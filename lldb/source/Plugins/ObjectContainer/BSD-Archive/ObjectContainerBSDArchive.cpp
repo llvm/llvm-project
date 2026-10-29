@@ -390,7 +390,8 @@ FileSpec GetChildFileSpecificationsFromThin(llvm::StringRef childPath,
 ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
-    if (module_sp->GetObjectName() && m_archive_sp) {
+    const bool module_has_name = !module_sp->GetObjectName().empty();
+    if (module_has_name && m_archive_sp) {
       Object *object = m_archive_sp->FindObject(
           module_sp->GetObjectName(), module_sp->GetObjectModificationTime());
       if (object) {
@@ -475,7 +476,7 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
                 object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = ConstString(object->ar_name);
+            spec.SetObjectName(object->ar_name);
             spec.SetObjectOffset(0);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;
@@ -494,7 +495,7 @@ ModuleSpecList ObjectContainerBSDArchive::GetModuleSpecifications(
                 object_specs.GetSize() - 1);
             llvm::sys::TimePoint<> object_mod_time(
                 std::chrono::seconds(object->modification_time));
-            spec.GetObjectName() = ConstString(object->ar_name);
+            spec.SetObjectName(object->ar_name);
             spec.SetObjectOffset(object_file_offset);
             spec.SetObjectSize(object->file_size);
             spec.GetObjectModificationTime() = object_mod_time;

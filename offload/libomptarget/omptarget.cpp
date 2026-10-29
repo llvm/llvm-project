@@ -33,6 +33,7 @@
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Object/ObjectFile.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
@@ -127,7 +128,7 @@ void handleTargetOutcome(bool Success, ident_t *Loc) {
       }
 
       SourceInfo Info(Loc);
-      if (Info.isAvailible())
+      if (Info.isAvailable())
         fprintf(stderr, "%s:%d:%d: ", Info.getFilename(), Info.getLine(),
                 Info.getColumn());
       else
@@ -616,7 +617,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
         HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry(),
-        /*ReleaseHDTTMap=*/true, StateInfo);
+        /*ReleaseHDTTMap=*/true, StateInfo, Loc);
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
     // If data_size==0, then the argument could be a zero-length pointer to
@@ -762,10 +763,10 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 ///
 /// (4) and (1) are both trying to modify the device memory corresponding to
 /// `&p`. So, if we decide that (4) should do an attachment, we also need to
-/// ensure that (4) happens after (1) is complete.
-///
-/// For this purpose, we insert a data_fence before the first
-/// pointer-attachment, (3), to ensure that all pending transfers finish first.
+/// ensure that (4) happens after (1) is complete. Since all supported
+/// backends execute enqueued work on a given queue in submission order, this
+/// is already guaranteed as long as (1) and (4) are submitted to the same
+/// queue, without requiring an explicit fence.
 int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                          AsyncInfoTy &AsyncInfo) {
   // Report all tracked allocations from both main loop and ATTACH processing
@@ -792,7 +793,6 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
                       << "LIBOMPTARGET_TREAT_ATTACH_AUTO_AS_ALWAYS is true";
 
   int Ret = OFFLOAD_SUCCESS;
-  bool IsFirstPointerAttachment = true;
   for (size_t EntryIdx = 0; EntryIdx < StateInfo.AttachEntries.size();
        ++EntryIdx) {
     const auto &AttachEntry = StateInfo.AttachEntries[EntryIdx];
@@ -881,18 +881,6 @@ int processAttachEntries(DeviceTy &Device, StateInfoTy &StateInfo,
     TargetPointerResultTy &PtrTPR = *PtrTPROpt;
     void **TgtPtrBase = reinterpret_cast<void **>(PtrTPR.TargetPointer);
 
-    // Insert a data-fence before the first pointer-attachment.
-    if (IsFirstPointerAttachment) {
-      IsFirstPointerAttachment = false;
-      ODBG(ODT_Mapping)
-          << "Inserting a data fence before the first pointer attachment.";
-      Ret = Device.dataFence(AsyncInfo);
-      if (Ret != OFFLOAD_SUCCESS) {
-        REPORT() << "Failed to insert data fence.";
-        return OFFLOAD_FAIL;
-      }
-    }
-
     // Do the pointer-attachment, i.e. update the device pointer to point to
     // device pointee.
     Ret = performPointerAttachment(Device, AsyncInfo, HstPtr, HstPteeBase,
@@ -930,6 +918,11 @@ struct PostProcessingInfo {
       : HstPtrBegin(HstPtr), DataSize(Size), ArgType(ArgType),
         TPR(std::move(TPR)) {}
 };
+
+static bool rangesOverlap(uintptr_t LBegin, uintptr_t LEnd, uintptr_t RBegin,
+                          uintptr_t REnd) {
+  return std::max(LBegin, RBegin) < std::min(LEnd, REnd);
+}
 
 } // namespace
 
@@ -1187,7 +1180,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         }
       }
 
-      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry);
+      int Ret = Device.retrieveData(HstPtr, TgtPtr, Size, AsyncInfo, Entry,
+                                    /*HDTTMapPtr=*/nullptr, Loc);
       if (Ret != OFFLOAD_SUCCESS) {
         REPORT() << "Copying data from device failed.";
         return OFFLOAD_FAIL;
@@ -1368,14 +1362,31 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (hst:" << HstPtrBegin
                       << ") -> (tgt:" << TgtPtrBegin << ")";
     int Ret = Device.submitData(TgtPtrBegin, HstPtrBegin, ArgSize, AsyncInfo,
-                                TPR.getEntry());
+                                TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data to device failed.";
       return OFFLOAD_FAIL;
     }
     if (TPR.getEntry()) {
+      uintptr_t UpdatedBegin = reinterpret_cast<uintptr_t>(TgtPtrBegin);
+      uintptr_t UpdatedEnd = UpdatedBegin + ArgSize;
       int Ret = TPR.getEntry()->foreachShadowPointerInfo(
           [&](ShadowPtrInfoTy &ShadowPtr) {
+            uintptr_t ShadowBegin =
+                reinterpret_cast<uintptr_t>(ShadowPtr.TgtPtrAddr);
+            uintptr_t ShadowEnd = ShadowBegin + ShadowPtr.PtrSize;
+
+            // The TO/update path has already issued an H2D memcpy for
+            // [UpdatedBegin, UpdatedEnd). If that memcpy did not touch this
+            // shadow pointer/descriptor slot on the device, there is nothing to
+            // fix up. If it did touch any byte, restore the whole saved target
+            // pointer/descriptor: a partially overwritten pointer/descriptor is
+            // not meaningful, and preserving the device attachment is safer
+            // than leaving mixed host/device descriptor bytes behind.
+            if (!rangesOverlap(UpdatedBegin, UpdatedEnd, ShadowBegin,
+                               ShadowEnd))
+              return OFFLOAD_SUCCESS;
+
             constexpr int64_t VoidPtrSize = sizeof(void *);
             if (ShadowPtr.PtrSize > VoidPtrSize) {
               ODBG(ODT_Mapping)
@@ -1409,7 +1420,7 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
     ODBG(ODT_Mapping) << "Moving " << ArgSize << " bytes (tgt:" << TgtPtrBegin
                       << ") -> (hst:" << HstPtrBegin << ")";
     int Ret = Device.retrieveData(HstPtrBegin, TgtPtrBegin, ArgSize, AsyncInfo,
-                                  TPR.getEntry());
+                                  TPR.getEntry(), /*HDTTMapPtr=*/nullptr, Loc);
     if (Ret != OFFLOAD_SUCCESS) {
       REPORT() << "Copying data from device failed.";
       return OFFLOAD_FAIL;

@@ -358,16 +358,16 @@ def GPR64as32 : RegisterOperand<GPR64, "printGPR64as32"> {
 // are encoded as the eight bit value 'abcdefgh'.
 def SIMDImmType10Operand : AsmOperandClass { let Name = "SIMDImmType10"; }
 
-class UImmScaledMemoryIndexed<int Width, int Scale> : AsmOperandClass {
+class UImmScaledOperand<int Width, int Scale> : AsmOperandClass {
   let Name = "UImm" # Width # "s" # Scale;
-  let DiagnosticType = "InvalidMemoryIndexed" # Scale # "UImm" # Width;
+  let DiagnosticType = "InvalidUImm" # Width # "s" # Scale;
   let RenderMethod = "addImmScaledOperands<" # Scale # ">";
   let PredicateMethod = "isUImmScaled<" # Width # ", " # Scale # ">";
 }
 
-class SImmScaledMemoryIndexed<int Width, int Scale> : AsmOperandClass {
+class SImmScaledOperand<int Width, int Scale> : AsmOperandClass {
   let Name = "SImm" # Width # "s" # Scale;
-  let DiagnosticType = "InvalidMemoryIndexed" # Scale # "SImm" # Width;
+  let DiagnosticType = "InvalidSImm" # Width # "s" # Scale;
   let RenderMethod = "addImmScaledOperands<" # Scale # ">";
   let PredicateMethod = "isSImmScaled<" # Width # ", " # Scale # ">";
 }
@@ -403,7 +403,7 @@ def adrlabel : Operand<i64> {
 
 class SImmOperand<int width> : AsmOperandClass {
   let Name = "SImm" # width;
-  let DiagnosticType = "InvalidMemoryIndexedSImm" # width;
+  let DiagnosticType = "InvalidSImm" # width;
   let RenderMethod = "addImmOperands";
   let PredicateMethod = "isSImm<" # width # ">";
 }
@@ -416,7 +416,7 @@ class AsmImmRange<int Low, int High> : AsmOperandClass {
 }
 
 // Authenticated loads for v8.3 can have scaled 10-bit immediate offsets.
-def SImm10s8Operand : SImmScaledMemoryIndexed<10, 8>;
+def SImm10s8Operand : SImmScaledOperand<10, 8>;
 def simm10Scaled : Operand<i64> {
   let ParserMatchClass = SImm10s8Operand;
   let DecoderMethod = "DecodeSImm<10>";
@@ -425,7 +425,7 @@ def simm10Scaled : Operand<i64> {
 }
 
 def simm9s16 : Operand<i64> {
-  let ParserMatchClass = SImmScaledMemoryIndexed<9, 16>;
+  let ParserMatchClass = SImmScaledOperand<9, 16>;
   let DecoderMethod = "DecodeSImm<9>";
   let PrintMethod = "printImmScale<16>";
   let OperandType = "OPERAND_IMMEDIATE";
@@ -616,9 +616,9 @@ def simm5_16b : Operand<i32>, ImmLeaf<i32, [{ return (int16_t)Imm >= -16 && (int
 // simm7sN predicate - True if the immediate is a multiple of N in the range
 // [-64 * N, 63 * N].
 
-def SImm7s4Operand : SImmScaledMemoryIndexed<7, 4>;
-def SImm7s8Operand : SImmScaledMemoryIndexed<7, 8>;
-def SImm7s16Operand : SImmScaledMemoryIndexed<7, 16>;
+def SImm7s4Operand : SImmScaledOperand<7, 4>;
+def SImm7s8Operand : SImmScaledOperand<7, 8>;
+def SImm7s16Operand : SImmScaledOperand<7, 16>;
 
 def simm7s4 : Operand<i32> {
   let ParserMatchClass = SImm7s4Operand;
@@ -674,9 +674,9 @@ def UImmM8XForm : SDNodeXForm<imm, [{
 
 // uimm5sN predicate - True if the immediate is a multiple of N in the range
 // [0 * N, 32 * N].
-def UImm5s2Operand : UImmScaledMemoryIndexed<5, 2>;
-def UImm5s4Operand : UImmScaledMemoryIndexed<5, 4>;
-def UImm5s8Operand : UImmScaledMemoryIndexed<5, 8>;
+def UImm5s2Operand : UImmScaledOperand<5, 2>;
+def UImm5s4Operand : UImmScaledOperand<5, 4>;
+def UImm5s8Operand : UImmScaledOperand<5, 8>;
 
 def uimm5s2 : Operand<i64>, ImmLeaf<i64,
                 [{ return Imm >= 0 && Imm < (32*2) && ((Imm % 2) == 0); }],
@@ -702,11 +702,11 @@ def uimm5s8 : Operand<i64>, ImmLeaf<i64,
 
 // uimm6sN predicate - True if the immediate is a multiple of N in the range
 // [0 * N, 64 * N].
-def UImm6s1Operand : UImmScaledMemoryIndexed<6, 1>;
-def UImm6s2Operand : UImmScaledMemoryIndexed<6, 2>;
-def UImm6s4Operand : UImmScaledMemoryIndexed<6, 4>;
-def UImm6s8Operand : UImmScaledMemoryIndexed<6, 8>;
-def UImm6s16Operand : UImmScaledMemoryIndexed<6, 16>;
+def UImm6s1Operand : UImmScaledOperand<6, 1>;
+def UImm6s2Operand : UImmScaledOperand<6, 2>;
+def UImm6s4Operand : UImmScaledOperand<6, 4>;
+def UImm6s8Operand : UImmScaledOperand<6, 8>;
+def UImm6s16Operand : UImmScaledOperand<6, 16>;
 
 def uimm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= 0 && Imm < 64; }]> {
   let ParserMatchClass = UImm6s1Operand;
@@ -737,6 +737,16 @@ def uimm6s16 : Operand<i64>, ImmLeaf<i64,
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// uimm8sN predicate - True if the immediate is a multiple of N in the range
+// [0 * N, 255 * N].
+def UImm8s32Operand : UImmScaledOperand<8, 32>;
+def uimm8s32 : Operand<i64>, ImmLeaf<i64,
+[{ return Imm >= 0 && Imm < (256*32) && ((Imm % 32) == 0); }]> {
+  let PrintMethod = "printImmScale<32>";
+  let ParserMatchClass = UImm8s32Operand;
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
 def SImmS2XForm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() / 2, SDLoc(N), MVT::i64);
 }]>;
@@ -755,7 +765,7 @@ def SImmS32XForm : SDNodeXForm<imm, [{
 
 // simm6sN predicate - True if the immediate is a multiple of N in the range
 // [-32 * N, 31 * N].
-def SImm6s1Operand : SImmScaledMemoryIndexed<6, 1>;
+def SImm6s1Operand : SImmScaledOperand<6, 1>;
 def simm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -32 && Imm < 32; }]> {
   let ParserMatchClass = SImm6s1Operand;
   let DecoderMethod = "DecodeSImm<6>";
@@ -764,12 +774,12 @@ def simm6s1 : Operand<i64>, ImmLeaf<i64, [{ return Imm >= -32 && Imm < 32; }]> {
 
 // simm4sN predicate - True if the immediate is a multiple of N in the range
 // [ -8* N, 7 * N].
-def SImm4s1Operand  : SImmScaledMemoryIndexed<4, 1>;
-def SImm4s2Operand  : SImmScaledMemoryIndexed<4, 2>;
-def SImm4s3Operand  : SImmScaledMemoryIndexed<4, 3>;
-def SImm4s4Operand  : SImmScaledMemoryIndexed<4, 4>;
-def SImm4s16Operand : SImmScaledMemoryIndexed<4, 16>;
-def SImm4s32Operand : SImmScaledMemoryIndexed<4, 32>;
+def SImm4s1Operand  : SImmScaledOperand<4, 1>;
+def SImm4s2Operand  : SImmScaledOperand<4, 2>;
+def SImm4s3Operand  : SImmScaledOperand<4, 3>;
+def SImm4s4Operand  : SImmScaledOperand<4, 4>;
+def SImm4s16Operand : SImmScaledOperand<4, 16>;
+def SImm4s32Operand : SImmScaledOperand<4, 32>;
 
 def simm4s1 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >=-8  && Imm <= 7; }]> {
@@ -1753,20 +1763,21 @@ def sme_elm_idx0_15 : Operand<i32>, TImmLeaf<i32, [{
 
 // SME2 vector select offset operands
 
-// uimm3s8 predicate
+// sme_elm_idx0_56s8 predicate
 // True if the immediate is a multiple of 8 in the range [0,56].
-def UImm3s8Operand : UImmScaledMemoryIndexed<3, 8>;
+def UImm3s8Operand : UImmScaledOperand<3, 8>;
 
-def uimm3s8 : Operand<i64>, ImmLeaf<i64,
+def sme_elm_idx0_56s8 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 56 && ((Imm % 8) == 0); }], UImmS8XForm> {
   let PrintMethod = "printMatrixIndex<8>";
   let ParserMatchClass = UImm3s8Operand;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-class UImmScaledMemoryIndexedRange<int Width, int Scale, int OffsetVal> : AsmOperandClass {
+class UImmScaledRangeOperand<int Width, int Scale, int OffsetVal>
+    : AsmOperandClass {
   let Name = "UImm" # Width # "s" # Scale # "Range";
-  let DiagnosticType = "InvalidMemoryIndexedRange" # Scale # "UImm" # Width;
+  let DiagnosticType = "InvalidVecSelRange" # Width # "s" # Scale;
   let RenderMethod = "addImmScaledRangeOperands<" # Scale # ">";
   let PredicateMethod = "isUImmScaled<" # Width # ", " # Scale # ", " # OffsetVal # ", /*IsRange=*/true>";
   let ParserMethod = "tryParseImmRange";
@@ -1774,14 +1785,14 @@ class UImmScaledMemoryIndexedRange<int Width, int Scale, int OffsetVal> : AsmOpe
 
 // Implicit immediate ranges 0:1 and 0:3, scale has no meaning
 // since the immediate is zero
-def UImm0s2RangeOperand : UImmScaledMemoryIndexedRange<0, 2, 1>;
-def UImm0s4RangeOperand : UImmScaledMemoryIndexedRange<0, 4, 3>;
+def UImm0s2RangeOperand : UImmScaledRangeOperand<0, 2, 1>;
+def UImm0s4RangeOperand : UImmScaledRangeOperand<0, 4, 3>;
 
-def UImm1s2RangeOperand : UImmScaledMemoryIndexedRange<1, 2, 1>;
-def UImm1s4RangeOperand : UImmScaledMemoryIndexedRange<1, 4, 3>;
-def UImm2s2RangeOperand : UImmScaledMemoryIndexedRange<2, 2, 1>;
-def UImm2s4RangeOperand : UImmScaledMemoryIndexedRange<2, 4, 3>;
-def UImm3s2RangeOperand : UImmScaledMemoryIndexedRange<3, 2, 1>;
+def UImm1s2RangeOperand : UImmScaledRangeOperand<1, 2, 1>;
+def UImm1s4RangeOperand : UImmScaledRangeOperand<1, 4, 3>;
+def UImm2s2RangeOperand : UImmScaledRangeOperand<2, 2, 1>;
+def UImm2s4RangeOperand : UImmScaledRangeOperand<2, 4, 3>;
+def UImm3s2RangeOperand : UImmScaledRangeOperand<3, 2, 1>;
 
 def uimm0s2range : Operand<i64>, ImmLeaf<i64,
 [{ return Imm == 0; }], UImmS1XForm> {
@@ -2785,6 +2796,17 @@ def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
 def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask<64>">,
                       GIComplexPatternEquiv<shiftMask64>;
 
+// A 32-bit shift reads only the low 5 bits of its amount, so the same masking
+// applies when that amount is held in an i64 register (e.g. a narrow shift
+// amount widened by sext/zext). Reuse the 32-bit matcher on an i64 node; the
+// widen pattern narrows the result with EXTRACT_SUBREG.
+def shiftMask32In64 : ComplexPattern<i64, 1, "SelectShiftMask<32>", [], [], 0>;
+
+// A 64-bit shift reads the low 6 bits of its amount; when that amount is an
+// i32 value widened to i64 (e.g. a (64 - x) computed in i32 then zero/any/
+// sign-extended), run the 64-bit matcher on the i32 node and widen the result.
+def shiftMask64In32 : ComplexPattern<i32, 1, "SelectShiftMask<64>", [], [], 0>;
+
 multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   def Wr : BaseShift<0b0, shift_type, GPR32, asm>;
 
@@ -2811,6 +2833,18 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
             (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
                 (SUBREG_TO_REG GPR32:$Rm, sub_32))>;
 
+  // Peek through the widening when the i64 shift amount is an extended i32
+  // value that still carries a maskable AND or a (C - x) subtract.
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (zext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (anyext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+  def : Pat<(i64 (OpNode GPR64:$Rn, (i64 (sext (i32 shiftMask64In32:$Rm))))),
+            (!cast<Instruction>(NAME # "Xr") GPR64:$Rn,
+                (SUBREG_TO_REG shiftMask64In32:$Rm, sub_32))>;
+
   def : Pat<(i32 (OpNode GPR32:$Rn, shiftMask32:$Rm)),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
   def : Pat<(i64 (OpNode GPR64:$Rn, shiftMask64:$Rm)),
@@ -2820,6 +2854,17 @@ multiclass Shift<bits<2> shift_type, string asm, SDNode OpNode> {
   // peek through it and apply the 32-bit shift-amount masking.
   def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (zext (i32 shiftMask32:$Rm))))),
             (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (anyext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 (sext (i32 shiftMask32:$Rm))))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn, shiftMask32:$Rm)>;
+
+  // A 32-bit shift may take an i64 shift amount that carries a redundant
+  // AND mask, e.g. an i8/i16 shift amount widened to i64. Strip the mask
+  // with the 32-bit matcher (shiftMask32In64) and narrow the result to i32.
+  def : Pat<(i32 (OpNode GPR32:$Rn, (i64 shiftMask32In64:$Rm))),
+            (!cast<Instruction>(NAME # "Wr") GPR32:$Rn,
+                (EXTRACT_SUBREG shiftMask32In64:$Rm, sub_32))>;
 }
 
 class ShiftAlias<string asm, Instruction inst, RegisterClass regtype>
@@ -3820,7 +3865,7 @@ class UImm12OffsetOperand<int Scale> : AsmOperandClass {
   let Name = "UImm12Offset" # Scale;
   let RenderMethod = "addUImm12OffsetOperands<" # Scale # ">";
   let PredicateMethod = "isUImm12Offset<" # Scale # ">";
-  let DiagnosticType = "InvalidMemoryIndexed" # Scale;
+  let DiagnosticType = "InvalidUImm12Offset" # Scale;
 }
 
 def UImm12OffsetScale1Operand : UImm12OffsetOperand<1>;
@@ -6115,11 +6160,12 @@ class BaseOneOperandFPComparison<bit signalAllNans,
 
   // Rm should be 0b00000 canonically, but we need to accept any value.
   let PostEncoderMethod = "fixOneOperandFPComparison";
+  let Defs = [NZCV];
 }
 
-let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseTwoOperandFPComparison<bit signalAllNans, RegisterClass regtype,
-                                string asm, list<dag> pat>
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, Uses = [FPCR] in
+class BaseTwoOperandFPComparison<bit totalOrder, bits<2> opc,
+                                 RegisterClass regtype, string asm, list<dag> pat>
     : I<(outs), (ins regtype:$Rn, regtype:$Rm), asm, "\t$Rn, $Rm", "", pat>,
       Sched<[WriteFCmp]> {
   bits<5> Rm;
@@ -6127,16 +6173,19 @@ class BaseTwoOperandFPComparison<bit signalAllNans, RegisterClass regtype,
   let Inst{31-24} = 0b00011110;
   let Inst{21}    = 1;
   let Inst{20-16} = Rm;
-  let Inst{15-10} = 0b001000;
+  let Inst{15}    = totalOrder;
+  let Inst{14-10} = 0b01000;
   let Inst{9-5}   = Rn;
-  let Inst{4}     = signalAllNans;
-  let Inst{3-0}   = 0b0000;
+  let Inst{4-3}   = opc;
+  let Inst{2-0}   = 0b000;
+
+  let mayRaiseFPException = !not(totalOrder);
+  let Defs = [NZCV];
 }
 
 multiclass FPComparison<bit signalAllNans, string asm,
                         SDPatternOperator OpNode = null_frag> {
-  let Defs = [NZCV] in {
-  def Hrr : BaseTwoOperandFPComparison<signalAllNans, FPR16, asm,
+  def Hrr : BaseTwoOperandFPComparison<0b0, {signalAllNans, 0}, FPR16, asm,
       [(set NZCV, (OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm)))]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
@@ -6148,7 +6197,7 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Predicates = [HasFullFP16];
   }
 
-  def Srr : BaseTwoOperandFPComparison<signalAllNans, FPR32, asm,
+  def Srr : BaseTwoOperandFPComparison<0b0, {signalAllNans, 0}, FPR32, asm,
       [(set NZCV, (OpNode FPR32:$Rn, (f32 FPR32:$Rm)))]> {
     let Inst{23-22} = 0b00;
   }
@@ -6158,7 +6207,7 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Inst{23-22} = 0b00;
   }
 
-  def Drr : BaseTwoOperandFPComparison<signalAllNans, FPR64, asm,
+  def Drr : BaseTwoOperandFPComparison<0b0, {signalAllNans, 0}, FPR64, asm,
       [(set NZCV, (OpNode FPR64:$Rn, (f64 FPR64:$Rm)))]> {
     let Inst{23-22} = 0b01;
   }
@@ -6167,7 +6216,20 @@ multiclass FPComparison<bit signalAllNans, string asm,
       [(set NZCV, (OpNode (f64 FPR64:$Rn), fpimm0))]> {
     let Inst{23-22} = 0b01;
   }
-  } // Defs = [NZCV]
+}
+
+multiclass FPTotalOrderComparison<bit magnitude, string asm> {
+  def Hrr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR16, asm, []> {
+    let Inst{23-22} = 0b11;
+  }
+
+  def Srr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR32, asm, []> {
+    let Inst{23-22} = 0b00;
+  }
+
+  def Drr : BaseTwoOperandFPComparison<0b1, {0, magnitude}, FPR64, asm, []> {
+    let Inst{23-22} = 0b01;
+  }
 }
 
 //---

@@ -284,6 +284,9 @@ def note_constexpr_alignment_compute : Note<
   "cannot constant evaluate whether run-time alignment is at least %0">;
 def note_constexpr_alignment_adjust : Note<
   "cannot constant evaluate the result of adjusting alignment to %0">;
+def note_constexpr_load8_unaligned : Note<
+  "%0 requires a pointer aligned to %1 %plural{1:byte|:bytes}1, but the "
+  "given pointer is only aligned to %2 %plural{1:byte|:bytes}2">;
 def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<
@@ -417,8 +420,8 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode
-    : Note<"stateful alloc token mode not supported in constexpr">;
+def note_constexpr_infer_alloc_token_unsupported_mode
+    : Note<"alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
@@ -449,6 +452,10 @@ def err_invalid_is_within_lifetime : Note<
   "%select{a null pointer|a one-past-the-end pointer|"
   "a pointer to an object whose lifetime has not yet begun}1"
 >;
+
+def note_break_continue_label_outside_context : Note<
+  "cannot %select{break|continue}0 to a label outside "
+  "the current evaluation context">;
 
 // inline asm related.
 let CategoryName = "Inline Assembly Issue" in {

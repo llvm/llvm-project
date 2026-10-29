@@ -4804,3 +4804,113 @@ void asm_inout_operand_is_read() {
 }
 } // namespace class_reads
 } // namespace what_is_a_use
+
+namespace DowncastTests {
+
+struct Base {};
+struct Derived : Base {};
+Derived *DowncastReturnsStackAddress() {
+  Derived d;
+  Base *b = &d;                     // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return static_cast<Derived *>(b); // expected-note {{returned here}}
+}
+
+// A downcast that does not outlive the pointee is fine.
+void use(Derived *);
+void DowncastWithinScopeIsOk() {
+  Derived d;
+  Base *b = &d;
+  use(static_cast<Derived *>(b)); // ok
+}
+
+struct RefBase {};
+struct RefDerived : RefBase {};
+RefDerived *DowncastReferenceReturnsStackAddress() {
+  RefDerived d;
+  RefBase &b = d; // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  RefDerived &r = static_cast<RefDerived &>(b);
+  return &r;      // expected-note {{returned here}}
+}
+
+void use(Derived &);
+void DowncastReferenceWithinScopeIsOk() {
+  Derived d;
+  Base &b = d;
+  use(static_cast<Derived &>(b)); // ok
+}
+
+} // namespace DowncastTests
+
+namespace DifferentOriginShapes {
+
+struct [[gsl::Pointer]] GslBase {};
+struct [[gsl::Pointer]] GslDerived : GslBase {};
+
+GslDerived *MatchingAnnotationsStillDetected() {
+  GslDerived d;
+  GslBase *b = &d;                     // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return static_cast<GslDerived *>(b); // expected-note {{returned here}}
+}
+
+// Base is a gsl::Pointer but the derived is not.
+// They have different origin shapes, thus the borrow is dropped, thus no dangling is reported.
+struct [[gsl::Pointer]] GslOnlyBase {};
+struct PlainFromGsl : GslOnlyBase {};
+
+PlainFromGsl *BaseAnnotatedMismatchDropsBorrow() {
+  PlainFromGsl d;
+  GslOnlyBase *b = &d;                   // FN: See comment above.
+  return static_cast<PlainFromGsl *>(b); // no note
+}
+
+// Mismatch the other way: derived is a gsl::Pointer, base is not.
+// Same outcome.
+struct PlainBase2 {};
+struct [[gsl::Pointer]] GslOnlyDerived : PlainBase2 {};
+
+GslOnlyDerived *DerivedAnnotatedMismatchDropsBorrow() {
+  GslOnlyDerived d;
+  PlainBase2 *b = &d;                      // FN: See comment above.
+  return static_cast<GslOnlyDerived *>(b); // no note
+}
+} // namespace DifferentOriginShapes
+
+const int &passthrough(const int &x [[clang::lifetimebound]]);
+
+// A borrow captured into the implicit object via
+// [[clang::lifetime_capture_by_this]] that outlives the captured local is
+// caught at the capturing method's exit.
+struct CaptureByThis {
+  int member;
+  const int *p;
+  void store(const int &x [[clang::lifetime_capture_by_this]]);
+  void captures_dangling_local() {
+    int local = 0;
+    store(local); // expected-warning {{local variable 'local' does not live long enough}}
+  }               // expected-note {{local variable 'local' is destroyed here}} expected-note {{later used here}}
+  void captures_through_alias_chain() {
+    int local = 0;
+    const int &r = passthrough(local); // expected-warning {{local variable 'local' does not live long enough}} \
+                                       // expected-note {{result of call to 'passthrough' aliases the storage of local variable 'local' because parameter 'x' is marked as lifetimebound}}
+    store(passthrough(r));             // expected-note {{result of call to 'passthrough' aliases the storage of local variable 'local'}}
+  } // expected-note {{local variable 'local' is destroyed here}} expected-note {{later used here}}
+  void captures_in_nested_scope() {
+    {
+      int local = 0;
+      store(local); // expected-warning {{local variable 'local' does not live long enough}}
+    }               // expected-note {{local variable 'local' is destroyed here}}
+  }                 // expected-note {{later used here}}
+  // Negative: capturing a caller-scoped reference into `this` does not dangle.
+  void captures_caller_ref(const int &caller_ref) {
+    store(caller_ref);
+  }
+  // Negative: capturing a member (same lifetime as the object) does not dangle.
+  void captures_member() {
+    store(member);
+  }
+  // Negative: the object is being destroyed, so nothing outlives the local.
+  ~CaptureByThis() {
+    int local = 0;
+    store(local);
+  }
+};

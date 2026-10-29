@@ -161,8 +161,12 @@ def LLVM_UDivOp : LLVM_IntArithmeticOpWithExactFlag<"udiv", "UDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_SDivOp : LLVM_IntArithmeticOpWithExactFlag<"sdiv", "SDiv",
     [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
-def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem", [Pure]>;
-def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem", [Pure]>;
+def LLVM_URemOp : LLVM_IntArithmeticOp<
+    "urem", "URem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
+def LLVM_SRemOp : LLVM_IntArithmeticOp<
+    "srem", "SRem",
+    [DeclareOpInterfaceMethods<ConditionallySpeculatable>]>;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And", [Pure]>;
 def LLVM_OrOp : LLVM_IntArithmeticOpWithDisjointFlag<"or", "Or", [Pure]> {
   let hasFolder = 1;
@@ -383,7 +387,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>,
+     DeclareOpInterfaceMethods<RangeOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -394,7 +399,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
               OptionalAttr<StrAttr>:$syncscope,
               OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable,
-              UnitAttr:$noundef);
+              UnitAttr:$noundef,
+              OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -418,6 +424,9 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     // A load of a value that is neither undef nor poison.
     %0 = llvm.load %ptr noundef : !llvm.ptr -> i32
 
+    // A load of an integer known to lie in [0, 10).
+    %0 = llvm.load %ptr range<i32, 0, 10> : !llvm.ptr -> i32
+
     // An atomic load of an integer variable.
     %0 = llvm.load %ptr atomic monotonic <alignment = 8>
         : !llvm.ptr -> i64
@@ -433,7 +442,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
       `invariant` $invariant |
       `invariant_group` $invariantGroup |
       `dereferenceable` `` $dereferenceable |
-      `noundef` $noundef
+      `noundef` $noundef |
+      `range` `` $range
     )
     prop-dict
     attr-dict `:` qualified(type($addr)) `->` type($res)
@@ -456,6 +466,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
      # setAlignmentCode
      # setNonTemporalMetadataCode
      # setInvariantGroupCode
+     # setRangeCode
      # setAccessGroupsMetadataCode
      # setAliasAnalysisMetadataCode;
   string mlirBuilder = [{
@@ -2114,9 +2125,8 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     ```
 
     The `function_entry_count` attribute models function-level `!prof`
-    entry-count metadata. It stores the entry count, whether the count is real
-    or synthetic, and any trailing import GUID operands in a single
-    `#llvm.function_entry_count` attribute.
+    entry-count metadata. It stores the entry count and any trailing import
+    GUID operands in a single `#llvm.function_entry_count` attribute.
   }];
 
   let arguments = (ins

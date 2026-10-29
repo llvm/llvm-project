@@ -631,6 +631,18 @@ TEST(RegisterTypeBuiltinTest, DoesNotSerialize) {
   EXPECT_TRUE(strm.GetString().empty());
 }
 
+TEST(RegisterTypeCompositeTest, TypeIdentification) {
+  RegisterTypeBuiltin builtin_type("ieee_single", eEncodingIEEE754,
+                                   eFormatFloat, 4);
+  RegisterTypeVector vector_type("v4f", &builtin_type, 4);
+  RegisterTypeUnion union_type(
+      "views", {RegisterTypeUnion::Field("scalar", &builtin_type)});
+
+  EXPECT_FALSE(llvm::isa<RegisterTypeComposite>(&builtin_type));
+  EXPECT_TRUE(llvm::isa<RegisterTypeComposite>(&vector_type));
+  EXPECT_TRUE(llvm::isa<RegisterTypeComposite>(&union_type));
+}
+
 TEST(RegisterTypeVectorTest, ConstructionAndXML) {
   RegisterTypeBuiltin element_type("ieee_single", eEncodingIEEE754,
                                    eFormatFloat, 4);

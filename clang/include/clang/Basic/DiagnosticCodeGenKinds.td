@@ -27,6 +27,9 @@ def err_cir_verification_failed_pre_passes : Error<
     "CIR module verification error before running CIR-to-CIR passes">,
     DefaultFatal;
 
+def err_cir_to_llvm_lowering_failed : Error<
+    "lowering ClangIR to LLVM IR failed">, DefaultFatal;
+
 // Diagnostics relayed from MLIR-side passes/verifier through the
 // clang::DiagnosticsEngine. The full message text comes from MLIR.
 def err_cir_mlir_diagnostic    : Error<"%0">;

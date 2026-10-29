@@ -321,6 +321,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  popen
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.popen
+)
+
+add_entrypoint_object(
+  pclose
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.pclose
+)
+
+add_entrypoint_object(
   tmpfile
   ALIAS
   DEPENDS
@@ -340,6 +354,8 @@ add_stdio_entrypoint_object(feof_unlocked)
 add_stdio_entrypoint_object(ferror)
 add_stdio_entrypoint_object(ferror_unlocked)
 add_stdio_entrypoint_object(fseek)
+add_stdio_entrypoint_object(fgetpos)
+add_stdio_entrypoint_object(fsetpos)
 add_stdio_entrypoint_object(rewind)
 add_stdio_entrypoint_object(ftell)
 add_stdio_entrypoint_object(fseeko)

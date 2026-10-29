@@ -9,17 +9,38 @@
 # Each action gets its own translation unit, so a process that only connects
 # does not link the code to listen.
 
-# TODO: Windows has no implementation yet. When it gets one, compose per-system
-# sources the way lib/bedrock/CMakeLists.txt does, rather than returning here.
-if (NOT ORC_RT_TARGET_POSIX)
-  return()
-endif()
-
+# The connectors are portable: they reach the system through the primitives in
+# connect-tcp/TCP.h, which have an implementation per system.
 set(ORC_RT_CONNECT_TCP_SOURCES
+  TCPConnectConnector.cpp
+  TCPConnectorHelpers.cpp
+  TCPListenConnector.cpp
+)
+
+set(ORC_RT_CONNECT_TCP_POSIX_SOURCES
   sys/posix/TCPConnect.cpp
   sys/posix/TCPListen.cpp
   sys/posix/TCPSocket.cpp
 )
+
+# TODO: Windows has stubs only, which report TCP as not yet supported.
+set(ORC_RT_CONNECT_TCP_WINDOWS_SOURCES
+  sys/windows/TCPConnect.cpp
+  sys/windows/TCPListen.cpp
+)
+
+# Composed the way lib/bedrock/CMakeLists.txt composes its per-system sources;
+# see the note there.
+if (ORC_RT_TARGET_POSIX)
+  list(APPEND ORC_RT_CONNECT_TCP_SOURCES ${ORC_RT_CONNECT_TCP_POSIX_SOURCES})
+elseif (WIN32)
+  list(APPEND ORC_RT_CONNECT_TCP_SOURCES ${ORC_RT_CONNECT_TCP_WINDOWS_SOURCES})
+else()
+  message(WARNING
+    "orc-rt: no TCP implementation for ${CMAKE_SYSTEM_NAME}; "
+    "add an orc-rt/lib/connect-tcp/sys/<system>/ directory and compose it "
+    "above")
+endif()
 
 add_library(orc-rt-connect-tcp-objects OBJECT ${ORC_RT_CONNECT_TCP_SOURCES})
 
@@ -41,9 +62,7 @@ target_compile_options(orc-rt-connect-tcp-objects
 add_library(orc-rt-connect-tcp ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
 target_link_libraries(orc-rt-connect-tcp
-  PUBLIC orc-rt-headers orc-rt-connect-socket)
-
-target_link_libraries(orc-rt-connect-tcp
+  PUBLIC orc-rt-headers orc-rt-connect-socket
   PRIVATE $<BUILD_INTERFACE:orc-rt-connect-tcp-objects>)
 
 # TODO: Use common runtimes infrastructure for output and install paths

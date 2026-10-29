@@ -695,6 +695,17 @@ static bool memOpsHaveSameBasePtr(const MachineInstr &MI1,
   return Base1 == Base2;
 }
 
+bool SIInstrInfo::memOpsHaveSameBase(
+    ArrayRef<const MachineOperand *> BaseOps1,
+    ArrayRef<const MachineOperand *> BaseOps2) const {
+  // Accesses without base operands (e.g. scratch addressed only by an
+  // immediate offset) share the same implicit base.
+  if (BaseOps1.empty() || BaseOps2.empty())
+    return BaseOps1.empty() && BaseOps2.empty();
+  return memOpsHaveSameBasePtr(*BaseOps1.front()->getParent(), BaseOps1,
+                               *BaseOps2.front()->getParent(), BaseOps2);
+}
+
 bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       int64_t Offset1, bool OffsetIsScalable1,
                                       ArrayRef<const MachineOperand *> BaseOps2,
@@ -703,19 +714,17 @@ bool SIInstrInfo::shouldClusterMemOps(ArrayRef<const MachineOperand *> BaseOps1,
                                       unsigned NumBytes) const {
   // If the mem ops (to be clustered) do not have the same base ptr, then they
   // should not be clustered
-  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
-  if (!BaseOps1.empty() && !BaseOps2.empty()) {
-    const MachineInstr &FirstLdSt = *BaseOps1.front()->getParent();
-    const MachineInstr &SecondLdSt = *BaseOps2.front()->getParent();
-    if (!memOpsHaveSameBasePtr(FirstLdSt, BaseOps1, SecondLdSt, BaseOps2))
-      return false;
-
-    const SIMachineFunctionInfo *MFI =
-        FirstLdSt.getMF()->getInfo<SIMachineFunctionInfo>();
-    MaxMemoryClusterDWords = MFI->getMaxMemoryClusterDWords();
-  } else if (!BaseOps1.empty() || !BaseOps2.empty()) {
-    // If only one base op is empty, they do not have the same base ptr
+  if (!memOpsHaveSameBase(BaseOps1, BaseOps2))
     return false;
+
+  // Both lists are empty or neither is, so BaseOps1 alone decides whether
+  // there is an instruction to read the budget from.
+  assert(BaseOps1.empty() == BaseOps2.empty());
+  unsigned MaxMemoryClusterDWords = DefaultMemoryClusterDWordsLimit;
+  if (!BaseOps1.empty()) {
+    const MachineFunction *MF = BaseOps1.front()->getParent()->getMF();
+    MaxMemoryClusterDWords =
+        MF->getInfo<SIMachineFunctionInfo>()->getMaxMemoryClusterDWords();
   }
 
   // In order to avoid register pressure, on an average, the number of DWORDS
@@ -2050,7 +2059,9 @@ MachineBasicBlock *SIInstrInfo::insertSimulatedTrap(MachineRegisterInfo &MRI,
   MachineBasicBlock *TrapBB = &MBB;
   MachineBasicBlock *HaltLoopBB = MF->CreateMachineBasicBlock();
 
-  if (!MBB.succ_empty() || std::next(MI.getIterator()) != MBB.end()) {
+  if (!MBB.succ_empty() ||
+      next_nodbg(MachineBasicBlock::iterator(MI), MBB.end(),
+                 /*SkipPseudoOp=*/false) != MBB.end()) {
     MBB.splitAt(MI, /*UpdateLiveIns=*/false);
     TrapBB = MF->CreateMachineBasicBlock();
     BuildMI(MBB, MI, DL, get(AMDGPU::S_CBRANCH_EXECNZ)).addMBB(TrapBB);
@@ -2737,7 +2748,7 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
 
   case AMDGPU::S_LOAD_DWORDX16_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM: {
-    if (SubIdx != 0)
+    if (SubIdx != 0 || UsedLanes.all())
       break;
 
     if (I == MBB.end())
@@ -2746,27 +2757,21 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
     if (I->isBundled())
       break;
 
-    // Look for a single use of the register that is also a subreg.
+    MachineFunction *MF = MBB.getParent();
+    MachineRegisterInfo &MRI = MF->getRegInfo();
+    assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
+
+    // Look for a single use of the register at the insertion point that is also
+    // a subreg.
     Register RegToFind = Orig.getOperand(0).getReg();
-    MachineOperand *UseMO = nullptr;
-    for (auto &CandMO : I->operands()) {
-      if (!CandMO.isReg() || CandMO.getReg() != RegToFind || CandMO.isDef())
-        continue;
-      if (UseMO) {
-        UseMO = nullptr;
-        break;
-      }
-      UseMO = &CandMO;
-    }
-    if (!UseMO || UseMO->getSubReg() == AMDGPU::NoSubRegister)
+    MachineOperand *UseMO = MRI.getOneNonDBGUse(RegToFind);
+    if (!UseMO ||
+        UseMO != I->findRegisterUseOperand(RegToFind, /*TRI=*/nullptr) ||
+        UseMO->getSubReg() == AMDGPU::NoSubRegister)
       break;
 
     unsigned Offset = RI.getSubRegIdxOffset(UseMO->getSubReg());
     unsigned SubregSize = RI.getSubRegIdxSize(UseMO->getSubReg());
-
-    MachineFunction *MF = MBB.getParent();
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    assert(MRI.use_nodbg_empty(DestReg) && "DestReg should have no users yet.");
 
     unsigned NewOpcode = -1;
     if (SubregSize == 256)
@@ -4066,7 +4071,6 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               get(AMDGPU::COPY), Tmp)
           .addReg(Reg);
       MI.getOperand(OpNo).setReg(Tmp);
-      MI.getOperand(OpNo).setIsKill();
     };
 
     // Multiplied part is the constant: Use v_madmk_{f16, f32}.
@@ -4131,7 +4135,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
                 UseMI.getDebugLoc(), get(AMDGPU::COPY),
                 UseMI.getOperand(0).getReg())
-            .addReg(Tmp, RegState::Kill);
+            .addReg(Tmp);
         UseMI.getOperand(0).setReg(Tmp);
         CopyRegOperandToNarrowerRC(UseMI, 1, NewRC);
         CopyRegOperandToNarrowerRC(UseMI, 3, NewRC);
@@ -4211,7 +4215,7 @@ bool SIInstrInfo::foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
         BuildMI(*UseMI.getParent(), std::next(UseMI.getIterator()),
                 UseMI.getDebugLoc(), get(AMDGPU::COPY),
                 UseMI.getOperand(0).getReg())
-            .addReg(Tmp, RegState::Kill);
+            .addReg(Tmp);
         UseMI.getOperand(0).setReg(Tmp);
         CopyRegOperandToNarrowerRC(UseMI, 1, NewRC);
         CopyRegOperandToNarrowerRC(UseMI, 2, NewRC);
@@ -6754,6 +6758,131 @@ bool SIInstrInfo::isLegalSingleSGPRReadInstOperand(
   bool OpSelHi = Mods & SISrcMods::OP_SEL_1;
 
   return !OpSel && !OpSelHi;
+}
+
+// Check if V_PK_FMA_F32 does not have the invalid opsel conditions.
+bool SIInstrInfo::isLegalPkFMAF32OpSel(const MachineInstr &MI) const {
+  if (!ST.hasPkF32InvalidOpSel() || MI.getOpcode() != AMDGPU::V_PK_FMA_F32)
+    return true;
+
+  const MachineOperand *Src1Mods =
+      getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
+  const MachineOperand *Src2Mods =
+      getNamedOperand(MI, AMDGPU::OpName::src2_modifiers);
+
+  auto HasOpSel0 = [](const MachineOperand *Mods) {
+    return Mods->getImm() & SISrcMods::OP_SEL_0;
+  };
+
+  // Illegal iff opsel[2:1] == 2'b01, 2'b10, or 2'b11
+  return !HasOpSel0(Src1Mods) && !HasOpSel0(Src2Mods);
+}
+
+void SIInstrInfo::decomposePkFMAF32(MachineInstr &MI,
+                                    MachineRegisterInfo &MRI) const {
+  assert(MI.getOpcode() == AMDGPU::V_PK_FMA_F32);
+
+  MachineBasicBlock &MBB = *MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  MachineOperand *Srcs[3] = {getNamedOperand(MI, AMDGPU::OpName::src0),
+                             getNamedOperand(MI, AMDGPU::OpName::src1),
+                             getNamedOperand(MI, AMDGPU::OpName::src2)};
+  const unsigned Mods[3] = {
+      static_cast<unsigned>(
+          getNamedOperand(MI, AMDGPU::OpName::src0_modifiers)->getImm()),
+      static_cast<unsigned>(
+          getNamedOperand(MI, AMDGPU::OpName::src1_modifiers)->getImm()),
+      static_cast<unsigned>(
+          getNamedOperand(MI, AMDGPU::OpName::src2_modifiers)->getImm())};
+
+  // extract op_sel / op_sel_hi
+  bool OpSel[3][2];
+  for (unsigned I = 0; I != 3; ++I) {
+    OpSel[I][0] = Mods[I] & SISrcMods::OP_SEL_0;
+    OpSel[I][1] = Mods[I] & SISrcMods::OP_SEL_1;
+  }
+
+  // The packed op can read only one SGPR on the constant bus (limit is 1 on
+  // gfx9), so all its SGPR sources are the same pair. Each scalar lane can also
+  // read only one SGPR, but op_sel may make a lane read different halves of
+  // that pair, e.g.
+  //   v_pk_fma_f32 v[0:1], s[0:1], 0, s[0:1] op_sel:[0,0,1] op_sel_hi:[1,1,0]
+  //   => v_fma_f32 v0, s0, 0, s1 / v_fma_f32 v1, s1, 0, s0
+  // If so, copy the pair to a VGPR once before extracting the lanes, rather
+  // than moving a scalar into a VGPR per lane.
+  SmallVector<unsigned, 3> SGPRSrcs;
+  bool DivergentSGPRs = false;
+  for (unsigned I = 0; I != 3; ++I) {
+    if (!Srcs[I]->isReg() || !RI.isSGPRReg(MRI, Srcs[I]->getReg()))
+      continue;
+    if (!SGPRSrcs.empty()) {
+      unsigned First = SGPRSrcs.front();
+      assert(Srcs[I]->getReg() == Srcs[First]->getReg() &&
+             Srcs[I]->getSubReg() == Srcs[First]->getSubReg() &&
+             "constant bus limit allows only one SGPR source");
+      DivergentSGPRs |=
+          OpSel[I][0] != OpSel[First][0] || OpSel[I][1] != OpSel[First][1];
+    }
+    SGPRSrcs.push_back(I);
+  }
+
+  if (DivergentSGPRs) {
+    unsigned First = SGPRSrcs.front();
+    legalizeOpWithMove(MI, MI.getOperandNo(Srcs[First]));
+    for (unsigned I : ArrayRef(SGPRSrcs).drop_front())
+      Srcs[I]->ChangeToRegister(Srcs[First]->getReg(), /*isDef=*/false);
+  }
+
+  // Extract the low or high lane of a packed VOP3P source operand.
+  auto ExtractLane = [&](MachineOperand &Op, bool UseSub1) -> MachineOperand {
+    unsigned SubIdx = (Op.isReg() && UseSub1) ? AMDGPU::sub1 : AMDGPU::sub0;
+    const TargetRegisterClass *RC =
+        Op.isReg() ? MRI.getRegClass(Op.getReg()) : nullptr;
+    const TargetRegisterClass *SubRC = !Op.isReg() ? nullptr
+                                       : RI.isVGPR(MRI, Op.getReg())
+                                           ? RI.getVGPRClassForBitWidth(32)
+                                           : RI.getSGPRClassForBitWidth(32);
+    return buildExtractSubRegOrImm(MI, MRI, Op, RC, SubIdx, SubRC);
+  };
+
+  // neg_lo/neg_hi on the packed operand become a plain NEG modifier.
+  auto LaneMods = [](unsigned Mods, bool Hi) -> unsigned {
+    if (Hi)
+      return (Mods & SISrcMods::NEG_HI) ? static_cast<unsigned>(SISrcMods::NEG)
+                                        : 0u;
+    return Mods & SISrcMods::NEG;
+  };
+
+  auto BuildLane = [&](Register Dst, bool Hi) {
+    MachineOperand L0 = ExtractLane(*Srcs[0], OpSel[0][Hi]);
+    MachineOperand L1 = ExtractLane(*Srcs[1], OpSel[1][Hi]);
+    MachineOperand L2 = ExtractLane(*Srcs[2], OpSel[2][Hi]);
+    BuildMI(MBB, MI, DL, get(AMDGPU::V_FMA_F32_e64), Dst)
+        .addImm(LaneMods(Mods[0], Hi))
+        .add(L0)
+        .addImm(LaneMods(Mods[1], Hi))
+        .add(L1)
+        .addImm(LaneMods(Mods[2], Hi))
+        .add(L2)
+        .addImm(0)  // clamp
+        .addImm(0); // omod
+  };
+
+  const TargetRegisterClass *VGPR32 = RI.getVGPRClassForBitWidth(32);
+  Register Lo = MRI.createVirtualRegister(VGPR32);
+  Register Hi = MRI.createVirtualRegister(VGPR32);
+  BuildLane(Lo, false);
+  BuildLane(Hi, true);
+
+  Register Dst = getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
+  BuildMI(MBB, MI, DL, get(AMDGPU::REG_SEQUENCE), Dst)
+      .addReg(Lo)
+      .addImm(AMDGPU::sub0)
+      .addReg(Hi)
+      .addImm(AMDGPU::sub1);
+
+  MI.eraseFromParent();
 }
 
 bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
@@ -10502,7 +10631,9 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
           {MOLastUse, "amdgpu-last-use"},
           {MOCooperative, "amdgpu-cooperative"},
           {MOThreadPrivate, "amdgpu-thread-private"},
-      };
+          {MOCFSB0, "amdgpu-cfs0"},
+          {MOCFSB1, "amdgpu-cfs1"},
+  };
 
   return ArrayRef(TargetFlags);
 }
@@ -10881,6 +11012,8 @@ static bool isRenamedInGFX9(int Opcode) {
   case AMDGPU::V_MAD_F16_e64:
   case AMDGPU::V_MAD_U16_e64:
   case AMDGPU::V_MAD_I16_e64:
+  case AMDGPU::V_MAD_U16_gfx9_e64:
+  case AMDGPU::V_MAD_I16_gfx9_e64:
     return true;
   default:
     return false;

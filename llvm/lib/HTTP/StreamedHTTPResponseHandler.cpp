@@ -31,4 +31,10 @@ Error StreamedHTTPResponseHandler::commit() {
   return Error::success();
 }
 
+Error StreamedHTTPResponseHandler::abort() {
+  if (FileStream)
+    return FileStream->abort();
+  return Error::success();
+}
+
 } // namespace llvm

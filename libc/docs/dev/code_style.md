@@ -167,6 +167,57 @@ storage mismatches, the following rules must be followed:
    different thread-local storage locations in the same thread. This results in silent
    test failures or error values that appear to vanish or go to the wrong thread.
 
+(expected_and_optional)=
+
+## Accessing values from `cpp::expected`, `ErrorOr`, and `cpp::optional`
+
+Because LLVM-libc builds with `-fno-exceptions`,
+[`cpp::expected`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/expected.h)
+(along with `ErrorOr<T>`, which aliases `cpp::expected<T, int>`) and
+[`cpp::optional`](https://github.com/llvm/llvm-project/blob/main/libc/src/__support/CPP/optional.h)
+cannot throw on invalid access. Instead, their observers provide two distinct
+safety contracts:
+
+- **`.value()` and `.error()` are checked in all build modes:** Calling
+  `.value()` when `!has_value()` (or `.error()` on `cpp::expected` when
+  `has_value()`) unconditionally executes `__builtin_trap()`, including in
+  release (`NDEBUG`) builds.
+- **`operator*` and `operator->` are unchecked in release builds:** They trap
+  under `#ifndef NDEBUG` when `!has_value()` to catch bugs during testing, and
+  compile to direct member access with no check in release builds.
+
+Choose between them as follows:
+
+1. **Prefer `*` and `->` after an explicit check:** Once `has_value()` or
+   `operator bool` has been checked, prefer `*res` and `res->member`, especially
+   in performance-sensitive paths (such as math or formatting fast paths) and
+   whenever accessing members of the contained object (`res->field` rather than
+   `res.value().field`). When the unwrapped value is needed more than once in a
+   scope, bind it to a local variable instead of unwrapping repeatedly:
+
+   ```c++
+   auto res = linux_syscalls::open(path, flags, mode);
+   if (!res) {
+     libc_errno = res.error();
+     return -1;
+   }
+   int fd = *res;
+   ```
+
+2. **Use `.value()` when relying on an invariant without a branch:** If an
+   algorithm or API invariant guarantees that a value is present and you
+   intentionally omit an `if (!res)` check, you **must** use `.value()` rather
+   than `*res`. That ensures any unexpected violation traps deterministically
+   in release builds instead of reading an inactive union member.
+
+3. **`.value()` is also acceptable for readability on `bool` or pointer types:**
+   After a dominating `if (!res)` check, writing `if (!res.value())` on
+   `ErrorOr<bool>` or `FILE *stream = res.value();` on `ErrorOr<FILE *>` avoids
+   visually ambiguous `!*res` expressions or confusion between unwrapping the
+   container and dereferencing the pointer. Under optimization, jump-threading
+   eliminates the redundant check in `res.value()` when no opaque calls
+   intervene.
+
 ## Assertions in libc runtime code
 
 The libc developers should, and are encouraged to, use assertions freely in

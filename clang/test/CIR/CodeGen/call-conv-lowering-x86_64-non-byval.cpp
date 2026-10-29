@@ -84,13 +84,12 @@ void callCopyCtorNonByval() {
 // CIR:         cir.call @_ZN12WithCopyCtorC1Ev(%[[C]])
 // CIR:         cir.call @_ZN12WithCopyCtorC1ERKS_(%[[TMP]], %[[C]])
 // CIR-NOT:     cir.load
-// CIR:         cir.call @_Z20takeCopyCtorNonByval12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z20takeCopyCtorNonByval12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {llvm.align = 4 : i64, llvm.dead_on_return = -1 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z20callCopyCtorNonByvalv()
 // LLVM:         call void @_ZN12WithCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[C:[^)]+]])
 // LLVM:         call void @_ZN12WithCopyCtorC1ERKS_(ptr noundef nonnull align 4 dereferenceable(4) %[[TMP:[^,]+]], ptr noundef nonnull align 4 dereferenceable(4) %[[C]])
-// LLVM-CIR:     call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dereferenceable(4) %[[TMP]])
-// OGCG:         call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
+// LLVM:         call void @_Z20takeCopyCtorNonByval12WithCopyCtor(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(4) %[[TMP]])
 
 // The materialized temporary is the operand's storage, so it is handed on as
 // the byval pointer with no slot of its own.

@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_wait_unittests)
+add_libc_testsuite(libc-sys-wait-tests)
 
 add_libc_test(
   waitpid_test
   SUITE
-    libc_sys_wait_unittests
+    libc-sys-wait-tests
   SRCS
     waitpid_test.cpp
   DEPENDS
@@ -17,7 +17,7 @@ add_libc_test(
 add_libc_test(
   wait4_test
   SUITE
-    libc_sys_wait_unittests
+    libc-sys-wait-tests
   SRCS
     wait4_test.cpp
   DEPENDS
@@ -31,7 +31,7 @@ add_libc_test(
 add_libc_test(
   waitid_test
   SUITE
-    libc_sys_wait_unittests
+    libc-sys-wait-tests
   SRCS
     waitid_test.cpp
   DEPENDS

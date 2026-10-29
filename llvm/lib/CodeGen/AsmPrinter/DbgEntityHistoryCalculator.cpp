@@ -52,6 +52,7 @@ void InstructionOrdering::initialize(const MachineFunction &MF) {
   //                       range. DBG_VALUEs at or after this position for
   //                       variables declared in the scope will have no effect.
   clear();
+  InstNumberMap.reserve(MF.getInstructionCount());
   unsigned Position = 0;
   for (const MachineBasicBlock &MBB : MF)
     for (const MachineInstr &MI : MBB)

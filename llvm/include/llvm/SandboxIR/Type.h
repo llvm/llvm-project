@@ -61,6 +61,7 @@ protected:
   friend class Function;           // For LLVMTy.
   friend class CallBase;           // For LLVMTy.
   friend class ConstantInt;        // For LLVMTy.
+  friend class ConstantExpr;       // For LLVMTy.
   friend class ConstantArray;      // For LLVMTy.
   friend class ConstantStruct;     // For LLVMTy.
   friend class ConstantVector;     // For LLVMTy.

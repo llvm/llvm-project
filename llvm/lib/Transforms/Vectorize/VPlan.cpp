@@ -24,6 +24,7 @@
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
 #include "VPlanUtils.h"
+#include "VectorizeOptions.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -55,8 +56,6 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -67,10 +66,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-static cl::opt<bool> PrintVPlansInDotFormat(
-    "vplan-print-in-dot-format", cl::Hidden,
-    cl::desc("Use dot format instead of plain text when dumping VPlans"));
 
 #define DEBUG_TYPE "loop-vectorize"
 
@@ -417,7 +412,7 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
       // Generated successors are redirected, as for the entry block and for
-      // blocks bypassing both vector loops during epilogue vectorization. Edges
+      // blocks bypassing a vector loop during epilogue vectorization. Edges
       // already present in the generated IR need no update; this happens during
       // epilogue vectorization, where the plan models blocks generated for the
       // main vector loop.
@@ -772,8 +767,8 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
       Cost += Block->cost(VF, Ctx);
     // Add the costs of the loop's backedge and canonical IV increment
     auto AddCost = [&](InstructionCost C, const char *Name) {
-      if (ForceTargetInstructionCost.getNumOccurrences())
-        C = InstructionCost(ForceTargetInstructionCost);
+      if (Ctx.Opts.force_target_instruction_cost)
+        C = InstructionCost(*Ctx.Opts.force_target_instruction_cost);
       LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
                         << "\n");
       Cost += C;
@@ -894,7 +889,6 @@ VPlan::~VPlan() {
   }
   for (VPValue *VPV : getLiveIns())
     delete VPV;
-  delete BackedgeTakenCount;
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
@@ -1035,17 +1029,18 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
 VPRegionBlock *VPlan::getVectorLoopRegion() {
   // Find the vector loop region by following the last successor of each block,
   // starting from the plan's entry; the vector code path is always the last
-  // successor. Every block on the path has a single predecessor, except the
-  // vector preheader, which is also entered from the block bypassing the main
-  // vector loop when vectorizing the epilogue. Stop at any other block with
-  // multiple predecessors: in a plain CFG that is the loop header (no region
-  // exists yet), in a region based CFG the scalar preheader.
+  // successor. When vectorizing the epilogue, the path leads through the blocks
+  // generated for the main vector loop. Each block on the path is entered from
+  // its first predecessor. Stop at a block entered from another predecessor,
+  // e.g. a loop header entered via its back-edge in a plain CFG, before regions
+  // are created or after they have been dissolved.
   for (VPBlockBase *B = Entry; B;) {
     if (auto *R = dyn_cast<VPRegionBlock>(B))
       return R->isReplicator() || R->getNumPredecessors() != 1 ? nullptr : R;
-    VPBlockBase *Succ =
-        B->hasSuccessors() ? B->getSuccessors().back() : nullptr;
-    if (B->getNumPredecessors() > 1 && !isa_and_present<VPRegionBlock>(Succ))
+    if (!B->hasSuccessors())
+      return nullptr;
+    VPBlockBase *Succ = B->getSuccessors().back();
+    if (Succ->getPredecessors().front() != B)
       return nullptr;
     B = Succ;
   }
@@ -1090,12 +1085,6 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
     O << " = vector-trip-count";
-  }
-
-  if (BackedgeTakenCount && !BackedgeTakenCount->user_empty()) {
-    O << "\nLive-in ";
-    BackedgeTakenCount->printAsOperand(O, SlotTracker);
-    O << " = backedge-taken count";
   }
 
   O << "\n";
@@ -1238,19 +1227,12 @@ VPlan *VPlan::duplicate() {
     }
   }
 
-  if (BackedgeTakenCount)
-    NewPlan->BackedgeTakenCount =
-        new VPSymbolicValue(BackedgeTakenCount->getType());
-
   // Map and propagate materialized state for symbolic values.
   for (auto [OldSV, NewSV] :
        {std::pair{&VectorTripCount, &NewPlan->VectorTripCount},
         {&VF, &NewPlan->VF},
         {&UF, &NewPlan->UF},
-        {&VFxUF, &NewPlan->VFxUF},
-        {BackedgeTakenCount, NewPlan->BackedgeTakenCount}}) {
-    if (!OldSV)
-      continue;
+        {&VFxUF, &NewPlan->VFxUF}}) {
     Old2NewVPValues[OldSV] = NewSV;
     if (OldSV->isMaterialized())
       NewSV->markMaterialized();
@@ -1552,8 +1534,6 @@ void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (!Plan.VFxUF.user_empty())
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
-  if (Plan.BackedgeTakenCount)
-    assignName(Plan.BackedgeTakenCount);
   for (VPValue *LI : Plan.getLiveIns())
     assignName(LI);
 
@@ -1712,8 +1692,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       if (DisableRuntimeUnroll)
         addRuntimeUnrollDisableMetaData(OrigLoop);
 
-      LoopVectorizeHints Hints(OrigLoop, /*InterleaveOnlyWhenForced*/ false,
-                               *ORE);
+      LoopVectorizeHints Hints(Opts, OrigLoop,
+                               /*InterleaveOnlyWhenForced*/ false, *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1737,8 +1717,8 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
       VectorLoop->setLoopID(OrigLoopID);
 
     if (!VectorizingEpilogue) {
-      LoopVectorizeHints Hints(VectorLoop, /*InterleaveOnlyWhenForced*/ false,
-                               *ORE);
+      LoopVectorizeHints Hints(Opts, VectorLoop,
+                               /*InterleaveOnlyWhenForced*/ false, *ORE);
       Hints.setAlreadyVectorized();
     }
   }
@@ -1802,7 +1782,7 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
     return;
   }
   for (const auto &Plan : VPlans)
-    if (PrintVPlansInDotFormat)
+    if (Opts.vplan_print_in_dot_format)
       Plan->printDOT(O);
     else
       Plan->print(O);
@@ -1910,7 +1890,7 @@ bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
       }
     }
   }
-  return *NumPredStores > NumberOfStoresToPredicate;
+  return *NumPredStores > Opts.vectorize_num_stores_pred;
 }
 
 bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {

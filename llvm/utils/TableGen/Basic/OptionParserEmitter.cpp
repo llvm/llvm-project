@@ -313,10 +313,10 @@ static void emitOptionsStruct(const Record &Struct,
   for (const Record *R : Opts) {
     StringRef Kind = R->getValueAsDef("Kind")->getValueAsString("Name");
     if (!R->getValue("FieldName")) {
-      if (Kind != "Input" && Kind != "Unknown" &&
-          isa<UnsetInit>(R->getValueInit("Alias")))
+      if (Kind != "Input" && Kind != "Unknown" && !R->getValue("AliasTarget"))
         PrintFatalError(R->getLoc(), "an option of an OptionsStruct must be "
-                                     "declared with BoolField or ValueField");
+                                     "declared with BoolField, ValueField or "
+                                     "AliasOf");
       continue;
     }
     if (Kind != "FlagOrEq" && Kind != "SeparateOrEq")
@@ -351,10 +351,16 @@ static void emitOptionsStruct(const Record &Struct,
   OS << "#include \"llvm/ADT/ArrayRef.h\"\n";
   OS << "#include \"llvm/ADT/BoolOrDefault.h\"\n";
   OS << "#include \"llvm/ADT/StringRef.h\"\n";
-  OS << "#include \"llvm/Support/Allocator.h\"\n\n";
+  OS << "#include \"llvm/Support/Allocator.h\"\n";
+  bool PerContext = Struct.getValueAsBit("PerContext");
+  if (PerContext)
+    OS << "#include \"llvm/Support/LibraryOptionsContext.h\"\n";
+  OS << "\n";
   StringRef Namespace = Struct.getValueAsString("Namespace");
-  OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n"
-        "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
+  OS << "namespace llvm {\nnamespace opt {\nclass Arg;\n";
+  if (PerContext)
+    OS << "class LibraryOptionsParser;\n";
+  OS << "class OptTable;\n} // namespace opt\n} // namespace llvm\n\n";
   OS << "namespace " << Namespace << " {\n";
   OS << "struct " << Name << " {\n";
   if (Namespace != "llvm")
@@ -363,19 +369,26 @@ static void emitOptionsStruct(const Record &Struct,
     ConditionScope CS(OS, *R);
     OS << "  " << M.Type << " " << M.Name << "{" << M.Default << "};\n";
   }
-  OS << "\n  /// The instance cl::ParseCommandLineOptions sets.\n";
-  OS << "  static " << Name << " Global;\n\n";
+  OS << "\n  static constexpr bool PerContext = "
+     << (PerContext ? "true" : "false") << ";\n";
   OS << "  static const llvm::opt::OptTable &optTable();\n";
   OS << "  /// Sets the member that \\p A names, allocating a list from \\p "
         "Alloc.\n  /// Returns false if the value is invalid.\n";
   OS << "  bool apply(const llvm::opt::Arg &A, llvm::BumpPtrAllocator "
         "&Alloc);\n";
+  if (PerContext)
+    OS << "\nprivate:\n  friend class llvm::cl::LibraryOptionsContext;\n"
+          "  friend class llvm::opt::LibraryOptionsParser;\n";
+  OS << "\n  static " << Name << " Global;\n";
+  OS << "  static const " << Name << " Default;\n";
   OS << "};\n} // namespace " << Namespace << "\n";
   OS << "#endif // OPTIONS_STRUCT_DECL\n";
 
   std::string Qualified = (Namespace + "::" + Name).str();
   OS << "\n#ifdef OPTIONS_STRUCT_DEFS\n#undef OPTIONS_STRUCT_DEFS\n";
-  OS << Qualified << " " << Qualified << "::Global;\n\n";
+  OS << Qualified << " " << Qualified << "::Global;\n";
+  OS << "LLVM_REQUIRE_CONSTANT_INITIALIZATION const " << Qualified << " "
+     << Qualified << "::Default;\n\n";
   OS << "const llvm::opt::OptTable &" << Qualified << "::optTable() {\n";
   OS << "  static const llvm::opt::LibraryOptTable T(optionTables());\n";
   OS << "  return T;\n}\n\n";
@@ -436,6 +449,26 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
       Records.getAllDerivedDefinitionsIfDefined("OptionsStruct");
   if (Structs.size() > 1)
     PrintFatalError(Structs[1]->getLoc(), "only one OptionsStruct is allowed");
+
+  StringMap<const Record *> Members;
+  for (const Record *R : Opts)
+    if (R->getValue("FieldName"))
+      Members[R->getValueAsString("Name")] = R;
+  DenseMap<const Record *, const Record *> AliasTargets;
+  for (const Record *R : Opts) {
+    if (!R->getValue("AliasTarget"))
+      continue;
+    StringRef Target = R->getValueAsString("AliasTarget");
+    const Record *T = Members.lookup(Target);
+    if (!T)
+      PrintFatalError(R->getLoc(),
+                      "'-" + Target +
+                          "' is not an option of the OptionsStruct");
+    if (!getCondition(*T).empty())
+      PrintFatalError(R->getLoc(), "an alias cannot refer to an option with a "
+                                   "Condition");
+    AliasTargets[R] = T;
+  }
 
   emitSourceFileHeader("Option Parsing Definitions", OS);
 
@@ -517,10 +550,11 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
   // An OptionsStruct's rows name the IDs, since a false Condition omits a row
   // and shifts the IDs after it.
   auto GetRefID = [&](const Record &R, StringRef Field) -> std::string {
-    const auto *DI = dyn_cast<DefInit>(R.getValueInit(Field));
-    if (!DI)
+    const Record *Ref = Field == "Alias" ? AliasTargets.lookup(&R) : nullptr;
+    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit(Field)))
+      Ref = DI->getDef();
+    if (!Ref)
       return "0";
-    const Record *Ref = DI->getDef();
     if (Structs.empty())
       return utostr(OptionID.lookup(Ref));
     return "OPT_" + getStructOptionID(*Ref);
@@ -692,16 +726,16 @@ static void emitOptionParser(const RecordKeeper &Records, raw_ostream &OS) {
                         /*EmitComment=*/true);
     OS << ", ";
     writeStrTableOffset(OS, Table, getHelpText(R));
-    if (const auto *DI = dyn_cast<DefInit>(R.getValueInit("Alias"));
-        DI && !getCondition(*DI->getDef()).empty())
-      PrintFatalError(R.getLoc(), "an alias cannot refer to an option with a "
-                                  "Condition");
     OS << ", " << GetRefID(R, "Group") << ", " << GetRefID(R, "Alias");
     OS << ", " << ExtraOffset.lookup(&R);
     std::vector<StringRef> RPrefixes = R.getValueAsListOfStrings("Prefixes");
     OS << ", " << Prefixes[PrefixKeyT(RPrefixes.begin(), RPrefixes.end())];
+    // An AliasOf without AliasArgs takes its target's kind.
+    const Record *KindR = AliasTargets.lookup(&R);
+    if (!KindR || !R.getValueAsListOfStrings("AliasArgs").empty())
+      KindR = &R;
     OS << ", llvm::opt::Option::"
-       << R.getValueAsDef("Kind")->getValueAsString("Name") << "Class},\n";
+       << KindR->getValueAsDef("Kind")->getValueAsString("Name") << "Class},\n";
   }
   OS << "  };\n\n";
 

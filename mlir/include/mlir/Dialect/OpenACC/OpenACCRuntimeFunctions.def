@@ -127,5 +127,12 @@ __ACC_RTL(tgt_acc_mirror_alloc, false, Void, Ptr, Int64, Int64, Int32, Ptr, Ptr,
 __ACC_RTL(tgt_acc_mirror_dealloc, false, Void, Ptr, Int64, Int64, Int32, Ptr,
           Ptr, Ptr, Ptr, Ptr, Ptr, Ptr)
 
+// int32_t __tgt_acc_kernel(ident_t *, void *kernel, int64_t flags,
+//                          int64_t device_type, void *args,
+//                          int64_t async_queue, char *kernel_name,
+//                          void *bin_desc);
+__ACC_RTL(tgt_acc_kernel, false, Int32, Ptr, Ptr, Int64, Int64, Ptr, Int64,
+          Ptr, Ptr)
+
 #undef __ACC_RTL
 #undef ACC_RTL
