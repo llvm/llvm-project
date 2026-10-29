@@ -5582,50 +5582,18 @@ func.func @subi_subi_lhs_rhs_lhs_dynamic(%a : tensor<?xi32>, %b : tensor<?xi32>)
 
 // -----
 
-// CHECK-LABEL: @recompose_signed_dividend_0_0
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_0_0(%x: i32, %d: i32) -> i32 {
+// CHECK-LABEL: @recompose_signed_dividend_operand_orders
+// CHECK-NEXT: return %arg0, %arg0, %arg0, %arg0
+func.func @recompose_signed_dividend_operand_orders(%x: i32, %d: i32) -> (i32, i32, i32, i32) {
   %q = arith.divsi %x, %d : i32
-  %m = arith.muli %q, %d : i32
   %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %m, %r : i32
-  return %sum : i32
-}
-
-// -----
-
-// CHECK-LABEL: @recompose_signed_dividend_0_1
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_0_1(%x: i32, %d: i32) -> i32 {
-  %q = arith.divsi %x, %d : i32
-  %m = arith.muli %d, %q : i32
-  %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %m, %r : i32
-  return %sum : i32
-}
-
-// -----
-
-// CHECK-LABEL: @recompose_signed_dividend_1_0
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_1_0(%x: i32, %d: i32) -> i32 {
-  %q = arith.divsi %x, %d : i32
-  %m = arith.muli %q, %d : i32
-  %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %r, %m : i32
-  return %sum : i32
-}
-
-// -----
-
-// CHECK-LABEL: @recompose_signed_dividend_1_1
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_1_1(%x: i32, %d: i32) -> i32 {
-  %q = arith.divsi %x, %d : i32
-  %m = arith.muli %d, %q : i32
-  %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %r, %m : i32
-  return %sum : i32
+  %qd = arith.muli %q, %d : i32
+  %dq = arith.muli %d, %q : i32
+  %sum0 = arith.addi %qd, %r : i32
+  %sum1 = arith.addi %dq, %r : i32
+  %sum2 = arith.addi %r, %qd : i32
+  %sum3 = arith.addi %r, %dq : i32
+  return %sum0, %sum1, %sum2, %sum3 : i32, i32, i32, i32
 }
 
 // -----
@@ -5726,38 +5694,19 @@ func.func @recompose_signed_dividend_dynamic_tensor(%x: tensor<?xi32>, %d: tenso
 
 // -----
 
-// CHECK-LABEL: @recompose_signed_dividend_exact
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_exact(%x: i32, %d: i32) -> i32 {
-  %q = arith.divsi %x, %d exact : i32
-  %m = arith.muli %q, %d : i32
-  %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %m, %r : i32
-  return %sum : i32
-}
-
-// -----
-
-// CHECK-LABEL: @recompose_signed_dividend_nsw
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_nsw(%x: i32, %d: i32) -> i32 {
+// CHECK-LABEL: @recompose_signed_dividend_flags
+// CHECK-NEXT: return %arg0, %arg0, %arg0
+func.func @recompose_signed_dividend_flags(%x: i32, %d: i32) -> (i32, i32, i32) {
   %q = arith.divsi %x, %d : i32
-  %m = arith.muli %q, %d overflow<nsw> : i32
+  %q_exact = arith.divsi %x, %d exact : i32
   %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %m, %r overflow<nsw> : i32
-  return %sum : i32
-}
-
-// -----
-
-// CHECK-LABEL: @recompose_signed_dividend_nuw
-// CHECK-NEXT: return %arg0
-func.func @recompose_signed_dividend_nuw(%x: i32, %d: i32) -> i32 {
-  %q = arith.divsi %x, %d : i32
-  %m = arith.muli %q, %d overflow<nuw> : i32
-  %r = arith.remsi %x, %d : i32
-  %sum = arith.addi %m, %r overflow<nuw> : i32
-  return %sum : i32
+  %m_exact = arith.muli %q_exact, %d : i32
+  %sum_exact = arith.addi %m_exact, %r : i32
+  %m_nsw = arith.muli %q, %d overflow<nsw> : i32
+  %sum_nsw = arith.addi %m_nsw, %r overflow<nsw> : i32
+  %m_nuw = arith.muli %q, %d overflow<nuw> : i32
+  %sum_nuw = arith.addi %m_nuw, %r overflow<nuw> : i32
+  return %sum_exact, %sum_nsw, %sum_nuw : i32, i32, i32
 }
 
 // -----
