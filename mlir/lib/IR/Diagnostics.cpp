@@ -673,12 +673,6 @@ SourceMgrDiagnosticVerifierHandler::SourceMgrDiagnosticVerifierHandler(
     llvm::SourceMgr &srcMgr, MLIRContext *ctx, raw_ostream &out, Level level)
     : SourceMgrDiagnosticHandler(srcMgr, ctx, out),
       impl(new SourceMgrDiagnosticVerifierHandlerImpl(level)) {
-  // Compute the expected diagnostics for each of the current files in the
-  // source manager.
-  for (unsigned i = 0, e = mgr.getNumBuffers(); i != e; ++i)
-    (void)impl->verifier.computeExpectedDiags(out, mgr,
-                                              mgr.getMemoryBuffer(i + 1));
-
   // The base class registered a handler that prints every diagnostic. The
   // verifier takes its place: it consumes diagnostics and reports unexpected
   // ones itself.
