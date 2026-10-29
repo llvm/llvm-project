@@ -82,19 +82,26 @@ target-defined scopes and constraints:
 These are arranged from largest scope (*system scope*) to smallest scope
 ("singlethread").
 
-- Every instance `X` of some scope `S1` other than "singlethread" scope is
-  partitioned by the scope `S2` one level below it. Each subset defined by this
-  partition is an instance of `S2` and is called a *subscope instance* of `X`.
-- It follows that if two scope instances `X` and `Y` intersect, then their
-  intersection is the smaller of `X` and `Y`.
-- A scope `S1` is a *subscope* of a scope `S2` if every instance of `S1`
-  is a subscope instance of some instance of `S2`.
+#### Subscopes
 
-**Inclusive Scopes**: Two operations `X` and `Y` are said to have *inclusive
-scopes* if the scope instance of each operation contains the other operation. In
-that case, the *common scope instance* `S'` of `X` and `Y` is the
-intersection of their scope instances. The scope corresponding to `S'` is also
-termed as the *common scope* of `X` and `Y`.
+Every instance `X` of some scope `S1` other than "singlethread" scope is
+partitioned by the scope `S2` one level below it. Each subset defined by this
+partition is an instance of `S2` and is called a *subscope instance* of `X`.
+`S2` itself is called a *subscope* of `S1`.
+
+The two relations *subscope* and *subscope instance* are transitive.
+
+It follows that if two scope instances `X` and `Y` intersect, then their
+intersection is the smaller of `X` and `Y`. The *common scope instance* `S'` of
+two operations `X` and `Y` is the intersection of their scope instances. The
+scope corresponding to `S'` is also termed as the *common scope* of `X` and `Y`.
+
+#### Inclusive Scopes
+
+Two operations `X` and `Y` are said to have *inclusive scopes* if their common
+scope instance contains both of `X` and `Y`. [Informational note --- In other
+words, `X` and `Y` have inclusive scopes if the scope instance of each contains
+the other.]
 
 ## Availability and Visibility
 
@@ -323,22 +330,16 @@ An operation `Y` is a *visibility operation* on a write `W` if `Y` is a
 and one of the following holds:
 
 - There exists an *availability* operation `X` on write `W` such that:
-
   - `X` happens-before `Y`, and,
-  - `X` and `Y` have inclusive scopes, and,
-  - Their common scope instance includes `W`.
-
-  Then `Y` makes `W` visible in the common scope instance `S` of `X` and
-  `Y`, and every subscope instance of `S` that includes `Y`.
-
+  - `X` makes `W` available in a scope instance `S1` that includes `Y`, and,
+  - `W` is included in the scope instance `S2` of `Y`.
 - There exists a *visibility* operation `X` on write `W` such that:
-
   - `X` happens-before `Y`, and,
   - `X` makes `W` visible in a scope instance `S1` that includes `Y`, and,
   - `X` is included in the scope instance `S2` of `Y`.
 
-  Then `Y` makes `W` visible in the intersection `S` of `S1` and `S2`,
-  and every subscope instance of `S` that includes `Y`.
+Then `Y` makes `W` visible in the intersection `S` of `S1` and `S2`, and every
+subscope instance of `S` that includes `Y`.
 
 ### Location Order
 
@@ -404,18 +405,18 @@ The following properties follow from the definitions above:
    the chain.
 2. **A write cannot be made available in a scope that does not contain it.** The
    definition of an availability operation `X` requires that `X`'s scope
-   instance includes `W` as a precondition. The operation makes `W` available
-   in that scope instance and only those subscope instances that also contain
-   `W`. Availability therefore cannot reach a scope instance that excludes `W`.
+   instance includes `W`. The operation makes `W` available in that scope
+   instance and only those subscope instances that also contain `W`.
+   Availability therefore cannot reach a scope instance that excludes `W`.
 3. **Visibility is bounded by availability.** When a write is available in a
    scope instance, it can be made visible in that scope instance by a visibility
    operation with the corresponding scope. Subsequent *make-visible* operations
    make that write visible into narrower scope instances towards the observer.
 4. **A write can be made visible in a scope instance that does not contain it.**
    The definition of a *visibility operation* anchors scope instances to the
-   observer (`Y`), not to the original write. The only precondition is that for
-   `Y`'s scope `S`, the write must already be visible or available in an instance
-   of `S` or a subscope of `S` that contains `Y`.
+   observer (`Y`), not to the original write. The only precondition is that the
+   write must already be visible or available in the scope instance `S` of 'Y'
+   or a subscope instance of `S` that contains `Y`.
 5. **Availability and visibility chains.** For a write `W` to be visible to a
    read `R` anywhere in the system, the sufficient condition is a chain of
    happens-before edges that include availability and visibility operations with
