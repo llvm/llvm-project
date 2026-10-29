@@ -8,12 +8,13 @@
 
 #include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
 
-// Mark all our options with this category.
-static cl::OptionCategory OffloadArchCategory("offload-arch options");
+// Defined in lib/OffloadArchOptions.cpp.
+extern cl::OptionCategory OffloadArchCategory;
 
 extern cl::OptionCategory AMDGPUArchByHIPCategory;
 
@@ -31,9 +32,6 @@ static cl::opt<VendorName>
                     clEnumVal(amdgpu, "Only print AMD GPUs"),
                     clEnumVal(nvptx, "Only print NVIDIA GPUs"),
                     clEnumVal(intel, "Only print Intel GPUs")));
-
-cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
-                      cl::init(false), cl::cat(OffloadArchCategory));
 
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("offload-arch") << '\n';
@@ -65,8 +63,9 @@ int main(int argc, char *argv[]) {
   cl::HideUnrelatedOptions({&OffloadArchCategory, &AMDGPUArchByHIPCategory});
 
   cl::SetVersionPrinter(PrintVersion);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(
+      LibraryOptions, ArrayRef(argv, argc),
       "A tool to detect the presence of offloading devices on the system. \n\n"
       "The tool will output each detected GPU architecture separated by a\n"
       "newline character. If multiple GPUs of the same architecture are found\n"

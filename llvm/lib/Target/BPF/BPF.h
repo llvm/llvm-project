@@ -35,6 +35,8 @@ public:
 };
 
 ModulePass *createBPFCheckAndAdjustIRLegacyPass();
+ModulePass *createBPFUnwindPreparePass();
+FunctionPass *createBPFUnwindLowerPass();
 
 class BPFISelDAGToDAGPass : public SelectionDAGISelPass {
 public:

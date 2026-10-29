@@ -807,7 +807,7 @@ void SystemZXPLINKAsmPrinter::emitPPA2(Module &M) {
 
 void SystemZXPLINKAsmPrinter::emitGlobalAlias(const Module &M,
                                               const GlobalAlias &GA) {
-  if (!TM.getTargetTriple().isOSzOS())
+  if (!M.getTargetTriple().isOSzOS())
     return AsmPrinter::emitGlobalAlias(M, GA);
 
   // Aliased function labels have already been emitted for z/OS
@@ -918,6 +918,7 @@ void SystemZXPLINKAsmPrinter::emitFunctionEntryLabel() {
   // Emit aliasing label for function entry point label.
   for (const GlobalAlias *Alias : GOAliasMap[F]) {
     MCSymbol *Sym = getSymbol(Alias);
+    ZOS->emitADA(Sym, getObjFileLowering().getADASection());
     OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     emitVisibility(Sym, Alias->getVisibility());
     emitLinkage(Alias, Sym);

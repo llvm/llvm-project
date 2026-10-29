@@ -197,6 +197,25 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
+static bool isStdMoveOperandInTemplate(const VarDecl *Variable,
+                                       const FunctionDecl *Func,
+                                       ASTContext &Context) {
+  if (Func->isTemplateInstantiation())
+    if (const Stmt *Body = Func->getBody()) {
+      // Match on the instantiated body where `std::move` is resolved to a
+      // concrete function and the argument references the instantiated
+      // variable.
+      const auto Moves =
+          match(stmt(forEachDescendant(
+                    callExpr(callee(functionDecl(hasName("std::move"))),
+                             hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                                to(equalsNode(Variable)))))))),
+                *Body, Context);
+      return !Moves.empty();
+    }
+  return false;
+}
+
 static void addConstFixits(const DiagnosticBuilder &Diag,
                            const VarDecl *Variable,
                            const FunctionDecl *Function,
@@ -253,9 +272,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   /// dependent. Variables like 'int x = 42;' in a template that can become
   /// const emit multiple warnings otherwise.
   bool IsNormalVariableInTemplate = Function->isTemplateInstantiation();
-  if (IsNormalVariableInTemplate &&
-      TemplateDiagnosticsCache.contains(Variable->getBeginLoc()))
-    return;
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
@@ -266,6 +282,14 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   else if (const auto *ArrayT = dyn_cast<ArrayType>(VT);
            ArrayT && ArrayT->getElementType()->isPointerType())
     VC = VariableCategory::Pointer;
+
+  if (IsNormalVariableInTemplate && VC != VariableCategory::Pointer &&
+      isStdMoveOperandInTemplate(Variable, Function, *Result.Context))
+    return;
+
+  if (IsNormalVariableInTemplate &&
+      TemplateDiagnosticsCache.contains(Variable->getBeginLoc()))
+    return;
 
   const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.

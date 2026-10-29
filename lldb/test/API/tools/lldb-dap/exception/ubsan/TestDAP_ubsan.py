@@ -30,6 +30,11 @@ class TestDAP_ubsan(DAPTestCaseBase):
         self.assertRegex(description, r"Out of bounds index")
         self.assertEqual(exception_info.exceptionId, "runtime-instrumentation")
 
+        stop_info = self.expect_not_none(exception_info.lldb_stop_reason_extended_info)
+        self.assertEqual(
+            stop_info["instrumentation_class"], "UndefinedBehaviorSanitizer"
+        )
+
         # FIXME: Check on non macOS platform the stop information location heuristic
         # may be wrong. enable when we have updated Ubsan stopInfo heuristic.
         if self.platformIsDarwin():

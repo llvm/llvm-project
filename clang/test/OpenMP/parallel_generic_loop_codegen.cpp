@@ -47,7 +47,7 @@ int foo() {
 //
 //
 // IR-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
-// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-NEXT:  entry:
 // IR-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -64,7 +64,7 @@ int foo() {
 // IR-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// IR-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
 // IR-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -147,7 +147,7 @@ int foo() {
 //
 //
 // IR-OMP60-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
-// IR-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-OMP60-NEXT:  entry:
 // IR-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -164,7 +164,7 @@ int foo() {
 // IR-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-OMP60-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// IR-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-OMP60-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
 // IR-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -247,7 +247,7 @@ int foo() {
 //
 //
 // IR-PCH-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
-// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-PCH-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-PCH-NEXT:  entry:
 // IR-PCH-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -264,7 +264,7 @@ int foo() {
 // IR-PCH-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-PCH-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// IR-PCH-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-PCH-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-PCH-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4
@@ -347,7 +347,7 @@ int foo() {
 //
 //
 // IR-PCH-OMP60-LABEL: define {{[^@]+}}@_Z3foov.omp_outlined
-// IR-PCH-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
+// IR-PCH-OMP60-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(256) [[RESULT:%.*]]) #[[ATTR2:[0-9]+]] {
 // IR-PCH-OMP60-NEXT:  entry:
 // IR-PCH-OMP60-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // IR-PCH-OMP60-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -364,7 +364,7 @@ int foo() {
 // IR-PCH-OMP60-NEXT:    store ptr [[DOTGLOBAL_TID_]], ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // IR-PCH-OMP60-NEXT:    store ptr [[DOTBOUND_TID_]], ptr [[DOTBOUND_TID__ADDR]], align 8
 // IR-PCH-OMP60-NEXT:    store ptr [[RESULT]], ptr [[RESULT_ADDR]], align 8
-// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// IR-PCH-OMP60-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[RESULT_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // IR-PCH-OMP60-NEXT:    store i32 0, ptr [[DOTOMP_LB]], align 4
 // IR-PCH-OMP60-NEXT:    store i32 4095, ptr [[DOTOMP_UB]], align 4
 // IR-PCH-OMP60-NEXT:    store i32 1, ptr [[DOTOMP_STRIDE]], align 4

@@ -15,6 +15,9 @@
 !rec_UVec384 =
     !cir.union<"UVec384" {data !cir.vector<4 x !cir.float>, data !cir.array<!s8i x 33>},
                padding = {!cir.array<!u8i x 32>}>
+!rec_UVec3x384 =
+    !cir.union<"UVec3x384" {data !cir.vector<3 x !cir.float>, data !cir.array<!s8i x 33>},
+               padding = {!cir.array<!u8i x 32>}>
 !rec_UVecInArr =
     !cir.union<"UVecInArr" {data !cir.array<!cir.vector<4 x !cir.float> x 2>,
                             data !cir.array<!s8i x 33>},
@@ -93,6 +96,13 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.union<"UVec384"
 
+  // A three-float vector's 96 bits classify at 128, so it reaches SSEUP too.
+  cir.func @take_vec3_384_union(%arg0: !rec_UVec3x384) {
+    cir.return
+  }
+
+  // CHECK: not yet implemented for type '!cir.union<"UVec3x384"
+
   // The same vector, an array away.
   cir.func @take_vec_in_arr_union(%arg0: !rec_UVecInArr) {
     cir.return
@@ -148,33 +158,14 @@ module attributes {
 
   // CHECK: not yet implemented for type '!cir.vector<[4] x !cir.float>
 
-  // Clang pads a vector's type width up to a power of two and the classifier
-  // branches on the exact width, so a three-byte vector would be classified at
-  // 24 bits where clang uses 32.  The ABI library's vector type cannot carry
-  // the padded width, so this is rejected rather than misclassified.
-  cir.func @take_odd_width(%arg0: !cir.vector<3 x !s8i>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.vector<3 x !cir.int<s, 8>>
-
-  // An element narrower than a byte is rounded up to its storage container by
-  // clang but not by the classifier, so the two would size the vector
-  // differently.  Classic passes this one in an xmm register from its 128-bit
-  // width, where the classifier would read 32 bits and coerce to an integer.
+  // A _BitInt element narrower than a byte has no memory representation in
+  // CIR's lowering to LLVM, so this is rejected here rather than failing
+  // there.
   cir.func @take_sub_byte_element(%arg0: !cir.vector<16 x !cir.int<s, 2, bitint>>) {
     cir.return
   }
 
   // CHECK: not yet implemented for type '!cir.vector<16 x !cir.int<s, 2, bitint>>
-
-  // An x87 long double is 80 bits to the classifier and 128 to clang, so the
-  // two would size this vector differently for the same reason.
-  cir.func @take_x87_element(%arg0: !cir.vector<2 x !cir.long_double<!cir.f80>>) {
-    cir.return
-  }
-
-  // CHECK: not yet implemented for type '!cir.vector<2 x !cir.long_double<!cir.f80>>
 
   // A definition (unlike a declaration) is refused: no incomplete-by-value
   // definition can arise from valid C++, so this stays a hard reject rather

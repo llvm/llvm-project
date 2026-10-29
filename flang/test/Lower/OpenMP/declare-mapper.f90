@@ -33,8 +33,8 @@ subroutine declare_mapper_1
    real                   :: x, y(nvals)
    !CHECK:omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_1my_type_omp_default_mapper]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_1Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>]] {
    !CHECK:      ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
-   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_1Evar"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
-   !CHECK:        %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_1Evar") : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
+   !CHECK:        %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   fortran_attrs<allocatable> : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
    !CHECK:        %[[VAL_5:.*]] = arith.constant 0 : index
@@ -51,7 +51,7 @@ subroutine declare_mapper_1
    !CHECK:        %[[VAL_16:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_15]] : index) extent(%[[VAL_6]]#1 : index) stride(%[[VAL_8]] : index) start_idx(%[[VAL_6]]#0 : index)
    !CHECK:        %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_1]]#0, values : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_19:.*]] = fir.box_offset %[[VAL_18]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-   !CHECK:        %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+   !CHECK:        %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
    !CHECK:        %[[VAL_21:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to) capture(ByRef) name("var%[[VAL_22:.*]](1:var%[[VAL_23:.*]])") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_ATTACH:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:        %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) members(%[[VAL_21]], %[[VAL_20]] : [1], [1, 0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) name("var") -> !fir.ref<[[MY_TYPE]]>
@@ -78,7 +78,7 @@ subroutine declare_mapper_2
    real                  :: x, y(nvals)
    !CHECK:omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_2my_mapper]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_2Tmy_type2\{my_type_var:!fir\.type<_QFdeclare_mapper_2Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>,temp:!fir\.type<_QFdeclare_mapper_2Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>,unmapped:!fir\.array<250xf32>,arr:!fir\.array<250xf32>\}>]] {
    !CHECK:      ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
-   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_2Ev"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
+   !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_2Ev") : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
    !CHECK:        %[[VAL_2:.*]] = arith.constant 250 : index
    !CHECK:        %[[VAL_3:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
    !CHECK:        %[[VAL_4:.*]] = hlfir.designate %[[VAL_1]]#0{"arr"}   shape %[[VAL_3]] : (!fir.ref<[[MY_TYPE]]>, !fir.shape<1>) -> !fir.ref<!fir.array<250xf32>>
@@ -109,7 +109,7 @@ subroutine declare_mapper_3
 
    !CHECK:  omp.declare_mapper @[[MY_TYPE_MAPPER2:_QQFdeclare_mapper_3my_mapper2]] : [[MY_TYPE2:!fir\.type<_QFdeclare_mapper_3Tmy_type2\{my_type_var:!fir\.type<_QFdeclare_mapper_3Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>}>,arr:!fir\.array<250xf32>}>]] {
    !CHECK:   ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE2]]>):
-   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_3Ev"} : (!fir.ref<[[MY_TYPE2]]>) -> (!fir.ref<[[MY_TYPE2]]>, !fir.ref<[[MY_TYPE2]]>)
+   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_3Ev") : (!fir.ref<[[MY_TYPE2]]>) -> (!fir.ref<[[MY_TYPE2]]>, !fir.ref<[[MY_TYPE2]]>)
    !CHECK:     %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"my_type_var"}   : (!fir.ref<[[MY_TYPE2]]>) -> !fir.ref<[[MY_TYPE:!fir\.type<_QFdeclare_mapper_3Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>}>]]>
    !CHECK:     %[[VAL_3:.*]] = omp.map.info var_ptr(%[[VAL_2]] : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[MY_TYPE_MAPPER:_QQFdeclare_mapper_3my_mapper]]) name("v%[[VAL_4:.*]]") -> !fir.ref<[[MY_TYPE]]>
    !CHECK:     %[[VAL_5:.*]] = arith.constant 250 : index
@@ -126,8 +126,8 @@ subroutine declare_mapper_3
 
    !CHECK:  omp.declare_mapper @[[MY_TYPE_MAPPER]] : [[MY_TYPE]] {
    !CHECK:   ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
-   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_3Evar"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
-   !CHECK:     %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+   !CHECK:     %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFdeclare_mapper_3Evar") : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
+   !CHECK:     %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   fortran_attrs<allocatable> : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_4:.*]] = fir.box_addr %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
    !CHECK:     %[[VAL_5:.*]] = arith.constant 0 : index
@@ -144,7 +144,7 @@ subroutine declare_mapper_3
    !CHECK:     %[[VAL_16:.*]] = omp.map.bounds lower_bound(%[[VAL_10]] : index) upper_bound(%[[VAL_15]] : index) extent(%[[VAL_6]]#1 : index) stride(%[[VAL_8]] : index) start_idx(%[[VAL_6]]#0 : index)
    !CHECK:     %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_1]]#0, values : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_19:.*]] = fir.box_offset %[[VAL_18]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
-   !CHECK:     %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
+   !CHECK:     %[[VAL_20:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAL_19]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%[[VAL_16]]) name("var%values(1:var%num_vals)") -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
    !CHECK:     %[[VAL_21:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(always, to) capture(ByRef) name("var%[[VAL_22:.*]](1:var%[[VAL_23:.*]])") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[ATTACH_MAP:.*]] = omp.map.info var_ptr(%[[VAL_18]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%{{.*}} : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%{{.*}}) name("var%values(1:var%num_vals)") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
    !CHECK:     %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_1]]#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) members(%[[VAL_21]], %[[VAL_20]] : [1], [1, 0] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) name("var") -> !fir.ref<[[MY_TYPE]]>
@@ -382,13 +382,13 @@ subroutine declare_mapper_10
     integer :: var_a, var_b
 
     ! dtype (dtype_a) should have mapper applied via var_ptr_ptr
-    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_A]]){{.*}}name("")
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_A]]){{.*}}name("dtype")
     ! CHECK: omp.map.info {{.*}} name("dtype")
     ! var_a and var_b are integers - no mapper
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_a") -> !fir.ref<i32>
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_b") -> !fir.ref<i32>
     ! dtype2 (dtype_b) should NOT have mapper applied
-    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("") -> {{.*}}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype2") -> {{.*}}
     ! CHECK-NOT: mapper(@
     ! CHECK: omp.map.info {{.*}} name("dtype2")
     ! CHECK: omp.target_enter_data
@@ -418,13 +418,13 @@ subroutine declare_mapper_11
     integer :: var_a, var_b
 
     ! dtype (dtype_a) should use named mapper "testing" when explicitly specified
-    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}name("")
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}name("dtype")
     ! CHECK: omp.map.info {{.*}} name("dtype")
     ! var_a and var_b are integers - no mapper
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_a") -> !fir.ref<i32>
     ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) name("var_b") -> !fir.ref<i32>
     ! dtype2 (dtype_b) should NOT have mapper - no mapper defined for dtype_b
-    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("") -> {{.*}}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype2") -> {{.*}}
     ! CHECK-NOT: mapper(@
     ! CHECK: omp.map.info {{.*}} name("dtype2")
     ! CHECK: omp.target_enter_data
@@ -471,16 +471,16 @@ subroutine declare_mapper_12
     ! - dtype4 (dtype_d): no mapper (no mapper defined for dtype_d)
 
     ! dtype should get MAPPER_A (default for dtype_a)
-    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_A]]){{.*}}name("")
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_A]]){{.*}}name("dtype")
     ! CHECK: omp.map.info {{.*}} name("dtype")
     ! dtype2 should get MAPPER_B (default for dtype_b)
-    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_B]]){{.*}}name("")
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_B]]){{.*}}name("dtype2")
     ! CHECK: omp.map.info {{.*}} name("dtype2")
     ! dtype3 should get MAPPER_TESTING (explicit match)
-    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}name("")
+    ! CHECK: omp.map.info {{.*}} mapper(@[[MAPPER_TESTING]]){{.*}}name("dtype3")
     ! CHECK: omp.map.info {{.*}} name("dtype3")
     ! dtype4 should NOT have any mapper
-    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("") -> {{.*}}
+    ! CHECK: omp.map.info {{.*}} map_clauses(to) capture(ByRef) var_ptr_ptr({{.*}}) name("dtype4") -> {{.*}}
     ! CHECK-NOT: mapper(@
     ! CHECK: omp.map.info {{.*}} name("dtype4")
     ! CHECK: omp.target_enter_data

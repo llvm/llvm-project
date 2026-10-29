@@ -65,3 +65,6 @@
 @ppc.5 = global ppc_fp128 f0x00000000000000007ff8000000000001
 ; CHECK: @ppc.6 = global ppc_fp128 f0x0FFFF000010000007FF8000000000001
 @ppc.6 = global ppc_fp128 f0x0ffff000010000007ff8000000000001
+; The signaling NaN second double must round-trip without crashing.
+; CHECK: @ppc.7 = global ppc_fp128 f0x7FF00000000000013FF0000000000000
+@ppc.7 = global ppc_fp128 f0x7ff00000000000013ff0000000000000

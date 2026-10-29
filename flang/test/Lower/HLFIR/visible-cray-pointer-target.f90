@@ -11,7 +11,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPvisible_association()
 ! CHECK-DAG: %[[ASSOCIATED_ALLOC:.*]] = fir.alloca f32 <{bindc_name = "associated", uniq_name = "_QFvisible_associationEassociated"}> {fir.target}
-! CHECK-DAG: %[[ASSOCIATED:.*]]:2 = hlfir.declare %[[ASSOCIATED_ALLOC]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFvisible_associationEassociated"}
+! CHECK-DAG: %[[ASSOCIATED:.*]]:2 = hlfir.declare %[[ASSOCIATED_ALLOC]] uniq_name("_QFvisible_associationEassociated") fortran_attrs<target>
 ! CHECK-DAG: fir.alloca f32 <{bindc_name = "unrelated", uniq_name = "_QFvisible_associationEunrelated"}>
 
 subroutine nested_association(flag)
@@ -26,7 +26,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPnested_association(
 ! CHECK-DAG: %[[NESTED_ALLOC:.*]] = fir.alloca f32 <{bindc_name = "associated", uniq_name = "_QFnested_associationEassociated"}> {fir.target}
-! CHECK-DAG: hlfir.declare %[[NESTED_ALLOC]] {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFnested_associationEassociated"}
+! CHECK-DAG: hlfir.declare %[[NESTED_ALLOC]] uniq_name("_QFnested_associationEassociated") fortran_attrs<target>
 
 subroutine ordinary_loc()
   real :: object
@@ -45,5 +45,5 @@ subroutine hidden_association(ptr, associated)
 end
 
 ! CHECK-LABEL: func.func @_QPhidden_association(
-! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFhidden_associationEassociated"}
+! CHECK: hlfir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFhidden_associationEassociated")
 ! CHECK-NOT: fortran_attrs = #fir.var_attrs<target>

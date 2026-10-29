@@ -4,7 +4,6 @@
 # RUN: %clang_host %p/Inputs/stop-hook.c -g -o %t
 # RUN: %lldb -b -s %p/Inputs/stop-hook-unified-1.lldbinit -s %s -f %t \
 # RUN:      | FileCheck %s
-# UNSUPPORTED: system-windows
 
 break set -f stop-hook.c -p "// Set breakpoint here to test target stop-hook"
 break set -f stop-hook.c -p "// Another breakpoint which is outside of the stop-hook range"

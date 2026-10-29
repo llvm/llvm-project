@@ -699,6 +699,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gfx_whole_wave);
   KEYWORD(tailcc);
   KEYWORD(m68k_rtdcc);
+  KEYWORD(wasm_emscripten_invokecc);
   KEYWORD(graalcc);
   KEYWORD(riscv_vector_cc);
   KEYWORD(riscv_vls_cc);
@@ -848,6 +849,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(critical);
   // Deprecated, keep in order to support old files.
   KEYWORD(relbf);
+  KEYWORD(indirect);
   KEYWORD(variable);
   KEYWORD(vTableFuncs);
   KEYWORD(virtFunc);

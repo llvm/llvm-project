@@ -1425,6 +1425,18 @@ define i32 @foo() {
   // Check classof(), creation.
   [[maybe_unused]] auto *ConstExpr =
       cast<sandboxir::ConstantExpr>(Ret->getReturnValue());
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Int64Ty = sandboxir::Type::getInt64Ty(Ctx);
+  auto *FloatTy = sandboxir::Type::getFloatTy(Ctx);
+  auto *PtrTy = sandboxir::PointerType::get(Ctx, 0);
+  auto *CInt = sandboxir::ConstantInt::get(Int32Ty, 1);
+  EXPECT_TRUE(isa<sandboxir::ConstantFP>(
+      sandboxir::ConstantExpr::getBitCast(CInt, FloatTy)));
+  EXPECT_TRUE(isa<sandboxir::Constant>(
+      sandboxir::ConstantExpr::getIntToPtr(CInt, PtrTy)));
+  auto *NullPtr = sandboxir::ConstantPointerNull::get(PtrTy);
+  EXPECT_TRUE(isa<sandboxir::ConstantInt>(
+      sandboxir::ConstantExpr::getPtrToInt(NullPtr, Int64Ty)));
 }
 
 TEST_F(SandboxIRTest, BlockAddress) {
@@ -1927,6 +1939,8 @@ define void @bar() {
   EXPECT_EQ(FBar, Ctx.getValue(LLVMFBar));
   // Check getDataLayout().
   EXPECT_EQ(&M->getDataLayout(), &LLVMM->getDataLayout());
+  // Check getTargetTriple().
+  EXPECT_EQ(&M->getTargetTriple(), &LLVMM->getTargetTriple());
   // Check getSourceFileName().
   EXPECT_EQ(M->getSourceFileName(), LLVMM->getSourceFileName());
   // Check getGlobalVariable().
@@ -3267,6 +3281,8 @@ define void @foo(ptr %arg0, ptr %arg1) {
   EXPECT_EQ(getLoadStoreAddressSpace(NewLd), NewLd->getPointerAddressSpace());
   EXPECT_EQ(NewLd->getAlign(), 8);
   EXPECT_EQ(NewLd->getName(), "NewLd");
+  // Check helper function getLoadStoreAlignment()
+  EXPECT_EQ(getLoadStoreAlignment(NewLd), NewLd->getAlign());
   // Check create(InsertBefore, IsVolatile=true)
   sandboxir::LoadInst *NewVLd = sandboxir::LoadInst::create(
       VLd->getType(), Arg1, Align(8), Ret->getIterator(),

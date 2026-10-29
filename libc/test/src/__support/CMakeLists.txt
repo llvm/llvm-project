@@ -1,4 +1,4 @@
-add_custom_target(libc-support-tests)
+add_libc_testsuite(libc-support-tests)
 
 if(NOT LIBC_TARGET_OS_IS_GPU)
   add_libc_test(
@@ -207,6 +207,7 @@ add_libc_test(
     libc.src.__support.CPP.string_view
     libc.src.__support.integer_literals
     libc.src.__support.integer_to_string
+    libc.src.__support.macros.properties.types
     libc.src.__support.uint128
 )
 
@@ -285,8 +286,6 @@ add_libc_test(
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.string.memset
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
 )
 
 add_libc_test(
@@ -299,9 +298,30 @@ add_libc_test(
     libc.src.__support.memory_size
 )
 
+if(LIBC_TARGET_OS_IS_BAREMETAL AND
+  NOT LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP)
+  add_object_library(
+    minimal_external_crt1_for_test
+    SRCS
+      minimal_external_crt1_for_test.cpp
+  )
+
+  add_libc_test(
+    external_startup_link_test
+    FULL_BUILD_ONLY
+    BUILD_ONLY
+    STARTUP
+      .minimal_external_crt1_for_test
+    SUITE
+      libc-support-tests
+    SRCS
+      external_startup_link_test.cpp
+  )
+endif()
+
 add_libc_test(
   str_to_float_comparison_test
-  NO_RUN_POSTBUILD
+  BUILD_ONLY
   SUITE
     libc-support-tests
   SRCS

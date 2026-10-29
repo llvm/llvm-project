@@ -206,6 +206,12 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
+void NVPTXTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                             const TargetInfo *Aux) {
+  TargetInfo::adjust(Diags, Opts, Aux);
+  AtomicOpts = AtomicOptions(Opts);
+}
+
 llvm::SmallVector<Builtin::InfosShard>
 NVPTXTargetInfo::getTargetBuiltins() const {
   return {{&BuiltinStrings, BuiltinInfos}};

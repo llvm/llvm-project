@@ -60,7 +60,7 @@ func.func @test_aggressive_invariant_load(%arg0: !fir.ref<!fir.array<10xf32>>, %
   %c10 = arith.constant 10 : index
   %cst = arith.constant 1.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 arg 2 {uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestEn") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   scf.for %i = %c0 to %c10 step %c1 {
     %cond = arith.cmpi slt, %i, %c5 : index
     scf.if %cond {
@@ -169,7 +169,7 @@ func.func @test_aggressive_conditional_optional_load(%arg0: !fir.ref<!fir.array<
   %c10 = arith.constant 10 : index
   %cst = arith.constant 1.000000e+00 : f32
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 arg 2 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtestEn"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %1 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtestEn") fortran_attrs<optional> : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   scf.for %i = %c0 to %c10 step %c1 {
     %cond = arith.cmpi slt, %i, %c5 : index
     scf.if %cond {
@@ -209,6 +209,42 @@ func.func @test_cheap_vs_aggressive(%arg0: !fir.ref<!fir.array<10xf32>>) {
       %cvt = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> memref<10xf32>
       %idx = arith.addi %c3, %c5 : index
       memref.store %cst, %cvt[%idx] : memref<10xf32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Test that hoisting through operations without OperationMoveOpInterface
+// (scf.if) still honors an enclosing operation that implements it
+// (acc.serial): the pure arith.addi is hoisted out of the loop, but neither
+// the fir.convert of a !fir.ref nor the scf.if operations containing it may
+// leave acc.serial.
+// CHECK-LABEL:   func.func @test_aggressive_nested_in_acc_serial(
+// CHECK-SAME:      %[[ARG0:[^:]*]]: !fir.ref<!fir.array<10xf32>>, %[[COND:[^:]*]]: i1, %[[A:[^:]*]]: i32, %[[B:[^:]*]]: i32,
+// CHECK:           %[[SUM:.*]] = arith.addi %[[A]], %[[B]] : i32
+// CHECK:           fir.do_loop
+// CHECK-NEXT:        acc.serial {
+// CHECK-NEXT:          scf.if %[[COND]] {
+// CHECK-NEXT:            scf.if %[[COND]] {
+// CHECK-NEXT:              %[[PTR:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.array<10xf32>>) -> i64
+// CHECK-NEXT:              fir.store %[[PTR]] to
+// CHECK-NEXT:              fir.store %[[SUM]] to
+func.func @test_aggressive_nested_in_acc_serial(%arg0: !fir.ref<!fir.array<10xf32>>, %cond: i1, %a: i32, %b: i32, %out: !fir.ref<i64>, %out2: !fir.ref<i32>) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %i = %c1 to %c10 step %c1 {
+    acc.serial {
+      scf.if %cond {
+        scf.if %cond {
+          %ptr = fir.convert %arg0 : (!fir.ref<!fir.array<10xf32>>) -> i64
+          fir.store %ptr to %out : !fir.ref<i64>
+          %sum = arith.addi %a, %b : i32
+          fir.store %sum to %out2 : !fir.ref<i32>
+        }
+      }
+      acc.yield
     }
   }
   return

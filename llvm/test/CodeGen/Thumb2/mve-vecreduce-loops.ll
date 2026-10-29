@@ -2282,22 +2282,23 @@ define i64 @add4i64(ptr noalias nocapture readonly %x, i32 %n) {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    cbz r1, .LBB29_3
+; CHECK-NEXT:    cbz r1, .LBB29_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    mov r3, r2
+; CHECK-NEXT:    mov r2, r0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    dlstp.32 lr, r1
 ; CHECK-NEXT:  .LBB29_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
-; CHECK-NEXT:    vaddlva.s32 r2, r3, q0
+; CHECK-NEXT:    vldrw.u32 q0, [r2], #16
+; CHECK-NEXT:    vaddlva.s32 r0, r3, q0
 ; CHECK-NEXT:    letp lr, .LBB29_2
-; CHECK-NEXT:    b .LBB29_4
-; CHECK-NEXT:  .LBB29_3:
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    mov r3, r2
-; CHECK-NEXT:  .LBB29_4: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:  .LBB29_4:
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    mov r1, r3
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -2332,27 +2333,28 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define i64 @mla4i64(ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: mla4i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    cbz r2, .LBB30_3
+; CHECK-NEXT:    .save {r5, lr}
+; CHECK-NEXT:    push {r5, lr}
+; CHECK-NEXT:    cbz r2, .LBB30_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    dlstp.32 lr, r2
 ; CHECK-NEXT:  .LBB30_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
+; CHECK-NEXT:    vldrw.u32 q0, [r3], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
-; CHECK-NEXT:    vmlalva.s32 r12, r3, q1, q0
+; CHECK-NEXT:    vmlalva.s32 r0, r5, q1, q0
 ; CHECK-NEXT:    letp lr, .LBB30_2
-; CHECK-NEXT:    b .LBB30_4
-; CHECK-NEXT:  .LBB30_3:
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov r3, r12
-; CHECK-NEXT:  .LBB30_4: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    pop {r5, pc}
+; CHECK-NEXT:  .LBB30_4:
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    pop {r5, pc}
 entry:
   %cmp9.not = icmp eq i32 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph
@@ -2390,27 +2392,28 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define i64 @mla8i64(ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: mla8i64:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    cbz r2, .LBB31_3
+; CHECK-NEXT:    .save {r5, lr}
+; CHECK-NEXT:    push {r5, lr}
+; CHECK-NEXT:    cbz r2, .LBB31_4
 ; CHECK-NEXT:  @ %bb.1: @ %vector.ph
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov r3, r12
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    dlstp.16 lr, r2
 ; CHECK-NEXT:  .LBB31_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
+; CHECK-NEXT:    vldrh.u16 q0, [r3], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
-; CHECK-NEXT:    vmlalva.s16 r12, r3, q1, q0
+; CHECK-NEXT:    vmlalva.s16 r0, r5, q1, q0
 ; CHECK-NEXT:    letp lr, .LBB31_2
-; CHECK-NEXT:    b .LBB31_4
-; CHECK-NEXT:  .LBB31_3:
-; CHECK-NEXT:    mov.w r12, #0
-; CHECK-NEXT:    mov r3, r12
-; CHECK-NEXT:  .LBB31_4: @ %for.cond.cleanup
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    pop {r7, pc}
+; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    pop {r5, pc}
+; CHECK-NEXT:  .LBB31_4:
+; CHECK-NEXT:    movs r0, #0
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    pop {r5, pc}
 entry:
   %cmp9.not = icmp eq i32 %n, 0
   br i1 %cmp9.not, label %for.cond.cleanup, label %vector.ph

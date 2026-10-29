@@ -14,7 +14,6 @@
 #include "Function.h"
 #include "InitMap.h"
 #include "Integral.h"
-#include "InterpBlock.h"
 #include "MemberPointer.h"
 #include "PrimType.h"
 #include "Record.h"
@@ -346,9 +345,9 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     Base = VD;
   else if (const auto *E = Desc->asExpr()) {
     if (block()->isDynamic()) {
-      QualType AllocatedType = getDeclPtr().getFieldDesc()->getDataType(ASTCtx);
-      DynamicAllocLValue DA(*block()->DynAllocId);
-      Base = APValue::LValueBase::getDynamicAlloc(DA, AllocatedType);
+      DynamicAllocLValue DA(*block()->DynAllocId, Desc->getDynAllocKind());
+      Base =
+          APValue::LValueBase::getDynamicAlloc(DA, Desc->getDataType(ASTCtx));
     } else {
       Base = E;
     }
@@ -769,7 +768,7 @@ Lifetime PtrView::getLifetime() const {
   if (Base < sizeof(InlineDescriptor))
     return Lifetime::Started;
 
-  if (inArray() && !isArrayRoot()) {
+  if (inPrimitiveArray() && !isArrayRoot()) {
     InitMapPtr &IM = getInitMap();
 
     if (!IM.hasInitMap()) {
@@ -807,12 +806,6 @@ void PtrView::setLifeState(Lifetime L) const {
 }
 
 void PtrView::initialize() const {
-  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
-  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
-  // initialized the scope via an InitScope op.
-  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
-    Pointee->invokeCtor();
-
   if (isRoot() && Base == sizeof(GlobalInlineDescriptor) && Offset == Base) {
     auto &GD = Pointee->getBlockDesc<GlobalInlineDescriptor>();
     GD.InitState = GlobalInitState::Initialized;
@@ -839,12 +832,6 @@ void PtrView::initializeElement(unsigned Index) const {
     return;
 
   assert(Index < getFieldDesc()->getNumElems());
-
-  // FIXME: This happens when the control flow jumps right into a scope, e.g. in
-  // switch_into_init_stmt in constant-expression-cxx2a.cpp. I.e. we have never
-  // initialized the scope via an InitScope op.
-  if (LLVM_UNLIKELY(!Pointee->isInitialized()))
-    Pointee->invokeCtor();
 
   InitMapPtr &IM = getInitMap();
   if (IM.allInitialized())
@@ -1415,19 +1402,21 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   for (const PointerPathEntry &Entry : path()) {
     switch (Entry.Kind) {
     case PointerPathEntry::Base: {
-      const RecordDecl *RD = CurType->getAsRecordDecl();
+      const CXXRecordDecl *RD = CurType->getAsCXXRecordDecl();
       if (!ASTContext::hasLayout(RD))
+        return std::nullopt;
+
+      const CXXRecordDecl *BaseDecl = Entry.RD.getPointer();
+      if (!RD->isDerivedFrom(BaseDecl))
         return std::nullopt;
 
       const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
       if (Entry.RD.getInt())
-        Offset +=
-            Layout.getVBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getVBaseClassOffset(BaseDecl).getQuantity();
       else
-        Offset +=
-            Layout.getBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+        Offset += Layout.getBaseClassOffset(BaseDecl).getQuantity();
 
-      CurType = ASTCtx.getCanonicalTagType(Entry.RD.getPointer());
+      CurType = ASTCtx.getCanonicalTagType(BaseDecl);
     } break;
 
     case PointerPathEntry::Field: {

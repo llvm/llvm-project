@@ -312,6 +312,21 @@ func.func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
 
 // -----
 
+func.func @pad_positive_constant(%arg0: tensor<4xf32>, %pad_value: f32) -> tensor<?xf32> {
+  %c2 = arith.constant 2 : index
+  %0 = tensor.pad %arg0 low[%c2] high[0] {
+    ^bb0(%arg1: index):
+      tensor.yield %pad_value : f32
+    } : tensor<4xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+// CHECK-LABEL: func @pad_positive_constant
+//       CHECK:   tensor.pad
+//  CHECK-SAME:     low[%{{.*}}]
+//       CHECK:    : tensor<4xf32> to tensor<?xf32>
+
+// -----
+
 // CHECK-LABEL: func @test_splat_op
 // CHECK-SAME: %[[S:.*]]: f32
 // CHECK-SAME: %[[P:.*]]: !llvm.ptr

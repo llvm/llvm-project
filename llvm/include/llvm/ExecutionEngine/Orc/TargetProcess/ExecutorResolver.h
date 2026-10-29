@@ -16,8 +16,8 @@
 #include "llvm/ADT/FunctionExtras.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RemoteSymbolLookupSet.h"
 
 namespace llvm::orc {
 

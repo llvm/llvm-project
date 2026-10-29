@@ -33,19 +33,19 @@ class TestEmptyThreadList(GDBRemoteTestBase):
 
             def haltReason(self):
                 # No "threads:" key, so the list has to come from qfThreadInfo.
-                return "S13"
+                return "S05"
 
             def cont(self):
-                return "S13"
+                return "S05"
 
             def vCont(self, packet):
-                return "S13"
+                return "S05"
 
             def other(self, packet):
                 if packet == "vCont?":
                     return "vCont;c;C;s;S"
                 if packet.startswith("vCont;"):
-                    return "S13"
+                    return "S05"
                 return ""
 
         self.server.responder = MyResponder()

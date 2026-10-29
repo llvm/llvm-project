@@ -618,7 +618,7 @@ int bar(int n){
 // CHECK45-64-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP16]]
 // CHECK45-64-NEXT:    [[TMP17:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK45-64-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP17]] to i64
-// CHECK45-64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK45-64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK45-64-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK45-64-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[TMP18]] to i64
 // CHECK45-64-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM11]]
@@ -1203,7 +1203,7 @@ int bar(int n){
 // CHECK45-32-NEXT:    [[TMP16:%.*]] = load i32, ptr [[K]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK45-32-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP16]]
 // CHECK45-32-NEXT:    [[TMP17:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
-// CHECK45-32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
+// CHECK45-32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
 // CHECK45-32-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK45-32-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP18]]
 // CHECK45-32-NEXT:    store i32 [[ADD10]], ptr [[ARRAYIDX11]], align 4, !llvm.access.group [[ACC_GRP20]]
@@ -1787,7 +1787,7 @@ int bar(int n){
 // CHECK45-32-EX-NEXT:    [[TMP16:%.*]] = load i32, ptr [[K]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK45-32-EX-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP16]]
 // CHECK45-32-EX-NEXT:    [[TMP17:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
-// CHECK45-32-EX-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
+// CHECK45-32-EX-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
 // CHECK45-32-EX-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK45-32-EX-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP18]]
 // CHECK45-32-EX-NEXT:    store i32 [[ADD10]], ptr [[ARRAYIDX11]], align 4, !llvm.access.group [[ACC_GRP20]]
@@ -2375,7 +2375,7 @@ int bar(int n){
 // CHECK-64-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP16]]
 // CHECK-64-NEXT:    [[TMP17:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK-64-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP17]] to i64
-// CHECK-64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK-64-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK-64-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK-64-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[TMP18]] to i64
 // CHECK-64-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM11]]
@@ -2960,7 +2960,7 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP16:%.*]] = load i32, ptr [[K]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK-32-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP16]]
 // CHECK-32-NEXT:    [[TMP17:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
-// CHECK-32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
+// CHECK-32-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
 // CHECK-32-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK-32-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP18]]
 // CHECK-32-NEXT:    store i32 [[ADD10]], ptr [[ARRAYIDX11]], align 4, !llvm.access.group [[ACC_GRP20]]
@@ -3544,7 +3544,7 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP16:%.*]] = load i32, ptr [[K]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK-32-EX-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP16]]
 // CHECK-32-EX-NEXT:    [[TMP17:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP20]]
-// CHECK-32-EX-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
+// CHECK-32-EX-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP17]]
 // CHECK-32-EX-NEXT:    [[TMP18:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP20]]
 // CHECK-32-EX-NEXT:    [[ARRAYIDX11:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP18]]
 // CHECK-32-EX-NEXT:    store i32 [[ADD10]], ptr [[ARRAYIDX11]], align 4, !llvm.access.group [[ACC_GRP20]]

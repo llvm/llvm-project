@@ -24,7 +24,7 @@ subroutine test_pointer_component_followed_by_component_ref(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_pointer_component_followed_by_component_ref(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}Ex
-! CHECK:  %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"p"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMmTt2{p:!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>>
+! CHECK:  %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"p"}   fortran_attrs<pointer> : (!fir.ref<!fir.type<_QMmTt2{p:!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>>
 ! CHECK:  %[[VAL_4:.*]] = fir.box_addr %[[VAL_3:.*]] : (!fir.box<!fir.ptr<!fir.type<_QMmTt1{x:f32}>>>) -> !fir.ptr<!fir.type<_QMmTt1{x:f32}>>
 ! CHECK:  hlfir.designate %[[VAL_4]]{"x"}   : (!fir.ptr<!fir.type<_QMmTt1{x:f32}>>) -> !fir.ref<f32>
@@ -34,7 +34,7 @@ subroutine test_symbol_followed_by_ref(x)
   call test_char(x(10))
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_symbol_followed_by_ref(
-! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = {{.*}}Ex"
+! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}uniq_name({{.*}}Ex") fortran_attrs<allocatable>
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 10 : index
@@ -47,7 +47,7 @@ subroutine test_component_followed_by_ref(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_component_followed_by_ref(
 ! CHECK:  %[[VAL_1:.*]]:2 = hlfir.declare %{{.*}} {{.*}}Ex
-! CHECK:  %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"a"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMmTt3{a:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+! CHECK:  %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"a"}   fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QMmTt3{a:!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:  %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
 ! CHECK:  %[[VAL_4:.*]] = fir.box_elesize %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 10 : index

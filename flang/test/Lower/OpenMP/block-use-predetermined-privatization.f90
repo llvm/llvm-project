@@ -23,12 +23,12 @@ end program p
 
 ! CHECK-LABEL: func.func @_QQmain()
 ! CHECK:         %[[I_ALLOC:.*]] = fir.alloca i32 <{bindc_name = "i"
-! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ALLOC]] {uniq_name = "_QFEi"}
+! CHECK:         %[[I_DECL:.*]]:2 = hlfir.declare %[[I_ALLOC]] uniq_name("_QFEi")
 ! CHECK:         omp.parallel {
 
 ! Verify the module variable is instantiated inside the parallel region.
 ! CHECK:           %[[N_ADDR:.*]] = fir.address_of(@_QMmEn) : !fir.ref<i32>
-! CHECK:           %[[N_DECL:.*]]:2 = hlfir.declare %[[N_ADDR]] {uniq_name = "_QMmEn"}
+! CHECK:           %[[N_DECL:.*]]:2 = hlfir.declare %[[N_ADDR]] uniq_name("_QMmEn")
 
 ! Verify the wsloop privatizes both i and n.
 ! CHECK:           omp.wsloop private(@[[I_PRIV]] %[[I_DECL]]#0 -> %{{.*}}, @[[N_PRIV]] %[[N_DECL]]#0 -> %{{.*}} : !fir.ref<i32>, !fir.ref<i32>) {

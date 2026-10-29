@@ -372,19 +372,20 @@ private:
 };
 
 struct EhSectionPiece {
-  EhSectionPiece(size_t off, InputSectionBase *sec, uint32_t size,
-                 unsigned firstRelocation)
-      : inputOff(off), sec(sec), size(size), firstRelocation(firstRelocation) {}
+  EhSectionPiece(uint32_t off, uint32_t size, unsigned firstRelocation,
+                 uint32_t cie)
+      : inputOff(off), size(size), firstRelocation(firstRelocation), cie(cie) {}
 
-  ArrayRef<uint8_t> data() const {
-    return {sec->content().data() + this->inputOff, size};
+  ArrayRef<uint8_t> data(const InputSectionBase &sec) const {
+    return {sec.content().data() + inputOff, size};
   }
 
-  size_t inputOff;
-  ssize_t outputOff = -1;
-  InputSectionBase *sec;
+  uint32_t inputOff;
   uint32_t size;
+  ssize_t outputOff = -1;
   unsigned firstRelocation;
+  // For an FDE, the index of its CIE in `cies`.
+  uint32_t cie;
 };
 
 // This corresponds to a .eh_frame section of an input file.
@@ -407,6 +408,9 @@ public:
   // Preprocessed relocations in uniform format to avoid REL/RELA/CREL
   // relocation format handling throughout the codebase.
   SmallVector<Relocation, 0> rels;
+
+  // For each CIE, the output offset of the identical CIE that is emitted.
+  SmallVector<uint32_t, 0> cieOutputOffs;
 };
 
 // This is a section that is added directly to an output section

@@ -1,4 +1,4 @@
-add_custom_target(libc-support-wctype-tests)
+add_libc_testsuite(libc-support-wctype-tests PARENT libc-support-tests)
 
 set(CONSTEXPR_FLAGS "")
 

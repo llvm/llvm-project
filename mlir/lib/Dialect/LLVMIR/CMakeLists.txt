@@ -73,6 +73,7 @@ endforeach()
 add_public_tablegen_target(MLIRNVVMOpsShardGen)
 
 add_mlir_dialect_library(MLIRNVVMDialect
+  IR/NVVMAttributes.cpp
   IR/NVVMDialect.cpp
   IR/BasicPtxBuilderInterface.cpp
   IR/NVVMRequiresSMTraits.cpp
@@ -80,6 +81,13 @@ add_mlir_dialect_library(MLIRNVVMDialect
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  # Cache the operation declarations shared by all source shards. Keep this
+  # specialized PCH local rather than making downstream libraries reuse it.
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+  [["mlir/Dialect/LLVMIR/NVVMDialect.h"]]
 
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
@@ -120,6 +128,13 @@ add_mlir_dialect_library(MLIRROCDLDialect
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
+
+  # Cache the operation declarations shared by all source shards. Keep this
+  # specialized PCH local rather than making downstream libraries reuse it.
+  DISABLE_PCH_REUSE
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+  [["mlir/Dialect/LLVMIR/ROCDLDialect.h"]]
 
   DEPENDS
   MLIRGPUCompilationAttrInterfacesIncGen
