@@ -9,6 +9,9 @@
 #include "lldb/Breakpoint/ScriptedBreakpointOverrideResolver.h"
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointResolverScripted.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
+#include "llvm/Support/ErrorExtras.h"
 
 namespace lldb_private {
 lldb::BreakpointResolverSP ScriptedBreakpointResolverOverride::CheckForOverride(
@@ -21,8 +24,11 @@ lldb::BreakpointResolverSP ScriptedBreakpointResolverOverride::CheckForOverride(
 }
 
 llvm::Error ScriptedBreakpointResolverOverride::HasErrors() {
-  // FIXME: we should make sure the module and class exist, though that will
-  // to happen in a scripting language specific function.
+  ScriptInterpreter *interpreter =
+      m_target.GetDebugger().GetScriptInterpreter();
+  if (!interpreter || !interpreter->CheckObjectExists(m_class_name.c_str()))
+    return llvm::createStringErrorV(
+        "class for breakpoint override: \"{0}\" does not exist", m_class_name);
   return llvm::Error::success();
 }
 } // namespace lldb_private

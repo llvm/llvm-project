@@ -131,6 +131,8 @@ class TestOverridesResolver(TestBase):
             override_id = int(result.GetOutput())
         else:
             self.assertFalse(result.Succeeded(), "We expected this to fail")
+            if error_string:
+                self.assertIn(error_string, result.GetError())
             return 0
 
         # Check the override listing, make sure our new entry is present:
@@ -308,18 +310,30 @@ class TestOverridesResolver(TestBase):
             expect_error=True,
             error_string="empty class name",
         )
-        # FIXME: We aren't currently returning a correct
-        # error when the class name doesn't exist.
         # And with a class name that doesn't exist:
-        # trivial_id = self.add_override_python(
-        #    trivial_help,
-        #    "NoModuleOfThisName.NoClassOfThisName",
-        #    lldb.eResolverName,
-        #    "test_key",
-        #    "test_value",
-        #    expect_error=True,
-        #    error_string=""
-        # )
+        missing_class = "NoModuleOfThisName.NoClassOfThisName"
+        missing_class_error = (
+            f'class for breakpoint override: "{missing_class}" does not exist'
+        )
+        trivial_id = self.add_override_python(
+            trivial_help,
+            missing_class,
+            lldb.eResolverName,
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string=missing_class_error,
+        )
+        trivial_id = self.add_override_cmd(
+            trivial_help,
+            missing_class,
+            "-m name",
+            "",
+            "test_key",
+            "test_value",
+            expect_error=True,
+            error_string=missing_class_error,
+        )
 
         trivial_id = self.add_override_cmd(
             trivial_help,
