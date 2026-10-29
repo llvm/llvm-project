@@ -99,8 +99,10 @@ LLVM_ABI bool isConstantSplatVectorAllOnes(SDValue V,
                                            bool BuildVectorOnly = false);
 
 /// Return true if the specified value is a BUILD_VECTOR or SPLAT_VECTOR where
-/// all of the elements are 0 or undef. If \p BuildVectorOnly is set to true, it
-/// only checks BUILD_VECTOR.
+/// all of the elements are 0 or undef, looking through bitcasts. Also recognize
+/// bitcasts of scalar constants with all bits zero to fixed-length vectors. If
+/// \p BuildVectorOnly is set to true, only recognize BUILD_VECTOR, optionally
+/// bitcast.
 LLVM_ABI bool isConstantSplatVectorAllZeros(SDValue V,
                                             bool BuildVectorOnly = false);
 
