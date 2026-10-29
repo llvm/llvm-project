@@ -1958,8 +1958,12 @@ multiclass DS_Real_vi <bits<8> op, DS_Pseudo base_pseudo, bit need_gfx9_suffix =
   def "" : DS_Real_Base_vi<op, base_pseudo>;
 
   if need_gfx9_suffix then {
+    // This only differs from the version above in not having an implicit use
+    // of M0, so it is indistinguishable in assembly. Hide it from the asm
+    // matcher and disassembler to avoid ambiguity.
     def _gfx9 : DS_Real_Base_vi<op, !cast<DS_Pseudo>(!cast<string>(base_pseudo)#"_gfx9")> {
       let DecoderNamespace = "GFX9";
+      let isCodeGenOnly = 1;
     }
   }
 
