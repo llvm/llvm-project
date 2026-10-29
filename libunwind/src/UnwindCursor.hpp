@@ -1115,6 +1115,10 @@ private:
 #else
     typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
 #endif
+    // For a signal frame, IP points to the faulting instruction, while
+    // parseFDEInstructions executes CFI instructions strictly before upToPC.
+    if (_isSignalFrame)
+      ++pc;
     return DwarfInstructions<A, R>::stepWithDwarf(
         _addressSpace, pc, (pint_t)_info.unwind_info, _registers,
         _isSignalFrame, stage2);
