@@ -501,8 +501,8 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; SDAG-NEXT:    s_mov_b32 s6, 2
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    ; asyncmark(stages=all)
-; SDAG-NEXT:    global_load_dword v8, v[0:1], off
-; SDAG-NEXT:    global_load_dword v9, v[3:4], off
+; SDAG-NEXT:    global_load_dword v12, v[0:1], off
+; SDAG-NEXT:    global_load_dword v15, v[3:4], off
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    ; asyncmark(stages=all)
@@ -562,8 +562,8 @@ define void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspac
 ; GISEL-NEXT:    s_mov_b32 s6, 2
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark(stages=all)
-; GISEL-NEXT:    global_load_dword v8, v[0:1], off
-; GISEL-NEXT:    global_load_dword v9, v[3:4], off
+; GISEL-NEXT:    global_load_dword v12, v[0:1], off
+; GISEL-NEXT:    global_load_dword v15, v[3:4], off
 ; GISEL-NEXT:    s_mov_b64 s[4:5], 0
 ; GISEL-NEXT:    global_load_dword v[0:1], off lds
 ; GISEL-NEXT:    ; asyncmark(stages=all)
