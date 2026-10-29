@@ -509,14 +509,21 @@ Value *directed(IRBuilderBase &B, StringRef Base, ArrayRef<Value *> A,
       Value *AV = B.CreateFSub(S, BV);
       Err = B.CreateFAdd(B.CreateFSub(X, AV), B.CreateFSub(Y, BV));
     }
+    // (on the bits: a GPU that flushes denormals compares a denormal equal
+    // to zero, which would take it for an exact zero)
     auto Safe = [&](Value *V) {
-      Value *Abs = B.CreateUnaryIntrinsic(Intrinsic::fabs, V);
-      Value *InRange =
-          B.CreateAnd(B.CreateFCmpOGE(Abs, ConstantFP::get(ST, 0x1p-70)),
-                      B.CreateFCmpOLT(Abs, ConstantFP::get(ST, 0x1p127)));
-      return B.CreateOr(B.CreateFCmpOEQ(V, ConstantFP::get(ST, 0.0)), InRange);
+      Value *Abs = B.CreateAnd(B.CreateBitCast(V, I32), 0x7fffffff);
+      Value *InRange = B.CreateAnd(
+          B.CreateICmpUGE(Abs, B.getInt32(0x1c800000)), // 2^-70
+          B.CreateICmpULT(Abs, B.getInt32(0x7f000000)));
+      return B.CreateOr(B.CreateICmpEQ(Abs, B.getInt32(0)), InRange);
     };
-    Value *Ok = B.CreateAnd(B.CreateAnd(Safe(X), Safe(Y)), Safe(S));
+    // (S not zero: on a GPU that flushes denormals, a zero S may be a
+    // flushed denormal result; an exact zero takes the slow path, which has
+    // the IEEE sign rules)
+    Value *Ok = B.CreateAnd(
+        B.CreateAnd(B.CreateAnd(Safe(X), Safe(Y)), Safe(S)),
+        B.CreateFCmpONE(S, ConstantFP::get(ST, 0.0)));
     // The step: +1 or -1 on the bits (away from or toward zero), by the
     // signs of the result and of the error.
     Value *SBits = B.CreateBitCast(S, I32);

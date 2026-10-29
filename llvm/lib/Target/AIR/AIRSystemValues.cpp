@@ -580,10 +580,26 @@ static bool airSystemValues(Module &M) {
   // lenient. Empirically required for the older-OS path.
   if (!M.getNamedMetadata("air.compile_options")) {
     auto *OptsMD = M.getOrInsertNamedMetadata("air.compile_options");
-    OptsMD->addOperand(
-        MDNode::get(Ctx, {MDString::get(Ctx, "air.compile.denorms_disable")}));
-    OptsMD->addOperand(
-        MDNode::get(Ctx, {MDString::get(Ctx, "air.compile.fast_math_enable")}));
+    // Denormals kept where the module asks for IEEE f32 (air.ieee-fp32): with
+    // denorms_disable the Metal compiler may treat a denormal as zero even
+    // where the AIR only moves its bits.
+    auto *IEEE = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("air.ieee-fp32"));
+    OptsMD->addOperand(MDNode::get(
+        Ctx, {MDString::get(Ctx, IEEE && !IEEE->isZero()
+                                     ? "air.compile.denorms_enable"
+                                     : "air.compile.denorms_disable")}));
+    // Fast math (no NaNs or infinities, reassociation) unless the module asks
+    // for IEEE math (the module flag air.precise-math, as a front end for a
+    // language without fast math by default sets it): under fast math the
+    // Metal compiler may fold the error-free transformations the AIR
+    // emulations of directed rounding are made of.
+    auto *Precise = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("air.precise-math"));
+    OptsMD->addOperand(MDNode::get(
+        Ctx, {MDString::get(Ctx, Precise && !Precise->isZero()
+                                     ? "air.compile.fast_math_disable"
+                                     : "air.compile.fast_math_enable")}));
     OptsMD->addOperand(MDNode::get(
         Ctx, {MDString::get(Ctx, "air.compile.framebuffer_fetch_enable")}));
     Changed = true;
