@@ -6453,3 +6453,59 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
     }
   }
 }
+
+void VPlanTransforms::applyReductionStartAfterLoop(VPlan &Plan) {
+  // With VF 1, seeding every interleaved part with the identity can
+  // let SLP vectorize the loop, overriding LV's choice not to
+  // vectorize it.
+  if (Plan.hasScalarVFOnly())
+    return;
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+  for (VPRecipeBase &R : LoopRegion->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR || PhiR->isInLoop())
+      continue;
+    // Reductions without an identity have no ReductionStartVector.
+    auto *StartVec = dyn_cast<VPInstruction>(PhiR->getStartValue());
+    if (!StartVec ||
+        StartVec->getOpcode() != VPInstruction::ReductionStartVector)
+      continue;
+    // Constants and arguments are available before the loop, so
+    // applying them after the loop only adds latency.
+    VPValue *Start = StartVec->getOperand(0);
+    auto *IRV = dyn_cast<VPIRValue>(Start);
+    if (IRV && isa<Constant, Argument>(IRV->getValue()))
+      continue;
+    // findComputeReductionResult does not find reductions performed in a
+    // narrower type: their result is computed from a truncate of the backedge
+    // value.
+    VPInstruction *RdxResult = vputils::findComputeReductionResult(PhiR);
+    if (!RdxResult)
+      continue;
+    assert(RdxResult->getScalarType() == Start->getScalarType() &&
+           "Unexpected reduction performed in a narrower type");
+
+    // The start vector may be shared with other reductions. Seed this
+    // one with a new start vector holding the identity.
+    auto *NewStartVec = cast<VPInstruction>(StartVec->clone());
+    NewStartVec->setOperand(0, StartVec->getOperand(1));
+    NewStartVec->insertBefore(StartVec);
+    PhiR->setStartValue(NewStartVec);
+
+    RecurKind RK = PhiR->getRecurrenceKind();
+    unsigned Opc = RecurrenceDescriptor::getOpcode(RK);
+    // The lanes of a sub reduction hold negated sums: add the start value.
+    if (RecurrenceDescriptor::isSubRecurrenceKind(RK))
+      Opc = RK == RecurKind::Sub ? Instruction::Add : Instruction::FAdd;
+    VPIRFlags Flags = RecurrenceDescriptor::isFloatingPointRecurrenceKind(RK)
+                          ? VPIRFlags(PhiR->getFastMathFlagsOrNone())
+                          : VPIRFlags::getDefaultFlags(Opc);
+    VPInstruction *StartOp =
+        VPBuilder::getToInsertAfter(RdxResult).createNaryOp(
+            Opc, {RdxResult, Start}, Flags, RdxResult->getDebugLoc(),
+            "rdx.start");
+    RdxResult->replaceUsesWithIf(StartOp, not_equal_to(StartOp));
+  }
+}

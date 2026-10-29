@@ -454,6 +454,12 @@ public:
 
   bool enableOrderedReductions() const override { return true; }
 
+  /// In-order cores cannot issue past the reduction's dependency chain, so
+  /// applying the start value after the loop only adds an instruction.
+  bool preferReductionStartAfterLoop() const override {
+    return ST->getSchedModel().isOutOfOrder();
+  }
+
   InstructionCost getInterleavedMemoryOpCost(
       unsigned Opcode, Type *VecTy, unsigned Factor, ArrayRef<unsigned> Indices,
       Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,

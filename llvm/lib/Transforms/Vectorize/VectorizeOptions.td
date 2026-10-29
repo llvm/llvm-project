@@ -130,6 +130,8 @@ defm : BoolField<"vectorize-loops", "true",
 // The number of stores in a loop that are allowed to need predication.
 defm : ValueField<"vectorize-num-stores-pred", "unsigned", "1",
   "Max number of stores to be predicated behind an if">;
+defm : OptionalBoolField<"vectorize-reduction-start-after-loop",
+  "Apply reduction start values after the final reduction instead of in the vector accumulator">;
 // TODO: Move size-based thresholds out of legality checking, make cost based
 // decisions instead of hard thresholds.
 defm : ValueField<"vectorize-scev-check-threshold", "unsigned", "16",
