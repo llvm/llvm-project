@@ -1131,18 +1131,18 @@ TEST(KnownBitsTest, TightenDivisionBounds) {
 
   // We try first with Exact set to false to get the result without tighter
   // bounds
-  KnownBits InexactRes = KnownBits::udiv(LHS, RHS, false);
+  KnownBits InexactRes = KnownBits::udiv(LHS, RHS, /*Exact=*/false);
 
   // Lower Bound: 0000 0111 (7)
   // Upper Bound: 0000 1010 (10)
   // Expected Inexact result: 0000 ????
-  // We are only expected to 4 Known bits
+  // Only 4 Known bits are expected
   EXPECT_EQ(InexactRes.Zero, APInt(8, 0xF0)); // 11110000
   EXPECT_EQ(InexactRes.One, APInt(8, 0x00));  // 00000000
   EXPECT_FALSE(InexactRes.hasConflict());
 
   // We set now Exact to true to test the difference
-  KnownBits Res = KnownBits::udiv(LHS, RHS, true);
+  KnownBits Res = KnownBits::udiv(LHS, RHS, /*Exact=*/true);
 
   // Lower Bound: 0000 1000 (8)
   // Upper Bound: 0000 1010 (10)
