@@ -1135,6 +1135,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   init-captures in default member initializers used during aggregate
   initialization. (#GH196469)
 
+- Fixed an assertion failure when direct-initializing an alias to a non-class
+  type with a parenthesized braced-init-list containing an unexpanded parameter
+  pack. (#GH113762)
+
 - Fixed incorrect evaluation of compound requirements when a return-type
   requirement contains a lambda with constrained template parameters.
 
