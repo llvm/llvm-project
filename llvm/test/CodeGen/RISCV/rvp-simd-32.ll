@@ -1775,11 +1775,7 @@ define <2 x i16> @test_pmulh_h(<2 x i16> %a, <2 x i16> %b) {
 define <2 x i16> @test_pmulh_h_insert_element(<2 x i16> %a, <2 x i16> %b) {
 ; RV32-LABEL: test_pmulh_h_insert_element:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    mul.h00 a2, a0, a1
-; RV32-NEXT:    mul.h11 a0, a0, a1
-; RV32-NEXT:    srli a2, a2, 16
-; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    pack a0, a2, a0
+; RV32-NEXT:    pmulh.h a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_pmulh_h_insert_element:
