@@ -11980,6 +11980,18 @@ TEST_F(FormatTest, UnderstandsBinaryOperators) {
   verifyFormat("auto s = sizeof...(Ts) - 1;");
 }
 
+TEST_F(FormatTest, AmpersandWithQualifiedCall) {
+  FormatStyle Style = getLLVMStyle();
+  Style.PointerAlignment = FormatStyle::PAS_Left;
+  Style.DerivePointerAlignment = false;
+
+  verifyFormat("void f() {\n"
+               "  a & b;\n"
+               "  a & c::d();\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, UnderstandsPointersToMembers) {
   verifyFormat("int A::*x;");
   verifyFormat("int (S::*func)(void *);");
