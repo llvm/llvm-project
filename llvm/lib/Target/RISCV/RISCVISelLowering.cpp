@@ -18342,17 +18342,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::riscv_sati:
     case Intrinsic::riscv_usati: {
-      // RV64 has no 32-bit sati; use psati.w on the low word.
+      // RV64 has no 32-bit sati; promote to i64.
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
       unsigned Opc =
           IntNo == Intrinsic::riscv_sati ? RISCVISD::SATI : RISCVISD::USATI;
       SDValue Rs1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue Res = DAG.getNode(
-          Opc, DL, MVT::v2i32, Rs1,
+          Opc, DL, MVT::i64, Rs1,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
     case Intrinsic::riscv_mulhr_i32:
