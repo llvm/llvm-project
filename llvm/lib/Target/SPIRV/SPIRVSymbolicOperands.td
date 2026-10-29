@@ -228,7 +228,7 @@ def EnvOpenCL : Environment<0>;
 def EnvVulkan : Environment<1>;
 
 //===----------------------------------------------------------------------===//
-// Multiclass used to define Extesions enum values and at the same time
+// Multiclass used to define Extension enum values and at the same time
 // SymbolicOperand entries.
 //===----------------------------------------------------------------------===//
 

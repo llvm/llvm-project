@@ -3523,7 +3523,8 @@ callable functions (i.e. those that do not correspond to hardware entry points):
 - On entry to a function the dependency counters (`VMcnt`, `LOADcnt` etc.)
   are in an indeterminate state.
 - On return from a function, all dependency counters must be zero except for
-  `VScnt`/`STOREcnt`.
+  `VScnt`/`STOREcnt` or `VMcnt`/`LOADcnt` if the only outstanding
+  operations are `global_inv` or `buffer_inv`.
 
 For entry points, the ABI conventions are dictated by the hardware behavior at
 wave launch and wave termination:
@@ -5061,10 +5062,14 @@ mapping.
   -
   - *Reserved for future Scalar Architectural Registers.*
 * - 512
-  - VCC_32
+  - VCC\_32\_LO
   - 32
   - Vector Condition Code Register when executing in wavefront 32 mode.
-* - 513-767
+* - 513
+  - VCC\_32\_HI
+  - 32
+  - General purpose high bits of Vector Condition Code Register when executing in wavefront 32 mode.
+* - 514-767
   - *Reserved*
   -
   - *Reserved for future Vector Architectural Registers when executing in wavefront 32 mode.*

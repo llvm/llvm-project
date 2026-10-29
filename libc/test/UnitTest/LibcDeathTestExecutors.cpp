@@ -20,7 +20,7 @@ constexpr unsigned TIMEOUT_MS = 10000;
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
-bool Test::testProcessKilled(cpp::function<void(void)> Func, int Signal,
+bool Test::testProcessKilled(cpp::function_ref<void(void)> Func, int Signal,
                              const char *LHSStr,
                              [[maybe_unused]] const char *RHSStr,
                              internal::Location Loc) {
@@ -65,7 +65,7 @@ bool Test::testProcessKilled(cpp::function<void(void)> Func, int Signal,
   return false;
 }
 
-bool Test::testProcessExits(cpp::function<void(void)> Func, int ExitCode,
+bool Test::testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
                             const char *LHSStr, const char *RHSStr,
                             internal::Location Loc) {
   testutils::ProcessStatus Result =
