@@ -1219,9 +1219,6 @@ public:
         CostBenefitAnalysisEnabled(isCostBenefitAnalysisEnabled()),
         Writer(this) {
     AllowRecursiveCall = *Params.AllowRecursiveCall;
-    // If requested, make the analysis independent of any profile information.
-    if (Params.IgnoreProfile.value_or(false))
-      this->PSI = nullptr;
   }
 
   /// Annotation Writer for instruction details
@@ -2144,9 +2141,7 @@ void InlineCostCallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
     // Callsite hotness and coldness can be determined if sample profile is
     // used (which adds hotness metadata to calls) or if caller's
     // BlockFrequencyInfo is available.
-    BlockFrequencyInfo *CallerBFI =
-        GetBFI && !Params.IgnoreProfile.value_or(false) ? &(GetBFI(*Caller))
-                                                        : nullptr;
+    BlockFrequencyInfo *CallerBFI = GetBFI ? &(GetBFI(*Caller)) : nullptr;
     auto HotCallSiteThreshold = getHotCallSiteThreshold(Call, CallerBFI);
     if (!Caller->hasOptSize() && HotCallSiteThreshold) {
       LLVM_DEBUG(dbgs() << "Hot callsite.\n");
@@ -3292,10 +3287,15 @@ InlineCost llvm::getInlineCost(
                           << "... (caller:" << Call.getCaller()->getName()
                           << ")\n");
 
-  InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
-                            /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache);
+  // If requested, make the analysis independent of any profile information by
+  // not providing the profile summary or block frequency info.
+  const bool IgnoreProfile = Params.IgnoreProfile.value_or(false);
+  function_ref<BlockFrequencyInfo &(Function &)> GetBFIForAnalysis =
+      IgnoreProfile ? nullptr : GetBFI;
+  InlineCostCallAnalyzer CA(
+      *Callee, Call, Params, CalleeTTI, GetAssumptionCache, GetBFIForAnalysis,
+      GetTLI, IgnoreProfile ? nullptr : PSI, ORE,
+      /*BoostIndirect=*/true, /*IgnoreThreshold=*/false, GetEphValuesCache);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());

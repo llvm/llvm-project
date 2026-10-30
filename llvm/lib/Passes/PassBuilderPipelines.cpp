@@ -736,8 +736,7 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
   InlineParams IP;
 
   IP.DefaultThreshold = Opts.preinline_threshold;
-  if (IgnoreProfile)
-    IP.IgnoreProfile = true;
+  IP.IgnoreProfile = IgnoreProfile;
 
   // FIXME: The hint threshold has the same value used by the regular inliner
   // when not optimzing for size. This should probably be lowered after

@@ -30,6 +30,15 @@
 ; RUN:   -pass-remarks=inline -pass-remarks-missed=inline -S 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes=CHECK,IGNORE_PROF
 
+;; Ensure that forcing the inliner cost-benefit analysis, which requires the
+;; profile summary, works when ignoring the profile.
+; RUN: opt < %t/t.ll -passes='thinlto-pre-link<O2>' \
+; RUN:   -pgo-kind=pgo-sample-use-pipeline -profile-file=%t/sample.prof \
+; RUN:   -memory-profile-file=%t/memprof.memprofdata \
+; RUN:   -inline-enable-cost-benefit-analysis=true \
+; RUN:   -pass-remarks=inline -pass-remarks-missed=inline -S 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,IGNORE_PROF
+
 ; RUN: opt < %t/t.ll -passes='thinlto-pre-link<O2>' \
 ; RUN:   -pgo-kind=pgo-sample-use-pipeline -profile-file=%t/sample.prof \
 ; RUN:   -memory-profile-file=%t/memprof.memprofdata \
