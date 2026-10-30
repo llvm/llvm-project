@@ -40,8 +40,13 @@
 # WARN: warning: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # WARN: error: undefined symbol: _helper
 
-## ld64 accepts some other markers in static links, such as kernels.
+## Static links, like ld64's, also take unversioned and kernel objects, but no
+## other markers.
 # RUN: %no-arg-lld -arch arm64e -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/kernel.o -o %t/static
+# RUN: %no-arg-lld -arch arm64e -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/old.o -o %t/static
+# RUN: not %no-arg-lld -arch arm64e -arch_errors_fatal -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/v1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=V1
+# RUN: not %no-arg-lld -arch arm64e -arch_errors_fatal -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/kernel-v1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
+# RUN: not %no-arg-lld -arch arm64e -arch_errors_fatal -platform_version ios 17.0 17.0 -static -e _main %t/main.o %t/v2.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 #--- main.s
 .globl _main
