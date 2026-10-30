@@ -1161,6 +1161,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// resident on the device simultaneously.
   virtual uint64_t getHardwareParallelism() const { return 0; }
 
+  /// Get the maximum size of a synchronous host-to-device transfer that may be
+  /// done by the host writing the device memory directly, or zero if the
+  /// device does not support direct writes.
+  virtual uint64_t getMaxDirectWriteSize() const { return 0; }
+
   /// Get the RPC server running on this device.
   RPCServerTy *getRPCServer() const { return RPCServer; }
 

@@ -2890,6 +2890,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return HardwareParallelism;
   }
 
+  /// See allowsDirectWrite() for the condition a transfer must meet in
+  /// addition.
+  uint64_t getMaxDirectWriteSize() const override {
+    return HostWritesDeviceMemory ? MaxDirectWriteSize : 0;
+  }
+
   /// We want to set up the RPC server for host services to the GPU if it is
   /// available.
   bool shouldSetupRPCServer() const override { return true; }
@@ -3074,9 +3080,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Whether a transfer of \p Size bytes should be done via direct H2D
   /// transfer.
   bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
-    // A first heuristic, tune as new insights arise.
-    static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
-    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
+    return Size > 0 && uint64_t(Size) <= getMaxDirectWriteSize() &&
            hsa_utils::isHostWritable(Agent, Ptr, Size);
   }
 
@@ -3985,6 +3989,10 @@ private:
   /// Whether the host can map this device's memory (large BAR) and write small
   /// transfers into it directly.
   bool HostWritesDeviceMemory = false;
+
+  /// The maximum size of a direct write. A first heuristic, tune as new
+  /// insights arise.
+  static constexpr uint64_t MaxDirectWriteSize = 2 * 4096;
 
   /// Whether the host reaches this device's memory over XGMI rather than PCIe.
   bool HostLinkIsXGMI = false;

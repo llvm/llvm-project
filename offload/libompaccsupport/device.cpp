@@ -160,6 +160,8 @@ llvm::Error DeviceTy::init() {
                         &Backend))
     Backend = OL_PLATFORM_BACKEND_UNKNOWN;
 
+  MaxDirectWriteSize = getInfo<uint64_t>(OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE);
+
   getInfoString(OL_DEVICE_INFO_UID, Uid);
   if (Uid.empty())
     ODBG(ODT_Init) << "Failed to get UID for device " << DeviceID;
@@ -509,6 +511,17 @@ int32_t DeviceTy::submitDataSync(void *TgtPtrBegin, void *HstPtrBegin,
                         Entry, HDTTMapPtr, Loc, Name);
 }
 
+int32_t DeviceTy::submitDataIndependently(void *TgtPtrBegin, void *HstPtrBegin,
+                                          int64_t Size, AsyncInfoTy &AsyncInfo,
+                                          const char *Name) {
+  if (Size > 0 && uint64_t(Size) <= MaxDirectWriteSize)
+    return submitDataSync(TgtPtrBegin, HstPtrBegin, Size, /*Entry=*/nullptr,
+                          /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr, Name);
+  return submitData(TgtPtrBegin, HstPtrBegin, Size, AsyncInfo,
+                    /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr, /*Loc=*/nullptr,
+                    Name);
+}
+
 int32_t DeviceTy::submitDataImpl(void *TgtPtrBegin, void *HstPtrBegin,
                                  int64_t Size, ol_queue_handle_t Queue,
                                  HostDataToTargetTy *Entry,
@@ -832,20 +845,9 @@ getKernelLaunchEnvironment(DeviceTy &Device, uint32_t OmpABIVersion,
     freeAfterSynchronization(Device, AsyncInfo, *ReductionAllocOrErr);
   }
 
-  // The allocation is fresh, so no work pending on the queue accesses it and
-  // the copy can bypass the queue. Without a queue, the AMDGPU plugin may write
-  // the memory directly. Other backends copy on the queue.
-  int32_t Ret =
-      Device.getBackend() == OL_PLATFORM_BACKEND_AMDGPU
-          ? Device.submitDataSync(*AllocOrErr, &LocalKLE,
-                                  sizeof(KernelLaunchEnvironmentTy),
-                                  /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                                  /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv")
-          : Device.submitData(*AllocOrErr, &LocalKLE,
-                              sizeof(KernelLaunchEnvironmentTy), AsyncInfo,
-                              /*Entry=*/nullptr, /*HDTTMapPtr=*/nullptr,
-                              /*Loc=*/nullptr, /*Name=*/"KernelLaunchEnv");
-  if (Ret)
+  if (Device.submitDataToFreshMemory(*AllocOrErr, &LocalKLE,
+                                     sizeof(KernelLaunchEnvironmentTy),
+                                     AsyncInfo, "KernelLaunchEnv"))
     return createError(ErrorCode::BackendFailure,
                        "failed to copy the kernel launch environment to "
                        "device %d",
