@@ -16,6 +16,15 @@ define amdgpu_ps void @tensor_load_to_lds_d4(<4 x i32> inreg %D0, <8 x i32> inre
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s20, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_cmp_eq_u32 s20, 0
+; GFX1250-NEXT:    s_cselect_b32 s20, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s21, s4, 0xffff
+; GFX1250-NEXT:    s_and_b32 s20, s20, s4
+; GFX1250-NEXT:    s_cmp_eq_u32 s21, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s4, s20, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[16:19]
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, <8 x i32> zeroinitializer, i32 0)
@@ -29,22 +38,29 @@ define amdgpu_ps void @tensor_load_to_lds_d4_vector(<4 x i32> %D0, <8 x i32> %D1
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-NEXT:    v_nop
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1250-SDAG-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 21, 4)
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s2, v6
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 0xffff0000, -2
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s3, v7
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v21, s0, v4
+; GFX1250-SDAG-NEXT:    v_and_b32_e32 v20, 0xffff, v4
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s8, v0
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s9, v1
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s10, v2
+; GFX1250-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0xffff, v20
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s11, v3
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s5, v9
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s6, v10
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s7, v11
+; GFX1250-SDAG-NEXT:    v_cndmask_b32_e32 v4, v4, v21, vcc_lo
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s12, v12
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s13, v13
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s14, v14
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s15, v15
+; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s16, v16
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s17, v17
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s18, v18
@@ -59,22 +75,29 @@ define amdgpu_ps void @tensor_load_to_lds_d4_vector(<4 x i32> %D0, <8 x i32> %D1
 ; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-GISEL-NEXT:    v_nop
 ; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 21, 4)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s9, v1
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, 0xffff0000, -2
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s10, v2
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v21, s0, v4
+; GFX1250-GISEL-NEXT:    v_and_b32_e32 v20, 0xffff, v4
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s11, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v6
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v7
+; GFX1250-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0xffff, v20
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v8
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v9
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v10
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v11
+; GFX1250-GISEL-NEXT:    v_cndmask_b32_e32 v4, v4, v21, vcc_lo
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s12, v12
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s13, v13
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s14, v14
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s15, v15
+; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s16, v16
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s17, v17
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s18, v18
@@ -93,6 +116,15 @@ define amdgpu_ps void @tensor_load_to_lds_d2(<4 x i32> inreg %D0, <8 x i32> inre
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s12, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_cmp_eq_u32 s12, 0
+; GFX1250-NEXT:    s_cselect_b32 s12, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s13, s4, 0xffff
+; GFX1250-NEXT:    s_and_b32 s12, s12, s4
+; GFX1250-NEXT:    s_cmp_eq_u32 s13, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s4, s12, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11] th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 27)
@@ -100,49 +132,34 @@ define amdgpu_ps void @tensor_load_to_lds_d2(<4 x i32> inreg %D0, <8 x i32> inre
 }
 
 define amdgpu_ps void @tensor_load_to_lds_d2_vector(<4 x i32> %D0, <8 x i32> %D1) {
-; GFX1250-SDAG-LABEL: tensor_load_to_lds_d2_vector:
-; GFX1250-SDAG:       ; %bb.0:
-; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-SDAG-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-SDAG-NEXT:    v_nop
-; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s8, v0
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s9, v1
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s10, v2
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s11, v3
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s1, v5
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s2, v6
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s3, v7
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s4, v8
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s5, v9
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s6, v10
-; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s7, v11
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[8:11], s[0:7] th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; GFX1250-SDAG-NEXT:    s_endpgm
-;
-; GFX1250-GISEL-LABEL: tensor_load_to_lds_d2_vector:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s8, v0
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s9, v1
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s10, v2
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s11, v3
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v6
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v7
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s4, v8
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s5, v9
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s6, v10
-; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s7, v11
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[8:11], s[0:7] th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; GFX1250-GISEL-NEXT:    s_endpgm
+; GFX1250-LABEL: tensor_load_to_lds_d2_vector:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
+; GFX1250-NEXT:    v_nop
+; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    v_readfirstlane_b32 s8, v0
+; GFX1250-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-NEXT:    v_readfirstlane_b32 s9, v1
+; GFX1250-NEXT:    s_cselect_b32 s0, 0xffff0000, -2
+; GFX1250-NEXT:    v_readfirstlane_b32 s10, v2
+; GFX1250-NEXT:    v_and_b32_e32 v13, s0, v4
+; GFX1250-NEXT:    v_and_b32_e32 v12, 0xffff, v4
+; GFX1250-NEXT:    v_readfirstlane_b32 s11, v3
+; GFX1250-NEXT:    v_readfirstlane_b32 s1, v5
+; GFX1250-NEXT:    v_readfirstlane_b32 s2, v6
+; GFX1250-NEXT:    v_readfirstlane_b32 s3, v7
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0xffff, v12
+; GFX1250-NEXT:    v_readfirstlane_b32 s4, v8
+; GFX1250-NEXT:    v_readfirstlane_b32 s5, v9
+; GFX1250-NEXT:    v_readfirstlane_b32 s6, v10
+; GFX1250-NEXT:    v_readfirstlane_b32 s7, v11
+; GFX1250-NEXT:    v_cndmask_b32_e32 v4, v4, v13, vcc_lo
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1250-NEXT:    tensor_load_to_lds s[8:11], s[0:7] th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 27)
   ret void
 }
@@ -298,6 +315,15 @@ define amdgpu_ps void @tensor_load_to_lds_d5(<4 x i32> inreg %D0, <8 x i32> inre
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s20, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_cmp_eq_u32 s20, 0
+; GFX1250-NEXT:    s_cselect_b32 s20, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s21, s4, 0xffff
+; GFX1250-NEXT:    s_and_b32 s20, s20, s4
+; GFX1250-NEXT:    s_cmp_eq_u32 s21, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s4, s20, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11], s[12:15], s[16:19]
 ; GFX1250-NEXT:    s_endpgm
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %D0, <8 x i32> %D1, <4 x i32> %D2, <4 x i32> %D3, <8 x i32> %D4, i32 0)
@@ -330,6 +356,15 @@ define amdgpu_ps void @tensor_load_to_lds_with_asyncmark(<4 x i32> inreg %D0, <8
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s12, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_cmp_eq_u32 s12, 0
+; GFX1250-NEXT:    s_cselect_b32 s12, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s13, s4, 0xffff
+; GFX1250-NEXT:    s_and_b32 s12, s12, s4
+; GFX1250-NEXT:    s_cmp_eq_u32 s13, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s4, s12, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(0)
@@ -369,8 +404,21 @@ define amdgpu_ps void @tensor_load_to_lds_two_asyncmarks(<4 x i32> inreg %D0a, <
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s24, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_cmp_eq_u32 s24, 0
+; GFX1250-NEXT:    s_cselect_b32 s24, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s25, s4, 0xffff
+; GFX1250-NEXT:    s_and_b32 s26, s24, s4
+; GFX1250-NEXT:    s_cmp_eq_u32 s25, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s4, s26, s4
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
+; GFX1250-NEXT:    s_and_b32 s0, s16, 0xffff
+; GFX1250-NEXT:    s_and_b32 s1, s24, s16
+; GFX1250-NEXT:    s_cmp_eq_u32 s0, 0xffff
 ; GFX1250-NEXT:    ; asyncmark
+; GFX1250-NEXT:    s_cselect_b32 s16, s1, s16
 ; GFX1250-NEXT:    s_wait_tensorcnt 0xa
 ; GFX1250-NEXT:    tensor_load_to_lds s[12:15], s[16:23]
 ; GFX1250-NEXT:    ; asyncmark
@@ -413,7 +461,15 @@ define void @tensor_and_async_lds_with_asyncmark(<4 x i32> inreg %D0, <8 x i32> 
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
 ; GFX1250-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
+; GFX1250-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s4, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s5, s16, 0xffff
+; GFX1250-NEXT:    s_and_b32 s4, s4, s16
+; GFX1250-NEXT:    s_cmp_eq_u32 s5, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s16, s4, s16
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; GFX1250-NEXT:    ; asyncmark
 ; GFX1250-NEXT:    ; wait_asyncmark(0)
@@ -444,19 +500,32 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s7, s21
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s6, s20
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s5, s19
-; GFX1250-SDAG-NEXT:    s_mov_b32 s4, s18
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s15, s17
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s14, s16
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s13, s3
 ; GFX1250-SDAG-NEXT:    s_mov_b32 s12, s2
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-SDAG-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 21, 4)
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_3
 ; GFX1250-SDAG-NEXT:  ; %bb.1: ; %t1
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s2, 0xffff0000, -2
+; GFX1250-SDAG-NEXT:    s_and_b32 s3, s18, 0xffff
+; GFX1250-SDAG-NEXT:    s_and_b32 s2, s2, s18
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s3, 0xffff
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s4, s2, s18
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s1, 0
 ; GFX1250-SDAG-NEXT:    ; asyncmark
 ; GFX1250-SDAG-NEXT:    s_cbranch_scc1 .LBB14_4
 ; GFX1250-SDAG-NEXT:  .LBB14_2: ; %t2
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, 0xffff0000, -2
+; GFX1250-SDAG-NEXT:    s_and_b32 s1, s18, 0xffff
+; GFX1250-SDAG-NEXT:    s_and_b32 s0, s0, s18
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s1, 0xffff
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s4, s0, s18
 ; GFX1250-SDAG-NEXT:    s_wait_tensorcnt 0xa
 ; GFX1250-SDAG-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-SDAG-NEXT:    ; asyncmark
@@ -485,7 +554,6 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s13, s3
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s14, s16
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s15, s17
-; GFX1250-GISEL-NEXT:    s_mov_b32 s4, s18
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s5, s19
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s6, s20
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s7, s21
@@ -494,13 +562,27 @@ define void @tensor_or_async_lds_diamonds(i32 inreg %cond1, i32 inreg %cond2, <4
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s10, s24
 ; GFX1250-GISEL-NEXT:    s_mov_b32 s11, s25
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_IB_STS2, 21, 4)
 ; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_3
 ; GFX1250-GISEL-NEXT:  ; %bb.1: ; %t1
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s2, 0xffff0000, -2
+; GFX1250-GISEL-NEXT:    s_and_b32 s3, s18, 0xffff
+; GFX1250-GISEL-NEXT:    s_and_b32 s2, s2, s18
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s3, 0xffff
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s4, s2, s18
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s1, 0
 ; GFX1250-GISEL-NEXT:    ; asyncmark
 ; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB14_4
 ; GFX1250-GISEL-NEXT:  .LBB14_2: ; %t2
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s0, 0
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s0, 0xffff0000, -2
+; GFX1250-GISEL-NEXT:    s_and_b32 s1, s18, 0xffff
+; GFX1250-GISEL-NEXT:    s_and_b32 s0, s0, s18
+; GFX1250-GISEL-NEXT:    s_cmp_eq_u32 s1, 0xffff
+; GFX1250-GISEL-NEXT:    s_cselect_b32 s4, s0, s18
 ; GFX1250-GISEL-NEXT:    s_wait_tensorcnt 0xa
 ; GFX1250-GISEL-NEXT:    tensor_load_to_lds s[12:15], s[4:11]
 ; GFX1250-GISEL-NEXT:    ; asyncmark
