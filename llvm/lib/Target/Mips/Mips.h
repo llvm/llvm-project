@@ -15,6 +15,12 @@
 #define LLVM_LIB_TARGET_MIPS_MIPS_H
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define IsMFLOMFHI(instr)                                                      \
@@ -38,29 +44,104 @@ class MipsTargetMachine;
 class ModulePass;
 class PassRegistry;
 
-ModulePass *createMipsOs16Pass();
-ModulePass *createMips16HardFloatPass();
+class Mips16ISelDAGPass : public SelectionDAGISelPass {
+public:
+  Mips16ISelDAGPass(MipsTargetMachine &TM, CodeGenOptLevel OptLevel);
+  static StringRef name() { return "Mips16ISelDAGPass"; }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    StringRef ClassName = name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << PassName;
+  }
+};
 
-FunctionPass *createMipsOptimizePICCallPass();
+FunctionPass *createMips16ISelDAGLegacyPass(MipsTargetMachine &TM,
+                                            CodeGenOptLevel OptLevel);
+
+class MipsOs16Pass : public RequiredPassInfoMixin<MipsOs16Pass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createMipsOs16LegacyPass();
+
+class Mips16HardFloatPass : public RequiredPassInfoMixin<Mips16HardFloatPass> {
+  MipsTargetMachine &TM;
+
+public:
+  Mips16HardFloatPass(MipsTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createMips16HardFloatLegacyPass();
+
+class MipsSEISelDAGPass : public SelectionDAGISelPass {
+public:
+  MipsSEISelDAGPass(MipsTargetMachine &TM, CodeGenOptLevel OptLevel);
+  static StringRef name() { return "MipsSEISelDAGPass"; }
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName) {
+    StringRef ClassName = name();
+    auto PassName = MapClassName2PassName(ClassName);
+    OS << PassName;
+  }
+};
+
+FunctionPass *createMipsSEISelDAGLegacyPass(MipsTargetMachine &TM,
+                                            CodeGenOptLevel OptLevel);
+
+class MipsOptimizePICCallPass
+    : public RequiredPassInfoMixin<MipsOptimizePICCallPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsOptimizePICCallLegacyPass();
 FunctionPass *createMipsDelaySlotFillerPass();
 FunctionPass *createMipsBranchExpansion();
 FunctionPass *createMipsConstantIslandPass();
-FunctionPass *createMicroMipsSizeReducePass();
-FunctionPass *createMipsExpandPseudoPass();
+
+class MipsMicroSizeReducePass
+    : public RequiredPassInfoMixin<MipsMicroSizeReducePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsMicroSizeReduceLegacyPass();
+
+class MipsExpandPseudoPass
+    : public RequiredPassInfoMixin<MipsExpandPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsExpandPseudoLegacyPass();
 FunctionPass *createMipsPreLegalizeCombiner();
 FunctionPass *createMipsPostLegalizeCombiner(bool IsOptNone);
-FunctionPass *createMipsMulMulBugPass();
+
+class MipsMulMulBugFixPass
+    : public RequiredPassInfoMixin<MipsMulMulBugFixPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsMulMulBugFixLegacyPass();
 
 InstructionSelector *
 createMipsInstructionSelector(const MipsTargetMachine &, const MipsSubtarget &,
                               const MipsRegisterBankInfo &);
 
-void initializeMicroMipsSizeReducePass(PassRegistry &);
+void initializeMipsMicroSizeReduceLegacyPass(PassRegistry &);
 void initializeMipsAsmPrinterPass(PassRegistry &);
 void initializeMipsBranchExpansionPass(PassRegistry &);
 void initializeMipsDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeMipsDelaySlotFillerPass(PassRegistry &);
-void initializeMipsMulMulBugFixPass(PassRegistry &);
+void initializeMipsMulMulBugFixLegacyPass(PassRegistry &);
 void initializeMipsPostLegalizerCombinerPass(PassRegistry &);
 void initializeMipsPreLegalizerCombinerPass(PassRegistry &);
 } // namespace llvm
