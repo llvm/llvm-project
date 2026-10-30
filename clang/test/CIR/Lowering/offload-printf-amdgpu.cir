@@ -1,4 +1,4 @@
-// RUN: cir-translate %s -cir-to-llvmir --target amdgcn-amd-amdhsa --disable-cc-lowering --split-input-file -o - \
+// RUN: cir-translate %s -cir-to-llvmir --target amdgpu-amd-amdhsa --disable-cc-lowering --split-input-file -o - \
 // RUN:   | FileCheck %s --check-prefixes=HOSTCALL,BUFFERED
 
 !s32i = !cir.int<s, 32>
