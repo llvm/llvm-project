@@ -988,7 +988,8 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
     for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n")) {
       if (Arch.empty())
         continue;
-      // SYCL only supports Intel devices, so skip NVIDIA and AMD GPUs.
+      // Skip NVIDIA and AMD GPUs, since clang does not support SYCL offloading
+      // to them.
       if (Kind == Action::OFK_SYCL) {
         OffloadArch ID = getOffloadArchIgnoringFeatures(Arch);
         if (ID.isNVPTX() || ID.isAMDGPU() || ID.isAMDGCNSPIRV())
