@@ -566,7 +566,7 @@ class ConstraintSatisfactionChecker {
 
   // This is for TemplateInstantiator to not instantiate the same template
   // parameter mapping many times, in order to improve substitution performance.
-  llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+  llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc>
       CachedTemplateArgs;
 
 private:
@@ -615,8 +615,8 @@ private:
                                             PreviousDetailsSize,
                                         Satisfaction.Details.end());
       Cache.SubstExpr = E;
-      Checker.S.UnsubstitutedConstraintSatisfactionCache.insert(
-          {ID, std::move(Cache)});
+      Checker.S.UnsubstitutedConstraintSatisfactionCache.try_emplace(
+          ID.Intern(Checker.S.BumpAlloc), std::move(Cache));
       return E;
     }
   };
@@ -1341,7 +1341,8 @@ bool Sema::CheckConstraintSatisfaction(
   // Else we can simply add this satisfaction to the list.
   OutSatisfaction = *Satisfaction;
   // Note that entries of SatisfactionCache are deleted in Sema's destructor.
-  auto [Iter, Inserted] = SatisfactionCache.insert({ID, nullptr});
+  auto [Iter, Inserted] =
+      SatisfactionCache.try_emplace(ID.Intern(BumpAlloc), nullptr);
   if (Inserted)
     Iter->second = Satisfaction.release();
   return false;

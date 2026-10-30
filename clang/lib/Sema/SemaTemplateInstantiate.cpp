@@ -1324,7 +1324,7 @@ namespace {
     bool BailOutOnIncomplete;
 
     std::optional<llvm::FoldingSetNodeID> TemplateArgsHashValue;
-    llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc>
+    llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc>
         *CurrentCachedTemplateArgs = nullptr;
 
     bool instantiateMissingDeclsToScopeForConcepts(Decl *D);
@@ -1360,7 +1360,7 @@ namespace {
     TemplateInstantiator(
         ForParameterMappingSubstitution_t, Sema &SemaRef, SourceLocation Loc,
         const MultiLevelTemplateArgumentList &TemplateArgs,
-        llvm::DenseMap<llvm::FoldingSetNodeID, TemplateArgumentLoc> *Cache)
+        llvm::DenseMap<llvm::FoldingSetNodeIDRef, TemplateArgumentLoc> *Cache)
         : inherited(SemaRef), TemplateArgs(TemplateArgs), Loc(Loc),
           EvaluateLambdaConstraint(true), BailOutOnIncomplete(false),
           CurrentCachedTemplateArgs(Cache) {
@@ -1652,7 +1652,7 @@ namespace {
         }
         bool Ret = inherited::TransformTemplateArgument(Input, Output, Uneval);
         if (!Ret)
-          Cache->insert({ID, Output});
+          Cache->try_emplace(ID.Intern(SemaRef.BumpAlloc), Output);
         return Ret;
       }
       switch (Arg.getKind()) {
