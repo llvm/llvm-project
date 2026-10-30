@@ -138,6 +138,7 @@ static int64_t buildAllocInfos(
 /// through `arith.select`, `scf.if`/`scf.for` results, `cf` branches, or view
 /// ops are handled uniformly. An allocation is eligible when:
 ///   - it has a static shape (dynamic shapes are silently skipped), and
+///   - its element type is an integer or float, and
 ///   - it lives directly in the function's entry block (allocs nested in a
 ///     region are skipped for now), and
 ///   - every dealloc that may free it is anchored in that same entry block --
@@ -153,8 +154,7 @@ static int64_t buildAllocInfos(
 static LogicalResult
 collectCandidates(FunctionOpInterface funcOp,
                   const BufferViewFlowAnalysis &analysis,
-                  llvm::Statistic &numSkipDynamic,
-                  llvm::Statistic &numSkipNested, llvm::Statistic &numEligible,
+                  llvm::Statistic &numSkipped, llvm::Statistic &numEligible,
                   SmallVector<AllocationCandidate> &candidates) {
   // All candidates are planned relative to the function's entry block.
   if (funcOp.getFunctionBody().empty())
@@ -165,14 +165,20 @@ collectCandidates(FunctionOpInterface funcOp,
   funcOp->walk([&](memref::AllocOp allocOp) -> WalkResult {
     MemRefType memrefType = allocOp.getType();
     if (!memrefType.hasStaticShape()) {
-      ++numSkipDynamic;
+      ++numSkipped;
       return WalkResult::advance();
     }
 
     // Only plan allocs that live directly in the entry block. Allocs nested in
     // a region (loop/conditional body) are skipped for now.
     if (allocOp->getBlock() != planBlock) {
-      ++numSkipNested;
+      ++numSkipped;
+      return WalkResult::advance();
+    }
+
+    // computeSizeInBytes only supports integer and floating-point elements.
+    if (!memrefType.getElementType().isIntOrFloat()) {
+      ++numSkipped;
       return WalkResult::advance();
     }
 
@@ -198,7 +204,7 @@ collectCandidates(FunctionOpInterface funcOp,
       // candidate; otherwise erasing it during the rewrite is unsafe.
       for (memref::AllocOp freed : findFreedAllocs(d, analysis)) {
         if (freed->getBlock() != planBlock) {
-          ++numSkipNested;
+          ++numSkipped;
           return WalkResult::advance();
         }
       }
@@ -322,8 +328,8 @@ void StaticMemoryPlannerAnalysisPass::runOnOperation() {
   // and view ops so we can find deallocs and freed allocs uniformly.
   BufferViewFlowAnalysis analysis(funcOp);
   SmallVector<AllocationCandidate> candidates;
-  if (failed(collectCandidates(funcOp, analysis, numSkipDynamic, numSkipNested,
-                               numEligible, candidates)))
+  if (failed(collectCandidates(funcOp, analysis, numSkipped, numEligible,
+                               candidates)))
     return signalPassFailure();
 
   if (candidates.empty())
