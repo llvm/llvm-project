@@ -174,15 +174,15 @@ exit:
 ; considering register pressure.
 define void @spills_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n, i32 %m) {
 ; CHECK-NOPRESSURE-LABEL: 'spills_profitable'
-; CHECK-NOPRESSURE:  Cost for VF 2: 1540 (Estimated cost per lane: 770)
-; CHECK-NOPRESSURE:  Cost for VF 4: 43 (Estimated cost per lane: 10.8)
+; CHECK-NOPRESSURE:  Cost for VF 2: 1532 (Estimated cost per lane: 766)
+; CHECK-NOPRESSURE:  Cost for VF 4: 39 (Estimated cost per lane: 9.75)
 ; CHECK-NOPRESSURE:  LV: Selecting VF: 4.
 ;
 ; CHECK-PRESSURE-LABEL: 'spills_profitable'
 ; CHECK-PRESSURE:  LV(REG): Cost of 4 from 2 spills of Generic::ScalarRC
-; CHECK-PRESSURE:  Cost for VF 2: 1544 (Estimated cost per lane: 772)
+; CHECK-PRESSURE:  Cost for VF 2: 1536 (Estimated cost per lane: 768)
 ; CHECK-PRESSURE:  LV(REG): Cost of 6 from 3 spills of Generic::VectorRC
-; CHECK-PRESSURE:  Cost for VF 4: 49 (Estimated cost per lane: 12.3)
+; CHECK-PRESSURE:  Cost for VF 4: 45 (Estimated cost per lane: 11.3)
 ; CHECK-PRESSURE:  LV: Selecting VF: 4.
 ;
 entry:
