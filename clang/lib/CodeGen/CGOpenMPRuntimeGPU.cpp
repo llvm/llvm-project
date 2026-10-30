@@ -706,6 +706,44 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
+static const OMPLoopDirective *
+checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
+  const LangOptions &LangOpts = Ctx.getLangOpts();
+  if (!LangOpts.OpenMPTeamSubscription || !LangOpts.OpenMPThreadSubscription)
+    return nullptr;
+
+  OpenMPDirectiveKind DKind = D.getDirectiveKind();
+  if (DKind != OMPD_target_teams_distribute_parallel_for &&
+      DKind != OMPD_target_teams_distribute_parallel_for_simd)
+    return nullptr;
+
+  const auto &LD = cast<OMPLoopDirective>(D);
+  // Do not filter out 'ordered' since Sema rejects it on these directives.
+  if (LD.getLoopsNumber() != 1 || LD.hasClausesOfKind<OMPNumTeamsClause>() ||
+      LD.hasClausesOfKind<OMPReductionClause>() ||
+      LD.hasClausesOfKind<OMPLastprivateClause>() ||
+      LD.hasClausesOfKind<OMPLinearClause>() ||
+      LD.getSingleClause<OMPScheduleClause>() ||
+      LD.getSingleClause<OMPDistScheduleClause>())
+    return nullptr;
+
+  for (const auto *C : LD.getClausesOfKind<OMPIfClause>()) {
+    if (C->getNameModifier() != OMPD_unknown &&
+        C->getNameModifier() != OMPD_parallel &&
+        C->getNameModifier() != OMPD_teams)
+      continue;
+    bool CondVal;
+    if (!C->getCondition()->EvaluateAsBooleanCondition(CondVal, Ctx) ||
+        !CondVal)
+      return nullptr;
+  }
+
+  if (const auto *TTD =
+          dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(&LD))
+    return TTD->hasCancel() ? nullptr : &LD;
+  return &LD;
+}
+
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
                                              StringRef ParentName,
                                              llvm::Function *&OutlinedFn,
@@ -766,6 +804,13 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
   Attrs.ExecFlags =
       IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
              : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+
+  NoLoopDirective =
+      IsSPMD ? checkAndGetNoLoopDirective(CGM.getContext(), D) : nullptr;
+  if (NoLoopDirective)
+    Attrs.ExecFlags =
+        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
 
   CGBuilderTy &Bld = CGF.Builder;
