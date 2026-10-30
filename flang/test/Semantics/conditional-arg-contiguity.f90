@@ -31,8 +31,8 @@ module m
 
   subroutine test_last_discontiguous(flag)
     logical, intent(in) :: flag
-    real :: a(10)
-    real, volatile :: b(10)
+    real, volatile :: a(10), b(10)
+    ! Only the discontiguous consequent-arg needs a temporary.
     !ERROR: ASYNCHRONOUS or VOLATILE actual argument that is not simply contiguous may not be associated with a contiguous ASYNCHRONOUS or VOLATILE dummy argument 'x='
     call volatile_contiguous((flag ? a : b(::2)))
   end subroutine

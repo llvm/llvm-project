@@ -1768,6 +1768,8 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     // Exception: a data-ref that goes through a pointer component defines the
     // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
     // p5), so copy-out is still needed in that case.
+    // TODO: Check each consequent-arg of a conditional argument the same way.
+    // It affects only lowering, which can't handle conditional arguments yet.
     if (const auto dataRef{ExtractDataRef(*actual)}) {
       const Symbol &firstSym{dataRef->GetFirstSymbol()};
       if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&

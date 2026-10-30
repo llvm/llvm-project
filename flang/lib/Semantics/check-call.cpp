@@ -913,6 +913,14 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       evaluate::ActualArgNeedsCopy(&arg, &dummyArg, foldingContext,
           /*forCopyOut=*/true)
           .value_or(false)};
+  if (copyOutNeeded && arg.isConditionalArg()) {
+    // The checks below apply to this consequent-arg alone.
+    evaluate::ActualArgument consequentArg{
+        evaluate::Expr<evaluate::SomeType>{actual}};
+    copyOutNeeded = evaluate::ActualArgNeedsCopy(
+        &consequentArg, &dummyArg, foldingContext, /*forCopyOut=*/true)
+                        .value_or(false);
+  }
   if (copyOutNeeded && !dummyIsValue &&
       (dummyIsAsynchronous || dummyIsVolatile)) {
     if (actualIsAsynchronous || actualIsVolatile) {
