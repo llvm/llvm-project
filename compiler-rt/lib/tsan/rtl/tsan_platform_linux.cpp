@@ -603,8 +603,6 @@ NOINLINE static void ProbeLongJmpSpDeep(uptr* sp, uptr* mangled_sp) {
 // Probe two stack depths to identify identity, XOR, or XOR-and-rotate without
 // depending on private guard locations.
 static void InitializeLongjmpSpMangling() {
-  if (!REAL(_setjmp))
-    return;
   uptr sp1, m1, sp2, m2;
   ProbeLongJmpSp(&sp1, &m1);
   ProbeLongJmpSpDeep(&sp2, &m2);
