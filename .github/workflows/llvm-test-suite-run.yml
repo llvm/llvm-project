@@ -99,7 +99,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y tcl python3-venv
+          sudo apt-get install -y tcl python3-venv linux-perf
 
       - name: Install Python dependencies
         run: |
@@ -113,6 +113,7 @@ jobs:
           ninja --version
           "${CC:-cc}" --version
           python3 --version
+          which perf && perf --version
 
       - name: Build and install Clang at ${{ inputs.commit }}
         run: |
@@ -158,7 +159,6 @@ jobs:
             --cc "${RUNNER_TEMP}/llvm-install/bin/clang"                       \
             --use-make ninja                                                   \
             --use-lit lit                                                      \
-            --use-perf time                                                    \
             --benchmarking-only                                                \
             --threads 1                                                        \
             --report-format v5                                                 \
