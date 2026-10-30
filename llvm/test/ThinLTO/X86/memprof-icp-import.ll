@@ -16,7 +16,7 @@
 ;; The indirect call edge is not hot in the per-module summary, but is marked
 ;; as being from an indirect call.
 ; RUN: llvm-dis %t/foo.o -o - | FileCheck %s --check-prefix=SUMMARY
-; SUMMARY: gv: (name: "_Z3fooPv", {{.*}} calls: ((callee: ^{{[0-9]+}}, hotness: none, indirect: 1))
+; SUMMARY: gv: (name: "_Z3fooPv", {{.*}} calls: ((callee: ^{{[0-9]+}}, hotness: none, tail: 1, indirect: 1))
 
 ;; The direct call edge from main to foo is not marked indirect.
 ; RUN: llvm-dis %t/main.o -o - | FileCheck %s --check-prefix=SUMMARY-MAIN

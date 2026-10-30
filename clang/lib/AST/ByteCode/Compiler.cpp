@@ -6400,6 +6400,7 @@ static bool isTrivialMemoryOperation(const CXXMethodDecl *MD) {
     return false;
   if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
     return false;
+  assert(!MD->getParent()->isInvalidDecl());
   return MD->getParent()->isUnion() ||
          (MD->isTrivial() && isReadByLvalueToRvalueConversion(MD->getParent()));
 }
@@ -6434,6 +6435,11 @@ bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
              this->emitPopPtr(E);
     }
   }
+
+  // Don't generate code for method with invalid parent decls.
+  if (const auto *MD = dyn_cast_if_present<CXXMethodDecl>(FuncDecl);
+      MD && MD->getParent()->isInvalidDecl())
+    return false;
 
   LocalScope<Emitter> CallScope(this, ScopeKind::Call);
   ArrayRef<const Expr *> Args(E->getArgs(), E->getNumArgs());
