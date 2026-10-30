@@ -3182,7 +3182,7 @@ def ffp_contract : Joined<["-"], "ffp-contract=">, Group<f_Group>,
   " | on (only fuses in the same statement unless dictated by pragmas)"
   " | off (never fuses)"
   " | fast-honor-pragmas (fuses across statements unless dictated by pragmas)."
-  " Default is 'fast' for CUDA, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
+  " Default is 'fast' for CUDA and HLSL, 'fast-honor-pragmas' for HIP, and 'on' otherwise.">,
   HelpText<"Form fused FP ops (e.g. FMAs)">,
   Values<"fast,on,off,fast-honor-pragmas">;
 
@@ -10129,7 +10129,7 @@ def spirv_validator_path_EQ : Joined<["--"], "spirv-val-path=">, Group<dxc_Group
 def dxc_disable_validation : DXCFlag<"Vd">,
   HelpText<"Disable validation">;
 def dxc_gis : DXCFlag<"Gis">,
-  HelpText<"Enable IEEE strict mode (equivalent to -ffp-model=strict)">;
+  HelpText<"Enable IEEE strict mode (equivalent to -fno-fast-math -ffp-model=strict)">;
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;

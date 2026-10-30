@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK \
-// RUN:  -DFLOATATTRS="reassoc nnan ninf nsz arcp afn"
+// RUN:  -DFLOATATTRS="fast"
 
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) float {{.*}}test_pow_double
 // CHECK: [[CONV0:%.*]] = fptrunc [[FLOATATTRS]] double %{{.*}} to float

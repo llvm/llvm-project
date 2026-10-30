@@ -69,8 +69,8 @@ bool4 test_or_int4(int4 x, int4 y)
 // CHECK-LABEL: define hidden noundef <4 x i1> @_Z14test_or_float4Dv4_fS_(
 // CHECK-SAME: <4 x float> noundef nofpclass(nan inf) [[X:%.*]], <4 x float> noundef nofpclass(nan inf) [[Y:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK:         [[TOBOOL:%.*]] =  fcmp reassoc nnan ninf nsz arcp afn une <4 x float> [[A:%.*]], zeroinitializer
-// CHECK:         [[TOBOOL1:%.*]] = fcmp reassoc nnan ninf nsz arcp afn une <4 x float> [[B:%.*]], zeroinitializer
+// CHECK:         [[TOBOOL:%.*]] =  fcmp fast une <4 x float> [[A:%.*]], zeroinitializer
+// CHECK:         [[TOBOOL1:%.*]] = fcmp fast une <4 x float> [[B:%.*]], zeroinitializer
 // CHECK:         [[HLSL_OR:%.*]] = or <4 x i1> [[TOBOOL]], [[TOBOOL1]]
 // CHECK:         ret <4 x i1> [[HLSL_OR]]
 bool4 test_or_float4(float4 x, float4 y)

@@ -197,8 +197,8 @@ float4 test_bias(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK: %[[SAMPLER_H1:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP1]]
 // CHECK: %[[COORD_VAL1:.*]] = load [[COORD_LLVM]], ptr %{{.*}}
 // CHECK: %[[BIAS_VAL1:.*]] = load float, ptr %{{.*}}
-// DXIL: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplebias.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL1]], float %[[BIAS_VAL1]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
-// SPIRV: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplebias.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL1]], float %[[BIAS_VAL1]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
+// DXIL: %{{.*}} = call fast <4 x float> @llvm.dx.resource.samplebias.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE1]], target("dx.Sampler", 0) %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL1]], float %[[BIAS_VAL1]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
+// SPIRV: %{{.*}} = call fast <4 x float> @llvm.spv.resource.samplebias.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE1]], target("spirv.Sampler") %[[SAMPLER_H1]], [[COORD_LLVM]] %[[COORD_VAL1]], float %[[BIAS_VAL1]], [[OFFSET_LLVM]] [[OFFSET_ZERO]]) [ "convergencectrl"(token %0) ]
 
 // CHECK-OFFSET: @test_offset([[COORD_CXX]])
 // CHECK-OFFSET: %[[CALL_OFFSET:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleBias(hlsl::SamplerState, [[COORD_CXX]], float, [[OFFSET_CXX]])(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, [[COORD_LLVM]] {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, [[OFFSET_LLVM]] noundef [[OFFSET_CONST]])
@@ -219,8 +219,8 @@ float4 test_offset(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-OFFSET: %[[SAMPLER_H2:.*]] = load target{{.*}}, ptr %[[SAMPLER_GEP2]]
 // CHECK-OFFSET: %[[COORD_VAL2:.*]] = load [[COORD_LLVM]], ptr %{{.*}}
 // CHECK-OFFSET: %[[BIAS_VAL2:.*]] = load float, ptr %{{.*}}
-// DXIL-OFFSET: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplebias.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]])
-// SPIRV-OFFSET: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplebias.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]])
+// DXIL-OFFSET: %{{.*}} = call fast <4 x float> @llvm.dx.resource.samplebias.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]])
+// SPIRV-OFFSET: %{{.*}} = call fast <4 x float> @llvm.spv.resource.samplebias.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]])
 
 // CHECK-OFFSET: @test_clamp([[COORD_CXX]])
 // CHECK-OFFSET: %[[CALL_CLAMP:.*]] = call {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleBias(hlsl::SamplerState, [[COORD_CXX]], float, [[OFFSET_CXX]], float)(ptr {{.*}} @t, ptr {{.*}} byval(%"class.hlsl::SamplerState") {{.*}}, [[COORD_LLVM]] {{.*}} %{{.*}}, float {{.*}} 0.000000e+00, [[OFFSET_LLVM]] noundef [[OFFSET_CONST]], float {{.*}} 1.000000e+00)
@@ -251,8 +251,8 @@ float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-OFFSET: %[[COORD_VAL3:.*]] = load [[COORD_LLVM]], ptr %{{.*}}
 // CHECK-OFFSET: %[[BIAS_VAL3:.*]] = load float, ptr %{{.*}}
 // CHECK-OFFSET: %[[CLAMP_VAL3:.*]] = load float, ptr %{{.*}}
-// DXIL-OFFSET: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplebias.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL3]], [[OFFSET_LLVM]] %{{.*}}, float %[[CLAMP_VAL3]]) [ "convergencectrl"(token %0) ]
-// SPIRV-OFFSET: %{{.*}} = call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplebias.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL3]], [[OFFSET_LLVM]] %{{.*}}, float %[[CLAMP_VAL3]]) [ "convergencectrl"(token %0) ]
+// DXIL-OFFSET: %{{.*}} = call fast <4 x float> @llvm.dx.resource.samplebias.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE3]], target("dx.Sampler", 0) %[[SAMPLER_H3]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL3]], [[OFFSET_LLVM]] %{{.*}}, float %[[CLAMP_VAL3]]) [ "convergencectrl"(token %0) ]
+// SPIRV-OFFSET: %{{.*}} = call fast <4 x float> @llvm.spv.resource.samplebias.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE3]], target("spirv.Sampler") %[[SAMPLER_H3]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL3]], [[OFFSET_LLVM]] %{{.*}}, float %[[CLAMP_VAL3]]) [ "convergencectrl"(token %0) ]
 
 // CHECK-NOOFFSET: define linkonce_odr hidden {{.*}} <4 x float> @hlsl::[[TEXTURE]]<float vector[4]>::SampleBias(hlsl::SamplerState, [[COORD_CXX]], float, float)(
 // CHECK-NOOFFSET: %[[THIS_VAL_NC:.*]] = load ptr, ptr %{{.*}}
@@ -263,5 +263,5 @@ float4 test_clamp(COORD_TYPE loc : LOC) : SV_Target {
 // CHECK-NOOFFSET: %[[COORD_VAL_NC:.*]] = load [[COORD_LLVM]], ptr %{{.*}}
 // CHECK-NOOFFSET: %[[BIAS_VAL_NC:.*]] = load float, ptr %{{.*}}
 // CHECK-NOOFFSET: %[[CLAMP_VAL_NC:.*]] = load float, ptr %{{.*}}
-// DXIL-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.dx.resource.samplebias.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL_NC]], [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
-// SPIRV-NOOFFSET: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.spv.resource.samplebias.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL_NC]], [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
+// DXIL-NOOFFSET: call fast <4 x float> @llvm.dx.resource.samplebias.clamp.v4f32.{{.*}}(target("dx.Texture", <4 x float>, [[RW]], 0, 0, [[DXIL_TY]]) %[[HANDLE_NC]], target("dx.Sampler", 0) %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL_NC]], [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
+// SPIRV-NOOFFSET: call fast <4 x float> @llvm.spv.resource.samplebias.clamp.v4f32.{{.*}}(target("spirv.Image", float, [[SPV_DIM]], 2, [[ARRAYED]], 0, [[SAMPLED]], [[IMG_FMT]]) %[[HANDLE_NC]], target("spirv.Sampler") %[[SAMPLER_H_NC]], [[COORD_LLVM]] %{{.*}}, float %[[BIAS_VAL_NC]], [[OFFSET_LLVM]] [[OFFSET_ZERO]], float %[[CLAMP_VAL_NC]])
