@@ -223,8 +223,7 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         if (!Call || Call->getCalledFunction() || Call->isMustTailCall())
           continue;
         auto *L = dyn_cast<LoadInst>(Call->getCalledOperand());
-        // Skip atomic or volatile loads.
-        if (!L || !L->isSimple())
+        if (!L || L->isVolatile())
           continue;
         auto *GEP = dyn_cast<GetElementPtrInst>(L->getPointerOperand());
         if (!GEP ||

@@ -90,20 +90,6 @@ define i32 @function_with_jump_table_and_volatile_load(i32 %index) {
   ret i32 %result
 }
 
-define i32 @function_with_jump_table_and_atomic_load(i32 %index) {
-; CHECK-LABEL: define i32 @function_with_jump_table_and_atomic_load(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [1 x ptr], ptr @func_array1, i32 0, i32 [[INDEX]]
-; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load atomic ptr, ptr [[GEP]] monotonic, align 8
-; CHECK-NEXT:    [[RESULT:%.*]] = call i32 [[FUNC_PTR]](i32 [[INDEX]])
-; CHECK-NEXT:    ret i32 [[RESULT]]
-;
-  %gep = getelementptr inbounds [1 x ptr], ptr @func_array1, i32 0, i32 %index
-  %func_ptr = load atomic ptr, ptr %gep monotonic, align 8
-  %result = call i32 %func_ptr(i32 %index)
-  ret i32 %result
-}
-
 @func_array2 = global [1 x ptr] [ptr @func2]
 
 define i32 @function_with_nonconstant_jump_table(i32 %index) {
