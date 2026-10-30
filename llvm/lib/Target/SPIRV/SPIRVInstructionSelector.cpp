@@ -1172,9 +1172,13 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ABS:
     return selectExtInst(ResVReg, ResType, I, CL::s_abs, GL::SAbs);
 
+  // nsz and reassoc both grant SPIR-V NSZ here, which lets fmin(-0.0, -0.0)
+  // return +0.0; nsz on llvm.minnum/maxnum does not.
   case TargetOpcode::G_FMINNUM:
+    I.clearFlags(MachineInstr::FmNsz | MachineInstr::FmReassoc);
     return selectExtInst(ResVReg, ResType, I, CL::fmin, GL::NMin);
   case TargetOpcode::G_FMAXNUM:
+    I.clearFlags(MachineInstr::FmNsz | MachineInstr::FmReassoc);
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
   case TargetOpcode::G_FCOPYSIGN:
