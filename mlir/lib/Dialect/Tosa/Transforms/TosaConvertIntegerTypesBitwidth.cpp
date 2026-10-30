@@ -111,9 +111,9 @@ private:
     Type convertedType = replace(type);
     if (type == convertedType)
       return attr;
-    return IntegerAttr::get(convertedType,
-                            attr.getValue().sext(
-                                cast<IntegerType>(convertedType).getWidth()));
+    return IntegerAttr::get(
+        convertedType,
+        attr.getValue().sext(cast<IntegerType>(convertedType).getWidth()));
   }
 
   Attribute convertDenseArray(DenseArrayAttr attr) {
@@ -211,8 +211,7 @@ struct TosaConvertIntegerTypesBitwidth
       if (!((source == 4 && destination == 8) ||
             (source == 48 && destination == 64))) {
         getOperation().emitError("unsupported integer bitwidth mapping ")
-            << source << ":" << destination
-            << ": expected 4:8 or 48:64";
+            << source << ":" << destination << ": expected 4:8 or 48:64";
         return signalPassFailure();
       }
       mappings.try_emplace(source, destination);
