@@ -4783,6 +4783,25 @@ static bool interp__builtin_meta_is_type(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// The offset of a global from the image base is only known to the linker, so
+/// the result is an integral based on the call, as in the other evaluator.
+static bool interp__builtin_imgrel32(InterpState &S, CodePtr OpPC,
+                                     const CallExpr *Call) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!Ptr.isFunctionPointer()) {
+    const auto *VD = Ptr.getRootValueDecl();
+    if (!VD)
+      return Invalid(S, OpPC);
+    if (const auto *Var = dyn_cast<VarDecl>(VD);
+        Var && !Var->hasGlobalStorage())
+      return Invalid(S, OpPC);
+  }
+
+  S.Stk.push<Integral<32, false>>(IntegralKind::ExprAddress, Call, 0);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
                       uint32_t BuiltinID) {
   const InterpFrame *Frame = S.Current;
@@ -4793,6 +4812,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_assume:
   case Builtin::BI__assume:
     return interp__builtin_assume(S, OpPC, Frame, Call);
+
+  case Builtin::BI__builtin_imgrel32:
+    return interp__builtin_imgrel32(S, OpPC, Call);
 
   case Builtin::BI__builtin_strcmp:
   case Builtin::BIstrcmp:

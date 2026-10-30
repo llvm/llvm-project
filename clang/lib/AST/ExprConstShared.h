@@ -159,7 +159,8 @@ inline bool isOpaqueConstantCall(const CallExpr *E) {
   return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
           Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
           Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
-          Builtin == Builtin::BI__builtin_function_start);
+          Builtin == Builtin::BI__builtin_function_start ||
+          Builtin == Builtin::BI__builtin_imgrel32);
 }
 
 bool isGlobalLValue(const ValueDecl *D, const Expr *E);

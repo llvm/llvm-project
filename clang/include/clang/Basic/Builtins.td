@@ -4963,6 +4963,12 @@ def BuiltinFunctionStart : Builtin {
   let Prototype = "void*(void&)";
 }
 
+def BuiltinImgrel32 : Builtin {
+  let Spellings = ["__builtin_imgrel32"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "unsigned int(void const*)";
+}
+
 def BuiltinOperatorNew : Builtin {
   let Spellings = ["__builtin_operator_new"];
   let Attributes = [Const, CustomTypeChecking, Constexpr];

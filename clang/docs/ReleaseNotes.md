@@ -328,6 +328,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
+- Added `__builtin_imgrel32`, which returns the offset of a global from the image
+  base as a constant, for static data that needs image relative references on
+  COFF targets.
+
 - Added `__builtin_sort_pack` to sort a pack of types using the same
   order as `__builtin_type_order`.
 

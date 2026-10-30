@@ -17234,6 +17234,21 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(Result, E);
   }
 
+  if (BuiltinOp == Builtin::BI__builtin_imgrel32) {
+    // The offset from the image base is only known to the linker. The result
+    // is an lvalue based on the call, which CodeGen turns into a relocation.
+    LValue LV;
+    if (!EvaluatePointer(E->getArg(0), LV, Info))
+      return false;
+    if (!LV.getLValueBase().is<const ValueDecl *>())
+      return Error(E);
+    LV.Designator.setInvalid();
+    LV.Base = E;
+    LV.Offset = CharUnits::Zero();
+    LV.moveInto(Result);
+    return true;
+  }
+
   auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
                             Fn) {
     APValue SourceLHS, SourceRHS;

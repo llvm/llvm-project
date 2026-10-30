@@ -6021,6 +6021,14 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_function_start:
     return RValue::get(CGM.GetFunctionStart(
         E->getArg(0)->getAsBuiltinConstantDeclRef(CGM.getContext())));
+  case Builtin::BI__builtin_imgrel32: {
+    const Expr *Arg = E->getArg(0);
+    llvm::Constant *Ptr =
+        ConstantEmitter(*this).tryEmitAbstract(Arg, Arg->getType());
+    assert(Ptr && "Sema checked that the argument is a constant address");
+    return RValue::get(
+        CGM.GetImageRelativeOffset(Ptr, ConvertType(E->getType())));
+  }
   case Builtin::BI__builtin_operator_new:
     return EmitBuiltinNewDeleteCall(
         E->getCallee()->getType()->castAs<FunctionProtoType>(), E, false);
