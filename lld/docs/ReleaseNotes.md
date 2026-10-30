@@ -31,6 +31,8 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 * `--mmap-output-file` and `--no-mmap-output-file` were swapped in LLVM 21 and 22.
   They now mean what they say again; the default behavior is unchanged.
+* Added `-z ibt-report=[none|warning|error]` and `-z shstk-report=[none|warning|error]` on x86 and x86-64 to report missing `GNU_PROPERTY_X86_FEATURE_1_IBT` and `GNU_PROPERTY_X86_FEATURE_1_SHSTK` properties individually (for example, when building with `-fcf-protection=branch` or `-fcf-protection=return`).
+  `-z ibt-report=none` and `-z cet-report=none` also silence warnings from `-z force-ibt`.
 
 ### Breaking changes
 

@@ -18,6 +18,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -66,6 +67,87 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-z");
     CmdArgs.push_back("rel");
     CmdArgs.push_back("--pack-dyn-relocs=relr");
+
+    // When hardware control-flow protection is enabled for code generation (by
+    // default on 64-bit Fuchsia targets or via explicit compiler flags), pass
+    // the corresponding ld.lld report switches so the linker requires every
+    // input object file to carry the matching .note.gnu.property feature bit.
+    // Querying Args.getLastArg() here also claims these options on link-only
+    // driver invocations (e.g., `clang foo.o -mbranch-protection=none`), and
+    // placing the switches before AddLinkerInputs allows explicit `-Wl,-z,...`
+    // flags to override them.
+    if (ToolChain.getArch() == llvm::Triple::aarch64) {
+      // On AArch64 Fuchsia, BTI is enabled by default unless overridden by
+      // `-mbranch-protection=` (matching CollectARMPACBTIOptions in Clang.cpp;
+      // `-msign-return-address=` only changes PAC scope and leaves BTI at the
+      // target default).
+      bool IndirectBranches = true;
+      bool GuardedControlStack = false;
+      if (const Arg *A = Args.getLastArg(options::OPT_msign_return_address_EQ,
+                                         options::OPT_mbranch_protection_EQ)) {
+        if (A->getOption().matches(options::OPT_mbranch_protection_EQ)) {
+          StringRef DiagMsg;
+          llvm::ARM::ParsedBranchProtection PBP;
+          if (llvm::ARM::parseBranchProtection(A->getValue(), PBP, DiagMsg,
+                                               Triple)) {
+            IndirectBranches = PBP.BranchTargetEnforcement;
+            GuardedControlStack = PBP.GuardedControlStack;
+          } else {
+            IndirectBranches = false;
+          }
+        }
+      }
+      if (IndirectBranches) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("bti-report=error");
+      }
+      if (GuardedControlStack) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("gcs-report=error");
+      }
+    } else if (Triple.isRISCV64() ||
+               ToolChain.getArch() == llvm::Triple::x86_64) {
+      // On RISC-V and x86-64 Fuchsia, `-fcf-protection=branch` is enabled by
+      // default unless overridden by `-fcf-protection=` (note that bare
+      // `-fcf-protection` is an alias for `-fcf-protection=full`).
+      StringRef CFProtection = "branch";
+      if (const Arg *A = Args.getLastArg(options::OPT_fcf_protection_EQ))
+        CFProtection = A->getValue();
+      const bool Branch = CFProtection == "branch" || CFProtection == "full";
+      const bool Return = CFProtection == "return" || CFProtection == "full";
+      if (Triple.isRISCV64()) {
+        // On RISC-V, `-fcf-protection=branch` uses the `unlabeled` Zicfilp
+        // scheme (`GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED`) by default
+        // unless `-mcf-branch-label-scheme=func-sig` is specified, and
+        // `-fcf-protection=return` enables Zicfiss shadow stack
+        // (`GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS`).
+        if (Branch) {
+          const Arg *SA =
+              Args.getLastArg(options::OPT_mcf_branch_label_scheme_EQ);
+          CmdArgs.push_back("-z");
+          if (SA && StringRef(SA->getValue()) == "func-sig")
+            CmdArgs.push_back("zicfilp-func-sig-report=error");
+          else
+            CmdArgs.push_back("zicfilp-unlabeled-report=error");
+        }
+        if (Return) {
+          CmdArgs.push_back("-z");
+          CmdArgs.push_back("zicfiss-report=error");
+        }
+      } else {
+        // On x86-64, `-fcf-protection=branch` enables CET IBT
+        // (`GNU_PROPERTY_X86_FEATURE_1_IBT`) and `-fcf-protection=return`
+        // enables CET shadow stack (`GNU_PROPERTY_X86_FEATURE_1_SHSTK`).
+        if (Branch) {
+          CmdArgs.push_back("-z");
+          CmdArgs.push_back("ibt-report=error");
+        }
+        if (Return) {
+          CmdArgs.push_back("-z");
+          CmdArgs.push_back("shstk-report=error");
+        }
+      }
+    }
   }
 
   if (!D.SysRoot.empty())
