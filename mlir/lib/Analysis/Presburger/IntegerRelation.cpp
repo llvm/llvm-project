@@ -2744,7 +2744,9 @@ void IntegerRelation::print(raw_ostream &os) const {
   os << '\n';
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void IntegerRelation::dump() const { print(llvm::errs()); }
+#endif
 
 unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
                                       unsigned num) {

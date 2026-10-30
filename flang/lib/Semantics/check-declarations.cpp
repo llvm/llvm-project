@@ -265,6 +265,16 @@ static bool IsBlockData(const Symbol &symbol) {
   return symbol.scope() && IsBlockData(*symbol.scope());
 }
 
+// Was this entity declared with an explicit-shape-bounds-spec (F2023 R818),
+// i.e. a rank-1 integer array as its bounds?  Name resolution marks the
+// resulting shape (a constant bounds array is folded into ordinary
+// per-dimension bounds, so the bounds themselves need not show it); a
+// zero-size base yields a scalar whose bounds were stashed for checking.
+static bool HasRankOneBounds(const ObjectEntityDetails &details) {
+  return details.shape().isFromRankOneBounds() ||
+      !details.droppedBoundsToCheck().empty();
+}
+
 void CheckHelper::Check(const Symbol &symbol) {
   if (symbol.has<UseErrorDetails>()) {
     return;
@@ -781,6 +791,15 @@ void CheckHelper::CheckObjectEntity(
   // final.
   for (const Bound &bound : details.droppedBoundsToCheck()) {
     Check(bound);
+  }
+  // F2023 C816 allows only an explicit-shape-spec-list for a nonallocatable
+  // nonpointer function result; an explicit-shape-bounds-spec (a rank-1
+  // integer array as the bounds, R818) is accepted as an extension there.
+  if (details.isFuncResult() && !IsAllocatableOrPointer(symbol) &&
+      HasRankOneBounds(details)) {
+    Warn(common::LanguageFeature::RankOneBoundsOnFunctionResult,
+        "Function result '%s' should not be declared with a rank-1 integer array as its bounds (F2023 C816)"_port_en_US,
+        symbol.name());
   }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(

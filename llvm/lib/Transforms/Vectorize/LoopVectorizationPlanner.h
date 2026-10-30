@@ -208,10 +208,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "",
-                              Type *ResultTy = nullptr) {
-    VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
+                              const Twine &Name = "", Type *ResultTy = nullptr,
+                              const VPIRAttributes &Attrs = {}) {
+    VPInstruction *NewVPInst = tryInsertInstruction(new VPInstruction(
+        Opcode, Operands, Flags, MD, DL, Name, ResultTy, Attrs));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }

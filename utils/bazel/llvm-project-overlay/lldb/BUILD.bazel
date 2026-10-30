@@ -1092,6 +1092,34 @@ cc_binary(
     }),
 )
 
+# A test driver for the lit Shell tests. Like CMake, link in every plugin.
+cc_binary(
+    name = "lldb-test",
+    srcs = glob([
+        "tools/lldb-test/*.cpp",
+        "tools/lldb-test/*.h",
+    ]),
+    deps = [
+        ":API",
+        ":Breakpoint",
+        ":Core",
+        ":DataFormatters",
+        ":Expression",
+        ":Headers",
+        ":Host",
+        ":Initialization",
+        ":Interpreter",
+        ":Symbol",
+        ":Target",
+        ":Utility",
+        ":Version",
+        "//lldb/source/Plugins:PluginSymbolFileDWARF",
+        "//lldb/source/Plugins:PluginsClang",
+        "//lldb/source/Plugins:PluginsConfig",
+        "//llvm:Support",
+    ],
+)
+
 expand_template(
     name = "lldb-dap-plist",
     out = "lldb-dap-Info.plist",

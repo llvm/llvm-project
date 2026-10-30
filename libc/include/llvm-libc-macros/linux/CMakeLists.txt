@@ -113,6 +113,12 @@ add_header(
 )
 
 add_header(
+  netinet_tcp_macros
+  HDR
+    netinet-tcp-macros.h
+)
+
+add_header(
   netdb_macros
   HDR
     netdb-macros.h

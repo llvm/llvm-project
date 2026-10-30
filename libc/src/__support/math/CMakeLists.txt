@@ -917,6 +917,16 @@ add_header_library(
 )
 
 add_header_library(
+  fmaximumf80
+  HDRS
+    fmaximumf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmaximuml
   HDRS
     fmaximuml.h
@@ -1135,6 +1145,16 @@ add_header_library(
     MISC_MATH_BASIC_OPS_OPT
 )
 
+add_header_library(
+  fminf80
+  HDRS
+    fminf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
 
 add_header_library(
   fminimum
@@ -1190,6 +1210,16 @@ add_header_library(
     libc.src.__support.macros.config
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
+)
+
+add_header_library(
+  fminimumf80
+  HDRS
+    fminimumf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -3900,6 +3930,16 @@ add_header_library(
 )
 
 add_header_library(
+  fmaxf80
+  HDRS
+    fmaxf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmaxl
   HDRS
     fmaxl.h
@@ -6050,6 +6090,57 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.macros.optimization
     libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
+  tanh_accurate_128
+  HDRS
+    tanh_accurate_128.h
+  DEPENDS
+    .exp2_accurate_128
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.common
+    libc.src.__support.frac128
+    libc.src.__support.frac64
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  tanh_double_eval
+  HDRS
+    tanh_double_eval.h
+  DEPENDS
+    .exp_utils
+    .tanh_accurate_128
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fp_bitwise
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.common
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.cpu_features
+)
+
+add_header_library(
+  tanh
+  HDRS
+    tanh.h
+  DEPENDS
+    .tanh_double_eval
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

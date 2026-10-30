@@ -47,6 +47,9 @@ struct __tgt_target_table;
 
 /// Kernel launch-geometry properties.
 struct KernelLaunchInfoTy {
+  const char *Name = nullptr;
+  llvm::MemoryBufferRef Image;
+  llvm::MemoryBufferRef IRImage;
   uint32_t MaxNumThreads = 0;
   uint32_t PreferredNumThreads = 0;
   uint32_t ReductionDataSize = 0;
@@ -97,6 +100,10 @@ struct DeviceGeometryPropsTy {
   uint32_t DefaultNumThreads = 0;
   /// Number of blocks to use when the user does not request one.
   uint32_t DefaultNumBlocks = 0;
+  /// Maximum number of blocks that can be launched.
+  uint32_t MaxNumBlocks = 0;
+  /// Maximum number of threads (blocks * threads per block) a launch can have.
+  uint64_t MaxGridSize = 0;
   /// Maximum amount of shared memory, in bytes, a block can use in a kernel.
   uint64_t MaxBlockSharedMemSize = 0;
   /// Number of compute units, or zero if the device does not report it.
