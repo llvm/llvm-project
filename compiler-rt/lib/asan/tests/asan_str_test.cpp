@@ -495,7 +495,7 @@ static std::string OverlapErrorMessage(const std::string &func) {
 // Waiting for https://github.com/llvm/llvm-project/pull/237000: Android 17
 // Bionic strcat calls strcpy@plt(dst + strlen(dst), src), triggering
 // strcpy-param-overlap on strcat(str, str + 10).
-#if defined(__ANDROID__)
+#if defined(__ANDROID__) && defined(__aarch64__)
 #  define MAYBE_StrArgsOverlapTest DISABLED_StrArgsOverlapTest
 #else
 #  define MAYBE_StrArgsOverlapTest StrArgsOverlapTest
