@@ -57,6 +57,8 @@ MACHINE_FUNCTION_PASS("riscv-lpad-setup", RISCVLandingPadSetupPass())
 MACHINE_FUNCTION_PASS("riscv-make-compressible", RISCVMakeCompressiblePass())
 MACHINE_FUNCTION_PASS("riscv-merge-base-offset", RISCVMergeBaseOffsetPass())
 MACHINE_FUNCTION_PASS("riscv-move-merge", RISCVMoveMergePass())
+MACHINE_FUNCTION_PASS("riscv-O0-prelegalizer-combiner",
+                      RISCVO0PreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("riscv-opt-w-instrs", RISCVOptWInstrsPass())
 MACHINE_FUNCTION_PASS("riscv-post-legalizer-combiner",
                       RISCVPostLegalizerCombinerPass())
