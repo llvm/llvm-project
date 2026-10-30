@@ -460,6 +460,50 @@ class SubtargetFeatureDataCacheLineSize <int Value> : SubtargetFeature <
 
 def FeatureDataCacheLineSize128 : SubtargetFeatureDataCacheLineSize<128>;
 
+// A wait counter field's bit shift or width, read by AMDGPU::getCounterLayout.
+// Absent means the SI layout value, which pseudo targets also use. FieldName is
+// a shared sink; non-bool so no per-feature getter is generated.
+class CounterFieldFeature<string name, string fieldName, int value>
+    : SubtargetFeature<name # "-" # value, "CounterFieldSink", "1",
+                       "Counter field " # fieldName # " is " # value> {
+  // Row of the backend's CounterFieldFeatures table.
+  string FeatureEnum = NAME;
+  string LayoutField = "&CounterLayout::" # fieldName;
+  bits<8> LayoutValue = value;
+}
+
+def FeatureVmcntLoShift10          : CounterFieldFeature<"vmcnt-lo-shift", "VmcntLoShift", 10>;
+def FeatureVmcntLoBits6            : CounterFieldFeature<"vmcnt-lo-bits", "VmcntLoBits", 6>;
+def FeatureVmcntHiBits2            : CounterFieldFeature<"vmcnt-hi-bits", "VmcntHiBits", 2>;
+def FeatureExpcntShift0            : CounterFieldFeature<"expcnt-shift", "ExpcntShift", 0>;
+def FeatureLgkmcntShift4           : CounterFieldFeature<"lgkmcnt-shift", "LgkmcntShift", 4>;
+def FeatureLgkmcntBits6            : CounterFieldFeature<"lgkmcnt-bits", "LgkmcntBits", 6>;
+def FeatureLoadStorecntShift8      : CounterFieldFeature<"loadcnt-storecnt-shift", "LoadStorecntShift", 8>;
+def FeatureLoadcntBits6            : CounterFieldFeature<"loadcnt-bits", "LoadcntBits", 6>;
+def FeatureSamplecntBits6          : CounterFieldFeature<"samplecnt-bits", "SamplecntBits", 6>;
+def FeatureBvhcntBits3             : CounterFieldFeature<"bvhcnt-bits", "BvhcntBits", 3>;
+def FeatureDscntBits6              : CounterFieldFeature<"dscnt-bits", "DscntBits", 6>;
+def FeatureStorecntBits6           : CounterFieldFeature<"storecnt-bits", "StorecntBits", 6>;
+def FeatureKmcntBits5              : CounterFieldFeature<"kmcnt-bits", "KmcntBits", 5>;
+def FeatureXcntBits6               : CounterFieldFeature<"xcnt-bits", "XcntBits", 6>;
+def FeatureAsynccntBits6           : CounterFieldFeature<"asynccnt-bits", "AsynccntBits", 6>;
+def FeatureHoldCntBits1            : CounterFieldFeature<"holdcnt-bits", "HoldCntBits", 1>;
+def FeatureBarrierMemberCountBits8 : CounterFieldFeature<"barrier-member-count-bits", "BarrierMemberCountBits", 8>;
+
+// Counter layouts shared by a generation and its successors.
+def FeatureCounterLayoutGFX11 : SubtargetFeature<"counter-layout-gfx11",
+  "CounterFieldSink", "1", "GFX11 wait counter layout",
+  [FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
+   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureHoldCntBits1]
+>;
+
+def FeatureCounterLayoutGFX12 : SubtargetFeature<"counter-layout-gfx12",
+  "CounterFieldSink", "1", "GFX12 wait counter layout",
+  [FeatureCounterLayoutGFX11, FeatureLoadStorecntShift8, FeatureLoadcntBits6,
+   FeatureSamplecntBits6, FeatureBvhcntBits3, FeatureDscntBits6,
+   FeatureKmcntBits5]
+>;
+
 defm GCN3Encoding : AMDGPUSubtargetFeature<"gcn3-encoding",
   "Encoding format for VI",
   /*GenPredicate=*/0
@@ -1225,12 +1269,16 @@ defm NoSdstCMPX : AMDGPUSubtargetFeature<"no-sdst-cmpx",
 
 defm Vscnt : AMDGPUSubtargetFeature<"vscnt",
   "Has separate store vscnt counter",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureStorecntBits6]
 >;
 
 defm Asynccnt : AMDGPUSubtargetFeature<"asynccnt",
   "Has separate asynccnt counter",
-  /*GenPredicate=*/0
+  /*GenPredicate=*/0,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureAsynccntBits6]
 >;
 
 defm GetWaveIdInst : AMDGPUSubtargetFeature<"get-wave-id-inst",
@@ -1395,7 +1443,10 @@ defm SetregVGPRMSBFixup : AMDGPUGenericAnySubtargetFeature<"setreg-vgpr-msb-fixu
 >;
 
 defm WaitXcnt : AMDGPUSubtargetFeature<"wait-xcnt",
-  "Has s_wait_xcnt instruction"
+  "Has s_wait_xcnt instruction",
+  /*GenPredicate=*/1,
+  /*GenAssemblerPredicate=*/1,
+  [FeatureXcntBits6]
 >;
 
 defm SetPrioIncWgInst : AMDGPUSubtargetFeature<"setprio-inc-wg-inst",
@@ -1800,7 +1851,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureVmcntHiBits2
   ]
 >;
 
@@ -1835,7 +1887,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureCvtNormInsts, FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts, FeatureDX10ClampAndIEEEMode, FeatureFlatOffsetBits12,
    FeatureInstCacheLineSize64, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
-   Feature32BitNumRecordsBufferResource
+   Feature32BitNumRecordsBufferResource,
+   FeatureVmcntHiBits2, FeatureLgkmcntBits6
   ]
 >;
 
@@ -1870,7 +1923,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature32BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16, FeatureCounterLayoutGFX11
   ]
 >;
 
@@ -1900,7 +1953,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   FeatureMaxWavesPerEU16
+   FeatureMaxWavesPerEU16, FeatureCounterLayoutGFX12
   ]
 >;
 
@@ -1934,7 +1987,8 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16, FeatureCacheFillSize
+   FeatureMaxWavesPerEU16, FeatureCacheFillSize,
+   FeatureBarrierMemberCountBits8, FeatureCounterLayoutGFX12
   ]
 >;
 //===----------------------------------------------------------------------===//
@@ -2287,6 +2341,7 @@ def FeatureISAVersion10_3_0 : FeatureSet<
      FeatureMSAALoadInsts,
      FeatureGFX10_BEncoding,
      FeatureGFX10_3Insts,
+     FeatureHoldCntBits1,
      FeatureDot1Insts,
      FeatureDot2Insts,
      FeatureDot5Insts,

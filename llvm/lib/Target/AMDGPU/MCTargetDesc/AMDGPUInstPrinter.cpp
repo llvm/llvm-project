@@ -1846,15 +1846,15 @@ void AMDGPUInstPrinter::printSwizzle(const MCInst *MI, unsigned OpNo,
 void AMDGPUInstPrinter::printSWaitCnt(const MCInst *MI, unsigned OpNo,
                                       const MCSubtargetInfo &STI,
                                       raw_ostream &O) {
-  AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(STI.getCPU());
+  AMDGPU::CounterLayout Layout = AMDGPU::getCounterLayout(STI);
 
   unsigned SImm16 = MI->getOperand(OpNo).getImm();
   unsigned Vmcnt, Expcnt, Lgkmcnt;
-  decodeWaitcnt(ISA, SImm16, Vmcnt, Expcnt, Lgkmcnt);
+  decodeWaitcnt(Layout, SImm16, Vmcnt, Expcnt, Lgkmcnt);
 
-  bool IsDefaultVmcnt = Vmcnt == getVmcntBitMask(ISA);
-  bool IsDefaultExpcnt = Expcnt == getExpcntBitMask(ISA);
-  bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(ISA);
+  bool IsDefaultVmcnt = Vmcnt == getVmcntBitMask(Layout);
+  bool IsDefaultExpcnt = Expcnt == getExpcntBitMask(Layout);
+  bool IsDefaultLgkmcnt = Lgkmcnt == getLgkmcntBitMask(Layout);
   bool PrintAll = IsDefaultVmcnt && IsDefaultExpcnt && IsDefaultLgkmcnt;
 
   ListSeparator Sep(" ");

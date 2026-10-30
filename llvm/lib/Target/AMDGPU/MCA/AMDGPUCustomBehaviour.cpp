@@ -178,7 +178,7 @@ unsigned AMDGPUCustomBehaviour::handleWaitCnt(ArrayRef<InstRef> IssuedInst,
 void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
                                            unsigned &Expcnt, unsigned &Lgkmcnt,
                                            unsigned &Vscnt) {
-  AMDGPU::IsaVersion IV = AMDGPU::getIsaVersion(STI.getCPU());
+  AMDGPU::CounterLayout Layout = AMDGPU::getCounterLayout(STI);
   const Instruction &Inst = *IR.getInstruction();
   unsigned Opcode = Inst.getOpcode();
 
@@ -225,7 +225,7 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
   case AMDGPU::S_WAITCNT_gfx6_gfx7:
   case AMDGPU::S_WAITCNT_vi:
     unsigned WaitCnt = Inst.getOperand(0)->getImm();
-    AMDGPU::decodeWaitcnt(IV, WaitCnt, Vmcnt, Expcnt, Lgkmcnt);
+    AMDGPU::decodeWaitcnt(Layout, WaitCnt, Vmcnt, Expcnt, Lgkmcnt);
     return;
   }
 }

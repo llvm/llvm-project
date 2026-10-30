@@ -8143,17 +8143,17 @@ void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
 // s_waitcnt
 //===----------------------------------------------------------------------===//
 
-static bool encodeCnt(const AMDGPU::IsaVersion ISA, int64_t &IntVal,
+static bool encodeCnt(const AMDGPU::CounterLayout &Layout, int64_t &IntVal,
                       int64_t CntVal, bool Saturate,
-                      unsigned (*encode)(const IsaVersion &Version, unsigned,
+                      unsigned (*encode)(const CounterLayout &, unsigned,
                                          unsigned),
-                      unsigned (*decode)(const IsaVersion &Version, unsigned)) {
+                      unsigned (*decode)(const CounterLayout &, unsigned)) {
   bool Failed = false;
 
-  IntVal = encode(ISA, IntVal, CntVal);
-  if (CntVal != decode(ISA, IntVal)) {
+  IntVal = encode(Layout, IntVal, CntVal);
+  if (CntVal != decode(Layout, IntVal)) {
     if (Saturate) {
-      IntVal = encode(ISA, IntVal, -1);
+      IntVal = encode(Layout, IntVal, -1);
     } else {
       Failed = true;
     }
@@ -8178,12 +8178,14 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
   bool Failed = true;
   bool Sat = CntName.ends_with("_sat");
 
+  const AMDGPU::CounterLayout Layout = AMDGPU::getCounterLayout(getSTI());
   if (CntName == "vmcnt" || CntName == "vmcnt_sat") {
-    Failed = encodeCnt(ISA, IntVal, CntVal, Sat, encodeVmcnt, decodeVmcnt);
+    Failed = encodeCnt(Layout, IntVal, CntVal, Sat, encodeVmcnt, decodeVmcnt);
   } else if (CntName == "expcnt" || CntName == "expcnt_sat") {
-    Failed = encodeCnt(ISA, IntVal, CntVal, Sat, encodeExpcnt, decodeExpcnt);
+    Failed = encodeCnt(Layout, IntVal, CntVal, Sat, encodeExpcnt, decodeExpcnt);
   } else if (CntName == "lgkmcnt" || CntName == "lgkmcnt_sat") {
-    Failed = encodeCnt(ISA, IntVal, CntVal, Sat, encodeLgkmcnt, decodeLgkmcnt);
+    Failed =
+        encodeCnt(Layout, IntVal, CntVal, Sat, encodeLgkmcnt, decodeLgkmcnt);
   } else {
     Error(CntLoc, "invalid counter name " + CntName);
     return false;
@@ -8208,7 +8210,7 @@ bool AMDGPUAsmParser::parseCnt(int64_t &IntVal) {
 }
 
 ParseStatus AMDGPUAsmParser::parseSWaitCnt(OperandVector &Operands) {
-  int64_t Waitcnt = getWaitcntBitMask(ISA);
+  int64_t Waitcnt = getWaitcntBitMask(AMDGPU::getCounterLayout(getSTI()));
   SMLoc S = getLoc();
 
   if (isToken(AsmToken::Identifier) && peekToken().is(AsmToken::LParen)) {

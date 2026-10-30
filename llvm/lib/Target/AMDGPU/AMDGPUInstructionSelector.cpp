@@ -7482,7 +7482,7 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
 
   // MO = ((CntOp & CntMask) << shAmt) | BarID
   unsigned CntMask =
-      AMDGPU::getBarrierMemberCountBitMask(AMDGPU::getIsaVersion(STI.getCPU()));
+      AMDGPU::getBarrierMemberCountBitMask(AMDGPU::getCounterLayout(STI));
   Register TmpReg2 = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
   BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_AND_B32), TmpReg2)
       .add(CntOp)

@@ -351,7 +351,7 @@ protected:
   /// Instruction info.
   const SIInstrInfo *TII = nullptr;
 
-  IsaVersion IV;
+  CounterLayout Layout;
 
   /// Whether to insert cache invalidating instructions.
   bool InsertCacheInv;
@@ -1037,7 +1037,7 @@ static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
 
 SICacheControl::SICacheControl(const GCNSubtarget &ST, bool TgSplit) : ST(ST) {
   TII = ST.getInstrInfo();
-  IV = getIsaVersion(ST.getCPU());
+  Layout = getCounterLayout(ST);
   InsertCacheInv = !AmdgcnSkipCacheInvalidations;
   TgSplitEnabled = TgSplit;
 }
@@ -1370,11 +1370,9 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if (VMCnt || LGKMCnt) {
-    unsigned WaitCntImmediate =
-      AMDGPU::encodeWaitcnt(IV,
-                            VMCnt ? 0 : getVmcntBitMask(IV),
-                            getExpcntBitMask(IV),
-                            LGKMCnt ? 0 : getLgkmcntBitMask(IV));
+    unsigned WaitCntImmediate = AMDGPU::encodeWaitcnt(
+        Layout, VMCnt ? 0 : getVmcntBitMask(Layout), getExpcntBitMask(Layout),
+        LGKMCnt ? 0 : getLgkmcntBitMask(Layout));
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
         .addImm(WaitCntImmediate);
     Changed = true;
@@ -1779,11 +1777,9 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   }
 
   if (VMCnt || LGKMCnt) {
-    unsigned WaitCntImmediate =
-      AMDGPU::encodeWaitcnt(IV,
-                            VMCnt ? 0 : getVmcntBitMask(IV),
-                            getExpcntBitMask(IV),
-                            LGKMCnt ? 0 : getLgkmcntBitMask(IV));
+    unsigned WaitCntImmediate = AMDGPU::encodeWaitcnt(
+        Layout, VMCnt ? 0 : getVmcntBitMask(Layout), getExpcntBitMask(Layout),
+        LGKMCnt ? 0 : getLgkmcntBitMask(Layout));
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
         .addImm(WaitCntImmediate);
     Changed = true;

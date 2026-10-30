@@ -61,94 +61,14 @@ unsigned unpackBits(unsigned Src, unsigned Shift, unsigned Width) {
   return (Src & getBitMask(Shift, Width)) >> Shift;
 }
 
-/// \returns Vmcnt bit shift (lower bits).
-unsigned getVmcntBitShiftLo(unsigned VersionMajor) {
-  return VersionMajor >= 11 ? 10 : 0;
-}
-
-/// \returns Vmcnt bit width (lower bits).
-unsigned getVmcntBitWidthLo(unsigned VersionMajor) {
-  return VersionMajor >= 11 ? 6 : 4;
-}
-
-/// \returns Expcnt bit shift.
-unsigned getExpcntBitShift(unsigned VersionMajor) {
-  return VersionMajor >= 11 ? 0 : 4;
-}
-
 /// \returns Expcnt bit width.
-unsigned getExpcntBitWidth(unsigned VersionMajor) { return 3; }
-
-/// \returns Lgkmcnt bit shift.
-unsigned getLgkmcntBitShift(unsigned VersionMajor) {
-  return VersionMajor >= 11 ? 4 : 8;
-}
-
-/// \returns Lgkmcnt bit width.
-unsigned getLgkmcntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 10 ? 6 : 4;
-}
+unsigned getExpcntBitWidth() { return 3; }
 
 /// \returns Vmcnt bit shift (higher bits).
-unsigned getVmcntBitShiftHi(unsigned VersionMajor) { return 14; }
-
-/// \returns Vmcnt bit width (higher bits).
-unsigned getVmcntBitWidthHi(unsigned VersionMajor) {
-  return (VersionMajor == 9 || VersionMajor == 10) ? 2 : 0;
-}
-
-/// \returns Loadcnt bit width
-unsigned getLoadcntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 6 : 0;
-}
-
-/// \returns Samplecnt bit width.
-unsigned getSamplecntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 6 : 0;
-}
-
-/// \returns Bvhcnt bit width.
-unsigned getBvhcntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 3 : 0;
-}
-
-/// \returns Dscnt bit width.
-unsigned getDscntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 6 : 0;
-}
+unsigned getVmcntBitShiftHi() { return 14; }
 
 /// \returns Dscnt bit shift in combined S_WAIT instructions.
-unsigned getDscntBitShift(unsigned VersionMajor) { return 0; }
-
-/// \returns Storecnt or Vscnt bit width, depending on VersionMajor.
-unsigned getStorecntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 10 ? 6 : 0;
-}
-
-/// \returns Kmcnt bit width.
-unsigned getKmcntBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 5 : 0;
-}
-
-/// \returns Xcnt bit width.
-unsigned getXcntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
-  return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
-}
-
-/// \returns Asynccnt bit width.
-unsigned getAsynccntBitWidth(unsigned VersionMajor, unsigned VersionMinor) {
-  return VersionMajor == 12 && VersionMinor == 5 ? 6 : 0;
-}
-
-/// \returns shift for Loadcnt/Storecnt in combined S_WAIT instructions.
-unsigned getLoadcntStorecntBitShift(unsigned VersionMajor) {
-  return VersionMajor >= 12 ? 8 : 0;
-}
-
-/// \returns barrier member count bit width in M0.
-unsigned getBarrierMemberCountBitWidth(unsigned VersionMajor) {
-  return VersionMajor >= 13 ? 8 : 6;
-}
+unsigned getDscntBitShift() { return 0; }
 
 /// \returns VaSdst bit width
 inline unsigned getVaSdstBitWidth() { return 3; }
@@ -185,15 +105,6 @@ inline unsigned getVaSsrcBitWidth() { return 1; }
 
 /// \returns VaSsrc bit shift
 inline unsigned getVaSsrcBitShift() { return 8; }
-
-/// \returns HoldCnt bit shift
-inline unsigned getHoldCntWidth(unsigned VersionMajor, unsigned VersionMinor) {
-  static constexpr const unsigned MinMajor = 10;
-  static constexpr const unsigned MinMinor = 3;
-  return std::tie(VersionMajor, VersionMinor) >= std::tie(MinMajor, MinMinor)
-             ? 1
-             : 0;
-}
 
 /// \returns HoldCnt bit shift
 inline unsigned getHoldCntBitShift() { return 7; }
@@ -1657,183 +1568,187 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   return false;
 }
 
-unsigned getVmcntBitMask(const IsaVersion &Version) {
-  return (1 << (getVmcntBitWidthLo(Version.Major) +
-                getVmcntBitWidthHi(Version.Major))) -
-         1;
+namespace {
+// A numeric subtarget feature that sets one CounterLayout field.
+struct CounterFieldFeature {
+  unsigned Feature;
+  uint8_t CounterLayout::*Field;
+  uint8_t Value;
+};
+} // namespace
+
+#define GET_CounterFieldFeatures_IMPL
+#include "AMDGPUGenSearchableTables.inc"
+
+CounterLayout getCounterLayout(const MCSubtargetInfo &STI) {
+  CounterLayout L;
+  for (const CounterFieldFeature &F : CounterFieldFeatures) {
+    if (STI.hasFeature(F.Feature)) {
+      L.*F.Field = F.Value;
+    }
+  }
+  return L;
 }
 
-unsigned getLoadcntBitMask(const IsaVersion &Version) {
-  return (1 << getLoadcntBitWidth(Version.Major)) - 1;
+unsigned getVmcntBitMask(const CounterLayout &Layout) {
+  return (1 << (Layout.VmcntLoBits + Layout.VmcntHiBits)) - 1;
 }
 
-unsigned getSamplecntBitMask(const IsaVersion &Version) {
-  return (1 << getSamplecntBitWidth(Version.Major)) - 1;
+unsigned getLoadcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.LoadcntBits) - 1;
 }
 
-unsigned getBvhcntBitMask(const IsaVersion &Version) {
-  return (1 << getBvhcntBitWidth(Version.Major)) - 1;
+unsigned getSamplecntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.SamplecntBits) - 1;
 }
 
-unsigned getExpcntBitMask(const IsaVersion &Version) {
-  return (1 << getExpcntBitWidth(Version.Major)) - 1;
+unsigned getBvhcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.BvhcntBits) - 1;
 }
 
-unsigned getLgkmcntBitMask(const IsaVersion &Version) {
-  return (1 << getLgkmcntBitWidth(Version.Major)) - 1;
+unsigned getExpcntBitMask(const CounterLayout &Layout) {
+  return (1 << getExpcntBitWidth()) - 1;
 }
 
-unsigned getDscntBitMask(const IsaVersion &Version) {
-  return (1 << getDscntBitWidth(Version.Major)) - 1;
+unsigned getLgkmcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.LgkmcntBits) - 1;
 }
 
-unsigned getKmcntBitMask(const IsaVersion &Version) {
-  return (1 << getKmcntBitWidth(Version.Major)) - 1;
+unsigned getDscntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.DscntBits) - 1;
 }
 
-unsigned getXcntBitMask(const IsaVersion &Version) {
-  return (1 << getXcntBitWidth(Version.Major, Version.Minor)) - 1;
+unsigned getKmcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.KmcntBits) - 1;
 }
 
-unsigned getAsynccntBitMask(const IsaVersion &Version) {
-  return (1 << getAsynccntBitWidth(Version.Major, Version.Minor)) - 1;
+unsigned getXcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.XcntBits) - 1;
 }
 
-unsigned getStorecntBitMask(const IsaVersion &Version) {
-  return (1 << getStorecntBitWidth(Version.Major)) - 1;
+unsigned getAsynccntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.AsynccntBits) - 1;
 }
 
-unsigned getBarrierMemberCountBitMask(const IsaVersion &Version) {
-  return (1 << getBarrierMemberCountBitWidth(Version.Major)) - 1;
+unsigned getStorecntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.StorecntBits) - 1;
 }
 
-unsigned getWaitcntBitMask(const IsaVersion &Version) {
-  unsigned VmcntLo = getBitMask(getVmcntBitShiftLo(Version.Major),
-                                getVmcntBitWidthLo(Version.Major));
-  unsigned Expcnt = getBitMask(getExpcntBitShift(Version.Major),
-                               getExpcntBitWidth(Version.Major));
-  unsigned Lgkmcnt = getBitMask(getLgkmcntBitShift(Version.Major),
-                                getLgkmcntBitWidth(Version.Major));
-  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(Version.Major),
-                                getVmcntBitWidthHi(Version.Major));
+unsigned getBarrierMemberCountBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.BarrierMemberCountBits) - 1;
+}
+
+unsigned getWaitcntBitMask(const CounterLayout &Layout) {
+  unsigned VmcntLo = getBitMask(Layout.VmcntLoShift, Layout.VmcntLoBits);
+  unsigned Expcnt = getBitMask(Layout.ExpcntShift, getExpcntBitWidth());
+  unsigned Lgkmcnt = getBitMask(Layout.LgkmcntShift, Layout.LgkmcntBits);
+  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(), Layout.VmcntHiBits);
   return VmcntLo | Expcnt | Lgkmcnt | VmcntHi;
 }
 
-unsigned decodeVmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  unsigned VmcntLo = unpackBits(Waitcnt, getVmcntBitShiftLo(Version.Major),
-                                getVmcntBitWidthLo(Version.Major));
-  unsigned VmcntHi = unpackBits(Waitcnt, getVmcntBitShiftHi(Version.Major),
-                                getVmcntBitWidthHi(Version.Major));
-  return VmcntLo | VmcntHi << getVmcntBitWidthLo(Version.Major);
+unsigned decodeVmcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  unsigned VmcntLo =
+      unpackBits(Waitcnt, Layout.VmcntLoShift, Layout.VmcntLoBits);
+  unsigned VmcntHi =
+      unpackBits(Waitcnt, getVmcntBitShiftHi(), Layout.VmcntHiBits);
+  return VmcntLo | VmcntHi << Layout.VmcntLoBits;
 }
 
-unsigned decodeExpcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getExpcntBitShift(Version.Major),
-                    getExpcntBitWidth(Version.Major));
+unsigned decodeExpcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.ExpcntShift, getExpcntBitWidth());
 }
 
-unsigned decodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getLgkmcntBitShift(Version.Major),
-                    getLgkmcntBitWidth(Version.Major));
+unsigned decodeLgkmcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.LgkmcntShift, Layout.LgkmcntBits);
 }
 
-unsigned decodeLoadcnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getLoadcntStorecntBitShift(Version.Major),
-                    getLoadcntBitWidth(Version.Major));
+unsigned decodeLoadcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.LoadStorecntShift, Layout.LoadcntBits);
 }
 
-unsigned decodeStorecnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getLoadcntStorecntBitShift(Version.Major),
-                    getStorecntBitWidth(Version.Major));
+unsigned decodeStorecnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.LoadStorecntShift, Layout.StorecntBits);
 }
 
-unsigned decodeDscnt(const IsaVersion &Version, unsigned Waitcnt) {
-  return unpackBits(Waitcnt, getDscntBitShift(Version.Major),
-                    getDscntBitWidth(Version.Major));
+unsigned decodeDscnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, getDscntBitShift(), Layout.DscntBits);
 }
 
-void decodeWaitcnt(const IsaVersion &Version, unsigned Waitcnt, unsigned &Vmcnt,
-                   unsigned &Expcnt, unsigned &Lgkmcnt) {
-  Vmcnt = decodeVmcnt(Version, Waitcnt);
-  Expcnt = decodeExpcnt(Version, Waitcnt);
-  Lgkmcnt = decodeLgkmcnt(Version, Waitcnt);
+void decodeWaitcnt(const CounterLayout &Layout, unsigned Waitcnt,
+                   unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt) {
+  Vmcnt = decodeVmcnt(Layout, Waitcnt);
+  Expcnt = decodeExpcnt(Layout, Waitcnt);
+  Lgkmcnt = decodeLgkmcnt(Layout, Waitcnt);
 }
 
-unsigned encodeVmcnt(const IsaVersion &Version, unsigned Waitcnt,
+unsigned encodeVmcnt(const CounterLayout &Layout, unsigned Waitcnt,
                      unsigned Vmcnt) {
-  Waitcnt = packBits(Vmcnt, Waitcnt, getVmcntBitShiftLo(Version.Major),
-                     getVmcntBitWidthLo(Version.Major));
-  return packBits(Vmcnt >> getVmcntBitWidthLo(Version.Major), Waitcnt,
-                  getVmcntBitShiftHi(Version.Major),
-                  getVmcntBitWidthHi(Version.Major));
+  Waitcnt = packBits(Vmcnt, Waitcnt, Layout.VmcntLoShift, Layout.VmcntLoBits);
+  return packBits(Vmcnt >> Layout.VmcntLoBits, Waitcnt, getVmcntBitShiftHi(),
+                  Layout.VmcntHiBits);
 }
 
-unsigned encodeExpcnt(const IsaVersion &Version, unsigned Waitcnt,
+unsigned encodeExpcnt(const CounterLayout &Layout, unsigned Waitcnt,
                       unsigned Expcnt) {
-  return packBits(Expcnt, Waitcnt, getExpcntBitShift(Version.Major),
-                  getExpcntBitWidth(Version.Major));
+  return packBits(Expcnt, Waitcnt, Layout.ExpcntShift, getExpcntBitWidth());
 }
 
-unsigned encodeLgkmcnt(const IsaVersion &Version, unsigned Waitcnt,
+unsigned encodeLgkmcnt(const CounterLayout &Layout, unsigned Waitcnt,
                        unsigned Lgkmcnt) {
-  return packBits(Lgkmcnt, Waitcnt, getLgkmcntBitShift(Version.Major),
-                  getLgkmcntBitWidth(Version.Major));
+  return packBits(Lgkmcnt, Waitcnt, Layout.LgkmcntShift, Layout.LgkmcntBits);
 }
 
-unsigned encodeWaitcnt(const IsaVersion &Version, unsigned Vmcnt,
+unsigned encodeWaitcnt(const CounterLayout &Layout, unsigned Vmcnt,
                        unsigned Expcnt, unsigned Lgkmcnt) {
-  unsigned Waitcnt = getWaitcntBitMask(Version);
-  Waitcnt = encodeVmcnt(Version, Waitcnt, Vmcnt);
-  Waitcnt = encodeExpcnt(Version, Waitcnt, Expcnt);
-  Waitcnt = encodeLgkmcnt(Version, Waitcnt, Lgkmcnt);
+  unsigned Waitcnt = getWaitcntBitMask(Layout);
+  Waitcnt = encodeVmcnt(Layout, Waitcnt, Vmcnt);
+  Waitcnt = encodeExpcnt(Layout, Waitcnt, Expcnt);
+  Waitcnt = encodeLgkmcnt(Layout, Waitcnt, Lgkmcnt);
   return Waitcnt;
 }
 
-static unsigned getCombinedCountBitMask(const IsaVersion &Version,
+static unsigned getCombinedCountBitMask(const CounterLayout &Layout,
                                         bool IsStore) {
-  unsigned Dscnt = getBitMask(getDscntBitShift(Version.Major),
-                              getDscntBitWidth(Version.Major));
+  unsigned Dscnt = getBitMask(getDscntBitShift(), Layout.DscntBits);
   if (IsStore) {
-    unsigned Storecnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                   getStorecntBitWidth(Version.Major));
+    unsigned Storecnt =
+        getBitMask(Layout.LoadStorecntShift, Layout.StorecntBits);
     return Dscnt | Storecnt;
   }
-  unsigned Loadcnt = getBitMask(getLoadcntStorecntBitShift(Version.Major),
-                                getLoadcntBitWidth(Version.Major));
+  unsigned Loadcnt = getBitMask(Layout.LoadStorecntShift, Layout.LoadcntBits);
   return Dscnt | Loadcnt;
 }
 
-static unsigned encodeLoadcnt(const IsaVersion &Version, unsigned Waitcnt,
+static unsigned encodeLoadcnt(const CounterLayout &Layout, unsigned Waitcnt,
                               unsigned Loadcnt) {
-  return packBits(Loadcnt, Waitcnt, getLoadcntStorecntBitShift(Version.Major),
-                  getLoadcntBitWidth(Version.Major));
+  return packBits(Loadcnt, Waitcnt, Layout.LoadStorecntShift,
+                  Layout.LoadcntBits);
 }
 
-static unsigned encodeStorecnt(const IsaVersion &Version, unsigned Waitcnt,
+static unsigned encodeStorecnt(const CounterLayout &Layout, unsigned Waitcnt,
                                unsigned Storecnt) {
-  return packBits(Storecnt, Waitcnt, getLoadcntStorecntBitShift(Version.Major),
-                  getStorecntBitWidth(Version.Major));
+  return packBits(Storecnt, Waitcnt, Layout.LoadStorecntShift,
+                  Layout.StorecntBits);
 }
 
-static unsigned encodeDscnt(const IsaVersion &Version, unsigned Waitcnt,
+static unsigned encodeDscnt(const CounterLayout &Layout, unsigned Waitcnt,
                             unsigned Dscnt) {
-  return packBits(Dscnt, Waitcnt, getDscntBitShift(Version.Major),
-                  getDscntBitWidth(Version.Major));
+  return packBits(Dscnt, Waitcnt, getDscntBitShift(), Layout.DscntBits);
 }
 
-unsigned encodeLoadcntDscnt(const IsaVersion &Version, unsigned Loadcnt,
+unsigned encodeLoadcntDscnt(const CounterLayout &Layout, unsigned Loadcnt,
                             unsigned Dscnt) {
-  unsigned Waitcnt = getCombinedCountBitMask(Version, false);
-  Waitcnt = encodeLoadcnt(Version, Waitcnt, Loadcnt);
-  Waitcnt = encodeDscnt(Version, Waitcnt, Dscnt);
+  unsigned Waitcnt = getCombinedCountBitMask(Layout, false);
+  Waitcnt = encodeLoadcnt(Layout, Waitcnt, Loadcnt);
+  Waitcnt = encodeDscnt(Layout, Waitcnt, Dscnt);
   return Waitcnt;
 }
 
-unsigned encodeStorecntDscnt(const IsaVersion &Version, unsigned Storecnt,
+unsigned encodeStorecntDscnt(const CounterLayout &Layout, unsigned Storecnt,
                              unsigned Dscnt) {
-  unsigned Waitcnt = getCombinedCountBitMask(Version, true);
-  Waitcnt = encodeStorecnt(Version, Waitcnt, Storecnt);
-  Waitcnt = encodeDscnt(Version, Waitcnt, Dscnt);
+  unsigned Waitcnt = getCombinedCountBitMask(Layout, true);
+  Waitcnt = encodeStorecnt(Layout, Waitcnt, Storecnt);
+  Waitcnt = encodeDscnt(Layout, Waitcnt, Dscnt);
   return Waitcnt;
 }
 
@@ -1946,8 +1861,8 @@ unsigned getVaSdstBitMask() { return (1 << getVaSdstBitWidth()) - 1; }
 
 unsigned getVaSsrcBitMask() { return (1 << getVaSsrcBitWidth()) - 1; }
 
-unsigned getHoldCntBitMask(const IsaVersion &Version) {
-  return (1 << getHoldCntWidth(Version.Major, Version.Minor)) - 1;
+unsigned getHoldCntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.HoldCntBits) - 1;
 }
 
 unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
@@ -1980,9 +1895,8 @@ unsigned decodeFieldVaSsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
 }
 
-unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version) {
-  return unpackBits(Encoded, getHoldCntBitShift(),
-                    getHoldCntWidth(Version.Major, Version.Minor));
+unsigned decodeFieldHoldCnt(unsigned Encoded, const CounterLayout &Layout) {
+  return unpackBits(Encoded, getHoldCntBitShift(), Layout.HoldCntBits);
 }
 
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
@@ -2040,14 +1954,13 @@ unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
 }
 
 unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
-                            const IsaVersion &Version) {
-  return packBits(HoldCnt, Encoded, getHoldCntBitShift(),
-                  getHoldCntWidth(Version.Major, Version.Minor));
+                            const CounterLayout &Layout) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), Layout.HoldCntBits);
 }
 
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {
   unsigned Encoded = getDefaultDepCtrEncoding(STI);
-  return encodeFieldHoldCnt(Encoded, HoldCnt, getIsaVersion(STI.getCPU()));
+  return encodeFieldHoldCnt(Encoded, HoldCnt, getCounterLayout(STI));
 }
 
 } // namespace DepCtr
