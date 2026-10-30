@@ -536,6 +536,32 @@ TemplateArgument TemplateArgument::getPackExpansionPattern() const {
   llvm_unreachable("Invalid TemplateArgument Kind!");
 }
 
+UnsignedOrNone TemplateArgument::getNumExpansions() const {
+  assert(isPackExpansion());
+
+  switch (getKind()) {
+  case Type:
+    return getAsType()->castAs<PackExpansionType>()->getNumExpansions();
+
+  case Expression:
+    return cast<PackExpansionExpr>(getAsExpr())->getNumExpansions();
+
+  case TemplateExpansion:
+    return getNumTemplateExpansions();
+
+  case Declaration:
+  case Integral:
+  case StructuralValue:
+  case Pack:
+  case Null:
+  case Template:
+  case NullPtr:
+    return std::nullopt;
+  }
+
+  llvm_unreachable("Invalid TemplateArgument Kind!");
+}
+
 void TemplateArgument::print(const PrintingPolicy &Policy, raw_ostream &Out,
                              bool IncludeType) const {
 
