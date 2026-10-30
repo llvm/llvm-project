@@ -307,10 +307,22 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
   // symbol to the end of .text, which must hold what it calls (a module from
   // AIR lists its functions before its kernels).
   if (agxExperimentalLeafCallsEnabled() && HasKernels) {
+    // (in increasing call depth: -agx-measured-call-frames places each
+    // depth's frames after the shallower ones', recorded as they compile)
     SmallVector<Function *, 16> Called;
     for (Function &F : M)
       if (!F.isDeclaration() && F.getCallingConv() != CallingConv::AGX_KERNEL)
         Called.push_back(&F);
+    auto DepthOf = [](const Function *F) {
+      unsigned D = 0;
+      if (Attribute A = F->getFnAttribute("agx-call-depth");
+          A.isStringAttribute())
+        (void)A.getValueAsString().getAsInteger(10, D);
+      return D;
+    };
+    llvm::stable_sort(Called, [&](const Function *A, const Function *B) {
+      return DepthOf(A) < DepthOf(B);
+    });
     for (Function *F : Called) {
       F->removeFromParent();
       M.getFunctionList().push_back(F);
@@ -378,9 +390,11 @@ bool AGXGlobalDataArgs::runOnModule(Module &M) {
     FunctionType *FT = F->getFunctionType();
     SmallVector<Type *, 8> Params(FT->params());
     Params.push_back(I64);
+    // (in F's place: AGXAlwaysInline ordered the called functions)
     Function *NF = Function::Create(
         FunctionType::get(FT->getReturnType(), Params, false), F->getLinkage(),
-        F->getAddressSpace(), "", &M);
+        F->getAddressSpace(), "");
+    M.getFunctionList().insert(F->getIterator(), NF);
     NF->copyAttributesFrom(F);
     NF->copyMetadata(F, 0);
     NF->setCallingConv(F->getCallingConv());

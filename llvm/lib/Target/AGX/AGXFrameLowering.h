@@ -21,10 +21,16 @@ class AGXSubtarget;
 class AGXFrameLowering : public TargetFrameLowering {
 public:
   // Experimental call ABI: each static call depth has a separate region of
-  // the kernel's per-thread scratch allocation.
+  // the kernel's per-thread scratch allocation: the kernel's own first, then
+  // one per depth. Normally all of CallFrameRegionBytes; the only kernel of a
+  // module may have a larger one, the depths' then sharing what remains of the
+  // 32 KB that frame offsets can address (getCallFrameLayout).
   static constexpr unsigned CallFrameRegionBytes = 4096;
 
   static unsigned getCallDepth(const MachineFunction &MF);
+
+  /// The offset of a called function's region (zero for depth 0).
+  static uint64_t getCalleeFrameOffset(const MachineFunction &MF);
 
   explicit AGXFrameLowering(const AGXSubtarget &ST)
       : TargetFrameLowering(TargetFrameLowering::StackGrowsUp, Align(4), 0,
