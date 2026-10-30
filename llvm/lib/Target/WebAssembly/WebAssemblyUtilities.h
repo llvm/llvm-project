@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/Support/CommandLine.h"
+#include <algorithm>
 
 namespace llvm {
 
@@ -96,6 +97,12 @@ bool canLowerReturn(size_t ResultSize, const WebAssemblySubtarget *Subtarget);
 MachineSDNode *getTLSBase(SelectionDAG &DAG, const SDLoc &DL,
                           const WebAssemblySubtarget *Subtarget,
                           const SDValue Chain = SDValue());
+
+/// Moves the element at \p Idx of \p Range to the front, keeping the order of
+/// the other elements.
+template <typename RangeT> void moveToFront(RangeT &Range, size_t Idx) {
+  std::rotate(Range.begin(), Range.begin() + Idx, Range.begin() + Idx + 1);
+}
 
 } // end namespace WebAssembly
 
