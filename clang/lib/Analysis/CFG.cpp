@@ -675,6 +675,7 @@ private:
                              bool ExternallyDestructed);
   CFGBlock *VisitOverflowCheckedOp(Expr *E, AddStmtChoice asc,
                                    bool ExternallyDestructed);
+  CFGBlock *VisitOverflowGotoExpr(OverflowGotoExpr *E, AddStmtChoice asc);
   void addOverflowHandlerSuccessor(CFGBlock *Src,
                                    LocalScope::const_iterator SrcPos,
                                    JumpTarget Handler, Expr *Op);
@@ -2417,6 +2418,9 @@ CFGBlock *CFGBuilder::VisitStmtByClass(Stmt *S, AddStmtChoice asc,
     case Stmt::AddrLabelExprClass:
       return VisitAddrLabelExpr(cast<AddrLabelExpr>(S), asc);
 
+    case Stmt::OverflowGotoExprClass:
+      return VisitOverflowGotoExpr(cast<OverflowGotoExpr>(S), asc);
+
     case Stmt::BinaryConditionalOperatorClass:
       return VisitConditionalOperator(cast<BinaryConditionalOperator>(S), asc);
 
@@ -2720,6 +2724,12 @@ void CFGBuilder::addOverflowHandlerSuccessor(CFGBlock *Src,
   addSuccessor(Block, Handler.block);
   addScopeChangesHandling(SrcPos, Handler.scopePosition, Op);
   addSuccessor(Src, Block);
+}
+
+CFGBlock *CFGBuilder::VisitOverflowGotoExpr(OverflowGotoExpr *E,
+                                            AddStmtChoice asc) {
+  OverflowHandlerScope HandlerScope(OverflowHandlers, *Context, E);
+  return VisitStmt(E, asc);
 }
 
 CFGBlock *CFGBuilder::VisitAddrLabelExpr(AddrLabelExpr *A,

@@ -7767,6 +7767,11 @@ public:
 
   //===---------------------------- Clang Extensions ----------------------===//
 
+  /// ActOnOverflowGotoExpr - Parse __builtin_overflow_goto(expr, label).
+  ExprResult ActOnOverflowGotoExpr(SourceLocation BuiltinLoc, Expr *E,
+                                   LabelDecl *TheDecl, SourceLocation LabelLoc,
+                                   SourceLocation RParenLoc);
+
   /// ActOnConvertVectorExpr - create a new convert-vector expression from the
   /// provided arguments.
   ///

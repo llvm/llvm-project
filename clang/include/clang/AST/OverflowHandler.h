@@ -10,10 +10,11 @@
 // perform a trap overflow behavior type check and which label such a check
 // branches to.
 //
-// A checked operation branches to the innermost visible handler label: a GNU
-// local label (__label__) with the configured name declared in an enclosing
-// compound statement, else a function-level label with that name. Lambdas,
-// blocks, and other nested function bodies have their own handlers.
+// A checked operation branches to the innermost visible handler label: the
+// label of an enclosing __builtin_overflow_goto, or a GNU local label
+// (__label__) with the configured name declared in an enclosing compound
+// statement, else a function-level label with that name. Lambdas, blocks, and
+// other nested function bodies have their own handlers.
 //
 //===----------------------------------------------------------------------===//
 
@@ -62,8 +63,8 @@ bool isOverflowHandlerCheckedConversion(ASTContext &Ctx, QualType Src,
 LabelDecl *findFunctionOverflowHandler(ASTContext &Ctx, const Decl *CodeDecl);
 
 /// Returns the overflow handler that \p S introduces for the operations within
-/// it: a GNU local label with the handler name declared in a compound
-/// statement. Returns nullptr if checks
+/// it: the label of a __builtin_overflow_goto, or a GNU local label with the
+/// handler name declared in a compound statement. Returns nullptr if checks
 /// within \p S trap regardless of the enclosing handler: \p S is a captured
 /// statement such as an OpenMP region, a __finally block, the body of a defer
 /// statement, or an OpenACC compute construct. Returns std::nullopt if \p S

@@ -4233,6 +4233,11 @@ bool Compiler<Emitter>::VisitChooseExpr(const ChooseExpr *E) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::VisitOverflowGotoExpr(const OverflowGotoExpr *E) {
+  return this->delegate(E->getSubExpr());
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
   if (DiscardResult)
     return true;

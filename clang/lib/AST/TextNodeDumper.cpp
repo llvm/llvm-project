@@ -1840,6 +1840,11 @@ void TextNodeDumper::VisitAddrLabelExpr(const AddrLabelExpr *Node) {
   dumpPointer(Node->getLabel());
 }
 
+void TextNodeDumper::VisitOverflowGotoExpr(const OverflowGotoExpr *Node) {
+  OS << " " << Node->getLabel()->getName();
+  dumpPointer(Node->getLabel());
+}
+
 void TextNodeDumper::VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node) {
   OS << " " << Node->getCastName() << "<"
      << Node->getTypeAsWritten().getAsString() << ">"

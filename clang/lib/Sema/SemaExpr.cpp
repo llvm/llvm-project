@@ -16921,6 +16921,33 @@ ExprResult Sema::ActOnAddrLabel(SourceLocation OpLoc, SourceLocation LabLoc,
   return Res;
 }
 
+ExprResult Sema::ActOnOverflowGotoExpr(SourceLocation BuiltinLoc, Expr *E,
+                                       LabelDecl *TheDecl,
+                                       SourceLocation LabelLoc,
+                                       SourceLocation RParenLoc) {
+  ExprResult Res = CheckPlaceholderExpr(E);
+  if (Res.isInvalid())
+    return ExprError();
+  E = Res.get();
+
+  // A void operand lets a statement expression guard a whole block.
+  if (!E->isTypeDependent() && !E->getType()->isIntegerType() &&
+      !E->getType()->isVoidType())
+    return ExprError(
+        Diag(E->getExprLoc(), diag::err_overflow_goto_invalid_operand)
+        << E->getType() << E->getSourceRange());
+
+  // Failed checks in the operand jump to the label, so jumps into protected
+  // scopes must be diagnosed as for 'goto'. The jump may also leave code that
+  // cannot be left, such as a constructor initializer, so check every use.
+  setFunctionHasBranchIntoScope();
+  setFunctionHasBranchProtectedScope();
+  TheDecl->markUsed(Context);
+
+  return new (Context)
+      OverflowGotoExpr(E, TheDecl, BuiltinLoc, LabelLoc, RParenLoc);
+}
+
 void Sema::ActOnStartStmtExpr() {
   PushExpressionEvaluationContext(ExprEvalContexts.back().Context);
   // Make sure we diagnose jumping into a statement expression.

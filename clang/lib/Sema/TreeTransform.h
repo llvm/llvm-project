@@ -3232,6 +3232,17 @@ public:
     return getSema().ActOnAddrLabel(AmpAmpLoc, LabelLoc, Label);
   }
 
+  /// Build a new __builtin_overflow_goto expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildOverflowGotoExpr(SourceLocation BuiltinLoc, Expr *SubExpr,
+                                     LabelDecl *Label, SourceLocation LabelLoc,
+                                     SourceLocation RParenLoc) {
+    return getSema().ActOnOverflowGotoExpr(BuiltinLoc, SubExpr, Label, LabelLoc,
+                                           RParenLoc);
+  }
+
   /// Build a new GNU statement expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -14793,6 +14804,27 @@ TreeTransform<Derived>::TransformAddrLabelExpr(AddrLabelExpr *E) {
 
   return getDerived().RebuildAddrLabelExpr(E->getAmpAmpLoc(), E->getLabelLoc(),
                                            cast<LabelDecl>(LD));
+}
+
+template <typename Derived>
+ExprResult
+TreeTransform<Derived>::TransformOverflowGotoExpr(OverflowGotoExpr *E) {
+  ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
+  if (SubExpr.isInvalid())
+    return ExprError();
+
+  Decl *LD =
+      getDerived().TransformDecl(E->getLabel()->getLocation(), E->getLabel());
+  if (!LD)
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getSubExpr() &&
+      LD == E->getLabel())
+    return E;
+
+  return getDerived().RebuildOverflowGotoExpr(
+      E->getBuiltinLoc(), SubExpr.get(), cast<LabelDecl>(LD), E->getLabelLoc(),
+      E->getRParenLoc());
 }
 
 template<typename Derived>

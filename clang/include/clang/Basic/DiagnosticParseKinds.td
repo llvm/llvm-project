@@ -400,6 +400,8 @@ def note_force_empty_selector_name : Note<
   "and have an empty entry in the selector">;
 def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
+def err_overflow_goto_outside_fn : Error<
+  "'__builtin_overflow_goto' cannot be used outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
   "cannot use %select{unicode|wide}0 string literal in 'asm'">;
 def err_defer_ts_labeled_stmt : Error<

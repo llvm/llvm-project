@@ -296,6 +296,7 @@ public:
   void VisitBinaryOperator(const BinaryOperator *Node);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
   void VisitAddrLabelExpr(const AddrLabelExpr *Node);
+  void VisitOverflowGotoExpr(const OverflowGotoExpr *Node);
   void VisitCXXNamedCastExpr(const CXXNamedCastExpr *Node);
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *Node);
   void VisitCXXThisExpr(const CXXThisExpr *Node);

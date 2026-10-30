@@ -1549,6 +1549,11 @@ void JSONNodeDumper::VisitAddrLabelExpr(const AddrLabelExpr *ALE) {
   JOS.attribute("labelDeclId", createPointerRepresentation(ALE->getLabel()));
 }
 
+void JSONNodeDumper::VisitOverflowGotoExpr(const OverflowGotoExpr *OGE) {
+  JOS.attribute("name", OGE->getLabel()->getName());
+  JOS.attribute("labelDeclId", createPointerRepresentation(OGE->getLabel()));
+}
+
 void JSONNodeDumper::VisitCXXTypeidExpr(const CXXTypeidExpr *CTE) {
   if (CTE->isTypeOperand()) {
     QualType Adjusted = CTE->getTypeOperand(Ctx);

@@ -1015,6 +1015,11 @@ public:
   Value *VisitBlockExpr(const BlockExpr *BE);
   Value *VisitAbstractConditionalOperator(const AbstractConditionalOperator *);
   Value *VisitChooseExpr(ChooseExpr *CE);
+  Value *VisitOverflowGotoExpr(OverflowGotoExpr *E) {
+    OverflowHandlerScope HandlerScope(CGF.LocalOverflowHandlers,
+                                      CGF.getContext(), E);
+    return Visit(E->getSubExpr());
+  }
   Value *VisitVAArgExpr(VAArgExpr *VE);
   Value *VisitObjCStringLiteral(const ObjCStringLiteral *E) {
     return CGF.EmitObjCStringLiteral(E);

@@ -201,6 +201,10 @@ ExprDependence clang::computeDependence(ConvertVectorExpr *E) {
   return D;
 }
 
+ExprDependence clang::computeDependence(OverflowGotoExpr *E) {
+  return E->getSubExpr()->getDependence();
+}
+
 ExprDependence clang::computeDependence(ChooseExpr *E) {
   if (E->isConditionDependent())
     return ExprDependence::TypeValueInstantiation |

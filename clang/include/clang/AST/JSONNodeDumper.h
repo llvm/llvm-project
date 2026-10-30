@@ -306,6 +306,7 @@ public:
   void VisitSizeOfPackExpr(const SizeOfPackExpr *SOPE);
   void VisitUnresolvedLookupExpr(const UnresolvedLookupExpr *ULE);
   void VisitAddrLabelExpr(const AddrLabelExpr *ALE);
+  void VisitOverflowGotoExpr(const OverflowGotoExpr *OGE);
   void VisitCXXTypeidExpr(const CXXTypeidExpr *CTE);
   void VisitConstantExpr(const ConstantExpr *CE);
   void VisitInitListExpr(const InitListExpr *ILE);

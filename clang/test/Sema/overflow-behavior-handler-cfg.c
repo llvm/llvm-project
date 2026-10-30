@@ -97,3 +97,19 @@ int wrap(int __ob_wrap a) {
 __overflow:
   return -1; // expected-warning {{'return' will never be executed}}
 }
+
+// __builtin_overflow_goto branches to its own label.
+int builtin_handler(int __ob_trap a) {
+  a = __builtin_overflow_goto(a + 1, l);
+  return a;
+l:
+  return -1;
+}
+
+int builtin_sometimes_uninit(int __ob_trap a) {
+  int r; // expected-note {{initialize the variable 'r' to silence this warning}}
+  a = __builtin_overflow_goto(a + 1, l); // expected-warning {{variable 'r' is used uninitialized whenever an overflow check fails}}
+  r = 0;
+l:
+  return r + a; // expected-note {{uninitialized use occurs here}}
+}

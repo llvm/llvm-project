@@ -1297,6 +1297,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Expr::ObjCIsaExprClass:
   case Expr::ObjCIvarRefExprClass:
   case Expr::ParenExprClass:
+  case Expr::OverflowGotoExprClass:
   case Expr::ParenListExprClass:
   case Expr::ShuffleVectorExprClass:
   case Expr::StmtExprClass:

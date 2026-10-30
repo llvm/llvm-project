@@ -2106,6 +2106,7 @@ public:
       : WL(wl), Parent(parent) {}
 
   void VisitAddrLabelExpr(const AddrLabelExpr *E);
+  void VisitOverflowGotoExpr(const OverflowGotoExpr *E);
   void VisitBlockExpr(const BlockExpr *B);
   void VisitCompoundLiteralExpr(const CompoundLiteralExpr *E);
   void VisitCompoundStmt(const CompoundStmt *S);
@@ -3044,6 +3045,10 @@ void EnqueueVisitor::EnqueueChildren(const AnnotateAttr *A) {
 
 void EnqueueVisitor::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   WL.push_back(LabelRefVisit(E->getLabel(), E->getLabelLoc(), Parent));
+}
+void EnqueueVisitor::VisitOverflowGotoExpr(const OverflowGotoExpr *E) {
+  WL.push_back(LabelRefVisit(E->getLabel(), E->getLabelLoc(), Parent));
+  AddStmt(E->getSubExpr());
 }
 void EnqueueVisitor::VisitBlockExpr(const BlockExpr *B) {
   AddDecl(B->getBlockDecl());

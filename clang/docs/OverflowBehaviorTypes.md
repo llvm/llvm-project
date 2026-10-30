@@ -842,6 +842,30 @@ function with it.
   analyzer follow the branch.
 - `-foverflow-behavior-label=<name>` (a `-cc1` option) changes the label name.
 
+`__builtin_overflow_goto(expr, label)` sends the failed checks of operations
+written inside `expr` to `label` instead. It yields the value of `expr`,
+which must have integer or `void` type. A `void` statement expression covers
+a whole block: `__builtin_overflow_goto(({ a--; a += 2; }), label)`. Effects
+before the failing check are kept. The label must be defined in the same
+function. When builtins and local labels nest, the innermost one applies. The
+builtin may not branch out of the code listed above whose checks always trap.
+
+```c
+int get_buf(size_t __ob_trap count, size_t __ob_trap size, void **out) {
+  size_t __ob_trap bytes = count * size;              // to __overflow
+  bytes = __builtin_overflow_goto(bytes + HDR, too_big); // to too_big
+  *out = malloc(bytes);
+  return *out ? 0 : -ENOMEM;
+__overflow:
+  return -EOVERFLOW;
+too_big:
+  return -E2BIG;
+}
+```
+
+`__has_builtin(__builtin_overflow_goto)` is true only when overflow behavior
+types are enabled.
+
 When overflow behavior types are disabled, a handler label is never used and
 `-Wunused-label` reports it. Mark the label `__attribute__((unused))` in code
 that must build either way.

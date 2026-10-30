@@ -1668,6 +1668,11 @@ void StmtProfiler::VisitAddrLabelExpr(const AddrLabelExpr *S) {
   VisitDecl(S->getLabel());
 }
 
+void StmtProfiler::VisitOverflowGotoExpr(const OverflowGotoExpr *S) {
+  VisitExpr(S);
+  VisitDecl(S->getLabel());
+}
+
 void StmtProfiler::VisitStmtExpr(const StmtExpr *S) {
   VisitExpr(S);
 }

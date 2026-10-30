@@ -650,6 +650,7 @@ namespace clang {
     ExpectedStmt VisitCompoundLiteralExpr(CompoundLiteralExpr *E);
     ExpectedStmt VisitAtomicExpr(AtomicExpr *E);
     ExpectedStmt VisitAddrLabelExpr(AddrLabelExpr *E);
+    ExpectedStmt VisitOverflowGotoExpr(OverflowGotoExpr *E);
     ExpectedStmt VisitConstantExpr(ConstantExpr *E);
     ExpectedStmt VisitParenExpr(ParenExpr *E);
     ExpectedStmt VisitParenListExpr(ParenListExpr *E);
@@ -8046,6 +8047,21 @@ ExpectedStmt ASTNodeImporter::VisitAddrLabelExpr(AddrLabelExpr *E) {
   return new (Importer.getToContext()) AddrLabelExpr(
       ToAmpAmpLoc, ToLabelLoc, ToLabel, ToType);
 }
+
+ExpectedStmt ASTNodeImporter::VisitOverflowGotoExpr(OverflowGotoExpr *E) {
+  Error Err = Error::success();
+  auto *ToSubExpr = importChecked(Err, E->getSubExpr());
+  auto *ToLabel = importChecked(Err, E->getLabel());
+  auto ToBuiltinLoc = importChecked(Err, E->getBuiltinLoc());
+  auto ToLabelLoc = importChecked(Err, E->getLabelLoc());
+  auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext()) OverflowGotoExpr(
+      ToSubExpr, ToLabel, ToBuiltinLoc, ToLabelLoc, ToRParenLoc);
+}
+
 ExpectedStmt ASTNodeImporter::VisitConstantExpr(ConstantExpr *E) {
   Error Err = Error::success();
   auto ToSubExpr = importChecked(Err, E->getSubExpr());
