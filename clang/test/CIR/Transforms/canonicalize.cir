@@ -216,6 +216,13 @@ module {
   // CHECK-NEXT:   %[[CAST3:.*]] = cir.cast integral %[[CAST2]] : !s32i -> !s64i
   // CHECK-NEXT:   cir.return %[[CAST3]] : !s64i
 
+  cir.func @cast_integral_same_type(%arg0: !s32i) -> !s32i {
+    %0 = cir.cast integral %arg0 : !s32i -> !s32i
+    cir.return %0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @cast_integral_same_type(%[[ARG0:.*]]: !s32i) -> !s32i
+  // CHECK-NEXT:   cir.return %[[ARG0]] : !s32i
+
   cir.func @cast_poison() -> !s64i {
     %0 = cir.const #cir.poison : !s32i
     %1 = cir.cast integral %0 : !s32i -> !s64i

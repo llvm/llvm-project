@@ -1635,7 +1635,8 @@ define <2 x i32> @test_concat_diff_v1i32_v1i32(i32 %a, i32 %b) {
 ; CHECK-GI-NEXT:    fmov s1, w1
 ; CHECK-GI-NEXT:    sqabs s0, s0
 ; CHECK-GI-NEXT:    sqabs s1, s1
-; CHECK-GI-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = tail call i32 @llvm.aarch64.neon.sqabs.i32(i32 %a)

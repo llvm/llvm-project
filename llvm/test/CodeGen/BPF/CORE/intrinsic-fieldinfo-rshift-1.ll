@@ -45,13 +45,13 @@ entry:
 }
 
 ; CHECK:             r1 = 57
-; CHECK:             r0 = 60
-; CHECK-ALU64:       r0 += r1
-; CHECK-ALU32:       w0 += w1
+; CHECK:             r2 = 60
+; CHECK-ALU64:       r2 += r1
+; CHECK-ALU32:       w2 += w1
 ; CHECK:             r1 = 59
-; CHECK-ALU64:       r0 += r1
-; CHECK-ALU32:       w0 += w1
-; CHECK:             r1 = 48
+; CHECK-ALU64:       r1 += r2
+; CHECK-ALU32:       w1 += w2
+; CHECK:             r0 = 48
 ; CHECK-ALU64:       r0 += r1
 ; CHECK-ALU32:       w0 += w1
 ; CHECK:             exit

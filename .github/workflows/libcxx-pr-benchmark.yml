@@ -129,6 +129,7 @@ jobs:
       setup: ${{ toJSON(matrix.setup) }}
       benchmarks: ${{ needs.extract-info.outputs.benchmarks }}
       artifact-name: ab-results-${{ matrix.lnt-machine }}
+      lnt-artifact-name: lnt-reports-${{ matrix.lnt-machine }}
 
   report:
     needs:

@@ -133,9 +133,8 @@ void cuf::genPointerSync(mlir::Location loc, const mlir::Value box,
                          fir::FirOpBuilder &builder) {
   if (auto declareOp = box.getDefiningOp<hlfir::DeclareOp>()) {
     if (auto addrOfOp = declareOp.getMemref().getDefiningOp<fir::AddrOfOp>()) {
-      auto mod = addrOfOp->getParentOfType<mlir::ModuleOp>();
-      if (auto globalOp =
-              mod.lookupSymbol<fir::GlobalOp>(addrOfOp.getSymbol())) {
+      if (auto globalOp = builder.getNamedGlobal(
+              addrOfOp.getSymbol().getLeafReference().getValue())) {
         if (cuf::isRegisteredDeviceGlobal(globalOp)) {
           cuf::SyncDescriptorOp::create(builder, loc, addrOfOp.getSymbol());
         }

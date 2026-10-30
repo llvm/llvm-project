@@ -713,6 +713,15 @@ bool ComputeRegionOp::isEffectivelySerial() {
          checkDim(GPUParallelDimAttr::blockZDim(ctx));
 }
 
+bool ComputeRegionOp::launchesMultipleBlocks() {
+  return llvm::any_of(getLaunchParDims(), [&](GPUParallelDimAttr dim) {
+    if (!dim.isAnyBlock())
+      return false;
+    std::optional<uint64_t> width = getKnownConstantLaunchArg(dim);
+    return !width || *width != 1;
+  });
+}
+
 BlockArgument ComputeRegionOp::parDimToWidth(GPUParallelDimAttr parDim) {
   for (auto [pos, launchArg] : llvm::enumerate(getLaunchArgs())) {
     auto parOp = launchArg.getDefiningOp<ParWidthOp>();
