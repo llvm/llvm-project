@@ -54,6 +54,9 @@ struct specificval_ty {
   specificval_ty(const VPValue *V) : Val(V) {}
 
   bool match(const VPValue *VPV) const { return VPV == Val; }
+  bool match(const VPRecipeBase *R) const {
+    return R->getNumDefinedValues() == 1 && R->getVPSingleValue() == Val;
+  }
 };
 
 inline specificval_ty m_Specific(const VPValue *VPV) { return VPV; }
@@ -448,11 +451,12 @@ m_ExtractPenultimateElement(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::ExtractPenultimateElement>(Op0);
 }
 
-template <typename Op0_t, typename Op1_t, typename Op2_t>
-inline VPInstruction_match<VPInstruction::WideActiveLaneMask, Op0_t, Op1_t,
-                           Op2_t>
-m_WideActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
-  return m_VPInstruction<VPInstruction::WideActiveLaneMask>(Op0, Op1, Op2);
+template <typename... Op_t>
+inline VPInstruction_match<VPInstruction::WideActiveLaneMask, Op_t...>
+m_WideActiveLaneMask(const Op_t &...Op) {
+  static_assert(sizeof...(Op) == 3 || sizeof...(Op) == 0,
+                "Expected three operands (or none for a wildcard match)");
+  return m_VPInstruction<VPInstruction::WideActiveLaneMask>(Op...);
 }
 
 inline VPInstruction_match<VPInstruction::AnyOf> m_AnyOf() {
