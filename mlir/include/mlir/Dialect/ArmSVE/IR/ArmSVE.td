@@ -68,8 +68,25 @@ def SVEVector : AnyTypeOf<[
   Scalable1DVectorOfLength<16, [I8]>],
   "an SVE vector with element size <= 64-bit">;
 
+// Inputs valid for the multi-vector zips (not including the 128-bit element zipqs)
+def ZipInputVectorType : AnyTypeOf<[
+  Scalable1DVectorOfLength<2, [I64, F64]>,
+  Scalable1DVectorOfLength<4, [I32, F32]>,
+  Scalable1DVectorOfLength<8, [I16, F16, BF16]>,
+  Scalable1DVectorOfLength<16, [I8]>],
+  "an SVE vector with element size <= 64-bit">;
+
 //===----------------------------------------------------------------------===//
-// ArmSVE op definitions
+// ArmSVE constraints
+//===----------------------------------------------------------------------===//
+
+class SvboolTypeConstraint<string lhsArg, string rhsArg> : TypesMatchWith<
+      "expected corresponding svbool type widened to [16]xi1",
+      lhsArg, rhsArg,
+      "VectorType(VectorType::Builder(::llvm::cast<VectorType>($_self)).setDim(::llvm::cast<VectorType>($_self).getRank() - 1, 16))">;
+
+//===----------------------------------------------------------------------===//
+// ArmSVE Op classes
 //===----------------------------------------------------------------------===//
 
 class ArmSVE_Op<string mnemonic, list<Trait> traits = []> :
@@ -149,6 +166,10 @@ class ScalableMaskedIOp<string mnemonic, string op_description,
     "$mask `,` $src1 `,` $src2 attr-dict `:` type($mask) `,` type($res)";
 }
 
+//===----------------------------------------------------------------------===//
+// SdotOp
+//===----------------------------------------------------------------------===//
+
 def SdotOp : ArmSVE_Op<"sdot", [Pure,
                                 AllTypesMatch<["src1", "src2"]>,
                                 AllTypesMatch<["acc", "dst"]>]> {
@@ -177,6 +198,43 @@ def SdotOp : ArmSVE_Op<"sdot", [Pure,
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
 }
+
+//===----------------------------------------------------------------------===//
+// UdotOp
+//===----------------------------------------------------------------------===//
+
+def UdotOp : ArmSVE_Op<"udot", [Pure,
+                                AllTypesMatch<["src1", "src2"]>,
+                                AllTypesMatch<["acc", "dst"]>]> {
+  let summary = "Vector-vector dot product and accumulate op";
+  let description = [{
+    UDOT: Unsigned integer addition of dot product.
+
+    This function maps to the UDOT instruction, and it takes signless integer
+    operands that the operation interprets as unsigned. It partitions the second
+    and third vector inputs into groups of four elements. They calculate the dot
+    product of each group (without loss of precision) and then add each result
+    to the overlapping element of the first vector input.
+
+    Source:
+    https://developer.arm.com/documentation/100987/0000
+  }];
+  // Supports either:
+  //   (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
+  //   (vector<8xi16>. vector<8xi16>) -> (vector<2xi64>)
+  let arguments = (ins
+          ScalableVectorOfLengthAndType<[4, 2], [I32, I64]>:$acc,
+          ScalableVectorOfLengthAndType<[16, 8], [I8, I16]>:$src1,
+          ScalableVectorOfLengthAndType<[16, 8], [I8, I16]>:$src2
+  );
+  let results = (outs ScalableVectorOfLengthAndType<[4, 2], [I32, I64]>:$dst);
+  let assemblyFormat =
+    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
+}
+
+//===----------------------------------------------------------------------===//
+// SmmlaOp
+//===----------------------------------------------------------------------===//
 
 def SmmlaOp : ArmSVE_Op<"smmla", [Pure,
                                   AllTypesMatch<["src1", "src2"]>,
@@ -208,34 +266,9 @@ def SmmlaOp : ArmSVE_Op<"smmla", [Pure,
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
 }
 
-def UdotOp : ArmSVE_Op<"udot", [Pure,
-                                AllTypesMatch<["src1", "src2"]>,
-                                AllTypesMatch<["acc", "dst"]>]> {
-  let summary = "Vector-vector dot product and accumulate op";
-  let description = [{
-    UDOT: Unsigned integer addition of dot product.
-
-    This function maps to the UDOT instruction, and it takes signless integer
-    operands that the operation interprets as unsigned. It partitions the second
-    and third vector inputs into groups of four elements. They calculate the dot
-    product of each group (without loss of precision) and then add each result
-    to the overlapping element of the first vector input.
-
-    Source:
-    https://developer.arm.com/documentation/100987/0000
-  }];
-  // Supports either:
-  //   (vector<16xi8>, vector<16xi8>) -> (vector<4xi32>)
-  //   (vector<8xi16>. vector<8xi16>) -> (vector<2xi64>)
-  let arguments = (ins
-          ScalableVectorOfLengthAndType<[4, 2], [I32, I64]>:$acc,
-          ScalableVectorOfLengthAndType<[16, 8], [I8, I16]>:$src1,
-          ScalableVectorOfLengthAndType<[16, 8], [I8, I16]>:$src2
-  );
-  let results = (outs ScalableVectorOfLengthAndType<[4, 2], [I32, I64]>:$dst);
-  let assemblyFormat =
-    "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
-}
+//===----------------------------------------------------------------------===//
+// UmmlaOp
+//===----------------------------------------------------------------------===//
 
 def UmmlaOp : ArmSVE_Op<"ummla", [Pure,
                                   AllTypesMatch<["src1", "src2"]>,
@@ -267,6 +300,10 @@ def UmmlaOp : ArmSVE_Op<"ummla", [Pure,
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
 }
 
+//===----------------------------------------------------------------------===//
+// UsmmlaOp
+//===----------------------------------------------------------------------===//
+
 def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
                                     AllTypesMatch<["src1", "src2"]>,
                                     AllTypesMatch<["acc", "dst"]>]> {
@@ -294,6 +331,10 @@ def UsmmlaOp : ArmSVE_Op<"usmmla", [Pure,
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($dst)";
 }
+
+//===----------------------------------------------------------------------===//
+// BfmmlaOp
+//===----------------------------------------------------------------------===//
 
 def BfmmlaOp : ArmSVE_IntrOp<"bfmmla", [Pure,
                                         AllTypesMatch<["src1", "src2"]>,
@@ -330,10 +371,9 @@ def BfmmlaOp : ArmSVE_IntrOp<"bfmmla", [Pure,
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
-class SvboolTypeConstraint<string lhsArg, string rhsArg> : TypesMatchWith<
-      "expected corresponding svbool type widened to [16]xi1",
-      lhsArg, rhsArg,
-      "VectorType(VectorType::Builder(::llvm::cast<VectorType>($_self)).setDim(::llvm::cast<VectorType>($_self).getRank() - 1, 16))">;
+//===----------------------------------------------------------------------===//
+// ConvertFromSvboolOp
+//===----------------------------------------------------------------------===//
 
 def ConvertFromSvboolOp : ArmSVE_Op<"convert_from_svbool",
                                     [Pure,
@@ -368,6 +408,10 @@ def ConvertFromSvboolOp : ArmSVE_Op<"convert_from_svbool",
   let results = (outs SVEPredicateMask:$result);
   let assemblyFormat = "$source attr-dict `:` type($result)";
 }
+
+//===----------------------------------------------------------------------===//
+// ConvertToSvboolOp
+//===----------------------------------------------------------------------===//
 
 def ConvertToSvboolOp : ArmSVE_Op<"convert_to_svbool",
                                   [Pure,
@@ -405,13 +449,9 @@ def ConvertToSvboolOp : ArmSVE_Op<"convert_to_svbool",
   let assemblyFormat = "$source attr-dict `:` type($source)";
 }
 
-// Inputs valid for the multi-vector zips (not including the 128-bit element zipqs)
-def ZipInputVectorType : AnyTypeOf<[
-  Scalable1DVectorOfLength<2, [I64, F64]>,
-  Scalable1DVectorOfLength<4, [I32, F32]>,
-  Scalable1DVectorOfLength<8, [I16, F16, BF16]>,
-  Scalable1DVectorOfLength<16, [I8]>],
-  "an SVE vector with element size <= 64-bit">;
+//===----------------------------------------------------------------------===//
+// ZipX2Op
+//===----------------------------------------------------------------------===//
 
 def ZipX2Op : ArmSVE_Op<"zip.x2", [Pure,
                                    AllTypesMatch<["sourceV1", "sourceV2",
@@ -455,6 +495,10 @@ def ZipX2Op : ArmSVE_Op<"zip.x2", [Pure,
     }
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// ZipX4Op
+//===----------------------------------------------------------------------===//
 
 def ZipX4Op
   : ArmSVE_Op<"zip.x4",
@@ -518,6 +562,10 @@ def ZipX4Op
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// PselOp
+//===----------------------------------------------------------------------===//
+
 def PselOp : ArmSVE_Op<"psel", [Pure, AllTypesMatch<["p1", "result"]>]> {
   let summary = "Predicate select";
 
@@ -552,29 +600,9 @@ def PselOp : ArmSVE_Op<"psel", [Pure, AllTypesMatch<["p1", "result"]>]> {
   }];
 }
 
-def ScalableMaskedAddIOp : ScalableMaskedIOp<"masked.addi", "addition",
-                                             [Commutative]>;
-
-def ScalableMaskedAddFOp : ScalableMaskedFOp<"masked.addf", "addition",
-                            [Commutative]>;
-
-def ScalableMaskedSubIOp : ScalableMaskedIOp<"masked.subi", "subtraction">;
-
-def ScalableMaskedSubFOp : ScalableMaskedFOp<"masked.subf", "subtraction">;
-
-def ScalableMaskedMulIOp : ScalableMaskedIOp<"masked.muli", "multiplication",
-                            [Commutative]>;
-
-def ScalableMaskedMulFOp : ScalableMaskedFOp<"masked.mulf", "multiplication",
-                            [Commutative]>;
-
-def ScalableMaskedSDivIOp : ScalableMaskedIOp<"masked.divi_signed",
-                                              "signed division">;
-
-def ScalableMaskedUDivIOp : ScalableMaskedIOp<"masked.divi_unsigned",
-                                              "unsigned division">;
-
-def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
+//===----------------------------------------------------------------------===//
+// DupQLaneOp
+//===----------------------------------------------------------------------===//
 
 def DupQLaneOp : ArmSVE_Op<"dupq_lane", [Pure, AllTypesMatch<["src", "dst"]>]> {
   let summary = "Broadcast indexed 128-bit segment to vector";
@@ -614,6 +642,40 @@ def DupQLaneOp : ArmSVE_Op<"dupq_lane", [Pure, AllTypesMatch<["src", "dst"]>]> {
     $src `[` $lane `]` attr-dict `:` type($dst)
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// Masked arithmetic Ops
+//
+// TODO: Audit - do we need these?
+//===----------------------------------------------------------------------===//
+
+def ScalableMaskedAddIOp : ScalableMaskedIOp<"masked.addi", "addition",
+                                             [Commutative]>;
+
+def ScalableMaskedAddFOp : ScalableMaskedFOp<"masked.addf", "addition",
+                            [Commutative]>;
+
+def ScalableMaskedSubIOp : ScalableMaskedIOp<"masked.subi", "subtraction">;
+
+def ScalableMaskedSubFOp : ScalableMaskedFOp<"masked.subf", "subtraction">;
+
+def ScalableMaskedMulIOp : ScalableMaskedIOp<"masked.muli", "multiplication",
+                            [Commutative]>;
+
+def ScalableMaskedMulFOp : ScalableMaskedFOp<"masked.mulf", "multiplication",
+                            [Commutative]>;
+
+def ScalableMaskedSDivIOp : ScalableMaskedIOp<"masked.divi_signed",
+                                              "signed division">;
+
+def ScalableMaskedUDivIOp : ScalableMaskedIOp<"masked.divi_unsigned",
+                                              "unsigned division">;
+
+def ScalableMaskedDivFOp : ScalableMaskedFOp<"masked.divf", "division">;
+
+//===----------------------------------------------------------------------===//
+//  Intrinsic ops
+//===----------------------------------------------------------------------===//
 
 def UmmlaIntrOp :
   ArmSVE_IntrBinaryOverloadedOp<"ummla">,
