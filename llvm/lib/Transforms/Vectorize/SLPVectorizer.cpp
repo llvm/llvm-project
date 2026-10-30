@@ -14607,9 +14607,10 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   SmallVector<unsigned> Order;
   std::optional<int64_t> Diff = Cache.getPointersDiff(
       ScalarTy, PointerOps.front(), ScalarTy, PointerOps.back(), *DL, *SE);
-  if (!Diff || !analyzeConstantStrideCandidate(PointerOps, ScalarTy,
-                                               CommonAlignment, Order, *Diff,
-                                               PointerOps.front(), SPtrInfo))
+  assert(Diff && "Expected constant distance between compressed loads.");
+  if (!analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                      Order, *Diff, PointerOps.front(),
+                                      SPtrInfo))
     return;
 
   auto *LI0 = cast<LoadInst>(E.Scalars.front());
