@@ -95,8 +95,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// nullopt otherwise.
   std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
-  /// Builds a single vector load out of \p Loads. \returns the new load,
-  /// or nullptr if \p Loads are not a vectorizable.
+  /// Builds a single vector load out of \p Loads. A chain of mixed types is
+  /// loaded as a vector of integers. \returns the new load, or nullptr if
+  /// \p Loads are not vectorizable.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
   /// Packs \p Constants into one constant vector. The element type is chosen
@@ -112,7 +113,9 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// loads. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
-  /// Vectorizes \p Loads into a single load. \return the packed load.
+  /// Vectorizes \p Loads into a single load and unpacks each original load
+  /// from it, casting the lanes back to the load's type if needed.
+  /// \return the packed load.
   LoadInst *vectorizeLoads(BndlRef<Instruction *> Loads, Region &Rgn);
 
 public:
