@@ -1318,16 +1318,13 @@ void Writer::buildFixupChains() {
     while (i < count && loc[i].isec->parent->parent == oseg &&
            (loc[i].offset / pageSize) == pageIdx) {
       uint64_t offset = loc[i].offset - loc[i - 1].offset;
-
-      auto fail = [&](Twine message) {
+      if (offset < target->wordSize) {
         error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
               ", offset " +
               Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
-              ": " + message);
-      };
-
-      if (offset < target->wordSize)
-        return fail("fixups overlap");
+              ": fixups overlap");
+        return;
+      }
 
       // The "next" field is in the same location for bind and rebase entries.
       reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
