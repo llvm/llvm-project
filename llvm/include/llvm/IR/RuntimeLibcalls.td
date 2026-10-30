@@ -305,6 +305,7 @@ foreach FPTy = [F32, F64, F80, F128, PPCF128] in {
   def ASIN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ACOS_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
   def ATAN_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type]>;
+  def HYPOT_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def ATAN2_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type]>;
   def SINCOS_#FPTy.Suffix : RuntimeLibcall<Void, [FPTy.Type, Ptr, Ptr]>;
   def REMQUO_#FPTy.Suffix : RuntimeLibcall<FPTy.Type, [FPTy.Type, FPTy.Type, Ptr]>;
@@ -384,6 +385,7 @@ def : RuntimeLibcallFamily<"TAN", StrictFP<"tan">.ret>;
 def : RuntimeLibcallFamily<"ASIN", StrictFP<"asin">.ret>;
 def : RuntimeLibcallFamily<"ACOS", StrictFP<"acos">.ret>;
 def : RuntimeLibcallFamily<"ATAN", StrictFP<"atan">.ret>;
+def : RuntimeLibcallFamily<"HYPOT", ["hypot"]>;
 def : RuntimeLibcallFamily<"ATAN2", StrictFP<"atan2">.ret>;
 def : RuntimeLibcallFamily<"SINH", StrictFP<"sinh">.ret>;
 def : RuntimeLibcallFamily<"COSH", StrictFP<"cosh">.ret>;
@@ -1459,6 +1461,7 @@ defset list<RuntimeLibcallImpl> LibmCoreImpls = {
 defm acos : LibmLibcallImpls;
 defm asin : LibmLibcallImpls;
 defm atan : LibmLibcallImpls;
+defm hypot: LibmLibcallImpls;
 defm atan2 : LibmLibcallImpls;
 defm cbrt : LibmLibcallImpls;
 defm ceil : LibmLibcallImpls;

@@ -627,6 +627,7 @@ def ftan       : SDNode<"ISD::FTAN"       , SDTFPUnaryOp>;
 def fasin      : SDNode<"ISD::FASIN"      , SDTFPUnaryOp>;
 def facos      : SDNode<"ISD::FACOS"      , SDTFPUnaryOp>;
 def fatan      : SDNode<"ISD::FATAN"      , SDTFPUnaryOp>;
+def fhypot     : SDNode<"ISD::FHYPOT"     , SDTFPBinOp>;
 def fatan2     : SDNode<"ISD::FATAN2"     , SDTFPBinOp>;
 def fsinh      : SDNode<"ISD::FSINH"      , SDTFPUnaryOp>;
 def fcosh      : SDNode<"ISD::FCOSH"      , SDTFPUnaryOp>;

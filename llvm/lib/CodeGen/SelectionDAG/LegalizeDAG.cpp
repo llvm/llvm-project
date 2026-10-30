@@ -4826,6 +4826,10 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::STRICT_FATAN:
     ExpandFPLibCall(Node, RTLIB::getATAN(Node->getSimpleValueType(0)), Results);
     break;
+  case ISD::FHYPOT:
+    ExpandFPLibCall(Node, RTLIB::getHYPOT(Node->getSimpleValueType(0)),
+                    Results);
+    break;
   case ISD::FATAN2:
   case ISD::STRICT_FATAN2:
     ExpandFPLibCall(Node, RTLIB::getATAN2(Node->getSimpleValueType(0)),

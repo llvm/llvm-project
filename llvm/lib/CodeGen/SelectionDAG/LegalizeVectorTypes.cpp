@@ -228,6 +228,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
 
   case ISD::FPOW:
   case ISD::FATAN2:
+  case ISD::FHYPOT:
   case ISD::FREM:
   case ISD::FSUB:
   case ISD::MUL:
@@ -1705,6 +1706,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FDIV:
   case ISD::FPOW:
   case ISD::FATAN2:
+  case ISD::FHYPOT:
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR:
@@ -5578,6 +5580,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FPOW:
   case ISD::FATAN2:
   case ISD::FREM:
+  case ISD::FHYPOT:
     if (unrollExpandedOp())
       break;
     // If the target has custom/legal support for the scalar FP intrinsic ops

@@ -7262,6 +7262,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              getValue(I.getArgOperand(0)), Flags));
     return;
   }
+  case Intrinsic::hypot:
+    setValue(&I, DAG.getNode(ISD::FHYPOT, sdl,
+                             getValue(I.getArgOperand(0)).getValueType(),
+                             getValue(I.getArgOperand(0)),
+                             getValue(I.getArgOperand(1)), Flags));
+    return;
+
   case Intrinsic::atan2:
     setValue(&I, DAG.getNode(ISD::FATAN2, sdl,
                              getValue(I.getArgOperand(0)).getValueType(),
@@ -9983,6 +9990,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_atanf:
       case LibFunc_atanl:
         if (visitUnaryFloatCall(I, ISD::FATAN))
+          return;
+        break;
+      case LibFunc_hypot:
+      case LibFunc_hypotf:
+      case LibFunc_hypotl:
+        if (visitBinaryFloatCall(I, ISD::FHYPOT))
           return;
         break;
       case LibFunc_atan2:

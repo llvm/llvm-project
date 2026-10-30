@@ -862,7 +862,8 @@ void TargetLoweringBase::initActions() {
                         ISD::FTANH,          ISD::FATAN2,
                         ISD::FMULADD,        ISD::CONVERT_FROM_ARBITRARY_FP,
                         ISD::CONVERT_TO_ARBITRARY_FP,
-                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX},
+                        ISD::PSEUDO_FMIN,    ISD::PSEUDO_FMAX,
+                        ISD::FHYPOT},
                        VT, Expand);
     // clang-format on
 
@@ -1008,7 +1009,7 @@ void TargetLoweringBase::initActions() {
                      {MVT::f32, MVT::f64, MVT::f128}, LibCall);
 
   setOperationAction({ISD::FTAN, ISD::FACOS, ISD::FASIN, ISD::FATAN, ISD::FCOSH,
-                      ISD::FSINH, ISD::FTANH, ISD::FATAN2},
+                      ISD::FSINH, ISD::FTANH, ISD::FATAN2, ISD::FHYPOT},
                      MVT::f16, Promote);
   // Default ISD::TRAP to expand (which turns it into abort).
   setOperationAction(ISD::TRAP, MVT::Other, Expand);
@@ -2038,6 +2039,8 @@ int TargetLoweringBase::IntrinsicIDToISD(Intrinsic::ID ID) const {
     return ISD::FACOS;
   case Intrinsic::asin:
     return ISD::FASIN;
+  case Intrinsic::hypot:
+    return ISD::FHYPOT;
   case Intrinsic::atan:
     return ISD::FATAN;
   case Intrinsic::cos:

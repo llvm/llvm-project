@@ -2384,6 +2384,9 @@ public:
     case Intrinsic::acos:
       ISD = ISD::FACOS;
       break;
+    case Intrinsic::hypot:
+      ISD = ISD::FHYPOT;
+      break;
     case Intrinsic::atan:
       ISD = ISD::FATAN;
       break;
