@@ -1106,7 +1106,8 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
   return success();
 }
 
-LogicalResult checkErrorIfResize(Operation *op) {
+LogicalResult checkErrorIfResize(Operation *op,
+                                 bool checkStrictSpecConformance) {
   auto resize = dyn_cast<tosa::ResizeOp>(op);
   if (!resize)
     return success();
@@ -1123,7 +1124,8 @@ LogicalResult checkErrorIfResize(Operation *op) {
 
   // Ensure the image size is supported by GPU APIs and that for integer
   // implementations, position * stride does not overflow int32_t.
-  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+  if (checkStrictSpecConformance && inputType.hasStaticShape() &&
+      outputType.hasStaticShape()) {
     const SmallVector<int64_t, 4> sizes = {
         outputType.getDimSize(1), outputType.getDimSize(2),
         inputType.getDimSize(1), inputType.getDimSize(2)};
@@ -1166,27 +1168,30 @@ LogicalResult checkErrorIfResize(Operation *op) {
 
   const int64_t offsetY = offset[0];
   const int64_t offsetX = offset[1];
-  // Set a consistent lower limit of 1/16 downscale to simplify
-  // implementations
-  if (offsetY < -scaleYN || offsetY >= 16 * scaleYN)
-    return op->emitOpError(
-               "expect offsetY / scaleYNumerator to be in range [-1, 16), got ")
-           << offsetY << "/" << scaleYN;
-  if (offsetX < -scaleXN || offsetX >= 16 * scaleXN)
-    return op->emitOpError(
-               "expect offsetX / scaleXNumerator to be in range [-1, 16), got ")
-           << offsetX << "/" << scaleXN;
-
   const int64_t borderY = border[0];
   const int64_t borderX = border[1];
-  if (borderY < -16 * scaleYN || borderY >= scaleYN)
-    return op->emitOpError(
-               "expect borderY / scaleYNumerator to be in range [-16, 1), got ")
-           << borderY << "/" << scaleYN;
-  if (borderX < -16 * scaleXN || borderX >= scaleXN)
-    return op->emitOpError(
-               "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
-           << borderX << "/" << scaleXN;
+
+  // Set a consistent lower limit of 1/16 downscale to simplify
+  // implementations
+  if (checkStrictSpecConformance) {
+    if (offsetY < -scaleYN || offsetY >= 16 * scaleYN)
+      return op->emitOpError("expect offsetY / scaleYNumerator to be in range "
+                             "[-1, 16), got ")
+             << offsetY << "/" << scaleYN;
+    if (offsetX < -scaleXN || offsetX >= 16 * scaleXN)
+      return op->emitOpError("expect offsetX / scaleXNumerator to be in range "
+                             "[-1, 16), got ")
+             << offsetX << "/" << scaleXN;
+
+    if (borderY < -16 * scaleYN || borderY >= scaleYN)
+      return op->emitOpError("expect borderY / scaleYNumerator to be in range "
+                             "[-16, 1), got ")
+             << borderY << "/" << scaleYN;
+    if (borderX < -16 * scaleXN || borderX >= scaleXN)
+      return op->emitOpError("expect borderX / scaleXNumerator to be in range "
+                             "[-16, 1), got ")
+             << borderX << "/" << scaleXN;
+  }
 
   // In TOSA specification, we do not support broadcast behavior. Here is a
   // strict check to conform to the specification.
@@ -1569,11 +1574,12 @@ LogicalResult checkErrorIfScatter(Operation *op) {
 }
 
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (failed(checkErrorIfResize(op)) || failed(checkErrorIfMul(op)) ||
-      failed(checkErrorIfTable(op)) || failed(checkErrorIfRescale(op)) ||
-      failed(checkErrorIfPad(op)) || failed(checkErrorIfReshape(op)) ||
-      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
-      failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
+  if (failed(checkErrorIfResize(op, strictOpSpecAlignment)) ||
+      failed(checkErrorIfMul(op)) || failed(checkErrorIfTable(op)) ||
+      failed(checkErrorIfRescale(op)) || failed(checkErrorIfPad(op)) ||
+      failed(checkErrorIfReshape(op)) || failed(checkErrorIfSlice(op)) ||
+      failed(checkErrorIfCondIf(op)) || failed(checkErrorIfWhileLoop(op)) ||
+      failed(checkErrorIfScatter(op)))
     return failure();
   return success();
 }
@@ -1763,7 +1769,7 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     // do error if checks
-    if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
+    if (failed(applyErrorIfCheck(op)))
       return signalPassFailure();
   });
 }
