@@ -28,6 +28,17 @@ LIBC_INLINE constexpr cpp::simd_mask<byte_ty> shift_mask(cpp::simd_mask<char> m,
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
   constexpr cpp::simd<char> null_byte = cpp::splat('\0');
 
+  // The vector loads below read outside the string on purpose. That is only
+  // sound when the compiler cannot see the object, since it treats a read
+  // outside a known object as undefined. Once a call is inlined on a known
+  // array, as under LTO, the size is known, so read it bytewise.
+  if (__builtin_object_size(src, 0) != static_cast<size_t>(-1)) {
+    size_t length = 0;
+    while (src[length])
+      ++length;
+    return length;
+  }
+
   size_t alignment = alignof(cpp::simd<char>);
   const cpp::simd<char> *aligned = reinterpret_cast<const cpp::simd<char> *>(
       __builtin_align_down(src, alignment));
@@ -60,6 +71,14 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   using Vector = cpp::simd<char>;
   using Mask = cpp::simd_mask<char>;
   Vector c_byte = c;
+
+  // See string_length.
+  if (__builtin_object_size(s, 0) != static_cast<size_t>(-1)) {
+    for (size_t i = 0; i < n; ++i)
+      if (s[i] == c)
+        return const_cast<unsigned char *>(s) + i;
+    return nullptr;
+  }
 
   size_t alignment = alignof(Vector);
   const Vector *aligned =
