@@ -6470,17 +6470,24 @@ bool Sema::diagnoseQualifiedDeclaration(CXXScopeSpec &SS, DeclContext *DC,
         // CheckRedeclarationExported.
         return false;
     } else {
-      unsigned DCKind = diag::EnclosingDeclKind::Namespace;
-      if (auto *TD = dyn_cast<TagDecl>(DC)) {
-        if (TD->isStruct())
-          DCKind = diag::EnclosingDeclKind::Struct;
-        else if (TD->isClass())
-          DCKind = diag::EnclosingDeclKind::Class;
-        else if (TD->isUnion())
-          DCKind = diag::EnclosingDeclKind::Union;
-        else if (TD->isEnum())
-          DCKind = diag::EnclosingDeclKind::Enum;
-      }
+      unsigned DCKind = [&] {
+        if (auto *TD = dyn_cast<TagDecl>(DC)) {
+          switch (TD->getTagKind()) {
+          case TagTypeKind::Struct:
+            return diag::EnclosingDeclKind::Struct;
+          case TagTypeKind::Interface:
+            return diag::EnclosingDeclKind::Struct;
+          case TagTypeKind::Class:
+            return diag::EnclosingDeclKind::Class;
+          case TagTypeKind::Union:
+            return diag::EnclosingDeclKind::Union;
+          case TagTypeKind::Enum:
+            return diag::EnclosingDeclKind::Enum;
+          }
+        }
+        assert(isa<NamespaceDecl>(DC));
+        return diag::EnclosingDeclKind::Namespace;
+      }();
       Diag(Loc, diag::err_invalid_declarator_scope)
           << Name << cast<NamedDecl>(Cur) << DCKind << cast<NamedDecl>(DC)
           << SS.getRange();
