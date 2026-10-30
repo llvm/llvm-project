@@ -377,3 +377,47 @@ void SPIRVCombinerHelper::applyMatrixMultiply(MachineInstr &MI) const {
     Builder.buildBuildVector(ResReg, ResultScalars);
   MI.eraseFromParent();
 }
+
+/// This match is part of a combine that
+/// rewrites fadd(X,fmul(S,fsub(Y,X))) to lerp(X)
+/// fadd(
+///    x,
+///    fmul(s,
+///         fsub(y, x)))
+/// ->
+/// lerp(x,y,s)
+///
+bool SPIRVCombinerHelper::matchFAddToLerp(MachineInstr &MI) const {
+  if (!STI.isShader())
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register XReg, YReg, SReg;
+
+  auto SubPattern = m_GFSub(m_Reg(YReg), m_DeferredReg(XReg));
+  auto MulPattern = m_GFMul(m_Reg(SReg), SubPattern);
+  auto AddPattern = m_GFAdd(m_Reg(XReg), MulPattern);
+
+  if (!mi_match(DstReg, MRI, AddPattern))
+    return false;
+
+  return true;
+}
+
+void SPIRVCombinerHelper::applySPIRVLerp(MachineInstr &MI) const {
+  // Extract the operands from the match criteria.
+  Register XReg = MI.getOperand(1).getReg();
+  MachineInstr *MulInstr = MRI.getVRegDef(MI.getOperand(2).getReg());
+  Register SReg = MulInstr->getOperand(1).getReg();
+  MachineInstr *SubInstr = MRI.getVRegDef(MulInstr->getOperand(2).getReg());
+  Register YReg = SubInstr->getOperand(1).getReg();
+
+  Register ResultReg = MI.getOperand(0).getReg();
+  Builder.setInstrAndDebugLoc(MI);
+  Builder.buildIntrinsic(Intrinsic::spv_lerp, ResultReg)
+      .addUse(XReg) 
+      .addUse(YReg) 
+      .addUse(SReg);
+
+  MI.eraseFromParent();
+}

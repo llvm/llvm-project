@@ -42,6 +42,12 @@ def matrix_multiply_lowering
           (match (int_matrix_multiply $dst, $a, $b, $m, $n, $k):$root),
           (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
 
+def lerp_pattern : GICombineRule<
+  (defs root:$root),
+  (match (wip_match_opcode G_FADD):$root,
+         [{ return Helper.matchFAddToLerp(*${root}); }]),
+  (apply [{ Helper.applySPIRVLerp(*${root}); }])>;
+
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
                  [vector_length_sub_to_distance_lowering,
