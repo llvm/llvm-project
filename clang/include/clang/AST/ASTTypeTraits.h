@@ -308,9 +308,8 @@ public:
   /// @{
   /// Imposes an order on \c DynTypedNode.
   ///
-  /// Supports comparison of nodes that support memoization.
-  /// FIXME: Implement comparison for other node types (currently
-  /// only Stmt, Decl and Type return memoization data).
+  /// FIXME: Implement comparison for TemplateName, LambdaCapture,
+  /// TemplateArgument, and TemplateArgumentLoc.
   bool operator<(const DynTypedNode &Other) const {
     if (!NodeKind.isSame(Other.NodeKind))
       return NodeKind < Other.NodeKind;
