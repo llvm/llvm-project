@@ -266,8 +266,8 @@ const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
   auto oldInsertPoint = MIRBuilder.getInsertPt();
-  MachineBasicBlock *OldMBB =
-      oldInsertPoint.isValid() ? &MIRBuilder.getMBB() : nullptr;
+  assert(oldInsertPoint.isValid() && "Builder must have insertion point set!");
+  MachineBasicBlock *OldMBB = &MIRBuilder.getMBB();
   MachineBasicBlock *NewMBB = &*MIRBuilder.getMF().begin();
 
   auto LastInsertedType = LastInsertedTypeMap.find(CurMF);
