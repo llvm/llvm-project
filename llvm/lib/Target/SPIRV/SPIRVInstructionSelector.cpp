@@ -1623,10 +1623,9 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
       continue;
 
     MachineIRBuilder MIRBuilder(I);
-    SPIRVTypeInst MantissaTy = GR.getSPIRVTypeForVReg(I.getOperand(2).getReg());
     // An unused exponent def has no SPIR-V type.
     SPIRVTypeInst PointeeTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-    unsigned N = GR.getScalarOrVectorComponentCount(MantissaTy);
+    unsigned N = GR.getScalarOrVectorComponentCount(ResType);
     if (N > 1)
       PointeeTy = GR.getOrCreateSPIRVVectorType(PointeeTy, N, I, TII);
     const SPIRVTypeInst PointerType = GR.getOrCreateSPIRVPointerType(
@@ -1652,7 +1651,7 @@ bool SPIRVInstructionSelector::selectFrexp(Register ResVReg,
 
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(MantissaTy))
+        .addUse(GR.getSPIRVTypeID(ResType))
         .addImm(static_cast<uint32_t>(Ex.first))
         .addImm(Opcode)
         .add(I.getOperand(2))
