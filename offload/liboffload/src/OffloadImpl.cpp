@@ -589,7 +589,7 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
     return Info.write<uint64_t>(Device->Device->getMaxGridSize());
 
-  case OL_DEVICE_INFO_PREFERS_ZERO_COPY:
+  case OL_DEVICE_INFO_PREFERRED_LOCATION_HOST:
     return Info.write<bool>(Device->Device->useAutoZeroCopy());
 
   default:
