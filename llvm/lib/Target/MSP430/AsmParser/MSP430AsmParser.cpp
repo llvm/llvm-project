@@ -162,14 +162,24 @@ public:
   bool isPostIndReg()     const { return Kind == k_PostIndReg; }
 
   bool isCGImm() const {
-    if (Kind != k_Imm)
-      return false;
-
     int64_t Val;
-    if (!Imm->evaluateAsAbsolute(Val))
+    if (!isImm() || !Imm->evaluateAsAbsolute(Val))
       return false;
     
     if (Val == 0 || Val == 1 || Val == 2 || Val == 4 || Val == 8 || Val == -1)
+      return true;
+
+    return false;
+  }
+
+  /// Shift count of the MSP430X multi-bit shifts (RRAM, RRUM, RLAM). It is
+  /// encoded as count - 1 in a 2-bit field, so only 1 to 4 is valid.
+  bool isRpt2Imm() const {
+    int64_t Val;
+    if (!isImm() || !Imm->evaluateAsAbsolute(Val))
+      return false;
+
+    if (Val >= 1 && Val <= 4)
       return true;
 
     return false;
@@ -265,6 +275,9 @@ bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
     return false;
   case Match_MnemonicFail:
     return Error(Loc, "invalid instruction mnemonic");
+  case Match_MissingFeature:
+    return Error(Loc,
+                 "instruction requires a CPU feature not currently enabled");
   case Match_InvalidOperand: {
     SMLoc ErrorLoc = Loc;
     if (ErrorInfo != ~0U) {

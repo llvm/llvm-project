@@ -44,6 +44,10 @@ class MSP430Disassembler : public MCDisassembler {
                                 ArrayRef<uint8_t> Bytes, uint64_t Address,
                                 raw_ostream &CStream) const;
 
+  DecodeStatus getInstructionX(MCInst &MI, uint64_t &Size,
+                               ArrayRef<uint8_t> Bytes, uint64_t Address,
+                               raw_ostream &CStream) const;
+
 public:
   MSP430Disassembler(const MCSubtargetInfo &STI, MCContext &Ctx)
       : MCDisassembler(STI, Ctx) {}
@@ -115,6 +119,15 @@ static DecodeStatus DecodeCGImm(MCInst &MI, uint64_t Bits, uint64_t Address,
   case 0x23: Imm =  2; break;
   case 0x33: Imm = -1; break;
   }
+  MI.addOperand(MCOperand::createImm(Imm));
+  return MCDisassembler::Success;
+}
+
+/// Decode the 2-bit shift count of RRCM, RRAM, RRUM and RLAM. It is stored as
+/// count - 1.
+static DecodeStatus decodeRpt2Imm(MCInst &MI, uint64_t Bits, uint64_t Address,
+                                  const MCDisassembler *Decoder) {
+  int64_t Imm = Bits + 1;
   MI.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -353,6 +366,37 @@ DecodeStatus MSP430Disassembler::getInstructionCJ(MCInst &MI, uint64_t &Size,
   return DecodeStatus::Success;
 }
 
+static bool isExtensionWord(uint64_t Word) { return (Word & 0xf800) == 0x1800; }
+
+DecodeStatus MSP430Disassembler::getInstructionX(MCInst &MI, uint64_t &Size,
+                                                 ArrayRef<uint8_t> Bytes,
+                                                 uint64_t Address,
+                                                 raw_ostream &CStream) const {
+  uint64_t Insn = support::endian::read16le(Bytes.data());
+  unsigned Words = 1;
+  if (isExtensionWord(Insn)) {
+    if (Bytes.size() < 4) {
+      Size = 2;
+      return DecodeStatus::Fail;
+    }
+    Insn |= (uint64_t)support::endian::read16le(Bytes.data() + 2) << 16;
+    Words = 2;
+  }
+
+  // MSP430X32 decodes the extension word together with the following Format I
+  // or II word. Each combination is its own instruction, like RRCX_16 or
+  // ADDX16rr, so the plain Format I and II tables are not used here.
+  const uint8_t *DecoderTable =
+      Words == 2 ? DecoderTableMSP430X32 : DecoderTableMSP430X16;
+  DecodeStatus Result =
+      decodeInstruction(DecoderTable, MI, Insn, Address, this, STI);
+  // The word after an extension word is a valid Format I or II instruction on
+  // its own. Skip it on failure too, so it is not shown without the extension
+  // word.
+  Size = Words * 2;
+  return Result;
+}
+
 DecodeStatus MSP430Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                 ArrayRef<uint8_t> Bytes,
                                                 uint64_t Address,
@@ -362,10 +406,18 @@ DecodeStatus MSP430Disassembler::getInstruction(MCInst &MI, uint64_t &Size,
     return MCDisassembler::Fail;
   }
 
+  // The first word selects the instruction format:
+  //   0x0000-0x0fff  MSP430X address instructions
+  //   0x1000-0x17ff  Format II
+  //   0x1800-0x1fff  MSP430X extension word, followed by a Format I or II word
+  //   0x2000-0x3fff  Jumps
+  //   0x4000-0xffff  Format I
   uint64_t Insn = support::endian::read16le(Bytes.data());
-  unsigned Opc = fieldFromInstruction(Insn, 13, 3);
-  switch (Opc) {
+  unsigned FormatBits = fieldFromInstruction(Insn, 13, 3);
+  switch (FormatBits) {
   case 0:
+    if (!(Insn & 0x1000) || isExtensionWord(Insn))
+      return getInstructionX(MI, Size, Bytes, Address, CStream);
     return getInstructionII(MI, Size, Bytes, Address, CStream);
   case 1:
     return getInstructionCJ(MI, Size, Bytes, Address, CStream);

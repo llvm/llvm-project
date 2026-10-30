@@ -13,6 +13,13 @@
 include "MSP430InstrFormats.td"
 
 //===----------------------------------------------------------------------===//
+// Feature predicates.
+//===----------------------------------------------------------------------===//
+
+def HasMSP430X : Predicate<"Subtarget->hasMSP430X()">,
+                 AssemblerPredicate<(all_of FeatureX), "MSP430X">;
+
+//===----------------------------------------------------------------------===//
 // Type Constraints.
 //===----------------------------------------------------------------------===//
 class SDTCisI8<int OpNum> : SDTCisVT<OpNum, i8>;
@@ -990,3 +997,5 @@ def : Pat<(and GR16:$src, 255), (ZEXT16r GR16:$src)>;
 def : Pat<(MSP430cmp (trunc (and_su GR16:$src, GR16:$src2)), 0),
           (BIT8rr (EXTRACT_SUBREG GR16:$src, subreg_8bit),
                   (EXTRACT_SUBREG GR16:$src2, subreg_8bit))>;
+
+include "MSP430InstrInfoExtended.td"
