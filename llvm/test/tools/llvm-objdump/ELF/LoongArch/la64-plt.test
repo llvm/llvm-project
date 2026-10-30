@@ -1,0 +1,104 @@
+# RUN: yaml2obj --docnum=1 %s | llvm-objdump -d --no-print-imm-hex --no-show-raw-insn - | FileCheck %s
+# RUN: yaml2obj --docnum=2 %s | llvm-objdump -d --no-print-imm-hex --no-show-raw-insn - | FileCheck %s --check-prefix=NEG
+
+# CHECK:      0000000000010340 <foo@plt>:
+# CHECK-NEXT:    10340:       pcaddu12i $t3, 32
+# CHECK-NEXT:    10344:       ld.d $t3, $t3, 224
+# CHECK-NEXT:    10348:       jirl $t1, $t3, 0
+# CHECK-NEXT:    1034c:       nop
+# CHECK-EMPTY:
+# CHECK-NEXT: 0000000000010350 <bar@plt>:
+# CHECK-NEXT:    10350:       pcaddu12i $t3, 32
+# CHECK-NEXT:    10354:       ld.d $t3, $t3, 216
+# CHECK-NEXT:    10358:       jirl $t1, $t3, 0
+# CHECK-NEXT:    1035c:       nop
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_OBJABI_V1 ]
+Sections:
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x2B8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x30420
+        Symbol:          foo
+        Type:            R_LARCH_JUMP_SLOT
+      - Offset:          0x30428
+        Symbol:          bar
+        Type:            R_LARCH_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x10320
+    AddressAlign:    0x10
+    Content:         0E04001CADBD1100CFC1C328AD51FF02CCC1C302AD0545008C21C028E001004C0F04001CEF81C328ED01004C000040030F04001CEF61C328ED01004C00004003
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x30410
+    AddressAlign:    0x8
+    Content:         '0000000000000000000000000000000020030100000000002003010000000000'
+DynamicSymbols:
+  - Name:            foo
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+
+## .got.plt is placed below .plt, so the pcaddu12i offset is negative.
+# NEG:      0000000040000020 <foo@plt>:
+# NEG-NEXT: 40000020:       pcaddu12i $t3, -262128
+# NEG:      0000000040000030 <bar@plt>:
+# NEG-NEXT: 40000030:       pcaddu12i $t3, -262128
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_LOONGARCH
+  Flags:           [ EF_LOONGARCH_ABI_DOUBLE_FLOAT, EF_LOONGARCH_OBJABI_V1 ]
+Sections:
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x100B0
+    AddressAlign:    0x8
+    Content:         '0000000000000000000000000000000000000040000000000000004000000000'
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x10188
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x100C0
+        Symbol:          foo
+        Type:            R_LARCH_JUMP_SLOT
+      - Offset:          0x100C8
+        Symbol:          bar
+        Type:            R_LARCH_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x40000000
+    AddressAlign:    0x10
+    Content:         0E02801DADBD1100CFC1C228AD51FF02CCC1C202AD0545008C21C028E001004C0F02801DEF81C228ED01004C000040030F02801DEF61C228ED01004C00004003
+DynamicSymbols:
+  - Name:            foo
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            bar
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
