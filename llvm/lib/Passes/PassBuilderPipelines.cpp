@@ -1618,6 +1618,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     // TODO: explore a better pipeline configuration that can improve
     // compilation time overhead.
     // FIXME: move this earlier (lots of pass ordering tests will need fixing)
+    MPM.addPass(NameAnonGlobalPass());
     MPM.addPass(AssignGUIDPass());
     MPM.addPass(WholeProgramDevirtPass(
         /*ExportSummary*/ nullptr,
