@@ -3354,8 +3354,36 @@ static bool canonicalizeShuffleVectorByLane(
   return true;
 }
 
+/// Lower VECTOR_SHUFFLE into XVPERMI_Q (if possible).
+///
+/// For example:
+///   %2 = shufflevector <4 x i64> %0, <4 x i64> %1,
+///                      <4 x i32> <i32 2, i32 3, i32 4, i32 5>
+/// is lowered to:
+///     (XVPERMI_Q $xr1, $xr0, 33)
+static SDValue
+lowerVECTOR_SHUFFLE_XVPERMIQ(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
+                             SDValue V1, SDValue V2, SelectionDAG &DAG,
+                             const LoongArchSubtarget &Subtarget) {
+  // Each 128-bit lane of the result must be a whole lane of V1 or V2.
+  SmallVector<int, 2> LaneMask;
+  if (!widenShuffleMaskElts(Mask.size() / 2, Mask, LaneMask))
+    return SDValue();
+
+  // Lanes 0-3 are V1.lo, V1.hi, V2.lo and V2.hi, the same as the XVPERMI_Q
+  // selector with xj = V1 and xd = V2.
+  int Lo = LaneMask[0] < 0 ? 0 : LaneMask[0];
+  int Hi = LaneMask[1] < 0 ? 1 : LaneMask[1];
+  return DAG.getNode(
+      LoongArchISD::XVPERMIQ, DL, VT, V2, V1,
+      DAG.getConstant(Lo | (Hi << 4), DL, Subtarget.getGRLenVT()));
+}
+
 /// Lower VECTOR_SHUFFLE as lane permute and then shuffle (if possible).
 /// Only for 256-bit vector.
+///
+/// Each 128-bit lane of the result may use at most two lanes of the inputs.
+/// These lanes are first moved into place, then shuffled within the lane.
 ///
 /// For example:
 /// %2 = shufflevector <4 x i64> %0, <4 x i64> posion,
@@ -3364,6 +3392,16 @@ static bool canonicalizeShuffleVectorByLane(
 ///     (XVPERMI $xr2, $xr0, 78)
 ///     (XVSHUF  $xr1, $xr2, $xr0)
 ///     (XVORI   $xr0, $xr1, 0)
+///
+/// and the splice:
+/// %2 = shufflevector <8 x i32> %0, <8 x i32> %1,
+///                    <8 x i32> <i32 7, i32 8, i32 9, i32 10,
+///                               i32 11, i32 12, i32 13, i32 14>
+/// is lowered to:
+///     (XVBSLL_V  $xr2, $xr1, 4)
+///     (XVPERMI_Q $xr1, $xr0, 33)
+///     (XVBSRL_V  $xr0, $xr1, 12)
+///     (XVOR_V    $xr0, $xr2, $xr0)
 static SDValue lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(const SDLoc &DL,
                                                           ArrayRef<int> Mask,
                                                           MVT VT, SDValue V1,
@@ -3373,30 +3411,64 @@ static SDValue lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(const SDLoc &DL,
   int Size = Mask.size();
   int LaneSize = Size / 2;
 
-  bool LaneCrossing[2] = {false, false};
-  for (int i = 0; i < Size; ++i)
-    if (Mask[i] >= 0 && ((Mask[i] % Size) / LaneSize) != (i / LaneSize))
-      LaneCrossing[(Mask[i] % Size) / LaneSize] = true;
-
-  // Ensure that all lanes ared involved.
-  if (!LaneCrossing[0] && !LaneCrossing[1])
-    return SDValue();
-
-  SmallVector<int> InLaneMask;
-  InLaneMask.assign(Mask.begin(), Mask.end());
+  // For each result lane, the input lanes (0/1: V1, 2/3: V2) used by the two
+  // operands of the in-lane shuffle.
+  int LaneSrcs[2][2] = {{-1, -1}, {-1, -1}};
+  SmallVector<int, 32> InLaneMask(Size, -1);
+  bool LaneCrossing = false;
   for (int i = 0; i < Size; ++i) {
-    int &M = InLaneMask[i];
+    int M = Mask[i];
     if (M < 0)
       continue;
-    if (((M % Size) / LaneSize) != (i / LaneSize))
-      M = (M % LaneSize) + ((i / LaneSize) * LaneSize) + Size;
+    int Lane = i / LaneSize;
+    int SrcLane = M / LaneSize;
+
+    // Put lanes that stay in place in the first operand and the others in the
+    // second one, so a single input becomes V1 and V1 with lanes swapped.
+    int Op = (SrcLane % 2) != Lane;
+    LaneCrossing |= Op;
+    if (LaneSrcs[Lane][Op] >= 0 && LaneSrcs[Lane][Op] != SrcLane)
+      Op ^= 1;
+    if (LaneSrcs[Lane][Op] >= 0 && LaneSrcs[Lane][Op] != SrcLane)
+      return SDValue();
+    LaneSrcs[Lane][Op] = SrcLane;
+    InLaneMask[i] = Op * Size + Lane * LaneSize + M % LaneSize;
   }
 
-  SDValue Flipped = DAG.getBitcast(MVT::v4i64, V1);
-  Flipped = DAG.getVectorShuffle(MVT::v4i64, DL, Flipped,
-                                 DAG.getUNDEF(MVT::v4i64), {2, 3, 0, 1});
-  Flipped = DAG.getBitcast(VT, Flipped);
-  return DAG.getVectorShuffle(VT, DL, V1, Flipped, InLaneMask);
+  if (!LaneCrossing)
+    return SDValue();
+
+  // Swap the operands of the high lane if that makes both lanes use the same
+  // in-lane mask, which more patterns (e.g. XVPICKEV) can match.
+  SmallVector<int, 16> RepeatedMask;
+  if (!isRepeatedShuffleMask(128, VT, InLaneMask, RepeatedMask)) {
+    SmallVector<int, 32> SwappedMask(InLaneMask);
+    for (int i = LaneSize; i < Size; ++i)
+      if (SwappedMask[i] >= 0)
+        SwappedMask[i] = (SwappedMask[i] + Size) % (2 * Size);
+    if (isRepeatedShuffleMask(128, VT, SwappedMask, RepeatedMask)) {
+      std::swap(LaneSrcs[1][0], LaneSrcs[1][1]);
+      InLaneMask = SwappedMask;
+    }
+  }
+
+  // Move the input lanes of each operand into place.
+  SDValue Ops[2];
+  for (int Op = 0; Op < 2; ++Op) {
+    SmallVector<int, 32> LaneMask(Size, -1);
+    for (int Lane = 0; Lane < 2; ++Lane)
+      if (LaneSrcs[Lane][Op] >= 0)
+        for (int i = 0; i < LaneSize; ++i)
+          LaneMask[Lane * LaneSize + i] = LaneSrcs[Lane][Op] * LaneSize + i;
+    Ops[Op] = DAG.getVectorShuffle(VT, DL, V1, V2, LaneMask);
+
+    // Exit if we got back the shuffle we started with, to avoid infinite
+    // recursion.
+    if (auto *SVN = dyn_cast<ShuffleVectorSDNode>(Ops[Op]))
+      if (SVN->getMask() == Mask)
+        return SDValue();
+  }
+  return DAG.getVectorShuffle(VT, DL, Ops[0], Ops[1], InLaneMask);
 }
 
 /// Dispatching routine to lower various 256-bit LoongArch vector shuffles.
@@ -3483,6 +3555,10 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
                                                 Subtarget)))
     return Result;
 
+  if ((Result =
+           lowerVECTOR_SHUFFLE_XVPERMIQ(DL, Mask, VT, V1, V2, DAG, Subtarget)))
+    return Result;
+
   // canonicalize non cross-lane shuffle vector
   SmallVector<int> NewMask(Mask);
   if (canonicalizeShuffleVectorByLane(DL, NewMask, VT, V1, V2, DAG, Subtarget))
@@ -3491,11 +3567,9 @@ static SDValue lower256BitShuffle(const SDLoc &DL, ArrayRef<int> Mask, MVT VT,
   // FIXME: Handling the remaining cases earlier can degrade performance
   // in some situations. Further analysis is required to enable more
   // effective optimizations.
-  if (V2.isUndef()) {
-    if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT,
-                                                             V1, V2, DAG)))
-      return Result;
-  }
+  if ((Result = lowerVECTOR_SHUFFLEAsLanePermuteAndShuffle(DL, NewMask, VT, V1,
+                                                           V2, DAG)))
+    return Result;
 
   if (SDValue NewShuffle = widenShuffleMask(DL, NewMask, VT, V1, V2, DAG))
     return NewShuffle;

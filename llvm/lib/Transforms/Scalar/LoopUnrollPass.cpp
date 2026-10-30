@@ -906,6 +906,80 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 
   return Count;
 }
+
+static unsigned
+shouldRuntimeUnroll(Loop *L, unsigned MaxTripCount, unsigned TripMultiple,
+                    const UnrollCostEstimator &UCE,
+                    const UnrollPragmaInfo &PInfo, const ScalarOptions &Opts,
+                    TargetTransformInfo::UnrollingPreferences &UP) {
+  // Don't unroll a runtime trip count loop when it is disabled.
+  if (PInfo.PragmaRuntimeUnrollDisable) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Not runtime unrolling: disabled by pragma.\n");
+    return 0;
+  }
+
+  // Don't unroll a small upper bound loop unless user or TTI asked to do so.
+  if (MaxTripCount && !UP.Force && MaxTripCount <= UP.MaxUpperBound) {
+    LLVM_DEBUG(dbgs().indent(2) << "Not runtime unrolling: max trip count "
+                                << MaxTripCount << " is small (<= "
+                                << UP.MaxUpperBound << ") and not forced.\n");
+    return 0;
+  }
+
+  // Check if the runtime trip count is too small when profile is available.
+  if (L->getHeader()->getParent()->hasProfileData()) {
+    if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
+      if (*ProfileTripCount < Opts.flat_loop_tripcount_threshold)
+        return 0;
+      else
+        UP.AllowExpensiveTripCount = true;
+    }
+  }
+  if (!UP.Runtime) {
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Will not try to unroll loop with runtime trip count "
+               << "because -unroll-runtime not given\n");
+    return 0;
+  }
+
+  unsigned Count = UP.DefaultUnrollRuntimeCount;
+
+  // Reduce unroll count to be the largest power-of-two factor of
+  // the original count which satisfies the threshold limit.
+  while (Count != 0 && UCE.getUnrolledLoopSize(UP, Count) > UP.PartialThreshold)
+    Count >>= 1;
+
+#ifndef NDEBUG
+  unsigned OrigCount = Count;
+#endif
+
+  if (!UP.AllowRemainder && Count != 0 && (TripMultiple % Count) != 0) {
+    while (Count != 0 && TripMultiple % Count != 0)
+      Count >>= 1;
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Remainder loop is restricted (that could be architecture "
+                  "specific or because the loop contains a convergent "
+                  "instruction), so unroll count must divide the trip "
+                  "multiple, "
+               << TripMultiple << ".  Reducing unroll count from " << OrigCount
+               << " to " << Count << ".\n");
+  }
+
+  if (Count > UP.MaxCount)
+    Count = UP.MaxCount;
+
+  if (MaxTripCount && Count > MaxTripCount)
+    Count = MaxTripCount;
+
+  if (Count < 2)
+    Count = 0;
+  else
+    LLVM_DEBUG(dbgs().indent(2)
+               << "Runtime unrolling with count: " << Count << "\n");
+  return Count;
+}
+
 // Calculates and returns the unroll count, using metadata and command-line
 // options that are specific to the LoopUnroll pass (which, for instance, are
 // irrelevant for the LoopUnrollAndJam pass).
@@ -1043,72 +1117,8 @@ unsigned llvm::computeUnrollCount(
 
   // 7th priority is runtime unrolling.
   LLVM_DEBUG(dbgs().indent(1) << "Trying runtime unroll...\n");
-  // Don't unroll a runtime trip count loop when it is disabled.
-  if (PInfo.PragmaRuntimeUnrollDisable) {
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Not runtime unrolling: disabled by pragma.\n");
-    return 0;
-  }
-
-  // Don't unroll a small upper bound loop unless user or TTI asked to do so.
-  if (MaxTripCount && !UP.Force && MaxTripCount <= UP.MaxUpperBound) {
-    LLVM_DEBUG(dbgs().indent(2) << "Not runtime unrolling: max trip count "
-                                << MaxTripCount << " is small (<= "
-                                << UP.MaxUpperBound << ") and not forced.\n");
-    return 0;
-  }
-
-  // Check if the runtime trip count is too small when profile is available.
-  if (L->getHeader()->getParent()->hasProfileData()) {
-    if (auto ProfileTripCount = getLoopEstimatedTripCount(L)) {
-      if (*ProfileTripCount < Opts.flat_loop_tripcount_threshold)
-        return 0;
-      else
-        UP.AllowExpensiveTripCount = true;
-    }
-  }
-  if (!UP.Runtime) {
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Will not try to unroll loop with runtime trip count "
-               << "because -unroll-runtime not given\n");
-    return 0;
-  }
-
-  unsigned Count = UP.DefaultUnrollRuntimeCount;
-
-  // Reduce unroll count to be the largest power-of-two factor of
-  // the original count which satisfies the threshold limit.
-  while (Count != 0 && UCE.getUnrolledLoopSize(UP, Count) > UP.PartialThreshold)
-    Count >>= 1;
-
-#ifndef NDEBUG
-  unsigned OrigCount = Count;
-#endif
-
-  if (!UP.AllowRemainder && Count != 0 && (TripMultiple % Count) != 0) {
-    while (Count != 0 && TripMultiple % Count != 0)
-      Count >>= 1;
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Remainder loop is restricted (that could be architecture "
-                  "specific or because the loop contains a convergent "
-                  "instruction), so unroll count must divide the trip "
-                  "multiple, "
-               << TripMultiple << ".  Reducing unroll count from " << OrigCount
-               << " to " << Count << ".\n");
-  }
-
-  if (Count > UP.MaxCount)
-    Count = UP.MaxCount;
-
-  if (MaxTripCount && Count > MaxTripCount)
-    Count = MaxTripCount;
-
-  if (Count < 2)
-    Count = 0;
-  else
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Runtime unrolling with count: " << Count << "\n");
-  return Count;
+  return shouldRuntimeUnroll(L, MaxTripCount, TripMultiple, UCE, PInfo, Opts,
+                             UP);
 }
 
 static LoopUnrollResult
