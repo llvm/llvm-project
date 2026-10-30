@@ -14659,14 +14659,9 @@ void BoUpSLP::transformNodes() {
   // Perform transformations that modify nodes in-place last.
   llvm::scope_exit PreferStridedLoads([&] {
     for (std::unique_ptr<TreeEntry> &E : VectorizableTree) {
-      if (!E->hasState())
-        continue;
-      if (DeletedNodes.contains(E.get()))
-        continue;
-      if (E->getOpcode() == Instruction::Load &&
-          E->State == TreeEntry::CompressVectorize) {
+      if (E->State == TreeEntry::CompressVectorize &&
+          !DeletedNodes.contains(E.get()))
         convertCompressedLoadToStrided(*E.get());
-      }
     }
   });
 
