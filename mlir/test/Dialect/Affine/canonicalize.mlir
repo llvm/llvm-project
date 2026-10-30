@@ -461,6 +461,63 @@ func.func @constant_fold_bounds(%N : index) {
 
 // -----
 
+// Regression tests for https://github.com/llvm/llvm-project/issues/229706:
+// constant folding must not fold affine expressions whose result would
+// overflow int64_t.
+
+// CHECK: #[[$MAP:.*]] = affine_map<() -> (9223372036854775807 + 1)>
+// CHECK-LABEL: func @for_bound_add_overflow
+// CHECK: affine.for %{{.*}} = 0 to #[[$MAP]]() {
+func.func @for_bound_add_overflow(%m: memref<32xf32>) {
+  %max = arith.constant 9223372036854775807 : index
+  %cst = arith.constant 1.0 : f32
+  affine.for %j = 0 to affine_map<(d0) -> (d0 + 1)>(%max) {
+    affine.store %cst, %m[%j] : memref<32xf32>
+  }
+  return
+}
+
+// -----
+
+// CHECK: #[[$MAP:.*]] = affine_map<() -> (9223372036854775807 + 1)>
+// CHECK-LABEL: func @apply_add_overflow
+// CHECK: %[[RES:.+]] = affine.apply #[[$MAP]]()
+// CHECK: return %[[RES]]
+func.func @apply_add_overflow() -> index {
+  %max = arith.constant 9223372036854775807 : index
+  %0 = affine.apply affine_map<(d0) -> (d0 + 1)>(%max)
+  return %0 : index
+}
+
+// -----
+
+// CHECK: #[[$MAP:.*]] = affine_map<() -> (9223372036854775807 * 2)>
+// CHECK-LABEL: func @apply_mul_overflow
+// CHECK: %[[RES:.+]] = affine.apply #[[$MAP]]()
+// CHECK: return %[[RES]]
+func.func @apply_mul_overflow() -> index {
+  %max = arith.constant 9223372036854775807 : index
+  %0 = affine.apply affine_map<(d0) -> (d0 * 2)>(%max)
+  return %0 : index
+}
+
+// -----
+
+// CHECK-DAG: #[[$FLOOR:.*]] = affine_map<() -> (-9223372036854775808 floordiv -1)>
+// CHECK-DAG: #[[$CEIL:.*]] = affine_map<() -> (-9223372036854775808 ceildiv -1)>
+// CHECK-LABEL: func @apply_div_overflow
+// CHECK: %[[FLOOR_RES:.+]] = affine.apply #[[$FLOOR]]()
+// CHECK: %[[CEIL_RES:.+]] = affine.apply #[[$CEIL]]()
+// CHECK: return %[[FLOOR_RES]], %[[CEIL_RES]]
+func.func @apply_div_overflow() -> (index, index) {
+  %min = arith.constant -9223372036854775808 : index
+  %0 = affine.apply affine_map<(d0) -> (d0 floordiv -1)>(%min)
+  %1 = affine.apply affine_map<(d0) -> (d0 ceildiv -1)>(%min)
+  return %0, %1 : index, index
+}
+
+// -----
+
 // CHECK-LABEL:  func @fold_empty_loops()
 func.func @fold_empty_loops() -> index {
   %c0 = arith.constant 0 : index
