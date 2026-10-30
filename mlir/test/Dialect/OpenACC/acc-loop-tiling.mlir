@@ -34,6 +34,8 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 // Test 2-level nested loop tiling with tile(4, 8)
 // Produces one multi-IV tile-group loop (gang) wrapping one multi-IV
 // element-group loop (vector), each carrying both tiled induction variables.
+// The first tile size applies to the innermost loop: %j is tiled by 4 and %i
+// by 8.
 
 // CHECK-LABEL: func.func @nested_loop_tile
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
@@ -43,9 +45,11 @@ func.func @single_loop_tile(%arg0: memref<10xf32>) {
 // CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
 // CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
 // Tile-group loop with gang; steps scaled by the tile sizes.
-// CHECK:         acc.loop gang control(%[[I:.*]] : index, %[[J:.*]] : index) = (%[[C0]], %[[C0]] : index, index) to (%[[C100]], %[[C50]] : index, index) step (%[[C4]], %[[C8]] : index, index) {
-// CHECK:           %[[MUB0:.*]] = arith.minsi
-// CHECK:           %[[MUB1:.*]] = arith.minsi
+// CHECK:         acc.loop gang control(%[[I:.*]] : index, %[[J:.*]] : index) = (%[[C0]], %[[C0]] : index, index) to (%[[C100]], %[[C50]] : index, index) step (%[[C8]], %[[C4]] : index, index) {
+// CHECK:           %[[E0:.*]] = arith.addi %[[I]], %[[C8]] : index
+// CHECK:           %[[MUB0:.*]] = arith.minsi %[[E0]], %[[C100]] : index
+// CHECK:           %[[E1:.*]] = arith.addi %[[J]], %[[C4]] : index
+// CHECK:           %[[MUB1:.*]] = arith.minsi %[[E1]], %[[C50]] : index
 // Element-group loop with vector.
 // CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]] : index, index) to (%[[MUB0]], %[[MUB1]] : index, index) step (%[[C1]], %[[C1]] : index, index) {
 // CHECK:             acc.yield
@@ -64,6 +68,71 @@ func.func @nested_loop_tile(%arg0: memref<100x50xf32>) {
     %val = arith.index_castui %sum : index to i32
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
+    acc.yield
+  } independent
+  return
+}
+
+// Test 3-level loop tiling with tile(2, 4, 8): %k is tiled by 2, %j by 4 and
+// %i by 8.
+
+// CHECK-LABEL: func.func @three_dim_tile
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : index
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : index
+// CHECK-DAG:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-DAG:     %[[C20:.*]] = arith.constant 20 : index
+// CHECK-DAG:     %[[C30:.*]] = arith.constant 30 : index
+// CHECK:         acc.loop gang control(%[[I:.*]] : index, %[[J:.*]] : index, %[[K:.*]] : index) = (%[[C0]], %[[C0]], %[[C0]] : index, index, index) to (%[[C10]], %[[C20]], %[[C30]] : index, index, index) step (%[[C8]], %[[C4]], %[[C2]] : index, index, index) {
+// CHECK:           %[[E0:.*]] = arith.addi %[[I]], %[[C8]] : index
+// CHECK:           %[[MUB0:.*]] = arith.minsi %[[E0]], %[[C10]] : index
+// CHECK:           %[[E1:.*]] = arith.addi %[[J]], %[[C4]] : index
+// CHECK:           %[[MUB1:.*]] = arith.minsi %[[E1]], %[[C20]] : index
+// CHECK:           %[[E2:.*]] = arith.addi %[[K]], %[[C2]] : index
+// CHECK:           %[[MUB2:.*]] = arith.minsi %[[E2]], %[[C30]] : index
+// CHECK:           acc.loop vector control(%{{.*}} : index, %{{.*}} : index, %{{.*}} : index) = (%[[I]], %[[J]], %[[K]] : index, index, index) to (%[[MUB0]], %[[MUB1]], %[[MUB2]] : index, index, index) step (%[[C1]], %[[C1]], %[[C1]] : index, index, index) {
+func.func @three_dim_tile(%arg0: memref<10x20x30xf32>) {
+  %c0 = arith.constant 0 : index
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %c30 = arith.constant 30 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
+  %c8 = arith.constant 8 : index
+  %cst = arith.constant 1.0 : f32
+  acc.loop gang vector tile({%c2 : index, %c4 : index, %c8 : index}) control(%i : index, %j : index, %k : index) = (%c0, %c0, %c0 : index, index, index) to (%c10, %c20, %c30 : index, index, index) step (%c1, %c1, %c1 : index, index, index) {
+    memref.store %cst, %arg0[%i, %j, %k] : memref<10x20x30xf32>
+    acc.yield
+  } independent
+  return
+}
+
+// Test tile sizes of different widths: the i32 size tiles the innermost i32
+// IV and the i64 size tiles the outermost i64 IV, so no size is wider than
+// the IV it tiles.
+
+// CHECK-LABEL: func.func @mixed_width_tile
+// CHECK-DAG:     %[[C4:.*]] = arith.constant 4 : i64
+// CHECK-DAG:     %[[C8:.*]] = arith.constant 8 : i32
+// CHECK:         acc.loop gang control(%{{.*}} : i64, %{{.*}} : i32) = {{.*}} step (%[[C4]], %[[C8]] : i64, i32) {
+// CHECK:           acc.loop vector control(%{{.*}} : i64, %{{.*}} : i32)
+func.func @mixed_width_tile(%arg0: memref<100x50xf32>) {
+  %c0_i64 = arith.constant 0 : i64
+  %c100_i64 = arith.constant 100 : i64
+  %c1_i64 = arith.constant 1 : i64
+  %c4_i64 = arith.constant 4 : i64
+  %c0_i32 = arith.constant 0 : i32
+  %c50_i32 = arith.constant 50 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c8_i32 = arith.constant 8 : i32
+  %cst = arith.constant 1.0 : f32
+  acc.loop gang vector tile({%c8_i32 : i32, %c4_i64 : i64}) control(%i : i64, %j : i32) = (%c0_i64, %c0_i32 : i64, i32) to (%c100_i64, %c50_i32 : i64, i32) step (%c1_i64, %c1_i32 : i64, i32) {
+    %ii = arith.index_cast %i : i64 to index
+    %jj = arith.index_cast %j : i32 to index
+    memref.store %cst, %arg0[%ii, %jj] : memref<100x50xf32>
     acc.yield
   } independent
   return

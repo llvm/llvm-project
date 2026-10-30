@@ -234,15 +234,17 @@ program acc_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true>) independent
 
-  !$acc loop tile(2, 2)
+  !$acc loop tile(2, 4)
   DO i = 1, n
     DO j = 1, n
       c(i, j) = d(i, j)
     END DO
   END DO
 
+! The tile sizes keep their clause order; the induction variables are listed
+! outermost first.
 ! CHECK:      [[TILESIZE1:%.*]] = arith.constant 2 : i32
-! CHECK:      [[TILESIZE2:%.*]] = arith.constant 2 : i32
+! CHECK:      [[TILESIZE2:%.*]] = arith.constant 4 : i32
 ! CHECK:      acc.loop {{.*}} tile({[[TILESIZE1]] : i32, [[TILESIZE2]] : i32}) control(%arg0 : i32, %arg1 : i32) = (%{{.*}} : i32, i32) to (%{{.*}} : i32, i32) step (%{{.*}} : i32, i32) {
 ! CHECK:        acc.yield
 ! CHECK-NEXT: } inclusiveUpperbound(array<i1: true, true>) independent
