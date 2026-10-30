@@ -563,7 +563,7 @@ mlir::Value AMDGPUPrintfLowering::callBufferedPrintfStart(
       }
     } else {
       uint64_t allocSize =
-          dataLayout.getTypeSize(args[i].getType()).getFixedValue();
+          dataLayout.getTypeAllocSize(args[i].getType()).getFixedValue();
       // We end up expanding non string arguments to 8 bytes
       // (args smaller than 8 bytes)
       bufSize += std::max<uint64_t>(allocSize, 8);
@@ -617,7 +617,7 @@ mlir::Value AMDGPUPrintfLowering::processNonStringArg(mlir::Value arg) {
   }
 
   if (mlir::isa<mlir::FloatType>(ty)) {
-    if (dataLayout.getTypeSize(ty).getFixedValue() < 8) {
+    if (dataLayout.getTypeAllocSize(ty).getFixedValue() < 8) {
       return mlir::LLVM::FPExtOp::create(rewriter, op.getLoc(),
                                          rewriter.getF64Type(), arg);
     }
@@ -667,7 +667,7 @@ void AMDGPUPrintfLowering::callBufferedPrintfArgPush(
       mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), toStore, ptrToStore);
       ptrToStore = gepInBounds(
           ptrToStore,
-          dataLayout.getTypeSize(toStore.getType()).getFixedValue());
+          dataLayout.getTypeAllocSize(toStore.getType()).getFixedValue());
     }
   }
 }
