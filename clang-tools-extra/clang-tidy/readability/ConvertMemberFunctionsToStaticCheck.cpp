@@ -24,10 +24,6 @@ namespace {
 
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
 
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  return Node.isOverloadedOperator();
-}
-
 AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
   return Node.hasAnyDependentBases();
 }
