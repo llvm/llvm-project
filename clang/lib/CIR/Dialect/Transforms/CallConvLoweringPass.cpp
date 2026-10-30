@@ -1049,8 +1049,6 @@ void CallConvLoweringPass::runOnOperation() {
   llvm::MapVector<cir::FuncOp, FunctionClassification> classifications;
   bool anyFailed = false;
   moduleOp.walk([&](cir::FuncOp f) {
-    // A lowered signature looks like one that still needs lowering, so a
-    // function this pass has already rewritten is skipped by its marker.
     if (f.getCallConvLowered())
       return;
     // A complete type is required at any call or definition, so only a
@@ -1191,9 +1189,7 @@ void CallConvLoweringPass::runOnOperation() {
         assert(classifiesSamePrefix(fc, *callFc) &&
                "a call site's declared parameters must be classified the same "
                "way as the callee's");
-        // The arguments passed through the ellipsis are classified for this
-        // call alone, so it can need a rewrite its callee does not, and needs
-        // its own marker.
+
         if (callFc->needsRewrite())
           callOp->setAttr(cir::CIRDialect::getCallConvLoweredAttrName(),
                           UnitAttr::get(ctx));
@@ -1207,8 +1203,7 @@ void CallConvLoweringPass::runOnOperation() {
     }
     for (cir::GetGlobalOp addrOp : addressTakers.lookup(func))
       rewriteCtx.rewriteFunctionAddress(addrOp, func, builder);
-    // A signature passed exactly as written comes out of the rewrite
-    // unchanged, so only one the rewrite changed needs the marker.
+
     if (fc.needsRewrite())
       func.setCallConvLowered(true);
   }
@@ -1234,8 +1229,7 @@ void CallConvLoweringPass::runOnOperation() {
     }
     if (hasIndirectSlot(*fc))
       widenForArgMemory(c);
-    // The rewrite carries the marker over to the call it builds in place of
-    // this one.
+
     if (fc->needsRewrite())
       c->setAttr(cir::CIRDialect::getCallConvLoweredAttrName(),
                  UnitAttr::get(ctx));
