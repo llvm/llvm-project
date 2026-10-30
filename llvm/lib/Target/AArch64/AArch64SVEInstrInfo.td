@@ -490,6 +490,11 @@ def AArch64ptest     : SDNode<"AArch64ISD::PTEST", SDT_AArch64PTest>;
 def AArch64ptest_any : SDNode<"AArch64ISD::PTEST_ANY", SDT_AArch64PTest>;
 def AArch64ptest_first : SDNode<"AArch64ISD::PTEST_FIRST", SDT_AArch64PTest>;
 
+def SDT_AArch64_BRK : SDTypeProfile<1, 2, [
+  SDTCisVT<0, nxv16i1>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>
+]>;
+def AArch64brkb_z : SDNode<"AArch64ISD::BRKB_Z", SDT_AArch64_BRK>;
+
 def SDT_AArch64DUP_PRED  : SDTypeProfile<1, 3,
   [SDTCisVec<0>, SDTCisSameAs<0, 3>, SDTCisVec<1>, SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0, 1>]>;
 def AArch64dup_mt : SDNode<"AArch64ISD::DUP_MERGE_PASSTHRU", SDT_AArch64DUP_PRED>;
@@ -1315,18 +1320,9 @@ let Predicates = [HasSVE_or_SME] in {
   defm BRKA_PPzP  : sve_int_break_z<0b000, "brka",  int_aarch64_sve_brka_z>;
   defm BRKA_PPmP  : sve_int_break_m<0b001, "brka",  int_aarch64_sve_brka>;
   defm BRKAS_PPzP : sve_int_break_z<0b010, "brkas", null_frag>;
-  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb",  int_aarch64_sve_brkb_z>;
+  defm BRKB_PPzP  : sve_int_break_z<0b100, "brkb",  AArch64brkb_z>;
   defm BRKB_PPmP  : sve_int_break_m<0b101, "brkb",  int_aarch64_sve_brkb>;
   defm BRKBS_PPzP : sve_int_break_z<0b110, "brkbs", null_frag>;
-
-  def : Pat<(nxv16i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_B 31), PPR8:$Pn)>;
-  def : Pat<(nxv8i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_H 31), PPR8:$Pn)>;
-  def : Pat<(nxv4i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_S 31), PPR8:$Pn)>;
-  def : Pat<(nxv2i1 (mask_beforefirst PPR8:$Pn)),
-            (BRKB_PPzP (PTRUE_D 31), PPR8:$Pn)>;
 
   defm PTEST_PP : sve_int_ptest<0b010000, "ptest", AArch64ptest, AArch64ptest_any, AArch64ptest_first>;
   defm PFALSE   : sve_int_pfalse<0b000000, "pfalse">;
