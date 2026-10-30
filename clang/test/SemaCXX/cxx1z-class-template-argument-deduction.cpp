@@ -559,6 +559,9 @@ namespace PR45124 {
   // deduction guide 'template<typename T> y(x = x()) -> Y<T>;' leaves behind a
   // pending cleanup.
   __thread b g;
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
 }
 
 namespace PR47175 {

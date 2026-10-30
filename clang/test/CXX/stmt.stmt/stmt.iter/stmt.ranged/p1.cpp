@@ -151,7 +151,12 @@ void g() {
 
   for (extern int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'extern'}}
   for (static int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'static'}}
-  for (thread_local int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'thread_local'}}
+  for (thread_local int a : A()) {}
+#ifdef __MVS__
+  // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#else
+  // expected-error@-4 {{loop variable 'a' may not be declared 'thread_local'}}
+#endif
   for (register int a : A()) {} // expected-error {{loop variable 'a' may not be declared 'register'}} expected-warning 0-1{{register}} expected-error 0-1{{register}}
   for (constexpr int a : X::C()) {} // OK per CWG issue #1204.
   for (constexpr int a : A()) {} // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} expected-note-re {{read of implicit variable '__begin{{[0-9]+}}' of range-based 'for' loop is not allowed in a constant expression}}

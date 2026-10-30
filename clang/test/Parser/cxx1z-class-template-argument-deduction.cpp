@@ -99,6 +99,9 @@ namespace stmt {
     A local = 0;
     static A local_static = 0;
     static thread_local A thread_local_static = 0;
+#ifdef __MVS__
+    // expected-error@-2 {{thread-local storage is not supported for the current target}}
+#endif
     if (A a = 0) {}
     if (A a = 0; a) {}
     switch (A a = 0) {} // expected-warning {{no case matching constant switch condition '0'}}

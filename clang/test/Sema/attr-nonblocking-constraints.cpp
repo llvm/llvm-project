@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -fsyntax-only -fblocks -fcxx-exceptions -std=c++20 -verify -Wfunction-effects -Wno-vla-extension %s
 // These are in a separate file because errors (e.g. incompatible attributes) currently prevent
 // the FXAnalysis pass from running at all.

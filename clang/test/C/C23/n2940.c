@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -verify=no-trigraphs -std=c23 %s
 // RUN: %clang_cc1 -verify=no-trigraphs -std=gnu23 %s
 // RUN: %clang_cc1 -verify=no-trigraphs -std=gnu17 %s

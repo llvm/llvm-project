@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify -std=c++17 %s
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -Wno-unused-but-set-global -verify=no-global -std=c++17 %s
 // no-global-no-diagnostics

@@ -77,6 +77,9 @@ const int glvalue_int2 = ReturnInt();
 ATTR const int &glvalue_ref ATTR = glvalue_int;
 ATTR const int &glvalue_ref2 ATTR = glvalue_int2;
 ATTR __thread const int &glvalue_ref_tl = glvalue_int;
+#ifdef __MVS__
+  // expected-error@-2  {{thread-local storage is not supported for the current target}}
+#endif
 
 void test_basic_start_static_2_1(void) {
   const int non_global = 42;
@@ -128,7 +131,13 @@ struct TT1 {
   ATTR static const int &subobj_init;
 #if __cplusplus >= 201103L
   ATTR static thread_local const int &tl_glvalue_init;
-  ATTR static thread_local const int &tl_temp_init; // expected-note {{required by 'require_constant_initialization' attribute here}}
+  ATTR static thread_local const int &tl_temp_init;
+#ifdef __MVS__
+  // expected-error@-3  {{thread-local storage is not supported for the current target}}
+  // expected-error@-3  {{thread-local storage is not supported for the current target}}
+#else
+  // expected-note@-5 {{required by 'require_constant_initialization' attribute here}}
+#endif
 #endif
 };
 const int &TT1::glvalue_init = glvalue_int;
@@ -136,9 +145,15 @@ const int &TT1::temp_init = 42;
 const int &TT1::subobj_init = PODType().value;
 #if __cplusplus >= 201103L
 thread_local const int &TT1::tl_glvalue_init = glvalue_int;
-thread_local const int &TT1::tl_temp_init = 42; // expected-error {{variable does not have a constant initializer}}
-// expected-note@-1 {{reference to temporary is not a constant expression}}
-// expected-note@-2 {{temporary created here}}
+thread_local const int &TT1::tl_temp_init = 42;
+#ifdef __MVS__
+  // expected-error@-3  {{thread-local storage is not supported for the current target}}
+  // expected-error@-3  {{thread-local storage is not supported for the current target}}
+#else
+  // expected-error@-5 {{variable does not have a constant initializer}}
+  // expected-note@-6 {{reference to temporary is not a constant expression}}
+  // expected-note@-7 {{temporary created here}}
+#endif
 #endif
 
 // [basic.start.static]p2.2
@@ -172,6 +187,10 @@ void test_basic_start_static_2_2(void) {
   // expected-note@-1 {{required by 'require_constant_initialization' attribute here}}
   // expected-note@-2 {{non-constexpr function 'ReturnInt' cannot be used in a constant expression}}
   ATTR thread_local LitType tls = 42;
+#ifdef __MVS__
+  // expected-error@-2  {{thread-local storage is not supported for the current target}}
+  // expected-error@-3 {{'require_constant_initialization' attribute only applies to global variables}}
+#endif
 #endif
 }
 
@@ -213,12 +232,18 @@ ATTR LitType lit_ctor;
 ATTR LitType lit_ctor2{};
 ATTR LitType lit_ctor3 = {};
 ATTR __thread LitType lit_ctor_tl = {};
+#ifdef __MVS__
+  // expected-error@-2  {{thread-local storage is not supported for the current target}}
+#endif
 
 #if __cplusplus >= 201402L
 ATTR NonLit nl_ctor;
 ATTR NonLit nl_ctor2{};
 ATTR NonLit nl_ctor3 = {};
 ATTR thread_local NonLit nl_ctor_tl = {};
+#ifdef __MVS__
+  // expected-error@-2  {{thread-local storage is not supported for the current target}}
+#endif
 ATTR StoresNonLit snl;
 #else
 ATTR NonLit nl_ctor; // expected-error {{variable does not have a constant initializer}}
@@ -233,6 +258,9 @@ ATTR NonLit nl_ctor3 = {}; // expected-error {{variable does not have a constant
 ATTR thread_local NonLit nl_ctor_tl = {}; // expected-error {{variable does not have a constant initializer}}
 // expected-note@-1 {{required by 'require_constant_initialization' attribute here}}
 // expected-note@-2 {{non-constexpr constructor 'NonLit' cannot be used in a constant expression}}
+#ifdef __MVS__
+  // expected-error@-4  {{thread-local storage is not supported for the current target}}
+#endif
 ATTR StoresNonLit snl; // expected-error {{variable does not have a constant initializer}}
 // expected-note@-1 {{required by 'require_constant_initialization' attribute here}}
 // expected-note@-2 {{non-constexpr constructor 'StoresNonLit' cannot be used in a constant expression}}
@@ -254,6 +282,10 @@ void test_basic_start_static_2_3(void) {
   ATTR static int static_local2; // zero-initialization takes place
 #if __cplusplus >= 201103L
   ATTR thread_local int tl_local = 42;
+#ifdef __MVS__
+  // expected-error@-2  {{thread-local storage is not supported for the current target}}
+  // expected-error@-3 {{'require_constant_initialization' attribute only applies to global variables}}
+#endif
 #endif
 }
 
@@ -276,6 +308,9 @@ ATTR int brace_init = {};
 #endif
 
 ATTR __thread int tl_init = 0;
+#ifdef __MVS__
+  // expected-error@-2  {{thread-local storage is not supported for the current target}}
+#endif
 typedef const char *StrType;
 
 #if __cplusplus >= 201103L

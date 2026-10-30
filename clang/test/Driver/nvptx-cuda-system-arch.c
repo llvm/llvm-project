@@ -1,5 +1,5 @@
 // UNSUPPORTED: system-windows
-// XFAIL: target={{.*}}-zos{{.*}}
+// XFAIL: system-zos
 
 // RUN: mkdir -p %t
 // RUN: cp %S/Inputs/nvptx-arch/nvptx_arch_fail %t/

@@ -1,6 +1,7 @@
 // Check that the presence of non-affecting module map files does not affect the
 // contents of PCM files.
 
+// XFAIL: system-zos
 // RUN: rm -rf %t && mkdir %t
 // RUN: split-file %s %t
 

@@ -1,5 +1,6 @@
 // Test that adding a new unused decl within reduced BMI may not produce a transitive change.
 //
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 //

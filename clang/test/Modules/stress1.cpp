@@ -1,3 +1,4 @@
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: cd %S
 //
@@ -79,7 +80,7 @@
 //
 // RUN: diff %t/merge00.pcm %t/merge00_check.pcm
 //
-// RUN: %clang_cc1 -fmodules -x c++ -std=c++11 \
+// RUN: %clang_cc1 -source-date-epoch 1613676318 -fmodules -x c++ -std=c++11 \
 // RUN:   -I Inputs/stress1 \
 // RUN:   -fno-implicit-modules \
 // RUN:   -fmodules-cache-path=%t \
@@ -92,7 +93,7 @@
 // RUN:   -fmodule-file=%t/merge00.pcm \
 // RUN:   -verify stress1.cpp -emit-llvm -o %t/stress1.ll
 //
-// RUN: %clang_cc1 -fmodules -x c++ -std=c++11 \
+// RUN: %clang_cc1 -source-date-epoch 1613676318 -fmodules -x c++ -std=c++11 \
 // RUN:   -I Inputs/stress1 \
 // RUN:   -fno-implicit-modules \
 // RUN:   -fmodules-cache-path=%t \

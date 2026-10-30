@@ -1,12 +1,12 @@
 // RUN: rm -rf %t
 //
 // RUN: %clang_cc1 -fmodules -x c++ -fmodules-cache-path=%t \
-// RUN:   -fno-implicit-modules \
+// RUN:   -fno-implicit-modules -source-date-epoch 1613676318 \
 // RUN:   -emit-module -fmodule-name=empty -o %t/base.pcm \
 // RUN:   %s
 //
 // RUN: %clang_cc1 -fmodules -x c++ -fmodules-cache-path=%t \
-// RUN:   -fno-implicit-modules \
+// RUN:   -fno-implicit-modules -source-date-epoch 1613676318 \
 // RUN:   -emit-module -fmodule-name=empty -o %t/check.pcm \
 // RUN:   %s
 //

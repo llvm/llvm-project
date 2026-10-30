@@ -1,3 +1,4 @@
+// XFAIL: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 -verify=expected,enabled -emit-codegen-only %s
 // RUN: %clang_cc1 -verify -emit-codegen-only -Wno-attribute-warning %s
 

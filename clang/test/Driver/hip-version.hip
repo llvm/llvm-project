@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
-// UNSUPPORTED: target={{.*}}-aix{{.*}}
+// UNSUPPORTED: target={{.*}}-aix{{.*}}, target={{.*}}-zos{{.*}}
 
 // RUN: %clang -v --rocm-path=%S/Inputs/rocm 2>&1 \
 // RUN:   | FileCheck -check-prefixes=FOUND %s

@@ -53,9 +53,9 @@ int e;
 // RUN: %clang_cc1 -code-completion-at=%s:%(line-3):46 %s | FileCheck --check-prefix=PRAGMA %s
 // PRAGMA: COMPLETION: Pattern : internal_linkage
 
-#ifdef MS_EXT
+#ifdef MS_EXT_DSTHREAD
 int __declspec(thread) f;
-// RUN: %clang_cc1 -fms-extensions -DMS_EXT -code-completion-at=%s:%(line-1):16 %s | FileCheck --check-prefix=DS %s
+// RUN: %clang_cc1 -fms-extensions -DMS_EXT_DSTHREAD -code-completion-at=%s:%(line-1):16 %s | FileCheck --check-prefix=DS %s
 // DS-NOT: COMPLETION: Pattern : __convergent__
 // DS-NOT: COMPLETION: Pattern : __used__
 // DS-NOT: COMPLETION: Pattern : clang::convergent
@@ -63,16 +63,18 @@ int __declspec(thread) f;
 // DS:     COMPLETION: Pattern : thread
 // DS-NOT: COMPLETION: Pattern : used
 // DS:     COMPLETION: Pattern : uuid
+#endif // MS_EXT_DSTHREAD
 
+#ifdef MS_EXT_UUID
 [uuid("123e4567-e89b-12d3-a456-426614174000")] struct g;
-// RUN: %clang_cc1 -fms-extensions -DMS_EXT -code-completion-at=%s:%(line-1):2 %s | FileCheck --check-prefix=MS %s
+// RUN: %clang_cc1 -fms-extensions -DMS_EXT_UUID -code-completion-at=%s:%(line-1):2 %s | FileCheck --check-prefix=MS %s
 // MS-NOT: COMPLETION: Pattern : __uuid__
 // MS-NOT: COMPLETION: Pattern : clang::convergent
 // MS-NOT: COMPLETION: Pattern : convergent
 // MS-NOT: COMPLETION: Pattern : thread
 // MS-NOT: COMPLETION: Pattern : used
 // MS:     COMPLETION: Pattern : uuid
-#endif // MS_EXT
+#endif // MS_EXT_UUID
 
 void foo() {
   [[omp::sequence(directive(parallel), directive(critical))]]

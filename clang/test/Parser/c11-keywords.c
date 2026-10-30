@@ -10,9 +10,11 @@ extern _Noreturn void exit(int); /* compat-warning {{'_Noreturn' is incompatible
                                   */
 
 void func(void) {
+#ifndef __MVS__
   static _Thread_local int tl;   /* compat-warning {{'_Thread_local' is incompatible with C standards before C11}}
                                     ext-warning {{'_Thread_local' is a C11 extension}}
                                   */
+#endif
   _Alignas(8) char c;            /* compat-warning {{'_Alignas' is incompatible with C standards before C11}}
                                     ext-warning {{'_Alignas' is a C11 extension}}
                                   */

@@ -1,3 +1,4 @@
+// XFAIL: system-zos
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: touch %t/A.pcm
