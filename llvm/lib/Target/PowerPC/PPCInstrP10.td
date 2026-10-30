@@ -2988,3 +2988,19 @@ let Predicates = [IsISA3_1, PrefixInstrs], isAsmParserOnly = 1, hasNoSchedulingI
                                  (ins s34imm64_pcrel:$SI),
                                  "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;
 }
+
+// pnop - Prefixed No-Op (Power ISA v3.1, Section 3.3.1.2)
+// Prefix word 0x07000000: primary opcode 1, prefix type 3, remaining bits 0.
+// Suffix word 0x00000000. Like all prefixed instructions it must not cross a
+// 64-byte boundary.
+let Predicates = [PrefixInstrs],
+    hasNoSchedulingInfo = 1, hasSideEffects = 0,
+    mayLoad = 0, mayStore = 0 in {
+  def PNOP : PI<1, 0, (outs), (ins), "pnop", IIC_IntSimple> {
+    // Prefix: type 3, remaining prefix bits all zero.
+    let Inst{6...7} = 3;
+    let Inst{8...31} = 0;
+    // Suffix: bits 38-63 all zero (bits 32-37 already = 0 from opcode)
+    let Inst{38...63} = 0;
+  }
+}
