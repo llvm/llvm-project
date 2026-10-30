@@ -8242,6 +8242,21 @@ static SDValue lowerLaneOp(const SITargetLowering &TLI, SDNode *N,
       Src2 = N->getOperand(3);
   }
 
+  auto IsZeroBits = [](SDValue V) {
+    if (const ConstantFPSDNode *C = isConstOrConstSplatFP(V))
+      return C->isPosZero();
+    return isNullOrNullSplat(V);
+  };
+
+  if (IID == Intrinsic::amdgcn_update_dpp && IsZeroBits(Src1)) {
+    // Masked-out or out-of-bounds lanes must also produce zero.
+    bool OldIsUnused = N->getConstantOperandVal(4) == 0xf &&
+                       N->getConstantOperandVal(5) == 0xf &&
+                       N->getConstantOperandVal(6) != 0;
+    if (IsZeroBits(Src0) || OldIsUnused)
+      return Src1;
+  }
+
   if (ValSize == SplitSize) {
     // Already legal
     return SDValue();
