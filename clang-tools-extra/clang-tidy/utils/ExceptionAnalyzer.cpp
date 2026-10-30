@@ -510,7 +510,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
       return Cached->second.withCallerStack(Func, CallStack, CallLoc);
   }
   const unsigned Generation = Analysis.RecursionGeneration;
-  auto Finish = [&](ExceptionInfo Result) {
+  const auto Finish = [&](ExceptionInfo Result) {
     if (Caught.empty() && Generation == Analysis.RecursionGeneration)
       Analysis.Completed.try_emplace(
           Func, Result.withCallerStack(Func, {}, Func->getLocation()));
