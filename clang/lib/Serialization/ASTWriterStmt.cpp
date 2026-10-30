@@ -2613,8 +2613,11 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
 
 void ASTStmtWriter::VisitOMPMetaDirective(OMPMetaDirective *D) {
   VisitStmt(D);
-  Record.push_back(D->getNumClauses());
+  Record.push_back(D->getNumVariants());
   VisitOMPExecutableDirective(D);
+  Record.writeBool(D->hasImplicitOtherwise());
+  for (const OMPTraitInfo *TI : D->traitInfos())
+    Record.writeOMPTraitInfo(TI);
   Code = serialization::STMT_OMP_META_DIRECTIVE;
 }
 

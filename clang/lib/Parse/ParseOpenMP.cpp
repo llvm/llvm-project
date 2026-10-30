@@ -2736,9 +2736,9 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       // was specified without an associated directive variant. Only
       // 'otherwise' (or the deprecated 'default') has no context selectors.
       unsigned NumClauses = TraitInfos.size();
-      if (llvm::none_of(TraitInfos, [](const OMPTraitInfo *TI) {
-            return TI->Sets.empty();
-          }))
+      bool HasImplicitOtherwise = llvm::none_of(
+          TraitInfos, [](const OMPTraitInfo *TI) { return TI->Sets.empty(); });
+      if (HasImplicitOtherwise)
         TraitInfos.push_back(&ASTContext.getNewOMPTraitInfo());
 
       // Reuse the normal metadirective variant parse per clause so every
@@ -2802,8 +2802,8 @@ StmtResult Parser::ParseOpenMPDeclarativeOrExecutableDirective(
       }
       if (HasError)
         return StmtError();
-      return Actions.OpenMP().ActOnOpenMPMetaDirective(Loc, EndLoc, TraitInfos,
-                                                       Variants);
+      return Actions.OpenMP().ActOnOpenMPMetaDirective(
+          Loc, EndLoc, TraitInfos, Variants, HasImplicitOtherwise);
     }
 
     int Idx = 0;

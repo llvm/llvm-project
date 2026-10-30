@@ -331,23 +331,41 @@ void OMPLoopDirective::setFinalsConditions(ArrayRef<Expr *> A) {
   llvm::copy(A, getFinalsConditions().begin());
 }
 
-OMPMetaDirective *OMPMetaDirective::Create(const ASTContext &C,
-                                           SourceLocation StartLoc,
-                                           SourceLocation EndLoc,
-                                           ArrayRef<OMPClause *> Clauses,
-                                           Stmt *AssociatedStmt, Stmt *IfStmt) {
-  auto *Dir = createDirective<OMPMetaDirective>(
-      C, Clauses, AssociatedStmt, /*NumChildren=*/1, StartLoc, EndLoc);
-  Dir->setIfStmt(IfStmt);
+OMPMetaDirective *OMPMetaDirective::allocate(const ASTContext &C,
+                                             unsigned NumVariants,
+                                             SourceLocation StartLoc,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(sizeof(OMPMetaDirective) + getTraitInfosOffset(NumVariants) +
+                     NumVariants * sizeof(OMPTraitInfo *),
+                 alignof(OMPMetaDirective));
+  auto *Data = OMPChildren::CreateEmpty(
+      reinterpret_cast<OMPMetaDirective *>(Mem) + 1, /*NumClauses=*/0,
+      /*HasAssociatedStmt=*/false, 2 * NumVariants);
+  auto *Dir = new (Mem) OMPMetaDirective(StartLoc, EndLoc);
+  Dir->Data = Data;
+  return Dir;
+}
+
+OMPMetaDirective *OMPMetaDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
+    ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise) {
+  assert(Variants.size() == Conditions.size() &&
+         Variants.size() == TraitInfos.size() &&
+         "Expected one condition and one trait info per variant");
+  OMPMetaDirective *Dir = allocate(C, Variants.size(), StartLoc, EndLoc);
+  llvm::copy(Variants, Dir->getTrailingVariants().begin());
+  llvm::copy(Conditions, Dir->getTrailingConditions().begin());
+  llvm::copy(TraitInfos, Dir->getTrailingTraitInfos().begin());
+  Dir->setHasImplicitOtherwise(HasImplicitOtherwise);
   return Dir;
 }
 
 OMPMetaDirective *OMPMetaDirective::CreateEmpty(const ASTContext &C,
-                                                unsigned NumClauses,
+                                                unsigned NumVariants,
                                                 EmptyShell) {
-  return createEmptyDirective<OMPMetaDirective>(C, NumClauses,
-                                                /*HasAssociatedStmt=*/true,
-                                                /*NumChildren=*/1);
+  return allocate(C, NumVariants, SourceLocation(), SourceLocation());
 }
 
 OMPParallelDirective *OMPParallelDirective::Create(
