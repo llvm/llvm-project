@@ -17,17 +17,18 @@
 // CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-arl-u)"
 // CHK-AS-GIVEN-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_12.70.0)"
 
-/// Without --offload-targets, an Intel device, an IGCA target or "generic" picks
-/// SPIR-V of the host's width.
+/// Without --offload-targets, an Intel device (by name or numeric name), an IGCA
+/// target or "generic" picks SPIR-V of the host's width.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-pvc --offload-arch=xe-bmg-g21 --offload-arch=graniterapids \
-// RUN:   --offload-arch=generic --offload-arch=igca_20ca -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=CHK-NO-TARGETS %s
+// RUN:   --offload-arch=generic --offload-arch=igca_20ca --offload-arch=xe_12.60.7 \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-NO-TARGETS %s
 // CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:generic)"
 // CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
 // CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:igca_20ca)"
 // CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-bmg-g21)"
 // CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// CHK-NO-TARGETS-DAG: offload, "device-sycl (spirv64-unknown-unknown:xe_12.60.7)"
 // RUN: %clang -ccc-print-phases --target=i386-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-pvc --offload-arch=igca_20ca -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NO-TARGETS-32 %s
