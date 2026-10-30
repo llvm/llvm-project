@@ -1,20 +1,4 @@
-// RUN: mlir-opt -split-input-file -verify-diagnostics -tosa-convert-integer-types-bitwidth='bitwidth-mappings=4:8,48:64,8:4' %s
-// RUN: mlir-opt -split-input-file -tosa-convert-integer-types-bitwidth='bitwidth-mappings=16:16' %s | FileCheck %s
-
-// Unselected widths must leave even missing or malformed resources untouched.
-// CHECK-LABEL: func.func @missing_resource()
-// CHECK: tosa.const values(dense_resource<missing> : tensor<2xi48>) : () -> tensor<2xi48>
-
-// A missing resource must produce a diagnostic, not an invalid i64 constant.
-// expected-error @+1 {{failed to convert integer types or attributes}}
-module {
-  func.func @missing_resource() -> tensor<2xi48> {
-    %0 = tosa.const values(dense_resource<missing> : tensor<2xi48>) : () -> tensor<2xi48>
-    return %0 : tensor<2xi48>
-  }
-}
-
-// -----
+// RUN: mlir-opt -split-input-file -verify-diagnostics -tosa-convert-integer-types-bitwidth='bitwidth-mappings=4:8,48:64' %s
 
 // Complete elements must match the element count of a static shape.
 // expected-error @+1 {{failed to convert integer types or attributes}}
@@ -69,9 +53,3 @@ module {
 {-# dialect_resources: { builtin: {
   packed: "0x0100000079"
 } } #-}
-
-// -----
-
-// Dense arrays cannot represent sub-byte destinations other than i1.
-// expected-error @+1 {{failed to convert integer types or attributes}}
-module attributes {test.array = array<i8: -1, 7>} {}

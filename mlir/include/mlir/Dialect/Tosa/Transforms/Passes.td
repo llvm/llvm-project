@@ -222,15 +222,13 @@ def TosaConvertIntegerTypesBitwidthPass : Pass<"tosa-convert-integer-types-bitwi
   let description = [{
     Converts integer types using `bitwidth-mappings`, a required list of
     `<source>:<destination>` bitwidth pairs.
-    A typical use case is `bitwidth-mappings=4:8,48:64` which maps i4 and i48 to
-    i8 and i64 respectively. This facilitates lowering to dialects that do not
-    support such non-standard bitwidths.
-    Source bitwidths 1, 32 and 64 are not supported because some attributes
-    require these fixed widths.
+    Only `4:8` and `48:64` are supported, mapping i4 to i8 and i48 to i64.
+    Specify either mapping or both with `bitwidth-mappings=4:8,48:64`.
+    This facilitates lowering to dialects that do not support such
+    non-standard bitwidths.
 
     Mappings apply once to the original width, leaving unmapped widths unchanged.
     Signless values are expected. Widening sign-extends constants.
-    Narrowing truncates without checking for data loss.
     The caller is responsible for ensuring the conversion is appropriate.
 
     Conversion covers types, function signatures and attribute payloads
@@ -245,7 +243,7 @@ def TosaConvertIntegerTypesBitwidthPass : Pass<"tosa-convert-integer-types-bitwi
     ListOption<"bitwidthMappings", "bitwidth-mappings",
                "std::pair<unsigned, unsigned>",
                "Integer bitwidth mappings <source>:<destination> "
-               "(required, non-empty)">
+               "(required, non-empty; supported: 4:8, 48:64)">
   ];
 }
 

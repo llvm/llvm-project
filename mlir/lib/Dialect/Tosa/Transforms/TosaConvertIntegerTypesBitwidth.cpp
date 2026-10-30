@@ -63,8 +63,7 @@ namespace {
 SmallVector<char> convertRawValues(ArrayRef<char> rawData, IntegerType type,
                                    IntegerType convertedType) {
   const unsigned inputElementSizeInBytes = llvm::divideCeil(type.getWidth(), 8);
-  const unsigned outputElementSizeInBytes =
-      llvm::divideCeil(convertedType.getWidth(), 8);
+  const unsigned outputElementSizeInBytes = convertedType.getWidth() / 8;
   const size_t numElements = rawData.size() / inputElementSizeInBytes;
   SmallVector<char> data(numElements * outputElementSizeInBytes);
   const auto *input = reinterpret_cast<const uint8_t *>(rawData.data());
@@ -75,7 +74,7 @@ SmallVector<char> convertRawValues(ArrayRef<char> rawData, IntegerType type,
                             inputElementSizeInBytes);
     // Discard padding bits before interpreting the source sign bit.
     value = value.trunc(type.getWidth());
-    llvm::StoreIntToMemory(value.sextOrTrunc(convertedType.getWidth()),
+    llvm::StoreIntToMemory(value.sext(convertedType.getWidth()),
                            output + i * outputElementSizeInBytes,
                            outputElementSizeInBytes);
   }
@@ -113,7 +112,7 @@ private:
     if (type == convertedType)
       return attr;
     return IntegerAttr::get(convertedType,
-                            attr.getValue().sextOrTrunc(
+                            attr.getValue().sext(
                                 cast<IntegerType>(convertedType).getWidth()));
   }
 
@@ -122,11 +121,6 @@ private:
     Type convertedType = replace(type);
     if (type == convertedType)
       return attr;
-    // For dense array the element type must be bool or its bitwidth must be a
-    // multiple of 8.
-    const unsigned width = cast<IntegerType>(convertedType).getWidth();
-    if (width != 1 && width % 8 != 0)
-      return nullptr;
     // Unlike dense elements, arrays always store every element, even splats.
     const SmallVector<char> data =
         convertRawValues(attr.getRawData(), cast<IntegerType>(type),
@@ -152,7 +146,7 @@ private:
     return attr
         .mapValues(convertedElementType,
                    [convertedIntegerType](const APInt &value) {
-                     return value.sextOrTrunc(convertedIntegerType.getWidth());
+                     return value.sext(convertedIntegerType.getWidth());
                    })
         .reshape(convertedType);
   }
@@ -185,17 +179,13 @@ private:
       return nullptr;
     const SmallVector<char> data =
         convertRawValues(rawData, integerType, convertedIntegerType);
-    // Alignment must be a power of two, including for sub-byte and
-    // non-power-of-two destination widths.
-    const unsigned alignment = llvm::PowerOf2Ceil(
-        llvm::divideCeil(convertedIntegerType.getWidth(), 8));
+    const unsigned alignment = convertedIntegerType.getWidth() / 8;
     return DenseResourceElementsAttr::get(
         convertedType, attr.getRawHandle().getKey(),
         HeapAsmResourceBlob::allocateAndCopyWithAlign(data, alignment));
   }
 
-  // Payload handlers already converted their subelements. Do not apply a
-  // second mapping when a destination width is also a source width.
+  // Payload handlers already converted their subelements.
   ReplaceFnResult<Attribute> skip(Attribute attr) {
     // replaceElementsIn ignores null replacements, so track failures here.
     conversionFailed |= !attr;
@@ -218,30 +208,14 @@ struct TosaConvertIntegerTypesBitwidth
     }
     DenseMap<unsigned, unsigned> mappings;
     for (auto [source, destination] : bitwidthMappings) {
-      for (auto [kind, width] : {std::make_pair("source", source),
-                                 std::make_pair("destination", destination)}) {
-        if (width == 0 || width > IntegerType::kMaxWidth) {
-          getOperation().emitError("invalid ")
-              << kind << " integer bitwidth " << width
-              << ": expected a value between 1 and " << IntegerType::kMaxWidth;
-          return signalPassFailure();
-        }
-      }
-      // These widths are fixed by boolean flags, axes, structural arrays and
-      // sparse indices. Reject these sources rather than exempting those
-      // attributes.
-      if (source == 1 || source == 32 || source == 64) {
-        getOperation().emitError("unsupported source integer bitwidth ")
-            << source;
+      if (!((source == 4 && destination == 8) ||
+            (source == 48 && destination == 64))) {
+        getOperation().emitError("unsupported integer bitwidth mapping ")
+            << source << ":" << destination
+            << ": expected 4:8 or 48:64";
         return signalPassFailure();
       }
-      auto [it, inserted] = mappings.try_emplace(source, destination);
-      if (!inserted && it->second != destination) {
-        getOperation().emitError(
-            "conflicting mappings for source integer bitwidth ")
-            << source << ": " << it->second << " and " << destination;
-        return signalPassFailure();
-      }
+      mappings.try_emplace(source, destination);
     }
     IntegerTypeReplacer replacer(mappings);
     replacer.recursivelyReplaceElementsIn(getOperation(), /*replaceAttrs=*/true,
