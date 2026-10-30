@@ -8,14 +8,9 @@ add_clang_library(MLIRCIR
   CIROpenCLAttrs.cpp
 
   DEPENDS
-  MLIRCIROpsIncGen
   MLIRCIRDialectBytecodeIncGen
-  MLIRCIRTypeConstraintsIncGen
   MLIRCIREnumsGen
-  MLIRCIROpInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
-  MLIRBuiltinLocationAttributesIncGen
-  MLIRBytecodeOpInterfaceIncGen
+  mlir-headers
 
   LINK_COMPONENTS
   TargetParser

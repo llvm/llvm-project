@@ -430,7 +430,6 @@ optMain(int argc, char **argv,
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandIRInstsLegacyPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
   initializeInlineAsmPreparePass(Registry);
   initializeCodeGenPrepareLegacyPassPass(Registry);
@@ -444,7 +443,6 @@ optMain(int argc, char **argv,
   initializeIndirectBrExpandLegacyPassPass(Registry);
   initializeInterleavedLoadCombinePass(Registry);
   initializeInterleavedAccessPass(Registry);
-  initializePostInlineEntryExitInstrumenterPass(Registry);
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeExpandReductionsPass(Registry);
   initializeWasmEHPreparePass(Registry);

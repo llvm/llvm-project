@@ -69,6 +69,45 @@ define <vscale x 4 x bfloat> @interleave2_lo_halves_extract_lo_nxv4bf16(<vscale 
   ret <vscale x 4 x bfloat> %z
 }
 
+define <vscale x 4 x bfloat> @interleave2_lo_halves_extract_hi_nxv4bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: interleave2_lo_halves_extract_hi_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip1 z0.h, z0.h, z1.h
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    ret
+  %x = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %a, i64 0)
+  %y = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %b, i64 0)
+  %r = call <vscale x 8 x bfloat> @llvm.vector.interleave2(<vscale x 4 x bfloat> %x, <vscale x 4 x bfloat> %y)
+  %z = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %r, i64 4)
+  ret <vscale x 4 x bfloat> %z
+}
+
+define <vscale x 4 x bfloat> @interleave2_hi_halves_extract_lo_nxv4bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: interleave2_hi_halves_extract_lo_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 z0.h, z0.h, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    ret
+  %x = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %a, i64 4)
+  %y = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %b, i64 4)
+  %r = call <vscale x 8 x bfloat> @llvm.vector.interleave2(<vscale x 4 x bfloat> %x, <vscale x 4 x bfloat> %y)
+  %z = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %r, i64 0)
+  ret <vscale x 4 x bfloat> %z
+}
+
+define <vscale x 4 x bfloat> @interleave2_hi_halves_extract_hi_nxv4bf16(<vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; CHECK-LABEL: interleave2_hi_halves_extract_hi_nxv4bf16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    zip2 z0.h, z0.h, z1.h
+; CHECK-NEXT:    uunpkhi z0.s, z0.h
+; CHECK-NEXT:    ret
+  %x = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %a, i64 4)
+  %y = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %b, i64 4)
+  %r = call <vscale x 8 x bfloat> @llvm.vector.interleave2(<vscale x 4 x bfloat> %x, <vscale x 4 x bfloat> %y)
+  %z = call <vscale x 4 x bfloat> @llvm.vector.extract(<vscale x 8 x bfloat> %r, i64 4)
+  ret <vscale x 4 x bfloat> %z
+}
+
 define <vscale x 16 x float> @interleave2_hi_halves_nxv16f32(<vscale x 16 x float> %a, <vscale x 16 x float> %b) {
 ; CHECK-LABEL: interleave2_hi_halves_nxv16f32:
 ; CHECK:       // %bb.0:
@@ -91,29 +130,19 @@ define <vscale x 10 x bfloat> @interleave2_halves_illegal_types(<vscale x 10 x b
 ; CHECK-NEXT:    addvl sp, sp, #-6
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x09, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x30, 0x1e, 0x22 // sp + 16 + 48 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #5 // =0x5
 ; CHECK-NEXT:    zip2 z1.h, z0.h, z2.h
-; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h
-; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    cntd x9, all, mul #5
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
-; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    str z0, [sp, #2, mul vl]
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x8]
-; CHECK-NEXT:    addvl x8, sp, #2
-; CHECK-NEXT:    add x8, x8, x9
-; CHECK-NEXT:    st1h { z0.h }, p0, [x8]
 ; CHECK-NEXT:    addpl x8, sp, #10
-; CHECK-NEXT:    ld1h { z0.d }, p1/z, [x8, #7, mul vl]
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    st1h { z1.d }, p0, [x8, #7, mul vl]
+; CHECK-NEXT:    addpl x8, sp, #10
+; CHECK-NEXT:    str z0, [sp, #2, mul vl]
+; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x8, #7, mul vl]
 ; CHECK-NEXT:    ldr z1, [sp, #2, mul vl]
 ; CHECK-NEXT:    addpl x8, sp, #26
-; CHECK-NEXT:    st1h { z0.d }, p1, [x8, #7, mul vl]
+; CHECK-NEXT:    st1h { z0.d }, p0, [x8, #7, mul vl]
 ; CHECK-NEXT:    str z1, [sp, #4, mul vl]
 ; CHECK-NEXT:    ldr z1, [sp, #5, mul vl]
 ; CHECK-NEXT:    ldr z0, [sp, #4, mul vl]
@@ -183,8 +212,8 @@ define <2 x double> @interleave2_hi_halves_v2f64(<2 x double> %a, <2 x double> %
   ret <2 x double> %r
 }
 
-define <16 x i8> @interleave2_lo_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; CHECK-LABEL: interleave2_lo_halves_v16i8:
+define <16 x i8> @interleave2_hi_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: interleave2_hi_halves_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    zip2 v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -194,16 +223,16 @@ define <16 x i8> @interleave2_lo_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %r
 }
 
-define void @interleave2_lo_halves_v16f32_256(<16 x float> %a, <16 x float> %b) vscale_range(2, 2) nounwind {
-; CHECK-LABEL: interleave2_lo_halves_v16f32_256:
+define void @interleave2_hi_halves_v16f32_256(<16 x float> %a, <16 x float> %b) vscale_range(2, 2) nounwind {
+; CHECK-LABEL: interleave2_hi_halves_v16f32_256:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    splice z6.d, p0, z6.d, z7.d
+; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
 ; CHECK-NEXT:    zip1 z0.s, z2.s, z6.s
 ; CHECK-NEXT:    zip2 z1.s, z2.s, z6.s
 ; CHECK-NEXT:    // fake_use: $z0
@@ -216,40 +245,21 @@ define void @interleave2_lo_halves_v16f32_256(<16 x float> %a, <16 x float> %b) 
   ret void
 }
 
-define void @interleave2_lo_halves_v16f32_512(<16 x float> %a, <16 x float> %b) vscale_range(4, 4) nounwind {
-; CHECK-LABEL: interleave2_lo_halves_v16f32_512:
+define void @interleave2_hi_halves_v16f32_512(<16 x float> %a, <16 x float> %b) vscale_range(4, 4) nounwind {
+; CHECK-LABEL: interleave2_hi_halves_v16f32_512:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    mov x29, sp
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
-; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    splice z6.d, p0, z6.d, z7.d
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    mov z0.s, z6.s[7]
-; CHECK-NEXT:    mov z1.s, z2.s[7]
-; CHECK-NEXT:    mov z3.s, z6.s[6]
-; CHECK-NEXT:    mov z4.s, z2.s[6]
-; CHECK-NEXT:    stp s1, s0, [sp, #24]
-; CHECK-NEXT:    mov z0.s, z6.s[5]
-; CHECK-NEXT:    mov z1.s, z2.s[5]
-; CHECK-NEXT:    stp s4, s3, [sp, #16]
-; CHECK-NEXT:    mov z3.s, z6.s[4]
-; CHECK-NEXT:    mov z4.s, z2.s[4]
-; CHECK-NEXT:    stp s1, s0, [sp, #8]
-; CHECK-NEXT:    zip1 z0.s, z2.s, z6.s
-; CHECK-NEXT:    stp s4, s3, [sp]
-; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x8]
-; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z6.s
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z2.s
+; CHECK-NEXT:    zip2 z0.s, z1.s, z0.s
 ; CHECK-NEXT:    // fake_use: $z0
-; CHECK-NEXT:    mov sp, x29
-; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
   %al = call <8 x float> @llvm.vector.extract(<16 x float> %a, i64 8)
   %bl = call <8 x float> @llvm.vector.extract(<16 x float> %b, i64 8)

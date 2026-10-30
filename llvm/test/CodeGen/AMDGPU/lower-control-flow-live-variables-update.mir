@@ -24,7 +24,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -53,7 +53,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY8]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY8]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -105,7 +105,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
@@ -140,7 +140,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY9]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY9]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
@@ -198,7 +198,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -229,7 +229,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY8]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY8]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -281,7 +281,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY3]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_]], [[COPY3]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3
@@ -316,7 +316,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY $exec, implicit-def $exec
   ; CHECK-NEXT:   [[S_AND_B64_1:%[0-9]+]]:sreg_64 = S_AND_B64 [[COPY8]], [[V_CMP_EQ_U32_e64_]], implicit-def dead $scc
   ; CHECK-NEXT:   [[S_XOR_B64_1:%[0-9]+]]:sreg_64_xexec = S_XOR_B64 [[S_AND_B64_1]], [[COPY8]], implicit-def dead $scc
-  ; CHECK-NEXT:   $exec = S_MOV_B64_term killed [[S_AND_B64_1]]
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[S_AND_B64_1]]
   ; CHECK-NEXT:   [[S_MOV_B64_term:%[0-9]+]]:sreg_64_xexec = S_MOV_B64_term [[S_XOR_B64_1]], implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.3

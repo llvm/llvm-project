@@ -140,3 +140,16 @@ llvm.func @loop_annotation_with_ids() {
 ^bb2:
   llvm.return
 }
+
+// -----
+
+// CHECK: #[[ALIGN_LOOP:.*]] = #llvm.loop_annotation<mustProgress = true, align = 32>
+#align_loop = #llvm.loop_annotation<mustProgress = true, align = 32>
+
+// CHECK: llvm.func @loop_annotation_with_align
+llvm.func @loop_annotation_with_align() {
+  // CHECK: llvm.br ^bb1 loop_annotation = #[[ALIGN_LOOP]]
+  llvm.br ^bb1 loop_annotation = #align_loop
+^bb1:
+  llvm.return
+}

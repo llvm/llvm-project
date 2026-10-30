@@ -1136,6 +1136,53 @@ define amdgpu_cs_chain void @amdgpu_cs_chain_realign_stack_chain_call(i32 %idx, 
   unreachable
 }
 
+declare void @use_inreg(i32 inreg)
+
+; The callee expects the scratch resource descriptor in s[0:3], not s[48:51].
+define amdgpu_cs_chain void @chain_call_inreg(i32 inreg %x) #0 {
+; GISEL-GFX11-LABEL: chain_call_inreg:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-NEXT:    s_mov_b32 s2, use_inreg@abs32@lo
+; GISEL-GFX11-NEXT:    s_mov_b32 s3, use_inreg@abs32@hi
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; GISEL-GFX11-NEXT:    s_endpgm
+;
+; GISEL-GFX10-LABEL: chain_call_inreg:
+; GISEL-GFX10:       ; %bb.0:
+; GISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX10-NEXT:    s_mov_b32 s18, use_inreg@abs32@lo
+; GISEL-GFX10-NEXT:    s_mov_b32 s19, use_inreg@abs32@hi
+; GISEL-GFX10-NEXT:    s_mov_b32 s16, s0
+; GISEL-GFX10-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; GISEL-GFX10-NEXT:    s_mov_b64 s[2:3], s[50:51]
+; GISEL-GFX10-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; GISEL-GFX10-NEXT:    s_endpgm
+;
+; DAGISEL-GFX11-LABEL: chain_call_inreg:
+; DAGISEL-GFX11:       ; %bb.0:
+; DAGISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s3, use_inreg@abs32@hi
+; DAGISEL-GFX11-NEXT:    s_mov_b32 s2, use_inreg@abs32@lo
+; DAGISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAGISEL-GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
+; DAGISEL-GFX11-NEXT:    s_endpgm
+;
+; DAGISEL-GFX10-LABEL: chain_call_inreg:
+; DAGISEL-GFX10:       ; %bb.0:
+; DAGISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s16, s0
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s19, use_inreg@abs32@hi
+; DAGISEL-GFX10-NEXT:    s_mov_b32 s18, use_inreg@abs32@lo
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[0:1], s[48:49]
+; DAGISEL-GFX10-NEXT:    s_mov_b64 s[2:3], s[50:51]
+; DAGISEL-GFX10-NEXT:    s_swappc_b64 s[30:31], s[18:19]
+; DAGISEL-GFX10-NEXT:    s_endpgm
+  call void @use_inreg(i32 inreg %x)
+  ret void
+}
+
 declare void @llvm.amdgcn.cs.chain.v2i32(ptr, i32, <2 x i32>, <2 x i32>, i32, ...)
 declare void @llvm.amdgcn.cs.chain.v3i32(ptr, i32, <3 x i32>, <3 x i32>, i32, ...)
 declare void @llvm.amdgcn.cs.chain.v4i32(ptr, i32, <4 x i32>, <4 x i32>, i32, ...)

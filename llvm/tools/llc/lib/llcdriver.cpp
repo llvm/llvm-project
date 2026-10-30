@@ -386,14 +386,9 @@ extern "C" int llcMain(int argc, char **argv) {
   PassRegistry *Registry = PassRegistry::getPassRegistry();
   initializeCore(*Registry);
   initializeCodeGen(*Registry);
-  initializeLoopStrengthReducePass(*Registry);
-  initializePostInlineEntryExitInstrumenterPass(*Registry);
-  initializeUnreachableBlockElimLegacyPassPass(*Registry);
-  initializeConstantHoistingLegacyPassPass(*Registry);
   initializeScalarOpts(*Registry);
   initializeIPO(*Registry);
   initializeVectorization(*Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(*Registry);
   initializeTransformUtils(*Registry);
 
   // Initialize debugging passes.

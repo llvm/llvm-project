@@ -1650,13 +1650,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{{UniPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}}, !HasSMemPF)
 
       .Any({{{DivPtr64}, IsDataPF}, {{}, {VgprPtr64}}}, HasVMemPF)
-      .Any({{{DivPtr64}, IsDataPF}, {{}, {}, DeletePrefetch}}, !HasVMemPF)
-      .Any({{{DivPtr64}, !IsDataPF}, {{}, {}, DeletePrefetch}})
+      // Otherwise prefetch the first active lane's address.
+      .Any({{DivPtr64}, {{}, {SgprB64_ReadFirstLane}}}, HasSMemPF)
+      .Any({{DivPtr64}, {{}, {}, DeletePrefetch}})
 
-      .Any({{P3}, {{}, {}, DeletePrefetch}})
-      .Any({{P5}, {{}, {}, DeletePrefetch}})
-      .Any({{UniP6}, {{}, {SgprP6}}}, HasSMemPF)
-      .Any({{UniP6}, {{}, {}, DeletePrefetch}}, !HasSMemPF);
+      .Any({{Ptr32}, {{}, {}, DeletePrefetch}})
+      .Any({{P8}, {{}, {}, DeletePrefetch}});
 
   addRulesForGOpcs({G_FPEXT})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
@@ -1879,6 +1878,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_prefetch}).Any({{}, {{}, {IntrId, VgprP1}}});
 
   addRulesForIOpcs({amdgcn_s_prefetch_data, amdgcn_s_prefetch_inst})
+      .Any({{_, Ptr32}, {{}, {}, DeletePrefetch}})
+      .Any({{_, P8}, {{}, {}, DeletePrefetch}})
       .Any({{}, {{}, {IntrId, SgprB64_ReadFirstLane, SgprB32_ReadFirstLane}}});
 
   addRulesForIOpcs({amdgcn_class})

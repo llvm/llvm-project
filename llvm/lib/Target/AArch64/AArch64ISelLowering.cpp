@@ -1902,8 +1902,18 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     if (Subtarget->hasSVEB16B16() &&
         Subtarget->isNonStreamingSVEorSME2Available()) {
       // Note: Use SVE for bfloat16 operations when +sve-b16b16 is available.
-      for (auto VT : {MVT::v4bf16, MVT::v8bf16, MVT::nxv2bf16, MVT::nxv4bf16,
-                      MVT::nxv8bf16}) {
+      for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
+        setOperationAction({ISD::FADD, ISD::STRICT_FADD}, VT, Custom);
+        setOperationAction({ISD::FMA, ISD::STRICT_FMA}, VT, Custom);
+        setOperationAction({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT, Custom);
+        setOperationAction({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT, Custom);
+        setOperationAction({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT, Custom);
+        setOperationAction({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT, Custom);
+        setOperationAction({ISD::FMUL, ISD::STRICT_FMUL}, VT, Custom);
+        setOperationAction({ISD::FSUB, ISD::STRICT_FSUB}, VT, Custom);
+      }
+      // TODO: Add fixed-length strict-fp support to LowerToPredicatedOp.
+      for (auto VT : {MVT::v4bf16, MVT::v8bf16}) {
         setOperationAction(ISD::FADD, VT, Custom);
         setOperationAction(ISD::FMA, VT, Custom);
         setOperationAction(ISD::FMAXIMUM, VT, Custom);
@@ -1915,11 +1925,30 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       }
     }
 
-    for (auto Opcode :
-         {ISD::FCEIL, ISD::FDIV, ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT,
-          ISD::FROUND, ISD::FROUNDEVEN, ISD::FSQRT, ISD::FTRUNC, ISD::SETCC,
-          ISD::VECREDUCE_FADD, ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMAXIMUM,
-          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMINIMUM}) {
+    for (auto Opcode : {ISD::FCEIL,
+                        ISD::FDIV,
+                        ISD::FFLOOR,
+                        ISD::FNEARBYINT,
+                        ISD::FRINT,
+                        ISD::FROUND,
+                        ISD::FROUNDEVEN,
+                        ISD::FSQRT,
+                        ISD::FTRUNC,
+                        ISD::SETCC,
+                        ISD::STRICT_FCEIL,
+                        ISD::STRICT_FDIV,
+                        ISD::STRICT_FFLOOR,
+                        ISD::STRICT_FNEARBYINT,
+                        ISD::STRICT_FRINT,
+                        ISD::STRICT_FROUND,
+                        ISD::STRICT_FROUNDEVEN,
+                        ISD::STRICT_FSQRT,
+                        ISD::STRICT_FTRUNC,
+                        ISD::VECREDUCE_FADD,
+                        ISD::VECREDUCE_FMAX,
+                        ISD::VECREDUCE_FMAXIMUM,
+                        ISD::VECREDUCE_FMIN,
+                        ISD::VECREDUCE_FMINIMUM}) {
       setOperationPromotedToType(Opcode, MVT::nxv2bf16, MVT::nxv2f32);
       setOperationPromotedToType(Opcode, MVT::nxv4bf16, MVT::nxv4f32);
       setOperationPromotedToType(Opcode, MVT::nxv8bf16, MVT::nxv8f32);
@@ -1929,18 +1958,25 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         !Subtarget->isNonStreamingSVEorSME2Available()) {
       for (MVT VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
         MVT PromotedVT = VT.changeVectorElementType(MVT::f32);
-        setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMA, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMAXIMUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMAXNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
-        setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+        setOperationPromotedToType({ISD::FADD, ISD::STRICT_FADD}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMA, ISD::STRICT_FMA}, VT, PromotedVT);
+        setOperationPromotedToType({ISD::FMAXIMUM, ISD::STRICT_FMAXIMUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMAXNUM, ISD::STRICT_FMAXNUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMINIMUM, ISD::STRICT_FMINIMUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FMINNUM, ISD::STRICT_FMINNUM}, VT,
+                                   PromotedVT);
+        setOperationPromotedToType({ISD::FSUB, ISD::STRICT_FSUB}, VT,
+                                   PromotedVT);
 
         if (VT != MVT::nxv2bf16 && Subtarget->hasBF16())
           setOperationAction(ISD::FMUL, VT, Custom);
         else
           setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
+        setOperationPromotedToType(ISD::STRICT_FMUL, VT, PromotedVT);
       }
 
       if (Subtarget->hasBF16() && Subtarget->isNeonAvailable())
@@ -2129,10 +2165,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     }
 
     // Map generic PEXT/PDEP to SVE2 bitperm BEXT/BDEP instructions.
-    if (Subtarget->hasSVEBitPerm() &&
-        (Subtarget->isSVEAvailable() ||
-         (Subtarget->isSVEorStreamingSVEAvailable() &&
-          Subtarget->hasSSVE_BitPerm()))) {
+    if (Subtarget->isSVEBitPermAvailable()) {
       for (auto VT : {MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32, MVT::nxv2i64}) {
         setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Custom);
       }
@@ -4942,7 +4975,12 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     return SDValue();
   }
 
-  assert(Op.getValueType() == MVT::f128 && "Unexpected lowering");
+  assert(VT == MVT::f128 && "Expected fp128 result type");
+  if (!IsStrict && Op0VT == MVT::bf16) {
+    SDLoc DL(Op);
+    SDValue Ext = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
+    return DAG.getNode(ISD::FP_EXTEND, DL, VT, Ext);
+  }
   return SDValue();
 }
 
@@ -4954,6 +4992,17 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   EVT SrcVT = SrcVal.getValueType();
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
   SDNodeFlags Flags = Op->getFlags();
+
+  if (!IsStrict && SrcVT == MVT::f128 && VT == MVT::bf16) {
+    SDLoc DL(Op);
+    // Round inexact results to odd before rounding to bf16 to avoid double
+    // rounding through fp32. Exact conversions do not need the correction.
+    SDValue Narrow =
+        Trunc ? DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, SrcVal,
+                            DAG.getIntPtrConstant(0, DL, true), Flags)
+              : expandRoundInexactToOdd(MVT::f32, SrcVal, DL, DAG);
+    return DAG.getNode(ISD::FP_ROUND, DL, VT, Narrow, Op.getOperand(1), Flags);
+  }
 
   if (VT.isScalableVector()) {
     // Let common code split the operation.
@@ -6654,16 +6703,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::aarch64_sme_ldr: {
     return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);
   }
-  case Intrinsic::aarch64_sme_za_enable:
-    return DAG.getNode(
-        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
-  case Intrinsic::aarch64_sme_za_disable:
-    return DAG.getNode(
-        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue),
-        Op->getOperand(0), // Chain
-        DAG.getTargetConstant((int32_t)(AArch64SVCR::SVCRZA), DL, MVT::i32));
   }
 }
 
@@ -11157,6 +11196,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
                                 ? alignTo(NumBytes, StackAlign)
                                 : 0;
 
+  // See AArch64FunctionInfo::HasWinCallToCalleePopFunction.
+  if (Subtarget->isTargetWindows() && CalleePopBytes != 0)
+    FuncInfo->setHasWinCallToCalleePopFunction(true);
+
   Chain = DAG.getCALLSEQ_END(Chain, NumBytes, CalleePopBytes, InGlue, DL);
   InGlue = Chain.getValue(1);
 
@@ -13996,8 +14039,9 @@ bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
   return false;
 }
 
-bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool OptForSize) const {
+TargetLowering::FPImmAction
+AArch64TargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool OptForSize) const {
   bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
 
   // If we can not materialize in immediate field for fmov, check if the
@@ -14041,7 +14085,7 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   LLVM_DEBUG(dbgs() << (IsLegal ? "Legal " : "Illegal ") << VT
                     << " imm value: ";
              Imm.dump(););
-  return IsLegal;
+  return IsLegal ? FPImmAction::Legal : FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//
@@ -19296,6 +19340,235 @@ bool AArch64TargetLowering::optimizeExtendOrTruncateConversion(
   return false;
 }
 
+// Match a bitcasted tbl intrinsic, and bind the tbl along with the mask.
+static auto m_Tbl(Instruction *&Tbl, Value *&Mask) {
+  using namespace llvm::PatternMatch;
+  return m_OneUse(m_BitCast(
+      m_OneUse(m_Instruction(Tbl, m_Intrinsic<Intrinsic::aarch64_sve_tbl>(
+                                      m_Value(), m_Value(Mask))))));
+}
+
+// Match a tbl intrinsic whose result is converted to a floating point value,
+// with the src and dest types for the UIToFP having the same bitwidth.
+struct uitofp_tbl_match {
+  Instruction *&Tbl;
+  Value *&Mask;
+
+  uitofp_tbl_match(Instruction *&Tbl, Value *&Mask) : Tbl(Tbl), Mask(Mask) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    using namespace llvm::PatternMatch;
+
+    if (!PatternMatch::match(V, m_OneUse(m_UIToFP(m_Tbl(Tbl, Mask)))))
+      return false;
+
+    UIToFPInst *UIToFP = cast<UIToFPInst>(V);
+    return UIToFP->getSrcTy()->getPrimitiveSizeInBits() ==
+           UIToFP->getDestTy()->getPrimitiveSizeInBits();
+  }
+};
+
+static auto m_UIToFPTbl(Instruction *&Tbl, Value *&Mask) {
+  return uitofp_tbl_match(Tbl, Mask);
+}
+
+// Match either of the above tbls, and recalculate the index of the
+// deinterleaved subvector. Bind the tbl and the index.
+struct deinterleaving_tbl_match {
+  Instruction *&Tbl;
+  unsigned &Idx;
+
+  deinterleaving_tbl_match(Instruction *&Tbl, unsigned &Idx)
+      : Tbl(Tbl), Idx(Idx) {}
+
+  template <typename ITy> bool match(ITy *V) const {
+    using namespace llvm::PatternMatch;
+
+    // Match the tbl.
+    Value *Mask;
+    if (!PatternMatch::match(
+            V, m_CombineOr(m_Tbl(Tbl, Mask), m_UIToFPTbl(Tbl, Mask))))
+      return false;
+
+    // For a deinterleaving+extending tbl, we will have a known constant values
+    // for the starting index and the step.
+    const APInt *Start;
+    if (!PatternMatch::match(
+            Mask, m_BitCast(m_Add(m_Mul(m_Intrinsic<Intrinsic::stepvector>(),
+                                        m_SpecificInt(4)),
+                                  m_APInt(Start)))))
+      return false;
+
+    unsigned SrcSize = Tbl->getType()->getScalarType()->getScalarSizeInBits();
+    unsigned ResSize = V->getType()->getScalarType()->getScalarSizeInBits();
+    // If the top bits are all ones, we know we're forcing an out-of-range
+    // index. With a deinterleave of 4, we should have 3 invalid indices for
+    // every valid one.
+    if (Start->countLeadingOnes() != ResSize - SrcSize)
+      return false;
+
+    // For a deinterleave of 4, the start of the valid indices must be between
+    // 0 and 3.
+    Idx = Start->getZExtValue() & (SrcSize - 1);
+    return Idx < 4;
+  }
+};
+
+static auto m_DeinterleavingTbl(Instruction *&Tbl, unsigned &Idx) {
+  return deinterleaving_tbl_match(Tbl, Idx);
+}
+
+// We want to find a reverse used only by BinOps where the other term comes
+// from one of the deinterleave-and-extend tbls we created before. If this
+// BinOp is only used in a reduction operation in the loop (so the order of
+// elements within it do not matter), then we can potentially fold the reverse
+// into the tbl and remove the separate reverse operation.
+// Something like the following (possibly repeated multiple times):
+//
+// %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00),
+//                                          %entry ], [ %fadd.b.f64, %loop ]
+// ...
+// %rev.load = load <vscale x 2 x double>, ptr %rev.ptr
+// %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(
+//                                            <vscale x 2 x double> %rev.load)
+// %bgra = load <vscale x 8 x i16>, ptr %src.gep
+// %stepvec = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+// %stride = mul nuw <vscale x 2 x i64> %stepvec, splat (i64 4)
+// %start = add nuw <vscale x 2 x i64> %stride, splat (i64 -65536)
+// %bc.to = bitcast <vscale x 2 x i64> %start to <vscale x 8 x i16>
+// %tbl = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(
+//                        <vscale x 8 x i16> %bgra, <vscale x 8 x i16> %bc.to)
+// %bc.from = bitcast <vscale x 8 x i16> %tbl to <vscale x 2 x i64>
+// %b.f64 = uitofp <vscale x 2 x i64> %bc.from to <vscale x 2 x double>
+// %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+// %fadd.b.f64 = call <vscale x 2 x double>
+//                     @llvm.vector.partial.reduce.fadd(%acc.b.f64, %b.mul.f64)
+static bool foldAdjacentReversesIntoTbls(IntrinsicInst *Rev, Loop *L) {
+  assert(Rev->getIntrinsicID() == Intrinsic::vector_reverse &&
+         "Wrong intrinsic");
+
+  // We look through bitcasts that may change element size, so only proceed
+  // if we're little endian since it's a no-op in that case.
+  if (!Rev->getFunction()->getDataLayout().isLittleEndian())
+    return false;
+
+  using namespace llvm::PatternMatch;
+  struct RevTblData {
+    Instruction *Tbl;
+    Use *RevUse;
+    unsigned Idx;
+  };
+
+  // Make sure we have a block before the loop we can use for all the mask
+  // calculations.
+  BasicBlock *PreHeader = L->getLoopPreheader();
+  if (!PreHeader)
+    return false;
+
+  // Look for reverse intrinsics used with the results of tbl instructions.
+  SmallVector<RevTblData, 4> Tbls;
+  VectorType *SrcTy = nullptr;
+  // Check all uses of the reverse; if there's anything which doesn't
+  // match our expected patterns, then give up on it. The intention is
+  // to remove the reverse, so any remaining users would prevent that.
+  for (Use &U : Rev->uses()) {
+    Instruction *UI = cast<Instruction>(U.getUser());
+
+    // Look for a tbl used to deinterleave and zero extend (and optionally
+    // convert to FP), the result of which is then used in a BinOp with
+    // the reverse.
+    Instruction *Tbl;
+    unsigned Idx;
+    if (!match(UI, m_OneUse(m_c_BinOp(m_DeinterleavingTbl(Tbl, Idx),
+                                      m_Specific(Rev)))))
+      return false;
+
+    // Check for a partial reduction user. Partial reductions permit reordering
+    // (and more) of the overall result within a vector, so it won't matter if
+    // we reverse the result.
+    if (!match(UI->getSingleUndroppableUse()->getUser(),
+               m_Intrinsic<Intrinsic::vector_partial_reduce_fadd>()))
+      return false;
+
+    // Make sure all the tbls share the same type.
+    if (SrcTy && Tbl->getType() != SrcTy)
+      return false;
+
+    SrcTy = cast<VectorType>(Tbl->getType());
+
+    Tbls.push_back({Tbl, &U, Idx});
+  }
+
+  if (Tbls.empty())
+    return false;
+
+  VectorType *DstTy = cast<VectorType>(Rev->getType());
+  unsigned SrcBits = SrcTy->getScalarSizeInBits();
+  unsigned DstBits = DstTy->getScalarSizeInBits();
+  VectorType *StepVecTy = VectorType::getInteger(DstTy);
+  ElementCount EC = StepVecTy->getElementCount();
+  Type *EltTy = StepVecTy->getScalarType();
+
+  // We need to create a new mask for the tbl, so that we effectively reverse
+  // the elements with the tbl. This means the resulting vector will be
+  // backwards compared to the original, which is why we check for reductions
+  // where we don't care about the order.
+  //
+  // Similar to the normal deinterleaving+extending mask, we will use out-of
+  // range indices to perform the zero extension. However, we need a negative
+  // stride starting from the highest group of elements. Since we're grouping
+  // by 4 (for now), we need to subtract 4 from the total source element count
+  // for the vector to get the start, then add the index of the extraction.
+  //
+  // The result should be the following:
+  // <EltCnt - 4 + Idx, 0xFFFF, 0xFFFF, 0xFFFF, EltCnt - 8 + Idx, 0xFFFF...>.
+  APInt Invalid = APInt::getAllOnes(DstBits);
+  Invalid = Invalid << SrcBits;
+  IRBuilder<> Builder(PreHeader->getTerminator());
+
+  // Create a splat of (Invalid | ElementCnt(SrcTy))
+  Value *EltCnt = Builder.CreateElementCount(EltTy, SrcTy->getElementCount());
+  Value *StartVal = Builder.CreateOr(EltCnt, ConstantInt::get(EltTy, Invalid));
+  StartVal = Builder.CreateVectorSplat(EC, StartVal);
+
+  // Add the step of -4.
+  Value *StepVector = Builder.CreateStepVector(StepVecTy);
+  StepVector = Builder.CreateMul(StepVector, ConstantInt::get(StepVecTy, -4));
+  StepVector = Builder.CreateAdd(StartVal, StepVector);
+
+  // Convert each candidate we found to perform the reverse in the tbl instead,
+  // then remove the reverse.
+  for (auto [Tbl, RevUse, Idx] : Tbls) {
+    // Subtract the reversed index then cast, giving us the final mask to
+    // replace the current one.
+    Value *FinalMaskForIdx =
+        Builder.CreateSub(StepVector, ConstantInt::get(StepVecTy, 4 - Idx));
+    Value *RevExtMask = Builder.CreateBitCast(FinalMaskForIdx, SrcTy);
+    Tbl->setOperand(1, RevExtMask);
+
+    // Skip the original reverse now that we've migrated it to the tbl.
+    RevUse->set(Rev->getOperand(0));
+
+    // And erase the reverse if that was the last use.
+    if (Rev->uses().empty())
+      Rev->eraseFromParent();
+  }
+
+  return true;
+}
+
+bool AArch64TargetLowering::optimizeVectorCrossLaneOperation(Instruction *I,
+                                                             Loop *L) const {
+  using namespace llvm::PatternMatch;
+  // We're only interested in vector operations in loops for now.
+  if (!L)
+    return false;
+  if (match(I, m_Intrinsic<Intrinsic::vector_reverse>()))
+    return foldAdjacentReversesIntoTbls(cast<IntrinsicInst>(I), L);
+
+  return false;
+}
+
 bool AArch64TargetLowering::hasPairedLoad(EVT LoadedType,
                                           Align &RequiredAlignment) const {
   if (!LoadedType.isSimple() ||
@@ -23026,55 +23299,6 @@ static SDValue performConcatVectorsCombine(SDNode *N,
 }
 
 static SDValue
-performVectorInterleaveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
-                               SelectionDAG &DAG) {
-  // Do this combine before type legalization as there may be half-width vector
-  // types in the combining patterns and type legalization will break the
-  // patterns when legalize the half-width vector types.
-  if (N->getNumOperands() != 2 || !DCI.isBeforeLegalizeOps())
-    return SDValue();
-
-  // Interleaving the low (or high) halves of two packed vectors is a single
-  // ZIP1 (or ZIP2) of the whole vectors:
-  //   (vector_interleave (extract_subvector A, I), (extract_subvector B, I))
-  //   -> Z = (zip1 A, B) for I == 0, (zip2 A, B) for I == half the elements,
-  //      with results (extract_subvector Z, 0) and (extract_subvector Z, half).
-  SDValue LHS = N->getOperand(0), RHS = N->getOperand(1);
-  if (LHS.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-      RHS.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return SDValue();
-
-  SDValue LHSVec = LHS.getOperand(0), RHSVec = RHS.getOperand(0);
-  EVT LHSVecVT = LHSVec.getValueType(), RHSVecVT = RHSVec.getValueType();
-  EVT HalfVT = N->getValueType(0);
-  const auto &TLI =
-      static_cast<const AArch64TargetLowering &>(DAG.getTargetLoweringInfo());
-  if (LHSVecVT != RHSVecVT || !TLI.isTypeLegal(LHSVecVT) ||
-      LHSVecVT != HalfVT.getDoubleNumVectorElementsVT(*DAG.getContext()))
-    return SDValue();
-
-  // Fixed-length vectors wider than NEON are legal because they can be put
-  // into SVE registers, but below ZIP1/ZIP2 on such types cannot be selected.
-  if (TLI.useSVEForFixedLengthVectorVT(LHSVecVT))
-    return SDValue();
-
-  uint64_t LHSIdx = LHS.getConstantOperandVal(1),
-           RHSIdx = RHS.getConstantOperandVal(1);
-  uint64_t Half = HalfVT.getVectorMinNumElements();
-  if (LHSIdx != RHSIdx || (LHSIdx != 0 && LHSIdx != Half))
-    return SDValue();
-
-  SDLoc DL(N);
-  SDValue Zip = DAG.getNode(LHSIdx == 0 ? AArch64ISD::ZIP1 : AArch64ISD::ZIP2,
-                            DL, LHSVecVT, LHSVec, RHSVec);
-  SDValue Res0 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Zip,
-                             DAG.getVectorIdxConstant(0, DL));
-  SDValue Res1 = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Zip,
-                             DAG.getVectorIdxConstant(Half, DL));
-  return DCI.CombineTo(N, Res0, Res1);
-}
-
-static SDValue
 performExtractSubvectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                SelectionDAG &DAG) {
   if (DCI.isBeforeLegalizeOps())
@@ -25661,8 +25885,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_subr:
     return convertMergedOpToPredOp(N, ISD::SUB, DAG, true, true);
   case Intrinsic::aarch64_sve_and_u:
-    return DAG.getNode(ISD::AND, SDLoc(N), N->getValueType(0), N->getOperand(2),
-                       N->getOperand(3));
+    return DAG.getNode(AArch64ISD::AND_U, SDLoc(N), N->getValueType(0),
+                       N->getOperand(1), N->getOperand(2), N->getOperand(3));
   case Intrinsic::aarch64_sve_bic_u:
     return DAG.getNode(AArch64ISD::BIC, SDLoc(N), N->getValueType(0),
                        N->getOperand(2), N->getOperand(3));
@@ -32003,8 +32227,6 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performSignExtendInRegCombine(N, DCI, DAG);
   case ISD::CONCAT_VECTORS:
     return performConcatVectorsCombine(N, DCI, DAG);
-  case ISD::VECTOR_INTERLEAVE:
-    return performVectorInterleaveCombine(N, DCI, DAG);
   case ISD::EXTRACT_SUBVECTOR:
     return performExtractSubvectorCombine(N, DCI, DAG);
   case ISD::INSERT_SUBVECTOR:
@@ -36408,7 +36630,8 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
 
   // If the vector is scalable, SVE is enabled, implying support for complex
   // numbers. Otherwise, we need to ensure complex number support is available
-  if (!VTy->isScalableTy() && !Subtarget->hasComplxNum())
+  if (!VTy->isScalableTy() &&
+      (!Subtarget->hasComplxNum() || !Subtarget->isNeonAvailable()))
     return false;
 
   auto *ScalarTy = VTy->getScalarType();

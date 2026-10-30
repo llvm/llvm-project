@@ -2748,9 +2748,14 @@ static bool HandleFloatToIntCast(EvalInfo &Info, const Expr *E,
   unsigned DestWidth = Info.Ctx.getIntWidth(DestType);
   // Determine whether we are converting to unsigned or signed.
   bool DestSigned = DestType->isSignedIntegerOrEnumerationType();
-
+  // This handles converstion to bool.
+  if (DestType->isBooleanType()) {
+    Result = APSInt(APInt(1, !Value.isZero()), /*isUnsigned=*/true);
+    return true;
+  }
   Result = APSInt(DestWidth, !DestSigned);
   bool ignored;
+
   if (Value.convertToInteger(Result, llvm::APFloat::rmTowardZero, &ignored)
       & APFloat::opInvalidOp)
     return HandleOverflow(Info, E, Value, DestType);
@@ -6481,7 +6486,20 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
   case Stmt::ContinueStmtClass:
   case Stmt::BreakStmtClass: {
     auto *B = cast<LoopControlStmt>(S);
-    Info.BreakContinueStack.push_back(B->getNamedLoopOrSwitch());
+    const Stmt *LoopOrSwitch = nullptr;
+    if (B->isNamed()) {
+      LoopOrSwitch = B->getNamedLoopOrSwitch();
+      // May be null if the named loop is outside of the
+      // current evaluation context, i.e. not a valid target.
+      if (!LoopOrSwitch) {
+        Info.FFDiag(S->getBeginLoc(),
+                    diag::note_break_continue_label_outside_context)
+            << isa<ContinueStmt>(B);
+        return ESR_Failed;
+      }
+    }
+
+    Info.BreakContinueStack.push_back(LoopOrSwitch);
     return isa<ContinueStmt>(S) ? ESR_Continue : ESR_Break;
   }
 
@@ -10913,13 +10931,6 @@ bool PointerExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     switch (BuiltinOp) {
     case Builtin::BIstrchr:
     case Builtin::BI__builtin_strchr:
-      // strchr compares directly to the passed integer, and therefore
-      // always fails if given an int that is not a char.
-      if (!APSInt::isSameValue(HandleIntToIntCast(Info, E, CharTy,
-                                                  E->getArg(1)->getType(),
-                                                  Desired),
-                               Desired))
-        return ZeroInitialization(E);
       StopAtNull = true;
       [[fallthrough]];
     case Builtin::BImemchr:
@@ -11425,6 +11436,25 @@ bool ReflectionEvaluator::ZeroInitialization(const Expr *E) {
 static bool EvaluateReflection(const Expr *E, APValue &Result, EvalInfo &Info) {
   assert(E->isPRValue() && E->getType()->isMetaInfoType());
   return ReflectionEvaluator(Info, Result).Visit(E);
+}
+
+static bool EvaluateReflectionMetafunctionBuiltin(EvalInfo &Info,
+                                                  const CallExpr *E,
+                                                  unsigned BuiltinOp,
+                                                  APValue &Result) {
+  switch (BuiltinOp) {
+  case Builtin::BI__builtin_meta_is_type: {
+    APValue Reflection;
+    if (!EvaluateReflection(E->getArg(0), Reflection, Info))
+      return false;
+    Result = APValue(Info.Ctx.MakeIntValue(
+        Reflection.getReflectionOperandKind() == ReflectionKind::Type,
+        E->getType()));
+    return true;
+  }
+  default:
+    llvm_unreachable("unknown metafunction builtin");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -17197,6 +17227,13 @@ static bool EvaluateStdcLoad8(EvalInfo &Info, const CallExpr *E, bool IsBE,
 
 bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
                                             unsigned BuiltinOp) {
+  if (Info.Ctx.BuiltinInfo.isReflectionMetafunctionBuiltin(BuiltinOp)) {
+    APValue Result;
+    if (!EvaluateReflectionMetafunctionBuiltin(Info, E, BuiltinOp, Result))
+      return false;
+    return Success(Result, E);
+  }
+
   auto EvalTestOp = [&](llvm::function_ref<bool(const APInt &, const APInt &)>
                             Fn) {
     APValue SourceLHS, SourceRHS;
@@ -20378,7 +20415,6 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
-  case CK_BitCast:
   case CK_Dependent:
   case CK_LValueBitCast:
   case CK_ARCProduceObject:
@@ -20395,6 +20431,16 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
+
+  case CK_BitCast: {
+    APValue Src;
+    if (!Evaluate(Src, Info, SubExpr))
+      return false;
+    APValue Dst;
+    if (!handleRValueToRValueBitCast(Info, Dst, Src, E))
+      return false;
+    return Success(Dst, E);
+  }
 
   case CK_MemberPointerToBoolean:
   case CK_PointerToBoolean:
@@ -22797,6 +22843,13 @@ APSInt Expr::EvaluateKnownConstInt(const ASTContext &Ctx) const {
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstInt");
   EvalResult EVResult;
 
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
+
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,
                                   /*SProxy=*/nullptr);
@@ -22829,6 +22882,13 @@ APSInt Expr::EvaluateKnownConstIntCheckOverflow(
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateKnownConstIntCheckOverflow");
   EvalResult EVResult;
   EVResult.Diag = Diag;
+
+  bool IsConst;
+  if (FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
+    assert(IsConst);
+    assert(EVResult.Val.isInt() && "Expression did not evaluate to integer");
+    return EVResult.Val.getInt();
+  }
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     interp::EvalSettings Settings(EvaluationMode::IgnoreSideEffects, EVResult,

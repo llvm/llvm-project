@@ -283,11 +283,11 @@ define void @test_vclez_fp(ptr %A) nounwind optsize {
 ; CHECK-LABEL: test_vclez_fp:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
+; CHECK-NEXT:    vmov.i8 d18, #0x1
 ; CHECK-NEXT:    vcle.f32 q8, q8, #0
 ; CHECK-NEXT:    vmovn.i32 d16, q8
-; CHECK-NEXT:    vmov.i8 d17, #0x1
-; CHECK-NEXT:    vuzp.8 d16, d18
-; CHECK-NEXT:    vadd.i8 d16, d16, d17
+; CHECK-NEXT:    vmovn.i16 d16, q8
+; CHECK-NEXT:    vadd.i8 d16, d16, d18
 ; CHECK-NEXT:    vst1.8 {d16}, [r0]
 entry:
   %ld = load <4 x float>, ptr %A

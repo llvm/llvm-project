@@ -2298,8 +2298,11 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
     }
 
     // Don't postRASink instructions that the target prefers not to sink.
-    if (!TII->shouldPostRASink(MI))
+    if (!TII->shouldPostRASink(MI)) {
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
       continue;
+    }
 
     if (MI.isDebugOrPseudoInstr())
       continue;

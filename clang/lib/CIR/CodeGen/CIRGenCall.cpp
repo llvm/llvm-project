@@ -403,8 +403,14 @@ void CIRGenModule::constructAttributeList(
       addAttributesFromFunctionProtoType(
           getBuilder(), attrs, func->getType()->getAs<FunctionProtoType>());
 
-      // TODO(cir): When doing 'return attrs' we need to cover the 'NoAlias' for
-      // global allocation functions here.
+      // A sane operator new returns a non-aliasing pointer.
+      if (attrOnCallSite && func->isReplaceableGlobalAllocationFunction() &&
+          codeGenOpts.AssumeSaneOperatorNew &&
+          func->getDeclName().isAnyOperatorNew()) {
+        retAttrs.set(mlir::LLVM::LLVMDialect::getNoAliasAttrName(),
+                     mlir::UnitAttr::get(&getMLIRContext()));
+      }
+
       assert(!cir::MissingFeatures::opCallAttrs());
 
       const CXXMethodDecl *md = dyn_cast<CXXMethodDecl>(func);
@@ -483,17 +489,6 @@ void CIRGenModule::constructAttributeList(
     // uniform (global work-size is a multiple of work-group size).
     if (langOpts.OffloadUniformBlock)
       addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
-
-    if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
-        targetDecl->hasAttr<CUDAGlobalAttr>()) {
-      GlobalDecl kernel(calleeInfo.getCalleeDecl());
-      llvm::StringRef kernelName = getMangledName(
-          kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-      auto attr = cir::CUDAKernelNameAttr::get(
-          &getMLIRContext(),
-          mlir::StringAttr::get(&getMLIRContext(), kernelName));
-      attrs.set(attr.getMnemonic(), attr);
-    }
 
     // TODO(cir): we should also do 'aarch64_pstate_sm_body' here.
 

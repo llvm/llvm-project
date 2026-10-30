@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+# ===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+# ===----------------------------------------------------------------------===##
+
+from typing import Container, Dict, List, NamedTuple, Optional, Sequence, Set, Tuple
+import argparse
+import collections
+import common
+import enum
+import json
+import logging
+import math
+import os
+import pathlib
+import statistics
+import subprocess
+import sys
+import tabulate
+
+
+DIRECTIONS = ('increase', 'decrease', 'both')
+
+
+class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                    argparse.RawDescriptionHelpFormatter):
+    """Show defaults, but keep the paragraphs of the description intact."""
+
+
+class Change(NamedTuple):
+    """A changepoint of one test, reduced to what the selection needs."""
+    test: str
+    before: str  # last commit measured before the change
+    after: str   # first commit measured after the change
+    size: float  # log(after / before): positive for an increase, negative for a decrease
+
+
+class Group(NamedTuple):
+    """The changes of several tests that happened in the same interval, in the same direction."""
+    before: str
+    after: str
+    tests: List[str]
+    size: float  # the median of log(after / before) across the tests
+
+    @property
+    def score(self) -> float:
+        """
+        How much refining this interval is worth.
+
+        This favors large changes on a few tests over small changes on many tests. For
+        micro-benchmarks, a change in the code is usually large and targeted, whereas broad
+        and small moves are typically the result of noise, like a change in code layout. The
+        number of tests still counts, but less than linearly.
+        """
+        return math.sqrt(len(self.tests)) * abs(self.size)
+
+
+class Status(enum.Enum):
+    PICKED = 'benchmark'
+    REFINED = 'fully refined'
+    UNKNOWN = 'unknown to Git'
+    VISITED = 'interval already visited'
+
+
+class Decision(NamedTuple):
+    """What was done with a group."""
+    group: Group
+    status: Status
+    candidates: Optional[List[str]] = None  # the commits that could be benchmarked in the interval
+    picked: Optional[str] = None
+
+
+def directory_path(string: str) -> pathlib.Path:
+    if not os.path.isdir(string):
+        raise argparse.ArgumentTypeError(f'{string} is not a directory')
+    return pathlib.Path(string)
+
+
+def non_negative_float(string: str) -> float:
+    try:
+        value = float(string)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'expected a number, got {string!r}')
+    if value < 0:
+        raise argparse.ArgumentTypeError(f'expected a non-negative number, got {string}')
+    return value
+
+
+def read_commits(stream) -> Set[str]:
+    """Read a list of whitespace separated commits."""
+    commits = {c.lower() for line in stream for c in line.split()}
+    invalid = sorted(c for c in commits if not common.is_sha(c))
+    if invalid:
+        raise ValueError(f'expected full 40-character SHAs in the attempted commits, got {invalid[0]!r}')
+    return commits
+
+
+def read_changes(stream) -> List[Change]:
+    """Read the changepoints written by `detect-changepoints --series-by test`."""
+    changes = []
+    for (number, line) in enumerate(stream, start=1):
+        if not line.strip():
+            continue
+        try:
+            record = json.loads(line)
+            change = Change(test=str(record['test']),
+                            before=str(record['before_x']).lower(),
+                            after=str(record['after_x']).lower(),
+                            size=math.log(float(record['after_y']) / float(record['before_y'])))
+        except json.JSONDecodeError as error:
+            raise ValueError(f'line {number} of the changes is not valid JSON: {error}')
+        except (KeyError, TypeError, ValueError, ZeroDivisionError) as error:
+            raise ValueError(f'line {number} of the changes is not a changepoint as written by '
+                             f'`detect-changepoints --series-by test`: {error!r}')
+        changes.append(change)
+    return changes
+
+
+def group(changes: Sequence[Change], direction: str, min_change: float, min_tests: int) -> List[Group]:
+    """
+    Group the changes by interval and direction, and return the groups best first.
+
+    Changes smaller than `min_change` are ignored, and so are groups of fewer than `min_tests`
+    tests: a single benchmark moving on its own is more likely to be a flaky benchmark than
+    a change in the code. Only the groups in `direction` are returned. Ties are broken by
+    interval so the order is stable.
+    """
+    threshold = math.log1p(min_change)
+    tests: Dict[Tuple[str, str, bool], List[Change]] = collections.defaultdict(list)
+    for change in changes:
+        if abs(change.size) >= threshold:
+            tests[(change.before, change.after, change.size > 0)].append(change)
+
+    groups = []
+    for ((before, after, increase), members) in tests.items():
+        if len(members) < min_tests or direction not in ('both', 'increase' if increase else 'decrease'):
+            continue
+        groups.append(Group(before=before, after=after,
+                            tests=sorted(change.test for change in members),
+                            size=statistics.median(change.size for change in members)))
+    return sorted(groups, key=lambda g: (-g.score, g.before, g.after, g.size > 0))
+
+
+def refinable_commits(git_repo: pathlib.Path, before: str, after: str, paths: Sequence[str],
+                      benchmarked: Container[str]) -> Optional[List[str]]:
+    """
+    Return the commits strictly between `before` and `after` that touch `paths` and were never
+    attempted, oldest first, or None if Git doesn't know the interval.
+
+    A commit that was attempted is never refinable, even if its runs produced no data (for
+    example because the build failed at that commit): it would otherwise be picked forever.
+    """
+    command = ['git', '-C', str(git_repo), 'rev-list', '--reverse', '--first-parent',
+               f'{before}..{after}', '--', *paths]
+    logging.debug(f'$ {" ".join(command)}')
+    process = subprocess.run(command, text=True, capture_output=True)
+    if process.returncode != 0:
+        logging.debug(f'skipping {before[:12]}..{after[:12]}: {process.stderr.strip()}')
+        return None
+    return [c for c in process.stdout.split() if c != after and c not in benchmarked]
+
+
+def select(groups: Sequence[Group], max_commits: int, git_repo: pathlib.Path, paths: Sequence[str],
+           benchmarked: Container[str]) -> Tuple[List[str], List[Decision]]:
+    """
+    Pick the commits to benchmark next, best interval first.
+
+    The groups are visited best first until we've picked `max_commits` commits.
+    """
+    commits: List[str] = []
+    decisions: List[Decision] = []
+    visited: Set[Tuple[str, str]] = set()
+    picked = 0
+    for group in groups:
+        if picked == max_commits:
+            break
+        if (group.before, group.after) in visited:
+            decisions.append(Decision(group, Status.VISITED))
+            continue
+        visited.add((group.before, group.after))
+        candidates = refinable_commits(git_repo, group.before, group.after, paths, benchmarked)
+        if candidates is None:
+            decisions.append(Decision(group, Status.UNKNOWN))
+            continue
+        if candidates:
+            middle = candidates[len(candidates) // 2]
+            commits.append(middle)
+            picked += 1
+            decisions.append(Decision(group, Status.PICKED, candidates, middle))
+        else:
+            decisions.append(Decision(group, Status.REFINED, candidates))
+    return (commits, decisions)
+
+
+def main(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog='select-refinement-commits',
+        description='Select the commits to benchmark next in order to narrow down the most significant '
+                    'changes found by `detect-changepoints` in the history of a machine.\n'
+                    '\n'
+                    'Changes are grouped by the commit interval they fall in, and the groups are ranked by '
+                    '`sqrt(tests) * median size`, where the size of a change is |log(after / before)|. This '
+                    'favors large changes on a few tests over small changes on many tests, which makes sense'
+                    'for microbenchmarks. The commit in the middle of each interval is selected, but only '
+                    'considering commits that touch the given paths and skipping already attempted commits.\n'
+                    '\n'
+                    'The selected commits are printed to standard output, one per line, best interval first.',
+        epilog='This script depends on the modules listed in `libcxx/utils/ci/lnt/requirements.txt`.',
+        formatter_class=HelpFormatter)
+    parser.add_argument('--changes', type=argparse.FileType('r'), default=sys.stdin, metavar='FILE',
+        help='The changepoints, as written by `detect-changepoints`. Defaults to standard input.')
+    parser.add_argument('--attempted-commits', type=argparse.FileType('r'), required=True, metavar='FILE',
+        help='A file of whitespace separated commits that were already attempted on the machine, which are skipped.')
+    parser.add_argument('--direction', choices=DIRECTIONS, default='both',
+        help='Which changes of the metric to consider. Whether an increase is a regression depends on the '
+             'metric (e.g. for cache hits, bigger is better, but for execution time, smaller is better).')
+    parser.add_argument('--min-change', type=non_negative_float, default=0.05,
+        help='Ignore changes smaller than this, as a fraction of the value before the change (a decrease is '
+             'measured as large as the increase of the same ratio, so 0.05 means 5%% slower or faster).')
+    parser.add_argument('--min-tests', type=common.at_least(1), default=2,
+        help='Ignore intervals where fewer than this number of tests have changed in the same direction.')
+    parser.add_argument('--max-commits', type=common.at_least(1), default=5,
+        help='The maximum number of commits to select.')
+    parser.add_argument('--paths', type=str, nargs='+', default=common.BENCHMARK_PATHS,
+        help='Only select commits touching these paths.')
+    parser.add_argument('--git-repo', type=directory_path, default=pathlib.Path(os.getcwd()),
+        help='Path to the Git repository to use. It needs the history of the commits the changes are about.')
+    parser.add_argument('--output', type=pathlib.Path, default=None,
+        help='Where to write the selected commits. Defaults to standard output.')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+        help='Print a human-readable summary to standard error. Pass it twice to also print debugging output.')
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(format='%(levelname)s: %(message)s',
+                        level=logging.DEBUG if args.verbose >= 2 else logging.WARNING)
+
+    changes = read_changes(args.changes)
+    groups = group(changes, args.direction, args.min_change, args.min_tests)
+
+    attempted = read_commits(args.attempted_commits)
+    if not attempted:
+        # Even the anchor commits have runs, so this is most likely a mistake rather than a new machine.
+        logging.warning('the list of attempted commits is empty, so any commit can be selected')
+    (commits, decisions) = select(groups, args.max_commits, args.git_repo, args.paths, attempted)
+    unknown = sum(1 for d in decisions if d.status == Status.UNKNOWN)
+    if unknown and all(d.status in (Status.UNKNOWN, Status.VISITED) for d in decisions):
+        raise ValueError(f'none of the {unknown} intervals are known to the Git repository in {args.git_repo}: '
+                         f'does it have the history of the commits the changes are about?')
+    if unknown:
+        logging.warning(f'skipped {unknown} intervals unknown to the Git repository in {args.git_repo}')
+
+    if args.verbose:
+        out = sys.stderr
+        print(f'Direction: {args.direction}   Attempted commits: {len(attempted)}', file=out)
+        print(f'Changes: {len(changes)}   Groups of at least {args.min_tests} tests changing by at least '
+              f'{args.min_change:.0%}: {len(groups)}', file=out)
+        rows = []
+        for (rank, decision) in enumerate(decisions, start=1):
+            g = decision.group
+            action = decision.status.value + (f' {decision.picked[:12]}' if decision.picked else '')
+            rows.append((rank, f'{g.score:.2f}', len(g.tests), f'{math.expm1(g.size):+.1%}',
+                         f'{g.before[:12]}..{g.after[:12]}',
+                         '-' if decision.candidates is None else len(decision.candidates), action, g.tests[0]))
+        if rows:
+            print('', file=out)
+            print(tabulate.tabulate(rows, headers=['#', 'SCORE', 'TESTS', 'MEDIAN', 'INTERVAL', 'REFINABLE',
+                                                   'ACTION', 'EXAMPLE'],
+                                    tablefmt='plain', disable_numparse=True,
+                                    colalign=('right', 'right', 'right', 'right', 'left', 'right', 'left', 'left')),
+                  file=out)
+        print(f'\nSelected {len(commits)} commits', file=out)
+
+    # Write the output all at once at the end, to avoid partial output in case of failure.
+    contents = ''.join(f'{commit}\n' for commit in commits)
+    if args.output is None:
+        sys.stdout.write(contents)
+    else:
+        args.output.write_text(contents)
+    return 0
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except (ValueError, OSError) as error:
+        sys.exit(f'error: {error}')

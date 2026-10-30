@@ -1,6 +1,6 @@
 add_subdirectory(timing)
 
-add_custom_target(gpu-benchmark)
+add_libc_testsuite(gpu-benchmark ROOT)
 
 function(add_benchmark benchmark_name)
   cmake_parse_arguments(
@@ -16,7 +16,6 @@ function(add_benchmark benchmark_name)
   endif()
   add_libc_test(
     ${benchmark_name}
-    IS_GPU_BENCHMARK
     FULL_BUILD_ONLY
     LINK_LIBRARIES
       LibcGpuBenchmark
@@ -28,10 +27,6 @@ function(add_benchmark benchmark_name)
     COMPILE_OPTIONS
       -flto
   )
-  get_fq_target_name(${benchmark_name} fq_target_name)
-  if(TARGET ${fq_target_name})
-    add_dependencies(gpu-benchmark ${fq_target_name})
-  endif()
 endfunction()
 
 function(add_benchmark_framework_library name)
@@ -59,7 +54,7 @@ function(add_benchmark_framework_library name)
     target_compile_definitions(${name} PRIVATE TARGET_SUPPORTS_CLOCK)
   endif()
 
-  _get_hermetic_test_compile_options(compile_options "" "")
+  _get_common_test_compile_options(compile_options "" "")
   target_include_directories(${name} PRIVATE ${LIBC_INCLUDE_DIR})
   target_compile_options(${name} PRIVATE ${compile_options} -nostdinc++)
 

@@ -86,8 +86,8 @@ public:
                          EVT) const override;
   bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
                                   EVT VT) const override;
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override {
     // Do not shrink 64-bit FP constpool entries since LDEB is slower than
     // LD, and having the full constant in memory enables reg/mem opcodes.
@@ -98,6 +98,11 @@ public:
 
   MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const;
+
+  bool canMergeStoresTo(unsigned AS, EVT MemVT,
+                        const MachineFunction &MF) const override;
+
+  bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override;
 
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
   AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const override;
@@ -426,10 +431,6 @@ private:
                                    bool Invert) const;
   MachineBasicBlock *emitICmp128Hi(MachineInstr &MI, MachineBasicBlock *BB,
                                    bool Unsigned) const;
-  MachineBasicBlock *emitPair128(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const;
-  MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
-                                bool ClearEven) const;
   MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode,
@@ -462,7 +463,6 @@ private:
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;
-  const TargetRegisterClass *getRepRegClassFor(MVT VT) const override;
 
 private:
   bool enableNarrowIntArgsVerification() const;

@@ -2589,6 +2589,36 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
     I.replaceAllUsesWith(NewLoad);
     return {nullptr, nullptr};
   }
+  case Intrinsic::prefetch: {
+    Value *Ptr = I.getArgOperand(0);
+    if (!isSplitFatPtr(Ptr->getType()))
+      return {nullptr, nullptr};
+    // s_buffer_prefetch_data only takes an immediate offset, so only a data
+    // prefetch at a constant offset can use it. Drop the others: a prefetch is
+    // only a hint.
+    if (ST->hasSafeSmemPrefetch() &&
+        cast<ConstantInt>(I.getArgOperand(3))->isOne()) {
+      IRB.SetInsertPoint(&I);
+      auto [Rsrc, Off] = getPtrParts(Ptr);
+      auto *ConstOff = dyn_cast<ConstantInt>(Off);
+      if (ConstOff && AMDGPU::isLegalSMRDEncodedSignedOffset(
+                          *ST, ConstOff->getZExtValue(), /*IsBuffer=*/true)) {
+        Value *NewPrefetch =
+            IRB.CreateIntrinsic(Intrinsic::amdgcn_s_buffer_prefetch_data, {},
+                                {Rsrc, ConstOff, IRB.getInt32(0)});
+        copyMetadata(NewPrefetch, &I);
+      }
+    }
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
+  }
+  case Intrinsic::amdgcn_s_prefetch_data:
+  case Intrinsic::amdgcn_s_prefetch_inst:
+    if (!isSplitFatPtr(I.getArgOperand(0)->getType()))
+      return {nullptr, nullptr};
+    // Instruction selection drops these for every other non-global pointer.
+    SplitUsers.insert(&I);
+    return {nullptr, nullptr};
   }
   return {nullptr, nullptr};
 }

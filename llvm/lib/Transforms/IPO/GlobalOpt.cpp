@@ -1637,6 +1637,13 @@ processGlobal(GlobalValue &GV,
   if (GV.getName().starts_with("llvm."))
     return false;
 
+  // The only transformation performed here on functions is setting
+  // unnamed_addr. Avoid scanning uses when its value cannot be strengthened.
+  if (isa<Function>(GV) &&
+      (GV.hasGlobalUnnamedAddr() ||
+       (!GV.hasLocalLinkage() && GV.hasAtLeastLocalUnnamedAddr())))
+    return false;
+
   GlobalStatus GS;
 
   if (GlobalStatus::analyzeGlobal(&GV, GS))
@@ -2404,12 +2411,12 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   // is trivial and remove them.
   bool Changed = false;
 
-  for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
-    // We're only interested in calls. Theoretically, we could handle invoke
-    // instructions as well, but neither llvm-gcc nor clang generate invokes
-    // to __cxa_atexit.
-    CallInst *CI = dyn_cast<CallInst>(U);
-    if (!CI)
+  for (Use &U : llvm::make_early_inc_range(CXAAtExitFn->uses())) {
+    // We're only interested in calls to the atexit function. Theoretically, we
+    // could handle invoke instructions as well, but neither llvm-gcc nor clang
+    // generate invokes to __cxa_atexit.
+    CallInst *CI = dyn_cast<CallInst>(U.getUser());
+    if (!CI || !CI->isCallee(&U))
       continue;
 
     Function *DtorFn =
