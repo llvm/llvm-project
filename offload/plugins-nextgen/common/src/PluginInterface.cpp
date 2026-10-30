@@ -1206,10 +1206,6 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t GenericPluginTy::use_auto_zero_copy(int32_t DeviceId) {
-  return getDevice(DeviceId).useAutoZeroCopy();
-}
-
 /// Create OpenMP interop with the given interop context
 omp_interop_val_t *
 GenericPluginTy::create_interop(int32_t ID, int32_t InteropContext,

@@ -1408,7 +1408,15 @@ void DeviceTy::dumpOffloadEntries() {
 bool DeviceTy::useAutoZeroCopy() {
   if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
     return false;
-  return RTL->use_auto_zero_copy(RTLDeviceID);
+  bool PrefersHost = false;
+  if (auto Res =
+          olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PREFERRED_LOCATION_HOST,
+                          sizeof(PrefersHost), &PrefersHost)) {
+    REPORT() << "Failed to query zero-copy preference of device " << DeviceID
+             << ": " << Res->Details;
+    return false;
+  }
+  return PrefersHost;
 }
 
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
