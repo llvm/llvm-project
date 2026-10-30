@@ -407,7 +407,7 @@ private:
                                  HLSLAppliedSemanticAttr *Semantic,
                                  std::optional<unsigned> Index,
                                  SemanticSignatures &Signature,
-                                 bool OneElementPerRow = false);
+                                 bool EnforceOneElementPerRow = false);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,
