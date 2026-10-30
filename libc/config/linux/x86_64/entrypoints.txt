@@ -331,6 +331,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/eventfd.h entrypoints
     libc.src.sys.eventfd.eventfd
+    libc.src.sys.eventfd.eventfd_read
+    libc.src.sys.eventfd.eventfd_write
 
     # sys/file.h entrypoints
     libc.src.sys.file.flock
