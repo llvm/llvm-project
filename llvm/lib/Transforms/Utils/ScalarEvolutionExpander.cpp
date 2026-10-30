@@ -194,13 +194,15 @@ void SCEVExpander::eraseDeadInstructions(Value *Root) {
 BasicBlock::iterator
 SCEVExpander::GetOptimalInsertionPointForCastOf(Value *V) const {
   // Cast the argument at the beginning of the entry block, after
-  // any bitcasts of other arguments.
+  // any bitcasts of other arguments, but not below the insertion point.
   if (Argument *A = dyn_cast<Argument>(V)) {
     BasicBlock::iterator IP = A->getParent()->getEntryBlock().begin();
-    while ((isa<BitCastInst>(IP) &&
-            isa<Argument>(cast<BitCastInst>(IP)->getOperand(0)) &&
-            cast<BitCastInst>(IP)->getOperand(0) != A))
-      ++IP;
+    for (; IP != Builder.GetInsertPoint(); ++IP) {
+      auto *BCI = dyn_cast<BitCastInst>(IP);
+      auto *Arg = BCI ? dyn_cast<Argument>(BCI->getOperand(0)) : nullptr;
+      if (!Arg || Arg == A)
+        break;
+    }
     return IP;
   }
 
