@@ -672,9 +672,14 @@ struct FixedScalableVFPair {
 /// Holds state needed to make cost decisions before computing costs per-VF,
 /// including the maximum VFs.
 class VFSelectionContext {
+  using VectorKind = TargetTransformInfo::VectorKind;
   /// \return True if maximizing vector bandwidth is enabled by the target or
   /// user options, for the given register kind (scalable or fixed-width).
-  bool useMaxBandwidth(bool IsScalable) const;
+  bool useMaxBandwidth(VectorKind Kind, Type *ElementTy = nullptr) const;
+  bool useMaxBandwidth(bool IsScalable, Type *ElementTy = nullptr) const {
+    return useMaxBandwidth(
+        IsScalable ? VectorKind::Scalable : VectorKind::FixedWidth, ElementTy);
+  }
 
   struct VFSelectionTypeWidths {
     unsigned SmallestTypeForMaxBandwidth;
