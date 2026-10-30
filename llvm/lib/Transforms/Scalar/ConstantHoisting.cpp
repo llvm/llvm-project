@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/LazyBlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
@@ -92,8 +93,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    if (ScalarOptions::Global.consthoist_with_block_frequency)
-      AU.addRequired<BlockFrequencyInfoWrapperPass>();
+    AU.addRequired<LazyBlockFrequencyInfoPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
@@ -109,7 +109,7 @@ char ConstantHoistingLegacyPass::ID = 0;
 
 INITIALIZE_PASS_BEGIN(ConstantHoistingLegacyPass, "consthoist",
                       "Constant Hoisting", false, false)
-INITIALIZE_PASS_DEPENDENCY(BlockFrequencyInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LazyBlockFrequencyInfoPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
@@ -128,12 +128,15 @@ bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   LLVM_DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
 
+  const ScalarOptions &Opts = getScalarOptions(Fn);
+  auto GetBFI = [&]() {
+    return Opts.consthoist_with_block_frequency
+               ? &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI()
+               : nullptr;
+  };
   bool MadeChange =
       Impl.runImpl(Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
-                   getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
-                   ScalarOptions::Global.consthoist_with_block_frequency
-                       ? &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI()
-                       : nullptr,
+                   getAnalysis<DominatorTreeWrapperPass>().getDomTree(), GetBFI,
                    Fn.getEntryBlock(),
                    &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI());
 
@@ -463,7 +466,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   // Visit constant expressions that have constant integers.
   if (auto ConstExpr = dyn_cast<ConstantExpr>(Opnd)) {
     // Handle constant gep expressions.
-    if (ScalarOptions::Global.consthoist_gep && isa<GEPOperator>(ConstExpr))
+    if (Opts->consthoist_gep && isa<GEPOperator>(ConstExpr))
       collectConstantCandidates(ConstCandMap, Inst, Idx, ConstExpr);
 
     // Only visit constant cast expressions.
@@ -846,8 +849,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
 
       // If only few constants depend on this IP of base, skip rebasing,
       // assuming the base and the rebased have the same materialization cost.
-      if (ToBeRebased.size() <
-          ScalarOptions::Global.consthoist_min_num_to_rebase) {
+      if (ToBeRebased.size() < Opts->consthoist_min_num_to_rebase) {
         NotRebasedNum += ToBeRebased.size();
         continue;
       }
@@ -910,17 +912,21 @@ void ConstantHoistingPass::deleteDeadCastInst() const {
 
 /// Optimize expensive integer constants in the given function.
 bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
-                                   DominatorTree &DT, BlockFrequencyInfo *BFI,
+                                   DominatorTree &DT,
+                                   function_ref<BlockFrequencyInfo *()> GetBFI,
                                    BasicBlock &Entry, ProfileSummaryInfo *PSI) {
+  this->Opts = &getScalarOptions(Fn);
   this->TTI = &TTI;
   this->DT = &DT;
-  this->BFI = BFI;
+  this->BFI = nullptr;
   this->DL = &Fn.getDataLayout();
   this->Ctx = &Fn.getContext();
   this->Entry = &Entry;
   this->PSI = PSI;
-  this->OptForSize = llvm::shouldOptimizeForSize(Entry.getParent(), PSI, BFI,
-                                                 PGSOQueryType::IRPass);
+  this->OptForSize = llvm::shouldOptimizeForSize(
+      Entry.getParent(), PSI,
+      PSI && PSI->hasProfileSummary() ? GetBFI() : nullptr,
+      PGSOQueryType::IRPass);
 
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
@@ -936,12 +942,15 @@ bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
   // Finally hoist the base constant and emit materialization code for dependent
   // constants.
   bool MadeChange = false;
-  if (!ConstIntInfoVec.empty())
+  if (!ConstIntInfoVec.empty()) {
+    BFI = BFI ? BFI : GetBFI();
     MadeChange = emitBaseConstants(nullptr);
+  }
   for (const auto &MapEntry : ConstGEPInfoMap)
-    if (!MapEntry.second.empty())
+    if (!MapEntry.second.empty()) {
+      BFI = BFI ? BFI : GetBFI();
       MadeChange |= emitBaseConstants(MapEntry.first);
-
+    }
 
   // Cleanup dead instructions.
   deleteDeadCastInst();
@@ -955,12 +964,15 @@ PreservedAnalyses ConstantHoistingPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  auto BFI = ScalarOptions::Global.consthoist_with_block_frequency
-                 ? &AM.getResult<BlockFrequencyAnalysis>(F)
-                 : nullptr;
+  const ScalarOptions &CLOpts = getScalarOptions(F);
+  auto GetBFI = [&]() {
+    return CLOpts.consthoist_with_block_frequency
+               ? &AM.getResult<BlockFrequencyAnalysis>(F)
+               : nullptr;
+  };
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  if (!runImpl(F, TTI, DT, BFI, F.getEntryBlock(), PSI))
+  if (!runImpl(F, TTI, DT, GetBFI, F.getEntryBlock(), PSI))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

@@ -95,8 +95,8 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
       // FIXME: This is missing checking aliases.
       if (&op == user)
         continue;
-      if (hasEffect<MemoryEffects::Write>(user, memref) ||
-          (hasEffect<MemoryEffects::Read>(user, memref) &&
+      if (mightHaveEffect<MemoryEffects::Write>(user, memref) ||
+          (mightHaveEffect<MemoryEffects::Read>(user, memref) &&
            isa<AffineWriteOpInterface>(op))) {
         userIVs.clear();
         getAffineForIVs(*user, &userIVs);

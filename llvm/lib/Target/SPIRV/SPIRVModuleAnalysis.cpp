@@ -91,15 +91,19 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   bool MinVerOK = SPIRVVersion.empty() || SPIRVVersion >= ReqMinVer;
   bool MaxVerOK =
       ReqMaxVer.empty() || SPIRVVersion.empty() || SPIRVVersion <= ReqMaxVer;
+  bool VerOK = MinVerOK && MaxVerOK;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
+  // A met minimum version makes the extension unnecessary.
+  if (VerOK && !ReqMinVer.empty())
+    ReqExts.clear();
   if (ReqCaps.empty()) {
     if (ReqExts.empty()) {
-      if (MinVerOK && MaxVerOK)
+      if (VerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
       return {false, {}, {}, VersionTuple(), VersionTuple()};
     }
-  } else if (MinVerOK && MaxVerOK) {
+  } else if (VerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap)) {
@@ -130,15 +134,15 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   }
   // If there are no capabilities, or we can't satisfy the version or
   // capability requirements, use the list of extensions (if the subtarget
-  // can handle them all).
-  if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
+  // can handle them all). Without an extension the version must hold. An
+  // extension stands in for an unmet version.
+  if ((!ReqExts.empty() || VerOK) &&
+      llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true,
-            {},
-            std::move(ReqExts),
-            VersionTuple(),
-            VersionTuple()}; // TODO: add versions to extensions.
+    if (VerOK)
+      return {true, {}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+    return {true, {}, std::move(ReqExts), VersionTuple(), VersionTuple()};
   }
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
@@ -1071,6 +1075,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
+                    Capability::Geometry,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
@@ -1082,6 +1087,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl,
+                    Capability::SampleRateShading,
                     Capability::MinLod,
                     Capability::ImageQuery,
                     Capability::ImageGatherExtended,
@@ -1095,6 +1101,10 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
       ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
     addAvailableCaps({Capability::VariablePointersStorageBuffer,
                       Capability::VariablePointers});
+
+  // Became core in Vulkan 1.1.
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    addAvailableCaps({Capability::DrawParameters, Capability::MultiView});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1122,6 +1132,27 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 } // namespace SPIRV
 } // namespace llvm
 
+// Add a capability that became core in SPIR-V 1.3. Earlier versions require
+// the extension that introduced it.
+static void addCoreInSPIRV13Capability(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       SPIRV::Capability::Capability Cap,
+                                       SPIRV::Extension::Extension Ext) {
+  Reqs.addCapability(Cap);
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    return;
+  if (!ST.canUseExtension(Ext))
+    report_fatal_error(
+        Twine("capability ") +
+            getSymbolicOperandMnemonic(
+                SPIRV::OperandCategory::CapabilityOperand, Cap) +
+            " requires SPIR-V 1.3 or the following SPIR-V extension: " +
+            getSymbolicOperandMnemonic(SPIRV::OperandCategory::ExtensionOperand,
+                                       Ext),
+        false);
+  Reqs.addExtension(Ext);
+}
+
 // Add the required capabilities from a decoration instruction (including
 // BuiltIns).
 static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
@@ -1135,8 +1166,30 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   if (Dec == SPIRV::Decoration::BuiltIn) {
     int64_t BuiltInOp = MI.getOperand(DecIndex + 1).getImm();
     auto BuiltIn = static_cast<SPIRV::BuiltIn::BuiltIn>(BuiltInOp);
-    Reqs.addRequirements(getSymbolicOperandRequirements(
-        SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+    if ((BuiltIn == SPIRV::BuiltIn::BaryCoordKHR ||
+         BuiltIn == SPIRV::BuiltIn::BaryCoordNoPerspKHR) &&
+        !ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_fragment_shader_barycentric))
+      report_fatal_error(
+          "Barycentric built-ins require the following SPIR-V extension: "
+          "SPV_KHR_fragment_shader_barycentric",
+          false);
+    switch (BuiltIn) {
+    case SPIRV::BuiltIn::BaseVertex:
+    case SPIRV::BuiltIn::BaseInstance:
+      addCoreInSPIRV13Capability(
+          Reqs, ST, SPIRV::Capability::DrawParameters,
+          SPIRV::Extension::SPV_KHR_shader_draw_parameters);
+      break;
+    case SPIRV::BuiltIn::ViewIndex:
+      addCoreInSPIRV13Capability(Reqs, ST, SPIRV::Capability::MultiView,
+                                 SPIRV::Extension::SPV_KHR_multiview);
+      break;
+    default:
+      Reqs.addRequirements(getSymbolicOperandRequirements(
+          SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+      break;
+    }
   } else if (Dec == SPIRV::Decoration::LinkageAttributes) {
     int64_t LinkageOp = MI.getOperand(MI.getNumOperands() - 1).getImm();
     SPIRV::LinkageType::LinkageType LnkType =
@@ -1233,6 +1286,16 @@ static bool isBFloat16Type(SPIRVTypeInst TypeDef) {
          TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
          TypeDef->getOperand(1).getImm() == 16 &&
          TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
+// Registers created after isel (e.g. by MachineCSE) may lack registry entries.
+// Fall back to the defining instruction's result type.
+static SPIRVTypeInst getRegType(Register Reg, const MachineFunction &MF,
+                                const SPIRVGlobalRegistry *GR) {
+  if (SPIRVTypeInst Ty = GR->getSPIRVTypeForVReg(Reg, &MF))
+    return Ty;
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  return MRI.getVRegDef(MRI.getVRegDef(Reg)->getOperand(1).getReg());
 }
 
 // Add requirements for handling atomic float instructions
@@ -1517,8 +1580,9 @@ static void AddDotProductRequirements(const MachineInstr &MI,
 
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   assert(MI.getOperand(2).isReg() && "Unexpected operand in dot");
-  SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
-      MI.getOperand(2).getReg(), MI.getMF());
+  SPIRVTypeInst TypeDef = getRegType(MI.getOperand(2).getReg(), *MI.getMF(),
+                                     ST.getSPIRVGlobalRegistry());
+  assert(TypeDef && "Unexpected type instruction for dot input");
   if (TypeDef->getOpcode() == SPIRV::OpTypeInt) {
     assert(TypeDef->getOperand(1).getImm() == 32);
     Reqs.addCapability(SPIRV::Capability::DotProductInput4x8BitPacked);
@@ -1785,6 +1849,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypeReserveId:
     Reqs.addCapability(SPIRV::Capability::Pipes);
     break;
+  case SPIRV::OpTypePipeStorage:
+    Reqs.addCapability(SPIRV::Capability::PipeStorage);
+    break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:
   case SPIRV::OpBuildNDRange:
@@ -1847,8 +1914,8 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVTypeInst TypeDef;
     if (Op == SPIRV::OpAtomicStore) {
       assert(MI.getOperand(3).isReg());
-      TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
-          MI.getOperand(3).getReg(), MI.getMF());
+      TypeDef = getRegType(MI.getOperand(3).getReg(), *MI.getMF(),
+                           ST.getSPIRVGlobalRegistry());
       assert(TypeDef && "Unexpected type instruction for OpAtomicStore");
     } else {
       assert(MI.getOperand(1).isReg() && "Unexpected operand in atomic");
@@ -2395,7 +2462,8 @@ void addInstrRequirements(const MachineInstr &MI,
                          "OpConvertHandleToSampledImageINTEL",
                          false);
     }
-    SPIRVTypeInst SpvTy = GR->getSPIRVTypeForVReg(MI.getOperand(2).getReg());
+    SPIRVTypeInst SpvTy =
+        getRegType(MI.getOperand(2).getReg(), *MI.getMF(), GR);
     unsigned Bitwidth = GR->getScalarOrVectorBitWidth(SpvTy);
     if (!(Bitwidth == 32 && AddrModel == SPIRV::AddressingModel::Physical32) &&
         !(Bitwidth == 64 && AddrModel == SPIRV::AddressingModel::Physical64)) {
@@ -2665,8 +2733,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpFUnordGreaterThan:
   case SPIRV::OpFUnordGreaterThanEqual: {
     const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
-    SPIRVTypeInst TypeDef = ST.getSPIRVGlobalRegistry()->getSPIRVTypeForVReg(
-        MI.getOperand(2).getReg(), MI.getMF());
+    SPIRVTypeInst TypeDef = getRegType(MI.getOperand(2).getReg(), *MI.getMF(),
+                                       ST.getSPIRVGlobalRegistry());
+    assert(TypeDef && "Unexpected type instruction for comparison operand");
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
     if (isBFloat16Type(TypeDef)) {
@@ -2936,25 +3005,14 @@ static bool handleMIFlagDecoration(
     if (FPFastMathDefaultInfoVec.empty())
       return Changed;
 
-    // There are three types of instructions that can use fast math flags:
-    // 1. Arithmetic instructions (FAdd, FMul, FSub, FDiv, FRem, etc.)
-    // 2. Relational instructions (FCmp, FOrd, FUnord, etc.)
-    // 3. Extended instructions (ExtInst)
-    // For arithmetic instructions, the floating point type can be in the
-    // result type or in the operands, but they all must be the same.
-    // For the relational and logical instructions, the floating point type
-    // can only be in the operands 1 and 2, not the result type. Also, the
-    // operands must have the same type. For the extended instructions, the
-    // floating point type can be in the result type or in the operands. It's
-    // unclear if the operands and the result type must be the same. Let's
-    // assume they must be. Therefore, for 1. and 2., we can check the first
-    // operand type, and for 3. we can check the result type.
-    assert(I.getNumOperands() >= 3 && "Expected at least 3 operands");
-    Register ResReg = I.getOpcode() == SPIRV::OpExtInst
-                          ? I.getOperand(1).getReg()
-                          : I.getOperand(2).getReg();
-    SPIRVTypeInst ResType = GR->getSPIRVTypeForVReg(ResReg, I.getMF());
-    const Type *Ty = GR->getTypeForSPIRVType(ResType);
+    // Use the first operand's FP type for arithmetic and comparisons,
+    // and the result type for calls and extended instructions.
+    SPIRVTypeInst FPType =
+        I.getOpcode() == SPIRV::OpExtInst ||
+                I.getOpcode() == SPIRV::OpFunctionCall
+            ? I.getMF()->getRegInfo().getVRegDef(I.getOperand(1).getReg())
+            : getRegType(I.getOperand(2).getReg(), *I.getMF(), GR);
+    const Type *Ty = GR->getTypeForSPIRVType(FPType);
     Ty = Ty->isVectorTy() ? cast<VectorType>(Ty)->getElementType() : Ty;
 
     // Match instruction type with the FPFastMathDefaultInfoVec.

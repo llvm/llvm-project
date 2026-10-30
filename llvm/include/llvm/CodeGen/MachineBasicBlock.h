@@ -513,6 +513,11 @@ public:
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
+  /// Return true if any part of \p Reg is live in, accounting for live-ins of
+  /// overlapping registers and their lane masks.
+  LLVM_ABI bool isLiveInOverlappedWith(MCRegister Reg,
+                                       const TargetRegisterInfo &TRI) const;
+
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   using livein_iterator = LiveInVector::const_iterator;

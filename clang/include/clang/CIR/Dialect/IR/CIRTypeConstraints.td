@@ -44,6 +44,19 @@ class CIR_TypeSummaries<list<Type> types> {
 }
 
 //===----------------------------------------------------------------------===//
+// Dialect predicates
+//===----------------------------------------------------------------------===//
+
+// Constrains the types nested in a CIR type. Every CIR type admits only CIR
+// types as parameters, so a CIR type holds no foreign type at any depth.
+def CIR_DialectType
+    : Type<CPred<"$_self && " #
+                 "::mlir::isa<::cir::CIRDialect>($_self.getDialect())">,
+           "any type from the CIR dialect"> {
+  let cppFunctionName = "isCIRType";
+}
+
+//===----------------------------------------------------------------------===//
 // Bool Type predicates
 //===----------------------------------------------------------------------===//
 
@@ -280,6 +293,11 @@ class CIR_PtrToAnyOf<list<Type> types, string summary = "">
 // Void type constraints
 def CIR_AnyVoidType : CIR_TypeBase<"::cir::VoidType", "void type">,
       BuildableType<"$_builder.getType<" # cppType # ">()">;
+
+// Void has no layout, so neither does an array of it.
+def CIR_ArrayElementType
+    : Type<And<[CIR_DialectType.predicate, Neg<CIR_AnyVoidType.predicate>]>,
+           "any CIR type except void">;
 
 // Void pointer type constraints
 def CIR_VoidPtrType : CIR_PtrTo<CIR_AnyVoidType, "void type">;

@@ -15,6 +15,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/TargetParser/Triple.h"
 
 static constexpr llvm::StringRef cudaDeviceModuleName = "cuda_device_mod";
 static constexpr llvm::StringRef cudaSharedMemSuffix = "__shared_mem__";
@@ -26,6 +27,18 @@ static constexpr llvm::StringRef cudaDeviceCopySuffix = ".device";
 /// under -gpu=mem:managed. It must be a valid C identifier so the linker
 /// defines the __start_ and __stop_ symbols bounding it.
 static constexpr llvm::StringRef cudaSharedTypeInfoSection = "__nv_type_info";
+/// Name prefix of the page-aligned global emitted last in that section by each
+/// translation unit, so that the section starts on a page boundary and the
+/// pages before the last one hold only type information.
+static constexpr llvm::StringRef cudaSharedTypeInfoEndPrefix =
+    "__nv_type_info_end_";
+/// Alignment of that global: the largest page size of \p triple, so that the
+/// layout holds whatever page size the system uses.
+inline int64_t getCudaSharedTypeInfoAlignment(const llvm::Triple &triple) {
+  if (triple.isAArch64() || triple.isPPC64())
+    return 65536;
+  return 4096;
+}
 /// Attribute on the GPU module mapping the name of each shared type
 /// descriptor to the managed pointer holding its host address.
 static constexpr llvm::StringRef cudaSharedTypeDescsAttrName =
@@ -104,7 +117,11 @@ void remapProcedureSymbols(
 /// smaller than the host one.
 void setDeviceAllocationPolicy(mlir::Operation *func);
 
-void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
+/// Emit a cuf.sync_descriptor when \p box is the descriptor of a registered
+/// CUDA device global. \p loc is the source location of the statement that
+/// may have modified the descriptor.
+void genPointerSync(mlir::Location loc, const mlir::Value box,
+                    fir::FirOpBuilder &builder);
 
 int computeElementByteSize(mlir::Location loc, mlir::Type type,
                            fir::KindMapping &kindMap,

@@ -104,6 +104,34 @@ When compiled, the PTX kernel functions are callable by host-side code.
   of the number of thread blocks. This attribute is only allowed for kernel
   functions and requires `nvvm.reqntid` and `nvvm.cluster_dim` attributes.
 
+`"nvvm.abi_preserve"="<n>"`
+
+: This attribute specifies the number of general purpose registers that the
+  callers of this function are responsible for preserving. The backend bounds
+  the number of live data variables the callers may keep in callee-save
+  registers accordingly. It is lowered to the PTX
+  [`.abi_preserve`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve)
+  directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
+  are omitted on targets below that.
+
+`"nvvm.abi_preserve_control"="<n>"`
+
+: This attribute specifies the number of control registers that the callers of
+  this function are responsible for preserving, corresponding to the number of
+  divergent program points in the call tree leading to this call. It is lowered
+  to the PTX
+  [`.abi_preserve_control`](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#performance-tuning-directives-abi-preserve-control)
+  directive, which requires PTX ISA 8.3 and `sm_80` or higher. The directives
+  are omitted on targets below that.
+
+Both `nvvm.abi_preserve*` attributes are valid on function definitions,
+declarations and call sites. PTX permits these directives only on device
+functions, between the `.func` directive and the function body. On a call site
+they are appended to the generated `.callprototype`; this is how an indirect
+call, which has no callee to consult, states the contract. A call site is never
+given the contract of its callee: the attributes are looked up on the call site
+only.
+
 (address-spaces)=
 
 ### Address Spaces
@@ -1610,23 +1638,21 @@ PTX instruction. The supported combinations are:
      - None
 ```
 
-#### '`llvm.nvvm.fma.*`' Half-precision Intrinsics
+#### '`llvm.nvvm.fma.*`' Intrinsics
 
 ##### Syntax:
 
+These are overloaded intrinsics. The '`.ftz`' modifier and one of the '`.sat`'
+or '`.relu`' modifiers are optional.
+
 ```llvm
-declare half @llvm.nvvm.fma.rn{.ftz}.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-declare bfloat @llvm.nvvm.fma.rn.bf16(bfloat %a, bfloat %b, bfloat %c)
-declare <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
-
-declare half @llvm.nvvm.fma.rn{.ftz}.sat.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.sat.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-
-declare half @llvm.nvvm.fma.rn{.ftz}.relu.f16(half %a, half %b, half %c)
-declare <2 x half> @llvm.nvvm.fma.rn{.ftz}.relu.f16x2(<2 x half> %a, <2 x half> %b, <2 x half> %c)
-declare bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %a, bfloat %b, bfloat %c)
-declare <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c)
+declare half         @llvm.nvvm.fma{.ftz}{.sat|.relu}.f16(half %a, half %b, half %c, i32 immarg %rnd)
+declare <2 x half>   @llvm.nvvm.fma{.ftz}{.sat|.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, i32 immarg %rnd)
+declare bfloat       @llvm.nvvm.fma{.relu}.bf16(bfloat %a, bfloat %b, bfloat %c, i32 immarg %rnd)
+declare <2 x bfloat> @llvm.nvvm.fma{.relu}.v2bf16(<2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c, i32 immarg %rnd)
+declare float        @llvm.nvvm.fma{.ftz}{.sat}.f32(float %a, float %b, float %c, i32 immarg %rnd)
+declare <2 x float>  @llvm.nvvm.fma{.ftz}.v2f32(<2 x float> %a, <2 x float> %b, <2 x float> %c, i32 immarg %rnd)
+declare double       @llvm.nvvm.fma.f64(double %a, double %b, double %c, i32 immarg %rnd)
 
 declare half @llvm.nvvm.fma.rn.oob{.relu}.f16(half %a, half %b, half %c)
 declare <2 x half> @llvm.nvvm.fma.rn.oob{.relu}.v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c)
@@ -1636,19 +1662,54 @@ declare <2 x bfloat> @llvm.nvvm.fma.rn.oob{.relu}.v2bf16(<2 x bfloat> %a, <2 x b
 
 ##### Overview:
 
-The '`llvm.nvvm.fma.*`' intrinsics perform a fused multiply-add with no loss
-of precision in the intermediate product and addition.
+The '`llvm.nvvm.fma.*`' intrinsics perform a fused multiply-add of `%a`, `%b`
+and `%c` with no loss of precision in the intermediate product and addition,
+using the rounding mode selected by `%rnd` and the modifiers present in the
+intrinsic name. They correspond directly to the `fma` PTX instruction.
 
 ##### Semantics:
 
-The '`.sat`' modifier performs a saturating operation where the result is
-clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
+`%rnd` selects the rounding mode applied to the result, see
+{ref}`fp-rounding-modes`.
+
 The '`.ftz`' modifier flushes subnormal inputs and results to sign-preserving
 zero.
+The '`.sat`' modifier performs a saturating operation where the result is
+clamped to `[0.0, 1.0]` and `NaN` results are flushed to `+0.0f`.
 The '`.relu`' modifier clamps the result to `0` if negative and `NaN`
 results are flushed to canonical `NaN`.
 The '`.oob`' modifier clamps the result to `0` if either of the operands is
-an `OOB NaN` (defined under [Tensors](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors)) value.
+an `OOB NaN` (defined under [Tensors](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors)) value. The
+'`llvm.nvvm.fma.rn.oob{.relu}`' intrinsics only support the `rn` rounding
+mode, and do not take a rounding-mode operand.
+
+Not every combination of operand type, rounding mode and modifier maps to a
+PTX instruction. For the '`llvm.nvvm.fma{.ftz}{.sat|.relu}`' intrinsics, the
+supported combinations are:
+
+```{list-table}
+:widths: 25 25 25
+:header-rows: 1
+
+   * - Operand Type
+     - Rounding Modes
+     - Modifiers
+   * - `half`, `<2 x half>`
+     - `rn`
+     - `.ftz`, `.sat`, `.relu`
+   * - `bfloat`, `<2 x bfloat>`
+     - `rn`
+     - `.relu`
+   * - `float`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`, `.sat`
+   * - `<2 x float>`
+     - `rn`, `rz`, `rp`, `rm`
+     - `.ftz`
+   * - `double`
+     - `rn`, `rz`, `rp`, `rm`
+     - None
+```
 
 ### Bit Manipulation Intrinsics
 
@@ -4894,7 +4955,7 @@ pass manager:
 
 ```c++
 std::unique_ptr<TargetMachine> TM = ...;
-PassBuilder PB(TM);
+PassBuilder PB(Context, TM.get());
 ModulePassManager MPM;
 PB.parsePassPipeline(MPM, ...);
 ```

@@ -495,8 +495,7 @@ struct FunCloner {
     if (!LLVMIsAInstruction(Src))
       report_fatal_error("Expected an instruction");
 
-    auto Ctx = LLVMGetModuleContext(M);
-    auto Builder = LLVMCreateBuilderInContext(Ctx);
+    auto Builder = LLVMCreateBuilderForModule(M);
     auto BB = DeclareBB(LLVMGetInstructionParent(Src));
     LLVMPositionBuilderAtEnd(Builder, BB);
     auto Dst = CloneInstruction(Src, Builder);
@@ -1148,8 +1147,7 @@ struct FunCloner {
       return BB;
     }
 
-    auto Ctx = LLVMGetModuleContext(M);
-    LLVMBuilderRef Builder = LLVMCreateBuilderInContext(Ctx);
+    LLVMBuilderRef Builder = LLVMCreateBuilderForModule(M);
     LLVMPositionBuilderAtEnd(Builder, BB);
 
     LLVMValueRef Cur = First;

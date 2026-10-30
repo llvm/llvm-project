@@ -1343,7 +1343,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
     std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
     if (!A || !B)
-      return Invalid(S, OpPC);
+      return false;
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
@@ -2854,11 +2854,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
   return true;
 }
 
-inline bool InitScope(InterpState &S, uint32_t I) {
-  S.Current->initScope(I);
-  return true;
-}
-
 inline bool EnableLocal(InterpState &S, uint32_t I) {
   assert(!S.Current->isLocalEnabled(I));
   S.Current->enableLocal(I);
@@ -3712,6 +3707,13 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
       << S.Current->getRange(OpPC);
+  return false;
+}
+
+inline bool InvalidTargetLabel(InterpState &S, CodePtr OpPC, bool IsContinue) {
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_break_continue_label_outside_context)
+      << S.Current->getRange(OpPC) << IsContinue;
   return false;
 }
 

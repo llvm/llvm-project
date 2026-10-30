@@ -399,8 +399,8 @@ define void @ldg(ptr %p0, ptr addrspace(1) %p1) {
 define i32 @atomics(ptr %p0, i32 %a, float %b, double %c) {
 ; CHECK: %1 = atomicrmw uinc_wrap ptr %p0, i32 %a syncscope("device") monotonic
 ; CHECK: %2 = atomicrmw udec_wrap ptr %p0, i32 %a syncscope("device") monotonic
-; CHECK: %3 = atomicrmw fadd ptr %p0, float %b syncscope("device") monotonic
-; CHECK: %4 = atomicrmw fadd ptr %p0, double %c syncscope("device") monotonic
+; CHECK: %3 = atomicrmw fadd ptr %p0, float %b syncscope("device") monotonic, align 4, !atomic.ignore.denormal.mode !0
+; CHECK: %4 = atomicrmw fadd ptr %p0, double %c syncscope("device") monotonic, align 8, !atomic.ignore.denormal.mode !0
 
   %r1 = call i32 @llvm.nvvm.atomic.load.inc.32.p0(ptr %p0, i32 %a)
   %r2 = call i32 @llvm.nvvm.atomic.load.dec.32.p0(ptr %p0, i32 %a)
@@ -501,13 +501,13 @@ define void @atomics_scoped(ptr %p, i32 %a, i64 %b, float %c, double %d) {
 ; CHECK: [[CAS_sys_i64:%.*]] = cmpxchg ptr %p, i64 %b, i64 %b monotonic monotonic
 ; CHECK: extractvalue { i64, i1 } [[CAS_sys_i64]], 0
   %cas.i.sys.i64 = call i64 @llvm.nvvm.atomic.cas.gen.i.sys.i64.p0(ptr %p, i64 %b, i64 %b)
-; CHECK: atomicrmw fadd ptr %p, float %c syncscope("block") monotonic
+; CHECK: atomicrmw fadd ptr %p, float %c syncscope("block") monotonic, align 4, !atomic.ignore.denormal.mode !0
   %add.f.cta.f32 = call float @llvm.nvvm.atomic.add.gen.f.cta.f32.p0(ptr %p, float %c)
-; CHECK: atomicrmw fadd ptr %p, double %d syncscope("block") monotonic
+; CHECK: atomicrmw fadd ptr %p, double %d syncscope("block") monotonic, align 8, !atomic.ignore.denormal.mode !0
   %add.f.cta.f64 = call double @llvm.nvvm.atomic.add.gen.f.cta.f64.p0(ptr %p, double %d)
-; CHECK: atomicrmw fadd ptr %p, float %c monotonic
+; CHECK: atomicrmw fadd ptr %p, float %c monotonic, align 4, !atomic.ignore.denormal.mode !0
   %add.f.sys.f32 = call float @llvm.nvvm.atomic.add.gen.f.sys.f32.p0(ptr %p, float %c)
-; CHECK: atomicrmw fadd ptr %p, double %d monotonic
+; CHECK: atomicrmw fadd ptr %p, double %d monotonic, align 8, !atomic.ignore.denormal.mode !0
   %add.f.sys.f64 = call double @llvm.nvvm.atomic.add.gen.f.sys.f64.p0(ptr %p, double %d)
   ret void
 }
@@ -833,6 +833,63 @@ define void @nvvm_mul(float %a, double %b, half %c, <2 x half> %d) {
   %r8 = call half @llvm.nvvm.mul.rn.ftz.sat.f16(half %c, half %c)
   %r9 = call <2 x half> @llvm.nvvm.mul.rn.sat.v2f16(<2 x half> %d, <2 x half> %d)
   %r10 = call <2 x half> @llvm.nvvm.mul.rn.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d)
+  ret void
+}
+
+define void @nvvm_fma(float %a, double %b, half %c, <2 x half> %d,
+                      bfloat %e, <2 x bfloat> %f) {
+; CHECK: call float @llvm.nvvm.fma.f32(float %a, float %a, float %a, /* rnd=rn */ i32 1)
+; CHECK: call float @llvm.nvvm.fma.ftz.f32(float %a, float %a, float %a, /* rnd=rz */ i32 0)
+; CHECK: call float @llvm.nvvm.fma.sat.f32(float %a, float %a, float %a, /* rnd=rm */ i32 3)
+; CHECK: call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %a, float %a, /* rnd=rp */ i32 2)
+; CHECK: call double @llvm.nvvm.fma.f64(double %b, double %b, double %b, /* rnd=rn */ i32 1)
+; CHECK: call double @llvm.nvvm.fma.f64(double %b, double %b, double %b, /* rnd=rz */ i32 0)
+; CHECK: call half @llvm.nvvm.fma.f16(half %c, half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fma.ftz.f16(half %c, half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fma.sat.f16(half %c, half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fma.ftz.sat.f16(half %c, half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fma.relu.f16(half %c, half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call half @llvm.nvvm.fma.ftz.relu.f16(half %c, half %c, half %c, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fma.v2f16(<2 x half> %d, <2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fma.ftz.sat.v2f16(<2 x half> %d, <2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call <2 x half> @llvm.nvvm.fma.relu.v2f16(<2 x half> %d, <2 x half> %d, <2 x half> %d, /* rnd=rn */ i32 1)
+; CHECK: call bfloat @llvm.nvvm.fma.bf16(bfloat %e, bfloat %e, bfloat %e, /* rnd=rn */ i32 1)
+; CHECK: call bfloat @llvm.nvvm.fma.relu.bf16(bfloat %e, bfloat %e, bfloat %e, /* rnd=rn */ i32 1)
+; CHECK: call <2 x bfloat> @llvm.nvvm.fma.v2bf16(<2 x bfloat> %f, <2 x bfloat> %f, <2 x bfloat> %f, /* rnd=rn */ i32 1)
+; CHECK: call <2 x bfloat> @llvm.nvvm.fma.relu.v2bf16(<2 x bfloat> %f, <2 x bfloat> %f, <2 x bfloat> %f, /* rnd=rn */ i32 1)
+  %r1 = call float @llvm.nvvm.fma.rn.f(float %a, float %a, float %a)
+  %r2 = call float @llvm.nvvm.fma.rz.ftz.f(float %a, float %a, float %a)
+  %r3 = call float @llvm.nvvm.fma.rm.sat.f(float %a, float %a, float %a)
+  %r4 = call float @llvm.nvvm.fma.rp.ftz.sat.f(float %a, float %a, float %a)
+  %r5 = call double @llvm.nvvm.fma.rn.d(double %b, double %b, double %b)
+  %r6 = call double @llvm.nvvm.fma.rz.d(double %b, double %b, double %b)
+  %r7 = call half @llvm.nvvm.fma.rn.f16(half %c, half %c, half %c)
+  %r8 = call half @llvm.nvvm.fma.rn.ftz.f16(half %c, half %c, half %c)
+  %r9 = call half @llvm.nvvm.fma.rn.sat.f16(half %c, half %c, half %c)
+  %r10 = call half @llvm.nvvm.fma.rn.ftz.sat.f16(half %c, half %c, half %c)
+  %r11 = call half @llvm.nvvm.fma.rn.relu.f16(half %c, half %c, half %c)
+  %r12 = call half @llvm.nvvm.fma.rn.ftz.relu.f16(half %c, half %c, half %c)
+  %r13 = call <2 x half> @llvm.nvvm.fma.rn.f16x2(<2 x half> %d, <2 x half> %d, <2 x half> %d)
+  %r14 = call <2 x half> @llvm.nvvm.fma.rn.ftz.sat.f16x2(<2 x half> %d, <2 x half> %d, <2 x half> %d)
+  %r15 = call <2 x half> @llvm.nvvm.fma.rn.relu.f16x2(<2 x half> %d, <2 x half> %d, <2 x half> %d)
+  %r16 = call bfloat @llvm.nvvm.fma.rn.bf16(bfloat %e, bfloat %e, bfloat %e)
+  %r17 = call bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %e, bfloat %e, bfloat %e)
+  %r18 = call <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %f, <2 x bfloat> %f, <2 x bfloat> %f)
+  %r19 = call <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %f, <2 x bfloat> %f, <2 x bfloat> %f)
+  ret void
+}
+
+define void @nvvm_fma_legacy_bf16(i16 %a, i32 %b) {
+; CHECK-LABEL: @nvvm_fma_legacy_bf16
+; CHECK: [[R1:%.*]] = call bfloat @llvm.nvvm.fma.bf16(bfloat %{{.*}}, bfloat %{{.*}}, bfloat %{{.*}}, /* rnd=rn */ i32 1)
+; CHECK: bitcast bfloat [[R1]] to i16
+; CHECK: [[R2:%.*]] = call <2 x bfloat> @llvm.nvvm.fma.v2bf16(<2 x bfloat> %{{.*}}, <2 x bfloat> %{{.*}}, <2 x bfloat> %{{.*}}, /* rnd=rn */ i32 1)
+; CHECK: bitcast <2 x bfloat> [[R2]] to i32
+; CHECK: [[R3:%.*]] = call bfloat @llvm.nvvm.fma.relu.bf16(bfloat %{{.*}}, bfloat %{{.*}}, bfloat %{{.*}}, /* rnd=rn */ i32 1)
+; CHECK: bitcast bfloat [[R3]] to i16
+  %r1 = call i16 @llvm.nvvm.fma.rn.bf16(i16 %a, i16 %a, i16 %a)
+  %r2 = call i32 @llvm.nvvm.fma.rn.bf16x2(i32 %b, i32 %b, i32 %b)
+  %r3 = call i16 @llvm.nvvm.fma.rn.relu.bf16(i16 %a, i16 %a, i16 %a)
   ret void
 }
 

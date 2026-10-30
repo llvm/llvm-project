@@ -1197,7 +1197,7 @@ external incoming : llvalue -> (llvalue * llbasicblock) list = "llvm_incoming"
 external delete_instruction : llvalue -> unit = "llvm_delete_instruction"
 
 (*===-- Instruction builders ----------------------------------------------===*)
-external builder : llcontext -> llbuilder = "llvm_builder"
+external builder : llmodule -> llbuilder = "llvm_builder"
 external position_builder : (llbasicblock, llvalue) llpos -> llbuilder -> unit
                           = "llvm_position_builder"
 external position_builder_before_dbg_records : (llbasicblock, llvalue) llpos ->
@@ -1207,13 +1207,18 @@ external insertion_block : llbuilder -> llbasicblock = "llvm_insertion_block"
 external insert_into_builder : llvalue -> string -> llbuilder -> unit
                              = "llvm_insert_into_builder"
 
-let builder_at context ip =
-  let b = builder context in
+let builder_at ip =
+  let block = match ip with
+  | At_end block -> block
+  | Before inst -> instr_parent inst in
+  let f = block_parent block in
+  let m = global_parent f in
+  let b = builder m in
   position_builder ip b;
   b
 
-let builder_before context i = builder_at context (Before i)
-let builder_at_end context bb = builder_at context (At_end bb)
+let builder_before i = builder_at (Before i)
+let builder_at_end bb = builder_at (At_end bb)
 
 let position_before i = position_builder (Before i)
 let position_before_dbg_records i =

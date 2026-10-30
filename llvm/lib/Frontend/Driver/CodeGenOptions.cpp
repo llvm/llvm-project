@@ -45,8 +45,9 @@ TargetLibraryInfoImpl *createTLII(const llvm::Triple &TargetTriple,
       TargetTriple, convertDriverVectorLibraryToVectorLibrary(Veclib));
 }
 
-std::string getDefaultProfileGenName() {
-  return isProfileCorrelationEnabled() ? "default_%m.proflite"
-                                       : "default_%m.profraw";
+std::string
+getDefaultProfileGenName(const cl::LibraryOptionsContext &LibraryOptions) {
+  return isProfileCorrelationEnabled(LibraryOptions) ? "default_%m.proflite"
+                                                     : "default_%m.profraw";
 }
 } // namespace llvm::driver

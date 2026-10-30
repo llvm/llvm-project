@@ -5,9 +5,9 @@
 
 ;; Test that `calleeTypeIds` field is not present in `callSites`
 ; CHECK-LABEL: callSites:
-; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
-; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
-; CHECK-NEXT: - { bb: {{[0-9]+}}, offset: {{[0-9]+}}, fwdArgRegs: [] }
+; CHECK-NEXT: - { bb: '%bb.{{[0-9]+}}', offset: {{[0-9]+}}, fwdArgRegs: [] }
+; CHECK-NEXT: - { bb: '%bb.{{[0-9]+}}', offset: {{[0-9]+}}, fwdArgRegs: [] }
+; CHECK-NEXT: - { bb: '%bb.{{[0-9]+}}', offset: {{[0-9]+}}, fwdArgRegs: [] }
 define i32 @foo(i32 %x, i32 %y) !callgraph !0 {
 entry:
   ;; Call instruction with accurate callee_type.

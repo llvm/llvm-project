@@ -79,6 +79,7 @@ public:
   virtual void emitARM64WinCFINop() {}
   virtual void emitARM64WinCFISaveNext() {}
   virtual void emitARM64WinCFIPrologEnd() {}
+  virtual void emitARM64WinCFIEndC() {}
   virtual void emitARM64WinCFIEpilogStart() {}
   virtual void emitARM64WinCFIEpilogEnd() {}
   virtual void emitARM64WinCFITrapFrame() {}
@@ -168,6 +169,7 @@ public:
   void emitARM64WinCFINop() override;
   void emitARM64WinCFISaveNext() override;
   void emitARM64WinCFIPrologEnd() override;
+  void emitARM64WinCFIEndC() override;
   void emitARM64WinCFIEpilogStart() override;
   void emitARM64WinCFIEpilogEnd() override;
   void emitARM64WinCFITrapFrame() override;

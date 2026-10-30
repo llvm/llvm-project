@@ -483,6 +483,13 @@ struct MachineOutliner : public ModulePass {
       unsigned StringLen, std::vector<Candidate> &CandidatesForRepeatedSeq,
       OutlinedFunction &OF);
 
+  /// Run the outlining cost model for a group of candidates and append the
+  /// resulting outlined function if it is profitable.
+  void createOutlinedFunctionIfBeneficial(
+      std::vector<Candidate> &Candidates, unsigned StringLen,
+      unsigned MinRepeats, const TargetInstrInfo &TII,
+      std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList);
+
   /// Remark output explaining that a function was outlined.
   void emitOutlinedFunctionRemark(OutlinedFunction &OF);
 
@@ -676,8 +683,10 @@ static SmallVector<MatchedEntry> getMatchedEntries(InstructionMapper &Mapper) {
   auto Size = UnsignedVec.size();
 
   // Get the global outlined hash tree built from the previous run.
-  assert(cgdata::hasOutlinedHashTree());
-  const auto *RootNode = cgdata::getOutlinedHashTree()->getRoot();
+  const cl::LibraryOptionsContext &LibraryOptions =
+      Mapper.MMI.getModule()->getContext().getLibraryOptions();
+  assert(cgdata::hasOutlinedHashTree(LibraryOptions));
+  const auto *RootNode = cgdata::getOutlinedHashTree(LibraryOptions)->getRoot();
 
   auto getValidInstr = [&](unsigned Index) -> const MachineInstr * {
     if (UnsignedVec[Index] >= Mapper.LegalInstrNumber)
@@ -737,8 +746,7 @@ void MachineOutliner::findGlobalCandidates(
     auto Length = ME.EndIdx - ME.StartIdx + 1;
     MachineBasicBlock *MBB = StartIt->getParent();
     CandidatesForRepeatedSeq.emplace_back(ME.StartIdx, Length, StartIt, EndIt,
-                                          MBB, FunctionList.size(),
-                                          MBBFlagsMap[MBB]);
+                                          MBB, MBBFlagsMap[MBB]);
     const TargetInstrInfo *TII =
         MBB->getParent()->getSubtarget().getInstrInfo();
     unsigned MinRepeats = 1;
@@ -752,6 +760,54 @@ void MachineOutliner::findGlobalCandidates(
     FunctionList.emplace_back(std::make_unique<GlobalOutlinedFunction>(
         std::move(OF.value()), ME.Count));
   }
+}
+
+static StringRef getCandidateInputSection(const Candidate &C) {
+  const Function &F = C.getMF()->getFunction();
+  return F.hasSection() ? F.getSection() : StringRef();
+}
+
+static SmallVector<std::vector<Candidate>>
+partitionCandidatesByInputSection(std::vector<Candidate> &Candidates) {
+  // Each candidate belongs to exactly one MachineFunction, so the partitions
+  // are disjoint and can be outlined independently.
+  SmallVector<std::vector<Candidate>> Partitions;
+  SmallVector<StringRef> Sections;
+  for (Candidate &C : Candidates) {
+    StringRef Section = getCandidateInputSection(C);
+    auto It = llvm::find(Sections, Section);
+    if (It == Sections.end()) {
+      Sections.push_back(Section);
+      Partitions.emplace_back();
+      It = Sections.end() - 1;
+    }
+    Partitions[std::distance(Sections.begin(), It)].push_back(std::move(C));
+  }
+  return Partitions;
+}
+
+void MachineOutliner::createOutlinedFunctionIfBeneficial(
+    std::vector<Candidate> &Candidates, unsigned StringLen, unsigned MinRepeats,
+    const TargetInstrInfo &TII,
+    std::vector<std::unique_ptr<OutlinedFunction>> &FunctionList) {
+  if (Candidates.size() < MinRepeats)
+    return;
+
+  std::optional<std::unique_ptr<OutlinedFunction>> OF =
+      TII.getOutliningCandidateInfo(*MMI, Candidates, MinRepeats);
+
+  // If we deleted too many candidates, then there's nothing worth outlining.
+  // FIXME: This should take target-specified instruction sizes into account.
+  if (!OF.has_value() || OF.value()->Candidates.size() < MinRepeats)
+    return;
+
+  // Is it better to outline this candidate than not?
+  if (OF.value()->getBenefit() < OutlinerBenefitThreshold) {
+    emitNotOutliningCheaperRemark(StringLen, Candidates, *OF.value());
+    return;
+  }
+
+  FunctionList.emplace_back(std::move(OF.value()));
 }
 
 void MachineOutliner::findCandidates(
@@ -823,8 +879,7 @@ void MachineOutliner::findCandidates(
       MachineBasicBlock::iterator EndIt = Mapper.InstrList[EndIdx];
       MachineBasicBlock *MBB = StartIt->getParent();
       CandidatesForRepeatedSeq.emplace_back(StartIdx, StringLen, StartIt, EndIt,
-                                            MBB, FunctionList.size(),
-                                            Mapper.MBBFlagsMap[MBB]);
+                                            MBB, Mapper.MBBFlagsMap[MBB]);
     }
 #ifndef NDEBUG
     LLVM_DEBUG(dbgs() << "    Candidates discarded: " << NumDiscarded
@@ -844,23 +899,34 @@ void MachineOutliner::findCandidates(
     const TargetInstrInfo *TII =
         CandidatesForRepeatedSeq[0].getMF()->getSubtarget().getInstrInfo();
 
-    std::optional<std::unique_ptr<OutlinedFunction>> OF =
-        TII->getOutliningCandidateInfo(*MMI, CandidatesForRepeatedSeq,
-                                       MinRepeats);
-
-    // If we deleted too many candidates, then there's nothing worth outlining.
-    // FIXME: This should take target-specified instruction sizes into account.
-    if (!OF.has_value() || OF.value()->Candidates.size() < MinRepeats)
-      continue;
-
-    // Is it better to outline this candidate than not?
-    if (OF.value()->getBenefit() < OutlinerBenefitThreshold) {
-      emitNotOutliningCheaperRemark(StringLen, CandidatesForRepeatedSeq,
-                                    *OF.value());
+    // Targets that do not opt in to section aware outlining never map
+    // functions with a section marking, so every candidate would land in a
+    // single partition. Skip partitioning entirely to avoid the allocation.
+    if (!TII->supportsSectionAwareOutlining()) {
+      createOutlinedFunctionIfBeneficial(CandidatesForRepeatedSeq, StringLen,
+                                         MinRepeats, *TII, FunctionList);
       continue;
     }
 
-    FunctionList.emplace_back(std::move(OF.value()));
+    LLVM_DEBUG(
+        dbgs()
+        << "*** Section Aware Outlining is enabled for the target *** \n");
+
+    SmallVector<std::vector<Candidate>> Partitions =
+        partitionCandidatesByInputSection(CandidatesForRepeatedSeq);
+    LLVM_DEBUG(dbgs() << "    Input section partitions: " << Partitions.size()
+                      << "\n");
+
+    for (std::vector<Candidate> &Partition : Partitions) {
+      LLVM_DEBUG({
+        StringRef Section = getCandidateInputSection(Partition.front());
+        dbgs() << "    .. section '"
+               << (Section.empty() ? StringRef("<none>") : Section)
+               << "': " << Partition.size() << " candidates\n";
+      });
+      createOutlinedFunctionIfBeneficial(Partition, StringLen, MinRepeats, *TII,
+                                         FunctionList);
+    }
   }
 }
 
@@ -929,6 +995,15 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       *FirstCand.getMF()->getSubtarget().getInstrInfo();
 
   TII.mergeOutliningCandidateAttributes(*F, OF.Candidates);
+
+  if (TII.supportsSectionAwareOutlining()) {
+    const Function &ParentFn = FirstCand.getMF()->getFunction();
+    if (ParentFn.hasSection()) {
+      F->setSection(ParentFn.getSection());
+      LLVM_DEBUG(dbgs() << "  INHERITED SECTION: " << ParentFn.getSection()
+                        << "\n");
+    }
+  }
 
   // Set uwtable, so we generate eh_frame.
   UWTableKind UW = std::accumulate(
@@ -1123,17 +1198,20 @@ bool MachineOutliner::outline(
       MachineBasicBlock::iterator EndIt = std::prev(C.end());
 
       // Find the first non-debug instruction with a non-zero source line, and
-      // the location of the last call in the candidate, if it has one.
-      DebugLoc FirstLoc, LastCallLoc;
+      // merge the locations of the calls in the candidate that have one.
+      DebugLoc FirstLoc, MergedCallLoc;
       for (MachineInstr &MI : C) {
         if (MI.isDebugInstr())
           continue;
         const DebugLoc &DL = MI.getDebugLoc();
-        bool HasLine = DL && DL.getLine();
-        if (!FirstLoc && HasLine)
+        if (!DL || !DL.getLine())
+          continue;
+        if (!FirstLoc)
           FirstLoc = DL;
         if (MI.isCall())
-          LastCallLoc = HasLine ? DL : DebugLoc();
+          MergedCallLoc = MergedCallLoc
+                              ? DebugLoc::getMergedLocation(MergedCallLoc, DL)
+                              : DL;
       }
 
       // Remember the instruction the call sequence will be inserted after, so
@@ -1145,19 +1223,20 @@ bool MachineOutliner::outline(
       auto CallInst = TII.insertOutlinedCall(M, MBB, StartIt, *MF, C);
 
       // Unwinding through a call in the candidate symbolizes the caller frame
-      // at the outlined call, so it should carry that call's location. Use the
-      // last call: a candidate ending in a call may be outlined as a thunk
-      // whose tail call returns directly past the outlined call. With multiple
-      // calls, only the last is attributed exactly. Nothing returns to a tail
-      // branch, so it keeps the first location.
+      // at the outlined call, so it should carry that call's location. With
+      // multiple calls, every one of them is symbolized there, so use their
+      // merged location: it may be less precise when the calls differ, but it
+      // never attributes a call to an inlined scope it was not in. Nothing
+      // returns to a tail branch, so it keeps the first location.
       DebugLoc CallLoc =
-          !CallInst->isTerminator() && LastCallLoc ? LastCallLoc : FirstLoc;
+          !CallInst->isTerminator() && MergedCallLoc ? MergedCallLoc : FirstLoc;
 
       // insertOutlinedCall may emit link register save/restore instructions
       // around the call, and leaves StartIt on the last instruction it
-      // inserted. Give the whole sequence the same location. Otherwise, a
-      // locationless save or restore can introduce a line 0 row, including at
-      // the return address immediately after the call.
+      // inserted. Give the whole sequence the same location. Otherwise, when
+      // that location has a source line, a locationless save or restore can
+      // introduce a line 0 row, including at the return address immediately
+      // after the call.
       MachineBasicBlock::iterator SeqBegin =
           PrevIt == MBB.end() ? MBB.begin() : std::next(PrevIt);
       for (MachineInstr &MI : make_range(SeqBegin, std::next(StartIt)))
@@ -1464,12 +1543,14 @@ void MachineOutliner::initializeOutlinerMode(const Module &M) {
   // hash tree to the custom section, `__llvm_outline`.
   // When the outlined hash tree is available from the previous codegen data,
   // we want to read it to optimistically create global outlining candidates.
-  if (cgdata::emitCGData()) {
+  const cl::LibraryOptionsContext &LibraryOptions =
+      M.getContext().getLibraryOptions();
+  if (cgdata::emitCGData(LibraryOptions)) {
     OutlinerMode = CGDataMode::Write;
     // Create a local outlined hash tree to be published.
     LocalHashTree = std::make_unique<OutlinedHashTree>();
     // We don't need to read the outlined hash tree from the previous codegen
-  } else if (cgdata::hasOutlinedHashTree())
+  } else if (cgdata::hasOutlinedHashTree(LibraryOptions))
     OutlinerMode = CGDataMode::Read;
 }
 

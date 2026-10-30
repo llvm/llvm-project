@@ -26,4 +26,5 @@ add_llvm_target_unittest(SPIRVTests
   SPIRVSortBlocksTests.cpp
   SPIRVPartialOrderingVisitorTests.cpp
   SPIRVAPITest.cpp
+  SPIRVUtilsTests.cpp
 )

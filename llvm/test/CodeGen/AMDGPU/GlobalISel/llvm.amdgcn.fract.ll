@@ -84,11 +84,8 @@ define amdgpu_ps double @v_fract_f64(double %src) {
 ; GFX12-LABEL: v_fract_f64:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_fract_f64_e32 v[0:1], v[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f64_e32 v[0:1], v[0:1], v[0:1]
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    ; return to shader part epilog
   %fract = call double @llvm.amdgcn.fract.f64(double %src)
   %res = fadd double %fract, %fract

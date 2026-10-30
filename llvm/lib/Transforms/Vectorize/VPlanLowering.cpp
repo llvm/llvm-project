@@ -58,7 +58,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     VPBuilder Builder(WideCanIV);
     WideCanIV->replaceAllUsesWith(vputils::createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
-        nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
+        CanIVTy, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
         WideCanIV->getDebugLoc(), Builder,
         WideCanIV->getNoWrapFlags().withoutNoSignedWrap()));
     WideCanIV->eraseFromParent();
@@ -167,13 +167,25 @@ addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan) {
   auto *HeaderVPBB = TopRegion->getEntryBasicBlock();
   LaneMaskPhi->insertBefore(*HeaderVPBB, HeaderVPBB->begin());
 
+  // If the canonical IV increment could overflow, adjust the trip count (TC)
+  // to TC - VF * UF.
+  VPValue *IncrementValue = CanonicalIVIncrement;
+  if (!TopRegion->hasCanonicalIVNUW() &&
+      !vputils::findIncomingAliasMask(Plan)) {
+    IncrementValue = TopRegion->getCanonicalIV();
+    VPValue &VFxUF = Plan.getVFxUF();
+    TC = Builder.createScalarIntrinsic(Intrinsic::usub_sat, {TC, &VFxUF},
+                                       TC->getScalarType(), DL,
+                                       "trip.count.minus.vf");
+  }
+
   // Create the active lane mask for the next iteration of the loop before the
   // original terminator.
   VPRecipeBase *OriginalTerminator = EB->getTerminator();
   Builder.setInsertPoint(OriginalTerminator);
   auto *ALM = Builder.createNaryOp(VPInstruction::WideActiveLaneMask,
-                                   {CanonicalIVIncrement, TC, ALMMultiplier},
-                                   DL, "active.lane.mask.next");
+                                   {IncrementValue, TC, ALMMultiplier}, DL,
+                                   "active.lane.mask.next");
   ALM = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                              {ALM, Plan.getConstantInt(64, 0)}, DL,
                              "extract.next.alm.part");
@@ -210,8 +222,17 @@ void VPlanTransforms::materializeHeaderMask(
                                 {WideCanonicalIV, Plan.getTripCount()}, nullptr,
                                 "active.lane.mask");
   } else {
-    Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV,
-                              Plan.getOrCreateBackedgeTakenCount());
+    // Compare against the backedge-taken count, TC - 1, computed in the vector
+    // preheader.
+    VPBasicBlock *VectorPH = Plan.getVectorPreheader();
+    VPValue *TC = Plan.getTripCount();
+    VPValue *BTC =
+        VPBuilder(VectorPH, VectorPH->getFirstNonPhi())
+            .createSub(TC, Plan.getConstantInt(TC->getScalarType(), 1),
+                       DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
+    if (!Plan.hasScalarVFOnly())
+      BTC = VPBuilder(VectorPH).createNaryOp(VPInstruction::Broadcast, BTC);
+    Mask = Builder.createICmp(CmpInst::ICMP_ULE, WideCanonicalIV, BTC);
   }
   HeaderMask->replaceAllUsesWith(Mask);
 }
@@ -717,8 +738,6 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 #endif
 
   SmallVector<VPValue *> VPValues;
-  if (VPValue *BTC = Plan.getBackedgeTakenCount())
-    VPValues.push_back(BTC);
   append_range(VPValues, Plan.getLiveIns());
   for (VPRecipeBase &R : *Plan.getEntry())
     append_range(VPValues, R.definedValues());
@@ -744,8 +763,8 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 
     VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
     auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
-    VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser &U) {
-      return Broadcast != &U && !U.usesScalars(VPV);
+    VPV->replaceUsesWithIf(Broadcast, [VPV, Broadcast](VPUser *U) {
+      return Broadcast != U && !U->usesScalars(VPV);
     });
   }
 }
@@ -781,20 +800,6 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   const SCEV *VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
   if (auto *ConstVecTC = dyn_cast<SCEVConstant>(VecTCScev))
     Plan.getVectorTripCount().setUnderlyingValue(ConstVecTC->getValue());
-}
-
-void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
-                                                    VPBasicBlock *VectorPH) {
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  if (BTC->user_empty())
-    return;
-
-  VPBuilder Builder(VectorPH, VectorPH->getFirstNonPhi());
-  auto *TCTy = Plan.getTripCount()->getScalarType();
-  auto *TCMO =
-      Builder.createSub(Plan.getTripCount(), Plan.getConstantInt(TCTy, 1),
-                        DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
-  BTC->replaceAllUsesWith(TCMO);
 }
 
 void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
@@ -834,7 +839,7 @@ void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
         else
           Unpack->insertAfter(&R);
         Def->replaceUsesWithIf(
-            Unpack, [&Def](VPUser &U) { return U.usesFirstLaneOnly(Def); });
+            Unpack, [&Def](VPUser *U) { return U->usesFirstLaneOnly(Def); });
       }
     }
   }
@@ -939,7 +944,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *RuntimeVF = Builder.createElementCount(TCTy, VFEC);
   if (!vputils::onlyScalarValuesUsed(&VF)) {
     VPValue *BC = Builder.createNaryOp(VPInstruction::Broadcast, RuntimeVF);
-    VF.replaceUsesWithIf(BC, [&VF](VPUser &U) { return !U.usesScalars(&VF); });
+    VF.replaceUsesWithIf(BC, [&VF](VPUser *U) { return !U->usesScalars(&VF); });
   }
   VF.replaceAllUsesWith(RuntimeVF);
 

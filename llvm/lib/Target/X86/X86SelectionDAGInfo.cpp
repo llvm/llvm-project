@@ -94,6 +94,14 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                          VT.getEVTString());
     break;
   }
+  case X86ISD::SETCC_CARRY: {
+    // SETCC_CARRY materializes CF as 0/-1, so the condition must be COND_B.
+    auto *CC = dyn_cast<ConstantSDNode>(N->getOperand(0));
+    if (!CC || CC->getZExtValue() != X86::COND_B)
+      report_fatal_error("invalid node: " + Twine(N->getOperationName(&DAG)) +
+                         " operand #0 must be X86::COND_B");
+    break;
+  }
   }
 }
 

@@ -2508,6 +2508,8 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   case Triple::xcore:
   case Triple::xtensa:
     return ExceptionHandling::DwarfCFI;
+  case Triple::ve:
+    return ExceptionHandling::SjLj;
   default:
     break;
   }
@@ -2564,8 +2566,8 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
     return LongDoubleFormat::IEEEquad;
   case sparc:
   case sparcel:
-    // GCC uses IEEE double for bare-metal and RTEMS SPARC V8 targets.
-    if (getOS() == UnknownOS || getOS() == RTEMS)
+    // GCC uses IEEE double for bare-metal, NetBSD, and RTEMS SPARC V8 targets.
+    if (getOS() == UnknownOS || getOS() == NetBSD || getOS() == RTEMS)
       return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case ppc:
@@ -2609,6 +2611,16 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   default:
     return LongDoubleFormat::IEEEdouble;
   }
+}
+
+DebuggerKind Triple::getDefaultDebuggerTuning() const {
+  if (isOSDarwin())
+    return DebuggerKind::LLDB;
+  if (isPS())
+    return DebuggerKind::SCE;
+  if (isOSAIX())
+    return DebuggerKind::DBX;
+  return DebuggerKind::GDB;
 }
 
 // HLSL triple environment orders are relied on in the front end

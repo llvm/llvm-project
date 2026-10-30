@@ -309,6 +309,9 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     return;
   case CK_UncheckedDerivedToBase:
   case CK_DerivedToBase:
+  case CK_BaseToDerived:
+    // The conversion cast doesn't change what it refers to, so preserve the
+    // borrow if we can.
     // It is possible that the derived class and base class have different
     // gsl::Pointer annotations. Skip if their origin shape differ.
     if (Dest && Src && Dest->getLength() == Src->getLength())
@@ -855,6 +858,17 @@ void FactsGenerator::handleExitBlock() {
             FactMgr.createFact<GlobalEscapeFact>(O.ID, VD));
       }
     }
+
+  // Keep the never-expiring `this` origin live at exit: the object outlives
+  // the method, so whatever it holds (e.g. borrows captured via
+  // [[clang::lifetime_capture_by_this]], or loans reachable through its
+  // fields) is considered used after the method returns. This is emitted for
+  // every method with a `this` origin, not only those that capture something.
+  // Destructors are skipped since the object is being destroyed.
+  if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins();
+      ThisOrigins && !IsDestructor)
+    EscapesInCurrentBlock.push_back(FactMgr.createFact<ThisEscapeFact>(
+        (*ThisOrigins)->getOuterOriginID(), AC.getDecl()->getEndLoc()));
 }
 
 void FactsGenerator::handleGSLPointerConstruction(const CXXConstructExpr *CCE) {
@@ -1011,23 +1025,31 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
   bool HasImplicitObjectArg = Method &&
                               Method->isImplicitObjectMemberFunction() &&
                               !isa<CXXConstructorDecl>(FD);
-  auto getParamDeclAt =
-      [FD, HasImplicitObjectArg](unsigned I) -> const ParmVarDecl * {
+  auto getArgCaptureByAttr =
+      [FD, HasImplicitObjectArg](
+          unsigned I) -> std::pair<const LifetimeCaptureByAttr *, QualType> {
     if (HasImplicitObjectArg) {
-      // FIXME: Add support for I == 0 i.e. capture_by on function declarations
-      if (I > 0 && I - 1 < FD->getNumParams())
-        return FD->getParamDecl(I - 1);
+      if (I == 0) {
+        auto *MethodDecl = cast<CXXMethodDecl>(FD);
+        QualType ParamType = MethodDecl->getFunctionObjectParameterType();
+        return {getCaptureByAttrFromFunctionType(FD), ParamType};
+      }
+      if (I > 0 && I - 1 < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I - 1);
+        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
+                PVD->getType()};
+      }
     } else {
-      if (I < FD->getNumParams())
-        return FD->getParamDecl(I);
+      if (I < FD->getNumParams()) {
+        const ParmVarDecl *PVD = FD->getParamDecl(I);
+        return {PVD ? PVD->getAttr<LifetimeCaptureByAttr>() : nullptr,
+                PVD->getType()};
+      }
     }
-    return nullptr;
+    return {nullptr, QualType()};
   };
   for (unsigned I = 0; I < Args.size(); ++I) {
-    const ParmVarDecl *PVD = getParamDeclAt(I);
-    if (!PVD)
-      continue;
-    const auto *Attr = PVD->getAttr<LifetimeCaptureByAttr>();
+    auto [Attr, ParamType] = getArgCaptureByAttr(I);
     if (!Attr)
       continue;
     OriginList *CapturedOriginList = getOriginsList(*Args[I]);
@@ -1035,7 +1057,7 @@ void FactsGenerator::handleLifetimeCaptureBy(const FunctionDecl *FD,
       continue;
     // For references to pointer-like types, peel the outer origin (the pointer
     // object itself) so that we capture the underlying data (the inner origin).
-    if (QualType ParamType = PVD->getType();
+    if (!ParamType.isNull() &&
         (ParamType->isReferenceType() &&
          isPointerLikeType(ParamType->getPointeeType())) &&
         CapturedOriginList->getLength() > 1)
@@ -1204,8 +1226,45 @@ void FactsGenerator::handleUse(const Expr *E) {
     CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(E, List));
 }
 
+// Issues a placeholder loan (this->field) for each origin-carrying field of the
+// class and its bases. It represents the storage the field refers to, as
+// opposed to the field itself (covered by $this).
+void FactsGenerator::issueFieldPlaceholderLoans(
+    const CXXRecordDecl *ClassDef, llvm::SmallVectorImpl<Fact *> &Facts) {
+  assert(ClassDef && "class methods have a defined parent");
+  assert(ClassDef->isThisDeclarationADefinition());
+  auto IssueForRecord = [&](const CXXRecordDecl *RD) {
+    for (const FieldDecl *Field : RD->fields()) {
+      // Skip private fields of bases as they cannot be named in ClassDef.
+      if (RD != ClassDef && Field->getAccess() == AS_private)
+        continue;
+
+      if (Field->isAnonymousStructOrUnion()) {
+        if (const CXXRecordDecl *Sub = Field->getType()->getAsCXXRecordDecl()) {
+          if (const CXXRecordDecl *SubDef = Sub->getDefinition()) {
+            // Anonymous records cannot have base classes and they can only have
+            // public fields. Sema rejects them with an error otherwise.
+            issueFieldPlaceholderLoans(SubDef, Facts);
+            continue;
+          }
+        }
+      }
+      OriginList *FieldList = getOriginsList(*Field);
+      if (!FieldList)
+        continue;
+      const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(Field);
+      Facts.push_back(FactMgr.createFact<IssueFact>(
+          L->getID(), FieldList->getOuterOriginID()));
+    }
+    return true;
+  };
+  IssueForRecord(ClassDef);
+  ClassDef->forallBases(IssueForRecord);
+}
+
 // Creates an IssueFact for a new placeholder loan for each pointer or reference
-// parameter at the function's entry.
+// parameter, the implicit 'this', and (if enabled) each origin-carrying field
+// at the function's entry.
 llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   const auto *FD = dyn_cast<FunctionDecl>(AC.getDecl());
   if (!FD)
@@ -1214,10 +1273,13 @@ llvm::SmallVector<Fact *> FactsGenerator::issuePlaceholderLoans() {
   llvm::SmallVector<Fact *> PlaceholderLoanFacts;
   if (auto ThisOrigins = FactMgr.getOriginMgr().getThisOrigins()) {
     OriginList *List = *ThisOrigins;
-    const Loan *L =
-        FactMgr.getLoanMgr().createPlaceholderLoan(cast<CXXMethodDecl>(FD));
+    const auto *MD = cast<CXXMethodDecl>(FD);
+    const Loan *L = FactMgr.getLoanMgr().createPlaceholderLoan(MD);
     PlaceholderLoanFacts.push_back(
         FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+    if (LSOpts.CheckFieldOriginEscape && !isa<CXXConstructorDecl>(MD))
+      issueFieldPlaceholderLoans(MD->getParent()->getDefinition(),
+                                 PlaceholderLoanFacts);
   }
   for (const ParmVarDecl *PVD : FD->parameters()) {
     OriginList *List = getOriginsList(*PVD);

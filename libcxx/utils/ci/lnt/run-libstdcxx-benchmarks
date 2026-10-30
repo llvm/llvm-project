@@ -8,6 +8,7 @@
 # ===----------------------------------------------------------------------===##
 
 import argparse
+import common
 import datetime
 import json
 import pathlib
@@ -23,7 +24,7 @@ def gather_machine_information(args):
     """
     Gather the machine information to upload to LNT as part of the submission.
     """
-    info = {'name': args.machine}
+    info = {}
     if platform.system() == 'Darwin':
         profiler_info = json.loads(subprocess.check_output(['system_profiler', 'SPHardwareDataType', 'SPSoftwareDataType', '-json']).decode())
         info['hardware'] = profiler_info['SPHardwareDataType'][0]['chip_type']
@@ -34,20 +35,18 @@ def gather_machine_information(args):
     info['test_suite_commit'] = subprocess.check_output(['git', '-C', MONOREPO_ROOT, 'rev-parse', args.test_suite_commit]).decode().strip()
     return info
 
-def parse_lnt_results(results):
+def version_ordinal(version):
     """
-    Parse `<test>.<metric> <value>` lines (as produced by consolidate-benchmarks) into the list of tests
-    expected in a LNT JSON report.
+    Return the ordinal of a GCC version (e.g. 16.2.0) in the libstdcxx LNT test suite. LNT orders commits
+    by their ordinal, so this must sort versions correctly.
     """
-    tests = {}
-    for line in results.splitlines():
-        if not line.strip():
-            continue
-        (key, value) = line.split()
-        (name, metric) = key.rsplit('.', 1)
-        tests.setdefault(name, {}).setdefault(metric, []).append(float(value))
-    return [{'name': name, **{m: v if len(v) > 1 else v[0] for (m, v) in metrics.items()}}
-            for (name, metrics) in tests.items()]
+    parts = version.split('.')
+    if len(parts) != 3 or not all(p.isdigit() for p in parts):
+        raise ValueError(f'expected a GCC version of the form X.Y.Z, got {version!r}')
+    (major, minor, patch) = (int(p) for p in parts)
+    if minor >= 100 or patch >= 100:
+        raise ValueError(f'GCC version {version} cannot be turned into an ordinal')
+    return major * 10000 + minor * 100 + patch
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -75,9 +74,13 @@ def main(argv):
             sys.exit('error: for clarity, Lit options must be separated from other options by --')
         lit_options = args.lit_options[1:]
 
+    # The commits of the libstdcxx test suite are versions of libstdc++. Determine it up front, since it
+    # doesn't depend on the results and can fail.
+    version = subprocess.check_output([args.gcc, '-dumpfullversion']).decode().strip()
+    commit = {'value': version, 'ordinal': version_ordinal(version)}
+
     with tempfile.TemporaryDirectory() as build_dir:
         build_dir = pathlib.Path(build_dir)
-        start_time = datetime.datetime.now(datetime.timezone.utc)
         # Some benchmarks may fail to build or run, and that's okay: we report the ones that succeeded.
         subprocess.run([MONOREPO_ROOT / 'libcxx/utils/test-at-commit',
                         '--git-repo', MONOREPO_ROOT,
@@ -92,24 +95,12 @@ def main(argv):
                         '--param', 'enable_werror=False', # don't fail on warnings when running with libstdc++
                         *lit_options,
                         build_dir / 'libcxx/test/benchmarks'])
-        end_time = datetime.datetime.now(datetime.timezone.utc)
+        measured_at = datetime.datetime.now(datetime.timezone.utc)
 
         results = subprocess.check_output([MONOREPO_ROOT / 'libcxx/utils/consolidate-benchmarks', build_dir]).decode()
-        tests = parse_lnt_results(results)
+        tests = common.parse_lnt_results(results.splitlines())
 
-    report = {
-        'format_version': '2',
-        'machine': gather_machine_information(args),
-        'run': {
-            # This is the version of libstdc++, but LNT hardcodes the name of the order field (see schemas/libstdcxx.yaml).
-            'llvm_project_revision': subprocess.check_output([args.gcc, '-dumpfullversion']).decode().strip(),
-            'start_time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'end_time': end_time.strftime('%Y-%m-%d %H:%M:%S'),
-        },
-        'tests': tests,
-    }
-    with open(args.output, 'w') as f:
-        json.dump(report, f, indent=4, sort_keys=True)
+    common.write_lnt_report(args.output, args.machine, gather_machine_information(args), commit, tests, measured_at)
 
 
 if __name__ == '__main__':

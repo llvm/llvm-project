@@ -6,6 +6,8 @@ target triple = "i686-pc-windows-msvc18.0.0"
 
 @sink = external global double
 
+; Operand bundles are not modeled by the vectorizer, so loops with calls with
+; funclet operand bundles are not vectorized.
 define void @test1(ptr %p) #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: define void @test1(
 ; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] personality ptr @__CxxFrameHandler3 {
@@ -16,24 +18,20 @@ define void @test1(ptr %p) #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %[[CATCH:.*]]] unwind to caller
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
-; CHECK:       [[VECTOR_BODY1]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_BODY]] ], [ [[INC:%.*]], %[[VECTOR_BODY1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[P]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x double> @llvm.floor.v2f64(<2 x double> [[WIDE_LOAD]]) [ "funclet"(token [[TMP1]]) ]
-; CHECK-NEXT:    [[INC]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[CATCH]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr double, ptr [[P]], i32 [[IV]]
+; CHECK-NEXT:    [[X:%.*]] = load double, ptr [[GEP]], align 8
+; CHECK-NEXT:    [[CALL:%.*]] = call double @floor(double [[X]]) #[[ATTR1:[0-9]+]] [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
-; CHECK:       [[EXIT1]]:
+; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = phi double [ [[CALL]], %[[LOOP]] ]
 ; CHECK-NEXT:    store double [[CALL_LCSSA]], ptr @sink, align 8
-; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT1:.*]]
-; CHECK:       [[TRY_CONT1]]:
+; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT:.*]]
+; CHECK:       [[TRY_CONT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
@@ -80,19 +78,16 @@ define void @constant_foldable() #0 personality ptr @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[TMP0:%.*]] = catchswitch within none [label %[[CATCH:.*]]] unwind to caller
 ; CHECK:       [[CATCH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = catchpad within [[TMP0]] [ptr null, i32 64, ptr null]
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY1:.*]]
-; CHECK:       [[VECTOR_BODY1]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x double> @llvm.floor.v16f64(<16 x double> splat (double 1.000000e+00)) [ "funclet"(token [[TMP1]]) ]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 16
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[VECTOR_BODY1]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[CATCH]] ], [ [[INC:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[CALL:%.*]] = call double @floor(double 1.000000e+00) #[[ATTR1]] [ "funclet"(token [[TMP1]]) ]
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 1024
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[EXIT1:.*]]
-; CHECK:       [[EXIT1]]:
-; CHECK-NEXT:    store double 1.000000e+00, ptr @sink, align 8
+; CHECK-NEXT:    [[CALL_LCSSA:%.*]] = phi double [ [[CALL]], %[[LOOP]] ]
+; CHECK-NEXT:    store double [[CALL_LCSSA]], ptr @sink, align 8
 ; CHECK-NEXT:    catchret from [[TMP1]] to label %[[TRY_CONT:.*]]
 ; CHECK:       [[TRY_CONT]]:
 ; CHECK-NEXT:    ret void

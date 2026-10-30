@@ -542,15 +542,14 @@ AMDGPUMangledLibFunc::AMDGPUMangledLibFunc(EFuncId id, FunctionType *FT,
 ///////////////////////////////////////////////////////////////////////////////
 // Demangling
 
-static int parseVecSize(StringRef& mangledName) {
-  size_t const Len = eatNumber(mangledName);
+static unsigned char parseVecSize(StringRef &mangledName) {
+  int const Len = eatNumber(mangledName);
   switch (Len) {
   case 2: case 3: case 4: case 8: case 16:
-    return Len;
+    return static_cast<unsigned char>(Len);
   default:
-    break;
+    return 1;
   }
-  return 1;
 }
 
 static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
@@ -884,7 +883,7 @@ AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
                                                              bool Signed) {
   Param P;
   if (FixedVectorType *VT = dyn_cast<FixedVectorType>(Ty)) {
-    P.VectorSize = VT->getNumElements();
+    P.VectorSize = static_cast<unsigned char>(VT->getNumElements());
     Ty = VT->getElementType();
   }
 

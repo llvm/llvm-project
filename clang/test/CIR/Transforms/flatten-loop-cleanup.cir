@@ -34,7 +34,7 @@ module {
     } cleanup normal {
       cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
       cir.yield
-    }
+    } loop_id distinct[0]<> loop_hints < must_progress>
     cir.return
   }
 
@@ -72,7 +72,7 @@ module {
   // CHECK:       ^[[UNREACHABLE]]:
   // CHECK:         cir.unreachable
   // CHECK:       ^[[LATCH]]:
-  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK-NEXT:    cir.br ^[[HEADER]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
   // CHECK:       ^[[EXIT]]:
   // CHECK:         cir.return
 
@@ -91,7 +91,7 @@ module {
     } cleanup normal {
       cir.call @dtor(%s) nothrow : (!cir.ptr<!rec_S>) -> ()
       cir.yield
-    }
+    } loop_id distinct[1]<> loop_hints < must_progress>
     cir.return
   }
 
@@ -134,7 +134,7 @@ module {
   // CHECK:       ^[[FORWARD]]:
   // CHECK:         cir.br ^[[LATCH:bb[0-9]+]]
   // CHECK:       ^[[LATCH]]:
-  // CHECK:         cir.br ^[[HEADER]]
+  // CHECK-NEXT:    cir.br ^[[HEADER]] loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress>
   // CHECK:       ^[[EXIT]]:
   // CHECK:         cir.return
 

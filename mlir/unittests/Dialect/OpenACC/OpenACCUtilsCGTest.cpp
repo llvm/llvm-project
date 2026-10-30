@@ -14,6 +14,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -38,6 +39,9 @@ protected:
     DialectRegistry registry;
     arith::registerValueBoundsOpInterfaceExternalModels(registry);
     context.appendDialectRegistry(registry);
+    DialectRegistry extensions;
+    acc::registerAllExtensions(extensions);
+    context.appendDialectRegistry(extensions);
     context.loadDialect<acc::OpenACCDialect, arith::ArithDialect,
                         func::FuncDialect, scf::SCFDialect, gpu::GPUDialect,
                         memref::MemRefDialect, DLTIDialect>();

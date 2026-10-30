@@ -15,6 +15,7 @@
 #include <optional>
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::modernize {
 
@@ -49,8 +50,8 @@ getAllDirectBases(const CXXRecordDecl *Record) {
 /// Returns a matcher that matches member expressions where the base is
 /// the variable declared as \p Var and the accessed member is the one declared
 /// as \p Field.
-static internal::Matcher<Expr> accessToFieldInVar(const FieldDecl *Field,
-                                                  const ValueDecl *Var) {
+static ast_matchers::internal::Matcher<Expr>
+accessToFieldInVar(const FieldDecl *Field, const ValueDecl *Var) {
   return ignoringImpCasts(
       memberExpr(hasObjectExpression(declRefExpr(to(varDecl(equalsNode(Var))))),
                  member(fieldDecl(equalsNode(Field)))));
@@ -217,10 +218,6 @@ void UseEqualsDefaultCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
 
-namespace {
-AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
-} // namespace
-
 void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
   // Skip unions/union-like classes since their constructors behave differently
   // when defaulted vs. empty.
@@ -247,9 +244,11 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
           anyOf(
               // Default constructor.
               allOf(parameterCountIs(0),
-                    unless(hasAnyConstructorInitializer(allOf(
-                        isWritten(), unless(withInitializer(cxxConstructExpr(
-                                         argumentCountIs(0))))))),
+                    unless(hasAnyConstructorInitializer(
+                        allOf(isWritten(),
+                              unless(withInitializer(cxxConstructExpr(
+                                  argumentCountIs(0),
+                                  unless(requiresZeroInitialization()))))))),
                     unless(isVariadic()), IsPublicOrOutOfLineUntilCPP20),
               // Copy constructor.
               allOf(isCopyConstructor(),

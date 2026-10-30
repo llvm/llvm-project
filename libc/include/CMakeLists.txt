@@ -195,6 +195,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  libintl
+  ../libc/include/libintl.yaml
+  libintl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.locale_t
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
@@ -517,6 +526,7 @@ add_header_macro(
     .llvm-libc-types.FILE
     .llvm-libc-types.cookie_io_functions_t
     .llvm-libc-types.errno_t
+    .llvm-libc-types.fpos_t
     .llvm-libc-types.off_t
     .llvm-libc-types.rsize_t
     .llvm-libc-types.size_t
@@ -726,6 +736,15 @@ add_header_macro(
     .llvm-libc-types.sigset_t
     .llvm-libc-types.struct_timespec
     .llvm-libc-macros.sys_epoll_macros
+)
+
+add_header_macro(
+  sys_eventfd
+  ../libc/include/sys/eventfd.yaml
+  sys/eventfd.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_eventfd_macros
 )
 
 add_header_macro(
@@ -1126,6 +1145,15 @@ add_header_macro(
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/net)
 
 add_header_macro(
+  net_ethernet
+  ../libc/include/net/ethernet.yaml
+  net/ethernet.h
+  DEPENDS
+    .llvm-libc-types.struct_ether_addr
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   net_if
   ../libc/include/net/if.yaml
   net/if.h
@@ -1138,6 +1166,15 @@ add_header_macro(
 
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_ether
+  ../libc/include/netinet/ether.yaml
+  netinet/ether.h
+  DEPENDS
+    .llvm-libc-types.struct_ether_addr
+    .llvm_libc_common_h
+)
 
 add_header_macro(
   netinet_in
@@ -1170,6 +1207,7 @@ add_header_macro(
   ../libc/include/netinet/tcp.yaml
   netinet/tcp.h
   DEPENDS
+    .llvm-libc-macros.netinet_tcp_macros
     .llvm_libc_common_h
 )
 

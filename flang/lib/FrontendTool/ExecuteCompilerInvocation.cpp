@@ -202,7 +202,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
       args[i + 1] = flang->getFrontendOpts().llvmArgs[i].c_str();
 
     args[numArgs + 1] = nullptr;
-    llvm::cl::ParseCommandLineOptions(numArgs + 1, args.get());
+    llvm::cl::parseCommandLineOptions(flang->getLibraryOptions(),
+                                      llvm::ArrayRef(args.get(), numArgs + 1));
   }
 
   // Honor -mmlir. This should happen AFTER plugins have been loaded!

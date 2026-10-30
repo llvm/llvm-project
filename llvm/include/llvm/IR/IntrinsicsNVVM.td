@@ -1209,7 +1209,8 @@ class NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<ArgIndex ColIdx, string Buffer> {
                        ImmArgPrinter<"printTcgen05CollectorUsageOp">]>;
 }
 
-class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
+class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = "",
+                            bit IsAShift = 0> {
   LLVMType a_operand_type = !if(!eq(Space, "tensor"),
                                   llvm_tmem_ptr_ty, llvm_i64_ty);
   list<LLVMType> common_args = !listconcat(
@@ -1219,10 +1220,12 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
                                    llvm_i32_ty,      // idesc
                                    llvm_i1_ty],      // enable_input_d
                                   !if(!eq(IsSparse, 1), [llvm_tmem_ptr_ty], [])); // spmetadata
+  // Descriptors read shared memory; writes affect tensor memory and internal
+  // state. D may be read, and .ashift also writes A.
   list<IntrinsicProperty> common_intr_props = !listconcat(
-                            [IntrArgMemOnly, WriteOnly<ArgIndex<0>>],
-                            !if(!eq(Space, "tensor"), [ReadOnly<ArgIndex<1>>], [])
-                          );
+      [IntrWrite<[ArgMem, InaccessibleMem]>],
+      !if(!and(!eq(Space, "tensor"), !not(IsAShift)), [ReadOnly<ArgIndex<1>>], []),
+      !if(IsSparse, [ReadOnly<ArgIndex<5>>], []));
 
   string Prefix = "llvm.nvvm.tcgen05.mma";
   string SpSpaceKindStr = !if(IsSparse, ".sp", "")
@@ -1232,7 +1235,7 @@ class NVVM_TCGEN05_MMA_BASE<string Space, bit IsSparse, string Kind = ""> {
 
 class NVVM_TCGEN05_MMA<bit IsSparse, string Space,
                        bit IsAShift, bit IsScaleInputD>:
-        NVVM_TCGEN05_MMA_BASE<Space, IsSparse> {
+        NVVM_TCGEN05_MMA_BASE<Space, IsSparse, "", IsAShift> {
   string name = Prefix
                 # SpSpaceKindStr
                 # !if(IsScaleInputD, ".scale_d", "")
@@ -1263,7 +1266,7 @@ class NVVM_TCGEN05_MMA_WS<bit IsSparse, string Space, bit IsZeroColMask>:
 class NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE<bit IsSparse, string Space,
                                            int CtaGroup, bit IsAShift,
                                            bit IsScaleInputD>:
-        NVVM_TCGEN05_MMA_BASE<Space, IsSparse> {
+        NVVM_TCGEN05_MMA_BASE<Space, IsSparse, "", IsAShift> {
   string name = Prefix
                 # SpSpaceKindStr
                 # !if(IsScaleInputD, ".scale_d", "")
@@ -1825,45 +1828,25 @@ let TargetPrefix = "nvvm" in {
   //
   // Fma
   //
-  foreach variant = ["", "_sat", "_relu"] in {
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_fma_rn # ftz # variant # _f16 :
-        PureIntrinsic<[llvm_half_ty],
-          [llvm_half_ty, llvm_half_ty, llvm_half_ty]>;
+  // TODO: Add tests for commutativity along with missing mixed precision 
+  // patterns.
+  foreach ftz = ["", "_ftz"] in
+    foreach variant = ["", "_sat", "_relu"] in
+      def int_nvvm_fma # ftz # variant :
+        PureIntrinsic<[llvm_anyfloat_ty],
+                      [LLVMMatchType<0>, LLVMMatchType<0>,
+                       LLVMMatchType<0>, llvm_i32_ty],
+                      [Commutative, ImmArg<ArgIndex<3>>,
+                       Range<ArgIndex<3>, 0, 4>,
+                       ArgInfo<ArgIndex<3>,
+                               [ArgName<"rnd">,
+                                ImmArgPrinter<"printFPRoundingMode">]>]>;
 
-      def int_nvvm_fma_rn # ftz # variant # _f16x2 :
-        PureIntrinsic<[llvm_v2f16_ty],
-          [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
-    } // ftz
-  } // variant
-  
-  foreach relu = ["", "_relu"] in { 
-    def int_nvvm_fma_rn # relu # _bf16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_bfloat_ty],
-        [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
-
-    def int_nvvm_fma_rn # relu # _bf16x2 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2bf16_ty],
-        [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
-    
-    // oob (out-of-bounds) - clamps the result to 0 if either of the operand is 
-    // an OOB NaN value.
+  // oob (out-of-bounds) - clamps the result to 0 if either of the operand is
+  // an OOB NaN value.
+  foreach relu = ["", "_relu"] in
     def int_nvvm_fma_rn_oob # relu : PureIntrinsic<[llvm_anyfloat_ty],
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
-  } // relu
-
-  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-    foreach ftz = ["", "_ftz"] in {
-      foreach sat = ["", "_sat"] in {
-        def int_nvvm_fma # rnd # ftz # sat # _f : NVVMBuiltin,
-          PureIntrinsic<[llvm_float_ty],
-            [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
-      } // sat
-    } // ftz
-    def int_nvvm_fma # rnd # _d : NVVMBuiltin,
-      PureIntrinsic<[llvm_double_ty],
-        [llvm_double_ty, llvm_double_ty, llvm_double_ty]>;
-  } // rnd
 
   //
   // Rcp
@@ -1939,7 +1922,7 @@ let TargetPrefix = "nvvm" in {
   //
   foreach a_type = ["s", "u"] in {
     foreach b_type = ["s", "u"] in {
-      def int_nvvm_idp4a_ # a_type # _ # b_type :
+      def int_nvvm_idp4a_ # a_type # _ # b_type : NVVMBuiltin,
           PureIntrinsic<[llvm_i32_ty],
               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty]>;
       def int_nvvm_idp2a_ # a_type # _ # b_type :
@@ -4080,7 +4063,9 @@ foreach sparse = [0, 1] in {
         if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
           def mma.record_name : DefaultAttrsIntrinsicFlags<[], args, flags,
             !listconcat(mma.common_intr_props,
-                        [Range<cta_group, 1, 3>,
+                        [ReadOnly<ArgIndex<!sub(nargs, 2)>>, // scale_a
+                         ReadOnly<ArgIndex<!sub(nargs, 1)>>, // scale_b
+                         Range<cta_group, 1, 3>,
                          Range<collector_usage_a, 0, 4>,
                          Range<collector_usage_b, 0, 4>,
                          ArgInfo<cta_group, [ArgName<"cta_group">]>,
@@ -4149,7 +4134,8 @@ foreach space = ["tensor", "shared"] in {
 
   defvar intrinsic_properties = !listconcat(
       mma.common_intr_props,
-      [Range<cta_group, 1, 3>,
+      [ReadOnly<ArgIndex<!sub(nargs, 1)>>, // decompress_b
+       Range<cta_group, 1, 3>,
        Range<collector_usage_a, 0, 4>,
        Range<collector_usage_b, 0, 4>,
        ArgInfo<cta_group, [ArgName<"cta_group">]>,
@@ -4182,7 +4168,8 @@ foreach space = ["tensor", "shared"] in {
 
     defvar intrinsic_properties = !listconcat(
         mma.common_intr_props,
-        [Range<collector_usage_a, 0, 4>,
+        [ReadOnly<ArgIndex<!sub(nargs, 2)>>, // decompress_b
+         Range<collector_usage_a, 0, 4>,
          Range<collector_usage_b, 0, 4>,
          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_a, "a">.Prop,
          NVVM_TCGEN05_MMA_COLLECTOR_ARGPROP<collector_usage_b, "b">.Prop]);
@@ -4214,7 +4201,10 @@ foreach space = ["tensor", "shared"] in {
 
   defvar intrinsic_properties = !listconcat(
       mma.common_intr_props,
-      [Range<cta_group, 1, 3>,
+      [ReadOnly<ArgIndex<!sub(nargs, 3)>>, // scale_a
+       ReadOnly<ArgIndex<!sub(nargs, 2)>>, // scale_b
+       ReadOnly<ArgIndex<!sub(nargs, 1)>>, // decompress_b
+       Range<cta_group, 1, 3>,
        Range<collector_usage_a, 0, 4>,
        Range<collector_usage_b, 0, 4>,
        ArgInfo<cta_group, [ArgName<"cta_group">]>,

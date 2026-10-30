@@ -1052,4 +1052,25 @@ void non_null_temporary(RefCountable& obj) {
   }
 }
 
+void null_temporary_swapped_with_guardian(RefCountable& src) {
+  RefPtr<RefCountable> obj = &src;
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    RefPtr<RefCountable>().swap(obj);
+    foo->trivial();
+  }
+}
+
+void moveInto(RefPtr<RefCountable>&& dst, RefPtr<RefCountable>& src) { dst.swap(src); }
+
+void null_temporary_filled_by_callee(RefPtr<RefCountable> obj) {
+  {
+    auto* foo = obj.get();
+    // expected-warning@-1{{Local variable 'foo' is a raw pointer to RefPtr-capable type 'RefCountable' [alpha.webkit.UncountedLocalVarsChecker]}}
+    moveInto(RefPtr<RefCountable>(), obj);
+    foo->trivial();
+  }
+}
+
 } // namespace hash_table_empty_value

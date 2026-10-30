@@ -3087,15 +3087,15 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
-; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x204
-; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.h, 0x204
 ; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v4.l, v0.l
+; GFX11-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
 ; GFX11-TRUE16-NEXT:    v_floor_f16_e32 v4.h, v0.h
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0, s0
-; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s1
+; GFX11-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
 ; GFX11-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s0
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-FAKE16-LABEL: safe_math_fract_v2f16:
@@ -3125,15 +3125,16 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) writeon
 ; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.l, v0.l
-; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
 ; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.l, 0x204
-; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s1, v0.h, 0x204
 ; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v4.l, v0.l
+; GFX12-TRUE16-NEXT:    v_fract_f16_e32 v3.h, v0.h
 ; GFX12-TRUE16-NEXT:    v_floor_f16_e32 v4.h, v0.h
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, v3.l, 0, s0
-; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s1
+; GFX12-TRUE16-NEXT:    v_cmp_class_f16_e64 s0, v0.h, 0x204
 ; GFX12-TRUE16-NEXT:    global_store_b32 v[1:2], v4, off
+; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.h, v3.h, 0, s0
 ; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: safe_math_fract_v2f16:
@@ -5295,96 +5296,79 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX7-LABEL: safe_math_fract_f32_swapped_edge_case_split_block:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_mov_b32_e32 v2, v0
-; GFX7-NEXT:    v_and_b32_e32 v0, 1, v1
-; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
-; GFX7-NEXT:    ; implicit-def: $vgpr0
+; GFX7-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX7-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GFX7-NEXT:    ; implicit-def: $vgpr1
 ; GFX7-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX7-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
-; GFX7-NEXT:    s_cbranch_execnz .LBB58_3
-; GFX7-NEXT:  ; %bb.1: ; %Flow
+; GFX7-NEXT:  ; %bb.1: ; %ret
+; GFX7-NEXT:    v_floor_f32_e32 v1, v0
+; GFX7-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX7-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
+; GFX7-NEXT:    ; implicit-def: $vgpr0
+; GFX7-NEXT:  ; %bb.2: ; %Flow
 ; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
-; GFX7-NEXT:    s_cbranch_execnz .LBB58_4
-; GFX7-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
-; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
-; GFX7-NEXT:  .LBB58_3: ; %ret
-; GFX7-NEXT:    v_floor_f32_e32 v0, v2
-; GFX7-NEXT:    v_sub_f32_e32 v0, v2, v0
-; GFX7-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
-; GFX7-NEXT:    ; implicit-def: $vgpr2
-; GFX7-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
-; GFX7-NEXT:    s_cbranch_execz .LBB58_2
-; GFX7-NEXT:  .LBB58_4: ; %edge_cases
+; GFX7-NEXT:  ; %bb.3: ; %edge_cases
 ; GFX7-NEXT:    s_mov_b32 s6, 0x7f800000
-; GFX7-NEXT:    v_fract_f32_e32 v0, v2
-; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v2|, s6
-; GFX7-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX7-NEXT:    v_fract_f32_e32 v1, v0
+; GFX7-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s6
+; GFX7-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX7-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX7-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX8-LABEL: safe_math_fract_f32_swapped_edge_case_split_block:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v2, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 1, v1
-; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
-; GFX8-NEXT:    ; implicit-def: $vgpr0
+; GFX8-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX8-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v1
+; GFX8-NEXT:    ; implicit-def: $vgpr1
 ; GFX8-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; GFX8-NEXT:    s_xor_b64 s[4:5], exec, s[4:5]
-; GFX8-NEXT:    s_cbranch_execnz .LBB58_3
-; GFX8-NEXT:  ; %bb.1: ; %Flow
+; GFX8-NEXT:  ; %bb.1: ; %ret
+; GFX8-NEXT:    v_floor_f32_e32 v1, v0
+; GFX8-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX8-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
+; GFX8-NEXT:    ; implicit-def: $vgpr0
+; GFX8-NEXT:  ; %bb.2: ; %Flow
 ; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
-; GFX8-NEXT:    s_cbranch_execnz .LBB58_4
-; GFX8-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
-; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-; GFX8-NEXT:  .LBB58_3: ; %ret
-; GFX8-NEXT:    v_floor_f32_e32 v0, v2
-; GFX8-NEXT:    v_sub_f32_e32 v0, v2, v0
-; GFX8-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
-; GFX8-NEXT:    ; implicit-def: $vgpr2
-; GFX8-NEXT:    s_andn2_saveexec_b64 s[4:5], s[4:5]
-; GFX8-NEXT:    s_cbranch_execz .LBB58_2
-; GFX8-NEXT:  .LBB58_4: ; %edge_cases
+; GFX8-NEXT:  ; %bb.3: ; %edge_cases
 ; GFX8-NEXT:    s_mov_b32 s6, 0x7f800000
-; GFX8-NEXT:    v_fract_f32_e32 v0, v2
-; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v2|, s6
-; GFX8-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX8-NEXT:    v_fract_f32_e32 v1, v0
+; GFX8-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s6
+; GFX8-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX8-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX8-NEXT:    s_or_b64 exec, exec, s[4:5]
+; GFX8-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: safe_math_fract_f32_swapped_edge_case_split_block:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_mov_b32_e32 v2, v0
-; GFX11-NEXT:    v_and_b32_e32 v0, 1, v1
+; GFX11-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v0
-; GFX11-NEXT:    ; implicit-def: $vgpr0
+; GFX11-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v1
+; GFX11-NEXT:    ; implicit-def: $vgpr1
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX11-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX11-NEXT:    s_cbranch_execnz .LBB58_3
-; GFX11-NEXT:  ; %bb.1: ; %Flow
-; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX11-NEXT:    s_cbranch_execnz .LBB58_4
-; GFX11-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
-; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
-; GFX11-NEXT:  .LBB58_3: ; %ret
-; GFX11-NEXT:    v_floor_f32_e32 v0, v2
+; GFX11-NEXT:  ; %bb.1: ; %ret
+; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_sub_f32_e32 v0, v2, v0
-; GFX11-NEXT:    ; implicit-def: $vgpr2
-; GFX11-NEXT:    v_min_f32_e32 v0, 0x3f7fffff, v0
+; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX11-NEXT:    v_min_f32_e32 v1, 0x3f7fffff, v0
+; GFX11-NEXT:    ; implicit-def: $vgpr0
+; GFX11-NEXT:  ; %bb.2: ; %Flow
 ; GFX11-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX11-NEXT:    s_cbranch_execz .LBB58_2
-; GFX11-NEXT:  .LBB58_4: ; %edge_cases
-; GFX11-NEXT:    v_fract_f32_e32 v0, v2
-; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, |v2|, 0x7f800000
+; GFX11-NEXT:  ; %bb.3: ; %edge_cases
+; GFX11-NEXT:    v_fract_f32_e32 v1, v0
+; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, |v0|, 0x7f800000
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
+; GFX11-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX11-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: safe_math_fract_f32_swapped_edge_case_split_block:
@@ -5394,40 +5378,33 @@ define float @safe_math_fract_f32_swapped_edge_case_split_block(float %x, i1 %co
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_mov_b32_e32 v2, v0
-; GFX12-NEXT:    v_and_b32_e32 v0, 1, v1
+; GFX12-NEXT:    v_and_b32_e32 v1, 1, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v0
-; GFX12-NEXT:    ; implicit-def: $vgpr0
+; GFX12-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 1, v1
+; GFX12-NEXT:    ; implicit-def: $vgpr1
 ; GFX12-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB58_3
-; GFX12-NEXT:  ; %bb.1: ; %Flow
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX12-NEXT:    s_cbranch_execnz .LBB58_4
-; GFX12-NEXT:  .LBB58_2: ; %UnifiedReturnBlock
-; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
-; GFX12-NEXT:  .LBB58_3: ; %ret
-; GFX12-NEXT:    v_floor_f32_e32 v0, v2
+; GFX12-NEXT:  ; %bb.1: ; %ret
+; GFX12-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_sub_f32_e32 v0, v2, v0
-; GFX12-NEXT:    ; implicit-def: $vgpr2
-; GFX12-NEXT:    v_min_num_f32_e32 v0, 0x3f7fffff, v0
+; GFX12-NEXT:    v_sub_f32_e32 v0, v0, v1
+; GFX12-NEXT:    v_min_num_f32_e32 v1, 0x3f7fffff, v0
+; GFX12-NEXT:    ; implicit-def: $vgpr0
+; GFX12-NEXT:  ; %bb.2: ; %Flow
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_and_not1_saveexec_b32 s0, s0
-; GFX12-NEXT:    s_cbranch_execz .LBB58_2
-; GFX12-NEXT:  .LBB58_4: ; %edge_cases
-; GFX12-NEXT:    v_fract_f32_e32 v0, v2
-; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, |v2|, 0x7f800000
+; GFX12-NEXT:  ; %bb.3: ; %edge_cases
+; GFX12-NEXT:    v_fract_f32_e32 v1, v0
+; GFX12-NEXT:    v_cmp_neq_f32_e64 vcc_lo, |v0|, 0x7f800000
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX12-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX12-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc_lo
+; GFX12-NEXT:  ; %bb.4: ; %UnifiedReturnBlock
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ; GFX6-IR-LABEL: define float @safe_math_fract_f32_swapped_edge_case_split_block(
 ; GFX6-IR-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {

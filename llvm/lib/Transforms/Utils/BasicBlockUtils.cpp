@@ -1349,7 +1349,7 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     // to be applied to the new latch.
     OldLatch = L->getLoopLatch();
   } else
-    BI->setDebugLoc(BB->getFirstNonPHIOrDbg()->getDebugLoc());
+    BI->setDebugLoc(BB->getFirstNonPHIOrPseudoProbe()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB instead of BB.
   for (BasicBlock *Pred : Preds) {

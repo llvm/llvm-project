@@ -696,7 +696,7 @@ TEST(AssignmentTrackingTest, Utils) {
   ASSERT_TRUE(M);
 
   Function &Fun1 = *M->getFunction("fun1");
-  Instruction &Alloca = *Fun1.getEntryBlock().getFirstNonPHIOrDbg();
+  Instruction &Alloca = *Fun1.getEntryBlock().getFirstNonPHIOrPseudoProbe();
 
   // 1. Check the Instruction <-> Intrinsic mappings work in fun1.
   //
@@ -738,7 +738,7 @@ TEST(AssignmentTrackingTest, Utils) {
 
   // Check that fun2's alloca and intrinsic have not not been updated.
   Instruction &Fun2Alloca =
-      *M->getFunction("fun2")->getEntryBlock().getFirstNonPHIOrDbg();
+      *M->getFunction("fun2")->getEntryBlock().getFirstNonPHIOrPseudoProbe();
   DIAssignID *Fun2ID = cast_or_null<DIAssignID>(
       Fun2Alloca.getMetadata(LLVMContext::MD_DIAssignID));
   EXPECT_NE(New, Fun2ID);
@@ -750,7 +750,7 @@ TEST(AssignmentTrackingTest, Utils) {
 
   // 3. Check that deleting dbg.assigns from a specific instruction works.
   Instruction &Fun3Alloca =
-      *M->getFunction("fun3")->getEntryBlock().getFirstNonPHIOrDbg();
+      *M->getFunction("fun3")->getEntryBlock().getFirstNonPHIOrPseudoProbe();
   auto Fun3Markers = at::getDVRAssignmentMarkers(&Fun3Alloca);
   ASSERT_TRUE(std::distance(Fun3Markers.begin(), Fun3Markers.end()) == 1);
   at::deleteAssignmentMarkers(&Fun3Alloca);

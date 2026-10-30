@@ -549,6 +549,10 @@ static bool isLibCallInTailPosition(const CallLowering::ArgInfo &Result,
       CallerAttrs.hasRetAttr(Attribute::SExt))
     return false;
 
+  // Check if tail calls have been disabled in this function.
+  if (F.getFnAttribute("disable-tail-calls").getValueAsBool())
+    return false;
+
   // Only tail call if the following instruction is a standard return or if we
   // have a `thisreturn` callee, and a sequence like:
   //
@@ -9430,10 +9434,12 @@ LegalizerHelper::lowerFMinimumMaximum(MachineInstr &MI) {
   // fminimum/fmaximum requires -0.0 less than +0.0
   if (!MinMaxMustRespectOrderedZero && !MI.getFlag(MachineInstr::FmNsz)) {
     GISelValueTracking VT(MIRBuilder.getMF());
+    // FIXME: Also demand for subnormal classes depending on the denormal mode.
     KnownFPClass Src0Info = VT.computeKnownFPClass(Src0, fcZero);
     KnownFPClass Src1Info = VT.computeKnownFPClass(Src1, fcZero);
 
-    if (!Src0Info.isKnownNeverZero() && !Src1Info.isKnownNeverZero()) {
+    // FIXME: Must use isKnownNeverLogicalZero(Mode)
+    if (!Src0Info.isKnownNever(fcZero) && !Src1Info.isKnownNever(fcZero)) {
       const unsigned Flags = MI.getFlags();
       Register Zero = MIRBuilder.buildFConstant(Ty, 0.0).getReg(0);
       auto IsZero = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ, CmpTy, Res, Zero);
@@ -11206,6 +11212,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
   // that type width, and then generate a corresponding store to the dest buffer
   // of that value loaded. This can result in a sequence of loads and stores
   // mixed types, depending on what the target specifies as good types to use.
+  LLT SrcTy = MRI.getType(Src);
+  LLT DstTy = MRI.getType(Dst);
+  unsigned SrcIndexSize = DL.getIndexSizeInBits(SrcTy.getAddressSpace());
+  unsigned DstIndexSize = DL.getIndexSizeInBits(DstTy.getAddressSpace());
   unsigned CurrOffset = 0;
   unsigned Size = KnownLen;
   for (auto CopyTy : MemOps) {
@@ -11228,10 +11238,8 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     Register LoadPtr = Src;
     Register Offset;
     if (CurrOffset != 0) {
-      LLT SrcTy = MRI.getType(Src);
       Offset =
-          MIB.buildConstant(LLT::integer(SrcTy.getSizeInBits()), CurrOffset)
-              .getReg(0);
+          MIB.buildConstant(LLT::integer(SrcIndexSize), CurrOffset).getReg(0);
       LoadPtr = MIB.buildObjectPtrOffset(SrcTy, Src, Offset).getReg(0);
     }
     auto LdVal = MIB.buildLoad(CopyTy, LoadPtr, *LoadMMO);
@@ -11239,7 +11247,10 @@ LegalizerHelper::lowerMemcpy(MachineInstr &MI, Register Dst, Register Src,
     // Create the store.
     Register StorePtr = Dst;
     if (CurrOffset != 0) {
-      LLT DstTy = MRI.getType(Dst);
+      if (SrcIndexSize != DstIndexSize) {
+        Offset =
+            MIB.buildConstant(LLT::integer(DstIndexSize), CurrOffset).getReg(0);
+      }
       StorePtr = MIB.buildObjectPtrOffset(DstTy, Dst, Offset).getReg(0);
     }
     MIB.buildStore(LdVal, StorePtr, *StoreMMO);

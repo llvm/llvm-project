@@ -60,6 +60,16 @@ backend convertBackend(ol_platform_backend_t Backend) {
   }
 }
 
+bool isBackendSupported(ol_platform_backend_t Backend) {
+  switch (Backend) {
+  case OL_PLATFORM_BACKEND_LEVEL_ZERO:
+  case OL_PLATFORM_BACKEND_HOST:
+    return true;
+  default:
+    return false;
+  }
+}
+
 ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType) {
   switch (DeviceType) {
   case info::device_type::all:

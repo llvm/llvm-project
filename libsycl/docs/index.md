@@ -91,7 +91,7 @@ which doesn't currently support Windows.
 
 - `exception`: methods with context are not implemented, to add once context is ready
 
-- `backend`:
+- `backend`: CUDA and HIP backends are not supported, to add together with the corresponding backend extensions; devices of these liboffload backends are ignored
 
   - `ext_oneapi_level_zero`: version 1 of the [sycl_ext_oneapi_backend_level_zero](https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/supported/sycl_ext_oneapi_backend_level_zero.md) extension is not fully implemented, so `SYCL_EXT_ONEAPI_BACKEND_LEVEL_ZERO` is not defined. Missing: backend selection through `ONEAPI_DEVICE_SELECTOR` and the filter selector (section 3), interoperability with the Level Zero API (section 4), `info::device::backend_version` (section 5)
 
