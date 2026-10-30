@@ -897,6 +897,13 @@ public:
     return false;
   }
 
+  /// Return true for a RISC-V load-reserved or store-conditional instruction,
+  /// including its acquire/release variants.
+  virtual bool isRISCVLRSC(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
   virtual bool isCleanReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
