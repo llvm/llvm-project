@@ -114,7 +114,9 @@ add_libc_test(
   DEPENDS
     libc.include.stdio
     libc.src.errno.errno
+    libc.src.stdio.clearerr
     libc.src.stdio.fclose
+    libc.src.stdio.fflush
     libc.src.stdio.fopen
     libc.src.stdio.fread
     libc.src.stdio.fwrite
