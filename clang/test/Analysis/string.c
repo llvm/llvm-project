@@ -1370,10 +1370,11 @@ void strsep_changes_input_string(void) {
 }
 
 //===----------------------------------------------------------------------===
-// memset() / explicit_bzero() / bzero()
+// memset() / explicit_bzero() / bzero() / memset_explicit()
 //===----------------------------------------------------------------------===
 
 void *memset(void *dest, int ch, size_t count);
+void *memset_explicit(void *s, int c, size_t n);
 
 void bzero(void *dst, size_t count);
 void explicit_bzero(void *dest, size_t count);
@@ -1621,6 +1622,31 @@ void explicit_bzero3_out_ofbound(void) {
   // expected-warning@-2 {{UNKNOWN}}
 #endif
   free(privkey);
+}
+
+void memset_explicit_null(void) {
+  char *p = 0;
+  memset_explicit(p, 0, 10); // expected-warning{{Null pointer passed as 1st argument to memory set function}}
+}
+ 
+void memset_explicit_oob(void) {
+  char buf[5];
+  memset_explicit(buf, 0, 10);  
+#ifndef SUPPRESS_OUT_OF_BOUND
+// expected-warning@-2{{Memory set function overflows the destination buffer}}
+#endif 
+}
+ 
+void memset_explicit_eval(void) {
+  char buf[5];
+  memset_explicit(buf, 0, 5);
+  clang_analyzer_eval(buf[0] == 0); // expected-warning{{TRUE}}
+}
+
+void memset_explicit_return(void){
+  char buf[5];
+  void *res = memset_explicit(buf, 0, 2);
+  clang_analyzer_eval(res == buf); // expected-warning{{TRUE}}
 }
 
 //===----------------------------------------------------------------------===
