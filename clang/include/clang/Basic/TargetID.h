@@ -48,7 +48,8 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
                                  const llvm::StringMap<bool> &Features);
 
 /// Returns the canonical form of \p TargetID, or std::nullopt if it is not a
-/// valid target ID for \p T.
+/// valid target ID for \p T. Only AMDGPU has target ID features, so other
+/// processor names are returned unchanged.
 std::optional<std::string> getCanonicalTargetID(const llvm::Triple &T,
                                                 llvm::StringRef TargetID);
 

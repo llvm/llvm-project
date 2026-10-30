@@ -9928,9 +9928,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // extract it from any static libraries if present. Device images are
       // labeled with the canonical target ID, so request that.
       for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
-        std::optional<std::string> TargetID;
-        if (TC->getTriple().isAMDGPU())
-          TargetID = getCanonicalTargetID(TC->getTriple(), Arg);
+        std::optional<std::string> TargetID =
+            getCanonicalTargetID(TC->getTriple(), Arg);
         CmdArgs.emplace_back(Args.MakeArgString(
             "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
       }
