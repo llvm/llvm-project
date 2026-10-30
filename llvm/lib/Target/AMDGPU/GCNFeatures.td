@@ -491,12 +491,18 @@ def FeatureHoldCntBits1            : CounterFieldFeature<"holdcnt-bits", "HoldCn
 def FeatureBarrierMemberCountBits8 : CounterFieldFeature<"barrier-member-count-bits", "BarrierMemberCountBits", 8>;
 
 // Counter layouts shared by a generation and its successors.
-defvar CounterLayoutGFX11 = [FeatureVmcntLoShift10, FeatureVmcntLoBits6,
-  FeatureExpcntShift0, FeatureLgkmcntShift4, FeatureLgkmcntBits6,
-  FeatureHoldCntBits1];
-defvar CounterLayoutGFX12 = !listconcat(CounterLayoutGFX11,
-  [FeatureLoadStorecntShift8, FeatureLoadcntBits6, FeatureSamplecntBits6,
-   FeatureBvhcntBits3, FeatureDscntBits6, FeatureKmcntBits5]);
+def FeatureCounterLayoutGFX11 : SubtargetFeature<"counter-layout-gfx11",
+  "CounterFieldSink", "1", "GFX11 wait counter layout",
+  [FeatureVmcntLoShift10, FeatureVmcntLoBits6, FeatureExpcntShift0,
+   FeatureLgkmcntShift4, FeatureLgkmcntBits6, FeatureHoldCntBits1]
+>;
+
+def FeatureCounterLayoutGFX12 : SubtargetFeature<"counter-layout-gfx12",
+  "CounterFieldSink", "1", "GFX12 wait counter layout",
+  [FeatureCounterLayoutGFX11, FeatureLoadStorecntShift8, FeatureLoadcntBits6,
+   FeatureSamplecntBits6, FeatureBvhcntBits3, FeatureDscntBits6,
+   FeatureKmcntBits5]
+>;
 
 defm GCN3Encoding : AMDGPUSubtargetFeature<"gcn3-encoding",
   "Encoding format for VI",
@@ -1880,7 +1886,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
 
 def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   "gfx11",
-  !listconcat([FeatureFP64, FeatureAddressableLocalMemorySize65536,
+  [FeatureFP64, FeatureAddressableLocalMemorySize65536,
    FeatureLDSAllocGranularity1024,
    FeatureLDSEncodingGranularity512,
    FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
@@ -1909,13 +1915,13 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureCvtPkNormVOP2Insts, FeatureCvtPkNormVOP3Insts,
    FeatureInstCacheLineSize128, FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature32BitNumRecordsBufferResource,
-   FeatureMaxWavesPerEU16
-  ], CounterLayoutGFX11)
+   FeatureMaxWavesPerEU16, FeatureCounterLayoutGFX11
+  ]
 >;
 
 def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
   "gfx12",
-  !listconcat([FeatureFP64, FeatureMIMG_R128,
+  [FeatureFP64, FeatureMIMG_R128,
    FeatureSupportsWave32,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
@@ -1939,13 +1945,13 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   FeatureMaxWavesPerEU16
-  ], CounterLayoutGFX12)
+   FeatureMaxWavesPerEU16, FeatureCounterLayoutGFX12
+  ]
 >;
 
 def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
   "gfx13",
-  !listconcat([FeatureFP64, FeatureMIMG_R128,
+  [FeatureFP64, FeatureMIMG_R128,
    FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs, FeatureGetDoorbellID,
@@ -1974,8 +1980,8 @@ def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
    FeatureMTBUFInsts, FeatureFormattedMUBUFInsts,
    Feature45BitNumRecordsBufferResource,
    FeatureMaxWavesPerEU16, FeatureCacheFillSize,
-   FeatureBarrierMemberCountBits8
-  ], CounterLayoutGFX12)
+   FeatureBarrierMemberCountBits8, FeatureCounterLayoutGFX12
+  ]
 >;
 //===----------------------------------------------------------------------===//
 

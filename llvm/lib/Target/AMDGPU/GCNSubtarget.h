@@ -88,7 +88,8 @@ protected:
   /// set from tablegen subtarget features, 0 is unknown.
   unsigned BufferResourceNumRecordsWidth = 0;
 
-  // Write-only FieldName of CounterFieldFeature. Use AMDGPU::getCounterLayout.
+  // Write-only FieldName of counter layout features. Use
+  // AMDGPU::getCounterLayout.
   unsigned CounterFieldSink = 0;
 
   // Dynamically set bits that enable features.
