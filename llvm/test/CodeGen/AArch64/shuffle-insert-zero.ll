@@ -37,12 +37,17 @@ entry:
 }
 
 define <4 x float> @testv4f32_0(<4 x float> noundef %vec) {
-; CHECK-LABEL: testv4f32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: testv4f32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv4f32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <4 x float> %vec, <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %vecinit3
@@ -51,9 +56,7 @@ entry:
 define <4 x float> @testv4f32_1(<4 x float> noundef %vec) {
 ; CHECK-SD-LABEL: testv4f32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4f32_1:
@@ -107,24 +110,27 @@ entry:
   ret <2 x float> %vecins
 }
 
-define <8 x half> @testv8f16_0(<8 x half> noundef %vec) {
-; CHECK-LABEL: testv8f16_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+define <8 x half> @testv8f16_0(<8 x half> noundef %vec) #0 {
+; CHECK-SD-LABEL: testv8f16_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov h0, h0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv8f16_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <8 x half> %vec, <8 x half> <half poison, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00, half 0.000000e+00>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x half> %vecinit3
 }
 
-define <8 x half> @testv8f16_1(<8 x half> noundef %vec) {
+define <8 x half> @testv8f16_1(<8 x half> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv8f16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv8f16_1:
@@ -140,13 +146,10 @@ entry:
   ret <8 x half> %vecins
 }
 
-define <4 x half> @testv4f16_0(<4 x half> noundef %vec) {
+define <4 x half> @testv4f16_0(<4 x half> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv4f16_0:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4f16_0:
@@ -161,13 +164,10 @@ entry:
   ret <4 x half> %vecinit3
 }
 
-define <4 x half> @testv4f16_1(<4 x half> noundef %vec) {
+define <4 x half> @testv4f16_1(<4 x half> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv4f16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4f16_1:
@@ -183,24 +183,27 @@ entry:
   ret <4 x half> %vecins
 }
 
-define <8 x bfloat> @testv8bf16_0(<8 x bfloat> noundef %vec) {
-; CHECK-LABEL: testv8bf16_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+define <8 x bfloat> @testv8bf16_0(<8 x bfloat> noundef %vec) #0 {
+; CHECK-SD-LABEL: testv8bf16_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov h0, h0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv8bf16_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <8 x bfloat> %vec, <8 x bfloat> <bfloat poison, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x bfloat> %vecinit3
 }
 
-define <8 x bfloat> @testv8bf16_1(<8 x bfloat> noundef %vec) {
+define <8 x bfloat> @testv8bf16_1(<8 x bfloat> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv8bf16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv8bf16_1:
@@ -216,13 +219,10 @@ entry:
   ret <8 x bfloat> %vecins
 }
 
-define <4 x bfloat> @testv4bf16_0(<4 x bfloat> noundef %vec) {
+define <4 x bfloat> @testv4bf16_0(<4 x bfloat> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv4bf16_0:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4bf16_0:
@@ -237,13 +237,10 @@ entry:
   ret <4 x bfloat> %vecinit3
 }
 
-define <4 x bfloat> @testv4bf16_1(<4 x bfloat> noundef %vec) {
+define <4 x bfloat> @testv4bf16_1(<4 x bfloat> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv4bf16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi d1, #0000000000000000
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4bf16_1:
@@ -293,12 +290,17 @@ entry:
 }
 
 define <4 x i32> @testv4i32_0(<4 x i32> noundef %vec) {
-; CHECK-LABEL: testv4i32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: testv4i32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv4i32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <4 x i32> %vec, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x i32> %vecinit3
@@ -307,9 +309,7 @@ entry:
 define <4 x i32> @testv4i32_1(<4 x i32> noundef %vec) {
 ; CHECK-SD-LABEL: testv4i32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4i32_1:
@@ -362,24 +362,27 @@ entry:
   ret <2 x i32> %vecins
 }
 
-define <8 x i16> @testv8i16_0(<8 x i16> noundef %vec) {
-; CHECK-LABEL: testv8i16_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+define <8 x i16> @testv8i16_0(<8 x i16> noundef %vec) #0 {
+; CHECK-SD-LABEL: testv8i16_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov h0, h0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv8i16_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <8 x i16> %vec, <8 x i16> <i16 poison, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0>, <8 x i32> <i32 0, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <8 x i16> %vecinit3
 }
 
-define <8 x i16> @testv8i16_1(<8 x i16> noundef %vec) {
+define <8 x i16> @testv8i16_1(<8 x i16> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv8i16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv8i16_1:
@@ -393,26 +396,28 @@ entry:
   ret <8 x i16> %vecins
 }
 
-define <4 x i16> @testv4i16_0(<4 x i16> noundef %vec) {
-; CHECK-LABEL: testv4i16_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-NEXT:    fmov d0, d1
-; CHECK-NEXT:    ret
+define <4 x i16> @testv4i16_0(<4 x i16> noundef %vec) #0 {
+; CHECK-SD-LABEL: testv4i16_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov h0, h0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv4i16_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
+; CHECK-GI-NEXT:    fmov d0, d1
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <4 x i16> %vec, <4 x i16> <i16 poison, i16 0, i16 0, i16 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x i16> %vecinit3
 }
 
-define <4 x i16> @testv4i16_1(<4 x i16> noundef %vec) {
+define <4 x i16> @testv4i16_1(<4 x i16> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv4i16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4i16_1:
@@ -488,3 +493,5 @@ entry:
   %vecins = shufflevector <8 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, <8 x i8> %vec, <8 x i32> <i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x i8> %vecins
 }
+
+attributes #0 = { "target-features"="+fullfp16" }
