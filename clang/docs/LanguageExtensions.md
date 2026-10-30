@@ -1808,7 +1808,7 @@ More information can be found [here](Modules.md).
 | `_Thread_local` (N1364)                       |                                    | C11           | C89, C++      |
 | Array & element qualification (N2607)         |                                    | C23           | C89           |
 | Attributes (N2335)                            |                                    | C23           | C89           |
-| `#embed` (N3017)                              |                                    | C23           | C89, C++      |
+| `#embed` (N3017)                              |                                    | C23           | C89           |
 | Enum with fixed underlying type (N3030)       |                                    | C23           | C89           |
 | `#warning` (N2686)                            |                                    | C23           | C89           |
 | `_BitInt` (N3035)                             |                                    | C23           | C89, C++      |
