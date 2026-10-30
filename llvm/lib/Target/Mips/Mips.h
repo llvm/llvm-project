@@ -16,6 +16,8 @@
 
 #include "MCTargetDesc/MipsMCTargetDesc.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -54,7 +56,13 @@ public:
 
 FunctionPass *createMips16ISelDAGLegacyPass(MipsTargetMachine &TM,
                                             CodeGenOptLevel OptLevel);
-ModulePass *createMipsOs16Pass();
+
+class MipsOs16Pass : public RequiredPassInfoMixin<MipsOs16Pass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+ModulePass *createMipsOs16LegacyPass();
 ModulePass *createMips16HardFloatPass();
 
 class MipsSEISelDAGPass : public SelectionDAGISelPass {

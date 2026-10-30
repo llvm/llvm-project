@@ -44,7 +44,8 @@ void MipsCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   Base::addIRPasses(PMW);
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
   if (getTM().getCLOpts().os16) {
-    // TODO(boomanaiden154): Add MipsOps16Pass
+    flushFPMsToMPM(PMW);
+    addModulePass(MipsOs16Pass(), PMW);
   }
   // TODO(boomanaiden154): Add Mips16HardFloatPass
 }
