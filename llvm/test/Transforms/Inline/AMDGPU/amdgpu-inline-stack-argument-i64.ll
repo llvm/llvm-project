@@ -52,7 +52,8 @@ entry:
 }
 
 ; Calling each (non-)inlining function twice to make sure they won't get the sole call inlining cost bonus. 
-define i64 @Caller(ptr noundef %in) {
+; Caller is an amdgpu_kernel to avoid function caller threshold bonus.
+define amdgpu_kernel void @Caller(ptr noundef %in) {
 entry:
   %arrayidx = getelementptr inbounds i64, ptr %in, i64 0
   %a0 = load i64, ptr %arrayidx, align 4
@@ -96,5 +97,5 @@ entry:
   %add3 = add i64 %add2, %inlinecall1
   %inlinecall2 = call noundef i64 @inlining_call(i64 noundef %a0, i64 noundef %b0, i64 noundef %c0, i64 noundef %d0, i64 noundef %e0, i64 noundef %f0, i64 noundef %g0, i64 noundef %h0, i64 noundef %i0, i64 noundef %j0, i64 noundef %k0, i64 noundef %l0, i64 noundef %m0, i64 noundef %n0, i64 noundef %o0, i64 noundef %p0, i64 noundef %q0)
   %add4 = add i64 %add3, %inlinecall2
-  ret i64 %add4
+  ret void
 }

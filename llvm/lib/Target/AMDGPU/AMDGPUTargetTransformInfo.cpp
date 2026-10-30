@@ -2036,6 +2036,13 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
   TypeSize AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
   if (AllocaSize.getFixedValue() > 0)
     Threshold += ArgAllocaCost;
+
+  // Making a call from a non-kernel will require saving return address into
+  // scratch. Add a bonus to threshold to discourage scratch use.
+  static const unsigned ScratchBonus = 200;
+  if (isCallableCC(CB->getCaller()->getCallingConv()))
+    Threshold += ScratchBonus;
+
   return Threshold;
 }
 
