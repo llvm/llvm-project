@@ -2151,8 +2151,8 @@ define i1 @sqrt_nsz_maybe_negzero_oeq_zero(float nofpclass(nan inf pzero sub nor
 }
 
 ; The negative subnormal input flushes to -0.0, so the result is -0.0.
-define i1 @sqrt_nsz_negsubnormal_une_zero__mode_daz(float nofpclass(nan inf zero psub norm) %only.negsub) #0 {
-; CHECK-LABEL: @sqrt_nsz_negsubnormal_une_zero__mode_daz(
+define i1 @sqrt_nsz_negsubnormal_une_zero__ftz_daz(float nofpclass(nan inf zero psub norm) %only.negsub) #0 {
+; CHECK-LABEL: @sqrt_nsz_negsubnormal_une_zero__ftz_daz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nsz float @llvm.sqrt.f32(float [[ONLY_NEGSUB:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[SQRT]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
