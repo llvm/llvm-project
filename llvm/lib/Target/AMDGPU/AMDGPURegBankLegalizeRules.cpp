@@ -895,6 +895,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
       .Any({{UniS1, UniS64}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
+      .Any({{UniS16, S64}, {{Sgpr16}, {Sgpr64}}})
+      .Any({{UniS16, S128}, {{Sgpr16}, {Sgpr128}}})
       .Any({{UniBRC, UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC, DivBRC}, {{VgprBRC}, {VgprBRC}}})
       .Any({{UniV2S16, V2S32}, {{SgprV2S16}, {SgprV2S32}}})
