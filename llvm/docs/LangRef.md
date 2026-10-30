@@ -12449,7 +12449,8 @@ value of a type like `i20` with a size that is not an integral number
 of bytes, the load will be performed on the next larger multiple of the byte
 size (here `i24`) and truncated. If any of the truncated bits are non-zero,
 the result is a poison value. As such, a non-byte-sized load behaves like a
-byte-sized load followed by a `trunc nuw` operation.
+byte-sized load followed by a `trunc nuw` operation. Especially, a load with
+non-byte-sized byte type doesn't check the truncated bits.
 
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
@@ -12547,7 +12548,9 @@ example, storing an `i24` writes at most three bytes. When writing a
 value of a type like `i20` with a size that is not an integral number
 of bytes, the value will be zero extended to the next larger multiple of the
 byte size (here `i24`) and then stored. As such, a non-byte-sized store
-behaves like a `zext` followed by a byte-sized store.
+behaves like a `zext` followed by a byte-sized store. Especially, a store with
+a non-byte-sized byte value fills the extended bits with poison if and only if
+the value is a {ref}`poison value <poisonvalues>`.
 
 If `<value>` is of aggregate type, padding is filled with
 {ref}`undef <undefvalues>`.

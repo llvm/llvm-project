@@ -89,6 +89,6 @@ entry:
 ; CHECK-NEXT:   store b12 %bitinsert_b12_mixed, ptr %alloca16, align 2
 ; CHECK-NEXT:   %bitinsert_b12_mixed_bytes = load b16, ptr %alloca16, align 2 => b16 !!!!0101 0000!!!! 
 ; CHECK-NEXT:   store b12 %bitinsert_b12_poison, ptr %alloca16, align 2
-; CHECK-NEXT:   %bitinsert_b12_poison_bytes = load b16, ptr %alloca16, align 2 => b16 0x!! 0000!!!! 
+; CHECK-NEXT:   %bitinsert_b12_poison_bytes = load b16, ptr %alloca16, align 2 => b16 0x!! 0x!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

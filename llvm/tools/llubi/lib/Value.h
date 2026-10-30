@@ -117,10 +117,9 @@ struct Byte {
                 static_cast<uint8_t>(TagValue << Shift)};
   }
 
-  bool areHighBitsZExtd(uint8_t BitsFrom) const {
-    uint8_t Mask = static_cast<uint8_t>((~0U) << BitsFrom);
-    return (ConcreteMask & Mask) == Mask && (Value & Mask) == 0 &&
-           (TagMask & Mask) == 0;
+  bool areBitsFilledWithZeroOrPoison(uint8_t Mask, bool IsPoison) const {
+    return (ConcreteMask & Mask) == (IsPoison ? 0 : Mask) &&
+           (Value & Mask) == 0 && (TagMask & Mask) == 0;
   }
 };
 
@@ -243,13 +242,28 @@ public:
   Provenance &provenance() const { return *Prov; }
 };
 
-/// Represents a scalar byte value. If the value is not byte-sized, the high
-/// bits are zero-padded.
+/// Represents a scalar byte value. If the value is not byte-sized, the padding
+/// bits are guaranteed to be filled by either poison/zero bits. The
+/// constructors are responsible to ensure the invariant.
 class ByteValue {
   // The byte order is endianness-dependent.
   std::vector<Byte> Val;
   uint32_t BitWidth : 31;
   uint32_t IsLittleEndian : 1;
+
+  // Note that we don't have undef bits in byte values.
+  // The only exception is Context::fromBytes will convert undef bits
+  // into poison bits after the construction.
+  bool shouldFillWithPoison() const {
+    assert((BitWidth & 7) != 0 && "It is meaningless for byte-sized values.");
+    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+    const Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
+    return all_of(this->Val, [&](const Byte &V) {
+      if (&V == &MSB)
+        return (V.ConcreteMask & ~Mask) == 0;
+      return V.ConcreteMask == 0;
+    });
+  }
 
 public:
   ByteValue(const APInt &V, bool IsLittleEndian);
@@ -261,18 +275,12 @@ public:
             bool ImplicitClearHighBits = false)
       : Val(std::move(Val)), BitWidth(BitWidth),
         IsLittleEndian(IsLittleEndian) {
-    if (ImplicitClearHighBits && (BitWidth & 7) != 0) {
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
-      if (IsLittleEndian)
-        this->Val.back().zeroBits(Mask);
-      else
-        this->Val.front().zeroBits(Mask);
-    }
-    assert(((BitWidth & 7) == 0 ||
-            ((IsLittleEndian ? this->Val.back() : this->Val.front())
-                 .areHighBitsZExtd(BitWidth & 7))) &&
-           "The caller is responsible to zero high bits for non-byte-sized "
-           "values.");
+    if (ImplicitClearHighBits)
+      clearHighBits();
+    else
+      assert(isValid() &&
+             "The caller is responsible to fill high bits for non-byte-sized "
+             "values.");
   }
   ByteValue(const ByteValue &) = default;
   ByteValue(ByteValue &&) = default;
@@ -285,7 +293,29 @@ public:
 
   uint32_t getBitWidth() const { return BitWidth; }
   ArrayRef<Byte> bytes() const { return Val; }
+  /// The caller should call clearHighBits after mutation.
   MutableArrayRef<Byte> mutableBytes() { return Val; }
+
+  // Fill high bits with poison iff the byte value is poison.
+  void clearHighBits() {
+    if ((BitWidth & 7) == 0)
+      return;
+    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+    Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
+    if (shouldFillWithPoison())
+      MSB.poisonBits(Mask);
+    else
+      MSB.zeroBits(Mask);
+  }
+
+  bool isValid() const {
+    if ((BitWidth & 7) == 0)
+      return true;
+    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+    const Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
+    return MSB.areBitsFilledWithZeroOrPoison(Mask, shouldFillWithPoison());
+  }
+
   void print(Context &Ctx, raw_ostream &OS) const;
 };
 

@@ -342,7 +342,7 @@ ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
 ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
   return ByteValue(BitWidth,
                    std::vector<Byte>(divideCeil(BitWidth, 8), Byte::poison()),
-                   IsLittleEndian, /*ImplicitClearHighBits=*/true);
+                   IsLittleEndian, /*ImplicitClearHighBits=*/false);
 }
 
 void ByteValue::print(Context &Ctx, raw_ostream &OS) const {

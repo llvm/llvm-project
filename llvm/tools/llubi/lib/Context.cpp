@@ -535,13 +535,10 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
   if (IsByteType) {
     assert(!CheckPaddingBits &&
            "Non-vector-element cases should be handled by the fast path.");
-    if (NumBits & 7) {
-      uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
-      LogicalBytes.back().zeroBits(Mask);
-    }
     if (DL.isBigEndian())
       std::reverse(LogicalBytes.begin(), LogicalBytes.end());
-    return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian());
+    return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian(),
+                     /*ImplicitClearHighBits=*/true);
   }
 
   APInt Bits(NumBitsToExtract, RawBits);
@@ -579,15 +576,8 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
                      /*CheckPaddingBits=*/true, ContainsUndefinedBits);
   if (Ty->isByteTy()) {
     unsigned BitWidth = Ty->getByteBitWidth();
-    if (BitWidth & 7) {
-      if (!(DL.isLittleEndian() ? Bytes.back() : Bytes.front())
-               .areHighBitsZExtd(BitWidth & 7)) {
-        if (ContainsUndefinedBits)
-          *ContainsUndefinedBits = true;
-        return ByteValue::poison(BitWidth, DL.isLittleEndian());
-      }
-    }
-    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian());
+    ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
+                  /*ImplicitClearHighBits=*/true);
     bool HasUndefinedBits = false;
     for (Byte &V : Res.mutableBytes()) {
       if (V.ConcreteMask != 255)
@@ -848,6 +838,7 @@ void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
          "Bit range out of bounds");
   toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
           /*PaddingBits=*/false);
+  Base.clearHighBits();
 }
 
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
@@ -897,7 +888,8 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
     return;
   }
   if (Val.isByte()) {
-    for (Byte &V : Val.asMutableByte().mutableBytes()) {
+    MutableArrayRef<Byte> Bytes = Val.asMutableByte().mutableBytes();
+    for (Byte &V : Bytes) {
       if (V.ConcreteMask == 255)
         continue;
       uint8_t OldMask = V.ConcreteMask;
@@ -905,6 +897,12 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
       V.Value &= OldMask;
       if (mayUseNonDeterminism())
         V.Value |= (Rng() & 255) & ~OldMask;
+    }
+    unsigned NumBits = Val.asByte().getBitWidth();
+    if (NumBits & 7) {
+      auto &MSB = DL.isLittleEndian() ? Bytes.back() : Bytes.front();
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
+      MSB.zeroBits(Mask);
     }
     return;
   }

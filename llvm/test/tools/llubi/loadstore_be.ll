@@ -308,11 +308,11 @@ define void @main() {
 ; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 00000000(00100110) 0x!! 0x!! 
 ; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
 ; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 0xDE 0xAD 0xBE 0xEF 
-; CHECK-NEXT:   %bytes_trunc_b28 = load b28, ptr %alloc_byte, align 4 => b28 !!!! 0x!! 0x!! 0x!! 
+; CHECK-NEXT:   %bytes_trunc_b28 = load b28, ptr %alloc_byte, align 4 => b28 1110 0xAD 0xBE 0xEF 
 ; CHECK-NEXT:   store b28 -22167825, ptr %alloc_byte, align 4
 ; CHECK-NEXT:   %bytes_zextd = load b32, ptr %alloc_byte, align 4 => b32 0x0E 0xAD 0xBE 0xEF 
 ; CHECK-NEXT:   store b8 -1, ptr %alloc_byte, align 1
-; CHECK-NEXT:   %bytes_trunc_b7 = load b7, ptr %alloc_byte, align 1 => b7 !!!!!!! 
+; CHECK-NEXT:   %bytes_trunc_b7 = load b7, ptr %alloc_byte, align 1 => b7 1111111 
 ; CHECK-NEXT:   %alloc_ptr_array = alloca [4 x ptr], align 8 => ptr 0xD8 [alloc_ptr_array]
 ; CHECK-NEXT:   store i64 0, ptr %alloc_ptr_array, align 8
 ; CHECK-NEXT:   %ptr_array_1 = getelementptr ptr, ptr %alloc_ptr_array, i64 1 => ptr 0xE0 [alloc_ptr_array + 8]
@@ -326,12 +326,12 @@ define void @main() {
 ; CHECK-NEXT:   store b7 %mixed_b7, ptr %alloc_byte, align 1
 ; CHECK-NEXT:   %mixed_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!101 
 ; CHECK-NEXT:   store b7 poison, ptr %alloc_byte, align 1
-; CHECK-NEXT:   %poison_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!!!! 
+; CHECK-NEXT:   %poison_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0x!! 
 ; CHECK-NEXT:   %undef_alloc = alloca i8, align 1 => ptr 0xF9 [undef_alloc (dead)]
 ; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %undef_alloc)
 ; CHECK-NEXT:   %undef_b7 = load b7, ptr %undef_alloc, align 1 => b7 !!!!!!! 
 ; CHECK-NEXT:   store b7 %undef_b7, ptr %alloc_byte, align 1
-; CHECK-NEXT:   %undef_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!!!! 
+; CHECK-NEXT:   %undef_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0x!! 
 ; CHECK-NEXT:   %b13_poison = bitinsert b13 poison, i3 -3, i32 0 => b13 !!!!! !!!!!101 
 ; CHECK-NEXT:   %b13_val = bitinsert b13 %b13_poison, i3 3, i32 10 => b13 011!! !!!!!101 
 ; CHECK-NEXT:   %b13_dst = alloca i16, align 2 => ptr 0xFC [b13_dst]
