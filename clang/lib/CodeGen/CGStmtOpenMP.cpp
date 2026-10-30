@@ -3993,8 +3993,9 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
     }
     CodeGenFunction::OMPCancelStackRAII CancelRegion(CGF, EKind, HasCancel);
 
-    CodeGenModule &CGM = CGF.CGM;
-    if (CGM.getOpenMPRuntime().canPromoteToNoLoop(S)) {
+    CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
+    bool NoLoop = RT.canPromoteToNoLoop(S);
+    if (NoLoop || RT.canPromoteToGridStrideLoop(S)) {
       // Prepare the loop variables and their privatization.
       emitLoopIterationspaceVars(CGF, S);
       OMPLoopScope PreInitScope(CGF, S);
@@ -4005,11 +4006,13 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
       (void)PrivateScope.Privatize();
 
       CodeGenFunction::OMPPrivateScope LastprivateScope(CGF);
+      CGOpenMPRuntime::LastprivateConditionalRAII LPCRegion(
+          CGF, S, CGF.EmitLValue(S.getIterationVariable()));
       (void)CGF.EmitOMPLastprivateClauseInit(S, LastprivateScope);
       (void)LastprivateScope.Privatize();
 
       if (isOpenMPTargetExecutionDirective(EKind))
-        CGM.getOpenMPRuntime().adjustTargetSpecificDataForLambdas(CGF, S);
+        RT.adjustTargetSpecificDataForLambdas(CGF, S);
 
       // Rebuild what the OMPCanonicalLoop node supplies under the IRBuilder
       // flag: iteration count, loop, index-to-variable mapping, body.
@@ -4029,8 +4032,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
 
       llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
           CGF.AllocaInsertPt->getIterator());
-      llvm::OpenMPIRBuilder &OMPBuilder =
-          CGM.getOpenMPRuntime().getOMPBuilder();
+      llvm::OpenMPIRBuilder &OMPBuilder = RT.getOMPBuilder();
       bool NeedsLastprivateFinalCopy = hasLoopLastprivateVariable(
           S, [&S](const Expr *E) { return !isLoopCounter(S, E); });
 
@@ -4043,7 +4045,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
           /*HasMonotonicModifier=*/false, /*HasNonmonotonicModifier=*/false,
           /*HasOrderedClause=*/false,
           llvm::omp::WorksharingLoopType::DistributeForStaticLoop,
-          /*NoLoop=*/true, /*HasDistSchedule=*/false,
+          /*NoLoop=*/NoLoop, /*HasDistSchedule=*/false,
           /*DistScheduleChunkSize=*/nullptr,
           /*NeedsLastIter=*/NeedsLastprivateFinalCopy));
 
@@ -6642,8 +6644,11 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
           !isOpenMPTeamsDirective(S.getDirectiveKind()))
         EmitOMPReductionClauseInit(S, LoopScope);
 
-      const bool NoLoopKernel = CGM.getOpenMPRuntime().canPromoteToNoLoop(S);
-      if (!NoLoopKernel)
+      // Defer lastprivate init to the parallel region for no-loop or
+      // grid-stride loop
+      const bool IsPromotedLoopKernel =
+          RT.canPromoteToNoLoop(S) || RT.canPromoteToGridStrideLoop(S);
+      if (!IsPromotedLoopKernel)
         HasLastprivateClause = EmitOMPLastprivateClauseInit(S, LoopScope);
 
       EmitOMPPrivateLoopCounters(S, LoopScope);
@@ -6673,8 +6678,9 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
 
       // omit the outer distribute loop and let the inner worksharing loop
       // schedule the flattened team/thread iteration space, necessary for
-      // GPU fused schedule and no-loop optimization
-      if (canEmitGPUFusedDistSchedule(CGM, S, EKind) || NoLoopKernel) {
+      // GPU fused schedule and loop-grid optimization (no-loop & grid-stride
+      // loop).
+      if (canEmitGPUFusedDistSchedule(CGM, S, EKind) || IsPromotedLoopKernel) {
         JumpDest LoopExit =
             getJumpDestInCurrentScope(createBasicBlock("omp.loop.exit"));
         CodeGenLoop(*this, S, LoopExit);
@@ -6778,12 +6784,14 @@ void CodeGenFunction::EmitOMPDistributeLoop(const OMPLoopDirective &S,
         }
       }
       if (isOpenMPSimdDirective(S.getDirectiveKind()) ||
-          (NoLoopKernel && hasLoopLastprivateVariable(S, [&S](const Expr *E) {
-             return isLoopCounter(S, E);
-           }))) {
+          (IsPromotedLoopKernel &&
+           hasLoopLastprivateVariable(
+               S, [&S](const Expr *E) { return isLoopCounter(S, E); }))) {
         EmitOMPSimdFinal(
-            S, [IL, &S, NoLoopKernel](CodeGenFunction &CGF) -> llvm::Value * {
-              if (NoLoopKernel)
+            S,
+            [IL, &S,
+             IsPromotedLoopKernel](CodeGenFunction &CGF) -> llvm::Value * {
+              if (IsPromotedLoopKernel)
                 return nullptr;
               return CGF.Builder.CreateIsNotNull(
                   CGF.EmitLoadOfScalar(IL, S.getBeginLoc()));
@@ -9108,7 +9116,8 @@ emitTeamsGenericLoopAsDistributeParallelFor(CodeGenFunction &CGF,
 
 void CodeGenFunction::EmitOMPTeamsGenericLoopDirective(
     const OMPTeamsGenericLoopDirective &S) {
-  if (CGM.getOpenMPRuntime().canPromoteToNoLoop(S)) {
+  if (CGM.getOpenMPRuntime().canPromoteToNoLoop(S) ||
+      CGM.getOpenMPRuntime().canPromoteToGridStrideLoop(S)) {
     emitTeamsGenericLoopAsDistributeParallelFor(*this, S);
     return;
   }

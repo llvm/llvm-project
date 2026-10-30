@@ -706,8 +706,8 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
       "Unknown programming model for OpenMP directive on NVPTX target.");
 }
 
-static bool isNoLoopCompatibleSchedule(ASTContext &Ctx,
-                                       const OMPLoopDirective &LD) {
+static bool isPromotableLoopSchedule(ASTContext &Ctx,
+                                     const OMPLoopDirective &LD) {
   const auto *C = LD.getSingleClause<OMPScheduleClause>();
   if (!C)
     return true;
@@ -728,17 +728,24 @@ static bool isNoLoopCompatibleSchedule(ASTContext &Ctx,
   }
 }
 
-static const OMPLoopDirective *
-checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
+void CGOpenMPRuntimeGPU::checkAndSetPromotableLoopDirective(
+    const OMPExecutableDirective &D) {
+  NoLoopDirective = nullptr;
+  GridStrideLoopDirective = nullptr;
+
+  ASTContext &Ctx = CGM.getContext();
   const LangOptions &LangOpts = Ctx.getLangOpts();
-  if (!LangOpts.OpenMPTeamSubscription || !LangOpts.OpenMPThreadSubscription)
-    return nullptr;
+  bool OneIterationPerThread =
+      LangOpts.OpenMPTeamSubscription && LangOpts.OpenMPThreadSubscription;
 
   const OMPExecutableDirective *Nested = &D;
   while (true) {
-    if (Nested->hasClausesOfKind<OMPNumTeamsClause>() ||
-        Nested->hasClausesOfKind<OMPReductionClause>())
-      return nullptr;
+    if (Nested->hasClausesOfKind<OMPReductionClause>())
+      return;
+
+    if (Nested->hasClausesOfKind<OMPNumTeamsClause>())
+      OneIterationPerThread = false;
+
     OpenMPDirectiveKind DKind = Nested->getDirectiveKind();
     if (DKind != OMPD_target && DKind != OMPD_target_teams &&
         DKind != OMPD_teams)
@@ -750,15 +757,14 @@ checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
                         CGOpenMPRuntime::getSingleCompoundChild(Ctx, Body))
                   : nullptr;
     if (!Nested)
-      return nullptr;
+      return;
   }
 
   const auto *LD = dyn_cast<OMPLoopDirective>(Nested);
   // Do not filter out 'ordered' since Sema rejects it on these directives.
-  if (!LD || LD->getLoopsNumber() != 1 ||
-      !isNoLoopCompatibleSchedule(Ctx, *LD) ||
+  if (!LD || LD->getLoopsNumber() != 1 || !isPromotableLoopSchedule(Ctx, *LD) ||
       LD->getSingleClause<OMPDistScheduleClause>())
-    return nullptr;
+    return;
 
   for (const auto *C : LD->getClausesOfKind<OMPIfClause>()) {
     if (C->getNameModifier() != OMPD_unknown &&
@@ -768,28 +774,36 @@ checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
     bool CondVal;
     if (!C->getCondition()->EvaluateAsBooleanCondition(CondVal, Ctx) ||
         !CondVal)
-      return nullptr;
+      return;
   }
 
-  auto getNoLoopDirective = [LD](bool Promotable) -> const OMPLoopDirective * {
-    return Promotable ? LD : nullptr;
+  auto setPromotableLoop = [&](bool Promotable = true) {
+    if (!Promotable)
+      return;
+    if (OneIterationPerThread)
+      NoLoopDirective = LD;
+    else
+      GridStrideLoopDirective = LD;
   };
 
   if (const auto *TTLD = dyn_cast<OMPTargetTeamsGenericLoopDirective>(LD))
-    return getNoLoopDirective(TTLD->canBeParallelFor());
+    return setPromotableLoop(TTLD->canBeParallelFor());
   if (const auto *TLD = dyn_cast<OMPTeamsGenericLoopDirective>(LD))
-    return getNoLoopDirective(TLD->canBeParallelFor());
+    return setPromotableLoop(TLD->canBeParallelFor());
+
   if (!isOpenMPDistributeDirective(LD->getDirectiveKind()) ||
       !isOpenMPParallelDirective(LD->getDirectiveKind()))
-    return nullptr;
+    return;
+
   if (const auto *TTD =
           dyn_cast<OMPTargetTeamsDistributeParallelForDirective>(LD))
-    return getNoLoopDirective(!TTD->hasCancel());
+    return setPromotableLoop(!TTD->hasCancel());
   if (const auto *TD = dyn_cast<OMPTeamsDistributeParallelForDirective>(LD))
-    return getNoLoopDirective(!TD->hasCancel());
+    return setPromotableLoop(!TD->hasCancel());
   if (const auto *DD = dyn_cast<OMPDistributeParallelForDirective>(LD))
-    return getNoLoopDirective(!DD->hasCancel());
-  return LD;
+    return setPromotableLoop(!DD->hasCancel());
+
+  setPromotableLoop();
 }
 
 void CGOpenMPRuntimeGPU::emitNonSPMDKernel(const OMPExecutableDirective &D,
@@ -853,11 +867,15 @@ void CGOpenMPRuntimeGPU::emitKernelInit(const OMPExecutableDirective &D,
       IsSPMD ? llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD
              : llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
 
-  NoLoopDirective =
-      IsSPMD ? checkAndGetNoLoopDirective(CGM.getContext(), D) : nullptr;
-  if (NoLoopDirective)
-    Attrs.ExecFlags =
-        llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+  if (IsSPMD) {
+    checkAndSetPromotableLoopDirective(D);
+    if (NoLoopDirective)
+      Attrs.ExecFlags =
+          llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
+    else if (GridStrideLoopDirective)
+      Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::
+          OMP_TGT_EXEC_MODE_SPMD_GRID_STRIDE_LOOP;
+  }
 
   computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
 

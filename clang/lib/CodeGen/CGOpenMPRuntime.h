@@ -676,6 +676,12 @@ public:
     return false;
   }
 
+  /// Check whether \a S is the loop the target kernel being emitted was
+  /// promoted for, to complete the promotion to a grid-stride loop SPMD kernel.
+  virtual bool canPromoteToGridStrideLoop(const OMPLoopDirective &S) const {
+    return false;
+  }
+
   /// Get call to __kmpc_alloc_shared
   virtual std::pair<llvm::Value *, llvm::Value *>
   getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) {

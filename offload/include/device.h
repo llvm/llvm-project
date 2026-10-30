@@ -67,6 +67,9 @@ struct KernelLaunchInfoTy {
   bool isNoLoopMode() const {
     return Mode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
   }
+  bool isGridStrideLoopMode() const {
+    return Mode == llvm::omp::OMP_TGT_EXEC_MODE_SPMD_GRID_STRIDE_LOOP;
+  }
 
   static const char *getExecutionModeName(llvm::omp::OMPTgtExecModeFlags Mode) {
     switch (Mode) {
@@ -80,6 +83,8 @@ struct KernelLaunchInfoTy {
       return "Generic-SPMD";
     case llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
       return "SPMD-No-Loop";
+    case llvm::omp::OMP_TGT_EXEC_MODE_SPMD_GRID_STRIDE_LOOP:
+      return "SPMD-Grid-Stride-Loop";
     }
     return "Unknown";
   }
