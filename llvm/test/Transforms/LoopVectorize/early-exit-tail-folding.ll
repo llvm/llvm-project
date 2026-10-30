@@ -273,72 +273,42 @@ exit:
 }
 
 define void @early_exit_with_store_after_exit(ptr align 4 dereferenceable(4096) noalias %dst, ptr align 4 dereferenceable(4096) %pred) {
-; PREFER-LABEL: define void @early_exit_with_store_after_exit(
-; PREFER-SAME: ptr noalias align 4 dereferenceable(4096) [[DST:%.*]], ptr align 4 dereferenceable(4096) [[PRED:%.*]]) {
-; PREFER-NEXT:  [[ENTRY:.*:]]
-; PREFER-NEXT:    br label %[[VECTOR_PH:.*]]
-; PREFER:       [[VECTOR_PH]]:
-; PREFER-NEXT:    br label %[[VECTOR_BODY:.*]]
-; PREFER:       [[VECTOR_BODY]]:
-; PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
-; PREFER-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i32, ptr [[PRED]], i32 [[INDEX]]
-; PREFER-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; PREFER-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 500)
-; PREFER-NEXT:    [[TMP2:%.*]] = freeze <4 x i1> [[TMP1]]
-; PREFER-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> [[TMP2]])
-; PREFER-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[DST]], i32 [[INDEX]]
-; PREFER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP4]], <4 x i1> [[TMP3]], <4 x i32> poison)
-; PREFER-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 1)
-; PREFER-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP5]], ptr align 4 [[TMP4]], <4 x i1> [[TMP3]])
-; PREFER-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP2]])
-; PREFER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; PREFER-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 120
-; PREFER-NEXT:    br i1 [[TMP6]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
-; PREFER:       [[VECTOR_BODY_INTERIM]]:
-; PREFER-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; PREFER:       [[MIDDLE_BLOCK]]:
-; PREFER-NEXT:    br label %[[SCALAR_PH:.*]]
-; PREFER:       [[VECTOR_EARLY_EXIT]]:
-; PREFER-NEXT:    br label %[[EXIT:.*]]
-; PREFER:       [[SCALAR_PH]]:
-; PREFER-NEXT:    br label %[[LOOP:.*]]
-; PREFER:       [[LOOP]]:
-; PREFER-NEXT:    [[IV:%.*]] = phi i32 [ 120, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; PREFER-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[PRED]], i32 [[IV]]
-; PREFER-NEXT:    [[EE_VAL:%.*]] = load i32, ptr [[EE_ADDR]], align 4
-; PREFER-NEXT:    [[EE_COND:%.*]] = icmp sgt i32 [[EE_VAL]], 500
-; PREFER-NEXT:    br i1 [[EE_COND]], label %[[EXIT]], label %[[LATCH]]
-; PREFER:       [[LATCH]]:
-; PREFER-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i32 [[IV]]
-; PREFER-NEXT:    [[DATA:%.*]] = load i32, ptr [[ST_ADDR]], align 4
-; PREFER-NEXT:    [[INC:%.*]] = add nsw i32 [[DATA]], 1
-; PREFER-NEXT:    store i32 [[INC]], ptr [[ST_ADDR]], align 4
-; PREFER-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; PREFER-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 123
-; PREFER-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
-; PREFER:       [[EXIT]]:
-; PREFER-NEXT:    ret void
-;
-; MUST-LABEL: define void @early_exit_with_store_after_exit(
-; MUST-SAME: ptr noalias align 4 dereferenceable(4096) [[DST:%.*]], ptr align 4 dereferenceable(4096) [[PRED:%.*]]) {
-; MUST-NEXT:  [[ENTRY:.*]]:
-; MUST-NEXT:    br label %[[LOOP:.*]]
-; MUST:       [[LOOP]]:
-; MUST-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
-; MUST-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[PRED]], i32 [[IV]]
-; MUST-NEXT:    [[EE_VAL:%.*]] = load i32, ptr [[EE_ADDR]], align 4
-; MUST-NEXT:    [[EE_COND:%.*]] = icmp sgt i32 [[EE_VAL]], 500
-; MUST-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[LATCH]]
-; MUST:       [[LATCH]]:
-; MUST-NEXT:    [[ST_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[DST]], i32 [[IV]]
-; MUST-NEXT:    [[DATA:%.*]] = load i32, ptr [[ST_ADDR]], align 4
-; MUST-NEXT:    [[INC:%.*]] = add nsw i32 [[DATA]], 1
-; MUST-NEXT:    store i32 [[INC]], ptr [[ST_ADDR]], align 4
-; MUST-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; MUST-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 123
-; MUST-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]]
-; MUST:       [[EXIT]]:
-; MUST-NEXT:    ret void
+; CHECK-LABEL: define void @early_exit_with_store_after_exit(
+; CHECK-SAME: ptr noalias align 4 dereferenceable(4096) [[DST:%.*]], ptr align 4 dereferenceable(4096) [[PRED:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY_INTERIM]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], splat (i8 122)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i32, ptr [[PRED]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP1]], <4 x i1> [[TMP0]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[WIDE_MASKED_LOAD]], splat (i32 500)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP5]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i32, ptr [[DST]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr align 4 [[TMP7]], <4 x i1> [[TMP6]], <4 x i32> poison)
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw <4 x i32> [[WIDE_MASKED_LOAD1]], splat (i32 1)
+; CHECK-NEXT:    call void @llvm.masked.store.v4i32.p0(<4 x i32> [[TMP8]], ptr align 4 [[TMP7]], <4 x i1> [[TMP6]])
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP9]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP10]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i32 [[INDEX_NEXT]], 124
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
@@ -382,7 +352,7 @@ define i32 @countable_early_exit(ptr align 4 dereferenceable(4096) %p, i32 %n) {
 ; PREFER-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; PREFER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; PREFER-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; PREFER-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; PREFER-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; PREFER:       [[MIDDLE_BLOCK]]:
 ; PREFER-NEXT:    br label %[[SCALAR_PH]]
 ; PREFER:       [[SCALAR_PH]]:
@@ -397,7 +367,7 @@ define i32 @countable_early_exit(ptr align 4 dereferenceable(4096) %p, i32 %n) {
 ; PREFER-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP]], align 4
 ; PREFER-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; PREFER-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 123
-; PREFER-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP9:![0-9]+]]
+; PREFER-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]
 ; PREFER:       [[EXIT]]:
 ; PREFER-NEXT:    [[RES:%.*]] = phi i32 [ 0, %[[LOOP]] ], [ [[LD]], %[[LATCH]] ]
 ; PREFER-NEXT:    ret i32 [[RES]]
@@ -463,7 +433,7 @@ define void @early_exit_with_store(ptr align 4 dereferenceable(4096) noalias %ds
 ; PREFER-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; PREFER-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 120
 ; PREFER-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
-; PREFER-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; PREFER-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; PREFER:       [[MIDDLE_BLOCK]]:
 ; PREFER-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP2]], i1 false)
 ; PREFER-NEXT:    [[TMP10:%.*]] = trunc i64 [[TMP9]] to i32
@@ -485,7 +455,7 @@ define void @early_exit_with_store(ptr align 4 dereferenceable(4096) noalias %ds
 ; PREFER:       [[LATCH]]:
 ; PREFER-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; PREFER-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 123
-; PREFER-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; PREFER-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
 ; PREFER:       [[EXIT]]:
 ; PREFER-NEXT:    ret void
 ;
