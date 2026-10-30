@@ -256,7 +256,7 @@ void DebuggerThread::ContinueAsyncException(ExceptionResult result) {
 
   Log *log = GetLog(WindowsLog::Process | WindowsLog::Exception);
   LLDB_LOG(log, "broadcasting for inferior process {0}.",
-           m_process.GetProcessId());
+           GetProcess().GetProcessId());
 
   m_exception_pred.SetValue(result, eBroadcastAlways);
 }
@@ -266,10 +266,7 @@ void DebuggerThread::ContinueAsyncDllEvent() {
 }
 
 void DebuggerThread::FreeProcessHandles() {
-  {
-    std::lock_guard<std::mutex> guard(m_process_mutex);
-    m_process = HostProcess();
-  }
+  *m_process.Lock() = HostProcess();
   m_main_thread = HostThread();
   if (m_image_file) {
     ::CloseHandle(m_image_file);
@@ -316,10 +313,10 @@ void DebuggerThread::DebugLoop() {
             HandleExitThreadEvent(dbe.u.ExitThread, dbe.dwThreadId);
         break;
       case EXIT_PROCESS_DEBUG_EVENT:
-        if (!::DuplicateHandle(::GetCurrentProcess(),
-                               m_process.GetNativeProcess().GetSystemHandle(),
-                               ::GetCurrentProcess(), &exited_process,
-                               SYNCHRONIZE, FALSE, 0))
+        if (!::DuplicateHandle(
+                ::GetCurrentProcess(),
+                GetProcess().GetNativeProcess().GetSystemHandle(),
+                ::GetCurrentProcess(), &exited_process, SYNCHRONIZE, FALSE, 0))
           exited_process = nullptr;
         should_debug = false;
         break;
@@ -463,7 +460,7 @@ DebuggerThread::HandleCreateThreadEvent(const CREATE_THREAD_DEBUG_INFO &info,
                                         DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event | WindowsLog::Thread);
   LLDB_LOG(log, "Thread {0} spawned in process {1}", thread_id,
-           m_process.GetProcessId());
+           GetProcess().GetProcessId());
   HostThread thread(info.hThread);
   thread.GetNativeThread().SetOwnsHandle(false);
   m_debug_delegate->OnCreateThread(thread);
@@ -529,9 +526,9 @@ DebuggerThread::HandleCreateProcessEvent(const CREATE_PROCESS_DEBUG_INFO &info,
   // info.hProcess and info.hThread are closed automatically by Windows when
   // EXIT_PROCESS_DEBUG_EVENT is received.
   {
-    std::lock_guard<std::mutex> guard(m_process_mutex);
-    m_process = HostProcess(info.hProcess);
-    static_cast<HostProcessWindows &>(m_process.GetNativeProcess())
+    auto process = m_process.Lock();
+    *process = HostProcess(info.hProcess);
+    static_cast<HostProcessWindows &>(process->GetNativeProcess())
         .SetOwnsHandle(false);
   }
   m_main_thread = HostThread(info.hThread);
@@ -550,7 +547,7 @@ DebuggerThread::HandleExitThreadEvent(const EXIT_THREAD_DEBUG_INFO &info,
                                       DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event | WindowsLog::Thread);
   LLDB_LOG(log, "Thread {0} exited with code {1} in process {2}", thread_id,
-           info.dwExitCode, m_process.GetProcessId());
+           info.dwExitCode, GetProcess().GetProcessId());
   m_debug_delegate->OnExitThread(thread_id, info.dwExitCode);
   return DBG_CONTINUE;
 }
@@ -559,7 +556,7 @@ DWORD
 DebuggerThread::HandleExitProcessEvent(const EXIT_PROCESS_DEBUG_INFO &info,
                                        DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event | WindowsLog::Thread);
-  LLDB_LOG(log, "process {0} exited with code {1}", m_process.GetProcessId(),
+  LLDB_LOG(log, "process {0} exited with code {1}", GetProcess().GetProcessId(),
            info.dwExitCode);
 
   m_debug_delegate->OnExitProcess(info.dwExitCode);
@@ -805,13 +802,13 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     lldb::addr_t load_addr = reinterpret_cast<lldb::addr_t>(info.lpBaseOfDll);
 
     LLDB_LOG(log, "Inferior {0} - DLL '{1}' loaded at address {2:x}...",
-             m_process.GetProcessId(), path, info.lpBaseOfDll);
+             GetProcess().GetProcessId(), path, info.lpBaseOfDll);
 
     m_dll_event_pred.SetValue(false, eBroadcastNever);
     action = m_debug_delegate->OnLoadDll(module_spec, load_addr, thread_id);
   };
 
-  HANDLE process = m_process.GetNativeProcess().GetSystemHandle();
+  HANDLE process = GetProcess().GetNativeProcess().GetSystemHandle();
 
   // Prefer the path the loader used for the DLL, which keeps the subst drive,
   // junction or symbolic link it was reached through.
@@ -862,7 +859,7 @@ DebuggerThread::HandleLoadDllEvent(const LOAD_DLL_DEBUG_INFO &info,
     LLDB_LOG(log,
              "Inferior {0} - could not resolve path for LOAD_DLL_DEBUG_EVENT "
              "(hFile={1}, base={2:x}, last error={3})",
-             m_process.GetProcessId(), info.hFile, info.lpBaseOfDll,
+             GetProcess().GetProcessId(), info.hFile, info.lpBaseOfDll,
              ::GetLastError());
 
   // Windows does not automatically close info.hFile, so we need to do it.
@@ -879,7 +876,7 @@ DebuggerThread::HandleUnloadDllEvent(const UNLOAD_DLL_DEBUG_INFO &info,
                                      DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
   LLDB_LOG(log, "process {0} unloading DLL at addr {1:x}.",
-           m_process.GetProcessId(), info.lpBaseOfDll);
+           GetProcess().GetProcessId(), info.lpBaseOfDll);
 
   m_dll_event_pred.SetValue(false, eBroadcastNever);
   DllEventAction action = m_debug_delegate->OnUnloadDll(
@@ -903,7 +900,7 @@ DWORD
 DebuggerThread::HandleRipEvent(const RIP_INFO &info, DWORD thread_id) {
   Log *log = GetLog(WindowsLog::Event);
   LLDB_LOG(log, "encountered error {0} (type={1}) in process {2} thread {3}",
-           info.dwError, info.dwType, m_process.GetProcessId(), thread_id);
+           info.dwError, info.dwType, GetProcess().GetProcessId(), thread_id);
 
   Status error(info.dwError, eErrorTypeWin32);
   m_debug_delegate->OnDebuggerError(error, info.dwType);
