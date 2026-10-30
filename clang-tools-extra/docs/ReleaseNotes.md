@@ -194,7 +194,8 @@ infrastructure are described first, followed by tool-specific sections.
   compares comments before an argument that follows a multi-token macro, such
   as `NULL`, with the parameter name. Added the
   {option}`CommentZeroIntegerLiterals` option to only add missing comments to
-  integer literals with the value zero.
+  integer literals with the value zero, and the {option}`IgnoredParameterNames`
+  option to skip parameters by name.
 
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring

@@ -62,6 +62,8 @@ private:
   const unsigned CommentZeroIntegerLiterals : 1;
   const std::vector<StringRef> NullPtrMacros;
   const std::vector<StringRef> BoolLiteralMacros;
+  const std::vector<StringRef> IgnoredParameterNames;
+  std::vector<llvm::Regex> IgnoredParameterNameRegexes;
   llvm::Regex IdentRE;
 
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,

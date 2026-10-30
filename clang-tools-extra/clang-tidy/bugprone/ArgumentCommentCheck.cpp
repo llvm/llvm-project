@@ -57,7 +57,20 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
           Options.get("NullPtrMacros", "NULL"))),
       BoolLiteralMacros(utils::options::parseStringList(
           Options.get("BoolLiteralMacros", "true;false"))),
-      IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
+      IgnoredParameterNames(utils::options::parseStringList(
+          Options.get("IgnoredParameterNames", ""))),
+      IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {
+  for (const StringRef Name : IgnoredParameterNames) {
+    llvm::Regex Regex(Name);
+    if (!Regex.isValid()) {
+      configurationDiag("Invalid regular expression '%0' in "
+                        "IgnoredParameterNames")
+          << Name;
+      continue;
+    }
+    IgnoredParameterNameRegexes.push_back(std::move(Regex));
+  }
+}
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
@@ -79,6 +92,8 @@ void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::options::serializeStringList(NullPtrMacros));
   Options.store(Opts, "BoolLiteralMacros",
                 utils::options::serializeStringList(BoolLiteralMacros));
+  Options.store(Opts, "IgnoredParameterNames",
+                utils::options::serializeStringList(IgnoredParameterNames));
 }
 
 void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -388,7 +403,10 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   for (unsigned I = 0; I < NumArgs; ++I) {
     const ParmVarDecl *PVD = Callee->getParamDecl(I);
     const IdentifierInfo *II = PVD->getIdentifier();
-    if (!II)
+    if (!II || llvm::any_of(IgnoredParameterNameRegexes,
+                            [II](const llvm::Regex &Regex) {
+                              return Regex.match(II->getName());
+                            }))
       continue;
     // Don't warn on arguments for parameters instantiated from template
     // parameter packs. If we find more arguments than the template

@@ -41,6 +41,14 @@ option. Default is `true`.
 When `true`, the check will ignore the single argument. Default is `false`.
 ```
 
+```{option} IgnoredParameterNames
+A semicolon-separated list of regular expressions for the parameter names that
+the check skips. The check neither compares the argument comment of a matching
+parameter nor adds a missing comment for it. A regular expression matches
+anywhere in the name unless you anchor it. Use the option for names that say
+nothing about the parameter, such as `^[a-z]$;^arg[0-9]*$`. Default is empty.
+```
+
 ```{option} CommentAnonymousInitLists
 When `true`, the check will add argument comments in the format
 `/*ParameterName=*/` right before anonymous braced-init list arguments
