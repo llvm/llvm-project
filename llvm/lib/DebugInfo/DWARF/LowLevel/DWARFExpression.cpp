@@ -95,6 +95,7 @@ static std::vector<Desc> getOpDescriptions() {
   Descriptions[DW_OP_convert] = Desc(Op::Dwarf5, Op::BaseTypeRef);
   Descriptions[DW_OP_regval_type] =
       Desc(Op::Dwarf5, Op::SizeLEB, Op::BaseTypeRef);
+  Descriptions[DW_OP_deref_type] = Desc(Op::Dwarf5, Op::Size1, Op::BaseTypeRef);
   Descriptions[DW_OP_WASM_location] =
       Desc(Op::Dwarf4, Op::SizeLEB, Op::WasmLocationArg);
   Descriptions[DW_OP_GNU_push_tls_address] = Desc(Op::Dwarf3);

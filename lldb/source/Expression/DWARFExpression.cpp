@@ -46,6 +46,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -333,7 +334,6 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_pick:        // 0x15 1 1-byte stack index
   case DW_OP_deref_size:  // 0x94 1 1-byte size of data retrieved
   case DW_OP_xderef_size: // 0x95 1 1-byte size of data retrieved
-  case DW_OP_deref_type:  // 0xa6 1 1-byte constant
     return 1;
 
   // Opcodes with a single 2 byte arguments
@@ -409,6 +409,11 @@ GetOpcodeDataSize(const DataExtractor &data, const lldb::offset_t data_offset,
   case DW_OP_bit_piece:   // 0x9d ULEB128 bit size, ULEB128 bit offset (DWARF3);
   case DW_OP_regval_type: // 0xa5 ULEB128 + ULEB128
     data.Skip_LEB128(&offset);
+    data.Skip_LEB128(&offset);
+    return offset - data_offset;
+
+  case DW_OP_deref_type: // 0xa6 1-byte size followed by ULEB128 type DIE offset
+    offset += 1;
     data.Skip_LEB128(&offset);
     return offset - data_offset;
 
@@ -1106,6 +1111,123 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   return llvm::Error::success();
 }
 
+static llvm::Error Evaluate_DW_OP_deref_type(EvalContext &eval_ctx,
+                                             unsigned size,
+                                             uint64_t relative_die_offset,
+                                             ByteOrder expression_byte_order) {
+  if (!eval_ctx.dwarf_cu)
+    return llvm::createStringError("DW_OP_deref_type requires a DWARF unit");
+  auto type = eval_ctx.dwarf_cu->GetDIEBitSizeAndEncoding(relative_die_offset);
+  if (!type)
+    return type.takeError();
+  const auto [bit_size, encoding] = *type;
+  if (size == 0 || bit_size == 0 || llvm::divideCeil(bit_size, 8) != size)
+    return llvm::createStringError(
+        "DW_OP_deref_type size (%u) does not match type size (%" PRIu64
+        " bits)",
+        size, bit_size);
+
+  const llvm::fltSemantics *semantics = nullptr;
+  if (encoding == DW_ATE_float) {
+    switch (bit_size) {
+    case 32:
+      semantics = &llvm::APFloat::IEEEsingle();
+      break;
+    case 64:
+      semantics = &llvm::APFloat::IEEEdouble();
+      break;
+    case 80:
+      semantics = &llvm::APFloat::x87DoubleExtended();
+      break;
+    default:
+      return llvm::createStringError("unsupported floating-point type size");
+    }
+  }
+
+  Value &value = eval_ctx.stack.back();
+  if (value.GetScalar().GetType() != Scalar::e_int)
+    return llvm::createStringError(
+        "DW_OP_deref_type requires an integral address");
+
+  Scalar scalar;
+  if (value.GetValueType() == Value::ValueType::HostAddress) {
+    // Implicit blocks use the expression's byte order. Other host buffers
+    // follow Value::GetValueAsData, including host-order scalar register
+    // buffers.
+    ByteOrder byte_order = expression_byte_order;
+    if (eval_ctx.loc_desc_kind != Implicit)
+      byte_order = eval_ctx.target
+                       ? eval_ctx.target->GetArchitecture().GetByteOrder()
+                       : endian::InlHostByteOrder();
+    if (const RegisterInfo *reg_info = value.GetRegisterInfo();
+        reg_info &&
+        !llvm::isa_and_present<RegisterTypeVector>(reg_info->register_type))
+      byte_order = endian::InlHostByteOrder();
+    const auto *bytes =
+        reinterpret_cast<const uint8_t *>(value.GetScalar().ULongLong());
+    const auto &buffer = value.GetBuffer();
+    const size_t available_size =
+        bytes == buffer.GetBytes() ? buffer.GetByteSize() : size;
+    DataExtractor data(
+        bytes, available_size, byte_order,
+        eval_ctx.target
+            ? eval_ctx.target->GetArchitecture().GetAddressByteSize()
+            : sizeof(void *));
+    if (Status error = scalar.SetValueFromData(data, lldb::eEncodingUint, size);
+        error.Fail())
+      return error.ToError();
+  } else if (eval_ctx.loc_desc_kind == Register ||
+             eval_ctx.loc_desc_kind == Implicit) {
+    // Match DW_OP_deref_size's handling of scalar register and implicit
+    // locations.
+    scalar = value.GetScalar();
+    scalar.TruncOrExtendTo(size * 8, /*sign=*/false);
+  } else {
+    if (!eval_ctx.target)
+      return llvm::createStringError("no target for DW_OP_deref_type");
+
+    Address address(value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS));
+    switch (value.GetValueType()) {
+    case Value::ValueType::FileAddress:
+      if (!eval_ctx.module_sp)
+        return llvm::createStringError(
+            "need module to resolve file address for DW_OP_deref_type");
+      if (!eval_ctx.module_sp->ResolveFileAddress(address.GetOffset(), address))
+        return llvm::createStringError(
+            "failed to resolve file address in module");
+      break;
+    case Value::ValueType::Scalar:
+    case Value::ValueType::LoadAddress:
+      break;
+    default:
+      return llvm::createStringError("invalid address for DW_OP_deref_type");
+    }
+
+    std::vector<uint8_t> bytes(size);
+    Status error;
+    if (eval_ctx.target->ReadMemory(address, bytes.data(), size, error) != size)
+      return llvm::createStringError(
+          "failed to dereference pointer for DW_OP_deref_type: %s",
+          error.Fail() ? error.AsCString() : "short memory read");
+
+    DataExtractor data(bytes.data(), bytes.size(),
+                       eval_ctx.target->GetArchitecture().GetByteOrder(),
+                       eval_ctx.target->GetArchitecture().GetAddressByteSize());
+    error = scalar.SetValueFromData(data, lldb::eEncodingUint, size);
+    if (error.Fail())
+      return error.ToError();
+  }
+
+  // Keep the referenced type's width rather than extending to the generic type.
+  const bool sign = encoding == DW_ATE_signed || encoding == DW_ATE_signed_char;
+  scalar.TruncOrExtendTo(bit_size, sign);
+  if (semantics)
+    scalar = Scalar(llvm::APFloat(*semantics, scalar.GetAPSInt()));
+  value = Value(scalar);
+  eval_ctx.loc_desc_kind = Memory;
+  return llvm::Error::success();
+}
+
 static llvm::Error Evaluate_DW_OP_piece(EvalContext &eval_ctx,
                                         uint64_t piece_byte_size) {
   LocationDescriptionKind piece_locdesc = eval_ctx.loc_desc_kind;
@@ -1530,6 +1652,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
               Evaluate_DW_OP_deref(eval_ctx, opcode, size, address_size))
         return err;
     } break;
+
+    case DW_OP_deref_type:
+      if (llvm::Error err = Evaluate_DW_OP_deref_type(
+              eval_ctx, op->getRawOperand(0), op->getRawOperand(1),
+              opcodes.GetByteOrder()))
+        return err;
+      break;
 
     case DW_OP_const1u:
       stack.push_back(to_generic(op->getRawOperand(0)));
@@ -2221,7 +2350,6 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_constx:
     case DW_OP_const_type:
     case DW_OP_regval_type:
-    case DW_OP_deref_type:
     case DW_OP_xderef_type:
     case DW_OP_reinterpret:
     case DW_OP_GNU_implicit_pointer:
