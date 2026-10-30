@@ -125,46 +125,46 @@ v_pk_mov_b32 v[0:1], v[2:3], v[5:6]
 // GFX90A: :[[@LINE-1]]:30: error: invalid operand for instruction
 
 ds_add_rtn_f64 a[0:1], v2, a[1:2]
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:28: error: invalid operand for instruction
 
 ds_add_rtn_f64 a[1:2], v2, a[2:3]
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:16: error: invalid operand for instruction
 
 ds_cmpst_b64 v1, a[1:2], a[4:5]
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 ds_cmpst_rtn_b64 a[1:2], v1, a[4:5], a[6:7]
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:18: error: invalid operand for instruction
 
 ds_cmpst_rtn_b64 a[2:3], v1, a[5:6], a[6:7]
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:30: error: invalid operand for instruction
 
 ds_cmpst_rtn_b64 a[2:3], v1, a[4:5], a[7:8]
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:38: error: invalid operand for instruction
 
 ds_write2_b64 v1, a[1:2], a[4:5] offset1:1
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:19: error: invalid operand for instruction
 
 ds_write2_b64 v1, a[2:3], a[5:6] offset1:1
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:27: error: invalid operand for instruction
 
 ds_wrxchg2_rtn_b32 a[1:2], v1, a2, a3 offset1:1
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:20: error: invalid operand for instruction
 
 ds_wrxchg2_rtn_b64 a[1:4], v1, a[4:5], a[6:7] offset1:1
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:20: error: invalid operand for instruction
 
 flat_atomic_add_f64 a[1:2], v[0:1], a[2:3] glc
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:21: error: invalid operand for instruction
 
 global_atomic_add_f64 a[1:2], v[0:1], a[2:3], off glc
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:23: error: invalid operand for instruction
 
 global_atomic_cmpswap v[0:1], a[1:2], off
 // GFX90A: :[[@LINE-1]]:31: error: invalid operand for instruction
 
 global_atomic_cmpswap a0, v[0:1], a[1:2], off glc
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:35: error: invalid operand for instruction
 
 global_atomic_cmpswap_x2 a[0:1], v[0:1], a[1:4], off glc
-// GFX90A: :[[@LINE-1]]:1: error: invalid register class: vgpr tuples must be 64 bit aligned
+// GFX90A: :[[@LINE-1]]:42: error: invalid operand for instruction
