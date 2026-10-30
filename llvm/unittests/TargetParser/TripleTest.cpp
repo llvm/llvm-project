@@ -4084,6 +4084,17 @@ TEST(DataLayoutTest, NVPTX) {
                                    "p6:32:32", "p7:32:32", "p101:32:32"));
 }
 
+TEST(DataLayoutTest, PowerPC64FreeBSD) {
+  // FreeBSD uses the ELFv2 ABI on both big- and little-endian powerpc64 and
+  // shares the 16-byte stack alignment and the vector alignment of Linux.
+  EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
+            Triple("powerpc64le-unknown-linux-gnu").computeDataLayout());
+  EXPECT_EQ(Triple("powerpc64le-unknown-freebsd").computeDataLayout(),
+            "e-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
+  EXPECT_EQ(Triple("powerpc64-unknown-freebsd").computeDataLayout(),
+            "E-m:e-Fn32-i64:64-i128:128-n32:64-S128-v256:256:256-v512:512:512");
+}
+
 TEST(DataLayoutTest, CheriRISCV32) {
   Triple TT = Triple("riscv32-unknown-unknown");
 
