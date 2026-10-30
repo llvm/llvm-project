@@ -115,9 +115,10 @@ private:
   std::unique_ptr<Impl> PImpl;
 };
 
-/// A streaming writer for an MSFZ container.  Its WritableBinaryStream
-/// interface accepts writes to physical MSF offsets and emits the corresponding
-/// logical PDB streams.
+/// A streaming writer that maps a classic MSF layout to an MSFZ container.
+/// Although we represent those offsets as if they were in an MSF image, none
+/// is ever written to disk. The writer maps addressed MSF blocks to logical
+/// streams and requires contiguous, forward writes within each stream.
 class LLVM_ABI MSFZWriter : public WritableBinaryStream {
 public:
   /// Create a writer using zstd's fastest compression level.
@@ -132,8 +133,12 @@ public:
   /// Create a writer using \p CompressionLevel.
   ///
   /// The level must be within the range accepted by LLVM's zstd support.
-  /// \p ChunkSize limits the uncompressed size of each compression chunk,
-  /// between 4096 and 1073741824 bytes. Writes are split at chunk boundaries.
+  /// \p ChunkSize is the maximum uncompressed size of an MSFZ compression
+  /// chunk, between 4096 and 1073741824 bytes. Compressed stream data shares
+  /// a chunk buffer across MSF block and logical stream boundaries; neither
+  /// boundary flushes it. A chunk may contain fragments from multiple streams,
+  /// and a stream may span chunks. Full chunks are emitted as they fill;
+  /// finalize() emits any remaining partial chunk.
   /// Invalid levels, invalid layouts, and output-file failures are returned as
   /// errors.
   static Expected<std::unique_ptr<MSFZWriter>>
@@ -145,12 +150,21 @@ public:
   MSFZWriter &operator=(const MSFZWriter &) = delete;
 
   llvm::endianness getEndian() const override;
+
+  /// Reading is unsupported; returns an error without interpreting \p Offset.
   Error readBytes(uint64_t Offset, uint64_t Size,
                   ArrayRef<uint8_t> &Buffer) override;
+
+  /// Reading is unsupported; returns an error without interpreting \p Offset.
   Error readLongestContiguousChunk(uint64_t Offset,
                                    ArrayRef<uint8_t> &Buffer) override;
+
+  /// getLength() returns the virtual MSF image's size, not the MSFZ output size.
   uint64_t getLength() override;
-  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> Data) override;
+
+  /// Offsets passed to writeBytes() are byte offsets in the (virtual) MSF image,
+  /// not offsets in the MSFZ output file or within a logical PDB stream.
+  Error writeBytes(uint64_t MSFLayoutOffset, ArrayRef<uint8_t> Data) override;
 
   /// Satisfy WritableBinaryStream's commit interface without publishing output.
   ///
@@ -158,17 +172,20 @@ public:
   /// ID patch, so callers must invoke finalize() to produce \p Path.
   Error commit() override;
 
-  /// Reserve one stream uncompressed immediately after the MSFZ header.
+  /// Reserve one stream's entire contents uncompressed immediately after the
+  /// MSFZ header, rather than packing it into compression chunks.
   ///
   /// This must be called before writing any stream, at most once per writer.
-  /// The first \p PatchablePrefixSize bytes can subsequently be changed with
-  /// patchStream(). The stream must be non-nil and the prefix must fit within
-  /// it.
+  /// Only the first \p PatchablePrefixSize bytes can subsequently be changed
+  /// with patchStream(). The stream must be non-nil and the prefix must fit
+  /// within it.
   Error setInitialUncompressedStream(uint32_t StreamIndex,
                                      uint32_t PatchablePrefixSize);
 
   /// Replace bytes in the prefix registered by setInitialUncompressedStream().
   ///
+  /// \p Offset is a byte offset within the logical stream identified by
+  /// \p StreamIndex, not within the virtual MSF image or the MSFZ output file.
   /// The range must be inside both the retained prefix and data already
   /// written. Patching does not change the canonical digest.
   Error patchStream(uint32_t StreamIndex, uint32_t Offset,

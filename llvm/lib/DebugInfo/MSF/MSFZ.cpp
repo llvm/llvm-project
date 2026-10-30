@@ -659,19 +659,20 @@ public:
     return takeOutputError();
   }
 
-  uint64_t getLength() const { return FileSize; }
+  uint64_t getLength() const { return MSFImageSize; }
 
-  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> Data) {
+  Error writeBytes(uint64_t MSFLayoutOffset, ArrayRef<uint8_t> Data) {
     if (Finalized)
       return streamError("MSFZ output: write after finalization");
     if (Data.empty())
       return Error::success();
-    if (Offset > FileSize || Data.size() > FileSize - Offset)
+    if (MSFLayoutOffset > MSFImageSize ||
+        Data.size() > MSFImageSize - MSFLayoutOffset)
       return streamError("MSFZ output: write is outside the MSF layout");
 
     while (!Data.empty()) {
-      uint64_t Block = Offset / BlockSize;
-      uint32_t OffsetInBlock = Offset % BlockSize;
+      uint64_t Block = MSFLayoutOffset / BlockSize;
+      uint32_t OffsetInBlock = MSFLayoutOffset % BlockSize;
       if (Block >= BlockLocations.size())
         return streamError("MSFZ output: write references an invalid block");
       const BlockLocation &Location = BlockLocations[Block];
@@ -693,7 +694,7 @@ public:
         return E;
       Stream.Hash.update(Data.take_front(Bytes));
       Stream.NextOffset += Bytes;
-      Offset += Bytes;
+      MSFLayoutOffset += Bytes;
       Data = Data.drop_front(Bytes);
     }
     return Error::success();
@@ -837,7 +838,7 @@ private:
     BlockSize = Layout.SB->BlockSize;
     if (BlockSize == 0)
       return streamError("MSFZ output: invalid MSF block size");
-    FileSize = uint64_t(BlockSize) * Layout.SB->NumBlocks;
+    MSFImageSize = uint64_t(BlockSize) * Layout.SB->NumBlocks;
     BlockLocations.resize(Layout.SB->NumBlocks);
     Streams.reserve(Layout.StreamSizes.size());
     for (size_t I = 0; I != Layout.StreamSizes.size(); ++I) {
@@ -1072,7 +1073,7 @@ private:
   std::deque<PendingChunk> PendingChunks;
   size_t QueuedCompressionBytes = 0;
   unsigned MaxPendingChunks = 1;
-  uint64_t FileSize = 0;
+  uint64_t MSFImageSize = 0;
   uint32_t BlockSize = 0;
   std::vector<BlockLocation> BlockLocations;
   SmallVector<uint8_t, 0> ChunkData;
@@ -1134,8 +1135,8 @@ Error MSFZWriter::readLongestContiguousChunk(uint64_t Offset,
 
 uint64_t MSFZWriter::getLength() { return PImpl->getLength(); }
 
-Error MSFZWriter::writeBytes(uint64_t Offset, ArrayRef<uint8_t> Data) {
-  return PImpl->writeBytes(Offset, Data);
+Error MSFZWriter::writeBytes(uint64_t MSFLayoutOffset, ArrayRef<uint8_t> Data) {
+  return PImpl->writeBytes(MSFLayoutOffset, Data);
 }
 
 Error MSFZWriter::commit() { return Error::success(); }
