@@ -34,6 +34,7 @@ bool agxExperimentalLeafCallsEnabled();
 
 // IR passes.
 ModulePass *createAGXAlwaysInlinePass();
+ModulePass *createAGXGlobalDataArgsPass();
 ModulePass *createAGXLowerAIRPass(const AGXTargetMachine *TM);
 ModulePass *createAGXPromoteKernelArgsPass();
 ModulePass *createAGXCheckedAccessesPass(const AGXTargetMachine *TM);

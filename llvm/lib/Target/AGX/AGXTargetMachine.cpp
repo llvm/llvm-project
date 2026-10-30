@@ -306,8 +306,11 @@ void AGXPassConfig::addIRPasses() {
   // Inlining non-callable wrappers can leave outlined leaves with no users.
   // Removing them before per-function codegen is material for large PTX
   // modules, where even dead device functions may be thousands of blocks.
-  if (agxExperimentalLeafCallsEnabled())
+  if (agxExperimentalLeafCallsEnabled()) {
     addPass(createGlobalDCEPass());
+    // Called functions reach the global data buffer through a parameter.
+    addPass(createAGXGlobalDataArgsPass());
+  }
 
   // 64- and 128-bit atomics take locks; the others are hardware atomics.
   addPass(createAGXExpandWideAtomicsPass(&getAGXTargetMachine()));
