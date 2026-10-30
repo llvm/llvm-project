@@ -7809,15 +7809,19 @@ bool AArch64TTIImpl::isLSRCostLess(
     const TargetTransformInfo::LSRCost &C1,
     const TargetTransformInfo::LSRCost &C2) const {
   // AArch64 specific here is adding the number of instructions to the
-  // comparison (though not as the first consideration, as some targets do)
+  // comparison (though not as the first consideration, as some targets do),
+  // preferring lower number of pre/post-index if numregs and insns are equal,
+  // as typically pre/post-index instructions use extra processor resources,
   // along with changing the priority of the base additions.
   // TODO: Maybe a more nuanced tradeoff between instruction count
   // and number of registers? To be investigated at a later date.
   if (ST->getCLOpts().enable_aarch64_lsr_cost_opt)
-    return std::tie(C1.NumRegs, C1.Insns, C1.NumBaseAdds, C1.AddRecCost,
-                    C1.NumIVMuls, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
-           std::tie(C2.NumRegs, C2.Insns, C2.NumBaseAdds, C2.AddRecCost,
-                    C2.NumIVMuls, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
+    return std::tie(C1.NumRegs, C1.Insns, C1.NumPrePostIndex, C1.NumBaseAdds,
+                    C1.AddRecCost, C1.NumIVMuls, C1.ScaleCost, C1.ImmCost,
+                    C1.SetupCost) <
+           std::tie(C2.NumRegs, C2.Insns, C2.NumPrePostIndex, C2.NumBaseAdds,
+                    C2.AddRecCost, C2.NumIVMuls, C2.ScaleCost, C2.ImmCost,
+                    C2.SetupCost);
 
   return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }

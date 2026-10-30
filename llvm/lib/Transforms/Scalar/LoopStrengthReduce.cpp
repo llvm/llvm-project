@@ -1203,6 +1203,7 @@ public:
     C.ImmCost = 0;
     C.SetupCost = 0;
     C.ScaleCost = 0;
+    C.NumPrePostIndex = 0;
   }
 
   bool isLess(const Cost &Other) const;
@@ -1212,10 +1213,11 @@ public:
 #ifndef NDEBUG
   // Once any of the metrics loses, they must all remain losers.
   bool isValid() {
-    return ((C.Insns | C.NumRegs | C.AddRecCost | C.NumIVMuls | C.NumBaseAdds
-             | C.ImmCost | C.SetupCost | C.ScaleCost) != ~0u)
-      || ((C.Insns & C.NumRegs & C.AddRecCost & C.NumIVMuls & C.NumBaseAdds
-           & C.ImmCost & C.SetupCost & C.ScaleCost) == ~0u);
+    return ((C.Insns | C.NumRegs | C.AddRecCost | C.NumIVMuls | C.NumBaseAdds |
+             C.ImmCost | C.SetupCost | C.ScaleCost | C.NumPrePostIndex) !=
+            ~0u) ||
+           ((C.Insns & C.NumRegs & C.AddRecCost & C.NumIVMuls & C.NumBaseAdds &
+             C.ImmCost & C.SetupCost & C.ScaleCost & C.NumPrePostIndex) == ~0u);
   }
 #endif
 
@@ -1426,8 +1428,10 @@ void Cost::RateRegister(const Formula &F, const SCEV *Reg,
                             !isa<SCEVConstant>(Start) &&
                             SE->isLoopInvariant(Start, L);
         // We can only pre or post index when the load/store is unconditional.
-        if ((CanPreIndex || CanPostIndex) && LU.AllFixupsUnconditional)
+        if ((CanPreIndex || CanPostIndex) && LU.AllFixupsUnconditional) {
+          ++C.NumPrePostIndex;
           LoopCost = 0;
+        }
       }
     }
 
@@ -1607,6 +1611,7 @@ void Cost::Lose() {
   C.ImmCost = std::numeric_limits<unsigned>::max();
   C.SetupCost = std::numeric_limits<unsigned>::max();
   C.ScaleCost = std::numeric_limits<unsigned>::max();
+  C.NumPrePostIndex = std::numeric_limits<unsigned>::max();
 }
 
 /// Choose the lower cost.
@@ -1635,6 +1640,8 @@ void Cost::print(raw_ostream &OS) const {
     OS << ", plus " << C.ImmCost << " imm cost";
   if (C.SetupCost != 0)
     OS << ", plus " << C.SetupCost << " setup cost";
+  if (C.NumPrePostIndex != 0)
+    OS << ", plus " << C.NumPrePostIndex << " pre/post-index";
 }
 
 LLVM_DUMP_METHOD void Cost::dump() const {
