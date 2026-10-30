@@ -144,8 +144,8 @@ static bool isSafeToExecuteUnconditionally(
     const Loop *CurLoop, const LoopSafetyInfo *SafetyInfo,
     OptimizationRemarkEmitter *ORE, const Instruction *CtxI,
     AssumptionCache *AC, bool AllowSpeculation);
-static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
-                                    AAResults *AA, Loop *CurLoop,
+static bool noConflictingReadWrites(Instruction *I, Loop *CurLoop,
+                                    const SinkAndHoistDependencies &Deps,
                                     SinkAndHoistLICMFlags &Flags);
 static bool pointerInvalidatedByLoop(const SinkAndHoistDependencies &Deps,
                                      MemoryUse *MU, Loop *CurLoop,
@@ -177,8 +177,7 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
 using PointersAndHasReadsOutsideSet =
     std::pair<SmallSetVector<Value *, 8>, bool>;
 static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
-    MemorySSA *MSSA, AliasAnalysis *AA, DominatorTree *DT,
-    ICFLoopSafetyInfo *SafetyInfo,
+    const LICMDependencies &Deps,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L);
 
 namespace {
@@ -488,9 +487,7 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, const LICMDependencies &Deps,
         }
 
         for (auto [PointerMustAliases, HasReadsOutsideSet] :
-             collectPromotionCandidates(MSSA, &Deps.AA, &Deps.DT,
-                                        &Deps.SafetyInfo, LoopLocalAliasScopes,
-                                        L)) {
+             collectPromotionCandidates(Deps, LoopLocalAliasScopes, L)) {
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC,
               Deps, L, LicmAllowSpeculation, HasReadsOutsideSet);
@@ -998,7 +995,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I,
     if (Behavior.onlyWritesMemory()) {
       // can hoist or sink if there are no conflicting read/writes to the
       // memory location written to by the call.
-      return noConflictingReadWrites(CI, MSSA, &Deps.AA, CurLoop, Flags);
+      return noConflictingReadWrites(CI, CurLoop, Deps, Flags);
     }
 
     return false;
@@ -1017,7 +1014,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I,
     // arbitrary number of reads in the loop.
     if (isOnlyMemoryAccess(SI, CurLoop, Deps.MSSAU))
       return true;
-    return noConflictingReadWrites(SI, MSSA, &Deps.AA, CurLoop, Flags);
+    return noConflictingReadWrites(SI, CurLoop, Deps, Flags);
   }
 
   assert(!I.mayReadOrWriteMemory() && "unhandled aliasing");
@@ -2056,10 +2053,10 @@ static SmallPtrSet<const StoreInst *, 8> collectStoresWithInvariantAATags(
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
 static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
-    MemorySSA *MSSA, AliasAnalysis *AA, DominatorTree *DT,
-    ICFLoopSafetyInfo *SafetyInfo,
+    const LICMDependencies &Deps,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
-  BatchAAResults BatchAA(*AA);
+  MemorySSA *MSSA = Deps.MSSAU.getMemorySSA();
+  BatchAAResults BatchAA(Deps.AA, &Deps.EEA);
   AliasSetTracker AST(BatchAA);
 
   // Only conditionally executed stores need this, so compute it on demand to
@@ -2067,8 +2064,8 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
   std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
   auto HasInvariantAATags = [&](const StoreInst *SI) {
     if (!StoresWithInvariantAATags)
-      StoresWithInvariantAATags =
-          collectStoresWithInvariantAATags(MSSA, DT, LoopLocalAliasScopes, L);
+      StoresWithInvariantAATags = collectStoresWithInvariantAATags(
+          MSSA, &Deps.DT, LoopLocalAliasScopes, L);
     return StoresWithInvariantAATags->contains(SI);
   };
 
@@ -2079,7 +2076,7 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
       AttemptingPromotion.insert(I);
       if (StoreInst *SI = dyn_cast<StoreInst>(I);
           SI && SI->getAAMetadata() &&
-          !SafetyInfo->isGuaranteedToExecute(*SI, DT) &&
+          !Deps.SafetyInfo.isGuaranteedToExecute(*SI, &Deps.DT) &&
           !HasInvariantAATags(SI)) {
         // Promotion requires inserting a new store at the loop exits; we need
         // to prove that store doesn't alias anything, in addition to proving
@@ -2137,8 +2134,8 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
 // For a given store instruction or writeonly call instruction, this function
 // checks that there are no read or writes that conflict with the memory
 // access in the instruction
-static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
-                                    AAResults *AA, Loop *CurLoop,
+static bool noConflictingReadWrites(Instruction *I, Loop *CurLoop,
+                                    const SinkAndHoistDependencies &Deps,
                                     SinkAndHoistLICMFlags &Flags) {
   assert(isa<CallInst>(*I) || isa<StoreInst>(*I));
   // If there are more accesses than the Promotion cap, then give up as we're
@@ -2146,8 +2143,9 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
   if (Flags.tooManyMemoryAccesses())
     return false;
 
+  MemorySSA *MSSA = Deps.MSSAU.getMemorySSA();
   auto *IMD = MSSA->getMemoryAccess(I);
-  BatchAAResults BAA(*AA);
+  BatchAAResults BAA(Deps.AA, &Deps.EEA);
   auto *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, IMD);
   // Make sure there are no clobbers inside the loop.
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))

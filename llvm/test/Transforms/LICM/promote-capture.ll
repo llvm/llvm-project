@@ -70,11 +70,12 @@ define void @test_captured_after_loop_unrelated_load(ptr %pp, i32 %len) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[I]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[C_INC]] = add i32 [[C_INC1]], [[V]]
-; CHECK-NEXT:    store i32 [[C_INC]], ptr [[COUNT]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
+; CHECK-NEXT:    [[C_INC_LCSSA:%.*]] = phi i32 [ [[C_INC]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[C_INC_LCSSA]], ptr [[COUNT]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
 ; CHECK-NEXT:    ret void
 ;
