@@ -240,16 +240,16 @@ body:             |
   ; RV64I-NEXT:   $x6 = ADDI $x0, 1
   ; RV64I-NEXT:   $x7 = ADDI $x0, 2
   ; RV64I-NEXT:   $x10 = LUI 10
-  ; RV64I-NEXT:   $x6 = SUB $x2, killed $x10
-  ; RV64I-NEXT:   $x7 = frame-setup LUI 1
+  ; RV64I-NEXT:   $x5 = SUB $x2, killed $x10
+  ; RV64I-NEXT:   $x28 = frame-setup LUI 1
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT: bb.3:
   ; RV64I-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
-  ; RV64I-NEXT:   liveins: $x6, $x7
+  ; RV64I-NEXT:   liveins: $x5, $x6, $x7, $x28
   ; RV64I-NEXT: {{  $}}
-  ; RV64I-NEXT:   $x2 = frame-setup SUB $x2, $x7
+  ; RV64I-NEXT:   $x2 = frame-setup SUB $x2, $x28
   ; RV64I-NEXT:   frame-setup SD $x0, $x2, 0
-  ; RV64I-NEXT:   frame-setup BNE $x2, $x6, %bb.3
+  ; RV64I-NEXT:   frame-setup BNE $x2, $x5, %bb.3
   ; RV64I-NEXT: {{  $}}
   ; RV64I-NEXT: bb.4:
   ; RV64I-NEXT:   successors: %bb.2(0x80000000)
@@ -293,16 +293,16 @@ body:             |
   ; RV32I-NEXT:   $x6 = ADDI $x0, 1
   ; RV32I-NEXT:   $x7 = ADDI $x0, 2
   ; RV32I-NEXT:   $x10 = LUI 10
-  ; RV32I-NEXT:   $x6 = SUB $x2, killed $x10
-  ; RV32I-NEXT:   $x7 = frame-setup LUI 1
+  ; RV32I-NEXT:   $x5 = SUB $x2, killed $x10
+  ; RV32I-NEXT:   $x28 = frame-setup LUI 1
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.3:
   ; RV32I-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
-  ; RV32I-NEXT:   liveins: $x6, $x7
+  ; RV32I-NEXT:   liveins: $x5, $x6, $x7, $x28
   ; RV32I-NEXT: {{  $}}
-  ; RV32I-NEXT:   $x2 = frame-setup SUB $x2, $x7
+  ; RV32I-NEXT:   $x2 = frame-setup SUB $x2, $x28
   ; RV32I-NEXT:   frame-setup SW $x0, $x2, 0
-  ; RV32I-NEXT:   frame-setup BNE $x2, $x6, %bb.3
+  ; RV32I-NEXT:   frame-setup BNE $x2, $x5, %bb.3
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT: bb.4:
   ; RV32I-NEXT:   successors: %bb.2(0x80000000)

@@ -678,31 +678,25 @@ getQCISavedInfo(const MachineFunction &MF,
   return QCIInterruptCSI;
 }
 
-static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
-                                   const MachineBasicBlock &MBB) {
-  const MachineFunction *MF = MBB.getParent();
-  LiveRegs.addLiveIns(MBB);
-  const MCPhysReg *CSRegs = MF->getRegInfo().getCalleeSavedRegs();
-  for (unsigned i = 0; CSRegs[i]; ++i)
-    LiveRegs.addReg(CSRegs[i]);
+// Add the registers live immediately before MBBI to LiveRegs. Once the saved
+// callee-saved registers are known, the others are live throughout (addLiveOuts
+// adds them), and a saved one is live until its spill and after its restore.
+// Before that, as when call frames are eliminated, a callee-saved register that
+// is not live is free: determineCalleeSaves saves it if it is then modified.
+static void getLiveRegsBefore(LivePhysRegs &LiveRegs,
+                              const MachineBasicBlock &MBB,
+                              MachineBasicBlock::const_iterator MBBI) {
+  LiveRegs.addLiveOuts(MBB);
+  for (MachineBasicBlock::const_iterator I = MBB.end(); I != MBBI;)
+    LiveRegs.stepBackward(*--I);
 }
 
-Register RISCVFrameLowering::findScratchNonCalleeSaveRegister(
-    MachineBasicBlock *MBB, Register PreferredReg, Register DontUseReg) const {
-  MachineFunction *MF = MBB->getParent();
-
-  // Stack protection code is being inserted at beginning of function, use
-  // register which has been historically used
-  if (&MF->front() == MBB)
-    return PreferredReg;
-
-  const RISCVSubtarget &Subtarget = MF->getSubtarget<RISCVSubtarget>();
-  const TargetRegisterInfo &TRI = *Subtarget.getRegisterInfo();
-  LivePhysRegs LiveRegs(TRI);
-  getLiveRegsForEntryMBB(LiveRegs, *MBB);
-
-  const MachineRegisterInfo &MRI = MF->getRegInfo();
-  // Prefer the register which has been historically used for stack protector
+// Return a temporary register that is not in LiveRegs, preferring
+// PreferredReg, or no register if there is none.
+static Register findFreeTemporary(const LivePhysRegs &LiveRegs,
+                                  const MachineRegisterInfo &MRI,
+                                  Register PreferredReg) {
+  // Prefer the register which has been historically used for stack probing.
   if (LiveRegs.available(MRI, PreferredReg))
     return PreferredReg;
 
@@ -712,11 +706,29 @@ Register RISCVFrameLowering::findScratchNonCalleeSaveRegister(
   };
 
   for (unsigned Reg : CandidateRegs) {
-    if (Reg != DontUseReg && LiveRegs.available(MRI, Reg))
+    if (LiveRegs.available(MRI, Reg))
       return Reg;
   }
 
   return Register();
+}
+
+// Return a register that a stack probe loop may use immediately before MBBI,
+// preferring PreferredReg. If there is none, report an error and return
+// PreferredReg.
+static Register getProbeLoopRegister(const MachineBasicBlock &MBB,
+                                     MachineBasicBlock::const_iterator MBBI,
+                                     Register PreferredReg) {
+  const MachineFunction &MF = *MBB.getParent();
+  LivePhysRegs LiveRegs(*MF.getSubtarget().getRegisterInfo());
+  getLiveRegsBefore(LiveRegs, MBB, MBBI);
+  Register Reg = findFreeTemporary(LiveRegs, MF.getRegInfo(), PreferredReg);
+  if (Reg.isValid())
+    return Reg;
+  const Function &F = MF.getFunction();
+  F.getContext().diagnose(
+      DiagnosticInfoUnsupported(F, "no free register for stack probing"));
+  return PreferredReg;
 }
 
 void RISCVFrameLowering::allocateAndProbeStackForRVV(
@@ -728,9 +740,7 @@ void RISCVFrameLowering::allocateAndProbeStackForRVV(
   // Emit a variable-length allocation probing loop.
 
   // Get VLEN in TargetReg
-  Register TargetReg = findScratchNonCalleeSaveRegister(&MBB, RISCV::X6);
-  assert(TargetReg.isValid() &&
-         "No available scratch register for stack probing");
+  Register TargetReg = getProbeLoopRegister(MBB, MBBI, RISCV::X6);
   const RISCVInstrInfo *TII = STI.getInstrInfo();
   uint32_t NumOfVReg = Amount / RISCV::RVVBytesPerBlock;
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::PseudoReadVLENB), TargetReg)
@@ -924,9 +934,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   uint64_t RoundedSize = alignDown(Offset, ProbeSize);
   uint64_t Residual = Offset - RoundedSize;
 
-  Register TargetReg = findScratchNonCalleeSaveRegister(&MBB, RISCV::X6);
-  assert(TargetReg.isValid() &&
-         "No available scratch register for stack probing");
+  Register TargetReg = getProbeLoopRegister(MBB, MBBI, RISCV::X6);
   // SUB TargetReg, SP, RoundedSize
   RI->adjustReg(MBB, MBBI, DL, TargetReg, SPReg,
                 StackOffset::getFixed(-RoundedSize), Flag, getStackAlign());
@@ -1902,6 +1910,23 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (RVFI->isSiFivePreemptibleInterrupt(MF))
     SavedRegs.set(RISCV::X5);
 
+  // An interrupt handler must preserve every register, including the two that
+  // the stack probe loops of its prologue use: save them if it may need one,
+  // that is if it may have RVV objects (see hasRVVFrameObject) or its frame is
+  // at least the probe size.
+  // FIXME: The loop of an SP adjustment that comes before these spills (with
+  // push/pop, or a small probe size) still finds no free register.
+  const RISCVTargetLowering *TLI = STI.getTargetLowering();
+  if (MF.getFunction().hasFnAttribute("interrupt") &&
+      TLI->hasInlineStackProbe(MF) &&
+      (STI.hasVInstructions() ||
+       MF.getFrameInfo().estimateStackSize(MF) >=
+           TLI->getStackProbeSize(MF, getStackAlign()))) {
+    for (MCPhysReg Reg : {RISCV::X6, RISCV::X7})
+      if (!MRI.isReserved(Reg))
+        SavedRegs.set(Reg);
+  }
+
   // When using cm.push/pop we must save X27 if we save X26.
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
@@ -2741,6 +2766,22 @@ bool RISCVFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
       (MBB.isLiveIn(RISCV::VTYPE) || MBB.isLiveIn(RISCV::VL)))
     return false;
 
+  // The stack probe loops of the prologue need two free temporaries. Which
+  // callee-saved registers are saved is not known yet: assume none.
+  if (STI.getTargetLowering()->hasInlineStackProbe(*MF)) {
+    const MachineRegisterInfo &MRI = MF->getRegInfo();
+    LivePhysRegs LiveRegs(*STI.getRegisterInfo());
+    getLiveRegsBefore(LiveRegs, MBB, MBB.begin());
+    for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); *CSR; ++CSR)
+      LiveRegs.addReg(*CSR);
+    for (MCPhysReg PreferredReg : {RISCV::X6, RISCV::X7}) {
+      Register Reg = findFreeTemporary(LiveRegs, MRI, PreferredReg);
+      if (!Reg.isValid())
+        return false;
+      LiveRegs.addReg(Reg);
+    }
+  }
+
   if (!RVFI->useSaveRestoreLibCalls(*MF))
     return true;
 
@@ -2897,11 +2938,12 @@ void RISCVFrameLowering::inlineStackProbe(MachineFunction &MF,
       DebugLoc DL = MBB.findDebugLoc(MBBI);
       Register TargetReg = MI->getOperand(0).getReg();
 
+      // TargetReg is live at MI, so it is never picked; the preference only
+      // keeps the two apart when no register is free. The expansion of an
+      // earlier probe may have moved MI to a new block.
       Register ScratchReg =
-          findScratchNonCalleeSaveRegister(&MBB, RISCV::X7, TargetReg);
-
-      assert(ScratchReg.isValid() &&
-             "No available scratch register for stack probe loop");
+          getProbeLoopRegister(*MI->getParent(), MBBI,
+                               TargetReg == RISCV::X7 ? RISCV::X6 : RISCV::X7);
 
       emitStackProbeInline(MBBI, DL, TargetReg, ScratchReg,
                            (MI->getOpcode() == RISCV::PROBED_STACKALLOC_RVV));

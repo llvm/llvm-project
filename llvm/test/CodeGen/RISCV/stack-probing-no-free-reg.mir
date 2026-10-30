@@ -1,0 +1,45 @@
+# RUN: not llc -mtriple=riscv64 -x mir -run-pass=prolog-epilog < %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=riscv32 -x mir -run-pass=prolog-epilog < %s -o /dev/null 2>&1 | FileCheck %s
+
+# Every temporary is live at the prologue: there is no free register for its
+# probe loop.
+
+# CHECK: error: {{.*}}no free register for stack probing
+
+--- |
+  define void @no_free_regs() #0 {
+  entry:
+    %buf = alloca [100000 x i8], align 8
+    ret void
+  }
+
+  attributes #0 = { "probe-stack"="inline-asm" }
+...
+---
+name:            no_free_regs
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x5', virtual-reg: '' }
+  - { reg: '$x6', virtual-reg: '' }
+  - { reg: '$x7', virtual-reg: '' }
+  - { reg: '$x28', virtual-reg: '' }
+  - { reg: '$x29', virtual-reg: '' }
+  - { reg: '$x30', virtual-reg: '' }
+  - { reg: '$x31', virtual-reg: '' }
+frameInfo:
+  maxAlignment:    8
+stack:
+  - { id: 0, name: buf, type: default, offset: 0, size: 100000, alignment: 8, stack-id: default }
+body:             |
+  bb.0.entry:
+    liveins: $x5, $x6, $x7, $x28, $x29, $x30, $x31
+
+    SW killed $x5, %stack.0.buf, 0
+    SW killed $x6, %stack.0.buf, 4
+    SW killed $x7, %stack.0.buf, 8
+    SW killed $x28, %stack.0.buf, 12
+    SW killed $x29, %stack.0.buf, 16
+    SW killed $x30, %stack.0.buf, 20
+    SW killed $x31, %stack.0.buf, 24
+    PseudoRET
+...
