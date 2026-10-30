@@ -3868,7 +3868,8 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
     return false;
 
   // Otherwise, try to save X5 into t1-t6 (MachineOutlinerRegSave).
-  if (STI.getCLOpts().outliner_regsave && findRegisterToSaveX5To(C, RegInfo))
+  if (STI.getCLOpts().outliner_regsave && !C.getMF()->isOutlined() &&
+      findRegisterToSaveX5To(C, RegInfo))
     return false;
 
   return true;

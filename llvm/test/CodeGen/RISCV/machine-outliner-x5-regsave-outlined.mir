@@ -21,9 +21,12 @@ body:             |
     ; CHECK-LABEL: name: outlined
     ; CHECK: liveins: $x5, $x10, $x11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: $x6 = ADDI $x5, 0
-    ; CHECK-NEXT: $x5 = PseudoCALLReg target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x5, implicit-def $x11, implicit-def $x12, implicit-def $x13, implicit-def $x14, implicit $x6, implicit $x10, implicit $x11
-    ; CHECK-NEXT: $x5 = ADDI $x6, 0
+    ; CHECK-NEXT: $x11 = ANDI $x11, 1023
+    ; CHECK-NEXT: $x12 = ADDI $x10, 17
+    ; CHECK-NEXT: $x11 = AND $x12, $x11
+    ; CHECK-NEXT: $x13 = ORI $x11, 255
+    ; CHECK-NEXT: $x12 = XOR $x13, $x10
+    ; CHECK-NEXT: $x14 = SUB $x12, $x11
     ; CHECK-NEXT: $x0 = JALR $x5, 0
     $x11 = ANDI $x11, 1023
     $x12 = ADDI $x10, 17
