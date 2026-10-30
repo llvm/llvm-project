@@ -13849,15 +13849,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::riscv_pmerge: {
     EVT VT = Op.getValueType();
-    auto buildMerge = [&](SDValue Rs1, SDValue Rs2, SDValue Mask,
-                          EVT ResultVT) {
-      MVT IntVT = MVT::getIntegerVT(ResultVT.getSizeInBits());
-      SDValue Res =
-          DAG.getNode(RISCVISD::MERGE, DL, IntVT, DAG.getBitcast(IntVT, Mask),
-                      DAG.getBitcast(IntVT, Rs1), DAG.getBitcast(IntVT, Rs2));
-      return DAG.getBitcast(ResultVT, Res);
-    };
-
     // 64-bit packed types on RV32: split into two 32-bit halves.
     if (!Subtarget.is64Bit() && (VT == MVT::v8i8 || VT == MVT::v4i16)) {
       MVT HalfVT = VT == MVT::v8i8 ? MVT::v4i8 : MVT::v2i16;
@@ -13867,8 +13858,10 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
           DAG.SplitVector(Op.getOperand(2), DL, HalfVT, HalfVT);
       auto [MaskLo, MaskHi] =
           DAG.SplitVector(Op.getOperand(3), DL, HalfVT, HalfVT);
-      SDValue ResLo = buildMerge(Rs1Lo, Rs2Lo, MaskLo, HalfVT);
-      SDValue ResHi = buildMerge(Rs1Hi, Rs2Hi, MaskHi, HalfVT);
+      SDValue ResLo =
+          DAG.getNode(RISCVISD::MERGE, DL, HalfVT, MaskLo, Rs1Lo, Rs2Lo);
+      SDValue ResHi =
+          DAG.getNode(RISCVISD::MERGE, DL, HalfVT, MaskHi, Rs1Hi, Rs2Hi);
       return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, ResLo, ResHi);
     }
 
@@ -13887,7 +13880,8 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       return DAG.getBuildVector(VT, DL, Elts);
     }
 
-    return buildMerge(Op.getOperand(1), Op.getOperand(2), Op.getOperand(3), VT);
+    return DAG.getNode(RISCVISD::MERGE, DL, VT, Op.getOperand(3),
+                       Op.getOperand(1), Op.getOperand(2));
   }
   case Intrinsic::experimental_get_vector_length:
     return lowerGetVectorLength(Op.getNode(), DAG, Subtarget);
