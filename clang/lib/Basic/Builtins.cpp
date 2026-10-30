@@ -213,6 +213,9 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   /* C2y unsupported */
   if (!LangOpts.C2y && BuiltinInfo.Langs == C2Y_LANG)
     return false;
+  /* Reflection unsupported */
+  if (!LangOpts.Reflection && (BuiltinInfo.Langs & REFLECTION_LANG))
+    return false;
   return true;
 }
 

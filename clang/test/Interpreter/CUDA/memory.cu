@@ -1,3 +1,4 @@
+// REQUIRES: host-supports-cuda
 // Tests cudaMemcpy and writes from kernel
 // RUN: cat %s | clang-repl --cuda | FileCheck %s
 

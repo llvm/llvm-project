@@ -13,6 +13,7 @@
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include "llvm/TargetParser/NVPTXTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 
 namespace clang {
 
@@ -22,6 +23,16 @@ OffloadArch OffloadArch::CudaDefault() {
 
 OffloadArch OffloadArch::HIPDefault() {
   return getAMDGPU(llvm::AMDGPU::parseArchAMDGCN("gfx906"));
+}
+
+OffloadArch OffloadArch::getIntelIGCA(llvm::IntelGPU::IGCATarget T) {
+  assert(T.isValid() && "T is not a valid IGCA target");
+  return {TargetArch::IntelIGCA, T.pack()};
+}
+
+llvm::IntelGPU::IGCATarget OffloadArch::igcaTarget() const {
+  assert(isIntelIGCA() && "cannot get IGCA target from a non-IGCA OffloadArch");
+  return llvm::IntelGPU::IGCATarget::unpack(Kind);
 }
 
 const char *OffloadArchToString(OffloadArch A) {
@@ -40,6 +51,8 @@ const char *OffloadArchToString(OffloadArch A) {
     return "graniterapids";
   case OffloadArch::TargetArch::IntelGPU:
     return llvm::IntelGPU::getArchName(A.intelGPUKind()).data();
+  case OffloadArch::TargetArch::IntelIGCA:
+    return llvm::IntelGPU::getIGCATargetName(A.igcaTarget()).data();
   case OffloadArch::TargetArch::Generic:
     return "generic";
   }
@@ -55,6 +68,8 @@ const char *OffloadArchToVirtualArchString(OffloadArch A) {
     return "compute_amdgcn";
   case OffloadArch::TargetArch::Unknown:
     return "unknown";
+  case OffloadArch::TargetArch::IntelIGCA:
+    return llvm::IntelGPU::getIGCATargetName(A.igcaTarget()).data();
   case OffloadArch::TargetArch::Unused:
   case OffloadArch::TargetArch::IntelCPU:
   case OffloadArch::TargetArch::IntelGPU:
@@ -85,6 +100,8 @@ OffloadArch StringToOffloadArch(llvm::StringRef S) {
     return OffloadArch::getAMDGPU(AK);
   if (llvm::IntelGPU::GPUKind IK = llvm::IntelGPU::parseArch(S))
     return OffloadArch::getIntelGPU(IK);
+  if (llvm::IntelGPU::IGCATarget IT = llvm::IntelGPU::parseIGCATarget(S))
+    return OffloadArch::getIntelIGCA(IT);
   return OffloadArch::getUnknown();
 }
 
