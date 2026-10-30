@@ -5994,8 +5994,15 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     APValue::LValueBase Base = Val.getLValueBase();
     QualType EntryType;
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>()) {
-      if (!this->visit(BaseExpr))
-        return false;
+      // Try to avoid evaluating the BaseExpr multiple times.
+      if (UnsignedOrNone GlobalIndex = P.getGlobal(BaseExpr);
+          GlobalIndex && P.isGlobalInitialized(*GlobalIndex)) {
+        if (!this->emitGetPtrGlobal(*GlobalIndex, Info))
+          return false;
+      } else {
+        if (!this->visit(BaseExpr))
+          return false;
+      }
       EntryType = BaseExpr->getType();
     } else if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
       if (!this->visitDeclRef(VD, Info.asExpr()))
