@@ -566,7 +566,7 @@ mlir::Value AMDGPUPrintfLowering::callBufferedPrintfStart(
           dataLayout.getTypeAllocSize(args[i].getType()).getFixedValue();
       // We end up expanding non string arguments to 8 bytes
       // (args smaller than 8 bytes)
-      bufSize += std::max<uint64_t>(allocSize, 8);
+      bufSize += llvm::alignTo(allocSize, 8);
     }
   }
 
@@ -632,36 +632,43 @@ void AMDGPUPrintfLowering::callBufferedPrintfArgPush(
   const StringData *strIt = stringContents.begin();
   size_t i = isConstFmtStr ? 1 : 0;
   for (; i < args.size(); i++) {
-    llvm::SmallVector<mlir::Value, 32> whatToStore;
-    if ((i == 0) || isCStringArg(args, i)) {
-      if (strIt->isConst) {
-        processConstantStringArg(*strIt, whatToStore);
-        strIt++;
-      } else {
-        // This copies the contents of the string, however the next offset
-        // is at aligned length, the extra space that might be created due
-        // to alignment padding is not populated with any specific value
-        // here. This would be safe as long as runtime is sync with
-        // the offsets.
-        auto memcpy = mlir::LLVM::MemcpyOp::create(
-            rewriter, op.getLoc(), ptrToStore, args[i], strIt->realSize,
-            /*isVolatile=*/false);
-        mlir::NamedAttribute align1(mlir::LLVM::LLVMDialect::getAlignAttrName(),
-                                    rewriter.getI64IntegerAttr(1));
-        memcpy.setArgAttrsAttr(
-            rewriter.getArrayAttr({rewriter.getDictionaryAttr(align1),
-                                   rewriter.getDictionaryAttr(align1),
-                                   rewriter.getDictionaryAttr({})}));
-
-        ptrToStore = gepInBounds(ptrToStore, strIt->alignedSize);
-
-        // done with current argument, move to next
-        strIt++;
-        continue;
-      }
-    } else {
-      whatToStore.push_back(processNonStringArg(args[i]));
+    if (i != 0 && !isCStringArg(args, i)) {
+      // The runtime reads each non-string argument from a slot of at least 8
+      // bytes, also when the stored value is smaller.
+      mlir::Value toStore = processNonStringArg(args[i]);
+      mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), toStore, ptrToStore);
+      uint64_t allocSize =
+          dataLayout.getTypeAllocSize(toStore.getType()).getFixedValue();
+      ptrToStore = gepInBounds(ptrToStore, llvm::alignTo(allocSize, 8));
+      continue;
     }
+
+    if (!strIt->isConst) {
+      // This copies the contents of the string, however the next offset
+      // is at aligned length, the extra space that might be created due
+      // to alignment padding is not populated with any specific value
+      // here. This would be safe as long as runtime is sync with
+      // the offsets.
+      auto memcpy = mlir::LLVM::MemcpyOp::create(
+          rewriter, op.getLoc(), ptrToStore, args[i], strIt->realSize,
+          /*isVolatile=*/false);
+      mlir::NamedAttribute align1(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                                  rewriter.getI64IntegerAttr(1));
+      memcpy.setArgAttrsAttr(
+          rewriter.getArrayAttr({rewriter.getDictionaryAttr(align1),
+                                 rewriter.getDictionaryAttr(align1),
+                                 rewriter.getDictionaryAttr({})}));
+
+      ptrToStore = gepInBounds(ptrToStore, strIt->alignedSize);
+
+      // done with current argument, move to next
+      strIt++;
+      continue;
+    }
+
+    llvm::SmallVector<mlir::Value, 32> whatToStore;
+    processConstantStringArg(*strIt, whatToStore);
+    strIt++;
 
     for (mlir::Value toStore : whatToStore) {
       mlir::LLVM::StoreOp::create(rewriter, op.getLoc(), toStore, ptrToStore);

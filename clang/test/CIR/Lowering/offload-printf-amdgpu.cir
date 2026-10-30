@@ -106,3 +106,29 @@ module attributes {cir.amdgpu_printf_kind = "buffered"} {
 // BUFFERED: ret i32 [[RES]]
 // BUFFERED: !llvm.printf.fmts = !{[[FMT:![0-9]+]]}
 // BUFFERED: [[FMT]] = !{!"0:0:d3e1b03bc04075f4,%d %s\0A"}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+
+module attributes {cir.amdgpu_printf_kind = "buffered"} {
+  cir.global "private" constant cir_private @".str" = #cir.const_array<"%p %d\0A" : !cir.array<!s8i x 6>, trailing_zeros> : !cir.array<!s8i x 7>
+  cir.func @buffered_small_arg(%p: !cir.ptr<!s32i, target_address_space(3)>, %v: !s32i) -> !s32i {
+    %0 = cir.get_global @".str" : !cir.ptr<!cir.array<!s8i x 7>>
+    %1 = cir.cast array_to_ptrdecay %0 : !cir.ptr<!cir.array<!s8i x 7>> -> !cir.ptr<!s8i>
+    %2 = cir.offload.printf(%1, %p, %v) : (!cir.ptr<!s8i>, !cir.ptr<!s32i, target_address_space(3)>, !s32i) -> !s32i
+    cir.return %2 : !s32i
+  }
+}
+
+// An argument stored in fewer than 8 bytes, here a 32-bit pointer, still takes
+// an 8-byte slot, so the next argument starts 8 bytes after it.
+// BUFFERED-LABEL: define{{.*}} i32 @buffered_small_arg(ptr addrspace(3) %0, i32 %1)
+// BUFFERED: [[BUF:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 28)
+// BUFFERED: [[P1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[BUF]], i32 4
+// BUFFERED: [[P2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P1]], i32 8
+// BUFFERED: store ptr addrspace(3) %0, ptr addrspace(1) [[P2]], align 4
+// BUFFERED: [[P3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[P2]], i32 8
+// BUFFERED: [[ARG:%.*]] = zext i32 %1 to i64
+// BUFFERED: store i64 [[ARG]], ptr addrspace(1) [[P3]], align 8
