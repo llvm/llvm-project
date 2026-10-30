@@ -29,6 +29,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
@@ -829,6 +830,7 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainConstant(
     Type *CurType, uint64_t Offset,
     const std::function<void(Type *, uint64_t)> &OnLiteralIndexing) {
   auto &DL = CurrF->getDataLayout();
+  Type *BaseType = CurType;
 
   do {
     if (ArrayType *AT = dyn_cast<ArrayType>(CurType)) {
@@ -853,14 +855,21 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChainConstant(
       assert(EltSizeBits % 8 == 0 &&
              "Element type size in bits must be a multiple of 8.");
       uint32_t EltTypeSize = EltSizeBits / 8;
-      assert(Offset < VT->getNumElements() * EltTypeSize);
+      if (Offset >= VT->getNumElements() * EltTypeSize)
+        report_fatal_error(
+            "Cannot lower an access to vector padding for Logical SPIR-V",
+            false);
       uint64_t Index = Offset / EltTypeSize;
       Offset -= Index * EltTypeSize;
       CurType = EltTy;
       OnLiteralIndexing(CurType, Index);
     } else {
-      // Unknown composite kind; give up.
-      return true;
+      if (CurType == BaseType && Offset >= DL.getTypeAllocSize(CurType))
+        return true;
+      report_fatal_error(
+          "Cannot lower a byte offset within a scalar or padding for "
+          "Logical SPIR-V",
+          false);
     }
   } while (Offset > 0);
 
@@ -881,6 +890,10 @@ bool SPIRVEmitIntrinsicsImpl::walkLogicalAccessChain(
 
   Value *Src = getPointerRoot(GEP.getPointerOperand());
   Type *CurType = deduceElementType(Src, true);
+  if (!CurType->isSized())
+    report_fatal_error(
+        "Cannot lower byte addressing with an unsized type for Logical SPIR-V",
+        false);
 
   Value *Operand = *GEP.idx_begin();
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Operand))
@@ -931,6 +944,7 @@ Instruction *SPIRVEmitIntrinsicsImpl::buildLogicalAccessChainFromGEP(
         Indices.push_back(Index);
       });
 
+  B.SetInsertPoint(&GEP);
   SmallVector<Type *, 2> Types = {GEP.getType(), GEP.getOperand(0)->getType()};
   SmallVector<Value *, 4> Args;
   Args.push_back(B.getInt1(GEP.isInBounds()));
@@ -4343,6 +4357,20 @@ bool SPIRVEmitIntrinsicsImpl::runOnModule(Module &M) {
   // Fold static allocation counts before pointer type inference.
   bool Changed = foldStaticArrayAllocas(M);
   Changed |= convertMaskedMemIntrinsics(M);
+
+  if (TM.getSubtargetImpl()->isLogicalSPIRV()) {
+    SmallVector<Constant *> GEPs;
+    for (Function &F : M)
+      for (Instruction &I : instructions(F))
+        for (Value *Op : I.operands())
+          if (auto *CE = dyn_cast<ConstantExpr>(Op);
+              CE && CE->getOpcode() == Instruction::GetElementPtr)
+            GEPs.push_back(CE);
+    // Let pointer type inference and GEP lowering handle constant expressions.
+    // The list can contain both a constant and its users.
+    Changed |= convertUsersOfConstantsToInstructions(
+        GEPs, nullptr, /*RemoveDeadConstants=*/false, /*IncludeSelf=*/true);
+  }
 
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
