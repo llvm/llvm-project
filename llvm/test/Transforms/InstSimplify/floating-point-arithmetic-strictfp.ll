@@ -276,7 +276,8 @@ define float @fabs_sqrt_nnan_nsz__no_pzero(float nofpclass(pzero) %a) #0 {
 define float @fabs_sqrt_nnan_nsz__no_nzero(float nofpclass(nzero) %a) #0 {
 ; CHECK-LABEL: @fabs_sqrt_nnan_nsz__no_nzero(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float [[A:%.*]], metadata !"round.tonearest", metadata !"fpexcept.ignore")
-; CHECK-NEXT:    ret float [[SQRT]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]]) #[[ATTR0]]
+; CHECK-NEXT:    ret float [[FABS]]
 ;
   %sqrt = call nnan nsz float @llvm.experimental.constrained.sqrt.f32(float %a, metadata !"round.tonearest", metadata !"fpexcept.ignore")
   %fabs = call float @llvm.fabs.f32(float %sqrt) #0
