@@ -24,6 +24,26 @@
 # RUN: FileCheck %s --check-prefixes=CHECK,ARM64E -D#%x,BASE=0x100000000 \
 # RUN:   < %t/out
 
+## DYLD_CHAINED_PTR_ARM64E_USERLAND24 keeps a negative addend inline, like ld64.
+## ld64 rejects one in DYLD_CHAINED_PTR_ARM64E, so it goes in the imports table.
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos -o %t/negative.o \
+# RUN:   %t/negative.s
+# RUN: %lld -arch arm64e -platform_version macos 13.0 13.0 %t/negative.o \
+# RUN:   %t/libfoo.dylib -o %t/negative-userland24
+# RUN: llvm-objdump --macho --chained-fixups %t/negative-userland24 > %t/out
+# RUN: llvm-objdump --macho --dyld-info %t/negative-userland24 >> %t/out
+# RUN: FileCheck %s --check-prefix=NEG-USERLAND24 < %t/out
+# RUN: %lld -arch arm64e -platform_version macos 11.0 11.0 %t/negative.o \
+# RUN:   %t/libfoo.dylib -o %t/negative-arm64e
+# RUN: llvm-objdump --macho --chained-fixups %t/negative-arm64e > %t/out
+# RUN: llvm-objdump --macho --dyld-info %t/negative-arm64e >> %t/out
+# RUN: FileCheck %s --check-prefix=NEG-ARM64E < %t/out
+# NEG-USERLAND24: imports_format = 1 (DYLD_CHAINED_IMPORT)
+# NEG-USERLAND24: __DATA __data 0x{{[0-9A-F]+}} 0x4007FFF800000000 bind 0xFFFFFFFFFFFFFFF8 libfoo _foo
+# NEG-ARM64E:     imports_format = 2 (DYLD_CHAINED_IMPORT_ADDEND)
+# NEG-ARM64E:     addend      = -8
+# NEG-ARM64E:     __DATA __data 0x{{[0-9A-F]+}} 0x4000000000000000 bind 0xFFFFFFFFFFFFFFF8 libfoo _foo
+
 ## An authenticated rebase stores its target as a 32-bit offset from the image
 ## base, which the target below doesn't fit in.
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos -o %t/far.o %t/far.s
@@ -32,9 +52,10 @@
 # FAR: error: vmOffset (0x100008000) cannot fit in fixup at __DATA+0x0
 
 ## Authenticated binds have no addend field, so their addends go in the
-## imports table. The unauthenticated bind shares import 0 and keeps its
-## addend inline.
-# CHECK:      imports_format = 2 (DYLD_CHAINED_IMPORT_ADDEND)
+## imports table. The unauthenticated binds share import 0 and keep their
+## addends inline.
+# CHECK:      imports_count  = 3
+# CHECK-NEXT: imports_format = 2 (DYLD_CHAINED_IMPORT_ADDEND)
 # USERLAND24: pointer_format = 12 (DYLD_CHAINED_PTR_ARM64E_USERLAND24)
 # ARM64E:     pointer_format = 1 (DYLD_CHAINED_PTR_ARM64E)
 # CHECK:      dyld chained import addend[0]
@@ -61,7 +82,8 @@
 # CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4020]] 0xC008000100000001 bind 0x0001 false IA 0xFFFFFFFFFFFFFFFC libfoo _foo
 # USERLAND24-NEXT: __DATA __data 0x[[#%X,BASE+0x4028]] 0x[[#%.16X,0x8000000000000+LOCAL-BASE]] rebase 0x[[#%X,LOCAL]]
 # ARM64E-NEXT:     __DATA __data 0x[[#%X,BASE+0x4028]] 0x[[#%.16X,0x8000000000000+LOCAL]] rebase 0x[[#%X,LOCAL]]
-# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4030]] 0x4000000800000000 bind 0x8 libfoo _foo
+# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4030]] 0x4008000800000000 bind 0x8 libfoo _foo
+# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4038]] 0x4000100000000000 bind 0x1000 libfoo _foo
 
 #--- foo.s
 .globl _foo
@@ -85,6 +107,17 @@ _local:
   .quad (_foo - 4)@AUTH(ia,1)
   .quad _local
   .quad _foo + 8
+  .quad _foo + 0x1000
+
+#--- negative.s
+.globl _main
+.p2align 2
+_main:
+  ret
+
+.data
+.p2align 3
+  .quad _foo - 8
 
 #--- far.s
 .globl _main
