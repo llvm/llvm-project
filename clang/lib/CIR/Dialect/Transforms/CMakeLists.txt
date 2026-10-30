@@ -1,5 +1,11 @@
 add_subdirectory(TargetLowering)
 
+set(LLVM_LINK_COMPONENTS
+  Core
+  Support
+  ABI
+)
+
 add_clang_library(MLIRCIRTransforms
   CallConvLoweringPass.cpp
   CIRCanonicalize.cpp

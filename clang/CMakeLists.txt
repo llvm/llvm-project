@@ -376,6 +376,17 @@ if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)
                       "LLVM_LINK_LLVM_DYLIB=OFF")
 endif()
 
+# For MinGW/Cygwin we only enable shared library if LLVM_LINK_LLVM_DYLIB=ON.
+# Without that option resulting library is too close to 2^16 DLL exports limit.
+if (LLVM_ENABLE_PIC AND
+    ((UNIX AND NOT CYGWIN) OR
+      (MSVC AND LLVM_BUILD_LLVM_DYLIB_VIS) OR
+      ((MINGW OR CYGWIN) AND LLVM_LINK_LLVM_DYLIB)))
+  set(CLANG_BUILD_CLANG_DYLIB ON)
+else()
+  set(CLANG_BUILD_CLANG_DYLIB OFF)
+endif()
+
 # The libdir suffix must exactly match whatever LLVM's configuration used.
 set(CLANG_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}")
 

@@ -57,13 +57,7 @@ public:
 
   /// Returns a unique instance for the given effect class.
   template <typename DerivedEffect>
-  static DerivedEffect *get() {
-    static_assert(std::is_base_of<Effect, DerivedEffect>::value,
-                  "expected DerivedEffect to inherit from Effect");
-
-    static DerivedEffect instance;
-    return &instance;
-  }
+  static DerivedEffect *get();
 
 protected:
   Effect(TypeID id) : id(id) {}
@@ -72,6 +66,15 @@ private:
   /// The id of the derived effect class.
   TypeID id;
 };
+
+template <typename DerivedEffect>
+DerivedEffect *Effect::get() {
+  static_assert(std::is_base_of<Effect, DerivedEffect>::value,
+                "expected DerivedEffect to inherit from Effect");
+
+  static DerivedEffect instance;
+  return &instance;
+}
 
 //===----------------------------------------------------------------------===//
 // Resources
@@ -100,10 +103,7 @@ public:
     using BaseT = Base<DerivedResource, BaseResource>;
 
     /// Returns a unique instance for the given effect class.
-    static DerivedResource *get() {
-      static DerivedResource instance;
-      return &instance;
-    }
+    static DerivedResource *get();
 
     /// Return the unique identifier for the base resource class.
     static TypeID getResourceID() { return TypeID::get<DerivedResource>(); }
@@ -177,6 +177,15 @@ private:
   TypeID id;
 };
 
+template <typename DerivedResource, typename BaseResource>
+DerivedResource *Resource::Base<DerivedResource, BaseResource>::get() {
+  static DerivedResource instance;
+  return &instance;
+}
+
+struct DefaultResource;
+extern template DefaultResource *Resource::Base<DefaultResource>::get();
+
 /// The default resource kind. It serves as the root of the resource hierarchy:
 /// all resources that do not override getParent() have DefaultResource as their
 /// parent.
@@ -195,6 +204,9 @@ protected:
 /// as their parent.
 inline Resource *Resource::getParent() const { return DefaultResource::get(); }
 
+struct AutomaticAllocationScopeResource;
+extern template AutomaticAllocationScopeResource *
+Resource::Base<AutomaticAllocationScopeResource, DefaultResource>::get();
 /// An automatic allocation-scope resource that is valid in the context of a
 /// parent AutomaticAllocationScope trait.
 struct AutomaticAllocationScopeResource
@@ -433,6 +445,22 @@ struct AlwaysSpeculatableImplTrait
 //===----------------------------------------------------------------------===//
 // Operation Memory-Effect Modeling
 //===----------------------------------------------------------------------===//
+
+namespace MemoryEffects {
+struct Allocate;
+struct Free;
+struct Read;
+struct Write;
+} // namespace MemoryEffects
+
+extern template MemoryEffects::Allocate *
+SideEffects::Effect::get<MemoryEffects::Allocate>();
+extern template MemoryEffects::Free *
+SideEffects::Effect::get<MemoryEffects::Free>();
+extern template MemoryEffects::Read *
+SideEffects::Effect::get<MemoryEffects::Read>();
+extern template MemoryEffects::Write *
+SideEffects::Effect::get<MemoryEffects::Write>();
 
 namespace MemoryEffects {
 /// This class represents the base class used for memory effects.
