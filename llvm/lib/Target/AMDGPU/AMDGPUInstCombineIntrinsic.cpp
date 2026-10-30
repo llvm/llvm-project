@@ -1811,10 +1811,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id: {
     const Function &F = *II.getFunction();
-    if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
-      break;
 
-    auto ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
+    AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
     if (!ClusterDims.isFixedDims())
       break;
 
