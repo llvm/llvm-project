@@ -2346,6 +2346,27 @@ void JumpThreadingPass::threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
   threadEdge(BB, PredsToFactor, SuccBB);
 }
 
+/// Returns false if threading the edge PredBB->BB is not profitable.
+static bool shouldThreadEdge(BasicBlock *PredBB, BasicBlock *BB) {
+  // Threading the edge duplicates BB; do not duplicate calls or stores.
+  // Duplicating a store can split the overwrite of an earlier store across
+  // paths so DSE no longer removes it.
+  if (any_of(*BB, [](const Instruction &I) {
+        return isa<StoreInst>(I) ||
+               (isa<CallBase>(I) && !isAssumeLikeIntrinsic(&I));
+      }))
+    return false;
+  // Don't prevent if-conversion: if PredBB's predecessor PP also reaches BB,
+  // SimplifyCFG can merge the branches of PP and PredBB.
+  if (BasicBlock *PP = PredBB->getSinglePredecessor())
+    if (auto *PPBr = dyn_cast<CondBrInst>(PP->getTerminator()))
+      if (any_of(PPBr->successors(), [&](BasicBlock *S) {
+            return S == BB || S->getSingleSuccessor() == BB;
+          }))
+        return false;
+  return true;
+}
+
 /// tryThreadEdge - Thread an edge if it's safe and profitable to do so.
 bool JumpThreadingPass::tryThreadEdge(
     BasicBlock *BB, const SmallVectorImpl<BasicBlock *> &PredBBs,
@@ -2378,6 +2399,10 @@ bool JumpThreadingPass::tryThreadEdge(
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
     return false;
   }
+
+  if (any_of(PredBBs,
+             [&](BasicBlock *PredBB) { return !shouldThreadEdge(PredBB, BB); }))
+    return false;
 
   threadEdge(BB, PredBBs, SuccBB);
   return true;
