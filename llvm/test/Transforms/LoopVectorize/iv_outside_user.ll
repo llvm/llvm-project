@@ -262,20 +262,19 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
-; INTERLEAVE-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 4
-; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP9]]
+; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
 ; INTERLEAVE-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i64 -4
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; INTERLEAVE:       [[SCALAR_PH]]:
-; INTERLEAVE-NEXT:    [[TMP10:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[TMP11:%.*]] = phi ptr [ [[NEXT_GEP1]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
-; INTERLEAVE-NEXT:    [[TMP12:%.*]] = phi ptr [ [[NEXT_GEP]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = phi i32 [ [[TMP3]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[TMP10:%.*]] = phi ptr [ [[NEXT_GEP1]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[TMP11:%.*]] = phi ptr [ [[NEXT_GEP]], %[[MIDDLE_BLOCK]] ], [ [[BASE]], %[[ENTRY]] ]
 ; INTERLEAVE-NEXT:    br label %[[FOR_BODY:.*]]
 ; INTERLEAVE:       [[FOR_BODY]]:
-; INTERLEAVE-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[TMP10]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[INC_LAG1:%.*]] = phi ptr [ [[TMP11]], %[[SCALAR_PH]] ], [ [[TMP:%.*]], %[[FOR_BODY]] ]
-; INTERLEAVE-NEXT:    [[INC_LAG2:%.*]] = phi ptr [ [[TMP12]], %[[SCALAR_PH]] ], [ [[INC_LAG1]], %[[FOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[INC_PHI:%.*]] = phi i32 [ [[TMP9]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[INC_LAG1:%.*]] = phi ptr [ [[TMP10]], %[[SCALAR_PH]] ], [ [[TMP:%.*]], %[[FOR_BODY]] ]
+; INTERLEAVE-NEXT:    [[INC_LAG2:%.*]] = phi ptr [ [[TMP11]], %[[SCALAR_PH]] ], [ [[INC_LAG1]], %[[FOR_BODY]] ]
 ; INTERLEAVE-NEXT:    [[TMP]] = getelementptr inbounds i32, ptr [[INC_LAG1]], i64 1
 ; INTERLEAVE-NEXT:    [[INC]] = add nsw i32 [[INC_PHI]], 1
 ; INTERLEAVE-NEXT:    [[CMP:%.*]] = icmp eq i32 [[INC]], [[K]]

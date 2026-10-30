@@ -41,14 +41,10 @@ define i8 @test_early_exit_max_tc_less_than_16(ptr dereferenceable(16) %A) nosyn
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
-; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
-; VF8UF2-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP6:%.*]] = freeze <8 x i1> [[TMP1]]
+; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = freeze <8 x i1> [[TMP2]]
-; VF8UF2-NEXT:    [[TMP3:%.*]] = or <8 x i1> [[TMP6]], [[TMP5]]
+; VF8UF2-NEXT:    [[TMP3:%.*]] = or <8 x i1> [[TMP5]], [[TMP5]]
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
 ; VF8UF2-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
@@ -139,14 +135,10 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
-; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
-; VF8UF2-NEXT:    [[TMP1:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP13:%.*]] = freeze <8 x i1> [[TMP1]]
+; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP6:%.*]] = freeze <8 x i1> [[TMP2]]
-; VF8UF2-NEXT:    [[TMP3:%.*]] = or <8 x i1> [[TMP13]], [[TMP6]]
+; VF8UF2-NEXT:    [[TMP3:%.*]] = or <8 x i1> [[TMP6]], [[TMP6]]
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP3]])
 ; VF8UF2-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
@@ -156,7 +148,7 @@ define i64 @test_early_exit_max_tc_less_than_16_with_iv_used_outside(ptr derefer
 ; VF8UF2:       [[VECTOR_EARLY_EXIT]]:
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP6]], i1 false)
 ; VF8UF2-NEXT:    [[TMP7:%.*]] = add i64 8, [[TMP5]]
-; VF8UF2-NEXT:    [[TMP8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP13]], i1 false)
+; VF8UF2-NEXT:    [[TMP8:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP6]], i1 false)
 ; VF8UF2-NEXT:    [[TMP9:%.*]] = add i64 0, [[TMP8]]
 ; VF8UF2-NEXT:    [[TMP10:%.*]] = icmp ne i64 [[TMP8]], 8
 ; VF8UF2-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i64 [[TMP9]], i64 [[TMP7]]
@@ -254,14 +246,10 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
-; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
-; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP7:%.*]] = freeze <8 x i1> [[TMP2]]
+; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP6:%.*]] = freeze <8 x i1> [[TMP3]]
-; VF8UF2-NEXT:    [[TMP4:%.*]] = or <8 x i1> [[TMP7]], [[TMP6]]
+; VF8UF2-NEXT:    [[TMP4:%.*]] = or <8 x i1> [[TMP6]], [[TMP6]]
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP4]])
 ; VF8UF2-NEXT:    br i1 [[TMP5]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
@@ -384,11 +372,9 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 8
 ; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
-; VF8UF2-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP5:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF8UF2-NEXT:    [[TMP6:%.*]] = freeze <8 x i1> [[TMP4]]
+; VF8UF2-NEXT:    [[TMP5:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP7:%.*]] = freeze <8 x i1> [[TMP5]]
-; VF8UF2-NEXT:    [[TMP8:%.*]] = or <8 x i1> [[TMP6]], [[TMP7]]
+; VF8UF2-NEXT:    [[TMP8:%.*]] = or <8 x i1> [[TMP7]], [[TMP7]]
 ; VF8UF2-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP8]])
 ; VF8UF2-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM:.*]]
 ; VF8UF2:       [[VECTOR_BODY_INTERIM]]:

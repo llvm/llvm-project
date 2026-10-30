@@ -50,42 +50,25 @@ define float @fminnum(ptr %src, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP15:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i64 4
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i64 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i64 12
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP20]], align 4
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = freeze <4 x float> [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP25:%.*]] = freeze <4 x float> [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP26:%.*]] = freeze <4 x float> [[WIDE_LOAD5]]
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[TMP27:%.*]] = freeze <4 x float> [[WIDE_LOAD6]]
-; CHECK-NEXT:    [[TMP7]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP22]])
-; CHECK-NEXT:    [[TMP8]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP25]])
-; CHECK-NEXT:    [[TMP13]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI2]], <4 x float> [[TMP26]])
 ; CHECK-NEXT:    [[TMP15]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VEC_PHI3]], <4 x float> [[TMP27]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 16
-; CHECK-NEXT:    [[TMP5:%.*]] = fcmp uno <4 x float> [[TMP22]], [[TMP25]]
-; CHECK-NEXT:    [[TMP23:%.*]] = fcmp uno <4 x float> [[TMP26]], [[TMP27]]
+; CHECK-NEXT:    [[TMP23:%.*]] = fcmp uno <4 x float> [[TMP27]], [[TMP27]]
+; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[TMP23]], [[TMP23]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP7]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = or <4 x i1> [[TMP5]], [[TMP23]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP24]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP7]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP8]]
-; CHECK-NEXT:    [[TMP18:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP13]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP15]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select i1 [[TMP6]], i64 [[IV]], i64 [[N_VEC]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP11]], <4 x float> [[TMP12]])
-; CHECK-NEXT:    [[RDX_MINMAX7:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[RDX_MINMAX_SELECT]], <4 x float> [[TMP18]])
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[TMP19]], <4 x float> [[TMP19]])
+; CHECK-NEXT:    [[RDX_MINMAX7:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[TMP19]])
 ; CHECK-NEXT:    [[RDX_MINMAX8:%.*]] = call <4 x float> @llvm.minnum.v4f32(<4 x float> [[RDX_MINMAX7]], <4 x float> [[TMP19]])
 ; CHECK-NEXT:    [[TMP21:%.*]] = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[RDX_MINMAX8]])
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]

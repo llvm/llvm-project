@@ -16,20 +16,14 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; VF1IC2:       [[VECTOR_PH]]:
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1IC2:       [[VECTOR_BODY]]:
-; VF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
-; VF1IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; VF1IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
+; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP0]]
-; VF1IC2-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
 ; VF1IC2-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
-; VF1IC2-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP3]], 0
 ; VF1IC2-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP4]], 0
-; VF1IC2-NEXT:    [[TMP7:%.*]] = select i1 [[COND]], i1 true, i1 [[TMP5]]
 ; VF1IC2-NEXT:    [[TMP8:%.*]] = select i1 [[COND]], i1 true, i1 [[TMP6]]
-; VF1IC2-NEXT:    [[TMP9:%.*]] = freeze i1 [[TMP7]]
 ; VF1IC2-NEXT:    [[TMP10:%.*]] = freeze i1 [[TMP8]]
-; VF1IC2-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF1IC2-NEXT:    [[TMP11:%.*]] = or i1 [[TMP10]], [[TMP10]]
+; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2
 ; VF1IC2-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; VF1IC2-NEXT:    br i1 [[TMP11]], label %[[VECTOR_EARLY_EXIT_CHECK:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; VF1IC2:       [[VECTOR_BODY_INTERIM]]:
@@ -59,16 +53,11 @@ define i64 @early_exit_with_live_in_condition(i1 %cond) {
 ; VF4IC2:       [[VECTOR_BODY]]:
 ; VF4IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; VF4IC2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[INDEX]]
-; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
-; VF4IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
-; VF4IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; VF4IC2-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD]], zeroinitializer
+; VF4IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
 ; VF4IC2-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF4IC2-NEXT:    [[TMP4:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i1> [[TMP2]]
 ; VF4IC2-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i1> [[TMP3]]
-; VF4IC2-NEXT:    [[TMP6:%.*]] = freeze <4 x i1> [[TMP4]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP5]]
-; VF4IC2-NEXT:    [[TMP8:%.*]] = or <4 x i1> [[TMP6]], [[TMP7]]
+; VF4IC2-NEXT:    [[TMP8:%.*]] = or <4 x i1> [[TMP7]], [[TMP7]]
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
 ; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -129,11 +118,9 @@ define i8 @early_exit_live_out_with_distinct_scalar_parts() {
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[TMP0]]
 ; VF1IC2-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP1]], align 1
 ; VF1IC2-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
-; VF1IC2-NEXT:    [[TMP5:%.*]] = icmp sgt i8 [[TMP3]], 10
-; VF1IC2-NEXT:    [[TMP6:%.*]] = icmp sgt i8 [[TMP4]], 10
-; VF1IC2-NEXT:    [[TMP7:%.*]] = freeze i1 [[TMP5]]
+; VF1IC2-NEXT:    [[TMP6:%.*]] = icmp sgt i8 [[TMP3]], 10
 ; VF1IC2-NEXT:    [[TMP8:%.*]] = freeze i1 [[TMP6]]
-; VF1IC2-NEXT:    [[TMP9:%.*]] = or i1 [[TMP7]], [[TMP8]]
+; VF1IC2-NEXT:    [[TMP9:%.*]] = or i1 [[TMP8]], [[TMP8]]
 ; VF1IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VF1IC2-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; VF1IC2-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
@@ -147,7 +134,7 @@ define i8 @early_exit_live_out_with_distinct_scalar_parts() {
 ; VF1IC2-NEXT:    [[TMP13:%.*]] = icmp eq i1 [[TMP8]], false
 ; VF1IC2-NEXT:    [[TMP14:%.*]] = zext i1 [[TMP13]] to i64
 ; VF1IC2-NEXT:    [[TMP15:%.*]] = add i64 1, [[TMP14]]
-; VF1IC2-NEXT:    [[TMP16:%.*]] = icmp eq i1 [[TMP7]], false
+; VF1IC2-NEXT:    [[TMP16:%.*]] = icmp eq i1 [[TMP8]], false
 ; VF1IC2-NEXT:    [[TMP17:%.*]] = zext i1 [[TMP16]] to i64
 ; VF1IC2-NEXT:    [[TMP18:%.*]] = add i64 0, [[TMP17]]
 ; VF1IC2-NEXT:    [[TMP19:%.*]] = icmp ne i64 [[TMP17]], 1
@@ -174,11 +161,9 @@ define i8 @early_exit_live_out_with_distinct_scalar_parts() {
 ; VF4IC2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
 ; VF4IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP0]], align 1
 ; VF4IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i8>, ptr [[TMP1]], align 1
-; VF4IC2-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i8> [[WIDE_LOAD]], splat (i8 10)
-; VF4IC2-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i8> [[WIDE_LOAD2]], splat (i8 10)
-; VF4IC2-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
+; VF4IC2-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i8> [[WIDE_LOAD]], splat (i8 10)
 ; VF4IC2-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP3]]
-; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP4]], [[TMP5]]
+; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP5]], [[TMP5]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; VF4IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; VF4IC2-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
@@ -192,7 +177,7 @@ define i8 @early_exit_live_out_with_distinct_scalar_parts() {
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = mul <4 x i8> [[WIDE_LOAD2]], splat (i8 7)
 ; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
 ; VF4IC2-NEXT:    [[TMP11:%.*]] = add i64 4, [[FIRST_ACTIVE_LANE]]
-; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
+; VF4IC2-NEXT:    [[FIRST_ACTIVE_LANE3:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
 ; VF4IC2-NEXT:    [[TMP12:%.*]] = add i64 0, [[FIRST_ACTIVE_LANE3]]
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[FIRST_ACTIVE_LANE3]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP11]]
