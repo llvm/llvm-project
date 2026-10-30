@@ -229,7 +229,7 @@ public:
       for (size_t i = 0; i < slots_; i++)
         t[i] = 0;
 
-    PilotsTypeV pilots{};
+    PilotsTypeV computed_pilots{};
 
     size_t tries = 0;
     constexpr size_t MAX_TRIES = 10;
@@ -248,20 +248,20 @@ public:
         return {};
 
       this->seed = STDRNG[tries - 1];
-      pilots = PilotsTypeV{0};
+      computed_pilots = PilotsTypeV{0};
 
       for (auto &t : taken)
-        for (size_t e = 0; e < pilots.size(); e++)
+        for (size_t e = 0; e < computed_pilots.size(); e++)
           t[e] = false;
 
       auto shard_hashes = this->shards(keys);
 
-      contd = !this->try_build_shards(shard_hashes, pilots, taken)
+      contd = !this->try_build_shards(shard_hashes, computed_pilots, taken)
                   ? true
                   : !this->remap_free_slots(taken);
     }
 
-    this->pilots = pilots;
+    this->pilots = computed_pilots;
     return {{this->seed, this->pilots, this->remap}};
   }
 
@@ -413,13 +413,13 @@ public:
 
   LIBC_INLINE constexpr bool
   try_build_shards(const cpp::array<cpp::array<uint64_t, n_>, 1> &shard_hashes,
-                   PilotsTypeV &pilots,
+                   PilotsTypeV &pilot_values,
                    cpp::array<cpp::array<bool, slots_>, parts_> &taken) const {
     const size_t pilots_chunk_size =
         cpp::max(buckets_ * parts_per_shard_, static_cast<size_t>(1));
     const size_t taken_chunk_size = parts_per_shard_;
     const size_t num_pilots_chunks =
-        (pilots.size() + pilots_chunk_size - 1) / pilots_chunk_size;
+        (pilot_values.size() + pilots_chunk_size - 1) / pilots_chunk_size;
     const size_t num_taken_chunks =
         (taken.size() + taken_chunk_size - 1) / taken_chunk_size;
 
@@ -431,7 +431,7 @@ public:
 
       size_t pilots_begin = shard * pilots_chunk_size;
       size_t pilots_end =
-          cpp::min(pilots_begin + pilots_chunk_size, pilots.size());
+          cpp::min(pilots_begin + pilots_chunk_size, pilot_values.size());
 
       size_t taken_begin = shard * taken_chunk_size;
       size_t taken_end = cpp::min(taken_begin + taken_chunk_size, taken.size());
@@ -445,7 +445,7 @@ public:
 
       auto &[new_hashes, part_starts] = sorted_parts.value();
 
-      if (!this->build_shard(shard, new_hashes, part_starts, pilots,
+      if (!this->build_shard(shard, new_hashes, part_starts, pilot_values,
                              pilots_begin, pilots_end, taken_begin, taken_end,
                              taken))
         return false;
@@ -457,7 +457,7 @@ public:
   LIBC_INLINE constexpr bool
   build_shard(size_t shard, cpp::array<uint64_t, n_> &hashes,
               cpp::array<uint32_t, parts_per_shard_ + 1> &part_starts,
-              PilotsTypeV &pilots, size_t pilots_begin, size_t pilots_end,
+              PilotsTypeV &pilot_values, size_t pilots_begin, size_t pilots_end,
               size_t taken_begin, size_t taken_end,
               cpp::array<cpp::array<bool, slots_>, parts_> &taken) const {
 
@@ -477,9 +477,9 @@ public:
             cpp::span<uint64_t>(hashes).subspan(part_starts[part_in_shard],
                                                 part_starts[part_in_shard + 1] -
                                                     part_starts[part_in_shard]),
-            cpp::span<uint8_t>(
-                const_cast<uint8_t *>(pilots.data() + target_pilots_begin),
-                target_pilots_end - target_pilots_begin),
+            cpp::span<uint8_t>(const_cast<uint8_t *>(pilot_values.data() +
+                                                     target_pilots_begin),
+                               target_pilots_end - target_pilots_begin),
             taken[taken_idx]);
         if (!total_evictions) {
           return false;
@@ -492,7 +492,8 @@ public:
   }
 
   LIBC_INLINE constexpr cpp::optional<size_t>
-  build_part(size_t part, cpp::span<uint64_t> hashes, cpp::span<uint8_t> pilots,
+  build_part(size_t part, cpp::span<uint64_t> hashes,
+             cpp::span<uint8_t> pilot_values,
              cpp::array<bool, slots_> &taken) const {
     cpp::tuple<cpp::array<uint32_t, buckets_ + 1>,
                cpp::array<uint32_t, buckets_>>
@@ -546,7 +547,7 @@ public:
       const auto new_bucket =
           hashes.subspan(starts[new_b], starts[new_b + 1] - starts[new_b]);
       if (new_bucket.empty()) {
-        pilots[new_b] = 0;
+        pilot_values[new_b] = 0;
         continue;
       }
       const size_t new_b_len = new_bucket.size();
@@ -573,11 +574,11 @@ public:
             hashes.subspan(starts[b], starts[b + 1] - starts[b]);
         if (auto fpilot = this->find_pilot(KMAX, bucket, taken)) {
           auto &[p, hp] = fpilot.value();
-          pilots[b] = static_cast<uint8_t>(p);
+          pilot_values[b] = static_cast<uint8_t>(p);
           for (auto &item :
                hashes.subspan(starts[b], starts[b + 1] - starts[b])) {
-            auto p = this->slot_in_part_hp(item, hp);
-            slots[p] = b;
+            auto item_slot = this->slot_in_part_hp(item, hp);
+            slots[item_slot] = b;
           }
           continue;
         }
@@ -592,8 +593,8 @@ public:
           size_t collision_score = 0;
           for (auto &item :
                hashes.subspan(starts[b], starts[b + 1] - starts[b])) {
-            auto p = this->slot_in_part_hp(item, hp);
-            const auto s = slots[p];
+            auto item_slot = this->slot_in_part_hp(item, hp);
+            const auto s = slots[item_slot];
             size_t new_score = 0;
             if (s == BUCKET_IDX_NONE) {
               continue;
@@ -630,7 +631,7 @@ public:
         }
 
         const auto &p = cpp::get<1>(best);
-        pilots[b] = static_cast<uint8_t>(p);
+        pilot_values[b] = static_cast<uint8_t>(p);
         const auto hp = this->hash_pilot(p);
         for (auto &item :
              hashes.subspan(starts[b], starts[b + 1] - starts[b])) {
@@ -641,10 +642,11 @@ public:
             heap.push({bucket_len(b2), b2});
             evictions++;
 
-            auto hp = this->hash_pilot(static_cast<uint64_t>(pilots[b2]));
-            for (auto &item :
+            auto evicted_hp =
+                this->hash_pilot(static_cast<uint64_t>(pilot_values[b2]));
+            for (auto &evicted_item :
                  hashes.subspan(starts[b2], starts[b2 + 1] - starts[b2])) {
-              auto p2 = this->slot_in_part_hp(item, hp);
+              auto p2 = this->slot_in_part_hp(evicted_item, evicted_hp);
               slots[p2] = BUCKET_IDX_NONE;
               taken[p2] = false;
             }
@@ -703,8 +705,8 @@ public:
       size_t hx = bucket[i];
       const auto slot = this->slot_in_part_hp(hx, hp);
       if (taken[slot]) {
-        for (auto hx : bucket.subspan(0, i)) {
-          taken[this->slot_in_part_hp(hx, hp)] = false;
+        for (auto prior : bucket.subspan(0, i)) {
+          taken[this->slot_in_part_hp(prior, hp)] = false;
         }
         return false;
       }
