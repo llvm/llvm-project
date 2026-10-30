@@ -188,8 +188,8 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_partition(const __iterator_partitions<_Ite
   struct __ctx_t {
     const __iterator_partitions<_Iterator>& __partitions_;
     _Functor& __func_;
-  } __ctx{__partitions, __func};
-  __statpart::__apply(__partitions.__partitions_count(), &__ctx, [](void* __context, size_t __partition) {
+  } __apply_ctx{__partitions, __func};
+  __statpart::__apply(__partitions.__partitions_count(), &__apply_ctx, [](void* __context, size_t __partition) {
     __ctx_t& __ctx = *static_cast<__ctx_t*>(__context);
     auto __range   = __ctx.__partitions_.__partition(__partition);
     __ctx.__func_(__range.__first, __range.__last);
