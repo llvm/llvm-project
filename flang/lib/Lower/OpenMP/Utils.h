@@ -146,6 +146,7 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     mlir::omp::ClauseMapFlags mapTypeBits);
 
 bool requiresImplicitDefaultDeclareMapper(
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     const semantics::DerivedTypeSpec &typeSpec,
     bool enableImplicitDefaultMapperAllocatableMembers);
 

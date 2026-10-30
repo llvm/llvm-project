@@ -76,14 +76,22 @@ llvm::cl::opt<bool> treatIndexAsSection(
 namespace Fortran {
 namespace lower {
 namespace omp {
+
+static bool
+hasUserDefinedDefaultMapper(Fortran::lower::AbstractConverter &converter,
+                            const semantics::DerivedTypeSpec &typeSpec) {
+  std::string mapperName =
+      typeSpec.name().ToString() + llvm::omp::OmpDefaultMapperName;
+  if (auto *sym = converter.getCurrentScope().FindSymbol(mapperName))
+    return sym->GetUltimate().detailsIf<semantics::MapperDetails>();
+
+  return false;
+}
+
 bool requiresImplicitDefaultDeclareMapper(
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
     const semantics::DerivedTypeSpec &typeSpec,
     bool enableImplicitDefaultMapperAllocatableMembers) {
-  // If disabled via -fno-implicit-default-mapper-allocatable-members
-  // return false, as we do not need to emit allocatable member maps.
-  if (!enableImplicitDefaultMapperAllocatableMembers)
-    return false;
-
   llvm::SmallPtrSet<const semantics::DerivedTypeSpec *, 8> visited;
 
   std::function<bool(const semantics::DerivedTypeSpec &)> requiresMapper =
@@ -93,13 +101,21 @@ bool requiresImplicitDefaultDeclareMapper(
 
     semantics::DirectComponentIterator directComponents{spec};
     for (const semantics::Symbol &component : directComponents) {
-      if (component.attrs().test(semantics::Attr::ALLOCATABLE))
+      if (enableImplicitDefaultMapperAllocatableMembers &&
+          component.attrs().test(semantics::Attr::ALLOCATABLE))
         return true;
 
-      if (const semantics::DeclTypeSpec *declType = component.GetType())
-        if (const auto *nested = declType->AsDerived())
-          if (requiresMapper(*nested))
-            return true;
+      if (const semantics::DeclTypeSpec *declType = component.GetType()) {
+        const auto *nested = declType->AsDerived();
+        if (!nested)
+          continue;
+
+        if (hasUserDefinedDefaultMapper(converter, *nested))
+          return true;
+
+        if (requiresMapper(*nested))
+          return true;
+      }
     }
     return false;
   };
@@ -1218,7 +1234,8 @@ findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
 static mlir::FlatSymbolRefAttr
 addImplicitMapper(Fortran::lower::AbstractConverter &converter,
                   mlir::Location loc, const omp::Object &object,
-                  std::string &mapperIdName, bool allowGenerate) {
+                  std::string &mapperIdName, bool allowGenerate,
+                  bool emitAllocatableMemberMaps) {
   if (!allowGenerate || mapperIdName.empty())
     return mlir::FlatSymbolRefAttr();
 
@@ -1239,7 +1256,8 @@ addImplicitMapper(Fortran::lower::AbstractConverter &converter,
       converter.getFirOpBuilder(), loc, recordType, mapperIdName,
       [&](std::string &mapperIdName, llvm::StringRef memberName) {
         defaultMangler(converter, mapperIdName, memberName);
-      });
+      },
+      emitAllocatableMemberMaps);
 }
 
 mlir::FlatSymbolRefAttr resolveMapperId(
@@ -1286,15 +1304,18 @@ mlir::FlatSymbolRefAttr resolveMapperId(
           (mapTypeBits & mlir::omp::ClauseMapFlags::implicit) ==
           mlir::omp::ClauseMapFlags::implicit;
       bool needsDefaultMapper = requiresImplicitDefaultDeclareMapper(
-          *objectTypeSpec, enableImplicitDefaultMapperAllocatableMembers);
+          converter, firOpBuilder, *objectTypeSpec,
+          enableImplicitDefaultMapperAllocatableMembers);
       // For implicit captures, avoid synthesizing default mappers for
       // pointer entities (which can over-map pointer payloads) and for
       // plain non-allocatable/non-pointer entities. Keep implicit mapper
       // support for allocatables.
       if (isImplicitMap && (isPointer || !isAllocOrPointer))
         needsDefaultMapper = false;
-      mapperId = addImplicitMapper(converter, loc, object, mapperIdName,
-                                   /*allowGenerate=*/needsDefaultMapper);
+      mapperId =
+          addImplicitMapper(converter, loc, object, mapperIdName,
+                            /*allowGenerate=*/needsDefaultMapper,
+                            enableImplicitDefaultMapperAllocatableMembers);
     }
   }
 
