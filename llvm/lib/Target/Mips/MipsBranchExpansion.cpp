@@ -84,12 +84,15 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -119,12 +122,11 @@ struct MBBInfo {
   MBBInfo() = default;
 };
 
-class MipsBranchExpansion : public MachineFunctionPass {
+class MipsBranchExpansionLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MipsBranchExpansion()
-      : MachineFunctionPass(ID), ABI(MipsABIInfo::Unknown()) {}
+  MipsBranchExpansionLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Mips Branch Expansion Pass";
@@ -135,8 +137,9 @@ public:
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setNoVRegs();
   }
+};
 
-private:
+class MipsBranchExpansionImpl {
   void splitMBB(MachineBasicBlock *MBB);
   void initMBBInfo();
   int64_t computeOffset(const MachineInstr *Br);
@@ -162,22 +165,25 @@ private:
   MachineFunction *MFp;
   SmallVector<MBBInfo, 16> MBBInfos;
   bool IsPIC;
-  MipsABIInfo ABI;
+  MipsABIInfo ABI = MipsABIInfo::Unknown();
   bool ForceLongBranchFirstPass = false;
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF);
 };
 
 } // end of anonymous namespace
 
-char MipsBranchExpansion::ID = 0;
+char MipsBranchExpansionLegacy::ID = 0;
 
-INITIALIZE_PASS(MipsBranchExpansion, DEBUG_TYPE,
+INITIALIZE_PASS(MipsBranchExpansionLegacy, DEBUG_TYPE,
                 "Expand out of range branch instructions and fix forbidden"
                 " slot hazards",
                 false, false)
 
 /// Returns a pass that clears pipeline hazards.
-FunctionPass *llvm::createMipsBranchExpansion() {
-  return new MipsBranchExpansion();
+FunctionPass *llvm::createMipsBranchExpansionLegacyPass() {
+  return new MipsBranchExpansionLegacy();
 }
 
 // Find the next real instruction from the current position in current basic
@@ -237,7 +243,7 @@ static ReverseIter getNonDebugInstr(ReverseIter B, const ReverseIter &E) {
 }
 
 // Split MBB if it has two direct jumps/branches.
-void MipsBranchExpansion::splitMBB(MachineBasicBlock *MBB) {
+void MipsBranchExpansionImpl::splitMBB(MachineBasicBlock *MBB) {
   ReverseIter End = MBB->rend();
   ReverseIter LastBr = getNonDebugInstr(MBB->rbegin(), End);
 
@@ -273,7 +279,7 @@ void MipsBranchExpansion::splitMBB(MachineBasicBlock *MBB) {
 }
 
 // Fill MBBInfos.
-void MipsBranchExpansion::initMBBInfo() {
+void MipsBranchExpansionImpl::initMBBInfo() {
   // Split the MBBs if they have two branches. Each basic block should have at
   // most one branch after this loop is executed.
   for (auto &MBB : *MFp)
@@ -293,7 +299,7 @@ void MipsBranchExpansion::initMBBInfo() {
 }
 
 // Compute offset of branch in number of bytes.
-int64_t MipsBranchExpansion::computeOffset(const MachineInstr *Br) {
+int64_t MipsBranchExpansionImpl::computeOffset(const MachineInstr *Br) {
   int64_t Offset = 0;
   int ThisMBB = Br->getParent()->getNumber();
   int TargetMBB = getTargetMBB(*Br)->getNumber();
@@ -314,7 +320,7 @@ int64_t MipsBranchExpansion::computeOffset(const MachineInstr *Br) {
 }
 
 // Returns the distance in bytes up until MBB
-uint64_t MipsBranchExpansion::computeOffsetFromTheBeginning(int MBB) {
+uint64_t MipsBranchExpansionImpl::computeOffsetFromTheBeginning(int MBB) {
   uint64_t Offset = 0;
   for (int N = 0; N < MBB; ++N)
     Offset += MBBInfos[N].Size;
@@ -323,9 +329,9 @@ uint64_t MipsBranchExpansion::computeOffsetFromTheBeginning(int MBB) {
 
 // Replace Br with a branch which has the opposite condition code and a
 // MachineBasicBlock operand MBBOpnd.
-void MipsBranchExpansion::replaceBranch(MachineBasicBlock &MBB, Iter Br,
-                                        const DebugLoc &DL,
-                                        MachineBasicBlock *MBBOpnd) {
+void MipsBranchExpansionImpl::replaceBranch(MachineBasicBlock &MBB, Iter Br,
+                                            const DebugLoc &DL,
+                                            MachineBasicBlock *MBBOpnd) {
   unsigned NewOpc = TII->getOppositeBranchOpc(Br->getOpcode());
   const MCInstrDesc &NewDesc = TII->get(NewOpc);
 
@@ -363,9 +369,9 @@ void MipsBranchExpansion::replaceBranch(MachineBasicBlock &MBB, Iter Br,
   Br->eraseFromParent();
 }
 
-bool MipsBranchExpansion::buildProperJumpMI(MachineBasicBlock *MBB,
-                                            MachineBasicBlock::iterator Pos,
-                                            DebugLoc DL) {
+bool MipsBranchExpansionImpl::buildProperJumpMI(MachineBasicBlock *MBB,
+                                                MachineBasicBlock::iterator Pos,
+                                                DebugLoc DL) {
   bool HasR6 = ABI.IsN64() ? STI->hasMips64r6() : STI->hasMips32r6();
   bool AddImm = HasR6 && !STI->useIndirectJumpsHazard();
 
@@ -397,7 +403,7 @@ bool MipsBranchExpansion::buildProperJumpMI(MachineBasicBlock *MBB,
 // currently assumes that all branches have 16-bit offsets, and will produce
 // wrong code if branches whose allowed offsets are [-128, -126, ..., 126]
 // are present.
-void MipsBranchExpansion::expandToLongBranch(MBBInfo &I) {
+void MipsBranchExpansionImpl::expandToLongBranch(MBBInfo &I) {
   MachineBasicBlock::iterator Pos;
   MachineBasicBlock *MBB = I.Br->getParent(), *TgtMBB = getTargetMBB(*I.Br);
   DebugLoc DL = I.Br->getDebugLoc();
@@ -722,7 +728,7 @@ static void emitGPDisp(MachineFunction &F, const MipsInstrInfo *TII) {
 }
 
 template <typename Pred, typename Safe>
-bool MipsBranchExpansion::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
+bool MipsBranchExpansionImpl::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
   bool Changed = false;
   bool hasPendingMFLO = false;
 
@@ -771,7 +777,7 @@ bool MipsBranchExpansion::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
 }
 
 template <typename Pred, typename Safe>
-bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
+bool MipsBranchExpansionImpl::handleSlot(Pred Predicate, Safe SafeInSlot) {
   bool Changed = false;
 
   for (MachineFunction::iterator FI = MFp->begin(); FI != MFp->end(); ++FI) {
@@ -806,7 +812,7 @@ bool MipsBranchExpansion::handleSlot(Pred Predicate, Safe SafeInSlot) {
   return Changed;
 }
 
-bool MipsBranchExpansion::handleMFLO() {
+bool MipsBranchExpansionImpl::handleMFLO() {
   // mips1-4 require a minimum of 2 instructions between a mflo/mfhi
   // and the next mul/div instruction.
   if (STI->hasMips32() || STI->hasMips5())
@@ -819,7 +825,7 @@ bool MipsBranchExpansion::handleMFLO() {
       });
 }
 
-bool MipsBranchExpansion::handleForbiddenSlot() {
+bool MipsBranchExpansionImpl::handleForbiddenSlot() {
   // Forbidden slot hazards are only defined for MIPSR6 but not microMIPSR6.
   if (!STI->hasMips32r6() || STI->inMicroMipsMode())
     return false;
@@ -831,7 +837,7 @@ bool MipsBranchExpansion::handleForbiddenSlot() {
       });
 }
 
-bool MipsBranchExpansion::handleFPUDelaySlot() {
+bool MipsBranchExpansionImpl::handleFPUDelaySlot() {
   // FPU delay slots are only defined for MIPS3 and below.
   if (STI->hasMips32() || STI->hasMips4())
     return false;
@@ -842,7 +848,7 @@ bool MipsBranchExpansion::handleFPUDelaySlot() {
                     });
 }
 
-bool MipsBranchExpansion::handleLoadDelaySlot() {
+bool MipsBranchExpansionImpl::handleLoadDelaySlot() {
   // Load delay slot hazards are only for MIPS1.
   if (STI->hasMips2())
     return false;
@@ -854,7 +860,7 @@ bool MipsBranchExpansion::handleLoadDelaySlot() {
       });
 }
 
-bool MipsBranchExpansion::handlePossibleLongBranch() {
+bool MipsBranchExpansionImpl::handlePossibleLongBranch() {
   if (STI->inMips16Mode())
     return false;
 
@@ -908,7 +914,7 @@ bool MipsBranchExpansion::handlePossibleLongBranch() {
   return EverMadeChange;
 }
 
-bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
+bool MipsBranchExpansionImpl::runOnMachineFunction(MachineFunction &MF) {
   const TargetMachine &TM = MF.getTarget();
   IsPIC = TM.isPositionIndependent();
   STI = &MF.getSubtarget<MipsSubtarget>();
@@ -945,4 +951,18 @@ bool MipsBranchExpansion::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool MipsBranchExpansionLegacy::runOnMachineFunction(MachineFunction &MF) {
+  MipsBranchExpansionImpl Impl;
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+MipsBranchExpansionPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  MipsBranchExpansionImpl Impl;
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+             : PreservedAnalyses::all();
 }
