@@ -157,6 +157,20 @@ inline CoExecMaskT getCoExecMask(InstructionFlavor F) {
   llvm_unreachable("Unknown InstructionFlavor");
 }
 
+/// Bitmask type for flavor sets. Supports up to 16 flavors.
+using FlavorMask = uint16_t;
+static_assert(static_cast<unsigned>(InstructionFlavor::NUM_FLAVORS) <= 16,
+              "FlavorMask is too narrow for InstructionFlavor");
+
+/// Convert a single flavor to its bitmask representation.
+inline constexpr FlavorMask flavorBit(InstructionFlavor F) {
+  return 1u << static_cast<unsigned>(F);
+}
+
+namespace FlavorMasks {
+constexpr FlavorMask None = 0;
+} // namespace FlavorMasks
+
 //===----------------------------------------------------------------------===//
 // Co-execution Stage Type
 //===----------------------------------------------------------------------===//
@@ -224,9 +238,11 @@ constexpr unsigned MaxCoExecStages = 32;
 // Co-execution Slot Info
 //===----------------------------------------------------------------------===//
 
-/// Per-slot info: which instruction classes may co-execute here.
+/// Per-slot info including capabilities and scheduling preferences.
 struct CoExecSlotInfo {
   CoExecMaskT Mask = CoExecMask::All; // What CAN execute (correctness)
+  FlavorMask PreferredFlavors = FlavorMasks::None; // Flavors to prefer here
+  FlavorMask AvoidedFlavors = FlavorMasks::None;   // Flavors to avoid here
 };
 
 //===----------------------------------------------------------------------===//
@@ -314,6 +330,42 @@ struct CoExecInfo {
   /// Get stage type for a specific stage.
   CoExecStageType getType(unsigned Stage) const {
     return getStageType(getMask(Stage));
+  }
+
+  /// Get preferred flavors for a stage.
+  FlavorMask getPreferredFlavors(unsigned Stage) const {
+    return Stage < TotalWindow ? Slots[Stage].PreferredFlavors
+                               : FlavorMasks::None;
+  }
+
+  /// Get avoided flavors for a stage.
+  FlavorMask getAvoidedFlavors(unsigned Stage) const {
+    return Stage < TotalWindow ? Slots[Stage].AvoidedFlavors
+                               : FlavorMasks::None;
+  }
+
+  /// Check if a flavor is preferred at a stage.
+  bool isPreferred(unsigned Stage, InstructionFlavor F) const {
+    return (getPreferredFlavors(Stage) & flavorBit(F)) != 0;
+  }
+
+  /// Check if a flavor should be avoided at a stage.
+  bool isAvoided(unsigned Stage, InstructionFlavor F) const {
+    return (getAvoidedFlavors(Stage) & flavorBit(F)) != 0;
+  }
+
+  /// Set preferred flavors for a stage. Returns *this for chaining.
+  CoExecInfo &prefer(unsigned Stage, FlavorMask Flavors) {
+    assert(Stage < TotalWindow && "Stage is outside the co-execution window");
+    Slots[Stage].PreferredFlavors = Flavors;
+    return *this;
+  }
+
+  /// Set avoided flavors for a stage. Returns *this for chaining.
+  CoExecInfo &avoid(unsigned Stage, FlavorMask Flavors) {
+    assert(Stage < TotalWindow && "Stage is outside the co-execution window");
+    Slots[Stage].AvoidedFlavors = Flavors;
+    return *this;
   }
 
   /// Build a CoExecInfo from an occupancy and stage pattern.
@@ -406,28 +458,93 @@ inline CoExecInfo getCoExecInfo(const MachineInstr &MI,
 
   // 16x16x128 F8/F6/F4 has occupancy of 8 cycles and a window of 10 cycles.
   case WMMAVariant::F8F6F4_16x16x128:
-    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV");
+    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEEISVV" : "0EEIEEIIVV")
+        .prefer(1, flavorBit(InstructionFlavor::DS))
+        .avoid(2, flavorBit(InstructionFlavor::DS))
+        .prefer(3, flavorBit(InstructionFlavor::TRANS))
+        .avoid(3, flavorBit(InstructionFlavor::DS) |
+                      flavorBit(InstructionFlavor::SALU) |
+                      flavorBit(InstructionFlavor::VMEM))
+        .prefer(4, flavorBit(InstructionFlavor::DS))
+        .avoid(5, flavorBit(InstructionFlavor::DS))
+        .prefer(6, flavorBit(InstructionFlavor::SingleCycleVALU))
+        .avoid(6, HasScaling ? flavorBit(InstructionFlavor::TRANS)
+                             : FlavorMasks::None)
+        .prefer(7, HasScaling ? flavorBit(InstructionFlavor::WMMA)
+                              : flavorBit(InstructionFlavor::TRANS))
+        .prefer(8, flavorBit(InstructionFlavor::WMMA))
+        .prefer(9, flavorBit(InstructionFlavor::WMMA));
 
   // 16x16x128 with two F4 inputs has occupancy of 4 cycles and a window of 6
   // cycles.
   case WMMAVariant::F8F6F4_16x16x128_BothF4:
-    return CoExecInfo::build(4, 6, HasScaling ? "0EESVV" : "0EEIVV");
+    return CoExecInfo::build(4, 6, HasScaling ? "0EESVV" : "0EEIVV")
+        .prefer(1, flavorBit(InstructionFlavor::DS))
+        .avoid(2, flavorBit(InstructionFlavor::DS))
+        .prefer(3, HasScaling ? flavorBit(InstructionFlavor::WMMA)
+                              : flavorBit(InstructionFlavor::SingleCycleVALU))
+        .prefer(4, flavorBit(InstructionFlavor::WMMA))
+        .prefer(5, flavorBit(InstructionFlavor::WMMA));
 
   // 16x16x64 FP8/BF8: 4-cycle occupancy, 6-cycle window.
   case WMMAVariant::FP8BF8_16x16x64:
-    return CoExecInfo::build(4, 6, "0EEIVV");
+    return CoExecInfo::build(4, 6, "0EEIVV")
+        .prefer(1, flavorBit(InstructionFlavor::DS))
+        .avoid(2, flavorBit(InstructionFlavor::DS))
+        .prefer(3, flavorBit(InstructionFlavor::SingleCycleVALU))
+        .prefer(4, flavorBit(InstructionFlavor::WMMA))
+        .prefer(5, flavorBit(InstructionFlavor::WMMA));
 
   // 16x16x32 F16/BF16: 8-cycle occupancy, 9-cycle window.
   case WMMAVariant::F16BF16_16x16x32:
-    return CoExecInfo::build(8, 9, "0EIIEEIIV");
+    return CoExecInfo::build(8, 9, "0EIIEEIIV")
+        .avoid(1, flavorBit(InstructionFlavor::DS))
+        .prefer(2, flavorBit(InstructionFlavor::SingleCycleVALU))
+        .prefer(3, flavorBit(InstructionFlavor::TRANS))
+        .avoid(3, flavorBit(InstructionFlavor::DS) |
+                      flavorBit(InstructionFlavor::SALU) |
+                      flavorBit(InstructionFlavor::VMEM))
+        .prefer(4, flavorBit(InstructionFlavor::DS))
+        .avoid(5, flavorBit(InstructionFlavor::DS))
+        .prefer(6, flavorBit(InstructionFlavor::SingleCycleVALU))
+        .prefer(7, flavorBit(InstructionFlavor::TRANS))
+        .prefer(8, flavorBit(InstructionFlavor::WMMA));
 
   // 16x16x128 FP8/BF8: 8-cycle occupancy, 10-cycle window.
   case WMMAVariant::FP8BF8_16x16x128:
-    return CoExecInfo::build(8, 10, "0EEIEEIIVV");
+    return CoExecInfo::build(8, 10, "0EEIEEIIVV")
+        .prefer(1, flavorBit(InstructionFlavor::DS))
+        .avoid(2, flavorBit(InstructionFlavor::DS))
+        .prefer(3, flavorBit(InstructionFlavor::TRANS))
+        .avoid(3, flavorBit(InstructionFlavor::DS) |
+                      flavorBit(InstructionFlavor::SALU) |
+                      flavorBit(InstructionFlavor::VMEM))
+        .prefer(4, flavorBit(InstructionFlavor::DS))
+        .avoid(5, flavorBit(InstructionFlavor::DS))
+        .prefer(6, flavorBit(InstructionFlavor::SingleCycleVALU))
+        .prefer(7, flavorBit(InstructionFlavor::TRANS))
+        .prefer(8, flavorBit(InstructionFlavor::WMMA))
+        .prefer(9, flavorBit(InstructionFlavor::WMMA));
 
   // 32x16x128 F4: 8-cycle occupancy, 10-cycle window.
   case WMMAVariant::F4_32x16x128:
-    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV");
+    return CoExecInfo::build(8, 10, HasScaling ? "0EEIEIESVV" : "0EEIEIEIVV")
+        .prefer(1, flavorBit(InstructionFlavor::DS))
+        .avoid(2, flavorBit(InstructionFlavor::DS))
+        .prefer(3, flavorBit(InstructionFlavor::TRANS))
+        .avoid(3, flavorBit(InstructionFlavor::DS) |
+                      flavorBit(InstructionFlavor::SALU) |
+                      flavorBit(InstructionFlavor::VMEM))
+        .avoid(4, flavorBit(InstructionFlavor::DS))
+        .prefer(5, flavorBit(InstructionFlavor::TRANS))
+        .avoid(5, flavorBit(InstructionFlavor::DS) |
+                      flavorBit(InstructionFlavor::SALU) |
+                      flavorBit(InstructionFlavor::VMEM))
+        .avoid(6, flavorBit(InstructionFlavor::DS))
+        .prefer(7, HasScaling ? flavorBit(InstructionFlavor::WMMA)
+                              : flavorBit(InstructionFlavor::TRANS))
+        .prefer(8, flavorBit(InstructionFlavor::WMMA))
+        .prefer(9, flavorBit(InstructionFlavor::WMMA));
 
   case WMMAVariant::Unknown:
     // Permissive window for variants without a modeled slot pattern.
