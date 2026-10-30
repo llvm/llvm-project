@@ -642,6 +642,11 @@ constexpr const char *saveTempsValues[] = {
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
+const std::optional<std::array<uint8_t, 16>> *
+LinkerDriver::getMemProfModuleId() const {
+  return lto ? &lto->getMemProfModuleId() : nullptr;
+}
+
 void LinkerDriver::waitForLTOCleanup() {
   if (lto)
     lto->waitForLTOCleanup();
@@ -694,6 +699,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       StringRef ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
       if (!ltoSampleProfile.empty())
         readFile(ctx, ltoSampleProfile);
+      StringRef ltoMemProfProfile =
+          args.getLastArgValue(OPT_lto_memprof_profile);
+      if (!ltoMemProfProfile.empty())
+        readFile(ctx, ltoMemProfProfile);
     } else {
       ErrAlways(ctx) << "--reproduce: " << errOrWriter.takeError();
     }
@@ -1513,6 +1522,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     ErrAlways(ctx) << "invalid codegen optimization level for LTO: " << ltoCgo;
   ctx.arg.ltoObjPath = args.getLastArgValue(OPT_lto_obj_path_eq);
   ctx.arg.ltoPartitions = args::getInteger(args, OPT_lto_partitions, 1);
+  ctx.arg.ltoMemProfProfile = args.getLastArgValue(OPT_lto_memprof_profile);
   ctx.arg.ltoSampleProfile = args.getLastArgValue(OPT_lto_sample_profile);
   ctx.arg.ltoBBAddrMap =
       args.hasFlag(OPT_lto_basic_block_address_map,

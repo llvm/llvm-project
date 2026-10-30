@@ -5,6 +5,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
+#include "llvm/Support/MD5.h"
 
 namespace llvm {
 namespace memprof {
@@ -273,6 +274,17 @@ GlobalValue::GUID getGUID(const StringRef FunctionName) {
   // this time, it is the lower 64 bits of the md5 of the canonical
   // function name.
   return Function::getGUIDAssumingExternalLinkage(CanonicalName);
+}
+
+GlobalValue::GUID getGUID(const StringRef FunctionName,
+                          ArrayRef<uint8_t> ModuleId) {
+  StringRef CanonicalName =
+      sampleprof::FunctionSamples::getCanonicalFnName(FunctionName);
+  MD5 Hash;
+  Hash.update("MemProf module GUID");
+  Hash.update(ModuleId);
+  Hash.update(CanonicalName);
+  return Hash.final().low();
 }
 
 Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer) {
