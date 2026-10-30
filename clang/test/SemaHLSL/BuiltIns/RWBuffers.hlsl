@@ -5,10 +5,12 @@ typedef vector<double, 2> double2;
 typedef vector<double, 3> double3;
 
 
-// expected-error@+1 {{class template 'RWBuffer' requires template arguments}}
+// expected-error@+2 {{class template 'RWBuffer' requires template arguments}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
 RWBuffer BufferErr1;
 
-// expected-error@+1 {{too few template arguments for class template 'RWBuffer'}}
+// expected-error@+2 {{too few template arguments for class template 'RWBuffer'}}
+// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
 RWBuffer<> BufferErr2;
 
 // test implicit RWBuffer concept
@@ -17,8 +19,7 @@ RWBuffer<float> r2;
 RWBuffer<float3> Buff;
 RWBuffer<double2> r4;
 
-// expected-error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
+// expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 'RWBuffer<int>' does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(hlsl::RWBuffer<int>)' evaluated to false}}
 RWBuffer<RWBuffer<int> > r5;
@@ -38,8 +39,7 @@ template<typename T> struct TemplatedVector {
 };
 
 // structs not allowed
-// expected-error@+4 {{constraints not satisfied for class template 'RWBuffer'}}
-// expected-note@*:* {{template declaration from hidden source: template <typename element_type> requires __is_typed_resource_element_compatible<element_type> class RWBuffer}}
+// expected-error@+3 {{constraints not satisfied for class template 'RWBuffer'}}
 // expected-note@*:* {{because 's' does not satisfy '__is_typed_resource_element_compatible'}}
 // expected-note@*:* {{because '__builtin_hlsl_is_typed_resource_element_compatible(s)' evaluated to false}}
 RWBuffer<s> r6;
