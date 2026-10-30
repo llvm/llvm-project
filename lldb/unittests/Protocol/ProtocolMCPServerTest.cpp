@@ -426,14 +426,17 @@ TEST_F(ProtocolServerMCPTest, ResourcesReadError) {
 }
 
 TEST_F(ProtocolServerMCPTest, Accept) {
-  auto transports = TestTransport<ProtocolDescriptor>::createPair(loop);
+  auto transports =
+      TestTransport<lldb_protocol::mcp::ProtocolDescriptor>::createPair(loop);
   EXPECT_THAT_ERROR(server_up->Accept(std::move(transports.second)),
                     Succeeded());
 }
 
 TEST_F(ProtocolServerMCPTest, AcceptErrorAndDisconnect) {
-  auto transports = TestTransport<ProtocolDescriptor>::createPair(loop);
-  TestTransport<ProtocolDescriptor> *server_transport = transports.second.get();
+  auto transports =
+      TestTransport<lldb_protocol::mcp::ProtocolDescriptor>::createPair(loop);
+  TestTransport<lldb_protocol::mcp::ProtocolDescriptor> *server_transport =
+      transports.second.get();
   EXPECT_THAT_ERROR(server_up->Accept(std::move(transports.second)),
                     Succeeded());
 
@@ -448,7 +451,9 @@ TEST_F(ProtocolServerMCPTest, AcceptErrorAndDisconnect) {
 }
 
 TEST_F(ProtocolServerMCPTest, AcceptRegisterFailure) {
-  auto transport = std::make_unique<TestTransport<ProtocolDescriptor>>(loop);
+  auto transport =
+      std::make_unique<TestTransport<lldb_protocol::mcp::ProtocolDescriptor>>(
+          loop);
   transport->SetRegisterMessageHandlerShouldFail(true);
   EXPECT_THAT_ERROR(server_up->Accept(std::move(transport)), Failed());
 }

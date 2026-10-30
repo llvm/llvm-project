@@ -96,10 +96,12 @@ public:
   MainLoop loop;
   std::unique_ptr<Server> server;
   std::unique_ptr<Client> client;
-  TestTransport<ProtocolDescriptor> *client_transport = nullptr;
+  TestTransport<lldb_protocol::mcp::ProtocolDescriptor> *client_transport =
+      nullptr;
 
   void SetUp() override {
-    auto pair = TestTransport<ProtocolDescriptor>::createConnectedPair(loop);
+    auto pair = TestTransport<
+        lldb_protocol::mcp::ProtocolDescriptor>::createConnectedPair(loop);
     client_transport = pair.first.get();
 
     server = std::make_unique<Server>("lldb-mcp", "0.1.0");
