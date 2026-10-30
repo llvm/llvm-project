@@ -85,7 +85,7 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  // TODO(boomanaiden154): AddMipsBranchExpansionPass
+  addMachineFunctionPass(MipsBranchExpansionPass(), PMW);
 
   // TODO(boomanaiden154): Add MipsConstantIslandPass
 }

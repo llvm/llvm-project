@@ -89,6 +89,7 @@
 ; MIPS-NEXT:     mips-expand-pseudo
 ; MIPS-NEXT:     mips-micro-size-reduce
 ; MIPS-NEXT:     mips-delay-slot-filler
+; MIPS-NEXT:     mips-branch-expansion
 ; MIPS-NEXT:     funclet-layout
 ; MIPS-NEXT:     remove-loads-into-fake-uses
 ; MIPS-NEXT:     StackMapLivenessPass
@@ -183,6 +184,7 @@
 ; MIPS-OS16-NEXT:     mips-expand-pseudo
 ; MIPS-OS16-NEXT:     mips-micro-size-reduce
 ; MIPS-OS16-NEXT:     mips-delay-slot-filler
+; MIPS-OS16-NEXT:     mips-branch-expansion
 ; MIPS-OS16-NEXT:     funclet-layout
 ; MIPS-OS16-NEXT:     remove-loads-into-fake-uses
 ; MIPS-OS16-NEXT:     StackMapLivenessPass
@@ -277,6 +279,7 @@
 ; MIPS-MFIX4300-NEXT:     mips-micro-size-reduce
 ; MIPS-MFIX4300-NEXT:     mips-mul-mul-bug-fix
 ; MIPS-MFIX4300-NEXT:     mips-delay-slot-filler
+; MIPS-MFIX4300-NEXT:     mips-branch-expansion
 ; MIPS-MFIX4300-NEXT:     funclet-layout
 ; MIPS-MFIX4300-NEXT:     remove-loads-into-fake-uses
 ; MIPS-MFIX4300-NEXT:     StackMapLivenessPass

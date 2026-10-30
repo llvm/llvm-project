@@ -61,7 +61,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeGlobalISel(*PR);
   initializeMipsAsmPrinterPass(*PR);
   initializeMipsDelaySlotFillerLegacyPass(*PR);
-  initializeMipsBranchExpansionPass(*PR);
+  initializeMipsBranchExpansionLegacyPass(*PR);
   initializeMipsMicroSizeReduceLegacyPass(*PR);
   initializeMipsPreLegalizerCombinerPass(*PR);
   initializeMipsPostLegalizerCombinerPass(*PR);
@@ -271,7 +271,7 @@ void MipsPassConfig::addPreEmitPass() {
   // then we can be sure that all branches are expanded properly and no hazards
   // exists.
   // Any new pass should go before this pass.
-  addPass(createMipsBranchExpansion());
+  addPass(createMipsBranchExpansionLegacyPass());
 
   addPass(createMipsConstantIslandPass());
 }
