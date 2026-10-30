@@ -2626,6 +2626,13 @@ def PROBED_STACKALLOC : Pseudo<(outs),
                                (ins GPR:$target),
                                []>,
                                Sched<[]>;
+// Probed stack allocation down to an address in a register, not necessarily a
+// multiple of the probe size below SP, used in function prologues to realign
+// the stack when stack-clash protection is enabled.
+def PROBED_STACKALLOC_VAR : Pseudo<(outs),
+                                   (ins GPR:$target),
+                                   []>,
+                                   Sched<[]>;
 let usesCustomInserter = 1 in
 def PROBED_STACKALLOC_DYN : Pseudo<(outs),
                                    (ins GPR:$target),
