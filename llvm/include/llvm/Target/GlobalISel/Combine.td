@@ -1783,7 +1783,8 @@ class signed_divrem_to_unsigned<Instruction signedOpcode,
                                Instruction unsignedOpcode> : GICombineRule<
   (defs root:$root),
   (match (signedOpcode $dst, $x, $y):$root,
-   [{ return Helper.matchSignedDivRemToUnsigned(*${root}); }]),
+   [{ return Helper.matchSignedDivRemToUnsigned(*${root},
+                       TargetOpcode::}] # unsignedOpcode # [{); }]),
   (apply (unsignedOpcode $dst, $x, $y, (MIFlags $root)))>;
 
 // Fold (sdiv x, y) -> (udiv x, y) when both operands are nonnegative.
