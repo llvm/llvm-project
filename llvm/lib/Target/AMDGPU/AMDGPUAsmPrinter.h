@@ -57,6 +57,10 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
+  // Symbol for the function end, used by ICache prefetch MCExprs.
+  // Created early in emitFunctionBodyStart when prefetch is enabled.
+  MCSymbol *PrefetchEndSym = nullptr;
+
   // When appropriate, add a _dvgpr$ symbol.
   void emitDVgprSymbol(MachineFunction &MF);
 
@@ -139,6 +143,8 @@ public:
 
   void emitFunctionBodyStart() override;
 
+  void emitFunctionBodyEnd() override;
+
   void endFunction(const MachineFunction *MF);
 
   void emitImplicitDef(const MachineInstr *MI) const override;
@@ -155,6 +161,9 @@ public:
 
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &O) override;
+
+  /// Get the symbol for the function end, used for ICache prefetch MCExprs.
+  MCSymbol *getPrefetchEndSym() const { return PrefetchEndSym; }
 
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override;

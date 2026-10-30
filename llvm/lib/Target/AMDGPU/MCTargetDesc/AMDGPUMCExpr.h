@@ -41,6 +41,8 @@ public:
     AGVK_AlignTo,
     AGVK_Occupancy,
     AGVK_InstPrefSize,
+    AGVK_PrefetchCachelines,
+    AGVK_PrefetchOffset,
     AGVK_Lit,
     AGVK_Lit64,
     AGVK_Min,
@@ -74,6 +76,8 @@ private:
   bool evaluateAlignTo(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateOccupancy(MCValue &Res, const MCAssembler *Asm) const;
   bool evaluateInstPrefSize(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluatePrefetchCachelines(MCValue &Res, const MCAssembler *Asm) const;
+  bool evaluatePrefetchOffset(MCValue &Res, const MCAssembler *Asm) const;
 
 public:
   static const AMDGPUMCExpr *
@@ -115,6 +119,31 @@ public:
   /// FieldWidth and CacheLineSize are derived from the subtarget.
   static const AMDGPUMCExpr *createInstPrefSize(const MCExpr *CodeSizeBytes,
                                                 MCContext &Ctx);
+
+  /// Create an expression for computing the encoded sdata field for a
+  /// prefetch target. TargetCacheLine is the function-relative target
+  /// cache-line index.
+  /// CodeSizeBytes is the total code size in bytes.
+  /// InstOffset is the byte offset of this prefetch instruction from the
+  /// function entry.
+  /// Returns the requested cacheline count minus one, encoded for the 5-bit
+  /// sdata field.
+  static const AMDGPUMCExpr *
+  createPrefetchCachelines(const MCExpr *TargetCacheLine,
+                           const MCExpr *CodeSizeBytes,
+                           const MCExpr *InstOffset, MCContext &Ctx);
+
+  /// Create an expression for computing the byte offset for a prefetch target.
+  /// TargetCacheLine is the function-relative target cache-line index.
+  /// CodeSizeBytes is the total code size in bytes.
+  /// InstOffset is the byte offset of this prefetch instruction from the
+  /// function entry.
+  /// Returns the byte offset from the PC of the corresponding prefetch
+  /// instruction to where this target should start prefetching.
+  static const AMDGPUMCExpr *createPrefetchOffset(const MCExpr *TargetCacheLine,
+                                                  const MCExpr *CodeSizeBytes,
+                                                  const MCExpr *InstOffset,
+                                                  MCContext &Ctx);
 
   static const AMDGPUMCExpr *createLit(LitModifier Lit, int64_t Value,
                                        MCContext &Ctx);

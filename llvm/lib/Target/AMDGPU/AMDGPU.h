@@ -352,6 +352,13 @@ struct AMDGPUInsertDelayAluPass
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class AMDGPUInsertICachePrefetchPass
+    : public RequiredPassInfoMixin<AMDGPUInsertICachePrefetchPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 FunctionPass *createAMDGPUISelDag(TargetMachine &TM, CodeGenOptLevel OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
@@ -592,6 +599,9 @@ extern char &SIModeRegisterID;
 
 void initializeAMDGPUInsertDelayAluLegacyPass(PassRegistry &);
 extern char &AMDGPUInsertDelayAluID;
+
+void initializeAMDGPUInsertICachePrefetchLegacyPass(PassRegistry &);
+extern char &AMDGPUInsertICachePrefetchID;
 
 void initializeAMDGPULowerVGPREncodingLegacyPass(PassRegistry &);
 extern char &AMDGPULowerVGPREncodingLegacyID;
