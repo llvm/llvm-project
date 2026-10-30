@@ -1057,8 +1057,9 @@ define i64 @macc_w00(i64 %rd, i32 %a, i32 %b) nounwind {
 }
 
 define i64 @macc_w01(i64 %rd, i32 %a, i64 %b) nounwind {
-; CHECK-LABEL: macc_w00:
+; CHECK-LABEL: macc_w01:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a2, a2, 32
 ; CHECK-NEXT:    macc.w00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
@@ -1069,8 +1070,10 @@ define i64 @macc_w01(i64 %rd, i32 %a, i64 %b) nounwind {
 }
 
 define i64 @macc_w11(i64 %rd, i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: macc_w00:
+; CHECK-LABEL: macc_w11:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a1, a1, 32
+; CHECK-NEXT:    srai a2, a2, 32
 ; CHECK-NEXT:    macc.w00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %ahi = ashr i64 %a, 32
@@ -1093,8 +1096,9 @@ define i64 @macc_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 }
 
 define i64 @macc_w01_commute(i64 %rd, i32 %a, i64 %b) nounwind {
-; CHECK-LABEL: macc_w00_commute:
+; CHECK-LABEL: macc_w01_commute:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a2, a2, 32
 ; CHECK-NEXT:    macc.w00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
@@ -1105,8 +1109,10 @@ define i64 @macc_w01_commute(i64 %rd, i32 %a, i64 %b) nounwind {
 }
 
 define i64 @macc_w11_commute(i64 %rd, i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: macc_w00_commute:
+; CHECK-LABEL: macc_w11_commute:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a1, a1, 32
+; CHECK-NEXT:    srai a2, a2, 32
 ; CHECK-NEXT:    macc.w00 a0, a1, a2
 ; CHECK-NEXT:    ret
   %ahi = ashr i64 %a, 32
@@ -1206,9 +1212,9 @@ define i64 @macc_w00_multiple_uses(i32 %a, i32 %b, i64 %c, ptr %out) nounwind {
 
 ; Negative test: multiply result has multiple uses, should not combine to macc
 define i64 @macc_w01_multiple_uses(i32 %a, i64 %b, i64 %c, ptr %out) nounwind {
-; CHECK-LABEL: macc_w00_multiple_uses:
+; CHECK-LABEL: macc_w01_multiple_uses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mul.w00 a1, a0, a1
+; CHECK-NEXT:    mul.w01 a1, a0, a1
 ; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    sd a1, 0(a3)
 ; CHECK-NEXT:    ret
@@ -1222,9 +1228,9 @@ define i64 @macc_w01_multiple_uses(i32 %a, i64 %b, i64 %c, ptr %out) nounwind {
 
 ; Negative test: multiply result has multiple uses, should not combine to macc
 define i64 @macc_w11_multiple_uses(i64 %a, i64 %b, i64 %c, ptr %out) nounwind {
-; CHECK-LABEL: macc_w00_multiple_uses:
+; CHECK-LABEL: macc_w11_multiple_uses:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mul.w00 a1, a0, a1
+; CHECK-NEXT:    mul.w11 a1, a0, a1
 ; CHECK-NEXT:    add a0, a2, a1
 ; CHECK-NEXT:    sd a1, 0(a3)
 ; CHECK-NEXT:    ret
@@ -1468,8 +1474,8 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; CHECK-LABEL: and_mul_32bitsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI103_0)
-; CHECK-NEXT:    ld a1, %lo(.LCPI103_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI109_0)
+; CHECK-NEXT:    ld a1, %lo(.LCPI109_0)(a1)
 ; CHECK-NEXT:    lui a2, 65664
 ; CHECK-NEXT:    addi a2, a2, 1024
 ; CHECK-NEXT:    slli a3, a2, 27
