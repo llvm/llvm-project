@@ -19,25 +19,27 @@ private struct DebugServer {
     }
 
     let subcommandName = args[1]
-    var subcommandArgs = consume args
-    subcommandArgs.removeFirst(2)
+    let subcommandArgs = args.dropFirst(2)
 
     switch subcommandName {
-      case "v", "version":
-        return version(subcommandArgs)
-      default:
-        print(helpText)
+    case "v", "version":
+      version(subcommandArgs)
+    default:
+      print(helpText)
     }
   }
 
-  static func version(_ args: consuming [String]) {
-    var versionCommand: Version
+  static func version(_ args: ArraySlice<String>) {
     do {
-      versionCommand = try Version.parse(args)
+      try Version.parse(args).run()
     } catch {
+      switch error {
+      case .failure(let message):
+        print(message)
+      case .unexpectedArgument(let arg):
+        print("Unexpected argument: \(arg)")
+      }
       print(Version.helpText)
-      return
     }
-    versionCommand.run()
   }
 }

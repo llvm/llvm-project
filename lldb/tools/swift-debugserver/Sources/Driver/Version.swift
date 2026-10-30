@@ -1,4 +1,4 @@
-internal struct Version {
+struct Version: Subcommand {
   static let helpText = """
     Usage:
       swift-debugserver version
@@ -6,13 +6,10 @@ internal struct Version {
     Displays the version of swift-debugserver.
     """
 
-  init() {
-  }
-
-  static func parse(_ args: borrowing [String])
+  static func parse(_ args: ArraySlice<String>)
       throws(ArgumentParseError) -> Version {
-    guard args.isEmpty else {
-      throw .failure("Unexpected argument \(args[0])")
+    if let extra = args.first {
+      throw .unexpectedArgument(extra)
     }
     return Version()
   }
