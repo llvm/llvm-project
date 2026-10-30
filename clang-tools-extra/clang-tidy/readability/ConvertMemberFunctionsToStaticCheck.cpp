@@ -22,8 +22,6 @@ namespace clang::tidy::readability {
 
 namespace {
 
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
 
 AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {

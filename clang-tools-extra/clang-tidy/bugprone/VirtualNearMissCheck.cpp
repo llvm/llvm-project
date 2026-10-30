@@ -18,10 +18,6 @@ using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
 
-namespace {
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-} // namespace
-
 /// Finds out if the given method overrides some method.
 static bool isOverrideMethod(const CXXMethodDecl *MD) {
   return MD->size_overridden_methods() > 0 || MD->hasAttr<OverrideAttr>();
