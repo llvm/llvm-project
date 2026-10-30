@@ -495,6 +495,15 @@ public:
   static std::optional<int64_t> extractSubregFromImm(int64_t ImmVal,
                                                      unsigned SubRegIndex);
 
+  /// Return the target flags for a global address operand reading subregister
+  /// \p SubRegIndex of a 64-bit global address with \p TargetFlags.
+  /// e.g. %addr = S_MOV_B64 target-flags(amdgpu-abs64) @gv
+  ///      USE %addr.sub1
+  /// This will return amdgpu-abs32-hi
+  static std::optional<unsigned>
+  extractSubregFromGlobalAddressFlags(unsigned TargetFlags,
+                                      unsigned SubRegIndex);
+
   bool foldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, Register Reg,
                      MachineRegisterInfo *MRI) const final;
 

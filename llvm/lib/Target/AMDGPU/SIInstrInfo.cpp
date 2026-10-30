@@ -133,47 +133,33 @@ static bool canRemat(const MachineInstr &MI) {
   return false;
 }
 
-// Split relocation flags for 64-bit global-address materialization into a
-// common base and the hi/lo relocation variants.
-static std::tuple<unsigned, unsigned, unsigned>
-splitGlobalAddressRelocFlags(const GCNSubtarget &ST,
-                             const MachineOperand &SrcOp) {
-  const unsigned BaseFlags = SrcOp.getTargetFlags() & ~SIInstrInfo::MO_MASK;
-  const unsigned Reloc = SrcOp.getTargetFlags() & SIInstrInfo::MO_MASK;
+// Split relocation flags for 64-bit global-address materialization into the
+// flags for the lo and hi halves.
+static std::pair<unsigned, unsigned>
+splitGlobalAddressRelocFlags(const MachineOperand &SrcOp) {
+  const unsigned Flags = SrcOp.getTargetFlags();
 
   // Infer the relocation type from the existing flags on the global operand.
   // The relocation type should have been determined earlier in the pipeline.
-  unsigned LoReloc, HiReloc;
-  switch (Reloc) {
-  case SIInstrInfo::MO_REL32_LO:
-  case SIInstrInfo::MO_REL32_HI:
-  case SIInstrInfo::MO_REL64:
-    LoReloc = SIInstrInfo::MO_REL32_LO;
-    HiReloc = SIInstrInfo::MO_REL32_HI;
-    break;
-  case SIInstrInfo::MO_GOTPCREL32_LO:
-  case SIInstrInfo::MO_GOTPCREL32_HI:
-    LoReloc = SIInstrInfo::MO_GOTPCREL32_LO;
-    HiReloc = SIInstrInfo::MO_GOTPCREL32_HI;
-    break;
+  switch (Flags & SIInstrInfo::MO_MASK) {
   case SIInstrInfo::MO_GOTPCREL:
-  case SIInstrInfo::MO_GOTPCREL64:
+  case SIInstrInfo::MO_GOTPCREL64: {
     // For 64-bit GOT-relative, use the 64-bit relocation.
-    LoReloc = SIInstrInfo::MO_GOTPCREL64;
-    HiReloc = SIInstrInfo::MO_GOTPCREL64;
-    break;
-  case SIInstrInfo::MO_ABS32_LO:
-  case SIInstrInfo::MO_ABS32_HI:
-  case SIInstrInfo::MO_ABS64:
-    LoReloc = SIInstrInfo::MO_ABS32_LO;
-    HiReloc = SIInstrInfo::MO_ABS32_HI;
-    break;
+    const unsigned GotFlags =
+        (Flags & ~SIInstrInfo::MO_MASK) | SIInstrInfo::MO_GOTPCREL64;
+    return {GotFlags, GotFlags};
+  }
   default:
-    llvm_unreachable("unknown relocation type for global address");
     break;
   }
 
-  return {BaseFlags, LoReloc, HiReloc};
+  std::optional<unsigned> LoFlags =
+      SIInstrInfo::extractSubregFromGlobalAddressFlags(Flags, AMDGPU::sub0);
+  std::optional<unsigned> HiFlags =
+      SIInstrInfo::extractSubregFromGlobalAddressFlags(Flags, AMDGPU::sub1);
+  if (!LoFlags || !HiFlags)
+    llvm_unreachable("unknown relocation type for global address");
+  return {*LoFlags, *HiFlags};
 }
 
 bool SIInstrInfo::isReMaterializableImpl(
@@ -2261,14 +2247,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       // shortcut cannot apply.
       const GlobalValue *GV = SrcOp.getGlobal();
       int64_t Offset = SrcOp.getOffset();
-      unsigned BaseFlags, LoReloc, HiReloc;
-      std::tie(BaseFlags, LoReloc, HiReloc) =
-          splitGlobalAddressRelocFlags(ST, SrcOp);
+      auto [LoFlags, HiFlags] = splitGlobalAddressRelocFlags(SrcOp);
 
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
-          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc);
+          .addGlobalAddress(GV, Offset, LoFlags);
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstHi)
-          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc);
+          .addGlobalAddress(GV, Offset, HiFlags);
     } else if (SrcOp.isImm()) {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
@@ -2337,14 +2321,12 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
       const GlobalValue *GV = SrcOp.getGlobal();
       int64_t Offset = SrcOp.getOffset();
-      unsigned BaseFlags, LoReloc, HiReloc;
-      std::tie(BaseFlags, LoReloc, HiReloc) =
-          splitGlobalAddressRelocFlags(ST, SrcOp);
+      auto [LoFlags, HiFlags] = splitGlobalAddressRelocFlags(SrcOp);
 
       BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstLo)
-          .addGlobalAddress(GV, Offset, BaseFlags | LoReloc);
+          .addGlobalAddress(GV, Offset, LoFlags);
       BuildMI(MBB, MI, DL, get(AMDGPU::S_MOV_B32), DstHi)
-          .addGlobalAddress(GV, Offset, BaseFlags | HiReloc);
+          .addGlobalAddress(GV, Offset, HiFlags);
       MI.eraseFromParent();
       break;
     }
@@ -3833,6 +3815,46 @@ std::optional<int64_t> SIInstrInfo::extractSubregFromImm(int64_t Imm,
   }
 
   llvm_unreachable("covered subregister switch");
+}
+
+std::optional<unsigned>
+SIInstrInfo::extractSubregFromGlobalAddressFlags(unsigned TargetFlags,
+                                                 unsigned SubRegIndex) {
+  if (SubRegIndex == AMDGPU::NoSubRegister)
+    return TargetFlags;
+
+  unsigned LoReloc, HiReloc;
+  switch (TargetFlags & MO_MASK) {
+  case MO_REL32_LO:
+  case MO_REL32_HI:
+  case MO_REL64:
+    LoReloc = MO_REL32_LO;
+    HiReloc = MO_REL32_HI;
+    break;
+  case MO_GOTPCREL32_LO:
+  case MO_GOTPCREL32_HI:
+    LoReloc = MO_GOTPCREL32_LO;
+    HiReloc = MO_GOTPCREL32_HI;
+    break;
+  case MO_ABS32_LO:
+  case MO_ABS32_HI:
+  case MO_ABS64:
+    LoReloc = MO_ABS32_LO;
+    HiReloc = MO_ABS32_HI;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  const unsigned BaseFlags = TargetFlags & ~MO_MASK;
+  switch (SubRegIndex) {
+  case AMDGPU::sub0:
+    return BaseFlags | LoReloc;
+  case AMDGPU::sub1:
+    return BaseFlags | HiReloc;
+  default:
+    return std::nullopt;
+  }
 }
 
 static unsigned getNewFMAAKInst(const GCNSubtarget &ST, unsigned Opc) {
