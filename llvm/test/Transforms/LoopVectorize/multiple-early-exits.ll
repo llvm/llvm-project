@@ -1491,29 +1491,121 @@ exit:
 define i64 @three_early_exits_same_block_no_latch_exit(i1 %cmp0) {
 ; CHECK-LABEL: define i64 @three_early_exits_same_block_no_latch_exit(
 ; CHECK-SAME: i1 [[CMP0:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    br i1 [[CMP0]], label %[[EARLY_EXIT:.*]], label %[[LOOP_BODY_0:.*]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[CMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[LOOP_BODY_0:.*]]
 ; CHECK:       [[LOOP_BODY_0]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP_HEADER]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_LOAD_CONTINUE_INTERIM:.*]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ <i8 0, i8 1, i8 2, i8 3>, %[[LOOP_HEADER]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE_INTERIM]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i8> [[VEC_IND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [24 x i8], ptr @GlobA, i64 [[IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [24 x i8], ptr @GlobA, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr [24 x i8], ptr @GlobA, i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr [24 x i8], ptr @GlobA, i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
+; CHECK:       [[PRED_LOAD_IF]]:
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[GEP]], i64 4
 ; CHECK-NEXT:    [[L_0:%.*]] = load i8, ptr [[GEP_1]], align 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[L_0]], 0
-; CHECK-NEXT:    br i1 [[CMP1]], label %[[EARLY_EXIT]], label %[[LOOP_BODY_1:.*]]
-; CHECK:       [[LOOP_BODY_1]]:
-; CHECK-NEXT:    [[L_1:%.*]] = load i8, ptr [[GEP]], align 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[L_1]], 0
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[EARLY_EXIT]], label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[EC]], label %[[LATCH_EXIT:.*]], label %[[LOOP_HEADER]]
-; CHECK:       [[LATCH_EXIT]]:
-; CHECK-NEXT:    ret i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i8> poison, i8 [[L_0]], i64 0
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
+; CHECK:       [[PRED_LOAD_CONTINUE]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = phi <4 x i8> [ poison, %[[LOOP_BODY_0]] ], [ [[TMP11]], %[[PRED_LOAD_IF]] ]
+; CHECK-NEXT:    [[CMP1:%.*]] = extractelement <4 x i1> [[TMP0]], i64 1
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[EARLY_EXIT:.*]], label %[[LOOP_BODY_1:.*]]
 ; CHECK:       [[EARLY_EXIT]]:
-; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[IV]], %[[LOOP_BODY_1]] ], [ [[IV]], %[[LOOP_BODY_0]] ], [ [[IV]], %[[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP5]], i64 4
+; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP14]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i8> [[TMP12]], i8 [[TMP15]], i64 1
+; CHECK-NEXT:    br label %[[LOOP_BODY_1]]
+; CHECK:       [[LOOP_BODY_1]]:
+; CHECK-NEXT:    [[TMP17:%.*]] = phi <4 x i8> [ [[TMP12]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP16]], %[[EARLY_EXIT]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <4 x i1> [[TMP0]], i64 2
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[LOOP_LATCH:.*]], label %[[PRED_LOAD_CONTINUE5:.*]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[TMP6]], i64 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load i8, ptr [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i8> [[TMP17]], i8 [[TMP20]], i64 2
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE5]]
+; CHECK:       [[PRED_LOAD_CONTINUE5]]:
+; CHECK-NEXT:    [[TMP22:%.*]] = phi <4 x i8> [ [[TMP17]], %[[LOOP_BODY_1]] ], [ [[TMP21]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i1> [[TMP0]], i64 3
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[LATCH_EXIT:.*]], label %[[PRED_LOAD_CONTINUE7:.*]]
+; CHECK:       [[LATCH_EXIT]]:
+; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP7]], i64 4
+; CHECK-NEXT:    [[TMP25:%.*]] = load i8, ptr [[TMP24]], align 1
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i8> [[TMP22]], i8 [[TMP25]], i64 3
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE7]]
+; CHECK:       [[PRED_LOAD_CONTINUE7]]:
+; CHECK-NEXT:    [[TMP27:%.*]] = phi <4 x i8> [ [[TMP22]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP26]], %[[LATCH_EXIT]] ]
+; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq <4 x i8> [[TMP27]], zeroinitializer
+; CHECK-NEXT:    br i1 [[TMP8]], label %[[PRED_LOAD_IF8:.*]], label %[[PRED_LOAD_CONTINUE9:.*]]
+; CHECK:       [[PRED_LOAD_IF8]]:
+; CHECK-NEXT:    [[TMP29:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <4 x i8> poison, i8 [[TMP29]], i64 0
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE9]]
+; CHECK:       [[PRED_LOAD_CONTINUE9]]:
+; CHECK-NEXT:    [[TMP31:%.*]] = phi <4 x i8> [ poison, %[[PRED_LOAD_CONTINUE7]] ], [ [[TMP30]], %[[PRED_LOAD_IF8]] ]
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[PRED_LOAD_IF10:.*]], label %[[PRED_LOAD_CONTINUE11:.*]]
+; CHECK:       [[PRED_LOAD_IF10]]:
+; CHECK-NEXT:    [[TMP32:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP33:%.*]] = insertelement <4 x i8> [[TMP31]], i8 [[TMP32]], i64 1
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE11]]
+; CHECK:       [[PRED_LOAD_CONTINUE11]]:
+; CHECK-NEXT:    [[TMP34:%.*]] = phi <4 x i8> [ [[TMP31]], %[[PRED_LOAD_CONTINUE9]] ], [ [[TMP33]], %[[PRED_LOAD_IF10]] ]
+; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_LOAD_IF12:.*]], label %[[PRED_LOAD_CONTINUE13:.*]]
+; CHECK:       [[PRED_LOAD_IF12]]:
+; CHECK-NEXT:    [[TMP35:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i8> [[TMP34]], i8 [[TMP35]], i64 2
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE13]]
+; CHECK:       [[PRED_LOAD_CONTINUE13]]:
+; CHECK-NEXT:    [[TMP37:%.*]] = phi <4 x i8> [ [[TMP34]], %[[PRED_LOAD_CONTINUE11]] ], [ [[TMP36]], %[[PRED_LOAD_IF12]] ]
+; CHECK-NEXT:    br i1 [[TMP23]], label %[[PRED_LOAD_IF14:.*]], label %[[PRED_LOAD_CONTINUE15:.*]]
+; CHECK:       [[PRED_LOAD_IF14]]:
+; CHECK-NEXT:    [[TMP38:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP39:%.*]] = insertelement <4 x i8> [[TMP37]], i8 [[TMP38]], i64 3
+; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE15]]
+; CHECK:       [[PRED_LOAD_CONTINUE15]]:
+; CHECK-NEXT:    [[TMP40:%.*]] = phi <4 x i8> [ [[TMP37]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP39]], %[[PRED_LOAD_IF14]] ]
+; CHECK-NEXT:    [[TMP41:%.*]] = icmp eq <4 x i8> [[TMP40]], zeroinitializer
+; CHECK-NEXT:    [[TMP42:%.*]] = select <4 x i1> [[BROADCAST_SPLAT]], <4 x i1> splat (i1 true), <4 x i1> [[TMP28]]
+; CHECK-NEXT:    [[TMP43:%.*]] = select <4 x i1> [[TMP42]], <4 x i1> splat (i1 true), <4 x i1> [[TMP41]]
+; CHECK-NEXT:    [[TMP44:%.*]] = freeze <4 x i1> [[TMP43]]
+; CHECK-NEXT:    [[TMP45:%.*]] = select <4 x i1> [[TMP0]], <4 x i1> [[TMP44]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP46:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP45]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
+; CHECK-NEXT:    [[TMP47:%.*]] = icmp eq i64 [[INDEX_NEXT]], 4
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 4)
+; CHECK-NEXT:    br i1 [[TMP46]], label %[[VECTOR_EARLY_EXIT_CHECK:.*]], label %[[PRED_LOAD_CONTINUE_INTERIM]]
+; CHECK:       [[PRED_LOAD_CONTINUE_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP47]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP_BODY_0]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[LATCH_EXIT1:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_CHECK]]:
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP45]], i1 false)
+; CHECK-NEXT:    br i1 [[CMP0]], label %[[VECTOR_EARLY_EXIT_0:.*]], label %[[VECTOR_EARLY_EXIT_CHECK_0:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_CHECK_0]]:
+; CHECK-NEXT:    [[TMP48:%.*]] = extractelement <4 x i1> [[TMP28]], i64 [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br i1 [[TMP48]], label %[[VECTOR_EARLY_EXIT_1:.*]], label %[[VECTOR_EARLY_EXIT_2:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_2]]:
+; CHECK-NEXT:    [[TMP49:%.*]] = add i64 [[IV]], [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label %[[EARLY_EXIT1:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT_1]]:
+; CHECK-NEXT:    [[TMP50:%.*]] = add i64 [[IV]], [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label %[[EARLY_EXIT1]]
+; CHECK:       [[VECTOR_EARLY_EXIT_0]]:
+; CHECK-NEXT:    [[TMP51:%.*]] = add i64 [[IV]], [[FIRST_ACTIVE_LANE]]
+; CHECK-NEXT:    br label %[[EARLY_EXIT1]]
+; CHECK:       [[LATCH_EXIT1]]:
+; CHECK-NEXT:    ret i64 0
+; CHECK:       [[EARLY_EXIT1]]:
+; CHECK-NEXT:    [[IV_LCSSA:%.*]] = phi i64 [ [[TMP51]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP50]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP49]], %[[VECTOR_EARLY_EXIT_2]] ]
 ; CHECK-NEXT:    ret i64 [[IV_LCSSA]]
 ;
 entry:
