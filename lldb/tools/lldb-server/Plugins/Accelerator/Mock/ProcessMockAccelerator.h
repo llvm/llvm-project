@@ -10,7 +10,9 @@
 #define LLDB_TOOLS_LLDB_SERVER_PLUGINS_ACCELERATOR_MOCK_PROCESSMOCKACCELERATOR_H
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
+
 #include "lldb/Utility/ArchSpec.h"
+#include <atomic>
 
 namespace lldb_private {
 namespace lldb_server {
@@ -20,6 +22,11 @@ namespace lldb_server {
 /// (accelerator) target without any real hardware.
 class ProcessMockAccelerator : public NativeProcessProtocol {
 public:
+  // Use an action identifier outside the native mock plugin's sequence. Action
+  // identifiers must be unique across all connections for a plugin.
+  static constexpr int64_t kStopReplyActionID = 1'000'000;
+  static constexpr int64_t kStopReplyBreakpointID = 6;
+
   class Manager : public NativeProcessProtocol::Manager {
   public:
     using NativeProcessProtocol::Manager::Manager;
@@ -66,8 +73,11 @@ public:
 
   std::vector<AddressSpaceInfo> GetAddressSpaces() override;
 
+  std::optional<AcceleratorActions> GetAcceleratorActions() override;
+
 private:
   mutable ArchSpec m_arch;
+  std::atomic<bool> m_sent_accelerator_stop_actions{false};
 };
 
 } // namespace lldb_server

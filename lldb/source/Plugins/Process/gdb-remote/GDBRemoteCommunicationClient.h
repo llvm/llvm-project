@@ -95,7 +95,9 @@ public:
   ///
   /// \param[in] args
   ///     A list of program arguments. The first entry is the program being run.
-  llvm::Error LaunchProcess(const Args &args);
+  /// Launch a process and return the launch response. With vRun this can be
+  /// the process's initial stop reply rather than an OK packet.
+  llvm::Expected<StringExtractorGDBRemote> LaunchProcess(const Args &args);
 
   /// Sends a "QEnvironment:NAME=VALUE" packet that will build up the
   /// environment that will get used when launching an application

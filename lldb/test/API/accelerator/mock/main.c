@@ -2,6 +2,8 @@
 // named functions.
 void mock_gpu_accelerator_initialize(void) {}
 
+void mock_gpu_accelerator_native_stop_action(void) {}
+
 int mock_gpu_accelerator_compute(int x) { return x * 2; }
 
 int mock_gpu_accelerator_finish(void) { return 0; }
@@ -11,9 +13,13 @@ int mock_gpu_accelerator_finish(void) { return 0; }
 // GDB server.
 void mock_gpu_accelerator_connect(void) {}
 
+void mock_gpu_accelerator_process_stop_action(void) {}
+
 int main(void) {
+  mock_gpu_accelerator_native_stop_action();
   mock_gpu_accelerator_initialize();
   mock_gpu_accelerator_connect();
+  mock_gpu_accelerator_process_stop_action();
   int result = mock_gpu_accelerator_compute(21);
   mock_gpu_accelerator_finish();
   return result == 42 ? 0 : 1;

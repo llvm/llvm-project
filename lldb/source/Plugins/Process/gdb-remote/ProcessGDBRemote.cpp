@@ -72,6 +72,7 @@
 #include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
+#include "lldb/Utility/AcceleratorGDBRemotePackets.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/Baton.h"
 #include "lldb/Utility/FileSpec.h"
@@ -747,6 +748,8 @@ Status ProcessGDBRemote::DoConnectRemote(llvm::StringRef remote_url) {
 Status ProcessGDBRemote::WillLaunchOrAttach() {
   Status error;
   m_stdio_communication.Clear();
+  std::lock_guard<std::recursive_mutex> guard(m_accelerator_actions_mutex);
+  m_processed_accelerator_actions.clear();
   return error;
 }
 
@@ -893,6 +896,7 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
     // Send the environment and the program + arguments after we connect
     m_gdb_comm.SendEnvironment(launch_info.GetEnvironment());
 
+    StringExtractorGDBRemote response;
     {
       // Scope for the scoped timeout object
       GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
@@ -914,11 +918,14 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
                                       exe_file.GetPath(/*denormalize=*/true));
         }
       }
-      if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
+      llvm::Expected<StringExtractorGDBRemote> launch_response =
+          m_gdb_comm.LaunchProcess(args);
+      if (!launch_response) {
         error = Status::FromErrorStringWithFormatv(
             "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
-            llvm::fmt_consume(std::move(err)));
+            llvm::fmt_consume(launch_response.takeError()));
       } else {
+        response = std::move(*launch_response);
         SetID(m_gdb_comm.GetCurrentProcessID());
       }
     }
@@ -930,8 +937,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       return error;
     }
 
-    StringExtractorGDBRemote response;
-    if (m_gdb_comm.GetStopReply(response)) {
+    llvm::StringRef launch_reply = response.GetStringRef();
+    bool launch_reply_is_stop =
+        !launch_reply.empty() &&
+        (launch_reply.front() == 'T' || launch_reply.front() == 'S');
+    if (launch_reply_is_stop || m_gdb_comm.GetStopReply(response)) {
       SetLastStopPacket(response);
 
       const ArchSpec &process_arch = m_gdb_comm.GetProcessArchitecture();
@@ -2473,6 +2483,7 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
     uint64_t queue_serial_number = 0;
     ExpeditedRegisterMap expedited_register_map;
     AddressableBits addressable_bits;
+    std::vector<AcceleratorActions> accelerator_actions;
     while (stop_packet.GetNameColonValue(key, value)) {
       if (key.compare("metype") == 0) {
         // exception type in big endian hex
@@ -2631,6 +2642,19 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         if (!value.getAsInteger(BASE_10, addressing_bits)) {
           addressable_bits.SetHighmemAddressableBits(addressing_bits);
         }
+      } else if (key == "accelerator-actions") {
+        StringExtractor json_extractor(value);
+        std::string json;
+        json_extractor.GetHexByteString(json);
+        llvm::Expected<AcceleratorActions> actions =
+            llvm::json::parse<AcceleratorActions>(json, "AcceleratorActions");
+        if (!actions) {
+          Debugger::ReportError(llvm::formatv(
+              "failed to parse accelerator actions from stop reply: {0}",
+              llvm::fmt_consume(actions.takeError())));
+        } else {
+          accelerator_actions.push_back(std::move(*actions));
+        }
       } else if (key == "added-binaries") {
         // A comma separated list of all threads in the current
         // process that includes the thread for this stop reply packet
@@ -2690,6 +2714,16 @@ StateType ProcessGDBRemote::SetThreadStopInfo(StringExtractor &stop_packet) {
         associated_with_dispatch_queue, dispatch_queue_t, queue_name,
         queue_kind, queue_serial_number, added_binaries,
         detailed_binaries_info);
+
+    // Apply the complete stop reply before dispatching actions. Later
+    // synchronization fields in the packet must take effect before an action
+    // can wait on that state.
+    for (const AcceleratorActions &actions : accelerator_actions) {
+      if (llvm::Error error = HandleAcceleratorActions(actions))
+        Debugger::ReportError(llvm::formatv(
+            "failed to handle accelerator actions: {0}\nActions:\n{1}",
+            llvm::fmt_consume(std::move(error)), toJSON(actions)));
+    }
 
     return eStateStopped;
   } break;
@@ -4336,22 +4370,45 @@ llvm::Error
 ProcessGDBRemote::HandleAcceleratorActions(const AcceleratorActions &actions) {
   Log *log = GetLog(GDBRLog::Process);
 
-  // The same set of actions can be delivered to the client more than once: a
-  // plugin may keep reporting the same actions (with the same identifier) on
-  // subsequent native stops until its state advances. The identifier uniquely
-  // names a set of actions for a plugin, so skip any set we have already
-  // processed to avoid re-running its side effects (e.g. setting the same
-  // breakpoints again).
-  auto it = m_processed_accelerator_actions.find(actions.plugin_name);
-  if (it != m_processed_accelerator_actions.end() &&
-      it->second == actions.identifier) {
+  // Actions always apply to the native process. Route actions received on an
+  // accelerator connection through the CPU target in the shared group.
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      GetTarget().GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
+  if (group_sp && group_sp->GetRole(GetTarget().shared_from_this()) ==
+                      TargetGroup::Role::Accelerator) {
+    TargetSP cpu_target_sp = group_sp->GetCPUTarget();
+    if (!cpu_target_sp)
+      return llvm::createStringError(
+          "accelerator target group does not contain a CPU target");
+
+    ProcessSP cpu_process_sp = cpu_target_sp->GetProcessSP();
+    if (!cpu_process_sp)
+      return llvm::createStringError("CPU target does not have a process");
+    if (cpu_process_sp->GetPluginName() != GetPluginNameStatic())
+      return llvm::createStringError(
+          "CPU target is not using the gdb-remote process plugin");
+
+    return std::static_pointer_cast<ProcessGDBRemote>(cpu_process_sp)
+        ->HandleAcceleratorActions(actions);
+  }
+
+  // Native and accelerator communication threads can both deliver actions to
+  // this CPU process. Serialize the deduplication check and all action side
+  // effects as one operation.
+  std::lock_guard<std::recursive_mutex> guard(m_accelerator_actions_mutex);
+
+  // Record before executing for deliberate at-most-once delivery: retrying an
+  // action that failed partway through could repeat an earlier side effect.
+  bool inserted = m_processed_accelerator_actions
+                      .emplace(actions.plugin_name, actions.identifier)
+                      .second;
+  if (!inserted) {
     LLDB_LOG(log,
              "ProcessGDBRemote::HandleAcceleratorActions skipping already "
              "processed actions for plugin '{0}' with identifier {1}",
              actions.plugin_name, actions.identifier);
     return llvm::Error::success();
   }
-  m_processed_accelerator_actions[actions.plugin_name] = actions.identifier;
 
   // Handle each kind of action. More action kinds will be handled here in the
   // future, so only return early on error; otherwise fall through so the next
