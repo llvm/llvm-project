@@ -2561,7 +2561,11 @@ public:
   /// Returns how the given (atomic) load should be cast by the IR-level
   /// AtomicExpand pass.
   virtual AtomicExpansionKind shouldCastAtomicLoadInIR(LoadInst *LI) const {
-    if (LI->getType()->isFloatingPointTy())
+    Type *Ty = LI->getType();
+    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty);
+        VecTy && VecTy->getNumElements() == 1)
+      Ty = VecTy->getElementType();
+    if (Ty->isFloatingPointTy())
       return AtomicExpansionKind::CastToInteger;
     return AtomicExpansionKind::None;
   }
@@ -2590,15 +2594,15 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. By default, elementwise operations are expanded and
-  /// floating-point operations use are expanded to a compare-exchange loop.
+  /// AtomicRMW, if at all. By default, multi-lane elementwise operations are
+  /// split. Floating-point operations are expanded to a compare-exchange loop.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
-    if (RMW->isElementwise())
-      return AtomicExpansionKind::Expand;
+    if (auto *VecTy = dyn_cast<FixedVectorType>(RMW->getType());
+        VecTy && VecTy->getNumElements() > 1)
+      return RMW->isElementwise() ? AtomicExpansionKind::Expand
+                                  : AtomicExpansionKind::CmpXChg;
     if (RMW->isFloatingPointOperation())
-      return AtomicExpansionKind::CmpXChg;
-    if (RMW->getType()->isVectorTy())
       return AtomicExpansionKind::CmpXChg;
     return AtomicExpansionKind::None;
   }
