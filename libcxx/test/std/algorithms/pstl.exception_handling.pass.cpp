@@ -286,6 +286,20 @@ int main(int, char**) {
         assert_non_throwing([=, &policy] {
           (void)std::is_partitioned(policy, std::move(first1), std::move(last1), pred);
         });
+
+        // partition(first, last, pred)
+        assert_non_throwing([=, &policy] { (void)std::partition(policy, std::move(first1), std::move(last1), pred); });
+
+        // stable_partition(first, last, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::stable_partition(policy, std::move(first1), std::move(last1), pred);
+        });
+
+        // partition_copy(first, last, dest1, dest2, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::partition_copy(
+              policy, std::move(first1), std::move(last1), std::move(first2), std::move(dest), pred);
+        });
       }
 
       {

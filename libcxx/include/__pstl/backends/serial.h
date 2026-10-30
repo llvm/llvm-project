@@ -19,6 +19,8 @@
 #include <__algorithm/min_element.h>
 #include <__algorithm/minmax_element.h>
 #include <__algorithm/mismatch.h>
+#include <__algorithm/partition.h>
+#include <__algorithm/partition_copy.h>
 #include <__algorithm/reverse.h>
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
@@ -26,6 +28,7 @@
 #include <__algorithm/set_intersection.h>
 #include <__algorithm/set_symmetric_difference.h>
 #include <__algorithm/set_union.h>
+#include <__algorithm/stable_partition.h>
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
@@ -414,6 +417,43 @@ struct __set_intersection<__serial_backend_tag, _ExecutionPolicy> {
         std::move(__last2),
         std::move(__result),
         std::move(__comp));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __partition<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Predicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
+    return std::partition(std::move(__first), std::move(__last), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __stable_partition<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator, class _Predicate>
+  optional<_BidirectionalIterator> operator()(
+      _Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last, _Predicate __pred) const noexcept {
+    return std::stable_partition(std::move(__first), std::move(__last), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __partition_copy<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy,
+            class _ForwardIterator,
+            class _ForwardOutIterator1,
+            class _ForwardOutIterator2,
+            class _Predicate>
+  optional<pair<_ForwardOutIterator1, _ForwardOutIterator2>>
+  operator()(_Policy&&,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _ForwardOutIterator1 __out_true,
+             _ForwardOutIterator2 __out_false,
+             _Predicate __pred) const noexcept {
+    return std::partition_copy(
+        std::move(__first), std::move(__last), std::move(__out_true), std::move(__out_false), std::move(__pred));
   }
 };
 
