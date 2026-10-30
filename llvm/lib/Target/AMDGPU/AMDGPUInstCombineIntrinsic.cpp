@@ -639,7 +639,23 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   if (ST.isWave64() && match(V, W64Pred))
     return true;
 
-  return false;
+  // Case 2:
+  //   workitem.id.x & (wavefront size - 1), or bare workitem.id.x when the
+  //   workgroup is one wave long or less.
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I || !ST.isWaveSizeKnown())
+    return false;
+
+  const Function &F = *I->getFunction();
+  if (!ST.hasWavefrontsEvenlySplittingXDim(F, /*RequiresUniformYZ=*/true))
+    return false;
+
+  unsigned WaveSize = ST.getWavefrontSize();
+  auto TidX = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
+  if (match(V, m_c_And(TidX, m_SpecificInt(WaveSize - 1))))
+    return true;
+
+  return match(V, TidX) && ST.getMaxWorkitemID(F, 0) < WaveSize;
 }
 
 Instruction *

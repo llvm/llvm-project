@@ -1031,10 +1031,7 @@ define ptr addrspace(3) @test_rotate_add3_ptr_w32(ptr addrspace(3) %val) {
 
 define amdgpu_kernel void @test_tid_masked_w32(i32 %val, ptr addrspace(1) %out) #2 !reqd_work_group_size !2 {
 ; GFX11-LABEL: @test_tid_masked_w32(
-; GFX11-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-NEXT:    [[LANE:%.*]] = and i32 [[ID]], 31
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-NEXT:    ret void
 ;
@@ -1064,10 +1061,7 @@ define amdgpu_kernel void @test_tid_masked_w32(i32 %val, ptr addrspace(1) %out) 
 
 define amdgpu_kernel void @test_tid_masked_2d_w32(i32 %val, ptr addrspace(1) %out) #3 !reqd_work_group_size !3 {
 ; GFX11-LABEL: @test_tid_masked_2d_w32(
-; GFX11-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-NEXT:    [[LANE:%.*]] = and i32 [[ID]], 31
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[LANE]], 1
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-NEXT:    ret void
 ;
@@ -1097,23 +1091,17 @@ define amdgpu_kernel void @test_tid_masked_2d_w32(i32 %val, ptr addrspace(1) %ou
 
 define amdgpu_kernel void @test_tid_bare_32_threads(i32 %val, ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
 ; GFX11-LABEL: @test_tid_bare_32_threads(
-; GFX11-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-NEXT:    ret void
 ;
 ; GFX11-W64-LABEL: @test_tid_bare_32_threads(
-; GFX11-W64-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-W64-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-W64-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_tid_bare_32_threads(
-; GFX9-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX9-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX9-NEXT:    ret void
 ;
@@ -1133,16 +1121,12 @@ define amdgpu_kernel void @test_tid_bare_64_threads(i32 %val, ptr addrspace(1) %
 ; GFX11-NEXT:    ret void
 ;
 ; GFX11-W64-LABEL: @test_tid_bare_64_threads(
-; GFX11-W64-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX11-W64-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX11-W64-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX11-W64-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX11-W64-NEXT:    ret void
 ;
 ; GFX9-LABEL: @test_tid_bare_64_threads(
-; GFX9-NEXT:    [[ID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; GFX9-NEXT:    [[IDX:%.*]] = xor i32 [[ID]], 1
-; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[VAL:%.*]], i32 [[IDX]])
+; GFX9-NEXT:    [[RESULT:%.*]] = call i32 @llvm.amdgcn.update.dpp.i32(i32 poison, i32 [[VAL:%.*]], i32 177, i32 15, i32 15, i1 true)
 ; GFX9-NEXT:    store i32 [[RESULT]], ptr addrspace(1) [[OUT:%.*]], align 4
 ; GFX9-NEXT:    ret void
 ;
