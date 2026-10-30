@@ -117,7 +117,8 @@ page](https://llvm.org/releases/).
   reducing debug information size in compiled binaries.
 
 - The debug information no longer asks for a name table by default, matching
-  clang. Use `-gpubnames` to get the table back.
+  clang. Use `-gpubnames` to get the table back. As in clang, `-gsplit-dwarf`
+  implies `-ggnu-pubnames`.
 
 - The FIR loop invariant code motion pass (`flang-licm`) is now enabled by
   default at optimization levels above `-O0`. It can be turned off with

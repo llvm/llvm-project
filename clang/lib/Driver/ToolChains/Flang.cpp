@@ -316,17 +316,6 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
         Args.MakeArgString("-dwarf-version=" + Twine(DwarfVersion)));
   }
 
-  // Handle name table requests (-gpubnames, -ggnu-pubnames).
-  if (const Arg *A = Args.getLastArg(
-          options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
-          options::OPT_gpubnames, options::OPT_gno_pubnames);
-      A && checkDebugInfoOption(A, Args, D, TC)) {
-    if (A->getOption().matches(options::OPT_ggnu_pubnames))
-      CmdArgs.push_back("-ggnu-pubnames");
-    else if (A->getOption().matches(options::OPT_gpubnames))
-      CmdArgs.push_back("-gpubnames");
-  }
-
   DwarfFissionKind DwarfFission =
       getSplitDWARFKind(Args, JA, TC, DebugInfoKind);
   if (DwarfFission != DwarfFissionKind::None) {
@@ -337,6 +326,22 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back("-split-dwarf-output");
       CmdArgs.push_back(SplitDWARFOut);
     }
+  }
+
+  // Handle name table requests (-gpubnames, -ggnu-pubnames). As in clang,
+  // split DWARF implies -ggnu-pubnames unless one of these says otherwise.
+  // TODO: Clang does not imply it when tuning for LLDB. Add that exception once
+  // flang has debugger tuning options (-glldb, -ggdb).
+  const Arg *PubnamesArg =
+      Args.getLastArg(options::OPT_ggnu_pubnames, options::OPT_gno_gnu_pubnames,
+                      options::OPT_gpubnames, options::OPT_gno_pubnames);
+  if (DwarfFission != DwarfFissionKind::None ||
+      (PubnamesArg && checkDebugInfoOption(PubnamesArg, Args, D, TC))) {
+    if (!PubnamesArg ||
+        PubnamesArg->getOption().matches(options::OPT_ggnu_pubnames))
+      CmdArgs.push_back("-ggnu-pubnames");
+    else if (PubnamesArg->getOption().matches(options::OPT_gpubnames))
+      CmdArgs.push_back("-gpubnames");
   }
 
   // Handle compressed debug sections (-gz).

@@ -30,6 +30,27 @@
 ! RUN: %flang -### -c -target x86_64 -g -gno-gnu-pubnames -ggnu-pubnames %s \
 ! RUN:   2>&1 | FileCheck %s --check-prefix=GNU
 
+! Split DWARF implies -ggnu-pubnames, unless one of the flags says otherwise.
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=GNU
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf=single %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=GNU
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf -gpubnames %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=PUB
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf -gno-pubnames %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=NONE
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf -gno-gnu-pubnames %s \
+! RUN:   2>&1 | FileCheck %s --check-prefix=NONE
+
+! It does not when split DWARF ends up off: without -g, with -gno-split-dwarf,
+! or on Darwin.
+! RUN: %flang -### -c -target x86_64 -gsplit-dwarf %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=NONE
+! RUN: %flang -### -c -target x86_64 -g -gsplit-dwarf -gno-split-dwarf %s \
+! RUN:   2>&1 | FileCheck %s --check-prefix=NONE
+! RUN: %flang -### -c -target x86_64-apple-darwin -g -gsplit-dwarf %s 2>&1 \
+! RUN:   | FileCheck %s --check-prefix=NONE
+
 ! NONE-NOT: error:
 ! NONE: "-fc1"
 ! NONE-NOT: "-gpubnames"
