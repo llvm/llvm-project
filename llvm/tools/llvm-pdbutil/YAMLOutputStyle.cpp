@@ -47,7 +47,7 @@ YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
 Error YAMLOutputStyle::dump() {
   if (File.isMSFZ())
     return make_error<StringError>(
-        "pdb2yaml requires a physical MSF block layout and does not support "
+        "pdb2yaml requires an MSF block layout and does not support "
         "MSFZ",
         inconvertibleErrorCode());
 

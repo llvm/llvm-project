@@ -47,9 +47,9 @@ static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize,
 namespace {
 
 /// Forwards a module's symbol bytes while replacing string-table references
-/// before their physical MSF blocks are emitted.  This avoids the backward
-/// seeks used by normal MSF output, which an append-only MSFZ writer cannot
-/// support.
+/// before forwarding them to the underlying stream. This avoids the backward
+/// seeks used by classic MSF output, which an MSFZ writer cannot support
+/// within compressed stream data.
 class StringTableFixupStream : public WritableBinaryStream {
 public:
   StringTableFixupStream(WritableBinaryStreamRef Stream,

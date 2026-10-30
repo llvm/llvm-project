@@ -324,7 +324,7 @@ private:
       const FileRange &Previous = OccupiedRanges[I - 1];
       const FileRange &Current = OccupiedRanges[I];
       if (Current.Offset < Previous.Offset + Previous.Size)
-        return streamError("MSFZ file has overlapping physical regions");
+        return streamError("MSFZ file has overlapping file regions");
     }
     return Error::success();
   }

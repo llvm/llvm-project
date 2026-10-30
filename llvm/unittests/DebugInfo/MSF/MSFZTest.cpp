@@ -519,7 +519,7 @@ TEST(MSFZTest, ReadsUncompressedFragmentsAndRejectsMalformedMetadata) {
   EXPECT_THAT_EXPECTED(MSFZFile::create(MalformedInput, Allocator), Failed());
 }
 
-TEST(MSFZTest, RejectsInvalidPhysicalLayout) {
+TEST(MSFZTest, RejectsInvalidFileLayout) {
   constexpr uint64_t UncompressedOffset = sizeof(MSFZHeader);
   constexpr uint64_t ChunkOffset = UncompressedOffset + 3;
   constexpr uint64_t DirectoryOffset = ChunkOffset + 3;
@@ -583,7 +583,7 @@ TEST(MSFZTest, RejectsInvalidPhysicalLayout) {
                                        llvm::endianness::little);
   EXPECT_THAT_EXPECTED(
       MSFZFile::create(AliasedPayloadInput, Allocator),
-      FailedWithMessage("MSFZ file has overlapping physical regions"));
+      FailedWithMessage("MSFZ file has overlapping file regions"));
 
   SmallVector<uint8_t, 0> MetadataOverlapFile = File;
   writeU64(MetadataOverlapFile,
@@ -593,7 +593,7 @@ TEST(MSFZTest, RejectsInvalidPhysicalLayout) {
                                         llvm::endianness::little);
   EXPECT_THAT_EXPECTED(
       MSFZFile::create(MetadataOverlapInput, Allocator),
-      FailedWithMessage("MSFZ file has overlapping physical regions"));
+      FailedWithMessage("MSFZ file has overlapping file regions"));
 }
 
 TEST(MSFZTest, RejectsUnboundedMetadataAllocations) {
@@ -641,7 +641,7 @@ TEST(MSFZTest, RejectsUnboundedMetadataAllocations) {
   EXPECT_THAT_EXPECTED(MSFZFile::create(OversizedChunk, Allocator), Failed());
 }
 
-TEST(MSFZTest, StreamsShuffledPhysicalBlocks) {
+TEST(MSFZTest, StreamsShuffledMSFBlocks) {
   constexpr uint32_t BlockSize = 512;
   SuperBlock SB = {};
   SB.BlockSize = BlockSize;

@@ -136,7 +136,7 @@ Expected<ArrayRef<uint8_t>> PDBFile::getBlockData(uint32_t BlockIndex,
 #if LLVM_ENABLE_ZSTD
   if (MSFZ)
     return make_error<RawError>(raw_error_code::feature_unsupported,
-                                "MSFZ files do not expose physical MSF blocks");
+                                "MSFZ files do not expose MSF blocks");
 #endif
   uint64_t StreamBlockOffset = msf::blockToOffset(BlockIndex, getBlockSize());
 

@@ -88,7 +88,7 @@ BytesOutputStyle::BytesOutputStyle(PDBFile &File)
 Error BytesOutputStyle::dump() {
   if (File.isMSFZ() && (opts::bytes::DumpBlockRange || opts::bytes::Fpm))
     return make_error<RawError>(raw_error_code::feature_unsupported,
-                                "MSFZ files do not expose physical MSF blocks");
+                                "MSFZ files do not expose MSF blocks");
 
   if (opts::bytes::DumpBlockRange) {
     auto &R = *opts::bytes::DumpBlockRange;

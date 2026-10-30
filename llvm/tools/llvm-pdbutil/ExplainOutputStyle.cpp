@@ -46,9 +46,8 @@ Error ExplainOutputStyle::dump() {
 
 Error ExplainOutputStyle::explainPdbFile() {
   if (File.pdb().isMSFZ())
-    return make_error<StringError>(
-        "MSFZ files do not expose physical MSF block offsets",
-        inconvertibleErrorCode());
+    return make_error<StringError>("MSFZ files do not expose MSF block offsets",
+                                   inconvertibleErrorCode());
 
   bool IsAllocated = explainPdbBlockStatus();
   if (!IsAllocated)

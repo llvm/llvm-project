@@ -194,10 +194,10 @@ public:
   /// Return a canonical digest of the completed, unpatched logical streams.
   ///
   /// The digest includes stream boundaries, sizes, nil-stream identity, and
-  /// contents, but is independent of physical blocks, chunks, compression, and
-  /// write scheduling. It is not updated by patchStream(), allowing the digest
-  /// to be embedded in the retained PDB Info stream prefix. Incomplete streams
-  /// are reported as errors.
+  /// contents, but is independent of MSF block placement, MSFZ chunk layout,
+  /// compression, and write scheduling. It is not updated by patchStream(),
+  /// allowing the digest to be embedded in the retained PDB Info stream prefix.
+  /// Incomplete streams are reported as errors.
   Expected<uint64_t> getCanonicalDigest();
 
   /// Finish compression and atomically publish the container at its final path.

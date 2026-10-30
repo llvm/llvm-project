@@ -369,7 +369,7 @@ Error DumpOutputStyle::dumpStreamSummary() {
   uint64_t MaxStreamSize = getPdb().getMaxStreamSize();
 
   if (opts::dump::DumpStreamBlocks && getPdb().isMSFZ())
-    P.formatLine("Physical stream blocks are unavailable for MSFZ.");
+    P.formatLine("MSF stream blocks are unavailable for MSFZ.");
 
   for (uint32_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     P.formatLine(
