@@ -1226,6 +1226,10 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
     RPTracker.advanceBeforeNext();
+    assert((!isPhysRegTrackingEnabled() ||
+            (Regions[CurRegion].first != I && NonDbgMI != I) ||
+            RPTracker.getPhysLiveRegUnits() == PhysLiveIns[CurRegion]) &&
+           "tracked physical live-ins differ from the backward walk");
     RPTracker.advanceToNext();
   }
 

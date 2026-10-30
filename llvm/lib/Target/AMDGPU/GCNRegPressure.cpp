@@ -409,6 +409,28 @@ static LaneBitmask findUseBetween(unsigned Reg, LaneBitmask LastUseMask,
   return LastUseMask;
 }
 
+/// Physical register counterpart of findUseBetween(). Returns whether \p Unit
+/// is read by an instruction in [PriorUseIdx, NextUseIdx).
+static bool isUnitReadBetween(MCRegUnit Unit, SlotIndex PriorUseIdx,
+                              SlotIndex NextUseIdx,
+                              const MachineRegisterInfo &MRI,
+                              const SIRegisterInfo &TRI,
+                              const LiveIntervals &LIS) {
+  for (MCRegUnitRootIterator Root(Unit, &TRI); Root.isValid(); ++Root) {
+    for (MCPhysReg Reg : TRI.superregs_inclusive(*Root)) {
+      for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+        if (!MO.readsReg())
+          continue;
+        SlotIndex InstSlot =
+            LIS.getInstructionIndex(*MO.getParent()).getRegSlot();
+        if (InstSlot >= PriorUseIdx && InstSlot < NextUseIdx)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // GCNRPTarget
 
@@ -1095,7 +1117,10 @@ GCNRegPressure GCNDownwardRPTrackerBase::bumpDownwardPressure(
     } else if (physRegTrackingEnabled()) {
       MCRegUnit Unit = Use.VRegOrUnit.asMCRegUnit();
       unsigned U = static_cast<unsigned>(Unit);
-      if (PhysLiveRegUnits.test(U) && !isUnitLiveAt(Unit, SlotIdx))
+      // As for virtual registers, a unit that LIS reports dead after MI is
+      // still live if an unscheduled instruction above MI reads it.
+      if (PhysLiveRegUnits.test(U) && !isUnitLiveAt(Unit, SlotIdx) &&
+          !isUnitReadBetween(Unit, CurrIdx, SlotIdx, *MRI, *SRI, LIS))
         TempPressure.dec(Unit, *SRI);
     }
   }
