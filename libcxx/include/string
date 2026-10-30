@@ -808,7 +808,8 @@ private:
     pointer __data_;
     size_type __size_;
     _LIBCPP_NO_UNIQUE_ADDRESS
-    __padding<((2 * sizeof(size_type) + alignof(pointer) - 1) & ~(alignof(pointer) - 1)) - 2 * sizeof(size_type)>
+    __padding<((2 * sizeof(size_type) + _LIBCPP_ALIGNOF(pointer) - 1) & ~(_LIBCPP_ALIGNOF(pointer) - 1)) -
+              2 * sizeof(size_type)>
         __padding_;
     size_type __cap_ : sizeof(size_type) * CHAR_BIT - 1;
     size_type __is_long_ : 1;
