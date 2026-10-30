@@ -39,6 +39,7 @@ set(ANALYSIS_TEST_SOURCES
   LastRunTrackingAnalysisTest.cpp
   LazyCallGraphTest.cpp
   LoadsTest.cpp
+  LoopAccessAnalysisTest.cpp
   LoopInfoTest.cpp
   LoopNestTest.cpp
   MemoryBuiltinsTest.cpp
