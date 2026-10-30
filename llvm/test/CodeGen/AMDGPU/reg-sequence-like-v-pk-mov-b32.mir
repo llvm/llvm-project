@@ -112,8 +112,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr9
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_64 = COPY $sgpr10
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_64 = COPY $sgpr11
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr10
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:sreg_32 = COPY $sgpr11
     ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
     ; CHECK-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1
     ; CHECK-NEXT: [[V_PK_MOV_B32_:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 12, [[REG_SEQUENCE]], 8, [[REG_SEQUENCE1]], 0, 0, 0, 0, 0, implicit $exec
@@ -124,8 +124,8 @@ body:             |
     ; CHECK-NEXT: S_ENDPGM 0, implicit $vgpr4, implicit $vgpr5
     %0:vgpr_32 = COPY $vgpr8
     %1:vgpr_32 = COPY $vgpr9
-    %2:sreg_64 = COPY $sgpr10
-    %3:sreg_64 = COPY $sgpr11
+    %2:sreg_32 = COPY $sgpr10
+    %3:sreg_32 = COPY $sgpr11
     %4:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
     %5:sreg_64 = REG_SEQUENCE %2, %subreg.sub0, %3, %subreg.sub1
     %6:vreg_64_align2 = V_PK_MOV_B32 12, %4, 8, %5, 0, 0, 0, 0, 0, implicit $exec

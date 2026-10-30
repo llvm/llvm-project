@@ -1056,7 +1056,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN1:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1064,7 +1064,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN %4, %5:sgpr_128, 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN %4, %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1079,7 +1079,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1087,7 +1087,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN %4, %5:sgpr_128, 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN %4, %5:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1102,7 +1102,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN1:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 8, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1110,7 +1110,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN %4, %5:sgpr_128, 0, 0, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN %4, %5:sgpr_128, 0, 8, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1125,7 +1125,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XYZ_BOTHEN:%[0-9]+]]:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_BOTHEN [[COPY4]], [[REG_SEQUENCE]], 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1133,7 +1133,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN %4, %5:sgpr_128, 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_BOTHEN %4, %5:sgpr_128, 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1240,7 +1240,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact1:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1248,7 +1248,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1263,7 +1263,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1271,7 +1271,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1286,7 +1286,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact1:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 8, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1294,7 +1294,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact %4, %5:sgpr_128, 0, 8, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1309,7 +1309,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XYZ_BOTHEN_exact:%[0-9]+]]:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1317,7 +1317,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 0, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1332,7 +1332,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact1:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1341,7 +1341,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1357,7 +1357,7 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 22, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_X_BOTHEN_exact1:%[0-9]+]]:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1366,7 +1366,7 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
+    %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 4, 22, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_BOTHEN_exact %4, %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1382,8 +1382,8 @@ body:             |
     ; GFX10-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0
-    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr1
+    ; GFX10-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact1:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE]], 0, 12, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1391,8 +1391,8 @@ body:             |
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0
-    %5:vreg_64 = COPY $vgpr1
+    %4:vreg_64 = COPY $vgpr0_vgpr1
+    %5:vreg_64 = COPY $vgpr1_vgpr2
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact %4, %6:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %9:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact %5, %6:sgpr_128, 0, 12, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1408,7 +1408,7 @@ body:             |
     ; GFX10-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX10-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
     ; GFX10-NEXT: [[COPY4:%[0-9]+]]:sgpr_32 = COPY $sgpr4
-    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr0
+    ; GFX10-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX10-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
     ; GFX10-NEXT: [[TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact:%[0-9]+]]:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE]], 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1418,7 +1418,7 @@ body:             |
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:sgpr_32 = COPY $sgpr4
-    %5:vreg_64 = COPY $vgpr0
+    %5:vreg_64 = COPY $vgpr0_vgpr1
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:sgpr_128 = REG_SEQUENCE %1:sgpr_32, %subreg.sub0, %2:sgpr_32, %subreg.sub1, %3:sgpr_32, %subreg.sub2, %4:sgpr_32, %subreg.sub3
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_BOTHEN_exact %5, %6:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)

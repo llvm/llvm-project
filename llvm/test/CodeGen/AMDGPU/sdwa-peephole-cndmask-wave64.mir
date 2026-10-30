@@ -137,7 +137,7 @@ body:             |
     ; CHECK-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     ; CHECK-NEXT: [[V_CNDMASK_B32_sdwa:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_sdwa 0, [[V_MOV_B32_e32_]], 0, [[V_PK_MAX_F16_]], 0, 6, 0, 6, 5, implicit $vcc, implicit $exec
     ; CHECK-NEXT: $vgpr0 = COPY [[V_CNDMASK_B32_sdwa]]
-    ; CHECK-NEXT: $vgpr1 = COPY [[DEF]]
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:sreg_64_xexec = IMPLICIT_DEF
     %1:vgpr_32 = IMPLICIT_DEF
@@ -145,7 +145,7 @@ body:             |
     %3:vgpr_32 = V_LSHRREV_B32_e64 16, %2, implicit $exec
     %4:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, %3, %0, implicit $exec
     $vgpr0 = COPY %4
-    $vgpr1 = COPY %0
+    S_NOP 0, implicit %0
     SI_RETURN implicit $vgpr0
 ...
 

@@ -626,7 +626,7 @@ registers:
 body: |
   bb.0:
     %2:sgpr_64 = COPY %1
-    %1:sgpr_64 = COPY %0
+    %1:sgpr_64 = IMPLICIT_DEF
 ...
 
 ---

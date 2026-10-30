@@ -139,14 +139,14 @@ body:             |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   dead undef [[COPY:%[0-9]+]].sub0:sgpr_256 = COPY $exec
+  ; GCN-NEXT:   dead undef [[COPY:%[0-9]+]].sub0_sub1:sgpr_256 = COPY $exec
   ; GCN-NEXT:   dead [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %2:sreg_64_xexec, implicit $exec
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
 
-    undef %0.sub0:sgpr_256 = COPY $exec
+    undef %0.sub0_sub1:sgpr_256 = COPY $exec
     %2:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, 1, undef %1:sreg_64_xexec, implicit $exec
     S_BRANCH %bb.1
 

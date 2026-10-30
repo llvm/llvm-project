@@ -14,7 +14,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[V_MOV_B32_e32_:%[0-9]+]].sub0:vreg_96 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]].sub1:vreg_96 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -32,7 +32,7 @@ body: |
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %1:vgpr_32 = COPY %0:vgpr_32
     %2:vgpr_32 = COPY %0:vgpr_32
-    %3:sreg_64 = COPY $sgpr0
+    %3:sreg_64 = COPY $sgpr0_sgpr1
     $exec = S_MOV_B64_term %3:sreg_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1
@@ -102,7 +102,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[AV_MOV_:%[0-9]+]].sub0:vreg_96 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
   ; CHECK-NEXT:   [[AV_MOV_:%[0-9]+]].sub1:vreg_96 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
@@ -120,7 +120,7 @@ body: |
     %0:av_32 = AV_MOV_B32_IMM_PSEUDO 0, implicit $exec
     %1:vgpr_32 = COPY %0
     %2:vgpr_32 = COPY %0
-    %3:sreg_64 = COPY $sgpr0
+    %3:sreg_64 = COPY $sgpr0_sgpr1
     $exec = S_MOV_B64_term %3:sreg_64
     S_CBRANCH_EXECZ %bb.2, implicit $exec
     S_BRANCH %bb.1

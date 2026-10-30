@@ -74,7 +74,7 @@ body:             |
   bb.3:
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
 
-    $vcc = COPY $vgpr1
+    $vcc = V_CMP_NE_U32_e64 0, $vgpr1, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -139,7 +139,7 @@ body:             |
   bb.3:
     liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr2_sgpr3, $sgpr4_sgpr5
 
-    $vcc = COPY $vgpr1
+    $vcc = V_CMP_NE_U32_e64 0, $vgpr1, implicit $exec
     S_ENDPGM 0
 
 ...
