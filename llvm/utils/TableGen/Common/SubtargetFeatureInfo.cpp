@@ -222,7 +222,7 @@ bool llvm::getRequiredFeatures(
       continue;
     }
     const RecordVal *V = R->getValue("AssemblerCondDag");
-    if (!V || !V->getValue() || !isa<DagInit>(V->getValue())) {
+    if (!V || !isa<DagInit>(V->getValue())) {
       // Ignore this predicate for semantic analysis, as it has no subtarget
       // features.
       AllPredicatesParsed = false;

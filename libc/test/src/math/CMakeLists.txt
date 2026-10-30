@@ -1636,6 +1636,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  frexpf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-tests
+  SRCS
+    frexpf128_test.cpp
+  HDRS
+    FrexpTest.h
+  DEPENDS
+    libc.src.math.frexpf128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+)
+
+add_fp_unittest(
   ilogb_test
   SUITE
     libc-math-tests
@@ -1676,6 +1691,22 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.ilogbl
     libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  ilogbf128_test
+  SUITE
+    libc-math-tests
+  SRCS
+    ilogbf128_test.cpp
+  HDRS
+    ILogbTest.h
+  DEPENDS
+    libc.src.math.ilogbf128
+    libc.src.__support.CPP.limits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.manipulation_functions
 )
@@ -1757,6 +1788,20 @@ add_fp_unittest(
     LogbTest.h
   DEPENDS
     libc.src.math.logbl
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
+  logbf128_test
+  SUITE
+    libc-math-tests
+  SRCS
+    logbf128_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
 )
 
@@ -2569,6 +2614,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosh_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    cosh_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.cosh
+    libc.src.__support.math.cosh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_fp_unittest(
   coshf_test
   NEED_MPFR
   SUITE
@@ -2596,6 +2657,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  sinh_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    sinh_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.sinh
+    libc.src.__support.math.sinh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
+)
+
+add_fp_unittest(
   sinhf_test
   NEED_MPFR
   SUITE
@@ -2620,6 +2697,22 @@ add_fp_unittest(
     sinhf16_test.cpp
   DEPENDS
     libc.src.math.sinhf16
+)
+
+add_fp_unittest(
+  tanh_test
+  NEED_MPFR
+  SUITE
+    libc-math-tests
+  SRCS
+    tanh_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.math.tanh
+    libc.src.__support.math.tanh_double_eval
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.optimization
 )
 
 add_fp_unittest(
