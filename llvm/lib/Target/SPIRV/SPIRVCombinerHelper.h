@@ -38,6 +38,7 @@ public:
   void applyMatrixTranspose(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
   bool matchFAddToLerp(MachineInstr &MI) const;
+  void applyFAddtoLerp(MachineInstr &MI) const;
 
 private:
   SPIRVTypeInst getDotProductVectorType(Register ResReg, uint32_t K,
