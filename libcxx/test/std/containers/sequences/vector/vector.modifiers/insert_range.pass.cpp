@@ -62,6 +62,21 @@ constexpr bool test() {
       v.insert_range(v.begin(), std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
       assert(std::ranges::equal(v, std::vector<int>{1, 2, 3, 4, -5, -6}));
     }
+
+    { // Ensure input-only sized ranges are inserted at the right place when the vector does not reallocate.
+      using input_iter = cpp20_input_iterator<const int*>;
+      const int in[]{1, 2, 3, 4};
+      for (int pos = 0; pos <= 2; ++pos) {
+        std::vector<int> v{-5, -6};
+        v.reserve(v.size() + std::ranges::size(in));
+        auto result = v.insert_range(
+            v.begin() + pos, std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
+        assert(result == v.begin() + pos);
+        std::vector<int> expected{-5, -6};
+        expected.insert(expected.begin() + pos, std::ranges::begin(in), std::ranges::end(in));
+        assert(v == expected);
+      }
+    }
   }
 
   { // Ensure that insert_range doesn't use unexpected assignment.
