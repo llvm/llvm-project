@@ -28,6 +28,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1336,8 +1337,9 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   EqClass.clear();
   EqClass.grow(LR.getNumValNums());
 
+  const MachineDominatorTree &MDT = LIS.getDomTree();
   const VNInfo *used = nullptr, *unused = nullptr;
-  bool HasPHIDef = false;
+  bool HasUnreachablePHIDef = false;
 
   // Determine connections.
   for (const VNInfo *VNI : LR.valnos) {
@@ -1350,9 +1352,9 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
     }
     used = VNI;
     if (VNI->isPHIDef()) {
-      HasPHIDef = true;
       const MachineBasicBlock *MBB = LIS.getMBBFromIndex(VNI->def);
       assert(MBB && "Phi-def has no defining MBB");
+      HasUnreachablePHIDef |= !MDT.isReachableFromEntry(MBB);
       // Connect to values live out of predecessors.
       for (MachineBasicBlock *Pred : MBB->predecessors())
         if (const VNInfo *PVNI = LR.getVNInfoBefore(LIS.getMBBEndIdx(Pred)))
@@ -1371,27 +1373,37 @@ unsigned ConnectedVNInfoEqClasses::Classify(const LiveRange &LR) {
   if (used && unused)
     EqClass.join(used->id, unused->id);
 
-  if (HasPHIDef) {
+  if (HasUnreachablePHIDef) {
     const VNInfo *Defined = nullptr;
     unsigned NumVals = LR.getNumValNums();
-    BitVector HasDef(NumVals);
+    BitVector KeepSeparate(NumVals);
     SmallVector<unsigned, 8> Leaders(NumVals);
     for (const VNInfo *VNI : LR.valnos) {
+      if (VNI->isUnused())
+        continue;
+
       unsigned Leader = EqClass.findLeader(VNI->id);
       Leaders[VNI->id] = Leader;
-      if (VNI->isPHIDef())
-        continue;
-      HasDef.set(Leader);
-      Defined = VNI;
+      if (!VNI->isPHIDef()) {
+        KeepSeparate.set(Leader);
+        Defined = VNI;
+      } else if (MDT.isReachableFromEntry(LIS.getMBBFromIndex(VNI->def))) {
+        KeepSeparate.set(Leader);
+      }
     }
 
-    for (const VNInfo *VNI : LR.valnos) {
-      unsigned Leader = Leaders[VNI->id];
-      if (HasDef.test(Leader))
-        continue;
-      assert(Defined && "phi-def only class with no defined value to join");
-      EqClass.join(Defined->id, VNI->id);
-      HasDef.set(Leader);
+    if (Defined) {
+      for (const VNInfo *VNI : LR.valnos) {
+        if (VNI->isUnused())
+          continue;
+
+        unsigned Leader = Leaders[VNI->id];
+        if (KeepSeparate.test(Leader))
+          continue;
+
+        EqClass.join(Defined->id, VNI->id);
+        KeepSeparate.set(Leader);
+      }
     }
   }
 

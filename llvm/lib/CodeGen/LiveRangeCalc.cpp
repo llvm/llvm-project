@@ -205,7 +205,7 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   for (unsigned i = 0; i != WorkList.size(); ++i) {
     MachineBasicBlock *MBB = MF->getBlockNumbered(WorkList[i]);
 
-    bool Unreachable = MBB->pred_empty() && MBB != &MF->front();
+    bool Unreachable = !DomTree->isReachableFromEntry(MBB);
     FoundUnreachable |= Unreachable;
 
 #ifndef NDEBUG
@@ -273,7 +273,6 @@ bool LiveRangeCalc::findReachingDefs(LiveRange &LR, MachineBasicBlock &UseMBB,
   }
 
   LiveIn.clear();
-  FoundUnreachable |= !TheVNI && !FoundUndef;
   FoundUndef |= (TheVNI == nullptr || TheVNI == &UndefVNI);
   if ((!Undefs.empty() && FoundUndef) || FoundUnreachable)
     UniqueVNI = false;
@@ -367,8 +366,8 @@ void LiveRangeCalc::updateSSA() {
       MachineDomTreeNode *IDom = Node->getIDom();
       LiveOutPair IDomValue;
 
-      // We need a live-in value to a block with no immediate dominator?
-      // This is probably an unreachable block that has survived somehow.
+      // Unreachable blocks already received phi-defs in findReachingDefs, so
+      // only the entry block has no immediate dominator.
       bool needPHI = !IDom || !Seen.test(IDom->getBlock()->getNumber());
 
       // IDom dominates all of our predecessors, but it may not be their

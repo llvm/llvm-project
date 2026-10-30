@@ -1,8 +1,7 @@
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --passes='print<live-intervals>' -filetype=null %s 2>&1 | FileCheck %s
 
-# Main ranges and subranges both get phi-defs for uses in unreachable
-# blocks, including when partial undef defs make the main range use
-# undefs.
+# Uses in unreachable blocks get phi-defs in both the main range and the
+# subranges, including when a partial def leaves other lanes undefined.
 
 # CHECK: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi  L0000000000000003 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
 # CHECK-LABEL: Machine code for function partial_def_use_in_unreachable:

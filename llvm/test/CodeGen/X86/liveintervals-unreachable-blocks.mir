@@ -97,7 +97,7 @@ body: |
 ...
 
 # CHECK-LABEL: Live intervals for machine function: unreachable_loop_exits_to_use:
-# CHECK: %0 [16r,112r:0) 0@16r
+# CHECK: %0 [16r,48B:0)[48B,96B:1)[96B,112r:2) 0@16r 1@48B-phi 2@96B-phi
 ---
 name: unreachable_loop_exits_to_use
 tracksRegLiveness: true
@@ -118,7 +118,7 @@ body: |
 ...
 
 # CHECK-LABEL: Live intervals for machine function: def_and_use_in_unreachable_blocks:
-# CHECK: %0 [48r,96r:0) 0@48r
+# CHECK: %0 [48r,80B:0)[80B,96r:1) 0@48r 1@80B-phi
 ---
 name: def_and_use_in_unreachable_blocks
 tracksRegLiveness: true
