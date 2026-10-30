@@ -5597,6 +5597,12 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
                                    /*useDelayedPrivatization=*/true, symTable,
                                    /*isTargetPrivatization=*/false,
                                    metadirectiveLoopIVs);
+  llvm::SmallVector<const semantics::Symbol *> reusedSymbols;
+  for (const semantics::Symbol *sym : wsloopItemDSP.getDelayedPrivSymbols())
+    if (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) &&
+        sym->test(semantics::Symbol::Flag::OmpLastPrivate))
+      reusedSymbols.push_back(sym);
+  simdItemDSP.setSymbolsUsingEnclosingStorage(reusedSymbols);
   simdItemDSP.processStep1(&simdClauseOps, simdItem->id);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
@@ -5631,6 +5637,9 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
       genWrapperOp<mlir::omp::SimdOp>(converter, loc, simdClauseOps, simdArgs);
   simdOp.setComposite(/*val=*/true);
 
+  // The SIMD DataSharingProcessor handles lastprivate for the entire
+  // composite, including symbols using wsloop storage. Calling `processStep2`
+  // on both processors would duplicate copy-back for those symbols.
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
                 loopNestClauseOps, iv,
                 {{wsloopOp, wsloopArgs}, {simdOp, simdArgs}},
