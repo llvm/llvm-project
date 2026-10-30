@@ -26,4 +26,4 @@
 ! VALID: -fconvert
 ! VALID_FC1: module
 
-! INVALID: error: invalid value 'foobar' in '-fconvert=foobar'
+! INVALID: error: invalid value 'foobar' in '-fconvert=foobar', expected one of: unknown,native,little-endian,big-endian,swap
