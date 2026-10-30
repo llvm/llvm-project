@@ -3290,7 +3290,9 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
-    // Discard annotate attributes, assumptions, and artificial side-effects.
+  case Intrinsic::observable_checkpoint:
+    // Discard annotate attributes, assumptions, artificial side-effects, and
+    // observable checkpoints.
     return true;
   case Intrinsic::read_volatile_register:
   case Intrinsic::read_register: {

@@ -1052,6 +1052,13 @@ feature_test_macros = [
             "headers": ["iterator"],
         },
         {
+            "name": "__cpp_lib_observable_checkpoint",
+            "values": {"c++26": 202506},
+            "headers": ["utility"],
+            "test_suite_guard": "__has_builtin(__builtin_observable_checkpoint)",
+            "libcxx_guard": "__has_builtin(__builtin_observable_checkpoint)",
+        },
+        {
             "name": "__cpp_lib_optional",
             "values": {
                 "c++17": 201606,

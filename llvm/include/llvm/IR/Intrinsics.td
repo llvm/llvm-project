@@ -2127,6 +2127,14 @@ def int_donothing : DefaultAttrsIntrinsic<[], [], [IntrNoMem]>;
 // which specify that infinite loops must be preserved.
 def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 
+// Establish an observable checkpoint. Model possible termination so that
+// undefined behavior after the checkpoint cannot affect preceding observable
+// behavior. In particular, this intrinsic must not have the willreturn
+// attribute. It is erased during code generation.
+def int_observable_checkpoint
+    : Intrinsic<[], [], [IntrInaccessibleMemOnly, IntrNoCallback, IntrNoSync,
+                        IntrNoFree]>;
+
 // The pseudoprobe intrinsic works as a place holder to the block it probes.
 // Like the sideeffect intrinsic defined above, this intrinsic is treated by the
 // optimizer as having opaque side effects so that it won't be get rid of or moved
