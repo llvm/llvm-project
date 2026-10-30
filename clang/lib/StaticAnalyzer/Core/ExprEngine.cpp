@@ -2055,6 +2055,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::ObjCSelectorExprClass:
     case Stmt::ParenListExprClass:
     case Stmt::ShuffleVectorExprClass:
+    case Stmt::SplatVectorExprClass:
     case Stmt::ConvertVectorExprClass:
     case Stmt::VAArgExprClass:
     case Stmt::CUDAKernelCallExprClass:

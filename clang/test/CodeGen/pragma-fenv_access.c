@@ -287,3 +287,43 @@ vector3ulong func_23(vector3float x) {
 }
 // CHECK-LABEL: @func_23
 // STRICT: call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float> {{.*}}, metadata !"fpexcept.ignore")
+
+typedef float  vector4float  __attribute__((__vector_size__(16)));
+vector4float func_26(double x) {
+  #pragma STDC FENV_ROUND FE_UPWARD
+  return __builtin_splatvector(x, vector4float);
+}
+// CHECK-LABEL: @func_26
+// STRICT: call <4 x float> @llvm.experimental.constrained.fptrunc.v4f32.v4f64(<4 x double> {{.*}}, metadata !"round.upward", metadata !"fpexcept.strict")
+
+typedef double vector8double __attribute__((__vector_size__(64)));
+vector8double func_27(short x) {
+  #pragma STDC FENV_ROUND FE_TOWARDZERO
+  return __builtin_splatvector(x, vector8double);
+}
+// CHECK-LABEL: @func_27
+// STRICT: call <8 x double> @llvm.experimental.constrained.sitofp.v8f64.v8i16(<8 x i16> {{.*}}, metadata !"round.towardzero", metadata !"fpexcept.strict")
+
+typedef double vector16double __attribute__((__vector_size__(128)));
+vector16double func_28(unsigned x) {
+  #pragma STDC FENV_ROUND FE_DOWNWARD
+  return __builtin_splatvector(x, vector16double);
+}
+// CHECK-LABEL: @func_28
+// STRICT: call <16 x double> @llvm.experimental.constrained.uitofp.v16f64.v16i32(<16 x i32> {{.*}}, metadata !"round.downward", metadata !"fpexcept.strict")
+
+typedef char vector2char __attribute__((__vector_size__(2)));
+vector2char func_29(float x) {
+  #pragma float_control(except, off)
+  return __builtin_splatvector(x, vector2char);
+}
+// CHECK-LABEL: @func_29
+// STRICT: call <2 x i8> @llvm.experimental.constrained.fptosi.v2i8.v2f32(<2 x float> {{.*}}, metadata !"fpexcept.ignore")
+
+typedef unsigned long long vector3ulong __attribute__((__vector_size__(24)));
+vector3ulong func_30(float x) {
+  #pragma float_control(except, off)
+  return __builtin_splatvector(x, vector3ulong);
+}
+// CHECK-LABEL: @func_30
+// STRICT: call <3 x i64> @llvm.experimental.constrained.fptoui.v3i64.v3f32(<3 x float> {{.*}}, metadata !"fpexcept.ignore")
