@@ -3745,12 +3745,18 @@ LegalizerHelper::lowerConstant(MachineInstr &MI) {
 
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFConstant(MachineInstr &MI) {
-  const MachineOperand &ConstOperand = MI.getOperand(1);
-  const Constant *ConstantVal = ConstOperand.getFPImm();
+  Register Dst = MI.getOperand(0).getReg();
+  const ConstantFP *ConstantVal = MI.getOperand(1).getFPImm();
+  const APFloat &Imm = ConstantVal->getValueAPF();
 
-  emitLoadFromConstantPool(MI.getOperand(0).getReg(), ConstantVal, MIRBuilder);
+  bool ForCodeSize = MIRBuilder.getMF().getFunction().hasOptSize();
+  if (TLI.getFPImmAction(Imm, MRI.getType(Dst), ForCodeSize) ==
+      TargetLowering::FPImmAction::Bitcast)
+    MIRBuilder.buildConstant(Dst, Imm.bitcastToAPInt());
+  else
+    emitLoadFromConstantPool(Dst, ConstantVal, MIRBuilder);
+
   MI.eraseFromParent();
-
   return Legalized;
 }
 

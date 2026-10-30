@@ -78,9 +78,9 @@ static void applyAlignAttr(AnyValue &V, Align Alignment) {
   });
 }
 
-static bool violatesNoUndefAttr(AnyValue &V) {
+static bool violatesNoUndefAttr(const AnyValue &V) {
   bool ContainsPoison = false;
-  forEachScalarValue(V, [&](AnyValue &Scalar) {
+  forEachScalarValue(const_cast<AnyValue &>(V), [&](const AnyValue &Scalar) {
     if (Scalar.isPoison()) {
       ContainsPoison = true;
       return;
@@ -976,14 +976,15 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     PerLane,
   };
 
-  /// Implements llvm.masked.load, llvm.masked.expandload, llvm.masked.store
-  /// and llvm.masked.gather. For loads, \p Data holds the pass-through values
-  /// and is updated with the loaded lanes; for stores, it holds the values to
-  /// store. Lane addresses are computed according to \p Mode.
+  /// Implements the masked intrinsic family. For loads, \p Data holds the
+  /// pass-through values and is updated with the loaded lanes; for stores, it
+  /// holds the values to store. Lane addresses are computed according to \p
+  /// Mode.
   AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
                                         const AnyValue &Mask, AnyValue Data,
                                         MaskedAddrMode Mode) {
-    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store;
+    const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store ||
+                         CB.getIntrinsicID() == Intrinsic::masked_scatter;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
@@ -1170,20 +1171,47 @@ public:
           auto GetBundleArg = [&](uint32_t Offset) -> Value * {
             return OBU.Inputs[Offset];
           };
+          // Bail out on "cold"()
           if (OBU.Inputs.empty())
             continue;
           Value *WasOnVal = GetBundleArg(0);
+          const AnyValue &WasOn = getValue(WasOnVal);
+          auto Kind = getBundleAttrFromOBU(OBU);
+          switch (Kind) {
+          case BundleAttr::Ignore:
+            continue;
+          case BundleAttr::NoUndef:
+            if (violatesNoUndefAttr(WasOn))
+              reportImmediateUB()
+                  << "The value " << WasOn << " violates noundef assumption.";
+            break;
+          case BundleAttr::Range: {
+            AnyValue V = WasOn;
+            const APInt &Lower = cast<ConstantInt>(OBU.Inputs[1])->getValue();
+            const APInt &Upper = cast<ConstantInt>(OBU.Inputs[2])->getValue();
+            applyRangeAttr(V, ConstantRange(Lower, Upper));
+            if (violatesNoUndefAttr(V))
+              reportImmediateUB() << "The value " << WasOn << " violates range("
+                                  << Lower << ", " << Upper << ") assumption.";
+            break;
+          }
+          default:
+            // Other assumptions on pointers or
+            // unrecognized ones.
+            break;
+          }
+          if (hasProgramExited())
+            break;
+
           // Bail out on unrecognized operand bundles.
           if (!WasOnVal->getType()->isPointerTy())
             continue;
           unsigned AS = WasOnVal->getType()->getPointerAddressSpace();
-          const AnyValue &WasOn = getValue(WasOnVal);
           if (WasOn.isPoison()) {
             reportImmediateUB() << "Assume on poison pointer.";
             break;
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
-          auto Kind = getBundleAttrFromOBU(OBU);
           switch (Kind) {
           case BundleAttr::Align: {
             // Alignment assumptions should have 2 or 3 arguments.
@@ -1937,6 +1965,9 @@ public:
                                           MaskedAddrMode::Consecutive);
     case Intrinsic::masked_gather:
       return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::PerLane);
+    case Intrinsic::masked_scatter:
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
                                           MaskedAddrMode::PerLane);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
@@ -2760,13 +2791,18 @@ public:
   }
 
   void visitICmpInst(ICmpInst &I) {
+    Type *OpTy = I.getOperand(0)->getType();
+    unsigned AddrWidth =
+        OpTy->isPtrOrPtrVectorTy() ? DL.getAddressSizeInBits(OpTy) : 0;
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      const APInt &LHSVal =
-          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
-      const APInt &RHSVal =
-          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
+      const APInt &LHSVal = LHS.isPointer()
+                                ? LHS.asPointer().address().trunc(AddrWidth)
+                                : LHS.asInteger();
+      const APInt &RHSVal = RHS.isPointer()
+                                ? RHS.asPointer().address().trunc(AddrWidth)
+                                : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(

@@ -43,7 +43,6 @@
 #include "llvm/CodeGen/InterleavedLoadCombine.h"
 #include "llvm/CodeGen/LiveDebugValuesPass.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
@@ -884,9 +883,6 @@ Error CodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(SSAMachineSchedulerPass(&TM), PMW);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addMachineFunctionPass(
       RequireAnalysisPass<LiveIntervalsAnalysis, MachineFunction>(), PMW);
 

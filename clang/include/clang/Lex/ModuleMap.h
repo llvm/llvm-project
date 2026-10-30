@@ -517,11 +517,11 @@ public:
   bool isHeaderUnavailableInModule(FileEntryRef Header,
                                    const Module *RequestingModule) const;
 
-  /// Retrieve a module with the given name.
+  /// Retrieve an already loaded module with the given name.
   ///
   /// \param Name The name of the module to look up.
   ///
-  /// \returns The named module, if known; otherwise, returns null.
+  /// \returns The named module, if loaded; otherwise, returns null.
   Module *findModule(StringRef Name) const;
 
   Module *findOrLoadModule(StringRef Name);

@@ -572,6 +572,10 @@ defm McastLoadInsts : AMDGPUSubtargetFeature<"mcast-load-insts",
   "Has multicast load instructions"
 >;
 
+defm LoadMonitorInsts : AMDGPUSubtargetFeature<"load-monitor-insts",
+  "Has flat_load_monitor_b* and global_load_monitor_b* instructions"
+>;
+
 defm AsyncLoadToLDSInsts : AMDGPUSubtargetFeature<"async-load-to-lds-insts",
   "Has global async load to LDS instructions"
 >;
@@ -2530,6 +2534,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureTensorCvtLutInsts,
    FeatureTDMInsts,
    FeatureVPermPk16Hazard,
+   FeatureLoadMonitorInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2834,7 +2839,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureGFX13Insts, FeatureGFX8Insts, FeatureGFX90AInsts,
   FeatureGFX940Insts, FeatureGFX950Insts, FeatureGFX9Insts,
   FeatureGWS, FeatureImageInsts, FeatureLdsBarrierArriveAtomic,
-  FeatureLerpInst, FeatureMAIInsts, FeatureMcastLoadInsts,
+  FeatureLerpInst, FeatureLoadMonitorInsts, FeatureMAIInsts, FeatureMcastLoadInsts,
   FeatureMqsadInsts, FeatureMqsadPkInsts, FeatureMsadInsts,
   FeatureOCPFP8ConversionInsts, FeaturePermlane16Insts, FeaturePermlane16Swap,
   FeaturePermlane32Swap, FeaturePkAddMinMaxInsts, FeaturePrngInst,
