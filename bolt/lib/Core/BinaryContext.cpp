@@ -1626,7 +1626,6 @@ void BinaryContext::processInterproceduralReferences() {
     // Check if the address falls into the function padding space - this could
     // be an unmarked data in code. In this case, adjust the padding space size.
     TargetFunction = getBinaryFunctionContainingAddress(Address,
-                                                        /*CheckPastEnd=*/false,
                                                         /*UseMaxSize=*/true);
     // We are not going to overwrite non-simple functions, but for simple
     // ones - adjust the padding size.
@@ -3090,8 +3089,9 @@ uint64_t BinaryContext::getHotThreshold() const {
   return Threshold;
 }
 
-BinaryFunction *BinaryContext::getBinaryFunctionContainingAddress(
-    uint64_t Address, bool CheckPastEnd, bool UseMaxSize) {
+BinaryFunction *
+BinaryContext::getBinaryFunctionContainingAddress(uint64_t Address,
+                                                  bool UseMaxSize) {
   auto FI = BinaryFunctions.upper_bound(Address);
   if (FI == BinaryFunctions.begin())
     return nullptr;
@@ -3100,7 +3100,7 @@ BinaryFunction *BinaryContext::getBinaryFunctionContainingAddress(
   const uint64_t UsedSize =
       UseMaxSize ? FI->second.getMaxSize() : FI->second.getSize();
 
-  if (Address >= FI->first + UsedSize + (CheckPastEnd ? 1 : 0))
+  if (Address >= FI->first + UsedSize)
     return nullptr;
 
   return &FI->second;

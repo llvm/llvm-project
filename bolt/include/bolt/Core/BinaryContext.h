@@ -480,29 +480,20 @@ public:
   /// Return BinaryFunction containing a given \p Address or nullptr if
   /// no registered function contains the \p Address.
   ///
-  /// In a binary a function has somewhat vague  boundaries. E.g. a function can
-  /// refer to the first byte past the end of the function, and it will still be
-  /// referring to this function, not the function following it in the address
-  /// space. Thus we have the following flags that allow to lookup for
-  /// a function where a caller has more context for the search.
-  ///
-  /// If \p CheckPastEnd is true and the \p Address falls on a byte
-  /// immediately following the last byte of some function and there's no other
-  /// function that starts there, then return the function as the one containing
-  /// the \p Address. This is useful when we need to locate functions for
-  /// references pointing immediately past a function body.
+  /// In a binary a function has somewhat vague boundaries. E.g. a function can
+  /// be followed by padding or data that is not part of its body. Thus we have
+  /// the following flag that allows to lookup for a function where a caller
+  /// has more context for the search.
   ///
   /// If \p UseMaxSize is true, then include the space between this function
   /// body and the next object in address ranges that we check.
   BinaryFunction *getBinaryFunctionContainingAddress(uint64_t Address,
-                                                     bool CheckPastEnd = false,
                                                      bool UseMaxSize = false);
   const BinaryFunction *
   getBinaryFunctionContainingAddress(uint64_t Address,
-                                     bool CheckPastEnd = false,
                                      bool UseMaxSize = false) const {
     return const_cast<BinaryContext *>(this)
-        ->getBinaryFunctionContainingAddress(Address, CheckPastEnd, UseMaxSize);
+        ->getBinaryFunctionContainingAddress(Address, UseMaxSize);
   }
 
   /// Return a BinaryFunction that starts at a given \p Address.

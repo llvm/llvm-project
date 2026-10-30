@@ -1486,7 +1486,6 @@ void RewriteInstance::discoverFileObjects() {
   // Annotate functions with code/data markers in AArch64
   for (auto &[Address, Type] : MarkerSymbols) {
     auto *BF = BC->getBinaryFunctionContainingAddress(Address,
-                                                      /*CheckPastEnd*/ false,
                                                       /*UseMaxSize*/ true);
 
     if (!BF) {
@@ -1516,7 +1515,6 @@ void RewriteInstance::discoverFileObjects() {
         const uint64_t RelAddress = SectionAddress + Rel.Offset;
         BinaryFunction *BF =
             BC->getBinaryFunctionContainingAddress(RelAddress,
-                                                   /*CheckPastEnd*/ false,
                                                    /*UseMaxSize*/ true);
         if (BF) {
           assert(RH.isRelative(Rel.Type) &&
@@ -3251,7 +3249,7 @@ void RewriteInstance::printRelocationInfo(const RelocationRef &Rel,
   const uint64_t Offset = Rel.getOffset();
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(SymbolAddress);
   BinaryFunction *Func =
-      BC->getBinaryFunctionContainingAddress(Offset, false, BC->isAArch64());
+      BC->getBinaryFunctionContainingAddress(Offset, BC->isAArch64());
   dbgs() << formatv("Relocation: offset = {0:x}; type = {1}; value = {2:x}; ",
                     Offset, TypeName, ExtractedValue)
          << formatv("symbol = {0} ({1}); symbol address = {2:x}; ", SymbolName,
@@ -3363,7 +3361,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     if (BD && (BD->nameStartsWith("_ZTV") ||   // vtable
                BD->nameStartsWith("_ZTCN"))) { // construction vtable
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
-          SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
+          SymbolAddress, /*UseMaxSize*/ true);
       if (BF) {
         if (BF->getAddress() != SymbolAddress) {
           BC->errs()
@@ -3389,10 +3387,8 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   BinaryFunction *ContainingBF = nullptr;
   if (IsFromCode) {
-    ContainingBF =
-        BC->getBinaryFunctionContainingAddress(Rel.getOffset(),
-                                               /*CheckPastEnd*/ false,
-                                               /*UseMaxSize*/ true);
+    ContainingBF = BC->getBinaryFunctionContainingAddress(Rel.getOffset(),
+                                                          /*UseMaxSize*/ true);
     assert(ContainingBF && "cannot find function for address in code");
     if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
       if (opts::Verbosity >= 1)
@@ -3484,28 +3480,29 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
     return;
   }
 
-  // Occasionally we may see a reference past the last byte of the function
-  // typically as a result of __builtin_unreachable(). Check it here.
-  //
   // Only look for a referenced function when the symbol itself denotes code
   // or it is a section relocation.
   BinaryFunction *ReferencedBF = nullptr;
   if (IsToCode || IsSectionRelocation)
     ReferencedBF = BC->getBinaryFunctionContainingAddress(
-        Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
+        Address, /*UseMaxSize*/ IsAArch64);
 
-  // On AArch64, don't turn an address that is outside the function but within
-  // its padding range into an entry point inside it.
+  // On AArch64, UseMaxSize also matches the padding after the function. Don't
+  // turn an address outside the function but within its padding range into an
+  // entry point inside it. Constant islands are function data, so keep them.
+  bool IsInPadding = false;
   if (ReferencedBF && IsAArch64) {
     const uint64_t End = ReferencedBF->getAddress() + ReferencedBF->getSize();
-    if (Address >= End && !ReferencedBF->isInConstantIsland(Address))
+    if (Address >= End && !ReferencedBF->isInConstantIsland(Address)) {
       ReferencedBF = nullptr;
+      IsInPadding = true;
+    }
   }
 
   if (!IsSectionRelocation) {
     if (BinaryFunction *BF =
             BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
-      if (BF != ReferencedBF) {
+      if (BF != ReferencedBF && !IsInPadding) {
         // It's possible we are referencing a function without referencing any
         // code, e.g. when taking a bitmask action on a function address.
         BC->errs()
@@ -5976,7 +5973,6 @@ void RewriteInstance::updateELFSymbolTable(
       Function =
           (Symbol.getType() == ELF::STT_FUNC || IsLocalLabel)
               ? BC->getBinaryFunctionContainingAddress(Symbol.st_value,
-                                                       /*CheckPastEnd=*/false,
                                                        /*UseMaxSize=*/true)
               : nullptr;
 
@@ -6045,7 +6041,6 @@ void RewriteInstance::updateELFSymbolTable(
         // BOLT generates its own via addExtraSymbols.
         if (IsMarkerSymbol() &&
             BC->getBinaryFunctionContainingAddress(Symbol.st_value,
-                                                   /*CheckPastEnd=*/false,
                                                    /*UseMaxSize=*/true)) {
           assert(!IsDynSym && "cannot delete symbol");
           continue;
