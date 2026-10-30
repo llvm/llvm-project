@@ -182,6 +182,48 @@ gpu.module @test_module_4 {
   }
 }
 
+gpu.module @test_module_4b {
+  // CHECK-LABEL: func @gpu_subgroup_broadcast_specific_lane
+  // CHECK-SAME: (%[[BCAST_SRC:.+]]: i32, %[[BCAST_LANE:.+]]: i32)
+  func.func @gpu_subgroup_broadcast_specific_lane(%arg0 : i32,
+                                                  %arg1 : i32) -> i32 {
+    // CHECK: %[[BCAST_FULL_MASK:.+]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[BCAST_CLAMP:.+]] = llvm.mlir.constant(31 : i32) : i32
+    // CHECK: %[[BCAST_TRUE:.+]] = llvm.mlir.constant(true) : i1
+    // CHECK: %[[BCAST_ACTIVE_MASK:.+]] = nvvm.vote.sync ballot %[[BCAST_FULL_MASK]], %[[BCAST_TRUE]] -> i32
+    // CHECK: nvvm.shfl.sync idx %[[BCAST_ACTIVE_MASK]], %[[BCAST_SRC]], %[[BCAST_LANE]], %[[BCAST_CLAMP]] : i32 -> i32
+    %0 = gpu.subgroup_broadcast %arg0, specific_lane %arg1 : i32
+    func.return %0 : i32
+  }
+
+  // CHECK-LABEL: func @gpu_subgroup_broadcast_first_active_lane
+  // CHECK-SAME: (%[[BCAST_SRC:.+]]: f32)
+  func.func @gpu_subgroup_broadcast_first_active_lane(%arg0 : f32) -> f32 {
+    // CHECK: %[[BCAST_FULL_MASK:.+]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[BCAST_CLAMP:.+]] = llvm.mlir.constant(31 : i32) : i32
+    // CHECK: %[[BCAST_TRUE:.+]] = llvm.mlir.constant(true) : i1
+    // CHECK: %[[BCAST_ACTIVE_MASK:.+]] = nvvm.vote.sync ballot %[[BCAST_FULL_MASK]], %[[BCAST_TRUE]] -> i32
+    // CHECK: %[[BCAST_FIRST_LANE:.+]] = {{.*}}(%[[BCAST_ACTIVE_MASK]]) <{is_zero_poison = false}> : (i32) -> i32
+    // CHECK: nvvm.shfl.sync idx %[[BCAST_ACTIVE_MASK]], %[[BCAST_SRC]], %[[BCAST_FIRST_LANE]], %[[BCAST_CLAMP]] : f32 -> f32
+    %0 = gpu.subgroup_broadcast %arg0, first_active_lane : f32
+    func.return %0 : f32
+  }
+
+  // CHECK-LABEL: func @gpu_subgroup_broadcast_i48
+  // CHECK-SAME: (%[[BCAST_SRC:.+]]: i48)
+  func.func @gpu_subgroup_broadcast_i48(%arg0 : i48) -> i48 {
+    // CHECK: %[[BCAST_FULL_MASK:.+]] = llvm.mlir.constant(-1 : i32) : i32
+    // CHECK: %[[BCAST_CLAMP:.+]] = llvm.mlir.constant(31 : i32) : i32
+    // CHECK: %[[BCAST_TRUE:.+]] = llvm.mlir.constant(true) : i1
+    // CHECK: %[[BCAST_ACTIVE_MASK:.+]] = nvvm.vote.sync ballot %[[BCAST_FULL_MASK]], %[[BCAST_TRUE]] -> i32
+    // CHECK: %[[BCAST_FIRST_LANE:.+]] = {{.*}}(%[[BCAST_ACTIVE_MASK]]) <{is_zero_poison = false}> : (i32) -> i32
+    // CHECK: nvvm.shfl.sync idx %[[BCAST_ACTIVE_MASK]], %{{.*}}, %[[BCAST_FIRST_LANE]], %[[BCAST_CLAMP]] : i32 -> i32
+    // CHECK: nvvm.shfl.sync idx %[[BCAST_ACTIVE_MASK]], %{{.*}}, %[[BCAST_FIRST_LANE]], %[[BCAST_CLAMP]] : i32 -> i32
+    %0 = gpu.subgroup_broadcast %arg0, first_active_lane : i48
+    func.return %0 : i48
+  }
+}
+
 gpu.module @test_module_5 {
   // CHECK-LABEL: func @gpu_sync()
   func.func @gpu_sync() {
