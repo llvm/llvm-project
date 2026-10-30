@@ -1532,6 +1532,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 #### Improvements
 
+- `-fsycl --offload-arch=<arch>` now selects the SPIR-V target without
+  `--offload-targets` when `<arch>` is an Intel GPU (e.g. `xe-pvc`), an IGCA
+  target (e.g. `igca_20ca`) or `generic`.
+
 ### Clang IR Improvements
 
 - Clang builds now build ClangIR support by default. Clang IR is expected to work with most Linux/X86-64 workloads. Normal builds are unchanged, however those who wish to test out the experimental `-fclangir` flag can now do so with a Clang build.
