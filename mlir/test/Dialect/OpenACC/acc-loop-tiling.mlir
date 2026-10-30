@@ -304,3 +304,37 @@ func.func @runtime_step_tile(%arg0: memref<16xf32>, %lb: index, %ub: index, %ste
   } independent
   return
 }
+
+// Test a tile clause on an unstructured loop, such as a sequential loop with an
+// early exit: the loop has no induction variables to tile, so the tile clause
+// is dropped and the loop is kept as is.
+
+// CHECK-LABEL: func.func @unstructured_loop_tile
+// CHECK:         acc.loop {
+// CHECK-NOT:     acc.loop
+// CHECK:           cf.cond_br
+// CHECK:           acc.yield
+// CHECK-NEXT:    } seq unstructured
+func.func @unstructured_loop_tile(%arg0: memref<16xf32>, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : i32
+  %zero = arith.constant 0.0 : f32
+  acc.loop tile({%c4 : i32}) {
+    cf.br ^header(%c0 : index)
+  ^header(%i: index):
+    %more = arith.cmpi slt, %i, %n : index
+    cf.cond_br %more, ^body, ^exit
+  ^body:
+    %val = memref.load %arg0[%i] : memref<16xf32>
+    %neg = arith.cmpf olt, %val, %zero : f32
+    cf.cond_br %neg, ^exit, ^latch
+  ^latch:
+    memref.store %zero, %arg0[%i] : memref<16xf32>
+    %next = arith.addi %i, %c1 : index
+    cf.br ^header(%next : index)
+  ^exit:
+    acc.yield
+  } seq unstructured
+  return
+}
