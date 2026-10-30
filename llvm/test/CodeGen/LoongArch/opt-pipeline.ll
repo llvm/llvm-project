@@ -5,13 +5,13 @@
 ; RUN: llc --mtriple=loongarch32 -mattr=+d -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
 ; RUN: llc --mtriple=loongarch32 -mattr=+d -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
-; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefix=LAXX
+; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,O3
 ; RUN: llc --mtriple=loongarch64 -mattr=+d -O1 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
 ; RUN: llc --mtriple=loongarch64 -mattr=+d -O2 --debug-pass=Structure %s -o /dev/null 2>&1 | \
 ; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
 ; RUN: llc --mtriple=loongarch64 -mattr=+d -O3 --debug-pass=Structure %s -o /dev/null 2>&1 | \
-; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64
+; RUN:   grep -v "Verify generated machine code" | FileCheck %s --check-prefixes=LAXX,LA64,O3
 
 ; REQUIRES: asserts
 
@@ -64,6 +64,16 @@
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
+; O3-NEXT:         Cycle Info Analysis
+; O3-NEXT:         Post-Dominator Tree Construction
+; O3-NEXT:         Branch Probability Analysis
+; O3-NEXT:         Block Frequency Analysis
+; O3-NEXT:         Lazy Branch Probability Analysis
+; O3-NEXT:         Lazy Block Frequency Analysis
+; O3-NEXT:         Optimization Remark Emitter
+; O3-NEXT:         Optimize selects
+; O3-NEXT:         Dominator Tree Construction
+; O3-NEXT:         Natural Loop Information
 ; LAXX-NEXT:       Type Promotion
 ; LAXX-NEXT:       Cycle Info Analysis
 ; LAXX-NEXT:       Post-Dominator Tree Construction

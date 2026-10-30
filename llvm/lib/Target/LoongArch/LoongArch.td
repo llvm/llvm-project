@@ -154,6 +154,11 @@ def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
 
+def TuneEnableSelectOptimize
+    : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
+                       "Enable the select optimize pass for select loop "
+                       "heuristics">;
+
 //===----------------------------------------------------------------------===//
 // Schedule, Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//
@@ -195,7 +200,8 @@ def : ProcessorModel<"la464", LA464Model, [Feature64Bit,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
-                                             FeatureExtLBT]>;
+                                             FeatureExtLBT],
+                                            [TuneEnableSelectOptimize]>;
 
 def : ProcessorModel<"la664", LA664Model, [Feature64Bit,
                                              FeatureUAL,
@@ -207,7 +213,8 @@ def : ProcessorModel<"la664", LA664Model, [Feature64Bit,
                                              FeatureLAMCAS,
                                              FeatureLD_SEQ_SA,
                                              FeatureDiv32,
-                                             FeatureSCQ]>;
+                                             FeatureSCQ],
+                                            [TuneEnableSelectOptimize]>;
 
 //===----------------------------------------------------------------------===//
 // Define the LoongArch target.
