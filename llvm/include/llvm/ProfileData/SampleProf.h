@@ -1250,35 +1250,37 @@ public:
     return Result;
   }
 
-  /// Recursively traverses all children, if the total sample count of the
-  /// corresponding function is no less than \p Threshold, add its corresponding
-  /// GUID to \p S. Also traverse the BodySamples to add hot CallTarget's GUID
-  /// to \p S.
+  /// Recursively collect import GUIDs from contexts with total samples greater
+  /// than \p Threshold, including hot call targets in their body samples.
+  /// By default, only collect targets defined outside this module. With
+  /// \p IncludeLocalTargets, also collect definitions so that another module
+  /// importing the caller can import its deferred indirect targets.
   void findInlinedFunctions(
       DenseSet<GlobalValue::GUID> &S,
       const HashKeyMap<DenseMap, FunctionId, Function *> &SymbolMap,
-      uint64_t Threshold) const {
+      uint64_t Threshold, bool IncludeLocalTargets = false) const {
     if (TotalSamples <= Threshold)
       return;
-    auto IsDeclaration = [](const Function *F) {
-      return !F || F->isDeclaration();
+    auto AddTarget = [&](FunctionId Name) {
+      const Function *F = SymbolMap.lookup(Name);
+      if (!F || F->isDeclaration())
+        S.insert(Name.getHashCode());
+      else if (IncludeLocalTargets)
+        // Use the IR identity, including the source-file prefix for locals.
+        // GUID metadata may not have been assigned yet during pre-link.
+        S.insert(F->getGUIDOrFallback());
     };
-    if (IsDeclaration(SymbolMap.lookup(getFunction()))) {
-      // Add to the import list only when it's defined out of module.
-      S.insert(getGUID());
-    }
+    AddTarget(getFunction());
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
     for (const auto &BS : BodySamples)
       for (const auto &TS : BS.second.getCallTargets())
-        if (TS.second > Threshold) {
-          const Function *Callee = SymbolMap.lookup(TS.first);
-          if (IsDeclaration(Callee))
-            S.insert(TS.first.getHashCode());
-        }
+        if (TS.second > Threshold)
+          AddTarget(TS.first);
     for (const auto &CS : CallsiteSamples)
       for (const auto &NameFS : CS.second)
-        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold);
+        NameFS.second.findInlinedFunctions(S, SymbolMap, Threshold,
+                                           IncludeLocalTargets);
   }
 
   /// Set the name of the function.
