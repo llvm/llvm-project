@@ -1,8 +1,9 @@
-// RUN: %clang_cc1 -triple avr -target-cpu atmega328 -emit-llvm -x c++ < %s | FileCheck --allow-empty %s
+// RUN: %clang_cc1 -triple avr -mconstructor-aliases -emit-llvm -o - %s | FileCheck %s
 
 // This test case verifies https://github.com/llvm/llvm-project/issues/236285 .
 
 struct A {};
+
 struct B : A {
   ~B();
 };
@@ -15,4 +16,5 @@ struct C : B {
 
 C::~C() {}
 
-// CHECK: {{.*}} alias void (ptr), ptr
+// CHECK: {{.*}} alias void (ptr), ptr addrspace(1)
+// CHECK: {{.*}} alias void (ptr), ptr addrspace(1)
