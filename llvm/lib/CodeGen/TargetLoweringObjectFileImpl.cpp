@@ -2455,7 +2455,8 @@ bool TargetLoweringObjectFileXCOFF::ShouldEmitEHBlock(
 bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
     const MachineFunction *MF) {
   const Function &F = MF->getFunction();
-  if (!F.hasStackProtectorFnAttr())
+  if (!F.hasStackProtectorFnAttr() ||
+      F.hasFnAttribute("stack-protector-layout-only"))
     return false;
   // FIXME: check presence of canary word
   // There are cases that the stack protectors are not really inserted even if

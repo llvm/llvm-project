@@ -135,6 +135,17 @@ TargetFrameLowering::getMustPreserveRegisters(const MachineFunction &MF) const {
 
 void TargetFrameLowering::determineUncondPrologCalleeSaves(
     MachineFunction &MF, const MCPhysReg *CSRegs, BitVector &SavedRegs) const {
+  // We always spill ra when  StackProtectorLayoutOnly is specified
+  if (MF.getFrameInfo().hasStackProtectorLayoutOnly()) {
+    MCRegister RA = MF.getSubtarget().getRegisterInfo()->getRARegister();
+    for (unsigned i = 0; CSRegs[i]; ++i) {
+      if (RA == CSRegs[i]) {
+        SavedRegs.set(RA);
+        break;
+      }
+    }
+  }
+
   // Functions which call __builtin_unwind_init get all their registers saved.
   if (!MF.callsUnwindInit())
     return;

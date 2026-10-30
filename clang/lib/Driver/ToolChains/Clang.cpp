@@ -3681,10 +3681,29 @@ static void RenderSSPOptions(const Driver &D, const ToolChain &TC,
     StackProtectorLevel = DefaultStackProtectorLevel;
   }
 
+  bool LayoutOnly = false;
+  if (Arg *A = Args.getLastArg(options::OPT_fstack_protector_layout_only,
+                               options::OPT_fno_stack_protector_layout_only)) {
+    LayoutOnly =
+        A->getOption().matches(options::OPT_fstack_protector_layout_only);
+    if (LayoutOnly && EffectiveTriple.isBPF()) {
+      D.Diag(diag::warn_drv_unsupported_option_for_target)
+          << A->getSpelling() << EffectiveTriple.getTriple();
+      LayoutOnly = false;
+    }
+    if (LayoutOnly && StackProtectorLevel == LangOptions::SSPOff) {
+      D.Diag(diag::warn_drv_overriding_option)
+          << "-fno-stack-protector" << A->getSpelling();
+      StackProtectorLevel = LangOptions::SSPOn;
+    }
+  }
+
   if (StackProtectorLevel) {
     CmdArgs.push_back("-stack-protector");
     CmdArgs.push_back(Args.MakeArgString(Twine(StackProtectorLevel)));
   }
+  if (LayoutOnly)
+    CmdArgs.push_back("-fstack-protector-layout-only");
 
   // --param ssp-buffer-size=
   for (const Arg *A : Args.filtered(options::OPT__param)) {

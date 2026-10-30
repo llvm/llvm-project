@@ -357,6 +357,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
   when subtracting pointers to unrelated objects.
 
+- Added `-fstack-protector-layout-only`. When specified, changes to the layout
+  of a stack frame that occur when `-fstack-protector` is specified are applied
+  but a stack protector is not actually inserted, and the return address is
+  forced to be spilled to the stack. This allows targets that have features
+  that can act as pseudo-stack-protectors, like RISC-V's shadow stack, to
+  benefit from the protection added by reordering stack variables.
+
 - Added `--print-cxx-stdlib` and `--print-cxx-stdlib-include-dirs` to print
   the C++ standard library selected by the driver and the include directories
   added for it.

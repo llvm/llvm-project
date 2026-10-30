@@ -9,6 +9,11 @@
 // RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 2 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSPSTRONG %s
 // RUN: %clang_cc1 -emit-llvm -o - %s -fsanitize=safe-stack -stack-protector 3 | FileCheck -check-prefix=DEF -check-prefix=SAFESTACK-SSPREQ %s
 
+// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 0 -fstack-protector-layout-only | FileCheck -check-prefix=DEF -check-prefix=NOSSP -check-prefix=NO-LAYOUT-ONLY %s
+// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 1 -fstack-protector-layout-only | FileCheck -check-prefix=DEF -check-prefix=SSP -check-prefix=LAYOUT-ONLY %s
+// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 2 -fstack-protector-layout-only | FileCheck -check-prefix=DEF -check-prefix=SSPSTRONG -check-prefix=LAYOUT-ONLY %s
+// RUN: %clang_cc1 -emit-llvm -o - %s -stack-protector 3 -fstack-protector-layout-only | FileCheck -check-prefix=DEF -check-prefix=SSPREQ -check-prefix=LAYOUT-ONLY %s
+
 typedef __SIZE_TYPE__ size_t;
 
 int printf(const char * _Format, ...);
@@ -34,6 +39,7 @@ void test2(const char *msg) {
 // SSP: attributes #[[A]] = {{.*}} ssp{{ }}
 // SSPSTRONG: attributes #[[A]] = {{.*}} sspstrong
 // SSPREQ: attributes #[[A]] = {{.*}} sspreq
+// LAYOUT-ONLY-SAME: "stack-protector-layout-only"
 
 // SAFESTACK-NOSSP: attributes #[[A]] = {{.*}} safestack
 // SAFESTACK-NOSSP-NOT: ssp
@@ -53,3 +59,6 @@ void test2(const char *msg) {
 // SAFESTACK-SSPSTRONG-NOT: attributes #[[B]] = {{.*}} safestack sspstrong
 // SAFESTACK-SSPREQ: attributes #[[B]] = {{.*}} safestack
 // SAFESTACK-SSPREQ-NOT: attributes #[[B]] = {{.*}} safestack sspreq
+
+// LAYOUT-ONLY-NOT: attributes #[[B]] = {{.*}} "stack-protector-layout-only"
+// NO-LAYOUT-ONLY-NOT: "stack-protector-layout-only"

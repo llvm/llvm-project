@@ -52,6 +52,9 @@ class SSPLayoutInfo {
 
   bool RequireStackProtector = false;
 
+  // Changes to frame layout are made, but no stack protector is inserted.
+  bool LayoutOnly = false;
+
   // A prologue is generated.
   bool HasPrologue = false;
 
