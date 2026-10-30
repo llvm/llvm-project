@@ -1278,8 +1278,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     std::optional<std::pair<llvm::AtomicScope, bool>> parsed;
     if (std::optional<std::string> name =
             expr->getArg(1)->tryEvaluateString(getContext())) {
-      parsed = llvm::parseAtomicScopeIRString(llvm::Triple("amdgcn-amd-amdhsa"),
-                                              *name);
+      parsed = llvm::parseAtomicScopeIRString(
+          llvm::Triple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                       llvm::Triple::AMD, llvm::Triple::AMDHSA),
+          *name);
       if (!parsed && triple.isSPIRV())
         parsed = llvm::parseAtomicScopeIRString(triple, *name);
     }

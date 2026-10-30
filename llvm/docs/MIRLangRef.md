@@ -310,8 +310,8 @@ one list by the parser.
 #### Miscellaneous Attributes
 
 The attributes `IsAddressTaken`, `IsLandingPad`,
-`IsInlineAsmBrIndirectTarget` and `Alignment` can be specified in parentheses
-after the block's definition:
+`IsInlineAsmBrIndirectTarget`, `LabelMustBeEmitted` and `Alignment` can be
+specified in parentheses after the block's definition:
 
 ```text
 bb.0.entry (address-taken):
@@ -321,6 +321,8 @@ bb.2.else (align 4):
 bb.3(landing-pad, align 4):
   <instructions>
 bb.4 (inlineasm-br-indirect-target):
+  <instructions>
+bb.5 (label-must-be-emitted):
   <instructions>
 ```
 

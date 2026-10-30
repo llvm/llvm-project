@@ -105,3 +105,30 @@ subroutine non_i32_type
     !CHECK: }
     !IMPLICIT: }
 end subroutine
+
+!CHECK-LABEL: func.func @_QPmultiple_items
+!CHECK: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEa")
+!CHECK: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEb")
+!CHECK: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEc")
+!CHECK: %[[TWO_A:.*]] = arith.constant 2 : i32
+!CHECK: %[[TWO_B:.*]] = arith.constant 2 : i32
+!CHECK: %[[THREE:.*]] = arith.constant 3 : i32
+!CHECK: omp.simd linear(val(@{{[^ ]+}} %[[A]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[TWO_A]] : i32), val(@{{[^ ]+}} %[[B]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[TWO_B]] : i32), val(@{{[^ ]+}} %[[C]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[THREE]] : i32)) linear_var_types([i32, i32, i32])
+
+!IMPLICIT-LABEL: func.func @_QPmultiple_items
+!IMPLICIT: %[[I:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFmultiple_itemsEi")
+!IMPLICIT: %[[TWO_A:.*]] = arith.constant 2 : i32
+!IMPLICIT: %[[TWO_B:.*]] = arith.constant 2 : i32
+!IMPLICIT: %[[THREE:.*]] = arith.constant 3 : i32
+!IMPLICIT: %{{.*}} = arith.constant 1 : i32
+!IMPLICIT: %{{.*}} = arith.constant 4 : i32
+!IMPLICIT: %[[STEP:.*]] = arith.constant 1 : i32
+!IMPLICIT: omp.simd linear({{.*}} = %[[TWO_A]] : i32, {{.*}} = %[[TWO_B]] : i32, {{.*}} = %[[THREE]] : i32, @{{[^ ]+}} %[[I]]#0 -> %{{[^ ]+}} : !fir.ref<i32> = %[[STEP]] : i32)
+subroutine multiple_items
+    implicit none
+    integer :: a, b, c, i
+    !$omp simd linear(a,b:2) linear(c:3)
+    do i = 1, 4
+    end do
+    !$omp end simd
+end subroutine

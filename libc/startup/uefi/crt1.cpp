@@ -1,9 +1,14 @@
-//===-- Implementation of crt for UEFI ------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of crt for UEFI.
+///
 //===----------------------------------------------------------------------===//
 
 #include "config/app.h"
@@ -16,9 +21,6 @@ AppProperties app;
 }
 
 extern "C" {
-EFI_HANDLE __llvm_libc_efi_image_handle;
-EFI_SYSTEM_TABLE *__llvm_libc_efi_system_table;
-
 int main(int argc, char **argv, char **envp);
 
 EFI_STATUS EfiMain(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {

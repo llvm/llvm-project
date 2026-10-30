@@ -1063,8 +1063,9 @@ public:
     virtual ~BreakpointResolverOverride() {}
     virtual lldb::BreakpointResolverSP
     CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) = 0;
-    // Return whether constructing this resolver was successful.
-    virtual llvm::Error Validate() = 0;
+    // Returns an error describing why this override can't be used, for
+    // example because its script class doesn't exist.
+    virtual llvm::Error HasErrors() = 0;
     const std::string &GetDescription() { return m_desc; }
     uint64_t GetTypeMask() { return m_type_mask; }
     std::string DescribeTypeMask();
