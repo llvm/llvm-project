@@ -1,0 +1,131 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=machine-scheduler %s -o - | FileCheck %s
+# RUN: %if asserts %{ llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=machine-scheduler -debug-only=machine-scheduler -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEBUG %}
+
+# The maximum pressure of a region is the maximum over its program points for
+# each register file. In both functions the peaks of two register classes are
+# at different points.
+
+--- |
+  define amdgpu_cs void @av_and_vgpr_peaks() #0 { ret void }
+  define amdgpu_cs void @agpr_and_vgpr_peaks() #0 { ret void }
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+...
+
+# 40 AV registers are live first, then 40 VGPRs. With the pointer the peak is
+# 42 ArchVGPRs, not 82.
+
+# DEBUG-LABEL: Machine code for function av_and_vgpr_peaks:
+# DEBUG: Region register pressure: VGPRs: 42 (AV: 40) AGPRs: 0
+# DEBUG: Pressure after scheduling: VGPRs: 42 (AV: 40) AGPRs: 0
+
+# CHECK-LABEL: name: av_and_vgpr_peaks
+# CHECK: occupancy: 8
+---
+name: av_and_vgpr_peaks
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %ptr:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %a0:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 0, 0, implicit $exec
+    %a1:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 16, 0, implicit $exec
+    %a2:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 32, 0, implicit $exec
+    %a3:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 48, 0, implicit $exec
+    %a4:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 64, 0, implicit $exec
+    %a5:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 80, 0, implicit $exec
+    %a6:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 96, 0, implicit $exec
+    %a7:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 112, 0, implicit $exec
+    %a8:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 128, 0, implicit $exec
+    %a9:av_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 144, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a1, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a2, 32, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a3, 48, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a4, 64, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a5, 80, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a6, 96, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a7, 112, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a8, 128, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a9, 144, 0, implicit $exec
+    %v0:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 0, 0, implicit $exec
+    %v1:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 16, 0, implicit $exec
+    %v2:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 32, 0, implicit $exec
+    %v3:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 48, 0, implicit $exec
+    %v4:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 64, 0, implicit $exec
+    %v5:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 80, 0, implicit $exec
+    %v6:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 96, 0, implicit $exec
+    %v7:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 112, 0, implicit $exec
+    %v8:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 128, 0, implicit $exec
+    %v9:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 144, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v1, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v2, 32, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v3, 48, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v4, 64, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v5, 80, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v6, 96, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v7, 112, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v8, 128, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v9, 144, 0, implicit $exec
+    S_ENDPGM 0
+...
+
+# 40 AGPRs are live first, then 40 VGPRs. ArchVGPRs and AGPRs use separate
+# ranges of the unified file, so the function needs the sum of both peaks:
+# 42 ArchVGPRs aligned to 44, plus 40 AGPRs.
+
+# DEBUG-LABEL: Machine code for function agpr_and_vgpr_peaks:
+# DEBUG: Region register pressure: VGPRs: 42 AGPRs: 40
+# DEBUG: Pressure after scheduling: VGPRs: 42 AGPRs: 40
+
+# CHECK-LABEL: name: agpr_and_vgpr_peaks
+# CHECK: occupancy: 5
+---
+name: agpr_and_vgpr_peaks
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %ptr:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %a0:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 0, 0, implicit $exec
+    %a1:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 16, 0, implicit $exec
+    %a2:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 32, 0, implicit $exec
+    %a3:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 48, 0, implicit $exec
+    %a4:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 64, 0, implicit $exec
+    %a5:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 80, 0, implicit $exec
+    %a6:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 96, 0, implicit $exec
+    %a7:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 112, 0, implicit $exec
+    %a8:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 128, 0, implicit $exec
+    %a9:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 144, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a1, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a2, 32, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a3, 48, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a4, 64, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a5, 80, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a6, 96, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a7, 112, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a8, 128, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %a9, 144, 0, implicit $exec
+    %v0:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 0, 0, implicit $exec
+    %v1:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 16, 0, implicit $exec
+    %v2:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 32, 0, implicit $exec
+    %v3:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 48, 0, implicit $exec
+    %v4:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 64, 0, implicit $exec
+    %v5:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 80, 0, implicit $exec
+    %v6:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 96, 0, implicit $exec
+    %v7:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 112, 0, implicit $exec
+    %v8:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 128, 0, implicit $exec
+    %v9:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %ptr, 144, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v0, 0, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v1, 16, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v2, 32, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v3, 48, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v4, 64, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v5, 80, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v6, 96, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v7, 112, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v8, 128, 0, implicit $exec
+    GLOBAL_STORE_DWORDX4 %ptr, %v9, 144, 0, implicit $exec
+    S_ENDPGM 0
+...

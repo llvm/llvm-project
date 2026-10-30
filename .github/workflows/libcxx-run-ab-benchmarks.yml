@@ -199,6 +199,8 @@ jobs:
                 --commit "${commit}"                                                                    \
                 --compiler "${COMPILER}"                                                                \
                 --no-ordinal                                                                            \
+                --untracked-machine                                                                     \
+                --delete-after-inactive-days 180                                                        \
                 --run-parameter "test_suite_commit=${BENCHMARK_SUITE_VERSION}"                          \
                 --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
                 --lit-build-dir "benchmarks/${build}"                                                   \

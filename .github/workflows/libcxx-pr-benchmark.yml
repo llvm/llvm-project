@@ -131,10 +131,33 @@ jobs:
       artifact-name: ab-results-${{ matrix.lnt-machine }}
       lnt-artifact-name: lnt-reports-${{ matrix.lnt-machine }}
 
+  # Submit the results of each machine to LNT, which allows linking to LNT's comparison page in the report.
+  # Machines whose benchmarks didn't complete have no reports, so submitting them fails too.
+  submit:
+    name: Submit ${{ matrix.lnt-machine }}
+    needs:
+      - extract-info
+      - run-benchmarks
+    # Submit the results of the machines that succeeded even if others failed.
+    if: ${{ !cancelled() && needs.extract-info.result == 'success' }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
+      fail-fast: false
+    uses: $/.github/workflows/lnt-submit.yml
+    with:
+      artifact-name: lnt-reports-${{ matrix.lnt-machine }}
+      test-suite: libcxx
+    secrets:
+      LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
+
   report:
     needs:
       - extract-info
       - run-benchmarks
+      - submit
     # Report results even if some of the benchmark runs failed.
     if: ${{ always() && needs.extract-info.result == 'success' }}
     runs-on: ubuntu-26.04
@@ -148,16 +171,59 @@ jobs:
           path: ${{ runner.temp }}/results
           merge-multiple: true
 
+      # Each artifact is downloaded in its own directory, since the reports of all machines have the same names.
+      - name: Download the LNT reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: lnt-reports-*
+          path: ${{ runner.temp }}/lnt-reports
+
       - name: Update comment with results
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         env:
           MATRIX: ${{ needs.extract-info.outputs.matrix }}
           RESULTS_DIR: ${{ runner.temp }}/results
+          LNT_REPORTS_DIR: ${{ runner.temp }}/lnt-reports
+          LNT_URL: https://lnt.llvm.org
+          LNT_TEST_SUITE: libcxx
+          BASELINE: ${{ needs.extract-info.outputs.baseline }}
+          CANDIDATE: ${{ needs.extract-info.outputs.candidate }}
         with:
           script: |
             const fs = require('fs');
             const path = require('path');
             const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Return a link to the comparison of the baseline and the candidate on LNT, or nothing if there are no
+            // results for that machine.
+            function lnt_comparison(machine) {
+              const suite = process.env.LNT_TEST_SUITE;
+              const dir = path.join(process.env.LNT_REPORTS_DIR, `lnt-reports-${machine}`);
+              if (!fs.existsSync(dir)) {
+                return '';
+              }
+              const reports = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+                                .map(f => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+              if (reports.length === 0) {
+                return '';
+              }
+
+              // Select the runs of this job explicitly, since other runs may exist for the same commits (e.g.
+              // when several pull requests have the same baseline).
+              const url = new URL('/compare', process.env.LNT_URL);
+              for (const [side, commit] of [['a', process.env.BASELINE], ['b', process.env.CANDIDATE]]) {
+                const runs = reports.filter(r => r.commit.value === commit);
+                url.searchParams.append(`suite_${side}`, suite);
+                url.searchParams.append(`machine_${side}`, reports[0].machine.name);
+                url.searchParams.append(`commit_${side}`, commit);
+                for (const run of runs) {
+                  url.searchParams.append(`runs_${side}`, run.uuid);
+                }
+              }
+              url.searchParams.append('metric', 'execution_time');
+              // This ends up in an HTML block of the comment, where Markdown links aren't rendered.
+              return ` (<a href="${url.href.replaceAll('&', '&amp;')}">view on LNT</a>)`;
+            }
 
             // Report the results of every machine we benchmarked on. Machines without results are those where
             // the comparison failed.
@@ -170,7 +236,7 @@ jobs:
               return [
                 '<details>',
                 '<summary>',
-                `Benchmark results for ${machine}:`,
+                `Benchmark results for ${machine}${lnt_comparison(machine)}:`,
                 '</summary>',
                 '',
                 '```',

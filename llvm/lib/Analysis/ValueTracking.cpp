@@ -11054,7 +11054,8 @@ void llvm::findValuesAffectedByCondition(
       // fcmp fneg(x), y
       // fcmp fabs(x), y
       // fcmp fneg(fabs(x)), y
-      if (match(A, m_FNeg(m_Value(A))))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(A, m_FNegOrFSubNegZero(m_Value(A))))
         AddAffected(A);
       if (match(A, m_FAbs(m_Value(A))))
         AddAffected(A);

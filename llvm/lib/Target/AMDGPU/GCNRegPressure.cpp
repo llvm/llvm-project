@@ -629,7 +629,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   DefPressure += CurPressure;
   if (HasECDefs)
     DefPressure += ECDefPressure;
-  MaxPressure = max(DefPressure, MaxPressure);
+  updateMaxPressure(DefPressure);
 
   // Make uses alive.
   SmallVector<VRegMaskOrUnit, 8> RegUses;
@@ -642,8 +642,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   }
 
   // Update MaxPressure with uses plus early-clobber defs pressure.
-  MaxPressure = HasECDefs ? max(CurPressure + ECDefPressure, MaxPressure)
-                          : max(CurPressure, MaxPressure);
+  updateMaxPressure(HasECDefs ? CurPressure + ECDefPressure : CurPressure);
 
   assert(CurPressure == getRegPressure(*MRI, LiveRegs));
 }
@@ -715,7 +714,7 @@ void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
                         *MRI);
   }
 
-  MaxPressure = max(MaxPressure, CurPressure + ECDefPressure);
+  updateMaxPressure(CurPressure + ECDefPressure);
 
   SlotIndex SI = LIS.getInstructionIndex(MI).getDeadSlot();
   assert(SI.isValid());
@@ -738,7 +737,7 @@ void GCNDownwardRPTrackerBase::retireDeadDefs(const MachineInstr &MI,
       retireVirtReg(Reg, SI);
   }
 
-  MaxPressure = max(MaxPressure, CurPressure);
+  updateMaxPressure(CurPressure);
 }
 
 void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
@@ -754,7 +753,7 @@ void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
     LiveMask |= getDefRegMask(MO, *MRI);
     CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
   }
-  MaxPressure = max(MaxPressure, CurPressure);
+  updateMaxPressure(CurPressure);
 }
 
 bool GCNDownwardRPTracker::advanceBeforeNext() {
@@ -1122,11 +1121,17 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
   unsigned MaxNumRegs = 0;
   const MachineInstr *MaxPressureMI = nullptr;
   GCNUpwardRPTracker RPT(LIS);
+  // The maximum pressure of the tracker pairs the VGPR and AVGPR components,
+  // so take the maximum of Kind alone from each point.
+  unsigned NumRegs = 0;
+  RPT.setPressureCallback([&](const GCNRegPressure &RP) {
+    NumRegs = std::max(NumRegs, RP.getNumRegs(Kind));
+  });
   for (const MachineBasicBlock &MBB : MF) {
     RPT.reset(MRI, LIS.getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+    NumRegs = RPT.getPressure().getNumRegs(Kind);
     for (const MachineInstr &MI : reverse(MBB)) {
       RPT.recede(MI);
-      unsigned NumRegs = RPT.getMaxPressure().getNumRegs(Kind);
       if (NumRegs > MaxNumRegs) {
         MaxNumRegs = NumRegs;
         MaxPressureMI = &MI;
