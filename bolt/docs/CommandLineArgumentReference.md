@@ -340,6 +340,14 @@
 
   File with list of functions to skip
 
+- `--skip-funcs-file-no-regex=<string>`
+
+  File with list of functions to skip (non-regex)
+
+- `--skip-funcs-no-regex=<func1,func2,func3,...>`
+
+  List of functions to skip (non-regex)
+
 - `--strict`
 
   Trust the input to be from a well-formed source
