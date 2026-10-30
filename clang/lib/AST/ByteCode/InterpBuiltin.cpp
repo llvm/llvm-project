@@ -2237,6 +2237,9 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
     return false;
 
+  if (!Ptr.isReadablePointerType())
+    return false;
+
   if (IsAligned) {
     CharUnits RequiredAlign =
         S.getASTContext().getTypeAlignInChars(Call->getType());
