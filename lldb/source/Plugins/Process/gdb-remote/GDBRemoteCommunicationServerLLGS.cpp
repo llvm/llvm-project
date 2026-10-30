@@ -1141,6 +1141,11 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
   Log *log = GetLog(LLDBLog::Process);
   LLDB_LOGF(log, "GDBRemoteCommunicationServerLLGS::%s called", __FUNCTION__);
 
+  if (std::optional<WaitStatus> exit_status = process->GetExitStatus())
+    for (const std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin>
+             &plugin_up : m_accelerator_plugins)
+      plugin_up->NativeProcessDidExit(*exit_status);
+
   PacketResult result = SendStopReasonForState(
       *process, StateType::eStateExited, /*force_synchronous=*/false);
   if (result != PacketResult::Success) {
