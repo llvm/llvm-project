@@ -40,10 +40,6 @@ point (e.g. maybe you would like to give an example of the
 functionality, or simply have a lot to talk about), see the comment below
 for adding a new subsection. -->
 
-* Fixed a miscompilation where tail recursion elimination left stale memory
-  effects on functions with `byval` arguments, allowing inlining to overwrite
-  the caller's original object. ([#235074](https://github.com/llvm/llvm-project/issues/235074))
-
 * ...
 
 <!-- If you would like to document a larger change, then you can add a
