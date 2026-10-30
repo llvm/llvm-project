@@ -1989,7 +1989,7 @@ StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
     C.emitReport(std::make_unique<PathSensitiveBugReport>(
         BT_IllegalWhence,
         "The whence argument to fseek() should be "
-        "SEEK_SET, SEEK_END, or SEEK_CUR",
+        "SEEK_SET, SEEK_END, or SEEK_CUR.",
         N));
     return nullptr;
   }

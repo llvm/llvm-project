@@ -22,7 +22,7 @@ void test() {
   A *array[42];
   A *found;
 
-  for (index = 0; (array[index] = foo()); ++index) { // expected-note {{Loop condition is false; execution continues on line 34}}
+  for (index = 0; (array[index] = foo()); ++index) { // expected-note {{Loop condition is false. Execution continues on line 34}}
     // expected-note@-1 {{Value assigned to 'index'}}
     // expected-note@-2 {{Assigning value}}
     // expected-note@-3 {{Assuming pointer value is null}}
