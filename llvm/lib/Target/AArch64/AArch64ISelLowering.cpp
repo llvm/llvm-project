@@ -34423,6 +34423,11 @@ bool AArch64TargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
         return true;
     }
   }
+  // The stride of a GEP with a scalable source element type is
+  // vscale-dependent, which the IRTranslator can't handle.
+  if (const auto *GEP = dyn_cast<GetElementPtrInst>(&Inst))
+    if (GEP->getSourceElementType()->isScalableTy())
+      return true;
 
   // Checks to allow the use of SME instructions
   if (auto *Base = dyn_cast<CallBase>(&Inst)) {
