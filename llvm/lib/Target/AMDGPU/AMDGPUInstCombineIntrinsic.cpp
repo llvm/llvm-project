@@ -18,6 +18,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "GCNSubtarget.h"
 #include "SIDefines.h"
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ConstantFolding.h"
@@ -1804,6 +1805,40 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, Call);
     }
     break;
+  }
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
+  case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
+  case Intrinsic::amdgcn_cluster_workgroup_max_flat_id: {
+    const Function &F = *II.getFunction();
+
+    AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
+    if (!ClusterDims.isFixedDims())
+      break;
+
+    const auto &Dims = ClusterDims.getDims();
+    if (Dims[0] == 0 || Dims[1] == 0 || Dims[2] == 0)
+      break;
+
+    unsigned MaxID;
+    switch (IID) {
+    case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
+      MaxID = Dims[0] - 1;
+      break;
+    case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
+      MaxID = Dims[1] - 1;
+      break;
+    case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
+      MaxID = Dims[2] - 1;
+      break;
+    case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
+      MaxID = Dims[0] * Dims[1] * Dims[2] - 1;
+      break;
+    default:
+      llvm_unreachable("Unexpected cluster size intrinsic");
+    }
+
+    return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), MaxID));
   }
   case Intrinsic::amdgcn_wavefrontsize: {
     if (ST->isWaveSizeKnown())
