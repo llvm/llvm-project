@@ -2,7 +2,6 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=4 -S %s | FileCheck %s
 
 ; Replicated icmps differ only in samesign; the merged icmp must not keep it.
-; FIXME: currently miscompiled.
 define void @icmp_samesign(i32 %a, i32 %b, ptr noalias %dst.1, ptr noalias %dst.2, ptr noalias %dst.3, i64 %n) {
 ; CHECK-LABEL: define void @icmp_samesign(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr noalias [[DST_1:%.*]], ptr noalias [[DST_2:%.*]], ptr noalias [[DST_3:%.*]], i64 [[N:%.*]]) {
