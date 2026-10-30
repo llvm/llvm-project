@@ -10303,7 +10303,7 @@ static std::optional<unsigned> isRotatedLoad(ArrayRef<int64_t> ByteOffsets,
   if (FirstByteOffset <= 0 || FirstByteOffset >= Width)
     return std::nullopt;
 
-  unsigned Rot = FirstByteOffset;
+  unsigned Rot = static_cast<unsigned>FirstByteOffset;
   for (unsigned i = 0; i < Width; i++) {
     int64_t CurrentByteOffset = ByteOffsets[i] - FirstOffset;
     if (CurrentByteOffset != static_cast<int64_t>((i + Rot) % Width))
@@ -10429,9 +10429,10 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   std::optional<bool> IsBigEndian = isBigEndian(
       ArrayRef(ByteOffsets).drop_back(ZeroExtendedBytes), FirstOffset);
 
-  // A check if its not big endian but can be solved by rotation
   std::optional<unsigned> RotatedBytes;
-  if (!IsBigEndian) {
+  if (!IsBigEndian.has_value()) {
+    // If the bytes do not match sequential LE or BE order in memory,
+    // check if they form a cyclically rotated layout on little-endian targets.
     if (!IsBigEndianTarget && ZeroExtendedBytes == 0)
       RotatedBytes = isRotatedLoad(ByteOffsets, FirstOffset);
     if (!RotatedBytes)
