@@ -41,6 +41,18 @@ using namespace PatternMatch;
 //                              Constant Class
 //===----------------------------------------------------------------------===//
 
+bool Constant::isNullOrUndef() const {
+  if (isNullValue() || isa<UndefValue>(this))
+    return true;
+  if (!isa<ConstantAggregate>(this))
+    return false;
+  for (const auto *Operand : operand_values()) {
+    if (!cast<Constant>(Operand)->isNullOrUndef())
+      return false;
+  }
+  return true;
+}
+
 bool Constant::isNegativeZeroValue() const {
   // Floating point values have an explicit -0.0 value.
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(this))
