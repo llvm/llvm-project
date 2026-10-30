@@ -528,7 +528,7 @@ defm RoundingModeRTZ : CapabilityOperand<4468, 0x10400, 0, [SPV_KHR_float_contro
 defm Float16ImageAMD : CapabilityOperand<5008, 0, 0, [], [Shader]>;
 defm ImageGatherBiasLodAMD : CapabilityOperand<5009, 0, 0, [], [Shader]>;
 defm FragmentMaskAMD : CapabilityOperand<5010, 0, 0, [], [Shader]>;
-defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [], [Shader]>;
+defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [SPV_EXT_shader_stencil_export], [Shader]>;
 defm ImageReadWriteLodAMD : CapabilityOperand<5015, 0, 0, [], [Shader]>;
 defm Int64ImageEXT : CapabilityOperand<5016, 0, 0, [SPV_EXT_shader_image_int64], [Int64]>;
 defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;

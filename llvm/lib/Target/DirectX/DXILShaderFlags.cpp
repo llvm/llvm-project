@@ -459,6 +459,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         CSF.Barycentrics |= llvm::any_of(Sig->Inputs, [](const auto &E) {
           return E.SemanticKind == dxbc::PSV::SemanticKind::Barycentrics;
         });
+        CSF.StencilRef |= llvm::any_of(Sig->Outputs, [](const auto &E) {
+          return E.SemanticKind == dxbc::PSV::SemanticKind::StencilRef;
+        });
         // Unallocated elements do not occupy signature registers. Their type
         // requirements come from the instructions that access them.
         auto HasLowPrecision = [](const auto &Elements) {

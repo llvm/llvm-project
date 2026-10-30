@@ -79,7 +79,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::StartInstanceLocation,
                                            SemanticKind::SampleIndex,
                                            SemanticKind::ViewID,
-                                           SemanticKind::PrimitiveID};
+                                           SemanticKind::PrimitiveID,
+                                           SemanticKind::StencilRef};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -231,6 +232,15 @@ TEST(HLSLSemanticStagesTest, PrimitiveIDSignaturePoints) {
       {Triple::Pixel, IOType::In, SemanticInterpretation::SGV},
   };
   expectOnlySignaturePoints(SemanticKind::PrimitiveID, Valid);
+}
+
+// SV_StencilRef is written by the pixel shader. Valid only on pixel outputs,
+// where it is in the signature but not packed.
+TEST(HLSLSemanticStagesTest, StencilRefSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked},
+  };
+  expectOnlySignaturePoints(SemanticKind::StencilRef, Valid);
 }
 
 } // namespace
