@@ -2,6 +2,8 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes=attributor -attributor-manifest-internal -S < %s | FileCheck %s --check-prefixes=CHECK,TUNIT
 
 declare float @llvm.canonicalize.f32(float)
+declare x86_fp80 @llvm.canonicalize.f80(x86_fp80)
+declare ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128)
 
 define float @ret_canonicalize(float %arg0) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_canonicalize
@@ -591,6 +593,206 @@ define float @ret_canonicalize_daz_not_sub_not_nzero(float nofpclass(sub nzero) 
 ;
   %call = call float @llvm.canonicalize.f32(float %x)
   ret float %call
+}
+
+define float @ret_canonicalize_f32__no_nzero_nsub__ftpz_dapz(float nofpclass(nzero nsub) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_nzero_nsub__ftpz_dapz
+; CHECK-SAME: (float nofpclass(nzero nsub) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(nzero nsub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_nsub__ftpz_dapz(float nofpclass(nsub) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_nsub__ftpz_dapz
+; CHECK-SAME: (float nofpclass(nsub) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(nsub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_nzero__ftpz_dapz(float nofpclass(nzero) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_nzero__ftpz_dapz
+; CHECK-SAME: (float nofpclass(nzero) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(nzero) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_pzero_psub__ftpz_dapz(float nofpclass(pzero psub) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_pzero_psub__ftpz_dapz
+; CHECK-SAME: (float nofpclass(pzero psub) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(pzero psub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_psub__ftpz_dapz(float nofpclass(psub) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_psub__ftpz_dapz
+; CHECK-SAME: (float nofpclass(psub) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(psub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_pzero__ftpz_dapz(float nofpclass(pzero) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_pzero__ftpz_dapz
+; CHECK-SAME: (float nofpclass(pzero) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(pzero) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_zero__ftpz_dapz(float nofpclass(zero) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_zero__ftpz_dapz
+; CHECK-SAME: (float nofpclass(zero) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(zero) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_sub__ftpz_dapz(float nofpclass(sub) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_sub__ftpz_dapz
+; CHECK-SAME: (float nofpclass(sub) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(sub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_sub_nzero__ftpz_dapz(float nofpclass(sub nzero) %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_sub_nzero__ftpz_dapz
+; CHECK-SAME: (float nofpclass(nzero sub) [[X:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(nzero sub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_nzero_nsub__ftpz_ieee(float nofpclass(nzero nsub) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_nzero_nsub__ftpz_ieee
+; CHECK-SAME: (float nofpclass(nzero nsub) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(nzero nsub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_nsub__ftpz_ieee(float nofpclass(nsub) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_nsub__ftpz_ieee
+; CHECK-SAME: (float nofpclass(nsub) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(nsub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_nzero__ftpz_ieee(float nofpclass(nzero) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_nzero__ftpz_ieee
+; CHECK-SAME: (float nofpclass(nzero) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(nzero) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_pzero_psub__ftpz_ieee(float nofpclass(pzero psub) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_pzero_psub__ftpz_ieee
+; CHECK-SAME: (float nofpclass(pzero psub) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(pzero psub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_psub__ftpz_ieee(float nofpclass(psub) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_psub__ftpz_ieee
+; CHECK-SAME: (float nofpclass(psub) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(psub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_pzero__ftpz_ieee(float nofpclass(pzero) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_pzero__ftpz_ieee
+; CHECK-SAME: (float nofpclass(pzero) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(pzero) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_zero__ftpz_ieee(float nofpclass(zero) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_zero__ftpz_ieee
+; CHECK-SAME: (float nofpclass(zero) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(zero) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_sub__ftpz_ieee(float nofpclass(sub) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan sub) float @ret_canonicalize_f32__no_sub__ftpz_ieee
+; CHECK-SAME: (float nofpclass(sub) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan sub) float @llvm.canonicalize.f32(float nofpclass(sub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define float @ret_canonicalize_f32__no_sub_nzero__ftpz_ieee(float nofpclass(sub nzero) %x) denormal_fpenv(positivezero|ieee) {
+; CHECK-LABEL: define nofpclass(snan nzero sub) float @ret_canonicalize_f32__no_sub_nzero__ftpz_ieee
+; CHECK-SAME: (float nofpclass(nzero sub) [[X:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(snan nzero sub) float @llvm.canonicalize.f32(float nofpclass(nzero sub) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = call float @llvm.canonicalize.f32(float %x)
+  ret float %call
+}
+
+define x86_fp80 @ret_canonicalize_f80__pinf(x86_fp80 nofpclass(nan ninf zero sub norm) %x) {
+; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) x86_fp80 @ret_canonicalize_f80__pinf
+; CHECK-SAME: (x86_fp80 nofpclass(nan ninf zero sub norm) [[X:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub norm) x86_fp80 @llvm.canonicalize.f80(x86_fp80 nofpclass(nan ninf zero sub norm) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret x86_fp80 [[CALL]]
+;
+  %call = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 %x)
+  ret x86_fp80 %call
+}
+
+define ppc_fp128 @ret_canonicalize_ppcf128__pinf(ppc_fp128 nofpclass(nan ninf zero sub norm) %x) {
+; CHECK-LABEL: define nofpclass(nan ninf zero sub norm) ppc_fp128 @ret_canonicalize_ppcf128__pinf
+; CHECK-SAME: (ppc_fp128 nofpclass(nan ninf zero sub norm) [[X:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(nan ninf zero sub norm) ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 nofpclass(nan ninf zero sub norm) [[X]]) #[[ATTR12]]
+; CHECK-NEXT:    ret ppc_fp128 [[CALL]]
+;
+  %call = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 %x)
+  ret ppc_fp128 %call
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:

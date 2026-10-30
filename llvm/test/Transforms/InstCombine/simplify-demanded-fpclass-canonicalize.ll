@@ -256,9 +256,19 @@ define nofpclass(qnan) float @ret_nofpclass_anan__canonicalize_ieee(float %unkno
 }
 
 ; Ignore fp80, leave canonicalize.
-define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub_canonicalize_fp80_daz(x86_fp80 %unknown) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub_canonicalize_fp80_daz(
+define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80(x86_fp80 %unknown) {
+; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80(
 ; CHECK-SAME: x86_fp80 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[CANON:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 [[UNKNOWN]])
+; CHECK-NEXT:    ret x86_fp80 [[CANON]]
+;
+  %canon = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 %unknown)
+  ret x86_fp80 %canon
+}
+
+define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80__ftz_daz(x86_fp80 %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80__ftz_daz(
+; CHECK-SAME: x86_fp80 [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CANON:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 [[UNKNOWN]])
 ; CHECK-NEXT:    ret x86_fp80 [[CANON]]
 ;
@@ -600,6 +610,123 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   ret float %result
 }
 
+; Flushing a denormal result is guaranteed for canonicalize, so the result
+; mode flushes with the sign preserved.
+define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_only_psub__ftz_ieee() #3 {
+; CHECK-LABEL: define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_only_psub__ftz_ieee(
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %psub = call float @returns_psub()
+  %canon = call float @llvm.canonicalize.f32(float %psub)
+  ret float %canon
+}
+
+define nofpclass(nan pzero) float @ret_nofpclass_nan_pzero__canonicalize_only_nsub__ftz_ieee() #3 {
+; CHECK-LABEL: define nofpclass(nan pzero) float @ret_nofpclass_nan_pzero__canonicalize_only_nsub__ftz_ieee(
+; CHECK-SAME: ) #[[ATTR3]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %nsub = call float @returns_nsub()
+  %canon = call float @llvm.canonicalize.f32(float %nsub)
+  ret float %canon
+}
+
+define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_only_sub__ftpz_ieee() #4 {
+; CHECK-LABEL: define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_only_sub__ftpz_ieee(
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %sub = call float @returns_sub()
+  %canon = call float @llvm.canonicalize.f32(float %sub)
+  ret float %canon
+}
+
+; The result mode flushes with the sign preserved whatever the dynamic input
+; mode does with the denormal first.
+define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_only_psub__ftz_dynamic() #9 {
+; CHECK-LABEL: define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_only_psub__ftz_dynamic(
+; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %psub = call float @returns_psub()
+  %canon = call float @llvm.canonicalize.f32(float %psub)
+  ret float %canon
+}
+
+; Flushing a denormal input is mandated, so +subnormal must become +0.0 and
+; the +subnormal source is demanded by a demanded +0.0.
+define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_psub__ieee_daz() #5 {
+; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_psub__ieee_daz(
+; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %psub = call float @returns_psub()
+  %canon = call float @llvm.canonicalize.f32(float %psub)
+  ret float %canon
+}
+
+define nofpclass(nan pzero sub) float @ret_nofpclass_nan_pzero_sub__canonicalize_only_nsub__ieee_daz() #5 {
+; CHECK-LABEL: define nofpclass(nan pzero sub) float @ret_nofpclass_nan_pzero_sub__canonicalize_only_nsub__ieee_daz(
+; CHECK-SAME: ) #[[ATTR6]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %nsub = call float @returns_nsub()
+  %canon = call float @llvm.canonicalize.f32(float %nsub)
+  ret float %canon
+}
+
+; A -subnormal input flushes to +0.0, so it is demanded by a demanded +0.0.
+define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_nsub__ieee_dapz() #6 {
+; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_nsub__ieee_dapz(
+; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
+; CHECK-NEXT:    ret float poison
+;
+  %nsub = call float @returns_nsub()
+  %canon = call float @llvm.canonicalize.f32(float %nsub)
+  ret float %canon
+}
+
+; Neither mode can flush to -0.0, so a -0.0 result is impossible.
+define nofpclass(nan sub) float @ret_nofpclass_nan_sub__canonicalize_only_pzero_psub__dynamic_ieee() #7 {
+; CHECK-LABEL: define nofpclass(nan sub) float @ret_nofpclass_nan_sub__canonicalize_only_pzero_psub__dynamic_ieee(
+; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    [[PZERO_PSUB:%.*]] = call float @returns_pzero_psub()
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[PZERO_PSUB]])
+; CHECK-NEXT:    ret float [[CANON]]
+;
+  %pzero.psub = call float @returns_pzero_psub()
+  %canon = call float @llvm.canonicalize.f32(float %pzero.psub)
+  ret float %canon
+}
+
+; A dynamic input mode may flush, so the +subnormal source is demanded by a
+; demanded +0.0.
+define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_psub__ieee_dynamic() #8 {
+; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_psub__ieee_dynamic(
+; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
+; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %psub = call float @returns_psub()
+  %canon = call float @llvm.canonicalize.f32(float %psub)
+  ret float %canon
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
 attributes #2 = { denormal_fpenv(positivezero|positivezero) }
+attributes #3 = { denormal_fpenv(preservesign|ieee) }
+attributes #4 = { denormal_fpenv(positivezero|ieee) }
+attributes #5 = { denormal_fpenv(ieee|preservesign) }
+attributes #6 = { denormal_fpenv(ieee|positivezero) }
+attributes #7 = { denormal_fpenv(dynamic|ieee) }
+attributes #8 = { denormal_fpenv(ieee|dynamic) }
+attributes #9 = { denormal_fpenv(preservesign|dynamic) }
