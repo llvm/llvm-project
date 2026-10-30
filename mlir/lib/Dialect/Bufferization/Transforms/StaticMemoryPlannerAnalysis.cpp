@@ -19,6 +19,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include <numeric>
@@ -132,6 +134,49 @@ static int64_t buildAllocInfos(
   return arenaAlignment;
 }
 
+/// Remove candidates that share a dealloc with an ineligible allocation.
+/// Exclusion propagates through shared deallocs: removing one candidate may
+/// prevent erasing another dealloc, which in turn excludes more candidates.
+static void filterSharedDeallocCandidates(
+    const BufferViewFlowAnalysis &analysis,
+    SmallVectorImpl<AllocationCandidate> &candidates) {
+  SmallPtrSet<Operation *, 16> eligible;
+  DenseMap<Operation *, SmallVector<AllocationCandidate *>> deallocCandidates;
+  for (auto &candidate : candidates) {
+    eligible.insert(candidate.alloc.getOperation());
+    for (memref::DeallocOp dealloc : candidate.deallocs)
+      deallocCandidates[dealloc.getOperation()].push_back(&candidate);
+  }
+
+  // Seed deallocs that may release an allocation rejected by the initial
+  // eligibility checks, such as a dynamic or nested allocation.
+  SmallVector<memref::DeallocOp> worklist;
+  for (const auto &entry : deallocCandidates) {
+    auto dealloc = cast<memref::DeallocOp>(entry.first);
+    if (llvm::any_of(findFreedAllocs(dealloc, analysis),
+                     [&](memref::AllocOp alloc) {
+                       return !eligible.contains(alloc.getOperation());
+                     }))
+      worklist.push_back(dealloc);
+  }
+
+  SmallPtrSet<Operation *, 16> visited;
+  while (!worklist.empty()) {
+    memref::DeallocOp dealloc = worklist.pop_back_val();
+    if (!visited.insert(dealloc.getOperation()).second)
+      continue;
+    for (AllocationCandidate *candidate :
+         deallocCandidates[dealloc.getOperation()]) {
+      if (eligible.erase(candidate->alloc.getOperation()))
+        worklist.append(candidate->deallocs.begin(), candidate->deallocs.end());
+    }
+  }
+
+  llvm::erase_if(candidates, [&](AllocationCandidate &candidate) {
+    return !eligible.contains(candidate.alloc.getOperation());
+  });
+}
+
 /// Collect alloc/dealloc groups eligible for arena placement.
 ///
 /// Eligibility uses the shared `BufferViewFlowAnalysis` so that buffers flowing
@@ -154,7 +199,8 @@ static int64_t buildAllocInfos(
 static LogicalResult collectCandidates(
     FunctionOpInterface funcOp, const BufferViewFlowAnalysis &analysis,
     llvm::Statistic &numSkipDynamic, llvm::Statistic &numSkipUnsupportedType,
-    llvm::Statistic &numSkipNested, llvm::Statistic &numEligible,
+    llvm::Statistic &numSkipNested, llvm::Statistic &numSkipSharedDealloc,
+    llvm::Statistic &numEligible,
     SmallVector<AllocationCandidate> &candidates) {
   // All candidates are planned relative to the function's entry block.
   if (funcOp.getFunctionBody().empty())
@@ -200,17 +246,8 @@ static LogicalResult collectCandidates(
         walkFailed = true;
         return WalkResult::interrupt();
       }
-      // Every alloc that this dealloc may free must also be an entry-block
-      // candidate; otherwise erasing it during the rewrite is unsafe.
-      for (memref::AllocOp freed : findFreedAllocs(d, analysis)) {
-        if (freed->getBlock() != planBlock) {
-          ++numSkipNested;
-          return WalkResult::advance();
-        }
-      }
     }
 
-    ++numEligible;
     AllocationCandidate candidate;
     candidate.alloc = allocOp;
     candidate.deallocs = deallocs;
@@ -220,7 +257,15 @@ static LogicalResult collectCandidates(
     return WalkResult::advance();
   });
 
-  return failure(walkFailed);
+  if (walkFailed)
+    return failure();
+
+  size_t initialCandidates = candidates.size();
+  filterSharedDeallocCandidates(analysis, candidates);
+  numSkipSharedDealloc += initialCandidates - candidates.size();
+
+  numEligible += candidates.size();
+  return success();
 }
 
 /// Create or obtain the arena buffer based on the arena mode.
@@ -330,7 +375,7 @@ void StaticMemoryPlannerAnalysisPass::runOnOperation() {
   SmallVector<AllocationCandidate> candidates;
   if (failed(collectCandidates(funcOp, analysis, numSkipDynamic,
                                numSkipUnsupportedType, numSkipNested,
-                               numEligible, candidates)))
+                               numSkipSharedDealloc, numEligible, candidates)))
     return signalPassFailure();
 
   if (candidates.empty())
