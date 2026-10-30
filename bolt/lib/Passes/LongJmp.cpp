@@ -230,6 +230,7 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
                                    uint64_t StubCreationAddress) {
   const BinaryFunction &Func = *BB.getFunction();
   const BinaryContext &BC = Func.getBinaryContext();
+  const bool IsCall = BC.MIB->isCall(Inst);
   std::unique_ptr<BinaryBasicBlock> NewBB;
   const MCSymbol *TgtSym = BC.MIB->getTargetSymbol(Inst);
   assert(TgtSym && "getTargetSymbol failed");
@@ -237,12 +238,14 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
   BinaryBasicBlock::BinaryBranchInfo BI{0, 0};
   BinaryBasicBlock *TgtBB = BB.getSuccessor(TgtSym, BI);
   auto LocalStubsIter = Stubs.find(&Func);
+  BinaryBasicBlock *PrevStub = nullptr;
 
   // If already using stub and the stub is from another function, create a local
   // stub, since the foreign stub is now out of range
   if (!TgtBB) {
     auto SSIter = SharedStubs.find(TgtSym);
     if (SSIter != SharedStubs.end()) {
+      PrevStub = SSIter->second;
       TgtSym = BC.MIB->getTargetSymbol(*SSIter->second->begin());
       --NumSharedStubs;
     }
@@ -263,7 +266,7 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
              "At least equal or greater than the branch count.");
       TgtBB->setExecutionCount(TgtBB->getExecutionCount() - BI.Count);
     }
-
+    PrevStub = TgtBB;
     TgtBB = TgtBBSucc;
   }
 
@@ -283,6 +286,17 @@ LongJmpPass::replaceTargetWithStub(BinaryBasicBlock &BB, MCInst &Inst,
     std::tie(NewBB, StubSymbol) =
         createNewStub(BB, TgtSym, /*is func?*/ !TgtBB, StubCreationAddress);
     StubBB = NewBB.get();
+  }
+
+  // Update non-call user counts when an instruction changes stubs.
+  if (!IsCall && PrevStub != StubBB) {
+    StubUsersMap[StubBB]++;
+    // Remove this instruction from the previous stub's user count.
+    if (PrevStub) {
+      assert(StubUsersMap[PrevStub] > 0 &&
+             "Non-call user count should be positive before decrementing.");
+      StubUsersMap[PrevStub]--;
+    }
   }
 
   // Local branch
@@ -528,26 +542,42 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
   BinaryFunction &Func = *StubBB.getFunction();
   BinaryContext &BC = Func.getBinaryContext();
   const int Bits = StubBits[&StubBB];
-  // Already working with the largest range?
-  if (Bits == static_cast<int>(BC.AsmInfo->getCodePointerSize() * 8))
-    return Error::success();
+  uint32_t NonCallUsers = StubUsersMap[&StubBB];
 
   const static int RangeShortJmp = BC.MIB->getShortJmpEncodingSize();
   const static int RangeSingleInstr = BC.MIB->getUncondBranchEncodingSize();
+  const static int CodePointerSizeBits = BC.AsmInfo->getCodePointerSize() * 8;
   const static uint64_t ShortJmpMask = ~((1ULL << RangeShortJmp) - 1);
-  const static uint64_t SingleInstrMask =
-      ~((1ULL << (RangeSingleInstr - 1)) - 1);
+
+  // Reject non-call users of existing stubs that clobber x16
+  if (Bits == RangeShortJmp || Bits == CodePointerSizeBits) {
+    if (NonCallUsers > 0)
+      return createFatalBOLTError(
+          "BOLT-ERROR: Unable to relax non-call branch beyond 128MiB\n");
+  }
+
+  // No further relaxation possible for a maximum range stub
+  if (Bits == CodePointerSizeBits) {
+    return Error::success();
+  }
 
   const MCSymbol *RealTargetSym = BC.MIB->getTargetSymbol(*StubBB.begin());
   const BinaryBasicBlock *TgtBB = Func.getBasicBlockForLabel(RealTargetSym);
   uint64_t TgtAddress = getSymbolAddress(BC, RealTargetSym, TgtBB);
   uint64_t DotAddress = BBAddresses[&StubBB];
+  const int64_t Offset = TgtAddress - DotAddress;
   uint64_t PCRelTgtAddress = DotAddress > TgtAddress ? DotAddress - TgtAddress
                                                      : TgtAddress - DotAddress;
 
   // If it fits in one instruction, do not relax
-  if (!(PCRelTgtAddress & SingleInstrMask))
+  if (isIntN(RangeSingleInstr, Offset))
     return Error::success();
+
+  // Do not relax non-call branches beyond 128MiB.
+  if (NonCallUsers > 0) {
+    return createFatalBOLTError(
+        "BOLT-ERROR: Unable to relax non-call branch beyond 128MiB\n");
+  }
 
   // Fits short jmp
   if (!(PCRelTgtAddress & ShortJmpMask)) {
