@@ -36,10 +36,10 @@
 #define LLVM_ANALYSIS_IR2VEC_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Analysis/IR2VecKind.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
@@ -58,25 +58,12 @@ class raw_ostream;
 class LLVMContext;
 class IR2VecVocabAnalysis;
 
-/// IR2Vec computes two kinds of embeddings: Symbolic and Flow-aware.
-/// Symbolic embeddings capture the "syntactic" and "statistical correlation"
-/// of the IR entities. Flow-aware embeddings build on top of symbolic
-/// embeddings and additionally capture the flow information in the IR.
-/// IR2VecKind is used to specify the type of embeddings to generate.
-/// Note: Implementation of FlowAware embeddings is not same as the one
-/// described in the paper. The current implementation is a simplified version
-/// that captures the flow information (SSA-based use-defs) without tracing
-/// through memory level use-defs in the embedding computation described in the
-/// paper.
-enum class IR2VecKind { Symbolic, FlowAware };
-
 namespace ir2vec {
 
-LLVM_ABI extern llvm::cl::OptionCategory IR2VecCategory;
 /// Return -ir2vec-vocab-path.
-LLVM_ABI StringRef getVocabFile();
+LLVM_ABI StringRef getVocabFile(const LLVMContext &C);
 /// Return -ir2vec-kind.
-LLVM_ABI IR2VecKind getEmbeddingKind();
+LLVM_ABI IR2VecKind getEmbeddingKind(const LLVMContext &C);
 
 /// Embedding is a datatype that wraps std::vector<double>. It provides
 /// additional functionality for arithmetic and comparison operations.

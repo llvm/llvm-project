@@ -161,6 +161,19 @@ defm : ValueField<"medium-basic-block-instruction-threshold", "unsigned", "15",
 // results.
 defm : BoolField<"enable-unsafe-globalsmodref-alias-results", "false", "">;
 
+// IR2Vec.cpp
+// FIXME: Use a default vocab when not specified
+defm : ValueField<"ir2vec-vocab-path", "StringRef", "",
+  "Path to the vocabulary file for IR2Vec">;
+defm : ValueField<"ir2vec-opc-weight", "float", "1.0",
+  "Weight for opcode embeddings">;
+defm : ValueField<"ir2vec-type-weight", "float", "0.5",
+  "Weight for type embeddings">;
+defm : ValueField<"ir2vec-arg-weight", "float", "0.2",
+  "Weight for argument embeddings">;
+defm : EnumField<"ir2vec-kind", "IR2VecKind", "IR2VecKind::Symbolic", "symbolic,flow-aware", ["IR2VecKind::Symbolic", "IR2VecKind::FlowAware"],
+  "IR2Vec embedding kind">;
+
 // IndirectCallPromotionAnalysis.cpp
 // Set the maximum number of targets to promote for a single indirect-call
 // callsite.

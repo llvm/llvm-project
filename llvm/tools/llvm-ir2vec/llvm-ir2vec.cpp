@@ -155,7 +155,8 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    if (ir2vec::getVocabFile().empty()) {
+    StringRef VocabFile = ir2vec::getVocabFile(M.getContext());
+    if (VocabFile.empty()) {
       return createStringError(
           errc::invalid_argument,
           "IR2Vec vocabulary file path not specified; "
@@ -163,8 +164,7 @@ static Error processModule(Module &M, raw_ostream &OS) {
     }
 
     std::shared_ptr<Vocabulary> Vocab;
-    if (auto Err =
-            ir2vec::loadVocabulary(ir2vec::getVocabFile()).moveInto(Vocab))
+    if (auto Err = ir2vec::loadVocabulary(VocabFile).moveInto(Vocab))
       return Err;
     if (auto Err = Tool.setVocabulary(std::move(Vocab)))
       return Err;
@@ -350,9 +350,9 @@ int main(int argc, char **argv) {
   using namespace llvm::mir2vec;
 
   InitLLVM X(argc, argv);
-  // Show Common, IR2Vec and MIR2Vec option categories
+  // Show Common and MIR2Vec option categories
   cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *>{
-      &CommonCategory, &ir2vec::IR2VecCategory, &mir2vec::MIR2VecCategory});
+      &CommonCategory, &mir2vec::MIR2VecCategory});
   cl::LibraryOptionsContext LibraryOptions;
   cl::parseCommandLineOptions(
       LibraryOptions, ArrayRef(argv, argc),
