@@ -191,3 +191,22 @@ body:             |
     $eax = COPY %rot(s32)
     RET implicit $eax
 ...
+---
+name:            right_ident_fmul_fp80
+tracksRegLiveness: true
+body:             |
+  bb.1.entry:
+    liveins: $fp0
+    ; Fold (x * 1.0) -> x
+    ; CHECK-LABEL: name: right_ident_fmul_fp80
+    ; CHECK: liveins: $fp0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s80) = COPY $fp0
+    ; CHECK-NEXT: $fp0 = COPY %x(s80)
+    ; CHECK-NEXT: RET 0, implicit $fp0
+    %x:_(s80) = COPY $fp0
+    %cst:_(s80) = G_FCONSTANT x86_fp80 0xK3FFF8000000000000000
+    %op:_(s80) = G_FMUL %x(s80), %cst
+    $fp0 = COPY %op(s80)
+    RET 0, implicit $fp0
+...
