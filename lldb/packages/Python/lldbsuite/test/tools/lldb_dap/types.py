@@ -783,6 +783,7 @@ class Thread:
 class CompileUnit:
     id: int
     compileUnitPath: str
+    isOptimized: Optional[bool] = None
 
 
 @dataclass(frozen=True)

@@ -1049,6 +1049,10 @@ struct CompileUnit {
 
   /// Path of compile unit.
   String compileUnitPath;
+
+  /// True if the compile unit was compiled with optimization, false if it was
+  /// unoptimized or unknown. Optional so a debugger can omit it when unknown.
+  std::optional<bool> isOptimized;
 };
 llvm::json::Value toJSON(const CompileUnit &);
 
