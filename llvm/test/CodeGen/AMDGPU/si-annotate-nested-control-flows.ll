@@ -92,62 +92,40 @@ define void @nested_inf_loop_callbr(i32 %0, i32 %1) {
 ; ISA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
-; ISA-NEXT:    s_branch .LBB1_2
-; ISA-NEXT:  .LBB1_1: ; %Flow14
-; ISA-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; ISA-NEXT:    s_and_b64 vcc, exec, s[4:5]
-; ISA-NEXT:    s_cbranch_vccnz .LBB1_12
-; ISA-NEXT:  .LBB1_2: ; %BB1
+; ISA-NEXT:    s_and_b64 s[4:5], exec, 0
+; ISA-NEXT:  .LBB1_1: ; %BB1
 ; ISA-NEXT:    ; =>This Loop Header: Depth=1
-; ISA-NEXT:    ; Child Loop BB1_5 Depth 2
+; ISA-NEXT:    ; Child Loop BB1_4 Depth 2
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
-; ISA-NEXT:  ; %bb.3: ; %BB1.target.BB3
-; ISA-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; ISA-NEXT:    s_mov_b64 s[4:5], -1
-; ISA-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; ISA-NEXT:    s_cbranch_scc1 .LBB1_10
-; ISA-NEXT:  .LBB1_4: ; %BB2
-; ISA-NEXT:    ; in Loop: Header=BB1_2 Depth=1
+; ISA-NEXT:  .LBB1_2: ; %BB3
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
-; ISA-NEXT:  .LBB1_5: ; %TransitionBlock
-; ISA-NEXT:    ; Parent Loop BB1_2 Depth=1
+; ISA-NEXT:    s_branch .LBB1_1
+; ISA-NEXT:  .LBB1_3: ; Inline asm indirect target
+; ISA-NEXT:    ; %BB2
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    ; Label of block must be emitted
+; ISA-NEXT:    ;;#ASMSTART
+; ISA-NEXT:    ;;#ASMEND
+; ISA-NEXT:  .LBB1_4: ; Inline asm indirect target
+; ISA-NEXT:    ; %BB4
+; ISA-NEXT:    ; Parent Loop BB1_1 Depth=1
 ; ISA-NEXT:    ; => This Inner Loop Header: Depth=2
+; ISA-NEXT:    ; Label of block must be emitted
+; ISA-NEXT:    s_mov_b64 vcc, s[4:5]
+; ISA-NEXT:    s_cbranch_vccnz .LBB1_7
+; ISA-NEXT:  ; %bb.5: ; %TransitionBlock
+; ISA-NEXT:    ; in Loop: Header=BB1_4 Depth=2
 ; ISA-NEXT:    ;;#ASMSTART
 ; ISA-NEXT:    ;;#ASMEND
 ; ISA-NEXT:  ; %bb.6: ; %TransitionBlock.target.BB3
-; ISA-NEXT:    ; in Loop: Header=BB1_5 Depth=2
-; ISA-NEXT:    s_mov_b64 s[4:5], -1
-; ISA-NEXT:  .LBB1_7: ; %Flow2
-; ISA-NEXT:    ; in Loop: Header=BB1_5 Depth=2
-; ISA-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; ISA-NEXT:    s_cbranch_scc0 .LBB1_5
-; ISA-NEXT:    s_branch .LBB1_10
-; ISA-NEXT:  .LBB1_8: ; Inline asm indirect target
-; ISA-NEXT:    ; %TransitionBlock.target.BB4
-; ISA-NEXT:    ; in Loop: Header=BB1_5 Depth=2
-; ISA-NEXT:    ; Label of block must be emitted
-; ISA-NEXT:    s_mov_b64 s[4:5], 0
-; ISA-NEXT:    s_branch .LBB1_7
-; ISA-NEXT:  .LBB1_9: ; Inline asm indirect target
-; ISA-NEXT:    ; %BB1.target.BB2
-; ISA-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; ISA-NEXT:    ; Label of block must be emitted
-; ISA-NEXT:    s_mov_b64 s[4:5], 0
-; ISA-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; ISA-NEXT:    s_cbranch_scc0 .LBB1_4
-; ISA-NEXT:  .LBB1_10: ; %Flow13
-; ISA-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; ISA-NEXT:    s_mov_b64 s[4:5], -1
-; ISA-NEXT:    s_cbranch_execz .LBB1_1
-; ISA-NEXT:  ; %bb.11: ; %BB3
-; ISA-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; ISA-NEXT:    ;;#ASMSTART
-; ISA-NEXT:    ;;#ASMEND
-; ISA-NEXT:    s_mov_b64 s[4:5], 0
-; ISA-NEXT:    s_branch .LBB1_1
-; ISA-NEXT:  .LBB1_12: ; %DummyReturnBlock
+; ISA-NEXT:    ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    s_branch .LBB1_2
+; ISA-NEXT:  .LBB1_7: ; in Loop: Header=BB1_1 Depth=1
+; ISA-NEXT:    s_cbranch_execz .LBB1_2
+; ISA-NEXT:  ; %bb.8: ; %DummyReturnBlock
 ; ISA-NEXT:    s_setpc_b64 s[30:31]
 BB:
   callbr void asm "", ""() to label %BB1 []
