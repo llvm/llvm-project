@@ -5548,9 +5548,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       FPClassTest InterestedSrcs = InterestedClasses;
       if (InterestedClasses & fcQNan)
         InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
-      // Subnormals may flush to zero.
+      // Subnormals may flush to zero, and the NSZ flag may demand the other
+      // zero.
       if (InterestedClasses & fcZero)
-        InterestedSrcs |= fcSubnormal;
+        InterestedSrcs |= fcZero | fcSubnormal;
 
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
