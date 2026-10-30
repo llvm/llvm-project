@@ -2009,13 +2009,25 @@ def TileReductionUsingForOp : Op<Transform_Dialect, "structured.tile_reduction_u
     The initial tensor always uses the tile size dimension. This may overallocate
     if the tile size is greater than the reduction dimension.
 
+    For generic Linalg operations, the partial-reduction implementation also
+    recognizes pure integer argmin/argmax value/index pairs on unencoded tensors
+    with matching output maps and shapes. The canonical combiner uses
+    `better || (equal && earlier)`, comparing incoming and carried values, and
+    explicitly selects the smaller index on value ties. The value is
+    produced by the corresponding integer min/max or by a select using the same
+    predicate as the index. Value and index may have different integer types.
+    Such a pair uses two neutral values and one multi-result merging reduction.
+
     #### Return modes
 
-    Returns 4 handles associated with (in order):
-      - the fill op used to initialize the neutral element,
-      - the parallel tiled op and
-      - the result-combining op,
+    Returns handles associated with, in order:
+      - each fill op used to initialize a neutral element,
+      - each tiled op,
+      - each result-combining op,
       - the parent `for` op.
+
+    A single independent output produces four handles. A recognized coupled
+    value/index pair has two fills and one combining op, producing five handles.
 
     The `reduction_dims` can be used to specify the subset of reduction dimensions
     of the operation to tile. If left unspecified, all reduction dimensions are
@@ -2122,13 +2134,25 @@ def TileReductionUsingForallOp :
     If an extra `tile_sizes` parameter is passed the tiles are cyclically
     distributed on the threads of the `scf.foralls` loop.
 
+    For generic Linalg operations, the partial-reduction implementation also
+    recognizes pure integer argmin/argmax value/index pairs on unencoded tensors
+    with matching output maps and shapes. The canonical combiner uses
+    `better || (equal && earlier)`, comparing incoming and carried values, and
+    explicitly selects the smaller index on value ties. The value is
+    produced by the corresponding integer min/max or by a select using the same
+    predicate as the index. Value and index may have different integer types.
+    Such a pair uses two neutral values and one multi-result merging reduction.
+
     #### Return modes
 
-    Returns 4 handles associated with (in order):
-      - the fill op used to initialize the neutral element,
-      - the parallel tiled op and
-      - the result-combining op,
+    Returns handles associated with, in order:
+      - each fill op used to initialize a neutral element,
+      - each tiled op,
+      - each result-combining op,
       - the parent `forall` op.
+
+    A single independent output produces four handles. A recognized coupled
+    value/index pair has two fills and one combining op, producing five handles.
 
     #### Example:
 
