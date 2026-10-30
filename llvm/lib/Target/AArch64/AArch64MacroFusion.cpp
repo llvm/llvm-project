@@ -529,19 +529,41 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
-static bool definesRegInClass(const MachineInstr &MI,
-                              const TargetRegisterInfo *TRI,
-                              const TargetRegisterClass &Class) {
-  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
-    return MI.definesRegister(Reg, TRI);
+// Checks whether RegMO's class is Class, or a subclass of it. Supports both
+// physical and virtual registers.
+static bool isRegInClass(const MachineOperand &RegMO,
+                         const TargetRegisterClass &Class,
+                         const MachineRegisterInfo &MRI) {
+  Register Reg = RegMO.getReg();
+  if (Reg.isVirtual())
+    return Class.hasSubClassEq(MRI.getRegClass(Reg));
+  return Class.contains(Reg.asMCReg());
+}
+
+// Checks whether MI defines any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+definesRegInClass(const MachineInstr &MI,
+                  const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_defs(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
   });
 }
 
-static bool readsRegInClass(const MachineInstr &MI,
-                            const TargetRegisterInfo *TRI,
-                            const TargetRegisterClass &Class) {
-  return llvm::any_of(
-      Class, [&MI, TRI](MCPhysReg Reg) { return MI.readsRegister(Reg, TRI); });
+// Checks whether MI reads/uses any register whose class is any of Classes, or a
+// subclass of them. Supports both physical and virtual registers.
+static bool
+readsRegInClass(const MachineInstr &MI,
+                const ArrayRef<const TargetRegisterClass *> Classes) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  return llvm::any_of(MI.all_uses(), [&](const MachineOperand &MO) {
+    return llvm::any_of(Classes, [&](const TargetRegisterClass *Class) {
+      return isRegInClass(MO, *Class, MRI);
+    });
+  });
 }
 
 static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
@@ -551,7 +573,11 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
                              MI.definesRegister(AArch64::ZA, TRI);
 
   // (read/write ZA or read/write Z)
-  if (!ReadOrWriteZA && !definesRegInClass(MI, TRI, AArch64::ZPRRegClass))
+  const TargetRegisterClass *ZClasses[] = {
+      &AArch64::ZPRRegClass, &AArch64::ZPR2RegClass, &AArch64::ZPR3RegClass,
+      &AArch64::ZPR4RegClass};
+  if (!ReadOrWriteZA && !definesRegInClass(MI, ZClasses) &&
+      !readsRegInClass(MI, ZClasses))
     return false;
 
   // (NOT load/store)
@@ -559,12 +585,13 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, TRI, AArch64::PPRRegClass))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass,
+                             &AArch64::PNRRegClass}))
     return false;
 
   // (NOT write GPR)
-  const bool WriteGPR = definesRegInClass(MI, TRI, AArch64::GPR32RegClass) ||
-                        definesRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool WriteGPR =
+      definesRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
   if (WriteGPR)
     return false;
 
@@ -573,8 +600,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
       MI.definesRegister(AArch64::NZCV, TRI))
     return false;
 
-  const bool ReadGPR = readsRegInClass(MI, TRI, AArch64::GPR32RegClass) &&
-                       readsRegInClass(MI, TRI, AArch64::GPR64RegClass);
+  const bool ReadGPR =
+      readsRegInClass(MI, {&AArch64::GPR32RegClass, &AArch64::GPR64RegClass});
 
   // ( (NOT read GPR) or read/write ZA )
   if (ReadGPR && !ReadOrWriteZA)
