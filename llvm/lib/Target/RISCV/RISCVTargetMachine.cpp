@@ -50,7 +50,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeRISCVO0PreLegalizerCombinerLegacyPass(*PR);
-  initializeRISCVPreLegalizerCombinerPass(*PR);
+  initializeRISCVPreLegalizerCombinerLegacyPass(*PR);
   initializeRISCVPostLegalizerCombinerLegacyPass(*PR);
   initializeMachineKCFILegacyPass(*PR);
   initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
@@ -461,7 +461,7 @@ void RISCVPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() == CodeGenOptLevel::None) {
     addPass(createRISCVO0PreLegalizerCombinerLegacyPass());
   } else {
-    addPass(createRISCVPreLegalizerCombiner());
+    addPass(createRISCVPreLegalizerCombinerLegacyPass());
   }
 }
 
