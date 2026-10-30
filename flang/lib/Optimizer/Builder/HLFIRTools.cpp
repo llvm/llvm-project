@@ -980,6 +980,19 @@ mlir::Value hlfir::inlineElementalOp(
           mlir::Value inlined = inlineElementalOp(loc, builder, elementalIface,
                                                   clonedApplyIndices, mapper,
                                                   mustRecursivelyInline);
+          // The applied elemental may yield a variable (e.g. a vector
+          // subscripted designator element), while hlfir.apply always
+          // produces a value. Convert the variable so that users expecting
+          // a value remain valid.
+          if (inlined.getType() != apply.getType()) {
+            hlfir::Entity inlinedEntity{inlined};
+            if (inlinedEntity.isVariable()) {
+              if (fir::isa_trivial(apply.getType()))
+                inlined = hlfir::loadTrivialScalar(loc, builder, inlinedEntity);
+              else
+                inlined = hlfir::AsExprOp::create(builder, loc, inlined);
+            }
+          }
           mapper.map(apply.getResult(), inlined);
           continue;
         }
