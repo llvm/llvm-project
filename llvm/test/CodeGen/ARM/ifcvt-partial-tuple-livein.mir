@@ -1,0 +1,44 @@
+# RUN: llc -mtriple=armv7 -run-pass=if-converter -verify-machineinstrs %s -o - | FileCheck %s
+
+# bb.2 is live-in on just $s2 (lane 0x10 of $q0). $s2 and the dead $s3 are the
+# two halves of $d1 (0x30), so the live-in used to pull in all of $d1, marking
+# $s3 live too. The if-converter then predicated the def of $s3 and, thinking
+# it was live, added a use of the never-defined $s3 that -verify-machineinstrs
+# rejects. With the fix only $s2 is marked live.
+#
+# Lane masks: $s2 = 0x10, $s3 = 0x20, $d1 = 0x30. Live mask 0x10 overlaps $d1
+# but is not all of it, so $d1 must not drag in the dead $s3.
+#
+# CHECK-LABEL: name: partial_tuple_livein
+# CHECK: renamable $s3 = VMOVSR killed renamable $r1, 0 /* CC::eq */, killed $cpsr{{$}}
+# CHECK-NOT: implicit killed $s3
+
+--- |
+  define void @partial_tuple_livein(i32 %n, i32 %x) {
+    ret void
+  }
+...
+---
+name:            partial_tuple_livein
+alignment:       4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $r0, $r1, $s2
+
+    CMPri killed renamable $r0, 0, 14, $noreg, implicit-def $cpsr
+    Bcc %bb.2, 1, killed $cpsr
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $r1
+
+    renamable $s3 = VMOVSR killed renamable $r1, 14, $noreg
+
+  bb.2:
+    liveins: $q0:0x0000000000000010
+
+    $r0 = VMOVRS killed renamable $s2, 14, $noreg
+    BX_RET 14, $noreg, implicit killed $r0
+...
