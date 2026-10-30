@@ -1243,51 +1243,54 @@ OverwriteResult DSEState::isOverwrite(const Instruction *KillingI,
 
   if (AnyScalable)
     return OW_Unknown;
-  // Query the alias information
-  AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
 
-  // If the start pointers are the same, we just have to compare sizes to see if
-  // the killing store was larger than the dead store.
-  if (AAR == AliasResult::MustAlias) {
-    // Make sure that the KillingSize size is >= the DeadSize size.
-    if (KillingSize >= DeadSize)
-      return OW_Complete;
-  }
-
-  // If we hit a partial alias we may have a full overwrite
-  if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
-    int32_t Off = AAR.getOffset();
-    if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
-      return OW_Complete;
-  }
-
-  // If we can't resolve the same pointers to the same object, then we can't
-  // analyze them at all.
-  if (DeadUndObj != KillingUndObj) {
-    // Non aliasing stores to different objects don't overlap. Note that
-    // if the killing store is known to overwrite whole object (out of
-    // bounds access overwrites whole object as well) then it is assumed to
-    // completely overwrite any store to the same object even if they don't
-    // actually alias (see next check).
-    if (AAR == AliasResult::NoAlias)
-      return OW_None;
-    return OW_Unknown;
-  }
-
-  // Okay, we have stores to two completely different pointers.  Try to
-  // decompose the pointer into a "base + constant_offset" form.  If the base
-  // pointers are equal, then we can reason about the two stores.
+  // Try to decompose the pointers into a "base + constant_offset" form. If the
+  // base pointers are equal, the offsets alone determine how the accesses
+  // overlap. This is what alias analysis would conclude too, so skip the much
+  // more expensive query.
   DeadOff = 0;
   KillingOff = 0;
-  const Value *DeadBasePtr =
-      GetPointerBaseWithConstantOffset(DeadPtr, DeadOff, DL);
-  const Value *KillingBasePtr =
-      GetPointerBaseWithConstantOffset(KillingPtr, KillingOff, DL);
+  const Value *DeadBasePtr = nullptr;
+  const Value *KillingBasePtr = nullptr;
+  if (DeadUndObj == KillingUndObj) {
+    DeadBasePtr = GetPointerBaseWithConstantOffset(DeadPtr, DeadOff, DL);
+    KillingBasePtr =
+        GetPointerBaseWithConstantOffset(KillingPtr, KillingOff, DL);
+  }
 
-  // If the base pointers still differ, we have two completely different
-  // stores.
-  if (DeadBasePtr != KillingBasePtr)
+  if (!DeadBasePtr || DeadBasePtr != KillingBasePtr) {
+    DeadOff = 0;
+    KillingOff = 0;
+    // Query the alias information
+    AliasResult AAR = BatchAA.alias(KillingLoc, DeadLoc);
+
+    // If the start pointers are the same, we just have to compare sizes to see
+    // if the killing store was larger than the dead store.
+    if (AAR == AliasResult::MustAlias) {
+      // Make sure that the KillingSize size is >= the DeadSize size.
+      if (KillingSize >= DeadSize)
+        return OW_Complete;
+    }
+
+    // If we hit a partial alias we may have a full overwrite
+    if (AAR == AliasResult::PartialAlias && AAR.hasOffset()) {
+      int32_t Off = AAR.getOffset();
+      if (Off >= 0 && (uint64_t)Off + DeadSize <= KillingSize)
+        return OW_Complete;
+    }
+
+    // Non aliasing stores to different objects don't overlap. Note that if
+    // the killing store is known to overwrite whole object (out of bounds
+    // access overwrites whole object as well) then it is assumed to
+    // completely overwrite any store to the same object even if they don't
+    // actually alias (see the check above).
+    if (DeadUndObj != KillingUndObj && AAR == AliasResult::NoAlias)
+      return OW_None;
+
+    // Either the pointers cannot be resolved to the same object, or the base
+    // pointers differ: we cannot analyze them any further.
     return OW_Unknown;
+  }
 
   // The killing access completely overlaps the dead store if and only if
   // both start and end of the dead one is "inside" the killing one:
