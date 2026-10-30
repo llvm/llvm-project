@@ -125,7 +125,7 @@ bool SpeculativeExecutionLegacyPass::runOnFunction(Function &F) {
 }
 
 bool SpeculativeExecutionPass::runImpl(Function &F, TargetTransformInfo *TTI) {
-  Opts = &F.getContext().getLibraryOptions().get<ScalarOptions>();
+  Opts = &getScalarOptions(F);
   if ((OnlyIfDivergentTarget || Opts->spec_exec_only_if_divergent_target) &&
       !TTI->hasBranchDivergence(&F)) {
     LLVM_DEBUG(dbgs() << "Not running SpeculativeExecution because "

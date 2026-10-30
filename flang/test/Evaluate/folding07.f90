@@ -307,5 +307,23 @@ module m
   logical, parameter :: test_set_exponent_1 = set_exponent(1., 1) == 1.
   logical, parameter :: test_set_exponent_2 = set_exponent(1., 2) == 2.
   logical, parameter :: test_set_exponent_min = set_exponent(1., -149) == 1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45_4
+  logical, parameter :: test_pow_subnormal_4 = 2.0_4**(-133) == scale(1.0_4, -133)
+  logical, parameter :: test_pow_subnormal_minpos_4 = 2.0_4**(-149) == scale(1.0_4, -149)
+  !WARN: warning: underflow on power with INTEGER exponent [-Wfolding-exception]
+  logical, parameter :: test_pow_subnormal_belowmin_4 = 2.0_4**(-150) == 0.0_4
+  logical, parameter :: test_pow_neg_base_odd_4 = (-2.0_4)**(-133) == -scale(1.0_4, -133)
+  !WARN: warning: underflow on power with INTEGER exponent [-Wfolding-exception]
+  !WARN: warning: underflow on power with INTEGER exponent [-Wfolding-exception]
+  logical, parameter :: test_pow_neg_npot_4 = 5.0_4**(-64) == (1.0_4/5.0_4)**64
+  logical, parameter :: test_pow_subnormal_8 = 2.0_8**(-1070) == scale(1.0_8, -1070)
+  logical, parameter :: test_pow_subnormal_16 = 2.0_16**(-16400) == scale(1.0_16, -16400)
+  logical, parameter :: test_pow_neg_3 = 3.0**(-2) == 1.0/3.0**2
+  logical, parameter :: test_pow_neg_7 = 7.0**(-5) == 1.0/7.0**5
+  logical, parameter :: test_pow_neg_10 = 10.0**(-2) == 1.0/10.0**2
+  logical, parameter :: test_pow_neg_2_5 = 2.5**(-9) == 1.0/2.5**9
+  logical, parameter :: test_pow_min_int1 = 1.5_8**(-128_1) < 1.0_8
+  logical, parameter :: test_pow_min_int1_retry = 2.0_4**(-128_1) == scale(1.0_4, -128)
+  logical, parameter :: test_pow_min_int2 = 1.0001_8**(-32768_2) < 1.0_8
+  logical, parameter :: test_pow_min_int4 = 1.0000001_8**(-huge(1)-1) < 1.0_8
 
 end module

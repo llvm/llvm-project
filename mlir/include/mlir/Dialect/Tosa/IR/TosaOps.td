@@ -1246,7 +1246,10 @@ def Tosa_MulOp : Tosa_Op<"mul", [
     Axis of size 1 will be broadcast, as necessary. Rank of input tensors must
     match.
 
-    This operation is not pure. Undefined behaviour may occur if the specifed
+    For int32_t input data, shift must be in the range [0, 63]. For all other
+    input data types, shift must be 0.
+
+    This operation is not pure. Undefined behaviour may occur if the specified
     shift is out of range or the result overflows.
   }];
 
@@ -2110,6 +2113,9 @@ def Tosa_PadOp : Tosa_InferShapedTypeOp<"pad", [Pure]> {
     Pads a tensor along the borders of each dimension with a supplied value.
     Returns a new tensor with the padding included. The pad_const value includes
     the zero point if the tensor uses a zero point.
+
+    The padding amounts must be non-negative. The TOSA specification requires
+    a negative padding to be diagnosed (`ERROR_IF`).
 
     Example:
 

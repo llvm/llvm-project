@@ -1221,7 +1221,18 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
                                     : Context::current().clone());
     return ModulesManager->hasRequiredModules(File);
   };
-  Inputs.Opts.SkipPreambleBuild = SkipPreambleBuild || HasRequiredModules();
+
+  Inputs.Opts.SkipPreambleBuild = [&]() {
+    switch (SkipPreambleBuild) {
+    case SkipPreambleBuildPolicy::Never:
+      return false;
+    case SkipPreambleBuildPolicy::Modules:
+      return HasRequiredModules();
+    case SkipPreambleBuildPolicy::Always:
+      return true;
+    }
+    llvm_unreachable("fully covered switch");
+  }();
 }
 
 } // namespace clangd

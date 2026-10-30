@@ -21,6 +21,7 @@
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/FPUtil/triple_double.h"
@@ -326,38 +327,6 @@ constexpr uint32_t Y_UPPER_BOUND = 0x4ecf'f1b4;
 // 0x2f5a740d
 constexpr uint32_t Y_LOWER_BOUND = 0x2f5a'740d;
 
-// Check if x is an odd integer: the lowest set bit must be at the unit
-// position:
-//   x_e + lsb == UNIT_EXPONENT.
-LIBC_INLINE bool is_odd_integer(float x) {
-  using FPBits = fputil::FPBits<float>;
-  FPBits xbits(x);
-  uint32_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb =
-      static_cast<unsigned>(cpp::countr_zero(x_u | FPBits::EXP_MASK));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return (x_e + lsb == UNIT_EXPONENT);
-}
-
-// Check if x is an integer: the lowest set bit must be at or above the unit
-// position:
-//   x_e + lsb >= UNIT_EXPONENT.
-LIBC_INLINE bool is_integer(float x) {
-  if (x == 0.0f)
-    return true;
-  using FPBits = fputil::FPBits<float>;
-  FPBits xbits(x);
-  uint32_t x_u = xbits.uintval();
-  unsigned x_e = static_cast<unsigned>(xbits.get_biased_exponent());
-  unsigned lsb =
-      static_cast<unsigned>(cpp::countr_zero(x_u | FPBits::EXP_MASK));
-  constexpr unsigned UNIT_EXPONENT =
-      static_cast<unsigned>(FPBits::EXP_BIAS + FPBits::FRACTION_LEN);
-  return (x_e + lsb >= UNIT_EXPONENT);
-}
-
 LIBC_INLINE float set_overflow(Sign sign = Sign::POS) {
   fputil::set_errno_if_required(ERANGE);
   fputil::raise_overflow_except_if_required<float>();
@@ -420,7 +389,7 @@ LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
       return y;
     if (y_abs.is_inf())
       return y_sign ? FPBits::inf().get_val() : 0.0f;
-    bool out_is_neg = x_sign && is_odd_integer(y);
+    bool out_is_neg = x_sign && fputil::is_odd_integer(y);
     if (y_sign) {
       // pow(0, negative number) = Inf
       fputil::set_errno_if_required(EDOM);
@@ -449,8 +418,9 @@ LIBC_ALWAYS_INLINE cpp::optional<float> check_special_inputs(float x, float y) {
   uint32_t y_a = y_abs.uintval();
   if (x_abs.is_normal() && xbits.get_mantissa() == 0 && y_a > Y_LOWER_BOUND &&
       y_a < Y_UPPER_BOUND) {
-    if (!x_sign || is_integer(y)) {
-      Sign out_sign = (x_sign && is_odd_integer(y)) ? Sign::NEG : Sign::POS;
+    if (!x_sign || fputil::is_integer(y)) {
+      Sign out_sign =
+          (x_sign && fputil::is_odd_integer(y)) ? Sign::NEG : Sign::POS;
       int e_x = xbits.get_exponent();
       double ey = static_cast<double>(e_x) * static_cast<double>(y);
       double ey_int = fputil::nearest_integer(ey);
@@ -555,8 +525,8 @@ check_exceptional_cases(float &x, float &y, int &ex, SignType &sign) {
   //   in real numbers; raises FE_INVALID, sets errno to EDOM, and returns
   //   quiet NaN.
   if (x_sign) {
-    if (is_integer(y)) {
-      if (is_odd_integer(y)) {
+    if (fputil::is_integer(y)) {
+      if (fputil::is_odd_integer(y)) {
         if constexpr (sizeof(SignType) == 8)
           sign = 0x8000'0000'0000'0000ULL;
         else

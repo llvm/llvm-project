@@ -60,11 +60,6 @@ class ExprPool {
   /// chains short.
   static constexpr double MAX_LOAD_FACTOR = 0.7;
 
-  /// The maximum number of nodes allowed in the pool to prevent memory
-  /// exhaustion during compilation of highly complex or maliciously crafted
-  /// regular expressions.
-  static constexpr size_t MAX_NODE_LIMIT = 10000;
-
   // TODO: Once cpp::unique_ptr and AllocChecker-backed cpp::make_unique (and/or
   // an owning unique_span) are available in src/__support/CPP/, replace raw
   // Block* and span-backed manual new[]/delete[] ownership here so that Block
@@ -122,6 +117,11 @@ class ExprPool {
   ErrorOr<ExprId> intern(Expr e);
 
 public:
+  /// The maximum number of nodes allowed in the pool to prevent memory
+  /// exhaustion during compilation of highly complex or maliciously crafted
+  /// regular expressions.
+  static constexpr size_t MAX_NODE_LIMIT = 10000;
+
   constexpr ExprPool() = default;
   ~ExprPool();
 
@@ -165,18 +165,11 @@ public:
   ErrorOr<ExprId> make_anchor(uint8_t mask);
   /// Creates or returns an existing node for the given 256-bit character set.
   ErrorOr<ExprId> make_byte_set(const ByteSet &bs);
-  /// Normalizing factory for Concatenation (L · R).
-  ///
-  /// Applies algebraic simplifications before interning:
-  /// - (Ø · R) or (R · Ø) => Ø
-  /// - (ε · R) or (R · ε) => R
+  /// Creates or returns a normalized Kleene star node (body*).
+  ErrorOr<ExprId> make_star(ExprId body);
+  /// Creates or returns a right-associated Concatenation node (l . r).
   ErrorOr<ExprId> make_concat(ExprId l, ExprId r);
-
-  /// Normalizing factory for Alternation (L | R).
-  ///
-  /// Applies algebraic simplifications before interning:
-  /// - (Ø | R) or (R | Ø) => R
-  /// - (R | R) => R (Idempotency)
+  /// Creates or returns a canonical deduplicated Alternation node (l | r).
   ErrorOr<ExprId> make_alt(ExprId l, ExprId r);
 };
 

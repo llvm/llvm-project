@@ -11,3 +11,10 @@ module m
   end subroutine
 end module
 
+subroutine s
+!CHECK: :[[@LINE+1]]:3: portability: nonstandard usage: ',' in place of '::'
+  real, x
+!CHECK: :[[@LINE+1]]:3: portability: nonstandard usage: ',' in place of '::'
+  real, dimension(3), y
+end subroutine
+

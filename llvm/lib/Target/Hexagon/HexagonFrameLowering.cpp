@@ -2050,9 +2050,87 @@ bool HexagonFrameLowering::expandStoreInt(MachineBasicBlock &B,
   return true;
 }
 
-bool HexagonFrameLowering::expandLoadInt(MachineBasicBlock &B,
-      MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
-      const HexagonInstrInfo &HII, SmallVectorImpl<Register> &NewRegs) const {
+bool HexagonFrameLowering::expandStoreCirc(
+    MachineBasicBlock &B, MachineBasicBlock::iterator It,
+    MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+    SmallVectorImpl<Register> &NewRegs) const {
+  MachineFunction &MF = *B.getParent();
+  const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  MachineInstr *MI = &*It;
+  if (!MI->getOperand(0).isFI())
+    return false;
+
+  DebugLoc DL = MI->getDebugLoc();
+  Register SrcR = MI->getOperand(1).getReg();
+  bool IsKill = MI->getOperand(1).isKill();
+  int FI = MI->getOperand(0).getIndex();
+
+  unsigned Offset = 0;
+  for (auto SubReg : {Hexagon::isub_lo, Hexagon::isub_hi}) {
+    Register SrcSubReg = HRI.getSubReg(SrcR, SubReg);
+
+    // TmpR = A2_tfrcrr SrcSubReg.
+    Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrcrr), TmpR)
+        .addReg(SrcSubReg, getKillRegState(IsKill))
+        ->copyImplicitOps(MF, *It);
+
+    // S2_storeri_io FI/FI+offset, TmpR.
+    BuildMI(B, It, DL, HII.get(Hexagon::S2_storeri_io))
+        .addFrameIndex(FI)
+        .addImm(Offset)
+        .addReg(TmpR, RegState::Kill)
+        .cloneMemRefs(*MI);
+    NewRegs.push_back(TmpR);
+    Offset += HRI.getSpillSize(Hexagon::IntRegsRegClass);
+  }
+
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandLoadCirc(
+    MachineBasicBlock &B, MachineBasicBlock::iterator It,
+    MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+    SmallVectorImpl<Register> &NewRegs) const {
+  MachineFunction &MF = *B.getParent();
+  const auto &HRI = *MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+  MachineInstr *MI = &*It;
+  if (!MI->getOperand(1).isFI())
+    return false;
+
+  DebugLoc DL = MI->getDebugLoc();
+  Register DstR = MI->getOperand(0).getReg();
+  int FI = MI->getOperand(1).getIndex();
+
+  unsigned Offset = 0;
+  for (auto SubReg : {Hexagon::isub_lo, Hexagon::isub_hi}) {
+    Register DstSubReg = HRI.getSubReg(DstR, SubReg);
+
+    // TmpR = L2_loadri_io FI, Offset.
+    Register TmpR = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(B, It, DL, HII.get(Hexagon::L2_loadri_io), TmpR)
+        .addFrameIndex(FI)
+        .addImm(Offset)
+        .cloneMemRefs(*MI);
+
+    // DstR = A2_tfrrcr TmpR.
+    BuildMI(B, It, DL, HII.get(Hexagon::A2_tfrrcr), DstSubReg)
+        .addReg(TmpR, RegState::Kill)
+        ->copyImplicitOps(MF, *It);
+
+    NewRegs.push_back(TmpR);
+    Offset += HRI.getSpillSize(Hexagon::IntRegsRegClass);
+  }
+
+  B.erase(It);
+  return true;
+}
+
+bool HexagonFrameLowering::expandLoadInt(
+    MachineBasicBlock &B, MachineBasicBlock::iterator It,
+    MachineRegisterInfo &MRI, const HexagonInstrInfo &HII,
+    SmallVectorImpl<Register> &NewRegs) const {
   MachineInstr *MI = &*It;
   if (!MI->getOperand(1).isFI())
     return false;
@@ -2329,9 +2407,15 @@ bool HexagonFrameLowering::expandSpillMacros(MachineFunction &MF,
         case Hexagon::STriw_ctr:
           Changed |= expandStoreInt(B, I, MRI, HII, NewRegs);
           break;
+        case Hexagon::STriw_circ:
+          Changed |= expandStoreCirc(B, I, MRI, HII, NewRegs);
+          break;
         case Hexagon::LDriw_pred:
         case Hexagon::LDriw_ctr:
           Changed |= expandLoadInt(B, I, MRI, HII, NewRegs);
+          break;
+        case Hexagon::LDriw_circ:
+          Changed |= expandLoadCirc(B, I, MRI, HII, NewRegs);
           break;
         case Hexagon::PS_vstorerq_ai:
           Changed |= expandStoreVecPred(B, I, MRI, HII, NewRegs);

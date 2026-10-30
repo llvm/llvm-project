@@ -493,6 +493,31 @@ TEST(MathExtras, DivideNearest) {
             1u);
 }
 
+TEST(MathExtras, MulDivNearest) {
+  EXPECT_EQ(mulDivNearest(0, 5, 3), 0u);
+  EXPECT_EQ(mulDivNearest(6, 4, 3), 8u);
+  EXPECT_EQ(mulDivNearest(7, 1, 3), 2u);
+  EXPECT_EQ(mulDivNearest(8, 1, 3), 3u);
+  // Halves round up.
+  EXPECT_EQ(mulDivNearest(3, 1, 2), 2u);
+  EXPECT_EQ(mulDivNearest(5, 1, 2), 3u);
+
+  // The product does not fit in 64 bits, but the result does.
+  const uint64_t Max = std::numeric_limits<uint64_t>::max();
+  const uint64_t Big = (uint64_t(1) << 63) + 1;
+  // 2^61 + 0.25
+  EXPECT_EQ(mulDivNearest(Big, 2, 8), uint64_t(1) << 61);
+  // 2^61 + 0.75
+  EXPECT_EQ(mulDivNearest(Big + 2, 2, 8), (uint64_t(1) << 61) + 1);
+  // 2^62 + 0.5
+  EXPECT_EQ(mulDivNearest(Big, 2, 4), (uint64_t(1) << 62) + 1);
+  EXPECT_EQ(mulDivNearest(Max, Max, Max), Max);
+
+  // The result does not fit in 64 bits.
+  EXPECT_EQ(mulDivNearest(Max, 2, 1), Max);
+  EXPECT_EQ(mulDivNearest(Max, Max, 1), Max);
+}
+
 TEST(MathExtras, DivideCeil) {
   EXPECT_EQ(divideCeil(14, 3), 5u);
   EXPECT_EQ(divideCeil(15, 3), 5u);

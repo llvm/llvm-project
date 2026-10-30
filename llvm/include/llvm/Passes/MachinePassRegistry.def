@@ -166,6 +166,7 @@ MACHINE_FUNCTION_PASS("unpack-mi-bundles", UnpackMachineBundlesPass())
 MACHINE_FUNCTION_PASS("unreachable-mbb-elimination", 
                       UnreachableMachineBlockElimPass())
 MACHINE_FUNCTION_PASS("verify", MachineVerifierPass())
+MACHINE_FUNCTION_PASS("verify<machine-cycles>", MachineCycleInfoVerifierPass())
 MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifierPass())
 MACHINE_FUNCTION_PASS("xray-instrumentation", XRayInstrumentationPass())
 #undef MACHINE_FUNCTION_PASS

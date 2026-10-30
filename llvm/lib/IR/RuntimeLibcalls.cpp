@@ -79,10 +79,46 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Module &M, StringRef ABIName,
                           M.getFloatABI(), M.getLongDoubleFormat(), ABIName,
                           VecLib) {}
 
+RTLIB::Libcall RuntimeLibcallsInfo::selectLongDoubleLibcall(
+    RTLIB::Libcall F80, RTLIB::Libcall F128, RTLIB::Libcall PPCF128) const {
+  switch (LongDoubleFmt) {
+  case LongDoubleFormat::X87DoubleExtended:
+    return F80;
+  case LongDoubleFormat::IEEEquad:
+    return F128;
+  case LongDoubleFormat::PPCDoubleDouble:
+    return PPCF128;
+  case LongDoubleFormat::IEEEsingle:
+  case LongDoubleFormat::IEEEdouble:
+    // These long double formats aren't properly handled, but we also don't emit
+    // calls for them. TODO: We could fix the avr_sin/avr_cos hack if we handled
+    // the float case.
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+
+  llvm_unreachable("unhandled long double format");
+}
+
 bool RuntimeLibcallsInfo::isLibraryAvailable(RuntimeLibrary Library) const {
   // TODO: Drive this from module-level state (e.g. the linked runtime). For now
   // every named library is reported as available.
   return true;
+}
+
+void RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
+    const Triple &TT, ExceptionHandling ExceptionModel,
+    FloatABI::ABIType FloatABI, StringRef ABIName,
+    LongDoubleFormat LongDoubleFormat) {
+  CallingConv::ID DefaultCC = getDefaultLibcallCallingConv(
+      TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+  if (DefaultCC != CallingConv::C)
+    llvm::fill(LibcallImplCallingConvs, DefaultCC);
+
+  for (RTLIB::RuntimeLibrary Library : getDefaultRuntimeLibraries(TT)) {
+    if (isLibraryAvailable(Library))
+      setAvailableLibraryLibcalls(Library, TT, ExceptionModel, FloatABI,
+                                  ABIName, LongDoubleFormat);
+  }
 }
 
 /// Set default libcall names. If a target wants to opt-out of a libcall it
@@ -120,6 +156,33 @@ bool RuntimeLibcallsInfo::isAAPCS_ABI(const Triple &TT, StringRef ABIName) {
   return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
 }
 
+void RuntimeLibcallsInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
+                                                  bool &ShouldExtI32Return,
+                                                  bool &ShouldSignExtI32Param,
+                                                  bool &ShouldSignExtI32Return,
+                                                  const Triple &T) {
+  ShouldExtI32Param = ShouldExtI32Return = false;
+  ShouldSignExtI32Param = ShouldSignExtI32Return = false;
+
+  // PowerPC64, Sparc64, SystemZ need signext/zeroext on i32 parameters and
+  // returns corresponding to C-level ints and unsigned ints.
+  if (T.isPPC64() || T.getArch() == Triple::sparcv9 ||
+      T.getArch() == Triple::systemz) {
+    ShouldExtI32Param = true;
+    ShouldExtI32Return = true;
+  }
+  // LoongArch, Mips, and riscv64, on the other hand, need signext on i32
+  // parameters corresponding to both signed and unsigned ints.
+  if (T.isLoongArch() || T.isMIPS() || T.isRISCV64()) {
+    ShouldSignExtI32Param = true;
+  }
+  // LoongArch and riscv64 need signext on i32 returns corresponding to both
+  // signed and unsigned ints.
+  if (T.isLoongArch() || T.isRISCV64()) {
+    ShouldSignExtI32Return = true;
+  }
+}
+
 /// TODO: There is really no guarantee that sizeof(size_t) is equal to the index
 /// size of the default address space. This matches TargetLibraryInfo and should
 /// be kept in sync.
@@ -151,7 +214,7 @@ static Type *getLongDoubleType(LLVMContext &Ctx, LongDoubleFormat Format) {
 
 static std::pair<Type *, Attribute>
 convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
-                       unsigned IntBits, Type *LongDoubleTy) {
+                       unsigned IntBits, LongDoubleFormat LdblFormat) {
 
   // FIXME: Use the llvm/ABI library to get accurate IR types and attributes.
   switch (ID) {
@@ -159,6 +222,8 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
     return {Type::getVoidTy(Ctx), Attribute()};
   case Bool:
     return {IntegerType::get(Ctx, 1), Attribute::get(Ctx, Attribute::ZExt)};
+  case Int8:
+    return {IntegerType::get(Ctx, 8), Attribute()};
   case Int16:
   case UInt16:
     return {IntegerType::get(Ctx, 16), Attribute()};
@@ -179,6 +244,8 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case LLong:
   case ULLong:
     return {IntegerType::get(Ctx, 64), Attribute()};
+  case Int128:
+    return {IntegerType::get(Ctx, 128), Attribute()};
   case SizeT:
   case SSizeT:
     return {getSizeTType(Ctx, DL), Attribute()};
@@ -188,7 +255,7 @@ convertToIRTypeAndAttr(FuncArgTypeID ID, LLVMContext &Ctx, const DataLayout &DL,
   case Dbl:
     return {Type::getDoubleTy(Ctx), Attribute()};
   case LDbl:
-    return {LongDoubleTy, Attribute()};
+    return {getLongDoubleType(Ctx, LdblFormat), Attribute()};
   case Ptr:
     return {PointerType::get(Ctx, 0), Attribute()};
   case V2F32:
@@ -234,18 +301,17 @@ std::pair<FunctionType *, AttributeList>
 RuntimeLibcallsInfo::getDefaultFunctionTy(
     LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
     RTLIB::LibcallImpl LibcallImpl) const {
-  Libcall LC = getLibcallFromImpl(LibcallImpl);
-  const FuncArgTypeID *ProtoTypes = &SignatureTable[SignatureOffset[LC]];
+  const FuncArgTypeID *ProtoTypes =
+      &SignatureTable[SignatureOffset[LibcallImpl]];
 
   if (ProtoTypes[0] == NoFuncArgType)
     return {};
 
   unsigned IntBits = getIntSize(TT);
-  Type *LongDoubleTy = getLongDoubleType(Ctx, LongDoubleFmt);
   AttributeList Attrs;
 
   auto [RetTy, RetAttr] =
-      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleTy);
+      convertToIRTypeAndAttr(ProtoTypes[0], Ctx, DL, IntBits, LongDoubleFmt);
   if (RetAttr.isValid())
     Attrs = Attrs.addRetAttribute(Ctx, RetAttr);
 
@@ -269,7 +335,7 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
       ArgAttr = LastAttr;
     } else {
       std::tie(ArgTy, ArgAttr) = convertToIRTypeAndAttr(
-          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleTy);
+          ProtoTypes[Idx], Ctx, DL, IntBits, LongDoubleFmt);
       LastTy = ArgTy;
       LastAttr = ArgAttr;
     }
@@ -299,6 +365,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
       Attribute::NoAlias, Attribute::WriteOnly, Attribute::NonNull};
 
   switch (LibcallImpl) {
+  // FIXME: Should also include __sincospi[f]_stret
   case RTLIB::impl___sincos_stret:
   case RTLIB::impl___sincosf_stret: {
     if (!darwinHasSinCosStret(TT)) // Non-darwin currently unexpected
@@ -316,8 +383,8 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
         TT.isX86_32() || ((TT.isARM() || TT.isThumb()) &&
                           ARM::computeTargetABI(TT) == ARM::ARM_ABI_APCS);
 
-    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argumentOrErrnoMemOnly(
-        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef, ModRefInfo::Mod));
+    FuncAttrBuilder.addMemoryAttr(MemoryEffects::argMemOnly(
+        UseSret ? ModRefInfo::Mod : ModRefInfo::NoModRef));
 
     AttributeList Attrs;
     Attrs = Attrs.addFnAttributes(Ctx, FuncAttrBuilder);

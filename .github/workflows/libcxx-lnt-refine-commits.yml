@@ -39,7 +39,7 @@ jobs:
   select:
     name: Select refinement commits for ${{ inputs.lnt-machine }}
     runs-on: ubuntu-26.04
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash # for pipefail, which the default shell doesn't set
@@ -48,14 +48,13 @@ jobs:
       METRIC: ${{ inputs.metric }}
       DIRECTION: ${{ inputs.direction }}
       MAX_COMMITS: ${{ inputs.max-commits }}
-      # Keep in sync with libcxx-lnt-submit.yml and libcxx-benchmark-cron.yml
       LNT_URL: https://lnt.llvm.org
     steps:
       # The selection only changes as new runs are submitted to LNT, and computing it takes several minutes.
-      # It is cached and recomputed every few hours instead of every time this workflow is called.
+      # It is cached and recomputed every hour instead of every time this workflow is called.
       - name: Compute the cache key
         id: key
-        run: echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F)-$((10#$(date -u +%H) / 3))" >> "${GITHUB_OUTPUT}"
+        run: echo "key=lnt-refinement-commits-${MACHINE}-${METRIC}-${DIRECTION}-${MAX_COMMITS}-$(date -u +%F-%H)" >> "${GITHUB_OUTPUT}"
 
       - name: Try restoring the selection from cache
         id: restore
@@ -75,9 +74,9 @@ jobs:
 
       - name: Install Python
         if: ${{ steps.restore.outputs.cache-hit != 'true' }}
-        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          python-version: '3.14'
+          python-version: '3.15'
           cache: pip
           cache-dependency-path: libcxx/utils/ci/lnt/requirements.txt
 

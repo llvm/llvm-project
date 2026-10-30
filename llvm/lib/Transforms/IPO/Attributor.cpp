@@ -68,6 +68,14 @@ using namespace llvm;
 DEBUG_COUNTER(ManifestDBGCounter, "attributor-manifest",
               "Determine what attributes are manifested in the IR");
 
+/// A debug counter to limit the number of AAs created.
+DEBUG_COUNTER(NumAbstractAttributes, "num-abstract-attributes",
+              "How many AAs should be initialized");
+
+bool llvm::shouldCreateAbstractAttribute() {
+  return DebugCounter::shouldExecute(NumAbstractAttributes);
+}
+
 STATISTIC(NumFnDeleted, "Number of function deleted");
 STATISTIC(NumFnWithExactDefinition,
           "Number of functions with exact definitions");
@@ -1002,50 +1010,35 @@ static bool isEqualOrWorse(const Attribute &New, const Attribute &Old) {
   return Old.getValueAsInt() >= New.getValueAsInt();
 }
 
-/// Return true if the information provided by \p Attr was added to the
-/// attribute set \p AttrSet. This is only the case if it was not already
-/// present in \p AttrSet.
-static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
-                             AttributeSet AttrSet, bool ForceReplace,
-                             AttrBuilder &AB) {
-
-  if (Attr.isEnumAttribute()) {
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (AttrSet.hasAttribute(Kind))
-      return false;
-    AB.addAttribute(Kind);
-    return true;
-  }
+/// Return the attribute to add to a position to provide the information of
+/// \p Attr, given the attribute \p Existing of the same kind at the position
+/// (or none), or an invalid attribute if \p Existing already provides it.
+static Attribute getAttrToAdd(LLVMContext &Ctx, Attribute Attr,
+                              Attribute Existing, bool ForceReplace) {
+  if (Attr.isEnumAttribute())
+    return Existing.isValid() ? Attribute() : Attr;
   if (Attr.isStringAttribute()) {
-    Attribute Existing = AttrSet.getAttribute(Attr.getKindAsString());
     if (Existing.isValid() && (!ForceReplace || Existing == Attr))
-      return false;
-    AB.addAttribute(Attr);
-    return true;
+      return Attribute();
+    return Attr;
   }
+
   if (Attr.isIntAttribute()) {
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (!ForceReplace && Kind == Attribute::Memory) {
-      MemoryEffects ME = Attr.getMemoryEffects() & AttrSet.getMemoryEffects();
-      if (ME == AttrSet.getMemoryEffects())
-        return false;
-      AB.addMemoryAttr(ME);
-      return true;
+    if (!ForceReplace && Attr.getKindAsEnum() == Attribute::Memory) {
+      MemoryEffects OldME = Existing.isValid() ? Existing.getMemoryEffects()
+                                               : MemoryEffects::unknown();
+      MemoryEffects ME = Attr.getMemoryEffects() & OldME;
+      if (ME == OldME)
+        return Attribute();
+      return Attribute::getWithMemoryEffects(Ctx, ME);
     }
-    if (AttrSet.hasAttribute(Kind)) {
-      if (!ForceReplace && isEqualOrWorse(Attr, AttrSet.getAttribute(Kind)))
-        return false;
-    }
-    AB.addAttribute(Attr);
-    return true;
+    if (Existing.isValid() && !ForceReplace && isEqualOrWorse(Attr, Existing))
+      return Attribute();
+    return Attr;
   }
-  if (Attr.isConstantRangeAttribute()) {
-    Attribute::AttrKind Kind = Attr.getKindAsEnum();
-    if (!ForceReplace && AttrSet.hasAttribute(Kind))
-      return false;
-    AB.addAttribute(Attr);
-    return true;
-  }
+
+  if (Attr.isConstantRangeAttribute())
+    return !ForceReplace && Existing.isValid() ? Attribute() : Attr;
 
   llvm_unreachable("Expected enum or string attribute!");
 }
@@ -1303,12 +1296,42 @@ ChangeStatus Attributor::removeAttrs(const IRPosition &IRP,
 ChangeStatus Attributor::manifestAttrs(const IRPosition &IRP,
                                        ArrayRef<Attribute> Attrs,
                                        bool ForceReplace) {
+  if (Attrs.empty())
+    return ChangeStatus::UNCHANGED;
+
+  switch (IRP.getPositionKind()) {
+  case IRPosition::IRP_FLOAT:
+  case IRPosition::IRP_INVALID:
+    return ChangeStatus::UNCHANGED;
+  default:
+    break;
+  }
+
+  AttributeList AL = IRP.getAttrList();
+  auto [Iter, Inserted] = AttrsMap.insert({IRP.getAttrListAnchor(), AL});
+  if (!Inserted)
+    AL = Iter->second;
+
   LLVMContext &Ctx = IRP.getAnchorValue().getContext();
-  auto AddAttrCB = [&](const Attribute &Attr, AttributeSet AttrSet,
-                       AttributeMask &, AttrBuilder &AB) {
-    return addIfNotExistent(Ctx, Attr, AttrSet, ForceReplace, AB);
-  };
-  return updateAttrMap<Attribute>(IRP, Attrs, AddAttrCB);
+  auto AttrIdx = IRP.getAttrIdx();
+  AttributeSet AS = AL.getAttributes(AttrIdx);
+  SmallVector<Attribute, 8> Added;
+  for (Attribute Attr : Attrs) {
+    Attribute Existing = Attr.isStringAttribute()
+                             ? AS.getAttribute(Attr.getKindAsString())
+                             : AS.getAttribute(Attr.getKindAsEnum());
+    if (Attribute New = getAttrToAdd(Ctx, Attr, Existing, ForceReplace);
+        New.isValid())
+      Added.push_back(New);
+  }
+
+  if (Added.empty())
+    return ChangeStatus::UNCHANGED;
+
+  // Added keeps the order of Attrs, so it is sorted with distinct kinds too.
+  AL = AL.addSortedAttributesAtIndex(Ctx, AttrIdx, Added);
+  Iter->second = AL;
+  return ChangeStatus::CHANGED;
 }
 
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {

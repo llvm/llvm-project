@@ -1495,39 +1495,15 @@ static void CreateGCRelocates(ArrayRef<Value *> LiveVariables,
   };
   Module *M = StatepointToken->getModule();
 
-  // All gc_relocate are generated as i8 addrspace(1)* (or a vector type whose
-  // element type is i8 addrspace(1)*). We originally generated unique
-  // declarations for each pointer type, but this proved problematic because
-  // the intrinsic mangling code is incomplete and fragile.  Since we're moving
-  // towards a single unified pointer type anyways, we can just cast everything
-  // to an i8* of the right address space.  A bitcast is added later to convert
-  // gc_relocate to the actual value's type.
-  auto getGCRelocateDecl = [&](Type *Ty) {
-    assert(isHandledGCPointerType(Ty, GC));
-    auto AS = Ty->getScalarType()->getPointerAddressSpace();
-    Type *NewTy = PointerType::get(M->getContext(), AS);
-    if (auto *VT = dyn_cast<VectorType>(Ty))
-      NewTy = FixedVectorType::get(NewTy,
-                                   cast<FixedVectorType>(VT)->getNumElements());
-    return Intrinsic::getOrInsertDeclaration(
-        M, Intrinsic::experimental_gc_relocate, {NewTy});
-  };
-
-  // Lazily populated map from input types to the canonicalized form mentioned
-  // in the comment above.  This should probably be cached somewhere more
-  // broadly.
-  DenseMap<Type *, Function *> TypeToDeclMap;
-
   for (unsigned i = 0; i < LiveVariables.size(); i++) {
     // Generate the gc.relocate call and save the result
     Value *BaseIdx = Builder.getInt32(FindIndex(LiveVariables, BasePtrs[i]));
     Value *LiveIdx = Builder.getInt32(i);
 
     Type *Ty = LiveVariables[i]->getType();
-    auto [It, Inserted] = TypeToDeclMap.try_emplace(Ty);
-    if (Inserted)
-      It->second = getGCRelocateDecl(Ty);
-    Function *GCRelocateDecl = It->second;
+    assert(isHandledGCPointerType(Ty, GC));
+    Function *GCRelocateDecl = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::experimental_gc_relocate, {Ty});
 
     // only specify a debug name if we can give a useful one
     CallInst *Reloc = Builder.CreateCall(
@@ -3012,8 +2988,7 @@ bool RewriteStatepointsForGC::runOnFunction(Function &F, DominatorTree &DT,
   assert(!F.isDeclaration() && !F.empty() &&
          "need function body to rewrite statepoints in");
   assert(shouldRewriteStatepointsIn(F) && "mismatch in rewrite decision");
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
 
   auto NeedsRewrite = [&](Instruction &I) {
     if (const auto *Call = dyn_cast<CallBase>(&I)) {

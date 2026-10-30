@@ -115,7 +115,11 @@ bool IsLocatorListItem(
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx);
 
-bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+// Analyzes potential substrings and retains diagnostics; may modify semantic
+// state and the parse tree. A missing result indicates an invalid designator,
+// already diagnosed.
+std::optional<bool> IsSubstringAndValidate(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
 bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
 
 const Symbol *GetHostSymbol(const Symbol &sym);

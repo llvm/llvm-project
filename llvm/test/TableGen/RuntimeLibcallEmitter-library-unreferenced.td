@@ -21,17 +21,21 @@ def ExtDefaultCC : LibcallCallingConv<
 def Libc : LibcallLibrary<"libc", (add memcpy)>;
 def ExtLib : LibcallLibrary<"ext", (add LibcallsWithCC<(add sqrt), ExtDefaultCC>)>;
 
-def X86System : SystemRuntimeLibrary<isX86, (add Libc)>;
+def X86System : SystemRuntimeLibrary<isX86, ["libc"]>;
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_ext(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK: setLibcallImplCallingConv(Impl, TT.isX86() ? static_cast<CallingConv::ID>(CallingConv::Fast) : static_cast<CallingConv::ID>(DefaultCC));
 
 // CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(
 
-// Only the referenced library is dispatched.
+// Only the referenced library is a default library.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
-// CHECK: if (isLibraryAvailable(RTLIB::RuntimeLibrary::libc))
-// CHECK-NEXT: setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, CallingConv::C);
-// CHECK-NOT: setAvailableLibFuncs_ext(
-// CHECK: no system runtime library applied to target
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.isX86()) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }

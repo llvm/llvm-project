@@ -717,7 +717,7 @@ RTLIB::Libcall RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
 TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
-      RuntimeLibcallInfo(TM.getTargetTriple(), TM.Options.ExceptionModel,
+      RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
@@ -1250,13 +1250,13 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownMVT(
 
   // Scalable vectors cannot be scalarized, so splitting or widening is
   // required.
-  if (VT.isScalableVector() && !isPowerOf2_32(EC.getKnownMinValue()))
+  if (VT.isScalableVector() && !EC.isPowerOf2())
     llvm_unreachable(
         "Splitting or widening of non-power-of-2 MVTs is not implemented.");
 
   // FIXME: We don't support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EC.getKnownMinValue())) {
+  if (!EC.isPowerOf2()) {
     // Split EC to unit size (scalable property is preserved).
     NumVectorRegs = EC.getKnownMinValue();
     EC = ElementCount::getFixed(1);
@@ -1586,7 +1586,7 @@ void TargetLoweringBase::computeRegisterProperties(
     }
 
     case TypeWidenVector:
-      if (isPowerOf2_32(EC.getKnownMinValue())) {
+      if (EC.isPowerOf2()) {
         // Try to widen the vector.
         for (unsigned nVT = i + 1; nVT <= MVT::LAST_VECTOR_VALUETYPE; ++nVT) {
           MVT SVT = (MVT::SimpleValueType) nVT;
@@ -1749,7 +1749,7 @@ unsigned TargetLoweringBase::getVectorTypeBreakdownImpl(
 
   // FIXME: We don't generically support non-power-of-2-sized vectors for now.
   // Ideally we could break down into LHS/RHS like LegalizeDAG does.
-  if (!isPowerOf2_32(EltCnt.getKnownMinValue())) {
+  if (!EltCnt.isPowerOf2()) {
     assert(VT.isFixedLengthVector() && "Expected a fixed-length vector VT");
     unsigned NumElts = EltCnt.getKnownMinValue();
 
