@@ -2361,7 +2361,7 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
     R.TiedNeedsOwnReg |= R.InDefs;
   }
 
-  if (foldUntilFit(Regs, DefTaken, UseTaken, /*Fewest=*/false, RegClassInfo,
+  if (foldUntilFit(Regs, DefTaken, UseTaken, /*Fewest=*/false, *RegClassInfo,
                    *TRI, ToFold))
     return;
 
@@ -2376,7 +2376,7 @@ void RegAllocFastImpl::selectInlineAsmRegsToFold(
     R.Folded = false;
 
   ToFold.clear();
-  if (!foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, RegClassInfo,
+  if (!foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, *RegClassInfo,
                     *TRI, ToFold))
     ToFold.clear();
 }
