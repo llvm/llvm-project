@@ -1718,14 +1718,6 @@ Constant *ConstantExpr::getWithOperands(ArrayRef<Constant *> Ops, Type *Ty,
   Type *OnlyIfReducedTy = OnlyIfReduced ? Ty : nullptr;
   switch (getOpcode()) {
   case Instruction::Trunc:
-  case Instruction::ZExt:
-  case Instruction::SExt:
-  case Instruction::FPTrunc:
-  case Instruction::FPExt:
-  case Instruction::UIToFP:
-  case Instruction::SIToFP:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
   case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:

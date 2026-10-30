@@ -18,7 +18,7 @@
 // This may result in significant changes to the control flow graph, e.g., when
 // LLVM moves unreachable blocks to the end of the function. That's a problem
 // in the context of divergent control flow, as `ptxas` uses the CFG to
-// determine divergent regions, and some intructions may not be executed
+// determine divergent regions, and some instructions may not be executed
 // divergently.
 //
 // For example, `bar.sync` is not allowed to be executed divergently on Pascal

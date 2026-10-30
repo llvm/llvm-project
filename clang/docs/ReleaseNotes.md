@@ -230,6 +230,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### C++2c Feature Support
 
+- `#embed` ([P1967R14](https://wg21.link/P1967R14)) is no longer diagnosed as
+  an extension in C++26 mode. In earlier C++ language modes, the directive is
+  now diagnosed as a C++26 extension under `-Wc++26-extensions` (previously it
+  was diagnosed as a Clang extension under `-Wc23-extensions`), and a new
+  `-Wpre-c++26-compat` warning is available in C++26 mode. The
+  `__cpp_pp_embed` feature-test macro is now defined.
+
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
 
@@ -455,6 +462,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   A requirement naming a parameter of the pointee, such as
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
+
+- Fixed thread safety attributes on a member of a nested struct or union, named
+  or anonymous, naming a member of the enclosing struct, such as
+  `struct Dst { unsigned len GUARDED_BY(lock); } dst;` after `Mutex lock;`.
+  The requirement is resolved on the enclosing object, `s->lock` for
+  `s->dst.len`, and is reported as `dst->Scratch::lock` when no enclosing
+  object is reachable.
 
 ### Improvements to Clang's diagnostics
 
@@ -758,6 +772,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Bug Fixes in This Version
 
+- Fixed an assertion failure when a token followed an `#embed` parameter whose
+  expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
+  (#GH212075)
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
@@ -802,6 +819,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed assertion failures caused by stale linkage information when an extern variable or function declaration is merged with a preceding static declaration. (#GH204759, #GH204754)
 - Fixed a crash due to typo correction mishandling custom keywords `_virtual_inheritance` and `_multiple_inheritance` in `-fms-compatibility` mode. (#GH228003)
 - Clang no longer treats a file-scope `thread_local` declaration without an initializer as a tentative definition in C23 mode. As specified by C23 6.9.3, such a declaration is a definition, so declaring the same variable more that once is now diagnosed as a redefinition. (#GH217636)
+- Fixed acceptance of redefinition of a struct with different bit-field width in C23 mode. (#GH232748)
 - Fixed an assertion failure on use of an uninitialized token in dependency directives lexing in clang-scan-deps.
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
@@ -848,6 +866,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   positive in the `bugprone-suspicious-memory-comparison` clang-tidy check.
 
 #### Bug Fixes to Attribute Support
+
+- Fixed a crash when using a zero-argument call to an undeclared
+  `__CFStringMakeConstantString` as a format string. (#GH225034)
 
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
   syntax followed by a parenthesized expression list in C code. (#GH225045)
@@ -915,6 +936,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an assertion failure when `#embed` was used in the braced initializer
   of an array new-expression, or of an array whose elements are of class type.
   (#GH128985)
+
+- Fixed list-initialization from `#embed` passing only the first embedded
+  element to a constructor, reference, scalar or `auto` deduction. (#GH222796)
 
 - Fixed a bug where top-level CV qualifiers (such as ``const``) were dropped from pointers modified by Microsoft pointer attributes (like ``__ptr32`` and ``__ptr64``) and WebAssembly's ``__funcref``.
 
@@ -1003,6 +1027,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a crash issue when a value dependent recovery init appeared in constant
   evaluation context in default constant evaluator.
+
+- Fixed crashes when parsing lambdas containing errors. (#GH175173), (#GH150733), and (#GH170185)
 
 - Fixed a bug where Clang incorrectly required `promise.return_value()` for a
   dependent `co_return` operand that inits to `void`, instead of using
@@ -1118,6 +1144,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   init-captures in default member initializers used during aggregate
   initialization. (#GH196469)
 
+- Fixed incorrect evaluation of compound requirements when a return-type
+  requirement contains a lambda with constrained template parameters.
+
+- Fixed a bug where Clang could ignore lambda constraints in return-type
+  requirements.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1129,6 +1161,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
+
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` condition. (#GH184060)
 
 #### Miscellaneous Bug Fixes
 

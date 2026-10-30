@@ -153,8 +153,6 @@ private:
   [[nodiscard]] bool lexPPLine(const char *&First, const char *const End);
   [[nodiscard]] bool lexAt(const char *&First, const char *const End);
   [[nodiscard]] bool lexModule(const char *&First, const char *const End);
-  [[nodiscard]] bool lexDefine(const char *HashLoc, const char *&First,
-                               const char *const End);
   [[nodiscard]] bool lexPragma(const char *&First, const char *const End);
   [[nodiscard]] bool lex_Pragma(const char *&First, const char *const End);
   [[nodiscard]] bool lexEndif(const char *&First, const char *const End);
@@ -1116,7 +1114,9 @@ void clang::printDependencyDirectivesAsSource(
 
   for (const dependency_directives_scan::Directive &Directive : Directives) {
     if (Directive.Kind == tokens_present_before_eof)
-      OS << "<TokBeforeEOF>";
+      // The specific token we use is arbitrary, so we use ; for simplicity. The
+      // comment is only for readability.
+      OS << ";/*TokBeforeEOF*/";
     std::optional<tok::TokenKind> PrevTokenKind;
     for (const dependency_directives_scan::Token &Tok : Directive.Tokens) {
       if (PrevTokenKind && needsSpaceSeparator(*PrevTokenKind, Tok))

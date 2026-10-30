@@ -28,7 +28,11 @@
 #include "MCTargetDesc/RISCVBaseInfo.h"
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include <queue>
 
 using namespace llvm;
@@ -191,43 +195,52 @@ struct BlockData {
   BlockData() = default;
 };
 
-class RISCVInsertWriteVXRM : public MachineFunctionPass {
+class RISCVInsertWriteVXRMImpl {
   const TargetInstrInfo *TII;
+  const MachineLoopInfo *MLI;
 
   std::vector<BlockData> BlockInfo;
   std::queue<const MachineBasicBlock *> WorkList;
 
+  bool computeVXRMChanges(const MachineBasicBlock &MBB);
+  void computeAvailable(const MachineBasicBlock &MBB);
+  void computeAnticipated(const MachineFunction &MF,
+                          const MachineBasicBlock &MBB);
+  void emitWriteVXRM(MachineBasicBlock &MBB);
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<MachineLoopInfo *()> GetMLI);
+};
+
+class RISCVInsertWriteVXRMLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVInsertWriteVXRM() : MachineFunctionPass(ID) {}
+  RISCVInsertWriteVXRMLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addUsedIfAvailable<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   StringRef getPassName() const override {
     return RISCV_INSERT_WRITE_VXRM_NAME;
   }
-
-private:
-  bool computeVXRMChanges(const MachineBasicBlock &MBB);
-  void computeAvailable(const MachineBasicBlock &MBB);
-  void computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB);
-  void emitWriteVXRM(MachineBasicBlock &MBB);
 };
 
 } // end anonymous namespace
 
-char RISCVInsertWriteVXRM::ID = 0;
+char RISCVInsertWriteVXRMLegacy::ID = 0;
 
-INITIALIZE_PASS(RISCVInsertWriteVXRM, DEBUG_TYPE, RISCV_INSERT_WRITE_VXRM_NAME,
-                false, false)
+INITIALIZE_PASS(RISCVInsertWriteVXRMLegacy, DEBUG_TYPE,
+                RISCV_INSERT_WRITE_VXRM_NAME, false, false)
 
-bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
+bool RISCVInsertWriteVXRMImpl::computeVXRMChanges(
+    const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   bool NeedVXRMWrite = false;
@@ -256,7 +269,7 @@ bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
   return NeedVXRMWrite;
 }
 
-void RISCVInsertWriteVXRM::computeAvailable(const MachineBasicBlock &MBB) {
+void RISCVInsertWriteVXRMImpl::computeAvailable(const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   BBInfo.InQueue = false;
@@ -298,7 +311,8 @@ void RISCVInsertWriteVXRM::computeAvailable(const MachineBasicBlock &MBB) {
   }
 }
 
-void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const MachineBasicBlock &MBB) {
+void RISCVInsertWriteVXRMImpl::computeAnticipated(
+    const MachineFunction &MF, const MachineBasicBlock &MBB) {
   BlockData &BBInfo = BlockInfo[MBB.getNumber()];
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
 
@@ -308,8 +322,14 @@ void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const M
   if (MBB.succ_empty()) {
     Anticipated.setUnknown();
   } else {
+    // If VXRM writes are expensive, speculate a write into successors that
+    // don't need it, but only within a loop so that the write can be hoisted
+    // out of the loop. Elsewhere this would just add writes to paths that
+    // don't use VXRM.
+    bool Speculate =
+        ST.hasVXRMPipelineFlush() && (!MLI || MLI->getLoopFor(&MBB));
     for (const MachineBasicBlock *S : MBB.successors())
-      if (ST.hasVXRMPipelineFlush())
+      if (Speculate)
         Anticipated =
           Anticipated.intersectAnticipated(BlockInfo[S->getNumber()].AnticipatedIn);
       else
@@ -347,7 +367,7 @@ void RISCVInsertWriteVXRM::computeAnticipated(const MachineFunction &MF, const M
   }
 }
 
-void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
+void RISCVInsertWriteVXRMImpl::emitWriteVXRM(MachineBasicBlock &MBB) {
   const BlockData &BBInfo = BlockInfo[MBB.getNumber()];
 
   VXRMInfo Info = BBInfo.AvailableIn;
@@ -437,13 +457,17 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
   }
 }
 
-bool RISCVInsertWriteVXRM::runOnMachineFunction(MachineFunction &MF) {
+bool RISCVInsertWriteVXRMImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<MachineLoopInfo *()> GetMLI) {
   // Skip if the vector extension is not enabled.
   const RISCVSubtarget &ST = MF.getSubtarget<RISCVSubtarget>();
   if (!ST.hasVInstructions())
     return false;
 
   TII = ST.getInstrInfo();
+  // Loop info is used to limit speculation of VXRM writes. It's available in
+  // optimized pipelines; without it, speculate everywhere.
+  MLI = GetMLI();
 
   assert(BlockInfo.empty() && "Expect empty block infos");
   BlockInfo.resize(MF.getNumBlockIDs());
@@ -489,6 +513,25 @@ bool RISCVInsertWriteVXRM::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createRISCVInsertWriteVXRMPass() {
-  return new RISCVInsertWriteVXRM();
+FunctionPass *llvm::createRISCVInsertWriteVXRMLegacyPass() {
+  return new RISCVInsertWriteVXRMLegacy();
+}
+
+bool RISCVInsertWriteVXRMLegacy::runOnMachineFunction(MachineFunction &MF) {
+  RISCVInsertWriteVXRMImpl Impl;
+  return Impl.runOnMachineFunction(MF, [&]() {
+    auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
+    return MLIWrapper ? &MLIWrapper->getLI() : nullptr;
+  });
+}
+
+PreservedAnalyses
+RISCVInsertWriteVXRMPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  RISCVInsertWriteVXRMImpl Impl;
+  bool Changed = Impl.runOnMachineFunction(
+      MF, [&]() { return &MFAM.getResult<MachineLoopAnalysis>(MF); });
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }
