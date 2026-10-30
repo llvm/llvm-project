@@ -6152,12 +6152,19 @@ LValue CodeGenFunction::EmitCompoundLiteralLValue(const CompoundLiteralExpr *E){
     // make sure to emit the VLA size.
     EmitVariablyModifiedType(E->getType());
 
-  Address DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
+  Address DeclPtr = Address::invalid();
+  if (auto It = PreAllocatedCompoundLiterals.find(E);
+      It != PreAllocatedCompoundLiterals.end())
+    DeclPtr = It->second;
+  bool IsPreAllocated = DeclPtr.isValid();
+  if (!IsPreAllocated)
+    DeclPtr = CreateMemTempWithoutCast(E->getType(), ".compoundliteral");
   const Expr *InitExpr = E->getInitializer();
   LValue Result = MakeAddrLValue(DeclPtr, E->getType(), AlignmentSource::Decl);
 
-  if (!getLangOpts().CPlusPlus) {
-    if (HaveInsertPoint() && !hasLabelBeenSeenInCurrentScope() &&
+  if (!getLangOpts().CPlusPlus && !IsPreAllocated) {
+    if (HaveInsertPoint() && !Bypasses.IsStmtBypassed(E) &&
+        !Bypasses.IsBackwardBypassed(E) &&
         EmitLifetimeStart(DeclPtr.getBasePointer()))
       pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker,
                                                 DeclPtr);

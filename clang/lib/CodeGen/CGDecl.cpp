@@ -1637,7 +1637,7 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         // completely in this case is unnecessarily pessimistic, but again, this
         // is rare.
         if (!Bypasses.IsBypassed(&D) &&
-            !(!getLangOpts().CPlusPlus && hasLabelBeenSeenInCurrentScope())) {
+            !(!getLangOpts().CPlusPlus && Bypasses.IsBackwardBypassed(&D))) {
           emission.UseLifetimeMarkers =
               EmitLifetimeStart(AllocaAddr.getPointer());
         }
