@@ -974,9 +974,14 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
       return GPUArchs;
     }
 
-    // SYCL only supports Intel devices, so skip NVIDIA and AMD GPUs.
+    // SYCL only supports Intel devices, so skip NVIDIA and AMD GPUs. An AMD GPU
+    // may come with target features, e.g. "gfx90a:sramecc+:xnack-".
+    llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                              llvm::Triple::AMD, llvm::Triple::AMDHSA);
     for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n")) {
       OffloadArch ID = StringToOffloadArch(Arch);
+      if (ID.isUnknown())
+        ID = StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
       if (Arch.empty() ||
           (Kind == Action::OFK_SYCL &&
            (ID.isNVPTX() || ID.isAMDGPU() || ID.isAMDGCNSPIRV())))
