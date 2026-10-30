@@ -205,61 +205,6 @@ void BPFAsmPrinter::emitInstruction(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, TmpInst);
 }
 
-void BPFAsmPrinter::emitFunctionBodyEnd() {
-  // Emit .bpf_cleanup section with a flat table of
-  // (call_site, landing_pad) pairs.
-  const std::vector<LandingPadInfo> &LandingPads = MF->getLandingPads();
-  if (LandingPads.empty())
-    return;
-
-  MCContext &Ctx = OutContext;
-  auto *CleanupSec =
-      Ctx.getELFSection(".bpf_cleanup", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
-  OutStreamer->switchSection(CleanupSec);
-
-  const auto &TypeInfos = MF->getTypeInfos();
-  const Function &F = MF->getFunction();
-  LLVMContext &LLVMCtx = F.getContext();
-
-  // Each landing pad has BeginLabels/EndLabels marking the invoke
-  // call sites that unwind to it.
-  for (const LandingPadInfo &LP : LandingPads) {
-    // BPF treats all landing pads as catch-all: the kernel redirects to
-    // the landing pad regardless of exception type. Reject type-specific
-    // catches and filters which would silently misbehave.
-    for (int TId : LP.TypeIds) {
-      if (TId > 0 && TypeInfos[TId - 1] != nullptr) {
-        LLVMCtx.diagnose(DiagnosticInfoUnsupported(
-            F, "BPF does not support type-specific exception catches yet"));
-        return;
-      }
-      if (TId < 0) {
-        LLVMCtx.diagnose(DiagnosticInfoUnsupported(
-            F, "BPF does not support exception filters yet"));
-        return;
-      }
-    }
-
-    MCSymbol *LPLabel = LP.LandingPadLabel;
-    if (!LPLabel)
-      continue;
-    for (unsigned i = 0, e = LP.BeginLabels.size(); i != e; ++i) {
-      MCSymbol *Begin = LP.BeginLabels[i];
-      MCSymbol *End = LP.EndLabels[i];
-
-      // Each entry is 3 x 4 bytes: begin, end, landing_pad.
-      // The invoke region [begin, end) may include argument setup
-      // before the call. The runtime checks begin <= PC < end.
-      OutStreamer->emitSymbolValue(Begin, 4);
-      OutStreamer->emitSymbolValue(End, 4);
-      OutStreamer->emitSymbolValue(LPLabel, 4);
-    }
-  }
-
-  // Switch back to the function's section.
-  OutStreamer->switchSection(MF->getSection());
-}
-
 MCSymbol *BPFAsmPrinter::getJTPublicSymbol(unsigned JTI) {
   SmallString<60> Name;
   raw_svector_ostream(Name)

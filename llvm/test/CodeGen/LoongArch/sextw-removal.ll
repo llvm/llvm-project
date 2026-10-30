@@ -1568,12 +1568,11 @@ define i1 @test22() {
 ; NORMV-NEXT:    vsetnez.v $fcc0, $vr0
 ; NORMV-NEXT:    bcnez $fcc0, .LBB25_2
 ; NORMV-NEXT:  # %bb.1: # %entry
-; NORMV-NEXT:    addi.d $a0, $zero, 0
-; NORMV-NEXT:    b .LBB25_3
+; NORMV-NEXT:    addi.w $a0, $zero, 0
+; NORMV-NEXT:    sltui $a0, $a0, 1
+; NORMV-NEXT:    ret
 ; NORMV-NEXT:  .LBB25_2: # %entry
-; NORMV-NEXT:    addi.d $a0, $zero, 1
-; NORMV-NEXT:  .LBB25_3: # %entry
-; NORMV-NEXT:    addi.w $a0, $a0, 0
+; NORMV-NEXT:    addi.w $a0, $zero, 1
 ; NORMV-NEXT:    sltui $a0, $a0, 1
 ; NORMV-NEXT:    ret
 entry:

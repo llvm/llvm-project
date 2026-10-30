@@ -7,10 +7,13 @@ set(LLVM_SUBPROJECT_TITLE "Cross-Project")
 
 find_package(Python3 COMPONENTS Interpreter)
 
+set(LLVM_LINK_COMPONENTS
+  Support
+  )
+
 add_llvm_executable(check-gdb-llvm-support
         debuginfo-tests/llvm-prettyprinters/gdb/llvm-support.cpp
 )
-target_link_libraries(check-gdb-llvm-support PRIVATE LLVMSupport)
 
 add_subdirectory(debuginfo-tests/llvm-prettyprinters/lldb)
 

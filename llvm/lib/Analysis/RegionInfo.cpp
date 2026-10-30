@@ -57,6 +57,18 @@ static cl::opt<Region::PrintStyle, true> printStyleX("print-region-style",
                "print regions in detail with element_iterator")));
 
 //===----------------------------------------------------------------------===//
+// RegionTraits<Function> implementation
+//
+
+void RegionTraits<Function>::updateStatistics(Region *R) {
+  ++numRegions;
+
+  // TODO: Slow. Should only be enabled if -stats is used.
+  if (R->isSimple())
+    ++numSimpleRegions;
+}
+
+//===----------------------------------------------------------------------===//
 // Region implementation
 //
 
@@ -86,14 +98,6 @@ bool RegionInfo::invalidate(Function &F, const PreservedAnalyses &PA,
            PAC.preservedSet<CFGAnalyses>());
 }
 
-void RegionInfo::updateStatistics(Region *R) {
-  ++numRegions;
-
-  // TODO: Slow. Should only be enabled if -stats is used.
-  if (R->isSimple())
-    ++numSimpleRegions;
-}
-
 void RegionInfo::recalculate(Function &F, DominatorTree *DT_,
                              PostDominatorTree *PDT_, DominanceFrontier *DF_) {
   DT = DT_;
@@ -102,7 +106,7 @@ void RegionInfo::recalculate(Function &F, DominatorTree *DT_,
 
   TopLevelRegion = new Region(&F.getEntryBlock(), nullptr,
                               this, DT, nullptr);
-  updateStatistics(TopLevelRegion);
+  RegionTraits<Function>::updateStatistics(TopLevelRegion);
   calculate(F);
 }
 

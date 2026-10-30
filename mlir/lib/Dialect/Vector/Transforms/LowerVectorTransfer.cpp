@@ -31,31 +31,30 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
 }
 
 /// Insert unit dims into `vec` so that they are at `unitDimPositions` in the
-/// result.
+/// result, e.g. position 1 turns `vector<4x8xf32>` into `vector<4x1x8xf32>`.
 static Value insertUnitDims(OpBuilder &builder, Location loc, Value vec,
                             ArrayRef<int64_t> unitDimPositions) {
   auto vecType = cast<VectorType>(vec.getType());
   int64_t numUnitDims = unitDimPositions.size();
-  SmallVector<int64_t> shape(numUnitDims, 1);
-  llvm::append_range(shape, vecType.getShape());
-  SmallVector<bool> scalableDims(numUnitDims, false);
-  llvm::append_range(scalableDims, vecType.getScalableDims());
-  // The broadcast puts the unit dims first. `inversePerm[i]` is the position
-  // that dim `i` of the broadcast moves to.
-  Value broadcast = vector::BroadcastOp::create(
-      builder, loc,
-      VectorType::get(shape, vecType.getElementType(), scalableDims), vec);
-  SmallVector<int64_t> inversePerm(unitDimPositions);
-  SmallVector<bool> isUnitDim(shape.size(), false);
-  for (int64_t pos : unitDimPositions)
-    isUnitDim[pos] = true;
-  for (auto [i, isUnit] : llvm::enumerate(isUnitDim))
-    if (!isUnit)
-      inversePerm.push_back(i);
-  if (isIdentityPermutation(inversePerm))
+  // Broadcast to add the unit dims as the outermost dims.
+  SmallVector<int64_t> newDims(numUnitDims, 1);
+  llvm::append_range(newDims, vecType.getShape());
+  SmallVector<bool> newScalableFlags(numUnitDims, false);
+  llvm::append_range(newScalableFlags, vecType.getScalableDims());
+  VectorType newVecType =
+      VectorType::get(newDims, vecType.getElementType(), newScalableFlags);
+  Value broadcast = vector::BroadcastOp::create(builder, loc, newVecType, vec);
+  // Transpose them into place. The other dims keep their order.
+  SmallVector<int64_t> permutation(newDims.size(), -1);
+  for (auto [i, pos] : llvm::enumerate(unitDimPositions))
+    permutation[pos] = i;
+  int64_t nextDim = numUnitDims;
+  for (int64_t &dim : permutation)
+    if (dim == -1)
+      dim = nextDim++;
+  if (isIdentityPermutation(permutation))
     return broadcast;
-  return vector::TransposeOp::create(builder, loc, broadcast,
-                                     invertPermutationVector(inversePerm));
+  return vector::TransposeOp::create(builder, loc, broadcast, permutation);
 }
 
 //===----------------------------------------------------------------------===//

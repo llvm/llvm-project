@@ -132,6 +132,7 @@ tools = [
     ),
     ToolSubst("process-debug-line", unresolved="fatal"),
     ToolSubst("merge-fdata", unresolved="fatal"),
+    ToolSubst("merge-fdata-for-test", unresolved="fatal"),
     ToolSubst("llvm-readobj", unresolved="fatal"),
     ToolSubst("llvm-dwp", unresolved="fatal"),
     ToolSubst("split-file", unresolved="fatal"),

@@ -192,8 +192,8 @@ similar to what you want to do.
 
 Another thing this enables is having different variants for the same test
 case. By default, we run every test for two debug info formats, once with
-DWARF from the object files and another with a dSYM on macOS or split
-DWARF (DWO) on Linux. But there are many more things we can test
+DWARF from the object files and another with a dSYM on macOS, split DWARF
+(DWO) on Linux or PDB on Windows. But there are many more things we can test
 that are orthogonal to the test itself. On GreenDragon we have a matrix bot
 that runs the test suite under different configurations, with older host
 compilers and different DWARF versions.
@@ -720,6 +720,13 @@ actual hardware. {doc}`/resources/qemu-testing` describes how to setup an
 emulation environment using QEMU helper scripts found in
 `llvm-project/lldb/scripts/lldb-test-qemu`. These scripts currently
 work with Arm or AArch64, but support for other architectures can be added easily.
+
+### Running tests against WebAssembly
+
+The API tests can be compiled to WebAssembly and run under a standalone Wasm
+runtime. {doc}`/resources/wasm-testing` describes how to configure LLDB's `wasm`
+platform for a runtime serving a GDB remote stub, with WAMR and WasmKit as
+examples.
 
 ## Debugging Test Failures
 

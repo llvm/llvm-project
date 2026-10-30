@@ -1718,7 +1718,7 @@ void InitListChecker::CheckComplexType(const InitializedEntity &Entity,
   // the element type of the complex type. The first element initializes
   // the real part, and the second element intitializes the imaginary part.
 
-  if (IList->getNumInits() < 2)
+  if (IList->hasZeroInits() || IList->hasOneInit())
     return CheckScalarType(Entity, IList, DeclType, Index, StructuredList,
                            StructuredIndex);
 
@@ -2208,6 +2208,10 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
     return;
   }
 
+  // Count in 64 bits so that the index cannot wrap with a narrow size_t.
+  if (elementIndex.getBitWidth() < 64)
+    elementIndex = elementIndex.extend(64);
+
   // We might know the maximum number of elements in advance.
   llvm::APSInt maxElements(elementIndex.getBitWidth(),
                            elementIndex.isUnsigned());
@@ -2291,6 +2295,12 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
       // Sizing an array implicitly to zero is not allowed by ISO C,
       // but is supported by GNU.
       SemaRef.Diag(IList->getBeginLoc(), diag::ext_typecheck_zero_array_size);
+    }
+
+    if (SemaRef.checkArrayTooLarge(elementType, maxElements,
+                                   IList->getBeginLoc())) {
+      hadError = true;
+      return;
     }
 
     DeclType = SemaRef.Context.getConstantArrayType(
@@ -3627,6 +3637,32 @@ bool Sema::CanPerformAggregateInitializationForOverloadResolution(
   return !Check.HadError();
 }
 
+MultiExprArg Sema::getInitsWithEmbedExpanded(InitListExpr *ILE,
+                                             SmallVectorImpl<Expr *> &Storage) {
+  auto AsMultiElementEmbed = [](Expr *Init) {
+    auto *Embed = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts());
+    return Embed && Embed->getDataElementCount() > 1 ? Embed : nullptr;
+  };
+  if (llvm::none_of(ILE->inits(), AsMultiElementEmbed))
+    return MultiExprArg(ILE->getInits(), ILE->getNumInits());
+
+  Storage.clear();
+  Storage.reserve(ILE->getNumInitsWithEmbedExpanded());
+  for (Expr *Init : ILE->inits()) {
+    EmbedExpr *Embed = AsMultiElementEmbed(Init);
+    if (!Embed) {
+      Storage.push_back(Init);
+      continue;
+    }
+    for (unsigned I = Embed->getStartingElementPos(),
+                  E = I + Embed->getDataElementCount();
+         I != E; ++I)
+      Storage.push_back(new (Context) EmbedExpr(Context, Embed->getLocation(),
+                                                Embed->getData(), I, 1));
+  }
+  return Storage;
+}
+
 /// Check that the given Index expression is a valid array designator
 /// value. This is essentially just a wrapper around
 /// VerifyIntegerConstantExpression that also checks for negative values
@@ -4590,8 +4626,9 @@ static void TryConstructorInitialization(Sema &S,
          "argument.");
   InitListExpr *ILE =
       (IsListInit || IsInitListCopy) ? cast<InitListExpr>(Args[0]) : nullptr;
+  SmallVector<Expr *, 8> ExpandedInits;
   MultiExprArg UnwrappedArgs =
-      ILE ? MultiExprArg(ILE->getInits(), ILE->getNumInits()) : Args;
+      ILE ? S.getInitsWithEmbedExpanded(ILE, ExpandedInits) : Args;
 
   // The type we're constructing needs to be complete.
   if (!S.isCompleteType(Kind.getLocation(), DestType)) {
@@ -4938,7 +4975,7 @@ static void TryReferenceListInitialization(Sema &S,
   // (possibly creating temporaries).
   // Otherwise, initialize a temporary with the initializer list and
   // bind to that.
-  if (InitList->getNumInits() == 1) {
+  if (InitList->hasOneInit()) {
     Expr *Initializer = InitList->getInit(0);
     QualType cv2T2 = S.getCompletedType(Initializer);
     Qualifiers T2Quals;
@@ -5032,7 +5069,8 @@ static void TryListInitialization(Sema &S,
   // C++ doesn't allow scalar initialization with more than one argument.
   // But C99 complex numbers are scalars and it makes sense there.
   if (S.getLangOpts().CPlusPlus && DestType->isScalarType() &&
-      !DestType->isAnyComplexType() && InitList->getNumInits() > 1) {
+      !DestType->isAnyComplexType() && !InitList->hasZeroInits() &&
+      !InitList->hasOneInit()) {
     Sequence.SetFailed(InitializationSequence::FK_TooManyInitsForScalar);
     return;
   }
@@ -5075,7 +5113,7 @@ static void TryListInitialization(Sema &S,
   //   (8.5.2 [dcl.init.string]), initialization is performed as described
   //   in that section.
   // - Otherwise, if T is an aggregate, [...] (continue below).
-  if (S.getLangOpts().CPlusPlus11 && InitList->getNumInits() == 1 &&
+  if (S.getLangOpts().CPlusPlus11 && InitList->hasOneInit() &&
       !IsDesignatedInit) {
     if (DestType->isRecordType() && DestType->isAggregateType()) {
       QualType InitType = InitList->getInit(0)->getType();
@@ -5157,7 +5195,7 @@ static void TryListInitialization(Sema &S,
       //   - Otherwise, if the initializer list has no elements and T is a
       //     class type with a default constructor, the object is
       //     value-initialized.
-      if (InitList->getNumInits() == 0) {
+      if (InitList->hasZeroInits()) {
         CXXRecordDecl *RD = DestType->castAsCXXRecordDecl();
         if (S.LookupDefaultConstructor(RD)) {
           TryValueInitialization(S, Entity, Kind, Sequence, InitList);
@@ -5181,7 +5219,7 @@ static void TryListInitialization(Sema &S,
   }
 
   if (S.getLangOpts().CPlusPlus && !DestType->isAggregateType() &&
-      InitList->getNumInits() == 1) {
+      InitList->hasOneInit()) {
     Expr *E = InitList->getInit(0);
 
     //   - Otherwise, if T is an enumeration with a fixed underlying type,
@@ -5347,12 +5385,13 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
       // If the conversion function doesn't return a reference type,
       // it can't be considered for this conversion unless we're allowed to
-      // consider rvalues.
+      // consider rvalues. If it's a template, we should accept it first
+      // and specialize it before deciding whether to reject it.
       // FIXME: Do we need to make sure that we only consider conversion
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
-      if ((AllowRValues ||
-           Conv->getConversionType()->isLValueReferenceType())) {
+      if (ConvTemplate || AllowRValues ||
+          Conv->getConversionType()->isLValueReferenceType()) {
         if (ConvTemplate)
           S.AddTemplateConversionCandidate(
               ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,
@@ -8454,7 +8493,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
       InitListExpr *InitList = cast<InitListExpr>(Args[0]);
       S.Diag(InitList->getExprLoc(), diag::warn_cxx98_compat_ctor_list_init)
         << InitList->getSourceRange();
-      MultiExprArg Arg(InitList->getInits(), InitList->getNumInits());
+      SmallVector<Expr *, 8> ExpandedInits;
+      MultiExprArg Arg = S.getInitsWithEmbedExpanded(InitList, ExpandedInits);
       CurInit = PerformConstructorInitialization(S, UseTemporary ? TempEntity :
                                                                    Entity,
                                                  Kind, Arg, *Step,
@@ -8570,7 +8610,8 @@ ExprResult InitializationSequence::Perform(Sema &S,
         return ExprError();
       CurInit = CurInitExprRes;
 
-      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity)) {
+      if (S.getLangOpts().C23 && initializingConstexprVariable(Entity) &&
+          !CurInit.get()->containsErrors()) {
         CheckC23ConstexprInitConversion(S, SourceType, Entity.getType(),
                                         CurInit.get());
 
@@ -8988,7 +9029,7 @@ static void diagnoseListInit(Sema &S, const InitializedEntity &Entity,
     QualType ArrayType = S.Context.getConstantArrayType(
         E.withConst(),
         llvm::APInt(S.Context.getTypeSize(S.Context.getSizeType()),
-                    InitList->getNumInits()),
+                    InitList->getNumInitsWithEmbedExpanded()),
         nullptr, clang::ArraySizeModifier::Normal, 0);
     InitializedEntity HiddenArray =
         InitializedEntity::InitializeTemporary(ArrayType);
@@ -9029,7 +9070,7 @@ bool InitializationSequence::Diagnose(Sema &S,
   Expr *OnlyArg;
   if (Args.size() == 1) {
     auto *List = dyn_cast<InitListExpr>(Args[0]);
-    if (List && List->getNumInits() == 1)
+    if (List && List->hasOneInit())
       OnlyArg = List->getInit(0);
     else
       OnlyArg = Args[0];
@@ -9349,11 +9390,12 @@ bool InitializationSequence::Diagnose(Sema &S,
       ArgsRange =
           SourceRange(Args.front()->getBeginLoc(), Args.back()->getEndLoc());
 
+    SmallVector<Expr *, 8> ExpandedInits;
     if (Failure == FK_ListConstructorOverloadFailed) {
       assert(Args.size() == 1 &&
              "List construction from other than 1 argument.");
       InitListExpr *InitList = cast<InitListExpr>(Args[0]);
-      Args = MultiExprArg(InitList->getInits(), InitList->getNumInits());
+      Args = S.getInitsWithEmbedExpanded(InitList, ExpandedInits);
     }
 
     // FIXME: Using "DestType" for the entity we're printing is probably
@@ -9908,6 +9950,20 @@ void InitializationSequence::dump() const {
   dump(llvm::errs());
 }
 
+static NarrowingKind getNarrowingKindWithEmbedExpanded(
+    Sema &S, const StandardConversionSequence &SCS, const Expr *Init,
+    APValue &ConstantValue, QualType &ConstantType) {
+  const auto *Embed = dyn_cast<EmbedExpr>(Init->IgnoreParenImpCasts());
+  if (!Embed || Embed->getDataElementCount() <= 1)
+    return SCS.getNarrowingKind(S.Context, Init, ConstantValue, ConstantType);
+  for (const IntegerLiteral *Elt : Embed->underlying_data_elements())
+    if (NarrowingKind NK =
+            SCS.getNarrowingKind(S.Context, Elt, ConstantValue, ConstantType);
+        NK != NK_Not_Narrowing)
+      return NK;
+  return NK_Not_Narrowing;
+}
+
 static void DiagnoseNarrowingInInitList(Sema &S,
                                         const ImplicitConversionSequence &ICS,
                                         QualType PreNarrowingType,
@@ -9944,8 +10000,8 @@ static void DiagnoseNarrowingInInitList(Sema &S,
   // C++11 [dcl.init.list]p7: Check whether this is a narrowing conversion.
   APValue ConstantValue;
   QualType ConstantType;
-  switch (SCS->getNarrowingKind(S.Context, PostInit, ConstantValue,
-                                ConstantType)) {
+  switch (getNarrowingKindWithEmbedExpanded(S, *SCS, PostInit, ConstantValue,
+                                            ConstantType)) {
   case NK_Not_Narrowing:
   case NK_Dependent_Narrowing:
     // No narrowing occurred.
@@ -10028,9 +10084,8 @@ static void CheckC23ConstexprInitConversion(Sema &S, QualType FromType,
   APValue Value;
   QualType PreNarrowingType;
   // Reuse C++ narrowing check.
-  switch (ICS.Standard.getNarrowingKind(
-      S.Context, Init, Value, PreNarrowingType,
-      /*IgnoreFloatToIntegralConversion*/ false)) {
+  switch (getNarrowingKindWithEmbedExpanded(S, ICS.Standard, Init, Value,
+                                            PreNarrowingType)) {
   // The value doesn't fit.
   case NK_Constant_Narrowing:
     S.Diag(Init->getBeginLoc(), diag::err_c23_constexpr_init_not_representable)
@@ -10253,6 +10308,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       (Inits.size() == 1 && Kind.getKind() != InitializationKind::IK_Direct)
           ? dyn_cast<InitListExpr>(Inits[0])
           : nullptr;
+  SmallVector<Expr *, 8> ExpandedInits;
 
   // C++1z [over.match.class.deduct]p1:
   //   Initialization and overload resolution are performed as described in
@@ -10446,7 +10502,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
 
     // Try list constructors unless the list is empty and the class has one or
     // more default constructors, in which case those constructors win.
-    if (!ListInit->getNumInits()) {
+    if (ListInit->hasZeroInits()) {
       for (NamedDecl *D : Guides) {
         auto *FD = dyn_cast<FunctionDecl>(D->getUnderlyingDecl());
         if (FD && FD->getMinRequiredArguments() == 0) {
@@ -10454,7 +10510,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
           break;
         }
       }
-    } else if (ListInit->getNumInits() == 1) {
+    } else if (ListInit->hasOneInit()) {
       // C++ [over.match.class.deduct]:
       //   As an exception, the first phase in [over.match.list] (considering
       //   initializer-list constructors) is omitted if the initializer list
@@ -10472,7 +10528,7 @@ QualType Sema::DeduceTemplateSpecializationFromInitializer(
       Result = TryToResolveOverload(/*OnlyListConstructor*/true);
     // Then unwrap the initializer list and try again considering all
     // constructors.
-    Inits = MultiExprArg(ListInit->getInits(), ListInit->getNumInits());
+    Inits = getInitsWithEmbedExpanded(ListInit, ExpandedInits);
   }
 
   // If list-initialization fails, or if we're doing any other kind of

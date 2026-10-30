@@ -32,6 +32,7 @@ add_flang_library(FlangOpenMPTransforms
   ${dialect_libs}
 
   MLIR_LIBS
+  MLIRAnalysisBase
   MLIRFuncDialect
   MLIROpenMPDialect
   MLIROpenMPTransforms

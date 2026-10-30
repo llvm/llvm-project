@@ -4,28 +4,18 @@
 define void @pr141907(ptr %0) nounwind {
 ; CHECK-LABEL: pr141907:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 2
-; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    addi a2, sp, 16
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    addi a3, sp, 20
-; CHECK-NEXT:    li a4, 12
+; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vs4r.v v8, (a2)
 ; CHECK-NEXT:    vsetvli a1, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
-; CHECK-NEXT:    vnsrl.wi v9, v8, 0
-; CHECK-NEXT:    vsetvli a5, zero, e32, m1, ta, ma
-; CHECK-NEXT:    vlse32.v v8, (a3), a4
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
-; CHECK-NEXT:    vsseg2e16.v v9, (zero)
+; CHECK-NEXT:    vnsrl.wi v8, v10, 0
+; CHECK-NEXT:    # implicit-def: $v10
+; CHECK-NEXT:    vsseg2e16.v v8, (zero)
 ; CHECK-NEXT:    bnez a1, .LBB0_1
 ; CHECK-NEXT:  .LBB0_2: # %while.body5
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1

@@ -111,7 +111,7 @@ body:             |
     DBG_VALUE_LIST !19, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_LLVM_arg, 2, DW_OP_and, DW_OP_or, DW_OP_stack_value), %0, 1, %0, debug-location !21
     DBG_VALUE %0, $noreg, !20, !DIExpression(), debug-location !21
     %5:gr32 = IMPLICIT_DEF
-    %4:gr32 = SUB32rr %0, killed %5, implicit-def $eflags
+    %4:gr32 = SUB32rr %0, %5, implicit-def $eflags
     JCC_1 %bb.5, 13, implicit $eflags
     JMP_1 %bb.3
   

@@ -49,6 +49,9 @@ struct UnwrappedLine {
   bool InPragmaDirective = false;
   /// Whether it is part of a macro body.
   bool InMacroBody = false;
+  /// Whether this \c UnwrappedLine is part of the first pass of a multi-pass
+  /// macro expansion run.
+  bool InMacroExpansion = false;
 
   /// Nesting level of unbraced body of a control statement.
   unsigned UnbracedBodyLevel = 0;
@@ -126,13 +129,15 @@ private:
   bool precededByCommentOrPPDirective() const;
   bool parseLevel(const FormatToken *OpeningBrace = nullptr,
                   IfStmtKind *IfKind = nullptr,
-                  FormatToken **IfLeftBrace = nullptr);
+                  FormatToken **IfLeftBrace = nullptr,
+                  bool *SeenExplicitAccessModifier = nullptr);
   bool mightFitOnOneLine(UnwrappedLine &Line,
                          const FormatToken *OpeningBrace = nullptr) const;
   FormatToken *parseBlock(bool MustBeDeclaration = false,
                           unsigned AddLevels = 1u, bool MunchSemi = true,
                           bool KeepBraces = true, IfStmtKind *IfKind = nullptr,
-                          bool UnindentWhitesmithsBraces = false);
+                          bool UnindentWhitesmithsBraces = false,
+                          bool IndentAfterExplicitAccessModifier = false);
   void parseChildBlock();
   void parsePPDirective();
   void parsePPDefine();
@@ -151,7 +156,9 @@ private:
   bool parseBracedList(bool IsAngleBracket = false, bool IsEnum = false);
   bool parseParens(TokenType StarAndAmpTokenType = TT_Unknown,
                    bool InMacroCall = false);
-  void parseSquare(bool LambdaIntroducer = false);
+  // SkipLambda means the square does not begin a lambda expression. The opening
+  // square bracket is assumed to be consumed when it is true.
+  void parseSquare(bool SkipLambda = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
   void handleAttributes();

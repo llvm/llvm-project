@@ -248,7 +248,10 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // If this token's spelling is a pp-identifier, check to see if it is
     // 'defined' or if it is a macro.  Note that we check here because many
     // keywords are pp-identifiers, so we can't check the kind.
-    if (IdentifierInfo *II = PeekTok.getIdentifierInfo()) {
+    // Pragma operators can produce annotation tokens, which have no
+    // IdentifierInfo and should be diagnosed as invalid expression tokens.
+    if (!PeekTok.isAnnotation() && PeekTok.getIdentifierInfo()) {
+      IdentifierInfo *II = PeekTok.getIdentifierInfo();
       // Handle "defined X" and "defined(X)".
       if (II->isStr("defined"))
         return EvaluateDefined(Result, PeekTok, DT, ValueLive, PP);

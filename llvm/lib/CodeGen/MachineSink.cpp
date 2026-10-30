@@ -861,8 +861,8 @@ bool MachineSinking::run(MachineFunction &MF) {
     MachineDomTreeUpdater MDTU(DT, PDT,
                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
-      auto NewSucc = Pair.first->SplitCriticalEdge(
-          Pair.second, {LIS, SI, /*LV=*/nullptr, MLI}, nullptr, &MDTU);
+      auto NewSucc =
+          Pair.first->SplitCriticalEdge(Pair.second, {LIS, SI, MLI}, &MDTU);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "
@@ -1540,7 +1540,7 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable, TRI))
+  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   if (!BaseOp->isReg())
@@ -2298,8 +2298,11 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
     }
 
     // Don't postRASink instructions that the target prefers not to sink.
-    if (!TII->shouldPostRASink(MI))
+    if (!TII->shouldPostRASink(MI)) {
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
       continue;
+    }
 
     if (MI.isDebugOrPseudoInstr())
       continue;

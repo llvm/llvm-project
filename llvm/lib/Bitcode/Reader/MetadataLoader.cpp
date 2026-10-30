@@ -1557,8 +1557,8 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_LOCATION: {
-    // 5: inlinedAt, 6: isImplicit, 8: Key Instructions fields.
-    if (Record.size() != 5 && Record.size() != 6 && Record.size() != 8)
+    // 5: inlinedAt, 6: isImplicit, 8: Key Instructions fields, 9: irlayers.
+    if (Record.size() < 5 || Record.size() == 7 || Record.size() > 9)
       return error("Invalid record");
 
     IsDistinct = Record[0];
@@ -1567,12 +1567,44 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     Metadata *Scope = getMD(Record[3]);
     Metadata *InlinedAt = getMDOrNull(Record[4]);
     bool ImplicitCode = Record.size() >= 6 && Record[5];
-    uint64_t AtomGroup = Record.size() == 8 ? Record[6] : 0;
-    uint8_t AtomRank = Record.size() == 8 ? Record[7] : 0;
+    uint64_t AtomGroup = Record.size() >= 8 ? Record[6] : 0;
+    uint8_t AtomRank = Record.size() >= 8 ? Record[7] : 0;
+    Metadata *IRLayers = Record.size() >= 9 ? getMDOrNull(Record[8]) : nullptr;
     MetadataList.assignValue(
-        GET_OR_DISTINCT(DILocation, (Context, Line, Column, Scope, InlinedAt,
-                                     ImplicitCode, AtomGroup, AtomRank)),
+        GET_OR_DISTINCT(DILocation,
+                        (Context, Line, Column, Scope, InlinedAt, ImplicitCode,
+                         AtomGroup, AtomRank, IRLayers)),
         NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LAYERLOC: {
+    if (Record.size() != 5)
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    unsigned Line = Record[1];
+    unsigned Column = Record[2];
+    Metadata *File = getMD(Record[3]);
+    // Read the kind opaquely and let the verifier report a bad type, as the
+    // other DI readers do: an unchecked cast would assert on malformed bitcode.
+    MDString *Kind = dyn_cast_if_present<MDString>(getMD(Record[4]));
+    MetadataList.assignValue(
+        GET_OR_DISTINCT(DILayerLoc, (Context, Kind, File, Line, Column)),
+        NextMetadataNo);
+    NextMetadataNo++;
+    break;
+  }
+  case bitc::METADATA_LAYERLOCLIST: {
+    if (Record.empty())
+      return error("Invalid record");
+
+    IsDistinct = Record[0];
+    SmallVector<Metadata *, 4> Elts;
+    for (unsigned I = 1, E = Record.size(); I != E; ++I)
+      Elts.push_back(getMD(Record[I]));
+    MetadataList.assignValue(GET_OR_DISTINCT(DILayerLocList, (Context, Elts)),
+                             NextMetadataNo);
     NextMetadataNo++;
     break;
   }
@@ -1739,25 +1771,36 @@ Error MetadataLoader::MetadataLoaderImpl::parseOneMetadata(
     break;
   }
   case bitc::METADATA_STRING_TYPE: {
-    if (Record.size() > 9 || Record.size() < 8)
+    if (Record.size() > 10 || Record.size() < 8)
       return error("Invalid record");
 
     IsDistinct = Record[0] & 1;
     bool SizeIsMetadata = Record[0] & 2;
-    bool SizeIs8 = Record.size() == 8;
-    // StringLocationExp (i.e. Record[5]) is added at a later time
-    // than the other fields. The code here enables backward compatibility.
-    Metadata *StringLocationExp = SizeIs8 ? nullptr : getMDOrNull(Record[5]);
-    unsigned Offset = SizeIs8 ? 5 : 6;
+    // StringLocationExp (i.e. Record[5]) was added at a later time
+    // than most of the other fields, and CharType (Record[9]) was
+    // added even later.
+    // The code here enables backward compatibility.
+    Metadata *StringLocationExp = nullptr;
+    Metadata *CharType = nullptr;
+
+    bool StringLocPresent = Record.size() > 8;
+    size_t SizeOffset = StringLocPresent ? 6 : 5;
+
     Metadata *SizeInBits =
-        getMetadataOrConstant(SizeIsMetadata, Record[Offset]);
+        getMetadataOrConstant(SizeIsMetadata, Record[SizeOffset]);
+    if (StringLocPresent) {
+      StringLocationExp = getMDOrNull(Record[5]);
+    }
+    if (Record.size() == 10) {
+      CharType = getMDOrNull(Record[9]);
+    }
 
     MetadataList.assignValue(
         GET_OR_DISTINCT(DIStringType,
                         (Context, Record[1], getMDString(Record[2]),
                          getMDOrNull(Record[3]), getMDOrNull(Record[4]),
-                         StringLocationExp, SizeInBits, Record[Offset + 1],
-                         Record[Offset + 2])),
+                         StringLocationExp, SizeInBits, Record[SizeOffset + 1],
+                         Record[SizeOffset + 2], CharType)),
         NextMetadataNo);
     NextMetadataNo++;
     break;

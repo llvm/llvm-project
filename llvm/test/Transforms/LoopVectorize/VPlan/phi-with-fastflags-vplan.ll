@@ -24,8 +24,7 @@ define void @f(ptr noalias %p, i1 %c) {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer float, ir<%gep>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%x> = load vp<[[VP5]]>
 ; CHECK-NEXT:      BLEND ir<%phi> = fast ir<%x> ir<0.000000e+00>/ir<%c>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer float, ir<%gep>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP6]]>, ir<%phi>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<%phi>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors

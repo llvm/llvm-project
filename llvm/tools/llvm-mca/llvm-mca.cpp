@@ -56,6 +56,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -379,7 +380,8 @@ int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions, &MCScheduleOptions});
 
   // Parse flags and initialize target options.
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
                               "llvm machine code performance analyzer.\n");
 
   Triple TheTriple(TripleNameOpt.empty()
@@ -456,6 +458,7 @@ int main(int argc, char **argv) {
   assert(MRI && "Unable to create target register info!");
 
   MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
+  MCOptions.LibraryOptions = &LibraryOptions;
   std::unique_ptr<MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   assert(MAI && "Unable to create target asm info!");
@@ -614,6 +617,8 @@ int main(int argc, char **argv) {
   mca::PipelineOptions PO(MicroOpQueue, DecoderThroughput, DispatchWidth,
                           RegisterFileSize, LoadQueueSize, StoreQueueSize,
                           AssumeNoAlias, EnableBottleneckAnalysis);
+  PO.ReservationStationScaleFactor =
+      MCSchedModel::getReservationStationScaleFactor(MCOptions);
 
   // Number each region in the sequence.
   unsigned RegionIdx = 0;
@@ -622,8 +627,8 @@ int main(int argc, char **argv) {
       TheTarget->createMCCodeEmitter(*MCII, ACtx));
   assert(MCE && "Unable to create code emitter!");
 
-  std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
-      *STI, *MRI, mc::InitMCTargetOptionsFromFlags()));
+  std::unique_ptr<MCAsmBackend> MAB(
+      TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
   assert(MAB && "Unable to create asm backend!");
 
   json::Object JSONOutput;
@@ -809,7 +814,8 @@ int main(int argc, char **argv) {
       Printer.addView(std::make_unique<mca::DispatchStatistics>());
 
     if (PrintSchedulerStats)
-      Printer.addView(std::make_unique<mca::SchedulerStatistics>(*STI));
+      Printer.addView(std::make_unique<mca::SchedulerStatistics>(
+          *STI, PO.ReservationStationScaleFactor));
 
     if (PrintRetireStats)
       Printer.addView(std::make_unique<mca::RetireControlUnitStatistics>(SM));
@@ -826,7 +832,7 @@ int main(int argc, char **argv) {
           TimelineMaxIterations ? TimelineMaxIterations : 10;
       Printer.addView(std::make_unique<mca::TimelineView>(
           *STI, *IP, Insts, std::min(TimelineIterations, S.getNumIterations()),
-          TimelineMaxCycles));
+          TimelineMaxCycles, PO.ReservationStationScaleFactor));
     }
 
     // Fetch custom Views that are to be placed after all other Views.

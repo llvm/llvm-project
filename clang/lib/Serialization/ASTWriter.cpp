@@ -901,6 +901,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(MODULE_NAME);
   RECORD(MODULE_DIRECTORY);
   RECORD(MODULE_MAP_FILE);
+  RECORD(MODULE_DIRECTORY_DEPENDENCIES);
   RECORD(IMPORT);
   RECORD(ORIGINAL_FILE);
   RECORD(ORIGINAL_FILE_ID);
@@ -1564,14 +1565,28 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
     Stream.EmitRecord(MODULE_MAP_FILE, Record);
   }
 
+  if (WritingModule && !WritingModule->getDirectoryDependencies().empty()) {
+    Record.clear();
+    // Sort so that dependencies are reported in a stable order.
+    SmallVector<StringRef> Dirs(WritingModule->getDirectoryDependencies());
+    llvm::sort(Dirs);
+    Record.push_back(Dirs.size());
+    for (StringRef Dir : Dirs)
+      AddPath(Dir, Record);
+    Stream.EmitRecord(MODULE_DIRECTORY_DEPENDENCIES, Record);
+  }
+
   // Imports
   if (Chain) {
+    const auto &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
     Abbrev->Add(BitCodeAbbrevOp(IMPORT));
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 3)); // Kind
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // ImportLoc
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Module name len
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Standard C++ mod
+    Abbrev->Add(
+        BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1));       // C++20/prebuilt HU
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File size
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File timestamp
     Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // File name raw kind
@@ -1595,9 +1610,20 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
       AddStringBlob(M.ModuleName, Record, Blob);
       Record.push_back(M.StandardCXXModule);
 
-      // We don't want to hard code the information about imported modules
-      // in the C++20 named modules.
-      if (M.StandardCXXModule) {
+      // We don't want to hard code file information for C++20 Modules
+      // (including explicitly mapped header units).
+      const Module *ImportedModule =
+          PP.getHeaderSearchInfo().getModuleMap().findModule(M.ModuleName);
+      bool IsPrebuiltHeaderUnit =
+          ImportedModule && ImportedModule->isHeaderUnit() &&
+          M.Kind == MK_PrebuiltModule &&
+          HSOpts.PrebuiltModuleFiles.count(M.ModuleName);
+
+      bool IsCXX20ModuleOrPrebuiltHeaderUnit =
+          M.StandardCXXModule || IsPrebuiltHeaderUnit;
+      Record.push_back(IsCXX20ModuleOrPrebuiltHeaderUnit);
+
+      if (IsCXX20ModuleOrPrebuiltHeaderUnit) {
         Record.push_back(0);
         Record.push_back(0);
         Record.push_back(0);
@@ -1885,7 +1911,9 @@ void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
       continue;
     const SrcMgr::FileInfo &File = SLoc->getFile();
     const SrcMgr::ContentCache *Cache = &File.getContentCache();
-    if (!Cache->OrigEntry)
+    // Named pipes, including stdin, are serialized as buffers rather than
+    // files, since their contents can differ between AST files.
+    if (!Cache->OrigEntry || Cache->OrigEntry->isNamedPipe())
       continue;
 
     // Do not emit input files that do not affect current module.
@@ -2399,7 +2427,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
     unsigned Code;
     if (SLoc->isFile()) {
       const SrcMgr::ContentCache *Cache = &SLoc->getFile().getContentCache();
-      if (Cache->OrigEntry) {
+      if (Cache->OrigEntry && !Cache->OrigEntry->isNamedPipe()) {
         Code = SM_SLOC_FILE_ENTRY;
       } else
         Code = SM_SLOC_BUFFER_ENTRY;
@@ -2421,7 +2449,7 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       Record.push_back(File.hasLineDirectives());
 
       bool EmitBlob = false;
-      if (Content->OrigEntry) {
+      if (Code == SM_SLOC_FILE_ENTRY) {
         assert(Content->OrigEntry == Content->ContentsEntry &&
                "Writing to AST an overridden file is not supported");
 
@@ -2944,10 +2972,12 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
   if (SkippedRanges.size() > 0) {
     std::vector<PPSkippedRange> SerializedSkippedRanges;
     SerializedSkippedRanges.reserve(SkippedRanges.size());
-    for (auto const& Range : SkippedRanges)
+    for (auto const &Range : SkippedRanges) {
+      SourceRange R = getAdjustedRange(Range);
       SerializedSkippedRanges.emplace_back(
-          getRawSourceLocationEncoding(Range.getBegin()),
-          getRawSourceLocationEncoding(Range.getEnd()));
+          getRawSourceLocationEncoding(R.getBegin()),
+          getRawSourceLocationEncoding(R.getEnd()));
+    }
 
     using namespace llvm;
     auto Abbrev = std::make_shared<BitCodeAbbrev>();
@@ -5418,7 +5448,6 @@ void ASTWriter::AddToken(const Token &Tok, RecordDataImpl &Record) {
     case tok::annot_pragma_unused:
     case tok::annot_pragma_openacc:
     case tok::annot_pragma_openacc_end:
-    case tok::annot_repl_input_end:
       break;
     default:
       llvm_unreachable("missing serialization code for annotation token");
@@ -6679,7 +6708,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
           // specialization. If so, record which one.
           auto From = Spec->getInstantiatedFrom();
           if (auto PartialSpec =
-                From.dyn_cast<ClassTemplatePartialSpecializationDecl*>()) {
+                  dyn_cast<ClassTemplatePartialSpecializationDecl *>(From)) {
             Record.push_back(true);
             Record.AddDeclRef(PartialSpec);
             Record.AddTemplateArgumentList(

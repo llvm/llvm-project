@@ -475,6 +475,14 @@ func.func @test_character(%input: !fir.box<!fir.array<?x!fir.char<1>>>) -> !hlfi
 // CHECK-LABEL:   func.func @test_character(
 // CHECK:           hlfir.minloc
 
+// UNSIGNED comparisons are not supported yet.
+func.func @test_unsigned(%input: !fir.box<!fir.array<?xui32>>) -> !hlfir.expr<1xi32> {
+  %0 = hlfir.minloc %input : (!fir.box<!fir.array<?xui32>>) -> !hlfir.expr<1xi32>
+  return %0 : !hlfir.expr<1xi32>
+}
+// CHECK-LABEL:   func.func @test_unsigned(
+// CHECK:           hlfir.minloc
+
 // BACK is not supported yet.
 func.func @test_back(%input: !hlfir.expr<?xi32>) -> !hlfir.expr<1xi32> {
   %back = arith.constant true
@@ -483,3 +491,11 @@ func.func @test_back(%input: !hlfir.expr<?xi32>) -> !hlfir.expr<1xi32> {
 }
 // CHECK-LABEL:   func.func @test_back(
 // CHECK:           hlfir.minloc
+
+// The INTEGER(16) identity must not be truncated to 64 bits.
+func.func @test_i128_mask(%input: !hlfir.expr<?xi128>, %mask: !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32> {
+  %0 = hlfir.minloc %input mask %mask : (!hlfir.expr<?xi128>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<1xi32>
+  return %0 : !hlfir.expr<1xi32>
+}
+// CHECK-LABEL: func.func @test_i128_mask(
+// CHECK: arith.constant 170141183460469231731687303715884105727 : i128

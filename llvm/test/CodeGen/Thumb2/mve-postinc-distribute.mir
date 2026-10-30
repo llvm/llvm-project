@@ -896,7 +896,7 @@ body:             |
     %0:gprnopc = COPY $r0
     %1:mqpr = MVE_VLDRWU32 %0, 0, 0, $noreg, $noreg :: (load (s128), align 8)
     %2:rgpr = nuw t2SUBri %0, 32, 14, $noreg, $noreg
-    %4:rgpr = nuw t2LSRri killed %2, 2, 14, $noreg, $noreg
+    %4:rgpr = nuw t2LSRri %2, 2, 14, $noreg, $noreg
     %3:mqpr = MVE_VLDRWU32 %0, 4, 0, $noreg, $noreg :: (load (s128), align 8)
     $r0 = COPY %4
     tBX_RET 14, $noreg, implicit $r0

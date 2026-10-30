@@ -14,6 +14,13 @@
 #ifndef LLVM_CLANG_CODEGENUTILS_EHPERSONALITY_H
 #define LLVM_CLANG_CODEGENUTILS_EHPERSONALITY_H
 
+namespace clang {
+class CodeGenOptions;
+class FunctionDecl;
+class LangOptions;
+class TargetInfo;
+} // namespace clang
+
 namespace clang::CodeGenUtils {
 
 /// The exceptions personality for a function.
@@ -59,6 +66,18 @@ struct EHPersonality {
 
   bool isMSVCXXPersonality() const { return this == &MSVC_CxxFrameHandler3; }
 };
+
+/// Selects the personality function to use for \p FD, or for the translation
+/// unit as a whole when \p FD is null.
+const EHPersonality &getEHPersonality(const TargetInfo &Target,
+                                      const LangOptions &LangOpts,
+                                      const CodeGenOptions &CGOpts,
+                                      const FunctionDecl *FD);
+
+/// Selects the personality function that plain C++ would use.  ObjC++ consults
+/// this to decide whether it can fall back on the C++ personality.
+const EHPersonality &getCXXEHPersonality(const TargetInfo &Target,
+                                         const CodeGenOptions &CGOpts);
 
 } // namespace clang::CodeGenUtils
 

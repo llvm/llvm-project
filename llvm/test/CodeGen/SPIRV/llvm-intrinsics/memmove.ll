@@ -1,5 +1,7 @@
-; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64v1.3-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPV13
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.3-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.3 %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64v1.4-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK,SPV14
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64v1.4-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 
 ; CHECK-NOT: llvm.memmove
 
@@ -93,3 +95,47 @@ define spir_kernel void @test_zero_move(ptr addrspace(1) %in, ptr addrspace(1) %
 declare void @llvm.memmove.p4.p4.i64(ptr addrspace(4) captures(none) writeonly, ptr addrspace(4) captures(none) readonly, i64, i1 immarg)
 
 declare void @llvm.memmove.p1.p1.i32(ptr addrspace(1) captures(none), ptr addrspace(1) captures(none) readonly, i32, i1)
+
+; Before SPIR-V 1.4, the single alignment applies to both pointers and must
+; be their minimum. SPIR-V 1.4 can preserve both alignments independently.
+; CHECK: %[[#Dst:]] = OpFunctionParameter
+; CHECK: %[[#Src:]] = OpFunctionParameter
+; SPV13: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Aligned 4{{$}}
+; SPV14: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Aligned 8 Aligned 4{{$}}
+; CHECK: OpFunctionEnd
+define spir_kernel void @test_destination_more_aligned(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 4 %src, i32 16, i1 false)
+  ret void
+}
+
+; CHECK: %[[#Dst:]] = OpFunctionParameter
+; CHECK: %[[#Src:]] = OpFunctionParameter
+; SPV13: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Aligned 4{{$}}
+; SPV14: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Aligned 4 Aligned 8{{$}}
+; CHECK: OpFunctionEnd
+define spir_kernel void @test_source_more_aligned(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) align 4 %dst, ptr addrspace(1) align 8 %src, i32 16, i1 false)
+  ret void
+}
+
+; An unspecified source alignment defaults to 1.
+; CHECK: %[[#Dst:]] = OpFunctionParameter
+; CHECK: %[[#Src:]] = OpFunctionParameter
+; SPV13: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Aligned 1{{$}}
+; SPV14: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Aligned 4 Aligned 1{{$}}
+; CHECK: OpFunctionEnd
+define spir_kernel void @test_unspecified_source_alignment(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) align 4 %dst, ptr addrspace(1) %src, i32 16, i1 false)
+  ret void
+}
+
+; Volatile must apply to both accesses when separate masks are emitted.
+; CHECK: %[[#Dst:]] = OpFunctionParameter
+; CHECK: %[[#Src:]] = OpFunctionParameter
+; SPV13: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Volatile|Aligned 4{{$}}
+; SPV14: OpCopyMemorySized %[[#Dst]] %[[#Src]] %[[#]] Volatile|Aligned 8 Volatile|Aligned 4{{$}}
+; CHECK: OpFunctionEnd
+define spir_kernel void @test_volatile_unequal_alignments(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) align 8 %dst, ptr addrspace(1) align 4 %src, i32 16, i1 true)
+  ret void
+}

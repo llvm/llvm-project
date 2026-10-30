@@ -20,6 +20,7 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_HAS_EXPERIMENTAL_PSTL && _LIBCPP_STD_VER >= 17
 
+#  include <__execution/is_execution_policy.h>
 #  include <__functional/identity.h>
 #  include <__functional/operations.h>
 #  include <__iterator/cpp17_iterator_concepts.h>
@@ -28,7 +29,6 @@ _LIBCPP_PUSH_MACROS
 #  include <__pstl/dispatch.h>
 #  include <__pstl/handle_exception.h>
 #  include <__type_traits/enable_if.h>
-#  include <__type_traits/is_execution_policy.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>

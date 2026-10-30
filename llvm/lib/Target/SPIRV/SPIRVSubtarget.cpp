@@ -39,12 +39,6 @@ static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
-// Provides access to the cl::opt<...> `Extensions` variable from outside of the
-// module.
-void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
-  Extensions.insert(AllowList.begin(), AllowList.end());
-}
-
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
   return Target.empty() || Target >= VerToCompareTo;

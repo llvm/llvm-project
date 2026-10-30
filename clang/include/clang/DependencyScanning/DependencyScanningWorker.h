@@ -47,7 +47,9 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  DependencyScanningWorker(DependencyScanningService &Service);
+  DependencyScanningWorker(
+      DependencyScanningService &Service,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS = nullptr);
 
   ~DependencyScanningWorker();
 

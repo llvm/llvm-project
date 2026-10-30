@@ -176,6 +176,30 @@ __m256i test_mm256_mul_epi32(__m256i a, __m256i b) {
   return _mm256_mul_epi32(a, b);
 }
 
+__m256i test_mm256_mulhi_epi16(__m256i a, __m256i b) {
+  // CIR-LABEL: _mm256_mulhi_epi16
+  // CIR: cir.call_llvm_intrinsic "smulh" %{{.*}}, %{{.*}} : (!cir.vector<16 x !s16i>, !cir.vector<16 x !s16i>) -> !cir.vector<16 x !s16i>
+
+  // LLVM-LABEL: test_mm256_mulhi_epi16
+  // LLVM: call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_mulhi_epi16
+  // OGCG: call <16 x i16> @llvm.smulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  return _mm256_mulhi_epi16(a, b);
+}
+
+__m256i test_mm256_mulhi_epu16(__m256i a, __m256i b) {
+  // CIR-LABEL: _mm256_mulhi_epu16
+  // CIR: cir.call_llvm_intrinsic "umulh" %{{.*}}, %{{.*}} : (!cir.vector<16 x !u16i>, !cir.vector<16 x !u16i>) -> !cir.vector<16 x !u16i>
+
+  // LLVM-LABEL: test_mm256_mulhi_epu16
+  // LLVM: call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm256_mulhi_epu16
+  // OGCG: call <16 x i16> @llvm.umulh.v16i16(<16 x i16> %{{.*}}, <16 x i16> %{{.*}})
+  return _mm256_mulhi_epu16(a, b);
+}
+
 __m256i test_mm256_alignr_epi8(__m256i a, __m256i b) {
   // CIR-LABEL: _mm256_alignr_epi8
   // CIR: {{.*}} = cir.vec.shuffle(%{{.*}}, {{.*}} : !cir.vector<32 x {{![us]8i}}>) [#cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i, #cir.int<9> : !s32i, #cir.int<10> : !s32i, #cir.int<11> : !s32i, #cir.int<12> : !s32i, #cir.int<13> : !s32i, #cir.int<14> : !s32i, #cir.int<15> : !s32i, #cir.int<32> : !s32i, #cir.int<33> : !s32i, #cir.int<18> : !s32i, #cir.int<19> : !s32i, #cir.int<20> : !s32i, #cir.int<21> : !s32i, #cir.int<22> : !s32i, #cir.int<23> : !s32i, #cir.int<24> : !s32i, #cir.int<25> : !s32i, #cir.int<26> : !s32i, #cir.int<27> : !s32i, #cir.int<28> : !s32i, #cir.int<29> : !s32i, #cir.int<30> : !s32i, #cir.int<31> : !s32i, #cir.int<48> : !s32i, #cir.int<49> : !s32i] : !cir.vector<32 x {{![us]8i}}>

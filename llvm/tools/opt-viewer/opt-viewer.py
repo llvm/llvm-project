@@ -286,9 +286,10 @@ class IndexRenderer:
         )
 
 
-def _render_file(source_dir, output_dir, ctx, no_highlight, entry, filter_):
+def _render_file(source_dir, output_dir, ctx, no_highlight, demangler, entry, filter_):
     global context
     context = ctx
+    optrecord.Remark.demangler_cmd = demangler
     filename, remarks = entry
     SourceFileRenderer(source_dir, output_dir, filename, no_highlight).render(remarks)
 
@@ -322,6 +323,7 @@ def generate_report(
     max_hottest_remarks_on_index,
     num_jobs,
     should_print_progress,
+    demangler,
 ):
     try:
         os.makedirs(output_dir)
@@ -369,7 +371,7 @@ def generate_report(
     )
 
     _render_file_bound = functools.partial(
-        _render_file, source_dir, output_dir, context, no_highlight
+        _render_file, source_dir, output_dir, context, no_highlight, demangler
     )
     if should_print_progress:
         print("Rendering HTML files...")
@@ -424,8 +426,8 @@ def main():
     )
     parser.add_argument(
         "--demangler",
-        help="Set the demangler to be used (defaults to %s)"
-        % optrecord.Remark.default_demangler,
+        default=optrecord.Remark.default_demangler,
+        help="Set the demangler to be used (defaults to %(default)s)",
     )
 
     parser.add_argument(
@@ -440,8 +442,7 @@ def main():
     args = parser.parse_args()
 
     print_progress = not args.no_progress_indicator
-    if args.demangler:
-        optrecord.Remark.set_demangler(args.demangler)
+    optrecord.Remark.demangler_cmd = args.demangler
 
     files = optrecord.find_opt_files(*args.yaml_dirs_or_files)
     if not files:
@@ -464,6 +465,7 @@ def main():
         args.max_hottest_remarks_on_index,
         args.jobs,
         print_progress,
+        args.demangler,
     )
 
 

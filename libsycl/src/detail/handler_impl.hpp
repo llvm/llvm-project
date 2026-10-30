@@ -51,6 +51,9 @@ struct HandlerImpl {
   /// Captured kernel argument data.
   std::vector<char> MArgData;
 
+  /// Pattern used for fill and memset operations.
+  std::vector<unsigned char> MFillPattern;
+
   /// Kernel execution range in liboffload format, set by setKernelRange().
   ol_kernel_launch_size_args_t MRange = {};
 };

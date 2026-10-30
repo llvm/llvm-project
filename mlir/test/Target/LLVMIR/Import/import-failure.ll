@@ -40,8 +40,10 @@ define dso_local void @tbaa(ptr %0) {
 
 ; // -----
 
-; CHECK:      import-failure.ll
-; CHECK-SAME: error: has cycle in TBAA graph: ![[ID:.*]] = distinct !{![[ID]], i64 4, !"int"}
+; CHECK:      Cycle detected in access type parent chain
+; CHECK-NEXT:   store i32 1, ptr %{{.*}}, align 4, !tbaa ![[TAG:[0-9]+]]
+; CHECK-NEXT: ![[TAG]] = !{![[ID:[0-9]+]], ![[ID]], i64 0, i64 4}
+; CHECK-NEXT: ![[ID]] = distinct !{![[ID]], i64 4, !"int"}
 define dso_local void @tbaa(ptr %0) {
   store i32 1, ptr %0, align 4, !tbaa !2
   ret void
@@ -610,3 +612,37 @@ define void @disable_tail_calls_invalid() #0 {
 }
 
 attributes #0 = { "disable-tail-calls"="invalid" }
+
+; // -----
+
+; A diagnostic rendering past the bound is truncated, not embedded whole.
+; CHECK: error: unsupported TBAA node format: !{{[0-9]+}} = !{!{{[0-9]+}}, i64 1, !"aaa
+; CHECK-SAME: {{a+[.][.][.]}} <truncated>{{$}}
+define dso_local void @tbaa_truncated(ptr %0) {
+  store i32 1, ptr %0, align 4, !tbaa !2
+  ret void
+}
+
+!2 = !{!3, !3, i64 0, i64 4}
+!3 = !{!4, i64 4, !"int"}
+!4 = !{!5, i64 1, !"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+!5 = !{!"Simple C++ TBAA"}
+
+; // -----
+
+; Two functions warn in one import; each diagnostic numbers its own
+; function's locals, so sharing the slot tracker must not leak numbering
+; across functions.
+; CHECK: warning: unhandled metadata: ![[ID0:[0-9]+]] = distinct !{![[ID0]], i32 42} on {{.*}}%1 = load i32, ptr %p
+; CHECK: warning: unhandled metadata: ![[ID1:[0-9]+]] = distinct !{![[ID1]], i32 43} on {{.*}}%1 = load i64, ptr %q
+define void @reuse_a(ptr %p) {
+  %1 = load i32, ptr %p, !llvm.loop !0
+  ret void
+}
+define void @reuse_b(ptr %q) {
+  %1 = load i64, ptr %q, !llvm.loop !1
+  ret void
+}
+
+!0 = distinct !{!0, i32 42}
+!1 = distinct !{!1, i32 43}

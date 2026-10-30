@@ -12,6 +12,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
+#include "llvm/ExecutionEngine/Orc/InstanceSymbolGeneratorSPS.h"
 #include "llvm/ExecutionEngine/Orc/Shared/Mangler.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -1462,16 +1463,15 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
         JITDylibSearchOrder({{JD, JITDylibLookupFlags::MatchAllSymbols}}),
         std::move(Names), SymbolState::Ready,
         [&, JD](Expected<SymbolMap> Result) {
-          {
-            std::lock_guard<std::mutex> Lock(LookupMutex);
-            --Count;
-            if (Result) {
-              assert(!CompoundResult.count(JD) &&
-                     "Duplicate JITDylib in lookup?");
-              CompoundResult[JD] = std::move(*Result);
-            } else
-              CompoundErr =
-                  joinErrors(std::move(CompoundErr), Result.takeError());
+          std::lock_guard<std::mutex> Lock(LookupMutex);
+          --Count;
+          if (Result) {
+            assert(!CompoundResult.count(JD) &&
+                   "Duplicate JITDylib in lookup?");
+            CompoundResult[JD] = std::move(*Result);
+          } else {
+            CompoundErr =
+                joinErrors(std::move(CompoundErr), Result.takeError());
           }
           CV.notify_one();
         },
@@ -1562,6 +1562,25 @@ ExecutionSession::ExecutionSession(std::unique_ptr<ExecutorProcessControl> EPC)
   // Can't fail: BootstrapJD is a new, empty JD and the BootstrapSymbols
   // variable is a map, so can't contain duplicates.
   cantFail(BootstrapJD.define(absoluteSymbols(std::move(BootstrapSymbols))));
+
+  // If the executor provides the ORC runtime's instance-symbol lookup then
+  // make instance symbols available via the bootstrap JITDylib.
+  //
+  // TODO: Bind the lookup proxy with a weak lookupAndApply in BootstrapJD,
+  //       rather than searching the bootstrap symbols map. That isn't safe
+  //       yet: the blocking lookup materializes BootstrapJD's absolute
+  //       symbols via a task, so it would hang with a dispatcher that defers
+  //       tasks. To fix this we should add a version of absoluteSymbols that
+  //       is guaranteed to inject definitions directly into the symbol table
+  //       without spawning a task, and guarantee that blocking lookups return
+  //       without dispatching if all symbols are already fully materialized.
+  Mangler Mangle(getTargetTriple());
+  auto &BootstrapSymbolsMap = this->EPC->getBootstrapSymbolsMap();
+  auto LookupFnI = BootstrapSymbolsMap.find(
+      Mangle.mangledCopy(rt::sps_ci::SessionLookupInstanceSymbols::Name));
+  if (LookupFnI != BootstrapSymbolsMap.end())
+    BootstrapJD.addGenerator(
+        sps::createInstanceSymbolGenerator(LookupFnI->second));
 }
 
 ExecutionSession::~ExecutionSession() {

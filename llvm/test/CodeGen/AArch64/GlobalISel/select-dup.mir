@@ -20,7 +20,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(i32) = COPY $w0
-    %dup:fpr(<4 x i32>) = G_DUP %copy(i32)
+    %dup:fpr(<4 x i32>) = G_SPLAT_VECTOR %copy(i32)
     $q0 = COPY %dup(<4 x i32>)
     RET_ReallyLR implicit $q0
 
@@ -42,7 +42,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(i64) = COPY $x0
-    %dup:fpr(<2 x i64>) = G_DUP %copy(i64)
+    %dup:fpr(<2 x i64>) = G_SPLAT_VECTOR %copy(i64)
     $q0 = COPY %dup(<2 x i64>)
     RET_ReallyLR implicit $q0
 
@@ -64,7 +64,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(i32) = COPY $w0
-    %dup:fpr(<2 x i32>) = G_DUP %copy(i32)
+    %dup:fpr(<2 x i32>) = G_SPLAT_VECTOR %copy(i32)
     $d0 = COPY %dup(<2 x i32>)
     RET_ReallyLR implicit $d0
 
@@ -89,7 +89,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(i32) = COPY $s0
-    %dup:fpr(<4 x i32>) = G_DUP %copy(i32)
+    %dup:fpr(<4 x i32>) = G_SPLAT_VECTOR %copy(i32)
     $q0 = COPY %dup(<4 x i32>)
     RET_ReallyLR implicit $q0
 
@@ -113,7 +113,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(i64) = COPY $d0
-    %dup:fpr(<2 x i64>) = G_DUP %copy(i64)
+    %dup:fpr(<2 x i64>) = G_SPLAT_VECTOR %copy(i64)
     $q0 = COPY %dup(<2 x i64>)
     RET_ReallyLR implicit $q0
 
@@ -137,7 +137,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:fpr(i32) = COPY $s0
-    %dup:fpr(<2 x i32>) = G_DUP %copy(i32)
+    %dup:fpr(<2 x i32>) = G_SPLAT_VECTOR %copy(i32)
     $d0 = COPY %dup(<2 x i32>)
     RET_ReallyLR implicit $d0
 
@@ -162,7 +162,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:fpr(i16) = COPY $h0
-    %dup:fpr(<4 x i16>) = G_DUP %copy(i16)
+    %dup:fpr(<4 x i16>) = G_SPLAT_VECTOR %copy(i16)
     $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 ...
@@ -183,7 +183,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(i32) = COPY $w0
-    %dup:fpr(<4 x i16>) = G_DUP %copy(i32)
+    %dup:fpr(<4 x i16>) = G_SPLAT_VECTOR %copy(i32)
     $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 
@@ -207,7 +207,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:fpr(i16) = COPY $h0
-    %dup:fpr(<8 x i16>) = G_DUP %copy(i16)
+    %dup:fpr(<8 x i16>) = G_SPLAT_VECTOR %copy(i16)
     $q0 = COPY %dup(<8 x i16>)
     RET_ReallyLR implicit $q0
 
@@ -229,7 +229,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(i32) = COPY $w0
-    %dup:fpr(<8 x i16>) = G_DUP %copy(i32)
+    %dup:fpr(<8 x i16>) = G_SPLAT_VECTOR %copy(i32)
     $q0 = COPY %dup(<8 x i16>)
     RET_ReallyLR implicit $q0
 
@@ -252,7 +252,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(i32) = COPY $w0
     %trunc:gpr(i16) = G_TRUNC %copy
-    %dup:fpr(<8 x i16>) = G_DUP %trunc(i16)
+    %dup:fpr(<8 x i16>) = G_SPLAT_VECTOR %trunc(i16)
     $q0 = COPY %dup(<8 x i16>)
     RET_ReallyLR implicit $q0
 
@@ -275,7 +275,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(i32) = COPY $w0
     %trunc:gpr(i16) = G_TRUNC %copy
-    %dup:fpr(<4 x i16>) = G_DUP %trunc(i16)
+    %dup:fpr(<4 x i16>) = G_SPLAT_VECTOR %trunc(i16)
     $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 
@@ -297,7 +297,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(i32) = COPY $w0
-    %dup:fpr(<8 x i8>) = G_DUP %copy(i32)
+    %dup:fpr(<8 x i8>) = G_SPLAT_VECTOR %copy(i32)
     $d0 = COPY %dup(<8 x i8>)
     RET_ReallyLR implicit $d0
 
@@ -320,7 +320,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %copy:gpr(i32) = COPY $w0
     %trunc:gpr(i8) = G_TRUNC %copy(i32)
-    %dup:fpr(<8 x i8>) = G_DUP %trunc(i8)
+    %dup:fpr(<8 x i8>) = G_SPLAT_VECTOR %trunc(i8)
     $d0 = COPY %dup(<8 x i8>)
     RET_ReallyLR implicit $d0
 
@@ -342,7 +342,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(i32) = COPY $w0
-    %dup:fpr(<16 x i8>) = G_DUP %copy(i32)
+    %dup:fpr(<16 x i8>) = G_SPLAT_VECTOR %copy(i32)
     $q0 = COPY %dup(<16 x i8>)
     RET_ReallyLR implicit $q0
 ...
@@ -364,7 +364,7 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %copy:gpr(i32) = COPY $w0
     %trunc:gpr(i8) = G_TRUNC %copy
-    %dup:fpr(<16 x i8>) = G_DUP %trunc(i8)
+    %dup:fpr(<16 x i8>) = G_SPLAT_VECTOR %trunc(i8)
     $q0 = COPY %dup(<16 x i8>)
     RET_ReallyLR implicit $q0
 ...
@@ -389,7 +389,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY [[DUPv2i64gpr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:gpr(p0) = COPY $x0
-    %4:fpr(<2 x p0>) = G_DUP %0(p0)
+    %4:fpr(<2 x p0>) = G_SPLAT_VECTOR %0(p0)
     $q0 = COPY %4(<2 x p0>)
     RET_ReallyLR implicit $q0
 
@@ -409,7 +409,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %cst:gpr(i32) = G_CONSTANT i32 3
-    %dup:fpr(<4 x i32>) = G_DUP %cst(i32)
+    %dup:fpr(<4 x i32>) = G_SPLAT_VECTOR %cst(i32)
     $q0 = COPY %dup(<4 x i32>)
     RET_ReallyLR implicit $q0
 
@@ -429,7 +429,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %cst:gpr(i8) = G_CONSTANT i8 3
-    %dup:fpr(<8 x i8>) = G_DUP %cst(i8)
+    %dup:fpr(<8 x i8>) = G_SPLAT_VECTOR %cst(i8)
     $d0 = COPY %dup(<8 x i8>)
     RET_ReallyLR implicit $d0
 ...
@@ -452,7 +452,7 @@ body:             |
     ; CHECK-NEXT: $q0 = COPY [[LDRQui]]
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %cst:gpr(p0) = G_CONSTANT i64 3
-    %dup:fpr(<2 x p0>) = G_DUP %cst(p0)
+    %dup:fpr(<2 x p0>) = G_SPLAT_VECTOR %cst(p0)
     $q0 = COPY %dup(<2 x p0>)
     RET_ReallyLR implicit $q0
 ...
@@ -469,7 +469,7 @@ body:             |
     ; CHECK-NEXT: $d0 = COPY %dup
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %cst:gpr(i32) = G_CONSTANT i32 3
-    %dup:fpr(<4 x i16>) = G_DUP %cst(i32)
+    %dup:fpr(<4 x i16>) = G_SPLAT_VECTOR %cst(i32)
     $d0 = COPY %dup(<4 x i16>)
     RET_ReallyLR implicit $d0
 

@@ -12,23 +12,22 @@
 # Maintainers.md files in the the respective subproject directories.
 
 /libc/ @llvm/reviewers-libc
+/libc/**/*math* @lntue
+/libc/**/FPUtil/ @lntue
+/libc/**/*complex* @lntue
 /libcxx/ @llvm/reviewers-libcxx
 /libcxxabi/ @llvm/reviewers-libcxxabi
 /libunwind/ @llvm/reviewers-libunwind
 
-/llvm/include/llvm/Analysis/ScalarEvolutionPatternMatch.h @artagnon
-/llvm/include/llvm/Support/PatternMatchHelpers.h @artagnon
 /llvm/lib/Analysis/BasicAliasAnalysis.cpp @nikic
 /llvm/lib/Analysis/HashRecognize.cpp @artagnon @pfusik
 /llvm/lib/Analysis/InstructionSimplify.cpp @nikic
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
-/llvm/lib/Analysis/LoopAccessAnalysis.cpp @artagnon
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
 /llvm/lib/IR/ConstantRange.cpp @nikic
 /llvm/lib/IR/Core.cpp @nikic
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
-/llvm/lib/Transforms/Scalar/LoopIdiomRecognize.cpp @artagnon
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
 
@@ -188,7 +187,7 @@
 /mlir/**/*IRDL* @moxinilian
 
 # BOLT
-/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @labrinea @yozhu @yavtuk
 
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt

@@ -317,7 +317,6 @@ struct Context {
 
   MetaMap metamap;
 
-  Mutex report_mtx;
   atomic_uint32_t nreported;
   atomic_uint64_t last_symbolize_time_ns;
 
@@ -414,8 +413,11 @@ const char *GetObjectTypeFromTag(uptr tag);
 const char *GetReportHeaderFromTag(uptr tag);
 uptr TagFromShadowStackFrame(uptr pc);
 
-class ScopedReportBase {
+class ScopedReport {
  public:
+  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
+  ~ScopedReport();
+
   void AddMemoryAccess(uptr addr, uptr external_tag, Shadow s, Tid tid,
                        StackTrace stack, const MutexSet *mset);
   void AddStack(StackTrace stack, bool suppressable = false);
@@ -431,27 +433,17 @@ class ScopedReportBase {
 
   const ReportDesc *GetReport() const;
 
- protected:
-  ScopedReportBase(ReportType typ, uptr tag);
-  ~ScopedReportBase();
-
  private:
   ReportDesc *rep_;
   // Symbolizer makes lots of intercepted calls. If we try to process them,
   // at best it will cause deadlocks on internal mutexes.
   ScopedIgnoreInterceptors ignore_interceptors_;
-
-  ScopedReportBase(const ScopedReportBase &) = delete;
-  void operator=(const ScopedReportBase &) = delete;
-};
-
-class ScopedReport : public ScopedReportBase {
- public:
-  explicit ScopedReport(ReportType typ, uptr tag = kExternalTagNone);
-  ~ScopedReport();
-
- private:
   ScopedErrorReportLock lock_;
+
+  void AddThreadLocked(const ThreadContext* tctx, bool suppressable = false);
+
+  ScopedReport(const ScopedReport&) = delete;
+  void operator=(const ScopedReport&) = delete;
 };
 
 bool ShouldReport(ThreadState *thr, ReportType typ);

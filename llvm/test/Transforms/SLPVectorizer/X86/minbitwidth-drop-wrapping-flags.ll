@@ -40,3 +40,177 @@ entry:
   %call3 = tail call i32 (ptr, ...) null(ptr null, i32 %3)
   ret i32 0
 }
+
+define void @nneg_on_narrowed_cast_operand(ptr %p, ptr %q) {
+; CHECK-LABEL: define void @nneg_on_narrowed_cast_operand(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i16> [[TMP1]] to <4 x i12>
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i12> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    store <4 x i16> [[TMP3]], ptr [[Q]], align 2
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i16, ptr %p, i64 1
+  %p2 = getelementptr i16, ptr %p, i64 2
+  %p3 = getelementptr i16, ptr %p, i64 3
+  %a0 = load i16, ptr %p
+  %a1 = load i16, ptr %p1
+  %a2 = load i16, ptr %p2
+  %a3 = load i16, ptr %p3
+  %b0 = trunc i16 %a0 to i12
+  %b1 = trunc i16 %a1 to i12
+  %b2 = trunc i16 %a2 to i12
+  %b3 = trunc i16 %a3 to i12
+  %z0 = zext i12 %b0 to i16
+  %z1 = zext i12 %b1 to i16
+  %z2 = zext i12 %b2 to i16
+  %z3 = zext i12 %b3 to i16
+  %e0 = zext nneg i16 %z0 to i32
+  %e1 = sext i16 %z1 to i32
+  %e2 = zext nneg i16 %z2 to i32
+  %e3 = sext i16 %z3 to i32
+  %t0 = trunc i32 %e0 to i16
+  %t1 = trunc i32 %e1 to i16
+  %t2 = trunc i32 %e2 to i16
+  %t3 = trunc i32 %e3 to i16
+  %q1 = getelementptr i16, ptr %q, i64 1
+  %q2 = getelementptr i16, ptr %q, i64 2
+  %q3 = getelementptr i16, ptr %q, i64 3
+  store i16 %t0, ptr %q
+  store i16 %t1, ptr %q1
+  store i16 %t2, ptr %q2
+  store i16 %t3, ptr %q3
+  ret void
+}
+
+define void @uitofp_nneg_on_narrowed_operand(ptr %p, ptr %q) {
+; CHECK-LABEL: define void @uitofp_nneg_on_narrowed_operand(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i16> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <4 x i8> [[TMP2]] to <4 x float>
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i16, ptr %p, i64 1
+  %p2 = getelementptr i16, ptr %p, i64 2
+  %p3 = getelementptr i16, ptr %p, i64 3
+  %a0 = load i16, ptr %p
+  %a1 = load i16, ptr %p1
+  %a2 = load i16, ptr %p2
+  %a3 = load i16, ptr %p3
+  %b0 = trunc i16 %a0 to i8
+  %b1 = trunc i16 %a1 to i8
+  %b2 = trunc i16 %a2 to i8
+  %b3 = trunc i16 %a3 to i8
+  %z0 = zext i8 %b0 to i32
+  %z1 = zext i8 %b1 to i32
+  %z2 = zext i8 %b2 to i32
+  %z3 = zext i8 %b3 to i32
+  %f0 = uitofp nneg i32 %z0 to float
+  %f1 = uitofp nneg i32 %z1 to float
+  %f2 = uitofp nneg i32 %z2 to float
+  %f3 = uitofp nneg i32 %z3 to float
+  %q1 = getelementptr float, ptr %q, i64 1
+  %q2 = getelementptr float, ptr %q, i64 2
+  %q3 = getelementptr float, ptr %q, i64 3
+  store float %f0, ptr %q
+  store float %f1, ptr %q1
+  store float %f2, ptr %q2
+  store float %f3, ptr %q3
+  ret void
+}
+
+define void @trunc_nuw_nsw_on_narrowed_result(ptr %p, ptr %q) {
+; CHECK-LABEL: define void @trunc_nuw_nsw_on_narrowed_result(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i32> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[TMP2]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    store <4 x i8> [[TMP3]], ptr [[Q]], align 1
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i32, ptr %p, i64 1
+  %p2 = getelementptr i32, ptr %p, i64 2
+  %p3 = getelementptr i32, ptr %p, i64 3
+  %a0 = load i32, ptr %p
+  %a1 = load i32, ptr %p1
+  %a2 = load i32, ptr %p2
+  %a3 = load i32, ptr %p3
+  %t0 = trunc nuw nsw i32 %a0 to i16
+  %t1 = trunc nuw nsw i32 %a1 to i16
+  %t2 = trunc nuw nsw i32 %a2 to i16
+  %t3 = trunc nuw nsw i32 %a3 to i16
+  %s0 = add i16 %t0, 1
+  %s1 = add i16 %t1, 2
+  %s2 = add i16 %t2, 3
+  %s3 = add i16 %t3, 4
+  %r0 = trunc i16 %s0 to i8
+  %r1 = trunc i16 %s1 to i8
+  %r2 = trunc i16 %s2 to i8
+  %r3 = trunc i16 %s3 to i8
+  %q1 = getelementptr i8, ptr %q, i64 1
+  %q2 = getelementptr i8, ptr %q, i64 2
+  %q3 = getelementptr i8, ptr %q, i64 3
+  store i8 %r0, ptr %q
+  store i8 %r1, ptr %q1
+  store i8 %r2, ptr %q2
+  store i8 %r3, ptr %q3
+  ret void
+}
+
+define void @trunc_nuw_nsw_on_narrowed_source(ptr %p, ptr %r, ptr %q, ptr %e) {
+; CHECK-LABEL: define void @trunc_nuw_nsw_on_narrowed_source(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]], ptr [[E:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[P]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, ptr [[R]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <4 x i16> [[TMP2]] to <4 x i32>
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc <4 x i32> [[TMP5]] to <4 x i16>
+; CHECK-NEXT:    store <4 x i16> [[TMP6]], ptr [[Q]], align 2
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP5]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    store i64 [[TMP8]], ptr [[E]], align 8
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i16, ptr %p, i64 1
+  %p2 = getelementptr inbounds i16, ptr %p, i64 2
+  %p3 = getelementptr inbounds i16, ptr %p, i64 3
+  %l0 = load i16, ptr %p, align 2
+  %l1 = load i16, ptr %p1, align 2
+  %l2 = load i16, ptr %p2, align 2
+  %l3 = load i16, ptr %p3, align 2
+  %r1 = getelementptr inbounds i16, ptr %r, i64 1
+  %r2 = getelementptr inbounds i16, ptr %r, i64 2
+  %r3 = getelementptr inbounds i16, ptr %r, i64 3
+  %m0 = load i16, ptr %r, align 2
+  %m1 = load i16, ptr %r1, align 2
+  %m2 = load i16, ptr %r2, align 2
+  %m3 = load i16, ptr %r3, align 2
+  %z0 = zext i16 %l0 to i64
+  %z1 = zext i16 %l1 to i64
+  %z2 = zext i16 %l2 to i64
+  %z3 = zext i16 %l3 to i64
+  %y0 = zext i16 %m0 to i64
+  %y1 = zext i16 %m1 to i64
+  %y2 = zext i16 %m2 to i64
+  %y3 = zext i16 %m3 to i64
+  %a0 = add i64 %z0, %y0
+  %a1 = add i64 %z1, %y1
+  %a2 = add i64 %z2, %y2
+  %a3 = add i64 %z3, %y3
+  %t0 = trunc nuw nsw i64 %a0 to i16
+  %t1 = trunc nuw nsw i64 %a1 to i16
+  %t2 = trunc nuw nsw i64 %a2 to i16
+  %t3 = trunc nuw nsw i64 %a3 to i16
+  %q1 = getelementptr inbounds i16, ptr %q, i64 1
+  %q2 = getelementptr inbounds i16, ptr %q, i64 2
+  %q3 = getelementptr inbounds i16, ptr %q, i64 3
+  store i16 %t0, ptr %q, align 2
+  store i16 %t1, ptr %q1, align 2
+  store i16 %t2, ptr %q2, align 2
+  store i16 %t3, ptr %q3, align 2
+  store i64 %a2, ptr %e, align 8
+  ret void
+}

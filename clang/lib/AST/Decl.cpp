@@ -32,6 +32,7 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/Redeclarable.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
@@ -2268,7 +2269,7 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
       return Definition;
-    if (!isOutOfLine() && isInline())
+    if (!isOutOfLine() && (isInline() || hasDefiningAttr()))
       return Definition;
     return DeclarationOnly;
   }
@@ -2309,16 +2310,21 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   if (isSingleLineLanguageLinkage(*this))
     return DeclarationOnly;
 
-  // C99 6.9.2p2:
-  //   A declaration of an object that has file scope without an initializer,
-  //   and without a storage class specifier or the scs 'static', constitutes
-  //   a tentative definition.
-  // No such thing in C++.
-  if (!C.getLangOpts().CPlusPlus && isFileVarDecl())
+  // C23 6.9.3p2:
+  //   A declaration of an identifier for an object that has file scope
+  //   without an initializer, and without the storage-class specifier extern
+  //   or thread_local, constitutes a tentative definition.
+  // In C23 and later, file-scope thread_local / _Thread_local / __thread
+  // declarations without initializers are full external definitions
+  // (C23 6.9.3p1). Pre-C23 standards allowed tentative TLS definitions, so we
+  // preserve that behavior in earlier language modes.
+  if (!C.getLangOpts().CPlusPlus && isFileVarDecl() &&
+      (getTLSKind() == TLS_None || !C.getLangOpts().C23))
     return TentativeDefinition;
 
-  // What's left is (in C, block-scope) declarations without initializers or
-  // external storage. These are definitions.
+  // What's left is (in C) block-scope declarations and, in C23, file-scope
+  // thread_local declarations without initializers or external storage. These
+  // are definitions.
   return Definition;
 }
 
@@ -2400,7 +2406,7 @@ Expr *VarDecl::getInit() {
 }
 
 Stmt **VarDecl::getInitAddress() {
-  if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
+  if (auto *ES = dyn_cast<EvaluatedStmt *>(Init))
     return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
@@ -2553,11 +2559,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
 }
 
 const APValue *VarDecl::evaluateValue() const {
-  return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
+  return evaluateValueImpl(/*Notes=*/nullptr, /*SProxy=*/nullptr,
+                           hasConstantInitialization());
 }
 
 const APValue *
 VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           SemaProxy *SProxy,
                            bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
@@ -2582,8 +2590,15 @@ VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
   Expr::EvalResult EStatus;
   EStatus.Diag = Notes;
   EStatus.ExtendedDiag = &MSWarning;
+
+  // VarDecl::evaluateValue is used in a great many places, but we only want to
+  // allow AST mutation during the initial check for constant initialization.
   bool Result =
-      Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
+      (SProxy && IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
+          ? Init->EvaluateAsMandatedConstantInitializer(EStatus, Ctx, *SProxy,
+                                                        this)
+          : Init->EvaluateAsInitializer(Ctx, this, EStatus,
+                                        IsConstantInitialization);
   Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
@@ -2653,7 +2668,7 @@ bool VarDecl::hasConstantInitialization() const {
 }
 
 bool VarDecl::checkForConstantInitialization(
-    SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+    SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SProxy) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
   // If we ask for the value before we know whether we have a constant
   // initializer, we can compute the wrong value (for example, due to
@@ -2668,7 +2683,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(&Notes, true) && Notes.empty();
+      evaluateValueImpl(&Notes, &SProxy, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
@@ -2712,7 +2727,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
   if (auto *VDTemplSpec = dyn_cast<VarTemplateSpecializationDecl>(VD)) {
     if (isTemplateInstantiation(VDTemplSpec->getTemplateSpecializationKind())) {
       auto From = VDTemplSpec->getInstantiatedFrom();
-      if (auto *VTD = From.dyn_cast<VarTemplateDecl *>()) {
+      if (auto *VTD = dyn_cast<VarTemplateDecl *>(From)) {
         while (!VTD->isMemberSpecialization()) {
           auto *NewVTD = VTD->getInstantiatedFromMemberTemplate();
           if (!NewVTD)
@@ -2722,7 +2737,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
         return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
-              From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
+              dyn_cast<VarTemplatePartialSpecializationDecl *>(From)) {
         while (!VTPSD->isMemberSpecialization()) {
           auto *NewVTPSD = VTPSD->getInstantiatedFromMember();
           if (!NewVTPSD)
@@ -2867,8 +2882,6 @@ CharUnits VarDecl::getFlexibleArrayInitChars(const ASTContext &Ctx) const {
 
 MemberSpecializationInfo *VarDecl::getMemberSpecializationInfo() const {
   if (isStaticDataMember())
-    // FIXME: Remove ?
-    // return getASTContext().getInstantiatedFromStaticDataMember(this);
     return dyn_cast_if_present<MemberSpecializationInfo *>(
         getASTContext().getTemplateOrSpecializationInfo(this));
   return nullptr;
@@ -3870,6 +3883,11 @@ unsigned FunctionDecl::getNumParams() const {
   return FPT ? FPT->getNumParams() : 0;
 }
 
+unsigned FunctionDecl::getNumParamsIncludingThis() const {
+  const auto *MD = dyn_cast<CXXMethodDecl>(this);
+  return getNumParams() + (MD && MD->isImplicitObjectMemberFunction());
+}
+
 void FunctionDecl::setParams(ASTContext &C,
                              ArrayRef<ParmVarDecl *> NewParamInfo) {
   assert(!ParamInfo && "Already has param info!");
@@ -4255,7 +4273,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
   return dyn_cast_if_present<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast<NamedDecl *>(TemplateOrSpecialization));
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {
@@ -4571,12 +4589,13 @@ bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
 }
 
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
-  if (FunctionTemplateSpecializationInfo *FTSInfo
-        = TemplateOrSpecialization.dyn_cast<
-                                        FunctionTemplateSpecializationInfo*>())
+  if (FunctionTemplateSpecializationInfo *FTSInfo =
+          dyn_cast_if_present<FunctionTemplateSpecializationInfo *>(
+              TemplateOrSpecialization))
     return FTSInfo->getPointOfInstantiation();
   if (MemberSpecializationInfo *MSInfo =
-          TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
+          dyn_cast_if_present<MemberSpecializationInfo *>(
+              TemplateOrSpecialization))
     return MSInfo->getPointOfInstantiation();
 
   return SourceLocation();

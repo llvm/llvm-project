@@ -21,8 +21,8 @@ maks@meta.com (email), [maksfb](https://github.com/maksfb) (GitHub)
 Alexey Moksyakov
 moksyakov.alexey@huawei.com (email), [yavtuk](https://github.com/yavtuk) (GitHub)
 
-Paschalis Mpeis
-paschalis.mpeis@arm.com (email), [paschalis-mpeis](https://github.com/paschalis-mpeis) (GitHub)
+Alexandros Lamprineas
+alexandros.lamprineas@arm.com (email), [labrinea](https://github.com/labrinea) (GitHub)
 
 ### X86 Backend
 
@@ -42,8 +42,8 @@ aaupov@meta.com (email), [aaupov](https://github.com/aaupov) (GitHub)
 Amir Ayupov
 aaupov@meta.com (email), [aaupov](https://github.com/aaupov) (GitHub)
 
-Paschalis Mpeis
-paschalis.mpeis@arm.com (email), [paschalis-mpeis](https://github.com/paschalis-mpeis) (GitHub)
+Asher Dobrescu
+ash.dobrescu@arm.com (email), [Asher8118](https://github.com/Asher8118) (GitHub)
 
 ### Gadget Scanner
 
@@ -61,6 +61,9 @@ Alexander Yermolovich
 ### Former Maintainers
 
 The following people have graciously spent time performing maintainership duties but are no longer active in that role. Thank you for all your help with the success of the project!
+
+Paschalis Mpeis
+[paschalis-mpeis](https://github.com/paschalis-mpeis) (GitHub)
 
 Rafael Auler
 [rafaelauler](https://github.com/rafaelauler) (GitHub)

@@ -33,8 +33,12 @@ getDeviceKernelInfo(std::string_view KernelName) {
 
 DeviceKernelInfo &
 ProgramAndKernelManager::getDeviceKernelInfo(std::string_view KernelName) {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
   auto It = MDeviceKernelInfoMap.find(KernelName);
-  assert(It != MDeviceKernelInfoMap.end());
+  if (It == MDeviceKernelInfoMap.end())
+    throw sycl::exception(sycl::make_error_code(sycl::errc::runtime),
+                          "No registered device image provides kernel " +
+                              std::string(KernelName));
   return It->second;
 }
 
@@ -44,8 +48,13 @@ void ProgramAndKernelManager::releaseResources() {
   // platform cache, which is static. Programs must not be left for
   // their destructors to release, because olShutDown() follows this call.
   for (const std::weak_ptr<ContextImpl> &WeakContext : MContextsWithPrograms) {
-    if (std::shared_ptr<ContextImpl> Context = WeakContext.lock())
+    if (std::shared_ptr<ContextImpl> Context = WeakContext.lock()) {
+      // Every DeviceKernelInfo below is about to be destroyed: make sure this
+      // context, if it outlives this call, does not keep pointers to them.
+      for (auto &[Name, Info] : MDeviceKernelInfoMap)
+        Context->forgetKernelInfoCache(&Info);
       Context->releaseAllPrograms();
+    }
   }
   MContextsWithPrograms.clear();
   MDeviceKernelInfoMap.clear();
@@ -148,6 +157,12 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
     llvm::offloading::sycl::forEachSymbol(Symbols, [&](llvm::StringRef Name) {
       if (auto KernelIt = MDeviceKernelInfoMap.find(std::string_view(Name));
           KernelIt != MDeviceKernelInfoMap.end()) {
+        DeviceKernelInfo *Info = &KernelIt->second;
+        for (const std::weak_ptr<ContextImpl> &WeakContext :
+             MContextsWithPrograms) {
+          if (std::shared_ptr<ContextImpl> Context = WeakContext.lock())
+            Context->forgetKernelInfoCache(Info);
+        }
         // Clear kernel specific data by destroying its kernel info object.
         MDeviceKernelInfoMap.erase(KernelIt);
       }
@@ -158,13 +173,12 @@ void ProgramAndKernelManager::unregisterFatBin(const void *BinaryStart,
 
 static bool isImageCompatible(const DeviceImageManager &Image,
                               const DeviceImpl &Device) {
-  const llvm::object::OffloadBinary &OB = Image.getOffloadBinary();
-  if (!(OB.getTriple() == DeviceBinaryTripleSPIRV64 &&
+  if (!(Image.getTargetArch() == DeviceBinaryArchSPIRV64 &&
         Device.getBackend() == sycl::backend::level_zero))
     return false;
 
   bool IsValid{};
-  llvm::StringRef ImageBytes = OB.getImage();
+  llvm::StringRef ImageBytes = Image.getOffloadBinary().getImage();
   callAndThrow(olIsValidBinary, Device.getOLHandle(), ImageBytes.data(),
                ImageBytes.size(), &IsValid);
   return IsValid;
@@ -174,6 +188,10 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
     DeviceKernelInfo &KernelInfo, const std::shared_ptr<ContextImpl> &Context,
     DeviceImpl &Device) {
   assert(Context && "Context can't be nullptr");
+
+  if (ol_symbol_handle_t CachedKernel =
+          KernelInfo.tryGetCachedKernel(Context.get(), Device.getOLHandle()))
+    return CachedKernel;
 
   std::lock_guard<std::mutex> KernelGuard(MDataCollectionMutex);
 
@@ -189,8 +207,10 @@ ol_symbol_handle_t ProgramAndKernelManager::getOrCreateKernel(
   trackContext(Context);
 
   // Lock order is MDataCollectionMutex -> ContextImpl::MProgramCacheMutex.
-  return Context->getOrCreateKernel(DeviceImage, Device.getOLHandle(),
-                                    KernelInfo.getName());
+  ol_symbol_handle_t Kernel = Context->getOrCreateKernel(
+      DeviceImage, Device.getOLHandle(), KernelInfo.getName());
+  KernelInfo.addCachedKernel(Context.get(), Device.getOLHandle(), Kernel);
+  return Kernel;
 }
 
 bool ProgramAndKernelManager::hasCompatibleImage(const DeviceImpl &Device) {

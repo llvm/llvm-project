@@ -25,6 +25,8 @@
 // CHECK-NOT:          "K"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
@@ -40,6 +42,8 @@
 // CHECK:              "K"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],

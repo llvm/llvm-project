@@ -54,6 +54,7 @@ struct InfoSectionData {
 
 class AMDGPUTargetStreamer : public MCTargetStreamer {
   AMDGPUPALMetadata PALMetadata;
+  bool AMDGCNTargetEmitted = false;
 
 protected:
   // TODO: Move HSAMetadataStream to AMDGPUTargetStreamer.
@@ -72,6 +73,17 @@ public:
   AMDGPUPALMetadata *getPALMetadata() { return &PALMetadata; }
 
   virtual void EmitDirectiveAMDGCNTarget(){};
+
+  /// Emit the .amdgcn_target directive unless it has already been emitted to
+  /// this streamer. The code generator and the parsers for any inline assembly
+  /// in the module share one streamer, and the directive must appear only once
+  /// per output file.
+  void emitDirectiveAMDGCNTargetOnce() {
+    if (AMDGCNTargetEmitted)
+      return;
+    AMDGCNTargetEmitted = true;
+    EmitDirectiveAMDGCNTarget();
+  }
 
   virtual void EmitDirectiveAMDHSACodeObjectVersion(unsigned COV) {
     CodeObjectVersion = COV;
@@ -130,7 +142,6 @@ public:
 
   virtual void emitAMDGPUInfo(const AMDGPU::InfoSectionData &Data) {}
 
-  static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
 
   const std::optional<AMDGPU::TargetID> &getTargetID() const {

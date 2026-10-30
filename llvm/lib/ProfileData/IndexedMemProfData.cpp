@@ -54,22 +54,6 @@ static uint64_t writeMemProfRecords(
   return RecordTableGenerator.Emit(OS.OS, RecordWriter);
 }
 
-// Serialize MemProfFrameData.  Return FrameTableOffset.
-static uint64_t writeMemProfFrames(
-    ProfOStream &OS,
-    llvm::MapVector<memprof::FrameId, memprof::Frame> &MemProfFrameData) {
-  OnDiskChainedHashTableGenerator<memprof::FrameWriterTrait>
-      FrameTableGenerator;
-  for (auto &[FrameId, Frame] : MemProfFrameData) {
-    // Insert the key (frame id) and value (frame contents).
-    FrameTableGenerator.insert(FrameId, Frame);
-  }
-  // Release the memory of this MapVector as it is no longer needed.
-  MemProfFrameData.clear();
-
-  return FrameTableGenerator.Emit(OS.OS);
-}
-
 // Serialize MemProfFrameData.  Return the mapping from FrameIds to their
 // indexes within the frame array.
 static llvm::DenseMap<memprof::FrameId, memprof::LinearFrameId>
@@ -127,20 +111,6 @@ writeMemProfFrameArray(
   return MemProfFrameIndexes;
 }
 
-static uint64_t writeMemProfCallStacks(
-    ProfOStream &OS,
-    llvm::MapVector<memprof::CallStackId, llvm::SmallVector<memprof::FrameId>>
-        &MemProfCallStackData) {
-  OnDiskChainedHashTableGenerator<memprof::CallStackWriterTrait>
-      CallStackTableGenerator;
-  for (auto &[CSId, CallStack] : MemProfCallStackData)
-    CallStackTableGenerator.insert(CSId, CallStack);
-  // Release the memory of this vector as it is no longer needed.
-  MemProfCallStackData.clear();
-
-  return CallStackTableGenerator.Emit(OS.OS);
-}
-
 static llvm::DenseMap<memprof::CallStackId, memprof::LinearCallStackId>
 writeMemProfCallStackArray(
     ProfOStream &OS,
@@ -165,56 +135,6 @@ writeMemProfCallStackArray(
   MemProfCallStackData.clear();
 
   return MemProfCallStackIndexes;
-}
-
-// Write out MemProf Version2 as follows:
-// uint64_t Version
-// uint64_t RecordTableOffset = RecordTableGenerator.Emit
-// uint64_t FramePayloadOffset = Offset for the frame payload
-// uint64_t FrameTableOffset = FrameTableGenerator.Emit
-// uint64_t CallStackPayloadOffset = Offset for the call stack payload (NEW V2)
-// uint64_t CallStackTableOffset = CallStackTableGenerator.Emit (NEW in V2)
-// uint64_t Num schema entries
-// uint64_t Schema entry 0
-// uint64_t Schema entry 1
-// ....
-// uint64_t Schema entry N - 1
-// OnDiskChainedHashTable MemProfRecordData
-// OnDiskChainedHashTable MemProfFrameData
-// OnDiskChainedHashTable MemProfCallStackData (NEW in V2)
-static Error writeMemProfV2(ProfOStream &OS,
-                            memprof::IndexedMemProfData &MemProfData,
-                            bool MemProfFullSchema) {
-  OS.write(memprof::Version2);
-  uint64_t HeaderUpdatePos = OS.tell();
-  OS.write(0ULL); // Reserve space for the memprof record table offset.
-  OS.write(0ULL); // Reserve space for the memprof frame payload offset.
-  OS.write(0ULL); // Reserve space for the memprof frame table offset.
-  OS.write(0ULL); // Reserve space for the memprof call stack payload offset.
-  OS.write(0ULL); // Reserve space for the memprof call stack table offset.
-
-  auto Schema = memprof::getHotColdSchema();
-  if (MemProfFullSchema)
-    Schema = memprof::getFullSchema();
-  writeMemProfSchema(OS, Schema);
-
-  uint64_t RecordTableOffset =
-      writeMemProfRecords(OS, MemProfData.Records, &Schema, memprof::Version2);
-
-  uint64_t FramePayloadOffset = OS.tell();
-  uint64_t FrameTableOffset = writeMemProfFrames(OS, MemProfData.Frames);
-
-  uint64_t CallStackPayloadOffset = OS.tell();
-  uint64_t CallStackTableOffset =
-      writeMemProfCallStacks(OS, MemProfData.CallStacks);
-
-  uint64_t Header[] = {
-      RecordTableOffset,      FramePayloadOffset,   FrameTableOffset,
-      CallStackPayloadOffset, CallStackTableOffset,
-  };
-  OS.patch({{HeaderUpdatePos, Header}});
-
-  return Error::success();
 }
 
 static Error writeMemProfRadixTreeBased(
@@ -316,8 +236,6 @@ Error writeMemProf(
     std::unique_ptr<memprof::DataAccessProfData> DataAccessProfileData,
     std::unique_ptr<memprof::MemProfSummary> MemProfSum) {
   switch (MemProfVersionRequested) {
-  case memprof::Version2:
-    return writeMemProfV2(OS, MemProfData, MemProfFullSchema);
   case memprof::Version3:
     return writeMemProfV3(OS, MemProfData, MemProfFullSchema);
   case memprof::Version4:
@@ -332,58 +250,6 @@ Error writeMemProf(
               "requires version between {} and {}, inclusive",
               MemProfVersionRequested, memprof::MinimumSupportedVersion,
               memprof::MaximumSupportedVersion));
-}
-
-Error IndexedMemProfReader::deserializeV2(const unsigned char *Start,
-                                          const unsigned char *Ptr) {
-  // The value returned from RecordTableGenerator.Emit.
-  const uint64_t RecordTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The offset in the stream right before invoking
-  // FrameTableGenerator.Emit.
-  const uint64_t FramePayloadOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  // The value returned from FrameTableGenerator.Emit.
-  const uint64_t FrameTableOffset =
-      support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-
-  // The offset in the stream right before invoking
-  // CallStackTableGenerator.Emit.
-  uint64_t CallStackPayloadOffset = 0;
-  // The value returned from CallStackTableGenerator.Emit.
-  uint64_t CallStackTableOffset = 0;
-  if (Version >= memprof::Version2) {
-    CallStackPayloadOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-    CallStackTableOffset =
-        support::endian::readNext<uint64_t, llvm::endianness::little>(Ptr);
-  }
-
-  // Read the schema.
-  auto SchemaOr = memprof::readMemProfSchema(Ptr);
-  if (!SchemaOr)
-    return SchemaOr.takeError();
-  Schema = SchemaOr.get();
-
-  // Now initialize the table reader with a pointer into data buffer.
-  MemProfRecordTable.reset(MemProfRecordHashTable::Create(
-      /*Buckets=*/Start + RecordTableOffset,
-      /*Payload=*/Ptr,
-      /*Base=*/Start, memprof::RecordLookupTrait(Version, Schema)));
-
-  // Initialize the frame table reader with the payload and bucket offsets.
-  MemProfFrameTable.reset(MemProfFrameHashTable::Create(
-      /*Buckets=*/Start + FrameTableOffset,
-      /*Payload=*/Start + FramePayloadOffset,
-      /*Base=*/Start));
-
-  if (Version >= memprof::Version2)
-    MemProfCallStackTable.reset(MemProfCallStackHashTable::Create(
-        /*Buckets=*/Start + CallStackTableOffset,
-        /*Payload=*/Start + CallStackPayloadOffset,
-        /*Base=*/Start));
-
-  return Error::success();
 }
 
 Error IndexedMemProfReader::deserializeRadixTreeBased(
@@ -467,10 +333,6 @@ Error IndexedMemProfReader::deserialize(const unsigned char *Start,
   }
 
   switch (Version) {
-  case memprof::Version2:
-    if (Error E = deserializeV2(Start, Ptr))
-      return E;
-    break;
   case memprof::Version3:
   case memprof::Version4:
     // V3 and V4 share the same high-level structure (radix tree, linear IDs).

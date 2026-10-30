@@ -7,8 +7,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantPos
   ; CHECK-NEXT: %0:_ FPClasses:(pnorm) SignBitKnown:0
-    %0:_(s32) = G_FCONSTANT float 1.0
-    $w0 = COPY %0(s32)
+    %0:_(f32) = G_FCONSTANT float 1.0
+    $w0 = COPY %0(f32)
 ...
 ---
 name:            FConstantNeg
@@ -16,8 +16,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantNeg
   ; CHECK-NEXT: %0:_ FPClasses:(nnorm) SignBitKnown:1
-    %0:_(s32) = G_FCONSTANT float -1.0
-    $w0 = COPY %0(s32)
+    %0:_(f32) = G_FCONSTANT float -1.0
+    $w0 = COPY %0(f32)
 ...
 ---
 name:            FConstantPosZero
@@ -25,8 +25,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantPosZero
   ; CHECK-NEXT: %0:_ FPClasses:(pzero) SignBitKnown:0
-    %0:_(s32) = G_FCONSTANT float 0.0
-    $w0 = COPY %0(s32)
+    %0:_(f32) = G_FCONSTANT float 0.0
+    $w0 = COPY %0(f32)
 ...
 ---
 name:            FConstantNegZero
@@ -34,8 +34,8 @@ body:             |
   bb.0:
   ; CHECK-LABEL: name: @FConstantNegZero
   ; CHECK-NEXT: %0:_ FPClasses:(nzero) SignBitKnown:1
-    %0:_(s32) = G_FCONSTANT float -0.0
-    $w0 = COPY %0(s32)
+    %0:_(f32) = G_FCONSTANT float -0.0
+    $w0 = COPY %0(f32)
 ...
 ---
 name:            FAbs
@@ -44,9 +44,9 @@ body:             |
   ; CHECK-LABEL: name: @FAbs
   ; CHECK-NEXT: %0:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %1:_ FPClasses:(nan pinf pzero psub pnorm) SignBitKnown:0
-    %0:_(s32) = COPY $s0
-    %1:_(s32) = G_FABS %0
-    $s0 = COPY %1(s32)
+    %0:_(f32) = COPY $s0
+    %1:_(f32) = G_FABS %0
+    $s0 = COPY %1(f32)
 ...
 ---
 name:            FNeg
@@ -55,9 +55,9 @@ body:             |
   ; CHECK-LABEL: name: @FNeg
   ; CHECK-NEXT: %0:_ FPClasses:(pnorm) SignBitKnown:0
   ; CHECK-NEXT: %1:_ FPClasses:(nnorm) SignBitKnown:1
-    %0:_(s32) = G_FCONSTANT float 1.0
-    %1:_(s32) = G_FNEG %0
-    $s0 = COPY %1(s32)
+    %0:_(f32) = G_FCONSTANT float 1.0
+    %1:_(f32) = G_FNEG %0
+    $s0 = COPY %1(f32)
 ...
 ---
 name:            FSqrt
@@ -66,7 +66,7 @@ body:             |
   ; CHECK-LABEL: name: @FSqrt
   ; CHECK-NEXT: %0:_ FPClasses:(all) SignBitKnown:?
   ; CHECK-NEXT: %1:_ FPClasses:(nan pinf zero pnorm) SignBitKnown:?
-    %0:_(s32) = COPY $s0
-    %1:_(s32) = G_FSQRT %0
-    $s0 = COPY %1(s32)
+    %0:_(f32) = COPY $s0
+    %1:_(f32) = G_FSQRT %0
+    $s0 = COPY %1(f32)
 ...

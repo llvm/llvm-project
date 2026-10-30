@@ -2934,3 +2934,34 @@ func.func @test_cheap_nested_omp_global_scalar(%arg0: !fir.ref<f64>) {
   }
   return
 }
+
+// -----
+// A sibling internal call may modify the captured SAVE global.
+// Its load must remain in the loop after the call.
+fir.global internal @_QFcapturedEx : i32
+
+func.func private @_QFcapturedPaccumulate() -> i32 attributes {fir.host_symbol = @_QPcaptured} {
+  %c0 = arith.constant 0 : i32
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %addr = fir.address_of(@_QFcapturedEx) : !fir.ref<i32>
+  %x = fir.declare %addr uniq_name("_QFcapturedEx") fortran_attrs<internal_assoc> : (!fir.ref<i32>) -> !fir.ref<i32>
+  %sum = fir.do_loop %i = %c1 to %c3 step %c1 iter_args(%s = %c0) -> (i32) {
+    fir.call @_QFcapturedPbump() : () -> ()
+    %value = fir.load %x : !fir.ref<i32>
+    %next = arith.addi %s, %value : i32
+    fir.result %next : i32
+  }
+  return %sum : i32
+}
+func.func private @_QFcapturedPbump() attributes {fir.host_symbol = @_QPcaptured}
+
+// CHECK-LABEL: func.func private @_QFcapturedPaccumulate()
+// CHECK: %[[X:[^ ]+]] = fir.declare {{.*}}uniq_name("_QFcapturedEx") fortran_attrs<internal_assoc>
+// CHECK: fir.do_loop
+// CHECK-NOT: {{^ *[}]}}
+// CHECK: fir.call @_QFcapturedPbump()
+// CHECK-NOT: {{^ *[}]}}
+// CHECK: fir.load %[[X]] : !fir.ref<i32>
+// CHECK: fir.result
+// CHECK: {{^ *[}]}}

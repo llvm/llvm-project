@@ -74,12 +74,19 @@ entry:
 }
 
 define <16 x i8> @test4(ptr nocapture noundef readonly %a, ptr nocapture noundef readonly %b) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ld1r { v1.8b }, [x0]
-; CHECK-NEXT:    ld1r { v0.8b }, [x1]
-; CHECK-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test4:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ld1r { v1.8b }, [x0]
+; CHECK-SD-NEXT:    ld1r { v0.8b }, [x1]
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test4:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ld1r { v0.8b }, [x1]
+; CHECK-GI-NEXT:    ld1r { v1.8b }, [x0]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i8, ptr %a, align 1
   %1 = insertelement <8 x i8> poison, i8 %0, i64 0
@@ -259,12 +266,14 @@ define <8 x i8> @test11(ptr nocapture noundef readonly %a, ptr nocapture noundef
 ;
 ; CHECK-GI-LABEL: test11:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ld1r { v0.8b }, [x0]
-; CHECK-GI-NEXT:    ld1r { v1.8b }, [x1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI10_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    ldr b0, [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[1], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[2], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[3], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[4], [x1]
+; CHECK-GI-NEXT:    ld1 { v0.b }[5], [x1]
+; CHECK-GI-NEXT:    ld1 { v0.b }[6], [x0]
+; CHECK-GI-NEXT:    ld1 { v0.b }[7], [x0]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -292,10 +301,10 @@ define <4 x i32> @test12(ptr nocapture noundef readonly %a, ptr nocapture nounde
 ; CHECK-GI-LABEL: test12:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    ld1r { v0.2s }, [x0]
-; CHECK-GI-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-GI-NEXT:    ld1r { v1.2s }, [x1]
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b, v1.16b }, v2.16b
+; CHECK-GI-NEXT:    zip1 v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    zip1 v0.4s, v2.4s, v0.4s
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[1]
 ; CHECK-GI-NEXT:    ret
 entry:
   %0 = load i32, ptr %a, align 1
