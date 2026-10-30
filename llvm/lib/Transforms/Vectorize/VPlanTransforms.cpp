@@ -4550,13 +4550,6 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
     return L;
   }
 
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R)) {
-    assert(RepR->isSingleScalar() && RepR->getOpcode() == Instruction::Load &&
-           "must be a single scalar load");
-    NarrowedOps.insert(RepR);
-    return RepR;
-  }
-
   auto *WideLoad = cast<VPWidenLoadRecipe>(R);
   VPValue *PtrOp = WideLoad->getAddr();
   if (auto *VecPtr = dyn_cast<VPVectorPointerRecipe>(PtrOp))
