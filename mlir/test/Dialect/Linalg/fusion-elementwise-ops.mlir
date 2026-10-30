@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -linalg-fuse-elementwise-ops -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -linalg-fuse-elementwise-ops -canonicalize -split-input-file | FileCheck %s --check-prefix=FILL-OUTS
 
 // CHECK-DAG: [[$MAP0:#[a-zA-Z0-9_]*]] = affine_map<(d0, d1) -> (d0, d1)>
 #map0 = affine_map<(d0, d1) -> (d0, d1)>
@@ -1055,3 +1056,270 @@ module {
 // CHECK:         tensor.expand_shape
 // CHECK:         linalg.generic {{.*}}, iterator_types = ["parallel", "parallel", "parallel", "parallel", "parallel", "parallel", "reduction"]}
 // CHECK-SAME:     ins(%[[ARG0]], %[[FUSED]]#1 : tensor<1x1x2x1xf32>, tensor<4x1x1x1xf32>)
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_zero(
+// FILL-OUTS-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<16xi32>
+// FILL-OUTS-NEXT: return %[[INPUT]] : tensor<16xi32>
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_zero(%input: tensor<16xi32>) -> tensor<16xi32> {
+  %c0 = arith.constant 0 : i32
+  %e = tensor.empty() : tensor<16xi32>
+  %z = linalg.fill ins(%c0 : i32) outs(%e : tensor<16xi32>) -> tensor<16xi32>
+  %r = linalg.generic {indexing_maps = [#id, #id], iterator_types = ["parallel"]} ins(%input : tensor<16xi32>) outs(%z : tensor<16xi32>) {
+    ^bb0(%x: i32, %y: i32):
+      %a = arith.addi %x, %y : i32
+      linalg.yield %a : i32
+  } -> tensor<16xi32>
+  return %r : tensor<16xi32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_dynamic(
+// FILL-OUTS-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<?xi32>, %[[INIT:[a-zA-Z0-9_]+]]: i32
+// FILL-OUTS-NOT: linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %{{.*}}: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[INIT]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_dynamic(%input: tensor<?xi32>, %init: i32) -> tensor<?xi32> {
+  %c0 = arith.constant 0 : index
+  %n = tensor.dim %input, %c0 : tensor<?xi32>
+  %e = tensor.empty(%n) : tensor<?xi32>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<?xi32>) -> tensor<?xi32>
+  %r = linalg.generic {indexing_maps = [#id, #id], iterator_types = ["parallel"]} ins(%input : tensor<?xi32>) outs(%z : tensor<?xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<?xi32>
+  return %r : tensor<?xi32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_shared(
+// FILL-OUTS-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<16xi32>, %[[INIT:[a-zA-Z0-9_]+]]: i32
+// FILL-OUTS: %[[FILL:.*]] = linalg.fill ins(%[[INIT]] : i32)
+// FILL-OUTS: %[[EMPTY:.*]] = tensor.empty()
+// FILL-OUTS: %[[RESULT:.*]] = linalg.generic
+// FILL-OUTS-SAME: outs(%[[EMPTY]] : tensor<16xi32>)
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %{{.*}}: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[INIT]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+// FILL-OUTS: return %[[FILL]], %[[RESULT]]
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_shared(%input: tensor<16xi32>, %init: i32) -> (tensor<16xi32>, tensor<16xi32>) {
+  %e = tensor.empty() : tensor<16xi32>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<16xi32>) -> tensor<16xi32>
+  %r = linalg.generic {indexing_maps = [#id, #id], iterator_types = ["parallel"]} ins(%input : tensor<16xi32>) outs(%z : tensor<16xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<16xi32>
+  return %z, %r : tensor<16xi32>, tensor<16xi32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_memref(
+// FILL-OUTS: linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %[[ACC:[a-zA-Z0-9_]+]]: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[ACC]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_memref(%input: memref<16xi32>, %out: memref<16xi32>, %init: i32) {
+  linalg.fill ins(%init : i32) outs(%out : memref<16xi32>)
+  linalg.generic {indexing_maps = [#id, #id], iterator_types = ["parallel"]} ins(%input : memref<16xi32>) outs(%out : memref<16xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  }
+  return
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_permuted(
+// FILL-OUTS-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<2x3xi32>, %[[INIT:[a-zA-Z0-9_]+]]: i32
+// FILL-OUTS-NOT: linalg.fill
+// FILL-OUTS: %[[EMPTY:.*]] = tensor.empty() : tensor<3x2xi32>
+// FILL-OUTS: linalg.generic
+// FILL-OUTS-SAME: outs(%[[EMPTY]] : tensor<3x2xi32>)
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %{{.*}}: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[INIT]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_permuted(%input: tensor<2x3xi32>, %init: i32) -> tensor<3x2xi32> {
+  %e = tensor.empty() : tensor<3x2xi32>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<3x2xi32>) -> tensor<3x2xi32>
+  %r = linalg.generic {indexing_maps = [#identity, #transpose], iterator_types = ["parallel", "parallel"]} ins(%input : tensor<2x3xi32>) outs(%z : tensor<3x2xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<3x2xi32>
+  return %r : tensor<3x2xi32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_reduction(
+// FILL-OUTS: %[[FILL:.*]] = linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS-SAME: outs(%[[FILL]] : tensor<i32>)
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %[[ACC:[a-zA-Z0-9_]+]]: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[ACC]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_reduction(%input: tensor<16xi32>) -> tensor<i32> {
+  %c0 = arith.constant 0 : i32
+  %e = tensor.empty() : tensor<i32>
+  %z = linalg.fill ins(%c0 : i32) outs(%e : tensor<i32>) -> tensor<i32>
+  %r = linalg.generic {indexing_maps = [#id, #scalar], iterator_types = ["reduction"]} ins(%input : tensor<16xi32>) outs(%z : tensor<i32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<i32>
+  return %r : tensor<i32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_float_zero(
+// FILL-OUTS: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// FILL-OUTS-NOT: linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: f32, %{{.*}}: f32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addf %[[IN]], %[[ZERO]] : f32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : f32
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_float_zero(%input: tensor<16xf32>) -> tensor<16xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %e = tensor.empty() : tensor<16xf32>
+  %z = linalg.fill ins(%c0 : f32) outs(%e : tensor<16xf32>) -> tensor<16xf32>
+  %r = linalg.generic {indexing_maps = [#id, #id], iterator_types = ["parallel"]} ins(%input : tensor<16xf32>) outs(%z : tensor<16xf32>) {
+    ^bb0(%x: f32, %acc: f32):
+      %a = arith.addf %x, %acc : f32
+      linalg.yield %a : f32
+  } -> tensor<16xf32>
+  return %r : tensor<16xf32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_sparse(
+// FILL-OUTS: %[[FILL:.*]] = linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS-SAME: outs(%[[FILL]] : tensor<16xi32, #{{.*}}>)
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %[[ACC:[a-zA-Z0-9_]+]]: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[ACC]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#id = affine_map<(d0) -> (d0)>
+#scalar = affine_map<(d0) -> ()>
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+#compressed = #sparse_tensor.encoding<{map = (d0) -> (d0 : compressed)}>
+func.func @fold_fill_out_sparse(%input: tensor<16xi32>, %init: i32) -> tensor<16xi32, #compressed> {
+  %e = tensor.empty() : tensor<16xi32, #compressed>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<16xi32, #compressed>) -> tensor<16xi32, #compressed>
+  %r = linalg.generic {indexing_maps = [#id, #id], iterator_types = ["parallel"]} ins(%input : tensor<16xi32>) outs(%z : tensor<16xi32, #compressed>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<16xi32, #compressed>
+  return %r : tensor<16xi32, #compressed>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_permuted_dynamic(
+// FILL-OUTS-SAME: %[[INPUT:[a-zA-Z0-9_]+]]: tensor<?x?xi32>, %[[INIT:[a-zA-Z0-9_]+]]: i32
+// FILL-OUTS-NOT: linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %{{.*}}: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[INIT]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#transpose = affine_map<(d0, d1) -> (d1, d0)>
+func.func @fold_fill_out_permuted_dynamic(%input: tensor<?x?xi32>, %init: i32) -> tensor<?x?xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %m = tensor.dim %input, %c0 : tensor<?x?xi32>
+  %n = tensor.dim %input, %c1 : tensor<?x?xi32>
+  %e = tensor.empty(%n, %m) : tensor<?x?xi32>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<?x?xi32>) -> tensor<?x?xi32>
+  %r = linalg.generic {indexing_maps = [#identity, #transpose], iterator_types = ["parallel", "parallel"]} ins(%input : tensor<?x?xi32>) outs(%z : tensor<?x?xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<?x?xi32>
+  return %r : tensor<?x?xi32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_projected(
+// FILL-OUTS: %[[FILL:.*]] = linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS-SAME: outs(%[[FILL]] : tensor<2xi32>)
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %[[ACC:[a-zA-Z0-9_]+]]: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[ACC]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#identity = affine_map<(d0, d1) -> (d0, d1)>
+#projected = affine_map<(d0, d1) -> (d0)>
+func.func @fold_fill_out_projected(%input: tensor<2x3xi32>, %init: i32) -> tensor<2xi32> {
+  %e = tensor.empty() : tensor<2xi32>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<2xi32>) -> tensor<2xi32>
+  %r = linalg.generic {indexing_maps = [#identity, #projected], iterator_types = ["parallel", "parallel"]} ins(%input : tensor<2x3xi32>) outs(%z : tensor<2xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<2xi32>
+  return %r : tensor<2xi32>
+}
+
+// -----
+
+// FILL-OUTS-LABEL: func.func @fold_fill_out_partial(
+// FILL-OUTS: %[[FILL:.*]] = linalg.fill
+// FILL-OUTS: linalg.generic
+// FILL-OUTS-SAME: outs(%[[FILL]] : tensor<8xi32>)
+// FILL-OUTS: ^bb0(%[[IN:[a-zA-Z0-9_]+]]: i32, %[[ACC:[a-zA-Z0-9_]+]]: i32):
+// FILL-OUTS-NEXT: %[[SUM:.*]] = arith.addi %[[IN]], %[[ACC]] : i32
+// FILL-OUTS-NEXT: linalg.yield %[[SUM]] : i32
+#identity = affine_map<(d0) -> (d0)>
+#strided = affine_map<(d0) -> (d0 * 2)>
+func.func @fold_fill_out_partial(%input: tensor<4xi32>, %init: i32) -> tensor<8xi32> {
+  %e = tensor.empty() : tensor<8xi32>
+  %z = linalg.fill ins(%init : i32) outs(%e : tensor<8xi32>) -> tensor<8xi32>
+  %r = linalg.generic {indexing_maps = [#identity, #strided], iterator_types = ["parallel"]} ins(%input : tensor<4xi32>) outs(%z : tensor<8xi32>) {
+    ^bb0(%x: i32, %acc: i32):
+      %a = arith.addi %x, %acc : i32
+      linalg.yield %a : i32
+  } -> tensor<8xi32>
+  return %r : tensor<8xi32>
+}
