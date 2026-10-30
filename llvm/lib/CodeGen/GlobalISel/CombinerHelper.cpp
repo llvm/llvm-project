@@ -8442,8 +8442,9 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   Register V;
   bool NeedAdd = true;
   if (mi_match(Src, MRI,
-               m_OneUse(m_GOr(m_OneUse(m_GShl(m_Reg(V), m_SpecificICst(1))),
-                              m_SpecificICst(1))))) {
+               m_OneNonDBGUse(
+                   m_GOr(m_OneNonDBGUse(m_GShl(m_Reg(V), m_SpecificICst(1))),
+                         m_SpecificICst(1))))) {
     NeedAdd = false;
     Src = V;
   }
@@ -8451,10 +8452,11 @@ bool CombinerHelper::matchCtls(MachineInstr &CtlzMI,
   unsigned BitWidth = Ty.getScalarSizeInBits();
 
   Register X;
-  if (!mi_match(Src, MRI,
-                m_OneUse(m_GXor(m_Reg(X), m_OneUse(m_GAShr(
-                                              m_DeferredReg(X),
-                                              m_SpecificICst(BitWidth - 1)))))))
+  if (!mi_match(
+          Src, MRI,
+          m_OneNonDBGUse(m_GXor(
+              m_Reg(X), m_OneNonDBGUse(m_GAShr(
+                            m_DeferredReg(X), m_SpecificICst(BitWidth - 1)))))))
     return false;
 
   MatchInfo = [=](MachineIRBuilder &B) {
