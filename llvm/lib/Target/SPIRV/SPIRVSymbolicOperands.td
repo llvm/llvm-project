@@ -411,6 +411,7 @@ defm SPV_KHR_untyped_pointers : ExtensionOperand<140, [EnvOpenCL]>;
 defm SPV_EXT_long_vector : ExtensionOperand<141, [EnvOpenCL, EnvVulkan]>;
 defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, EnvOpenCL]>;
 defm SPV_KHR_quad_control : ExtensionOperand<143, [EnvVulkan]>;
+defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<144, [EnvVulkan]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -567,7 +568,11 @@ defm VulkanMemoryModelKHR : CapabilityOperand<5345, 0, 0, [], []>;
 defm VulkanMemoryModelDeviceScopeKHR : CapabilityOperand<5346, 0, 0, [], []>;
 defm ImageFootprintNV : CapabilityOperand<5282, 0, 0, [], []>;
 defm FragmentBarycentricKHR : CapabilityOperand<5284, 0, 0, [SPV_KHR_fragment_shader_barycentric], [Shader]>;
-defm ComputeDerivativeGroupQuadsNV : CapabilityOperand<5288, 0, 0, [], []>;
+defm ComputeDerivativeGroupQuadsKHR
+    : CapabilityOperand<5288, 0, 0, [SPV_KHR_compute_shader_derivatives],
+                        [Shader]>;
+def ComputeDerivativeGroupQuadsNV
+    : Capability<"ComputeDerivativeGroupQuadsNV", 5288>;
 defm DemoteToHelperInvocation : CapabilityOperand<5379, 0x10600, 0, [SPV_EXT_demote_to_helper_invocation], []>;
 defm ComputeDerivativeGroupLinearNV : CapabilityOperand<5350, 0, 0, [], []>;
 defm FragmentDensityEXT : CapabilityOperand<5291, 0, 0, [], [Shader]>;
@@ -850,8 +855,12 @@ defm SignedZeroInfNanPreserve : ExecutionModeOperand<4461, [SignedZeroInfNanPres
 defm RoundingModeRTE : ExecutionModeOperand<4462, [RoundingModeRTE]>;
 defm RoundingModeRTZ : ExecutionModeOperand<4463, [RoundingModeRTZ]>;
 defm StencilRefReplacingEXT : ExecutionModeOperand<5027, [StencilExportEXT]>;
+defm QuadDerivativesKHR : ExecutionModeOperand<5088, [QuadControlKHR]>;
+defm RequireFullQuadsKHR : ExecutionModeOperand<5089, [QuadControlKHR]>;
 defm OutputLinesNV : ExecutionModeOperand<5269, [MeshShadingNV]>;
-defm DerivativeGroupQuadsNV : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsNV]>;
+defm DerivativeGroupQuadsKHR
+    : ExecutionModeOperand<5289, [ComputeDerivativeGroupQuadsKHR]>;
+def DerivativeGroupQuadsNV : ExecutionMode<"DerivativeGroupQuadsNV", 5289>;
 defm DerivativeGroupLinearNV : ExecutionModeOperand<5290, [ComputeDerivativeGroupLinearNV]>;
 defm OutputTrianglesNV : ExecutionModeOperand<5298, [MeshShadingNV]>;
 defm RoundingModeRTPINTEL : ExecutionModeOperand<5620, [RoundToInfinityINTEL]>;

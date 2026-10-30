@@ -855,10 +855,39 @@ void SPIRVModuleAnalysisImpl::numberRegistersGlobally(const Module &M) {
   }
 }
 
+static void addQuadControlRequirements(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       StringRef Feature) {
+  if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    report_fatal_error(Twine(Feature) + " requires SPIR-V 1.3", false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    report_fatal_error(Twine(Feature) + " requires the following SPIR-V "
+                                        "extension: SPV_KHR_quad_control",
+                       false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
+    report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
+                       "extension: SPV_KHR_maximal_reconvergence",
+                       false);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+}
+
 // RequirementHandler implementations.
 void SPIRV::RequirementHandler::getAndAddRequirements(
     SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
     const SPIRVSubtarget &ST) {
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::QuadDerivativesKHR ||
+       i == SPIRV::ExecutionMode::RequireFullQuadsKHR))
+    addQuadControlRequirements(*this, ST,
+                               getSymbolicOperandMnemonic(Category, i));
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR &&
+      !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
+    report_fatal_error(
+        "DerivativeGroupQuadsKHR requires the following SPIR-V extension: "
+        "SPV_KHR_compute_shader_derivatives",
+        false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
@@ -2139,19 +2168,7 @@ void addInstrRequirements(const MachineInstr &MI,
     }
     break;
   case SPIRV::OpGroupNonUniformQuadAllKHR:
-    if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-      report_fatal_error("OpGroupNonUniformQuadAllKHR requires SPIR-V 1.3",
-                         false);
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
-      report_fatal_error("OpGroupNonUniformQuadAllKHR instruction requires the "
-                         "following SPIR-V extension: SPV_KHR_quad_control",
-                         false);
-    if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
-      report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
-                         "extension: SPV_KHR_maximal_reconvergence",
-                         false);
-    Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
-    Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+    addQuadControlRequirements(Reqs, ST, "OpGroupNonUniformQuadAllKHR");
     Reqs.addCapability(SPIRV::Capability::QuadControlKHR);
     break;
   case SPIRV::OpGroupNonUniformRotateKHR:

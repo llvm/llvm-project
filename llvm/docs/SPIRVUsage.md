@@ -197,6 +197,9 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Adds a function-termination instruction that signals an abnormal error to the client API. Currently supported in OpenCL environments only.
    * - ``SPV_KHR_bit_instructions``
      - Enables bit instructions to be used by SPIR-V modules without requiring the Shader capability.
+   * - ``SPV_KHR_compute_shader_derivatives``
+     - Adds the `DerivativeGroupQuadsKHR` execution mode and the
+       `ComputeDerivativeGroupQuadsKHR` capability.
    * - ``SPV_KHR_expect_assume``
      - Provides additional information to a compiler, similar to the llvm.assume and llvm.expect intrinsics.
    * - ``SPV_KHR_float_controls``
@@ -232,8 +235,9 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
    * - ``SPV_KHR_maximal_reconvergence``
      - Adds execution mode and capability to enable maximal reconvergence.
    * - ``SPV_KHR_quad_control``
-     - Adds the quad vote instruction for HLSL `QuadAll`.
-       This instruction also requires `SPV_KHR_maximal_reconvergence`.
+     - Adds the quad vote instruction for HLSL `QuadAll` and the
+       `QuadDerivativesKHR` and `RequireFullQuadsKHR` execution modes.
+       These features also require `SPV_KHR_maximal_reconvergence`.
    * - ``SPV_ALTERA_blocking_pipes``
      - Adds new pipe read and write functions that have blocking semantics instead of the non-blocking semantics of the existing pipe read/write functions.
    * - ``SPV_ALTERA_arbitrary_precision_fixed_point``
