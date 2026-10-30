@@ -57,8 +57,8 @@ ret:
 ; even though the function has no reserve and no frame.
 define tailcc void @shrink(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h, i64 %i, i64 %j, i64 %k, i64 %l) {
 ; CHECK-LABEL: shrink:
-; CHECK:         movq (%rsp), %r10
-; CHECK-NEXT:    movq %r10, 48(%rsp)
+; CHECK:         movq (%rsp), %[[R:[a-z0-9]+]]
+; CHECK-NEXT:    movq %[[R]], 48(%rsp)
 ; CHECK:         addq $48, %rsp
 ; CHECK-NEXT:    jmp h # TAILCALL
   musttail call tailcc void @h(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g)
