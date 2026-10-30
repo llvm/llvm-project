@@ -36,8 +36,10 @@ namespace detail {
 class PlatformImpl;
 } // namespace detail
 
-/// \brief SYCL 2020 platform class (4.6.2.) encapsulating a single SYCL
-/// platform on which kernel functions may be executed.
+/// A set of devices associated with a single SYCL backend, on which kernel
+/// functions may be executed. A platform may contain no devices.
+///
+/// \sa SYCL 2020 4.6.2. Platform class.
 class _LIBSYCL_EXPORT platform {
 public:
   // The platform class provides the common reference semantics (SYCL
@@ -58,47 +60,35 @@ public:
     return !(lhs == rhs);
   }
 
-  /// Returns the backend associated with this platform.
-  ///
   /// \return the backend associated with this platform.
   backend get_backend() const noexcept;
 
   /// Returns all SYCL devices associated with this platform.
   ///
-  /// If there are no devices that match given device
-  /// type, resulting vector is empty.
-  ///
-  /// \param type is a SYCL device type.
-  /// \return a vector of SYCL devices matching given device type.
+  /// \param type the type of the devices to return.
+  /// \return the SYCL devices of this platform that match \p type; empty if
+  /// there are none.
   std::vector<device>
   get_devices(info::device_type type = info::device_type::all) const;
 
-  /// Queries this SYCL platform for info.
-  ///
-  /// The return type depends on information being queried.
+  /// \return the value of the platform information descriptor Param.
   template <typename Param>
   detail::is_platform_info_desc_t<Param> get_info() const;
 
-  /// Queries this SYCL platform for SYCL backend-specific information.
-  ///
-  /// The return type depends on information being queried.
+  /// \return the value of the SYCL backend-specific information descriptor
+  /// Param of this platform.
   template <typename Param>
   typename detail::is_backend_info_desc<Param>::return_type
   get_backend_info() const;
 
-  /// Indicates if all of the SYCL devices on this platform have the
-  /// given aspect.
+  /// Indicates if all of the SYCL devices on this platform have the given
+  /// aspect.
   ///
-  /// \param asp is one of the values defined in SYCL 2020 Section 4.6.4.5.
-  ///
-  /// \return true if all of the SYCL devices on this platform have the
-  /// given aspect.
+  /// \param asp the aspect to check for (SYCL 2020 4.6.4.5. Aspects).
+  /// \return true if all of the SYCL devices on this platform have \p asp.
   bool has(aspect asp) const;
 
-  /// Returns all SYCL platforms from all backends that are available in the
-  /// system.
-  ///
-  /// \return A std::vector containing all of the platforms from all backends
+  /// \return a std::vector containing all of the platforms from all backends
   /// that are available in the system.
   static std::vector<platform> get_platforms();
 

@@ -109,7 +109,7 @@ void PlatformImpl::iterateDevices(
          "Platform can't exist without at least one device.");
 
   // TODO: Need a way to get default device from liboffload.
-  // As a temporal solution just return the first device for DeviceType ==
+  // As a temporary solution just return the first device for DeviceType ==
   // automatic.
   if (DeviceType == info::device_type::automatic) {
     Callback(DeviceImpls[0].get());

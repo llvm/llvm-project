@@ -23,9 +23,10 @@ namespace detail {
 struct UnifiedRangeView;
 } // namespace detail
 
-// SYCL 2020 4.9.1.2. nd_range class.
 /// nd_range<int Dimensions> defines the iteration domain of both the
 /// work-groups and the overall dispatch.
+///
+/// \sa SYCL 2020 4.9.1.2. nd_range class.
 template <int Dimensions = 1> class nd_range {
   static_assert(Dimensions >= 1 && Dimensions <= 3,
                 "nd_range can only be 1-, 2-, or 3-dimensional.");
@@ -49,11 +50,23 @@ public:
     return !(lhs == rhs);
   }
 
+  /// Constructs an nd_range from the global and local constituent ranges and an
+  /// offset; supplying the offset is deprecated in SYCL 2020.
+  ///
+  /// \param globalSize is the whole range over which the kernel is to be
+  /// executed.
+  /// \param localSize is the range of each work group.
+  /// \param offset is the offset of the nd_range.
   __SYCL2020_DEPRECATED("offset is deprecated in SYCL2020")
   nd_range(range<Dimensions> globalSize, range<Dimensions> localSize,
            id<Dimensions> offset) noexcept
       : MGlobalSize(globalSize), MLocalSize(localSize), MOffset(offset) {}
 
+  /// Constructs an nd_range from the global and local constituent ranges.
+  ///
+  /// \param globalSize is the whole range over which the kernel is to be
+  /// executed.
+  /// \param localSize is the range of each work group.
   nd_range(range<Dimensions> globalSize, range<Dimensions> localSize)
       : MGlobalSize(globalSize), MLocalSize(localSize),
         MOffset(id<Dimensions>()) {}

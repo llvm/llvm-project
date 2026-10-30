@@ -40,9 +40,12 @@ using EnableIfDeviceSelectorIsInvocable = std::enable_if_t<
 
 /// Returns a SYCL device instance chosen by the device selector provided.
 ///
-/// \param DeviceSelector is SYCL 2020 device selector, a simple callable that
-/// takes a device and returns an int.
-/// \return device chosen by selector.
+/// \param DeviceSelector a callable that takes a device and returns an int
+/// score; the device with the highest score is chosen, and a negative score
+/// rejects a device.
+/// \return the SYCL device chosen by \p DeviceSelector.
+/// \throw sycl::exception with sycl::errc::runtime if the selector rejects all
+/// devices.
 _LIBSYCL_EXPORT device
 SelectDevice(const DeviceSelectorInvocableType &DeviceSelector);
 
@@ -83,12 +86,13 @@ _LIBSYCL_EXPORT int accelerator_selector_v(const device &dev);
 /// Returns a selector object that selects a SYCL device from any supported SYCL
 /// backend which contains all the requested aspects.
 ///
-/// \param aspectList requested aspects,  i.e. for the specific device dev and
+/// \param aspectList requested aspects, i.e. for the specific device dev and
 /// each aspect devAspect from aspectList dev.has(devAspect) equals true.
 /// \param denyList all the aspects that have to be avoided, i.e. for the
 /// specific device dev and each aspect devAspect from denyList
 /// dev.has(devAspect) equals false.
-/// \return a selector object
+/// \return a device selector that rejects every device that does not satisfy
+/// these aspect requirements.
 _LIBSYCL_EXPORT detail::DeviceSelectorInvocableType
 aspect_selector(const std::vector<aspect> &aspectList,
                 const std::vector<aspect> &denyList = {});
@@ -96,9 +100,10 @@ aspect_selector(const std::vector<aspect> &aspectList,
 /// Returns a selector object that selects a SYCL device from any supported SYCL
 /// backend which contains all the requested aspects.
 ///
-/// \param aspectList requested aspects,  i.e. for the specific device dev and
+/// \param aspectList requested aspects, i.e. for the specific device dev and
 /// each aspect devAspect from aspectList dev.has(devAspect) equals true.
-/// \return a selector object
+/// \return a device selector that rejects every device that does not satisfy
+/// these aspect requirements.
 template <typename... AspectListT>
 detail::DeviceSelectorInvocableType aspect_selector(AspectListT... aspectList) {
   std::vector<aspect> RequireList;
@@ -111,9 +116,10 @@ detail::DeviceSelectorInvocableType aspect_selector(AspectListT... aspectList) {
 /// Returns a selector object that selects a SYCL device from any supported SYCL
 /// backend which contains all the requested aspects.
 ///
-/// \param AspectList requested aspects,  i.e. for the specific device dev and
+/// \tparam AspectList requested aspects, i.e. for the specific device dev and
 /// each aspect devAspect from AspectList dev.has(devAspect) equals true.
-/// \return a selector object
+/// \return a device selector that rejects every device that does not satisfy
+/// these aspect requirements.
 template <aspect... AspectList>
 detail::DeviceSelectorInvocableType aspect_selector() {
   return aspect_selector({AspectList...}, {});

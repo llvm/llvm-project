@@ -24,6 +24,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 class event;
 
 namespace detail {
+/// \internal
 /// Sentinel type used as the DescOf tag for event profiling info descriptors,
 /// so they are distinct from regular event info descriptors.
 struct event_profiling_tag {};

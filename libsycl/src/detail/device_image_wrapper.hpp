@@ -43,8 +43,8 @@ public:
   /// \param Context is the context to use for program creation.
   /// \param Device is the device to use for program creation.
   /// \param DevImage is the device image to use for program creation.
-  /// \throw sycl::exception with sycl::errc::runtime when failed to create the
-  /// program.
+  /// \throw sycl::exception with sycl::errc::runtime if the program creation
+  /// fails.
   ProgramWrapper(ContextImpl &Context, ol_device_handle_t Device,
                  const DeviceImageManager &DevImage);
 

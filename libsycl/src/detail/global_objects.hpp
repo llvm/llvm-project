@@ -38,9 +38,9 @@ template <typename T> using InstanceWithLock = std::pair<T, SpinLock>;
 
 /// Returns offload topologies (one per backend) discovered from liboffload.
 ///
-/// This vector is populated only once at the first call of get_platforms().
+/// This array is populated only once at the first call of get_platforms().
 ///
-/// \return std::array of all offload topologies.
+/// \return the offload topologies discovered from liboffload, one per backend.
 std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
 getOffloadTopologies();
 
@@ -49,7 +49,8 @@ getOffloadTopologies();
 ///
 /// This vector is populated only once at the first call of get_platforms().
 ///
-/// \return std::vector of implementation objects for all platforms.
+/// \return the implementation objects of all platforms discovered from
+/// liboffload.
 std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 
 // This initializes a function-local variable whose destructor is invoked as
@@ -75,8 +76,8 @@ struct AsyncExceptionKeyOwnerLess {
 using AsyncExceptionsContainer =
     std::map<AsyncExceptionKey, exception_list, AsyncExceptionKeyOwnerLess>;
 
-/// \return pair of container with unreported exceptions and an unlocked
-/// SpinLock.
+/// \return a pair of the container with unreported asynchronous exceptions and
+/// the SpinLock that guards it.
 InstanceWithLock<AsyncExceptionsContainer> &getAsyncExceptionList();
 
 /// Adds an exception to the list of unreported asynchronous exceptions

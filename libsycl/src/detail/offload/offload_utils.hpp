@@ -35,18 +35,16 @@ namespace detail {
 
 class ContextImpl;
 
-/// Converts liboffload error code to C-string.
+/// Converts a liboffload error code to its name.
 ///
-/// \param Error liboffload error code.
-///
-/// \return C-string representing the name of Error as specified in enum.
+/// \param Error is the liboffload error code.
+/// \return the name of \p Error as spelled in the ol_errc_t enum.
 const char *stringifyErrorCode(ol_errc_t Error);
 
-/// Constructs C++-string with information about liboffload error.
+/// Formats a failed liboffload result into an error message.
 ///
-/// \param Result liboffload result of calling API.
-///
-/// \return C++-string containing all available data of failure.
+/// \param Result is the liboffload result of a failed API call.
+/// \return a string with all available data about the failure.
 inline std::string formatCodeString(ol_result_t Result) {
   // liboffload leaves Details unset for errors it has no message for.
   const char *Details = Result->Details ? Result->Details : "";
@@ -56,14 +54,11 @@ inline std::string formatCodeString(ol_result_t Result) {
 
 inline bool isFailed(const ol_result_t &Result) { return Result != OL_SUCCESS; }
 
-/// Checks liboffload API call result.
+/// Checks the result of a liboffload API call that was made without a check,
+/// when specific handling is needed and explicitly done by the developer before
+/// throwing an exception.
 ///
-/// Used after calling the API without check.
-/// To be called when specific handling is needed and explicitly done by
-/// developer before throwing exception.
-///
-/// \param Result liboffload result of calling API.
-///
+/// \param Result the liboffload result of calling the API.
 /// \throw sycl::exception with ErrC if the call was not successful.
 template <sycl::errc ErrC = sycl::errc::runtime>
 void checkAndThrow(ol_result_t Result) {
@@ -73,15 +68,11 @@ void checkAndThrow(ol_result_t Result) {
   }
 }
 
-/// Checks liboffload API call result, attaches the context to the exception.
+/// \overload
 ///
-/// Used after calling the API without a check.
-/// To be called when specific handling is needed and explicitly done by
-/// developer before throwing an exception.
-///
-/// \param Context the context the failed API call was made for.
-/// \param Result the liboffload result of calling API.
-///
+/// \param Context is the context the API call was made for, which is attached
+/// to the exception.
+/// \param Result is the liboffload result of calling the API.
 /// \throw sycl::exception with ErrC if the call was not successful.
 template <sycl::errc ErrC = sycl::errc::runtime>
 void checkAndThrow(ContextImpl &Context, ol_result_t Result) {
@@ -105,11 +96,10 @@ ol_result_t callNoCheck(FunctionType &Function, ArgsT &&...Args) {
   return Function(std::forward<ArgsT>(Args)...);
 }
 
-/// Calls the API and checks result.
+/// Calls the liboffload API and checks the result.
 ///
-/// \param Function liboffload API function to be called.
-/// \param Args arguments to be passed to the liboffload API function.
-///
+/// \param Function the liboffload API function to be called.
+/// \param Args the arguments to be passed to the liboffload API function.
 /// \throw sycl::exception with sycl::errc::runtime if the call was not
 /// successful.
 template <typename FunctionType, typename... ArgsT>
@@ -118,12 +108,12 @@ void callAndThrow(FunctionType &Function, ArgsT &&...Args) {
   checkAndThrow(Err);
 }
 
-/// Calls the API and checks the result, attaches the context to the exception.
+/// \overload
 ///
-/// \param Context the context the API call is made for.
+/// \param Context the context the API call is made for, which is attached to
+/// the exception.
 /// \param Function the liboffload API function to be called.
 /// \param Args the arguments to be passed to the liboffload API function.
-///
 /// \throw sycl::exception with sycl::errc::runtime if the call was not
 /// successful.
 template <typename FunctionType, typename... ArgsT>
@@ -133,38 +123,34 @@ void callAndThrow(ContextImpl &Context, FunctionType &Function,
   checkAndThrow(Context, Err);
 }
 
-/// Converts liboffload backend to SYCL backend.
+/// Converts a liboffload backend to the matching SYCL backend.
 ///
-/// \param Backend liboffload backend.
-///
-/// \return sycl::backend matching specified liboffload backend.
+/// \param Backend is the liboffload backend to convert.
+/// \return the matching SYCL backend.
 backend convertBackend(ol_platform_backend_t Backend);
 
-/// Converts SYCL device type to liboffload type.
+/// Converts a SYCL device type to the matching liboffload device type.
 ///
-/// \param DeviceType SYCL device type.
-///
-/// \return ol_device_type_t matching specified SYCL device type.
+/// \param DeviceType is the SYCL device type to convert.
+/// \return the matching liboffload device type.
 ol_device_type_t convertDeviceTypeToOL(info::device_type DeviceType);
 
-/// Converts liboffload device type to SYCL type.
+/// Converts a liboffload device type to the matching SYCL device type.
 ///
-/// \param DeviceType liboffload device type.
-///
-/// \return SYCL device type matching specified liboffload device type.
+/// \param DeviceType is the liboffload device type to convert.
+/// \return the matching SYCL device type.
 info::device_type convertDeviceTypeToSYCL(ol_device_type_t DeviceType);
 
-/// Converts a SYCL USM kind to a liboffload type.
+/// Converts a SYCL USM kind to the matching liboffload allocation type.
 ///
-/// \param USMKind a SYCL USM kind.
-///
-/// \return ol_alloc_type_t matching the specified SYCL USM kind.
+/// \param USMKind is the SYCL USM kind to convert.
+/// \return the matching liboffload allocation type.
 ol_alloc_type_t getOlAllocType(usm::alloc USMKind);
 
 /// Helper for static assertions in the discarded branch of an if constexpr.
 template <typename> inline constexpr bool AlwaysFalse = false;
 
-/// Helper to map SYCL information descriptors to OL_<HANDLE>_INFO_<SMTH>.
+/// Helper to map SYCL information descriptors to `OL_<HANDLE>_INFO_<SMTH>`.
 ///
 /// Typical usage:
 /// \code

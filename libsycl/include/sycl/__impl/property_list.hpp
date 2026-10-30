@@ -23,6 +23,8 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 /// Collection of properties for SYCL objects. Supported properties are defined
 /// by the exact object the property_list is passed to.
+///
+/// \sa SYCL 2020 4.5.4.1. Properties interface.
 // TODO: This is just a placeholder for initial stage.
 class property_list {
 public:

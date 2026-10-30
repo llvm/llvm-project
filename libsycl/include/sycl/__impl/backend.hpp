@@ -34,7 +34,10 @@ namespace detail {
 template <typename T> struct is_backend_info_desc : std::false_type {};
 } // namespace detail
 
-// SYCL 2020  4.5.1.1. Type traits backend_traits.
+/// Provides the native interoperability types of SYCL objects, specialized for
+/// each named SYCL backend.
+///
+/// \sa SYCL 2020 4.5.1.1. Type traits backend_traits.
 template <backend Backend> class backend_traits;
 
 template <backend Backend, typename SyclType>

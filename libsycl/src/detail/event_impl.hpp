@@ -79,11 +79,7 @@ public:
   /// \return the platform implementation object this event belongs to.
   const PlatformImpl &getPlatformImpl() const { return MPlatform; }
 
-  /// Blocks until all commands associated with this event and any dependency
-  /// events have completed. Passes at least all unconsumed asynchronous errors
-  /// held by the queues (or their associated contexts) that were used to
-  /// enqueue commands associated with this event and any dependency events, to
-  /// the appropriate async_handler.
+  /// Implements sycl::event::wait_and_throw.
   void waitAndThrow();
 
   /// \return the list of event implementation objects that this event waits for

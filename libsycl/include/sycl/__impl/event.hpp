@@ -39,7 +39,10 @@ using is_event_profiling_info_desc_t =
     typename is_info_desc<T, event_profiling_tag>::return_type;
 } // namespace detail
 
-/// SYCL 2020 4.6.6. Event class.
+/// Represents the status of an operation that is being executed by the SYCL
+/// runtime.
+///
+/// \sa SYCL 2020 4.6.6. Event class.
 class _LIBSYCL_EXPORT event {
 public:
   /// Constructs an event that is immediately ready.
@@ -72,7 +75,7 @@ public:
   /// events have completed.
   void wait();
 
-  /// Behaves as if calling event::wait on each event in eventList.
+  /// Behaves as if calling event::wait on each event in \p eventList.
   static void wait(const std::vector<event> &eventList);
 
   /// Blocks until all commands associated with this event and any dependency
@@ -82,24 +85,20 @@ public:
   /// the appropriate async_handler.
   void wait_and_throw();
 
-  /// Behaves as if calling event::wait_and_throw on each event in eventList.
+  /// Behaves as if calling event::wait_and_throw on each event in \p eventList.
   static void wait_and_throw(const std::vector<event> &eventList);
 
-  /// Queries this SYCL event for information.
-  ///
-  /// \return depends on the information being requested.
+  /// \return the value of the event information descriptor Param.
   template <typename Param>
   detail::is_event_info_desc_t<Param> get_info() const;
 
-  /// Queries this SYCL event for SYCL backend-specific information.
-  ///
-  /// \return depends on the information being queried.
+  /// \return the value of the SYCL backend-specific information descriptor
+  /// Param of this event.
   template <typename Param>
   typename Param::return_type get_backend_info() const;
 
-  /// Queries this SYCL event for profiling data.
-  ///
-  /// \return depends on the information being queried.
+  /// \return the value of the profiling information descriptor Param of this
+  /// event.
   template <typename Param>
   typename detail::is_event_profiling_info_desc_t<Param>
   get_profiling_info() const;

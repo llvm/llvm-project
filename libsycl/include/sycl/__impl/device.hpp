@@ -36,7 +36,9 @@ namespace detail {
 class DeviceImpl;
 } // namespace detail
 
-// SYCL 2020 4.6.4. Device class.
+/// A device on which kernels can be executed.
+///
+/// \sa SYCL 2020 4.6.4. Device class.
 class _LIBSYCL_EXPORT device {
 public:
   device(const device &rhs) = default;
@@ -57,16 +59,21 @@ public:
 
   /// Constructs a SYCL device instance using the default device (device chosen
   /// by default device selector).
+  ///
+  /// \throw sycl::exception with sycl::errc::runtime if no device is available.
   device() : device(default_selector_v) {}
 
   /// Constructs a SYCL device instance using the device
   /// identified by the provided device selector.
-  /// \param deviceSelector is SYCL 2020 device selector, a simple callable that
-  /// takes a device and returns an int.
+  /// \param deviceSelector a callable that takes a device and returns an int
+  /// score; the device with the highest score is chosen, and a negative score
+  /// rejects a device.
+  /// \throw sycl::exception with sycl::errc::runtime if \p deviceSelector
+  /// rejects all devices.
   template <
       typename DeviceSelector,
       // `DeviceImpl` (used as a parameter in private ctor) is incomplete
-      // so would result in a error trying to instantiate
+      // so would result in an error trying to instantiate
       // `EnableIfDeviceSelectorIsInvocable` below. Filter it out
       // before trying to do that.
       typename =
@@ -75,49 +82,36 @@ public:
   explicit device(const DeviceSelector &deviceSelector)
       : device(detail::SelectDevice(deviceSelector)) {}
 
-  /// Returns the backend associated with this device.
-  ///
   /// \return the backend associated with this device.
   backend get_backend() const noexcept;
 
-  /// Check if device is a CPU device.
-  ///
-  /// \return true if SYCL device is a CPU device.
+  /// \return true if this device is a CPU device.
   bool is_cpu() const;
 
-  /// Check if device is a GPU device.
-  ///
-  /// \return true if SYCL device is a GPU device.
+  /// \return true if this device is a GPU device.
   bool is_gpu() const;
 
-  /// Check if device is an accelerator device.
-  ///
-  /// \return true if SYCL device is an accelerator device.
+  /// \return true if this device is an accelerator device.
   bool is_accelerator() const;
 
-  /// Get associated SYCL platform.
-  ///
-  /// \return The associated SYCL platform.
+  /// \return the associated SYCL platform.
   platform get_platform() const;
 
-  /// Queries this SYCL device for information requested by the template
-  /// parameter Param.
-  ///
-  /// \return device info of type described in 4.6.4.4.
+  /// \return the value of the device information descriptor Param (SYCL 2020
+  /// 4.6.4.4. Information descriptors).
   template <typename Param>
   detail::is_device_info_desc_t<Param> get_info() const;
 
-  /// Queries this SYCL device for SYCL backend-specific information.
-  ///
-  /// The return type depends on information being queried.
+  /// \return the value of the SYCL backend-specific information descriptor
+  /// Param of this device.
   template <typename Param>
   typename detail::is_backend_info_desc<Param>::return_type
   get_backend_info() const;
 
   /// Queries which optional features this device supports (if any).
   ///
-  /// \param asp is one of the values defined in SYCL 2020 Section 4.6.4.5.
-  /// \return true if this device has the given aspect.
+  /// \param asp the aspect to check for (SYCL 2020 4.6.4.5. Aspects).
+  /// \return true if this device has \p asp.
   bool has(aspect asp) const;
 
   /// Partition device into sub devices.
@@ -154,11 +148,11 @@ public:
   /// info::partition_property::partition_by_affinity_domain. If this SYCL
   /// device does not support
   /// info::partition_property::partition_by_affinity_domain or the SYCL device
-  /// does not support provided info::affinity_domain provided a
+  /// does not support the provided info::partition_affinity_domain, a
   /// feature_not_supported exception will be thrown.
   ///
-  /// \param affinityDomain is one of the values described in Table 4.20 of the
-  /// SYCL 2020 specification.
+  /// \param affinityDomain the affinity domain to partition this device along
+  /// (SYCL 2020 4.6.4.7.3. Partition affinity domain).
   /// \return sub devices partitioned from this SYCL device by affinity domain
   /// based on the affinityDomain parameter.
   template <info::partition_property Prop>
@@ -167,8 +161,8 @@ public:
 
   /// Query available SYCL devices.
   ///
-  /// \param type is one of the values described in A.3 of the SYCL 2020
-  /// specification.
+  /// \param type the type of the devices to return (SYCL 2020 4.6.4.7.1. Device
+  /// type).
   /// \return all SYCL devices available in the system of the device type
   /// specified.
   static std::vector<device>

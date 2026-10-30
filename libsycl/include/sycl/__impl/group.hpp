@@ -26,9 +26,10 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 template <int> class nd_item;
 
-// SYCL2020 4.9.1.7. group class.
 /// The group class encapsulates all functionality required to represent a
 /// particular work-group within a parallel execution.
+///
+/// \sa SYCL 2020 4.9.1.7. group class.
 template <int Dimensions = 1> class group {
 public:
   using id_type = id<Dimensions>;

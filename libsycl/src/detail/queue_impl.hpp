@@ -49,7 +49,7 @@ public:
   /// \param Context is a SYCL context the queue is associated with.
   /// \param Device is a SYCL device that is used to dispatch tasks
   /// submitted to the queue.
-  /// \param AsyncHandler is a SYCL asynchronous exception handler.
+  /// \param AsyncHandler receives the asynchronous errors of this queue.
   /// \param PropList is a list of properties to use for queue construction.
   explicit QueueImpl(const std::shared_ptr<ContextImpl> &Context,
                      DeviceImpl &Device, const async_handler &AsyncHandler,
@@ -106,16 +106,15 @@ public:
     return MCurrentSubmitInfo.LastEvent;
   }
 
-  /// \brief Sets event dependencies and execution range for the next kernel
+  /// Sets event dependencies and execution range for the next kernel
   /// submission.
+  ///
   /// \param Events a collection of events that the kernel depends on.
   /// \param Range a unified range view of the execution range.
   void setKernelLaunchParams(std::vector<EventImplPtr> &&Events,
                              const detail::UnifiedRangeView &Range);
 
-  /// \copybrief
-  /// QueueImpl::setKernelLaunchParams(std::vector<EventImplPtr>&&,detail::UnifiedRangeView
-  /// const&)
+  /// \overload
   ///
   /// \param Events a collection of events that the kernel depends on.
   /// \param Range a pre-converted liboffload kernel launch size args struct.
@@ -126,24 +125,11 @@ public:
   /// was constructed without one and its context has none either.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
-  /// Submits a memory copy operation from one USM or host pointer to another.
-  ///
-  /// \param Dest is the pointer to copy to.
-  /// \param Src is the pointer to copy from.
-  /// \param NumBytes is the number of bytes to copy.
-  /// \param DepEvents is a vector of dependencies for the operation.
-  /// \return an event impl object that represents the status of the operation.
+  /// Implements sycl::queue::memcpy.
   EventImplPtr memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                       const std::vector<EventImplPtr> &DepEvents);
 
-  /// Submits a fill operation that replicates a pattern into USM.
-  ///
-  /// \param Ptr is the pointer to memory to be filled.
-  /// \param Pattern is the pattern to be replicated.
-  /// \param PatternSize is the size of the pattern in bytes.
-  /// \param Count is the number of times the pattern is filled.
-  /// \param DepEvents is a vector of dependencies for the operation.
-  /// \return an event impl object that represents the status of the operation.
+  /// Implements sycl::queue::fill for a type-erased pattern.
   EventImplPtr fill(void *Ptr, const void *Pattern, std::size_t PatternSize,
                     std::size_t Count,
                     const std::vector<EventImplPtr> &DepEvents);
@@ -161,12 +147,7 @@ public:
   /// \return an event impl object representing the wait operation.
   EventImplPtr submitWait(const std::vector<EventImplPtr> &DepEvents);
 
-  /// Submits a prefetch operation for a USM pointer.
-  ///
-  /// \param Ptr is a USM pointer to the memory to be prefetched to the device.
-  /// \param NumBytes is a number of bytes to be prefetched.
-  /// \param DepEvents is a vector of dependencies for the operation.
-  /// \return an event impl object that represents the status of the operation.
+  /// Implements sycl::queue::prefetch.
   EventImplPtr prefetch(const void *Ptr, std::size_t NumBytes,
                         const std::vector<EventImplPtr> &DepEvents);
 

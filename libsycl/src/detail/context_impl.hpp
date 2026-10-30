@@ -53,7 +53,7 @@ public:
   /// Constructs a context implementation for the provided devices.
   ///
   /// \param DeviceList is the list of devices associated with this context.
-  /// \param AsyncHandler is a SYCL asynchronous exception handler.
+  /// \param AsyncHandler receives the asynchronous errors of this context.
   /// \param PropList is a list of context properties.
   ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
               const async_handler &AsyncHandler, const property_list &PropList,
@@ -62,9 +62,7 @@ public:
   /// Releases the underlying offload context handle.
   ~ContextImpl();
 
-  /// Gets asynchronous exception handler.
-  ///
-  /// \return an instance of SYCL async_handler.
+  /// \return the handler that receives the asynchronous errors of this context.
   const async_handler &getAsyncHandler() const { return MAsyncHandler; }
 
   /// Constructs a ContextImpl with the provided arguments. Variadic helper.
@@ -89,7 +87,7 @@ public:
   /// Calls Callback with every device associated with this context.
   void iterateDevices(const std::function<void(DeviceImpl *)> &Callback) const;
 
-  /// \return backend of the platform this context is associated with.
+  /// \return the backend of the platform this context is associated with.
   backend getBackend() const;
 
   /// Returns the liboffload kernel symbol for the specified kernel, taken from
