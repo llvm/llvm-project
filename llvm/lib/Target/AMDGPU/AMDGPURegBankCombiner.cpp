@@ -478,12 +478,12 @@ bool AMDGPURegBankCombinerImpl::combineD16Load(MachineInstr &MI) const {
       return false;
     }
 
-    // s32 Load_lo16 holds SextLoad i8, Load_hi16 is zero.
-    // fake16: and  (sextload i8 -> s32), 0xFFFF
-    // true16: zext (sextload i8 -> s16) -> s32
+    // The shift discards the upper half, so a bare sign-extending load is
+    // equivalent to masking it to 16 bits first.
     if (mi_match(
             Load, MRI,
-            m_any_of(m_GAnd(m_GSExtLoad(SextLoad, m_MMO(MMO)),
+            m_any_of(m_GSExtLoad(SextLoad, m_MMO(MMO)),
+                     m_GAnd(m_GSExtLoad(SextLoad, m_MMO(MMO)),
                             m_Copy(m_SpecificICst(CleanHi16))),
                      m_GZExt(m_all_of(m_SpecificType(LLT::scalar(16)),
                                       m_GSExtLoad(SextLoad, m_MMO(MMO))))))) {
