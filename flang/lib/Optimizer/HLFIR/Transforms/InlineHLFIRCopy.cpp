@@ -19,8 +19,14 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -40,11 +46,19 @@ static llvm::cl::opt<bool> noInlineHLFIRCopy(
 namespace {
 class InlineCopyInConversion : public mlir::OpRewritePattern<hlfir::CopyInOp> {
 public:
-  using mlir::OpRewritePattern<hlfir::CopyInOp>::OpRewritePattern;
+  InlineCopyInConversion(mlir::MLIRContext *context,
+                         const fir::AllocationPolicy &policy,
+                         const fir::AllocationSizeContext &sizeContext)
+      : mlir::OpRewritePattern<hlfir::CopyInOp>(context), policy(policy),
+        sizeContext(sizeContext) {}
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::CopyInOp copyIn,
                   mlir::PatternRewriter &rewriter) const override;
+
+private:
+  fir::AllocationPolicy policy;
+  const fir::AllocationSizeContext &sizeContext;
 };
 
 // Inline a copy_out operation (deallocation only — no copy-back).
@@ -53,8 +67,7 @@ static void inlineCopyOut(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Value tempBox, mlir::Value wasCopied,
                           mlir::Type sequenceType) {
   builder.genIfOp(loc, {}, wasCopied, /*withElseRegion=*/false).genThen([&]() {
-    mlir::Value box = fir::LoadOp::create(builder, loc, tempBox);
-    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, box);
+    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, tempBox);
     auto heapType = fir::HeapType::get(sequenceType);
     mlir::Value heapAddr = fir::ConvertOp::create(builder, loc, heapType, addr);
     fir::FreeMemOp::create(builder, loc, heapAddr);
@@ -112,6 +125,11 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
+  // Decide where the buffer will live before creating it, so that the matching
+  // kind of allocation and deallocation is generated.
+  const bool useStack =
+      fir::shouldUseStackForCopyin(loc, sequenceType, policy, sizeContext);
+
   mlir::Value isContiguous =
       fir::IsContiguousBoxOp::create(builder, loc, inputVariable);
   mlir::Operation::result_range results =
@@ -132,8 +150,11 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           .genElse([&] {
             llvm::StringRef tmpName{".tmp.copy_in"};
             llvm::SmallVector<mlir::Value> lenParams;
-            mlir::Value alloc = builder.createHeapTemporary(
-                loc, sequenceType, tmpName, extents, lenParams);
+            mlir::Value alloc =
+                useStack ? builder.createTemporary(loc, sequenceType, tmpName,
+                                                   extents, lenParams)
+                         : builder.createHeapTemporary(
+                               loc, sequenceType, tmpName, extents, lenParams);
 
             auto declareOp = hlfir::DeclareOp::create(builder, loc, alloc,
                                                       tmpName, shape, lenParams,
@@ -174,28 +195,31 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
           .getResults();
 
   mlir::OpResult resultBox = results[0];
-  mlir::OpResult needsCleanup = results[1];
+  mlir::OpResult wasCopied = results[1];
 
-  // Inline the corresponding copyOut (deallocation only).
-  // Store the resultBox first since it's a box value.
-  auto alloca = fir::AllocaOp::create(builder, loc, resultBox.getType());
-  fir::StoreOp::create(builder, loc, resultBox, alloca);
-
-  rewriter.setInsertionPoint(copyOut);
-  fir::FirOpBuilder copyOutBuilder(rewriter, copyOut.getOperation());
-  inlineCopyOut(copyOutBuilder, copyOut.getLoc(), alloca, needsCleanup,
-                sequenceType);
+  // Inline the corresponding copyOut. A stack buffer needs no deallocation, so
+  // there is nothing to generate for it.
+  if (!useStack) {
+    rewriter.setInsertionPoint(copyOut);
+    fir::FirOpBuilder copyOutBuilder(rewriter, copyOut.getOperation());
+    inlineCopyOut(copyOutBuilder, copyOut.getLoc(), resultBox, wasCopied,
+                  sequenceType);
+  }
 
   // Erase the copyOut since we've inlined it
   rewriter.eraseOp(copyOut);
 
-  rewriter.replaceOp(copyIn, {resultBox, builder.genNot(loc, isContiguous)});
+  rewriter.replaceOp(copyIn,
+                     {resultBox, builder.genNot(loc, isContiguous),
+                      useStack ? builder.createBool(loc, false) : wasCopied});
   return mlir::success();
 }
 
 class InlineHLFIRCopyPass
     : public hlfir::impl::InlineHLFIRCopyBase<InlineHLFIRCopyPass> {
 public:
+  using InlineHLFIRCopyBase<InlineHLFIRCopyPass>::InlineHLFIRCopyBase;
+
   void runOnOperation() override {
     mlir::MLIRContext *context = &getContext();
 
@@ -204,9 +228,22 @@ public:
     config.setRegionSimplificationLevel(
         mlir::GreedySimplifyRegionLevel::Disabled);
 
+    // Gather allocation policy for created temporary buffers (heap vs stack).
+    // This is done here because StackArrays cannot promote the heap allocations
+    // created here to stack allocations because of the branches.
+    // StackArrays is not honored yet: copy-in buffers are often unused at
+    // runtime, so it is unclear whether putting large buffers on the stack is
+    // beneficial. Runtime-sized buffers additionally need stack save/restore
+    // to avoid growing the stack when the copy-in sits in a loop.
+    fir::AllocationPolicy policy = fir::getAllocationPolicy(getOperation());
+    fir::overrideIfExplicitlySet(policy.smallArrayThresholdBytes,
+                                 smallArrayThresholdBytes);
+    const fir::AllocationSizeContext sizeContext =
+        fir::getAllocationSizeContext(getOperation());
+
     mlir::RewritePatternSet patterns(context);
     if (!noInlineHLFIRCopy) {
-      patterns.insert<InlineCopyInConversion>(context);
+      patterns.insert<InlineCopyInConversion>(context, policy, sizeContext);
     }
 
     if (mlir::failed(mlir::applyPatternsGreedily(

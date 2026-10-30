@@ -25,7 +25,7 @@ module {
 // CHECK-DAG: #[[MOD_CHILD:.+]] = #llvm.di_module<{{.*}}name = "child"{{.*}}>
 // CHECK-DAG: #[[MOD_PARENT:.+]] = #llvm.di_module<{{.*}}name = "parent"{{.*}}>
 
-// CHECK-DAG: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[RECID:[0-9]+]]]<>, isRecSelf = true{{.*}}name = "MAIN_USE"
+// CHECK-DAG: #[[SP_REC:.+]] = #llvm.di_subprogram<recId = distinct[[[RECID:[0-9]+]]]<>, isRecSelf = true{{.*}}name = "main_use"
 // CHECK-DAG: #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[MOD_CHILD]],{{.*}}>
 // CHECK-DAG: #llvm.di_imported_entity<tag = DW_TAG_imported_module, scope = #[[SP_REC]], entity = #[[MOD_PARENT]],{{.*}}>
-// CHECK-DAG: #llvm.di_subprogram<recId = distinct[[[RECID]]]<>{{.*}}name = "MAIN_USE"{{.*}}retainedNodes = {{.+}}>
+// CHECK-DAG: #llvm.di_subprogram<recId = distinct[[[RECID]]]<>{{.*}}name = "main_use"{{.*}}retainedNodes = {{.+}}>

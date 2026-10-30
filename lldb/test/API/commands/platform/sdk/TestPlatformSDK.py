@@ -39,6 +39,7 @@ class PlatformSDKTestCase(TestBase):
 
     @no_debug_info_test
     @requireDarwin
+    @requireSocketPermission  # debugserver listens on PORT
     @skipTestIfFn(no_debugserver)
     @skipTestIfFn(port_not_available)
     @skipIfRemote

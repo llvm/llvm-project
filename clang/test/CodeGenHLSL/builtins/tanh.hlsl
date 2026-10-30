@@ -57,3 +57,9 @@ float3 test_tanh_float3 ( float3 p0 ) {
 float4 test_tanh_float4 ( float4 p0 ) {
   return tanh ( p0 );
 }
+
+// CHECK-LABEL: test_tanh_float5
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.tanh.v5f32
+vector<float, 5> test_tanh_float5(vector<float, 5> p0) {
+  return tanh(p0);
+}

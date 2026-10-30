@@ -375,3 +375,181 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     spirv.Return
   }
 }
+
+// -----
+
+// Selection with 64-bit selector switch (two-word case literals).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Linkage], []> {
+// CHECK-LABEL: @selection_switch_i64
+  spirv.func @selection_switch_i64(%selector: i64) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %two = spirv.Constant 2: i32
+    %three = spirv.Constant 3: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+// CHECK: spirv.mlir.selection {
+    spirv.mlir.selection {
+// CHECK-NEXT: spirv.Switch {{%.*}} : i64, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]],
+// CHECK-NEXT: 0: ^[[CASE0:.+]],
+// CHECK-NEXT: 4294967296: ^[[CASE1:.+]],
+// CHECK-NEXT: 4294967297: ^[[CASE2:.+]]
+      spirv.Switch %selector : i64, [
+        default: ^default,
+        0: ^case0,
+        4294967296: ^case1,
+        4294967297: ^case2
+      ]
+    ^default:
+      spirv.Store "Function" %var, %zero : i32
+      spirv.Branch ^merge
+    ^case0:
+      spirv.Store "Function" %var, %one : i32
+      spirv.Branch ^merge
+    ^case1:
+      spirv.Store "Function" %var, %two : i32
+      spirv.Branch ^merge
+    ^case2:
+      spirv.Store "Function" %var, %three : i32
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}
+
+// -----
+
+// Selection with signed 64-bit selector switch and negative case literals
+// (two-word literals, sign-extended across both words).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int64, Linkage], []> {
+// CHECK-LABEL: @selection_switch_si64_negative
+  spirv.func @selection_switch_si64_negative(%selector: si64) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %two = spirv.Constant 2: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+// CHECK: spirv.mlir.selection {
+    spirv.mlir.selection {
+// CHECK-NEXT: spirv.Switch {{%.*}} : si64, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]],
+// CHECK-NEXT: -1: ^[[CASE0:.+]],
+// CHECK-NEXT: -4294967296: ^[[CASE1:.+]]
+      spirv.Switch %selector : si64, [
+        default: ^default,
+        -1: ^case0,
+        -4294967296: ^case1
+      ]
+    ^default:
+      spirv.Store "Function" %var, %zero : i32
+      spirv.Branch ^merge
+    ^case0:
+      spirv.Store "Function" %var, %one : i32
+      spirv.Branch ^merge
+    ^case1:
+      spirv.Store "Function" %var, %two : i32
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}
+
+// -----
+
+// Selection with signed 16-bit selector switch and a negative case literal
+// (single-word literal, sign-extended within the word).
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Int16, Linkage], []> {
+// CHECK-LABEL: @selection_switch_si16_negative
+  spirv.func @selection_switch_si16_negative(%selector: si16) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %two = spirv.Constant 2: i32
+    %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+// CHECK: spirv.mlir.selection {
+    spirv.mlir.selection {
+// CHECK-NEXT: spirv.Switch {{%.*}} : si16, [
+// CHECK-NEXT: default: ^[[DEFAULT:.+]],
+// CHECK-NEXT: -1: ^[[CASE0:.+]],
+// CHECK-NEXT: 32767: ^[[CASE1:.+]]
+      spirv.Switch %selector : si16, [
+        default: ^default,
+        -1: ^case0,
+        32767: ^case1
+      ]
+    ^default:
+      spirv.Store "Function" %var, %zero : i32
+      spirv.Branch ^merge
+    ^case0:
+      spirv.Store "Function" %var, %one : i32
+      spirv.Branch ^merge
+    ^case1:
+      spirv.Store "Function" %var, %two : i32
+      spirv.Branch ^merge
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+}
+
+// -----
+
+// Two sibling selections nested in a loop, each with its own selection control
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// CHECK-LABEL: @sibling_selections
+  spirv.func @sibling_selections(%count : i32, %cond : i1) -> () "None" {
+    %zero = spirv.Constant 0: i32
+    %one = spirv.Constant 1: i32
+    %ivar = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+// CHECK:        spirv.mlir.loop {
+    spirv.mlir.loop {
+      spirv.Branch ^header
+    ^header:
+      %ival0 = spirv.Load "Function" %ivar : i32
+      %icmp = spirv.SLessThan %ival0, %count : i32
+      spirv.BranchConditional %icmp, ^body, ^merge
+    ^body:
+// CHECK:          spirv.mlir.selection control(Flatten)
+      spirv.mlir.selection control(Flatten) {
+        spirv.BranchConditional %cond, ^then, ^merge
+      ^then:
+        spirv.Store "Function" %ivar, %one : i32
+        spirv.Branch ^merge
+      ^merge:
+        spirv.mlir.merge
+      }
+// CHECK:          spirv.mlir.selection control(DontFlatten)
+      spirv.mlir.selection control(DontFlatten) {
+        spirv.BranchConditional %cond, ^then, ^merge
+      ^then:
+        spirv.Store "Function" %ivar, %zero : i32
+        spirv.Branch ^merge
+      ^merge:
+        spirv.mlir.merge
+      }
+      spirv.Branch ^continue
+    ^continue:
+      %ival1 = spirv.Load "Function" %ivar : i32
+      %iadd = spirv.IAdd %ival1, %one : i32
+      spirv.Store "Function" %ivar, %iadd : i32
+      spirv.Branch ^header
+    ^merge:
+      spirv.mlir.merge
+    }
+    spirv.Return
+  }
+
+  spirv.func @main() -> () "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "GLCompute" @main
+  spirv.ExecutionMode @main "LocalSize", 1, 1, 1
+}

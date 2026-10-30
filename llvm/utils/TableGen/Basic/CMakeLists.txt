@@ -15,6 +15,8 @@ add_llvm_library(LLVMTableGenBasic OBJECT EXCLUDE_FROM_ALL DISABLE_LLVM_LINK_LLV
   CodeGenIntrinsics.cpp
   DirectiveEmitter.cpp
   IntrinsicEmitter.cpp
+  OptEmitter.cpp
+  OptionParserEmitter.cpp
   PredicateExpanderDag.cpp
   RISCVTargetDefEmitter.cpp
   RuntimeLibcallsEmitter.cpp

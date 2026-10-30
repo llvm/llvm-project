@@ -77,6 +77,18 @@ def CallOpInterface : OpInterface<"CallOpInterface",
     another. These operations may be traditional direct calls `call @foo`, or
     indirect calls to other operations `call_indirect %foo`. An operation that
     uses this interface, must *not* also provide the `CallableOpInterface`.
+
+    This interface distinguishes between forwarded operands/results, and
+    consumed/produced operands/results. Forwarded operands/results are in a
+    1:1 relationship with the arguments/results of the callee: the i-th
+    forwarded operand is passed as the i-th argument of the callee and the i-th
+    forwarded result receives the i-th value returned by the callee.
+    Corresponding types are not required to be equal; it is up to the operation
+    to verify them as needed.
+
+    Note: This interface does not model variadic operands ("argument pack").
+    Neither does the CallableOpInterface. Variadic operands should be modeled
+    as consumed operands.
   }];
   let cppNamespace = "::mlir";
 
@@ -99,16 +111,40 @@ def CallOpInterface : OpInterface<"CallOpInterface",
       "void", "setCalleeFromCallable", (ins "::mlir::CallInterfaceCallable":$callee)
     >,
     InterfaceMethod<[{
-        Returns the operands within this call that are used as arguments to the
-        callee.
+        Returns the operands of this call that are used as arguments to the
+        callee ("forwarded operands").
+
+        The returned range must be a contiguous sub-range of the operation's
+        operands. The i-th forwarded operand is passed as the i-th argument of
+        the callee. Operands that are not part of the returned range are
+        consumed by the operation itself and are not passed to the callee as
+        arguments.
       }],
       "::mlir::Operation::operand_range", "getArgOperands"
     >,
     InterfaceMethod<[{
-        Returns the operands within this call that are used as arguments to the
-        callee as a mutable range.
+        Returns the operands of this call that are used as arguments to the
+        callee ("forwarded operands") as a mutable range.
+
+        This must be the same range of operands as returned by `getArgOperands`.
       }],
       "::mlir::MutableOperandRange", "getArgOperandsMutable"
+    >,
+    InterfaceMethod<[{
+        Returns the results of this call that receive the values returned by the
+        callee ("forwarded results").
+
+        The returned range must be a contiguous sub-range of the operation's
+        results. The i-th forwarded result receives the i-th value returned by
+        the callee. Results that are not part of the returned range are produced
+        by the operation itself and do not originate from the callee.
+
+        By default, all results of the operation are forwarded results.
+      }],
+      "::mlir::Operation::result_range", "getForwardedResults", (ins),
+      /*methodBody=*/[{}], /*defaultImplementation=*/[{
+        return $_op->getResults();
+      }]
     >,
     InterfaceMethod<[{
         Resolve the callable operation for given callee to a

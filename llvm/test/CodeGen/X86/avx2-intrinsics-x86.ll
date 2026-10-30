@@ -219,38 +219,6 @@ define i32 @test_x86_avx2_pmovmskb(<32 x i8> %a0) {
 declare i32 @llvm.x86.avx2.pmovmskb(<32 x i8>) nounwind readnone
 
 
-define <16 x i16> @test_x86_avx2_pmulh_w(<16 x i16> %a0, <16 x i16> %a1) {
-; AVX2-LABEL: test_x86_avx2_pmulh_w:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xe5,0xc1]
-; AVX2-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx2_pmulh_w:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe5,0xc1]
-; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
-  ret <16 x i16> %res
-}
-declare <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16>, <16 x i16>) nounwind readnone
-
-
-define <16 x i16> @test_x86_avx2_pmulhu_w(<16 x i16> %a0, <16 x i16> %a1) {
-; AVX2-LABEL: test_x86_avx2_pmulhu_w:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 # encoding: [0xc5,0xfd,0xe4,0xc1]
-; AVX2-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-;
-; AVX512VL-LABEL: test_x86_avx2_pmulhu_w:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0xe4,0xc1]
-; AVX512VL-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
-  ret <16 x i16> %res
-}
-declare <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16>, <16 x i16>) nounwind readnone
-
-
 define <4 x i64> @test_x86_avx2_psad_bw(<32 x i8> %a0, <32 x i8> %a1) {
 ; AVX2-LABEL: test_x86_avx2_psad_bw:
 ; AVX2:       # %bb.0:

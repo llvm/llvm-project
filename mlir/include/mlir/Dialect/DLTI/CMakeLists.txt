@@ -7,3 +7,8 @@ set(LLVM_TARGET_DEFINITIONS DLTIAttrs.td)
 mlir_tablegen(DLTIAttrs.h.inc -gen-attrdef-decls -attrdefs-dialect=dlti)
 mlir_tablegen(DLTIAttrs.cpp.inc -gen-attrdef-defs -attrdefs-dialect=dlti)
 add_mlir_dialect_tablegen_target(MLIRDLTIAttrsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS DLTIOpInterfaces.td)
+mlir_tablegen(DLTIOpInterfaces.h.inc -gen-op-interface-decls)
+mlir_tablegen(DLTIOpInterfaces.cpp.inc -gen-op-interface-defs)
+add_mlir_generic_tablegen_target(MLIRDLTIOpInterfacesIncGen)

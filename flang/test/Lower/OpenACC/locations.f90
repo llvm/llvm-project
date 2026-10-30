@@ -53,7 +53,7 @@ module acc_locations
     !CHECK: acc.loop
 
     !CHECK:        acc.yield loc("{{.*}}locations.f90":44:11)
-    !CHECK-NEXT: } attributes {{.*}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":44:11), loops = loc("{{[^"]*}}locations.f90":45:5)>>["{{[^"]*}}locations.f90":44:11, "{{[^"]*}}locations.f90":45:5])
+    !CHECK-NEXT: } {{.*}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":44:11), loops = loc("{{[^"]*}}locations.f90":45:5)>>["{{[^"]*}}locations.f90":44:11, "{{[^"]*}}locations.f90":45:5])
 
     !CHECK:        acc.yield loc("{{.*}}locations.f90":43:11)
     !CHECK-NEXT: } loc("{{.*}}locations.f90":43:11)
@@ -169,7 +169,7 @@ module acc_locations
 
 ! CHECK-LABEL: func.func @_QMacc_locationsPacc_loop_fused_locations
 ! CHECK: acc.loop
-! CHECK: } attributes {collapse = [3]{{.*}}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":160:11), loops = loc("{{[^"]*}}locations.f90":161:5), loc("{{[^"]*}}locations.f90":162:7), loc("{{[^"]*}}locations.f90":163:9)>>["{{[^"]*}}locations.f90":160:11, "{{[^"]*}}locations.f90":161:5, "{{[^"]*}}locations.f90":162:7, "{{[^"]*}}locations.f90":163:9])
+! CHECK: } {{.*}}collapse([3]){{.*}} loc(fused<#acc.loop_loc<directive = loc("{{[^"]*}}locations.f90":160:11), loops = loc("{{[^"]*}}locations.f90":161:5), loc("{{[^"]*}}locations.f90":162:7), loc("{{[^"]*}}locations.f90":163:9)>>["{{[^"]*}}locations.f90":160:11, "{{[^"]*}}locations.f90":161:5, "{{[^"]*}}locations.f90":162:7, "{{[^"]*}}locations.f90":163:9])
 
   subroutine data_end_locations(arr)
     real, dimension(10) :: arr
@@ -196,5 +196,5 @@ module acc_locations
 
 ! CHECK-LABEL: func.func @_QMacc_locationsPacc_kernel_with_loop_locations
 ! CHECK: acc.loop
-! CHECK: } attributes {{.*}} loc(fused<#acc.loop_loc<loops = loc("{{[^"]*}}locations.f90":191:5)>>["{{[^"]*}}locations.f90":191:5])
+! CHECK: } {{.*}} loc(fused<#acc.loop_loc<loops = loc("{{[^"]*}}locations.f90":191:5)>>["{{[^"]*}}locations.f90":191:5])
 end module

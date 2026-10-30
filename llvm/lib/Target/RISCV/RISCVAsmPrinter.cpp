@@ -42,6 +42,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CHERICapabilityFormat.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
@@ -60,12 +61,14 @@ public:
   static char ID;
 
 private:
+  const RISCVMCOptions &CLOpts;
   const RISCVSubtarget *STI;
 
 public:
   explicit RISCVAsmPrinter(TargetMachine &TM,
                            std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID) {}
+      : AsmPrinter(TM, std::move(Streamer), ID),
+        CLOpts(RISCV_MC::getCLOpts(TM.Options.MCOptions)) {}
 
   StringRef getPassName() const override { return "RISC-V Assembly Printer"; }
 
@@ -122,8 +125,6 @@ public:
   void emitNoteGnuProperty(const Module &M);
 
 private:
-  void emitAttributes(const MCSubtargetInfo &SubtargetInfo);
-
   void emitNTLHint(const MachineInstr *MI);
 
   void emitLpadAlignedCall(const MachineInstr &MI);
@@ -135,6 +136,9 @@ private:
   void emitSled(const MachineInstr *MI, SledKind Kind);
 
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
+
+  MaybeAlign
+  getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) override;
 };
 } // namespace
 
@@ -392,6 +396,17 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case RISCV::PseudoTAILX7: {
+    // Lower to PseudoTAILReg with X7 as the register operand.
+    MCOperand SymOp;
+    lowerOperand(MI->getOperand(0), SymOp);
+    MCInst TmpInst;
+    TmpInst.setOpcode(RISCV::PseudoTAILReg);
+    TmpInst.addOperand(SymOp);
+    TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
@@ -448,7 +463,7 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       return true; // Unknown modifier.
     case 'z':      // Print zero register if zero, regular printing otherwise.
       if (MO.isImm() && MO.getImm() == 0) {
-        OS << RISCVInstPrinter::getRegisterName(RISCV::X0);
+        OS << RISCVInstPrinter::getRegisterName(CLOpts, RISCV::X0);
         return false;
       }
       break;
@@ -471,7 +486,7 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     OS << MO.getImm();
     return false;
   case MachineOperand::MO_Register:
-    OS << RISCVInstPrinter::getRegisterName(MO.getReg());
+    OS << RISCVInstPrinter::getRegisterName(CLOpts, MO.getReg());
     return false;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
@@ -523,7 +538,8 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     MMI->getContext().registerInlineAsmLabel(Sym);
   }
 
-  OS << "(" << RISCVInstPrinter::getRegisterName(AddrReg.getReg()) << ")";
+  OS << "(" << RISCVInstPrinter::getRegisterName(CLOpts, AddrReg.getReg())
+     << ")";
   return false;
 }
 
@@ -547,6 +563,8 @@ bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
     RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
+    RTS.setArchString(
+        cantFail(RISCVFeatures::parseFeatureBits(STI))->toString());
     return true;
   }
 
@@ -631,9 +649,19 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   assert(OutStreamer->getTargetStreamer() &&
          "target streamer is uninitialized");
   RISCVTargetStreamer &RTS = getTargetStreamer();
-  if (const MDString *ModuleTargetABI =
-          dyn_cast_or_null<MDString>(M.getModuleFlag("target-abi")))
-    RTS.setTargetABI(RISCVABI::getTargetABI(ModuleTargetABI->getString()));
+  StringRef ABIName = M.getTargetABIFromMD();
+  if (!ABIName.empty()) {
+    RISCVABI::ABI ABI = RISCVABI::getTargetABI(ABIName);
+    if (ABI == RISCVABI::ABI_Unknown) {
+      M.getContext().emitError(Twine('\'') + ABIName +
+                               "' is not a recognized ABI for this target");
+    } else {
+      RTS.setTargetABI(ABI);
+    }
+  } else if (!RTS.hasTargetABI()) {
+    RTS.setTargetABI(
+        cantFail(RISCVABI::computeTargetABI(TM.getMCSubtargetInfo(), "")));
+  }
 
   MCSubtargetInfo SubtargetInfo = TM.getMCSubtargetInfo();
 
@@ -658,26 +686,18 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
     RTS.setFlagsFromFeatures(SubtargetInfo);
   }
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
-    emitAttributes(SubtargetInfo);
+  if (M.getTargetTriple().isOSBinFormatELF())
+    RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign=*/true);
 }
 
 void RISCVAsmPrinter::emitEndOfAsmFile(Module &M) {
   RISCVTargetStreamer &RTS = getTargetStreamer();
 
-  if (TM.getTargetTriple().isOSBinFormatELF()) {
+  if (M.getTargetTriple().isOSBinFormatELF()) {
     RTS.finishAttributeSection();
     emitNoteGnuProperty(M);
   }
   EmitHwasanMemaccessSymbols(M);
-}
-
-void RISCVAsmPrinter::emitAttributes(const MCSubtargetInfo &SubtargetInfo) {
-  RISCVTargetStreamer &RTS = getTargetStreamer();
-  // Use MCSubtargetInfo from TargetMachine. Individual functions may have
-  // attributes that differ from other functions in the module and we have no
-  // way to know which function is correct.
-  RTS.emitTargetAttributes(SubtargetInfo, /*EmitStackAlign*/ true);
 }
 
 void RISCVAsmPrinter::emitFunctionEntryLabel() {
@@ -805,7 +825,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
   if (HwasanMemaccessSymbols.empty())
     return;
 
-  assert(TM.getTargetTriple().isOSBinFormatELF());
+  assert(M.getTargetTriple().isOSBinFormatELF());
   // Use MCSubtargetInfo from TargetMachine. Individual functions may have
   // attributes that differ from other functions in the module and we have no
   // way to know which function is correct.
@@ -1025,7 +1045,7 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 }
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
-  assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  assert(M.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
   uint32_t GnuProps = 0;
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero())
@@ -1321,6 +1341,33 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
   const MCExpr *Expr = MCSymbolRefExpr::create(MCSym, OutContext);
   uint64_t Size = getDataLayout().getTypeAllocSize(RCPV->getType());
   OutStreamer->emitValue(Expr, Size);
+}
+
+MaybeAlign
+RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
+  const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
+  if (!GV.getValueType()->isSized())
+    return std::nullopt;
+
+  // When the alignment granule is determined by a CHERI requirement,
+  // don't increase alignment if a custom section has been specified,
+  // as doing so can break existing code that relies on the lack of
+  // padding (e.g. linker sets).
+  if (GV.hasSection())
+    return std::nullopt;
+
+  uint64_t Size = GV.getGlobalSize(getDataLayout());
+  if (MCSTI.hasFeature(RISCV::FeatureVendorXCheriot))
+    return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
+
+  if (MCSTI.hasFeature(RISCV::FeatureStdExtY)) {
+    if (MCSTI.hasFeature(RISCV::Feature64Bit))
+      return RV64YCapabilityFormat::getRequiredAlignment(Size);
+    else
+      return RV32YCapabilityFormat::getRequiredAlignment(Size);
+  }
+
+  return std::nullopt;
 }
 
 char RISCVAsmPrinter::ID = 0;

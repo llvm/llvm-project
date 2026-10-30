@@ -17,7 +17,7 @@
 
 define weak_odr dso_local spir_kernel void @foo() {
 entry:
-  %r = tail call spir_func noundef float @lgammaf(float noundef 0x7FF8000000000000)
+  %r = tail call spir_func noundef float @lgammaf(float noundef +qnan)
   ret void
 }
 

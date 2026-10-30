@@ -73,7 +73,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["nvptx64-
   llvm.func @_QPopenmp_target_data(%d16 : i16, %d32 : i32, %d64 : i64) {
     %one = llvm.mlir.constant(1 : i64) : i64
     %buf = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
-    %map = omp.map.info var_ptr(%buf : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+    %map = omp.map.info var_ptr(%buf : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
 
     // Constant i16 -> i64 in the runtime call.
     %c1_i16 = llvm.mlir.constant(1 : i16) : i16
@@ -147,8 +147,8 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["nvptx64-
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %var = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
 
-    %m_to = omp.map.info var_ptr(%var : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "var"}
-    %m_from = omp.map.info var_ptr(%var : !llvm.ptr, i32) map_clauses(from) capture(ByRef) -> !llvm.ptr {name = "var"}
+    %m_to = omp.map.info var_ptr(%var : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("var") -> !llvm.ptr
+    %m_from = omp.map.info var_ptr(%var : !llvm.ptr, i32) map_clauses(from) capture(ByRef) name("var") -> !llvm.ptr
 
     // Constant i16 -> i64 in the runtime call.
     %c1_i16 = llvm.mlir.constant(1 : i16) : i16
@@ -228,7 +228,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["nvptx64-
   llvm.func @target_update_dev_clause(%d16 : i16, %d32 : i32, %d64 : i64) {
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %var = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr
-    %m = omp.map.info var_ptr(%var : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = "var"}
+    %m = omp.map.info var_ptr(%var : !llvm.ptr, i32) map_clauses(to) capture(ByRef) name("var") -> !llvm.ptr
 
     // ---- Constant cases ----
     %c1_i16 = llvm.mlir.constant(1 : i16) : i16

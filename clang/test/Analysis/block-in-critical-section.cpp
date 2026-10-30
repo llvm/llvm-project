@@ -337,3 +337,10 @@ void testBlockInCriticalSectionUniqueLockWithDeferLock() {
   std::unique_lock<std::mutex> lock(g_mutex, std::defer_lock);
   sleep(1); // no-warning
 }
+
+void testBlockInCriticalSectionUniqueLockWithDeferLockVariable() {
+  std::mutex g_mutex;
+  std::defer_lock_t tag;
+  std::unique_lock<std::mutex> lock(g_mutex, tag);
+  sleep(1); // no-warning
+}

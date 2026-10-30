@@ -60,6 +60,15 @@ FriendDecl *CXXRecordDecl::getFirstFriend() const {
   return First ? cast<FriendDecl>(First) : nullptr;
 }
 
+void CXXRecordDecl::loadLazyFriends() {
+  assert(hasDefinition());
+  assert(hasLazyFriends());
+  ExternalASTSource *Source = getParentASTContext().getExternalSource();
+  FriendDecl *Friend = cast_or_null<FriendDecl>(data().FirstFriend.get(Source));
+  while (Friend && Friend->NextFriend.isOffset())
+    Friend = cast_or_null<FriendDecl>(Friend->NextFriend.get(Source));
+}
+
 SourceRange FriendDecl::getSourceRange() const {
   if (TypeSourceInfo *TInfo = getFriendType()) {
     SourceLocation EndL =

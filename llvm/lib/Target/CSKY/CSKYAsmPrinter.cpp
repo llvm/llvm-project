@@ -39,7 +39,9 @@ STATISTIC(CSKYNumInstrsCompressed,
 
 CSKYAsmPrinter::CSKYAsmPrinter(llvm::TargetMachine &TM,
                                std::unique_ptr<llvm::MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer)), MCInstLowering(OutContext, *this) {}
+    : AsmPrinter(TM, std::move(Streamer)),
+      CLOpts(CSKY_MC::getCLOpts(TM.Options.MCOptions)),
+      MCInstLowering(OutContext, *this) {}
 
 bool CSKYAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   MCP = MF.getConstantPool();
@@ -129,7 +131,7 @@ void CSKYAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void CSKYAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     emitAttributes(M);
 }
 
@@ -137,7 +139,7 @@ void CSKYAsmPrinter::emitEndOfAsmFile(Module &M) {
   CSKYTargetStreamer &CTS =
       static_cast<CSKYTargetStreamer &>(*OutStreamer->getTargetStreamer());
 
-  if (TM.getTargetTriple().isOSBinFormatELF())
+  if (M.getTargetTriple().isOSBinFormatELF())
     CTS.finishAttributeSection();
 }
 
@@ -270,7 +272,7 @@ bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       return true; // Unknown modifier.
     case 'R':
       if (MO.getType() == MachineOperand::MO_Register) {
-        OS << CSKYInstPrinter::getRegisterName(MO.getReg() + 1);
+        OS << CSKYInstPrinter::getRegisterName(CLOpts, MO.getReg() + 1);
         return false;
       }
     }
@@ -283,7 +285,7 @@ bool CSKYAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   case MachineOperand::MO_Register:
     if (MO.getReg() == CSKY::C)
       return false;
-    OS << CSKYInstPrinter::getRegisterName(MO.getReg());
+    OS << CSKYInstPrinter::getRegisterName(CLOpts, MO.getReg());
     return false;
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, OS);
@@ -310,7 +312,8 @@ bool CSKYAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     if (!MO.isReg())
       return true;
 
-    OS << "(" << CSKYInstPrinter::getRegisterName(MO.getReg()) << ", 0)";
+    OS << "(" << CSKYInstPrinter::getRegisterName(CLOpts, MO.getReg())
+       << ", 0)";
     return false;
   }
 

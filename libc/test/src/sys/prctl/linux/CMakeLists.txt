@@ -1,4 +1,4 @@
-add_custom_target(libc_sys_prctl_unittests)
+add_libc_testsuite(libc-sys-prctl-tests)
 
 # Temporarily disable this test while setting up arm and riscv buildbots
 # using qemu, since PR_GET_THP_DISABLE is not supported on qemu.
@@ -8,7 +8,7 @@ if(NOT (LIBC_TARGET_ARCHITECTURE_IS_ARM OR
   add_libc_test(
     prctl_test
     SUITE
-      libc_sys_prctl_unittests
+      libc-sys-prctl-tests
     SRCS
       prctl_test.cpp
     DEPENDS

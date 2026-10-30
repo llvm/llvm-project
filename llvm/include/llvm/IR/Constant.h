@@ -21,6 +21,7 @@
 namespace llvm {
 
 class ConstantRange;
+class ConstantFPRange;
 class APInt;
 
 /// This is an important base class in LLVM. It provides the common facilities
@@ -112,22 +113,26 @@ public:
   /// lane, the constants still match.
   LLVM_ABI bool isElementWiseEqual(Value *Y) const;
 
-  /// Return true if this is a vector constant that includes any undef or
-  /// poison elements. Since it is impossible to inspect a scalable vector
-  /// element- wise at compile time, this function returns true only if the
-  /// entire vector is undef or poison.
+  /// Return true if this is a vector or aggregate constant that includes any
+  /// undef or poison elements. Nested aggregates (structs, arrays and fixed
+  /// width vectors) are inspected recursively. Since it is impossible to
+  /// inspect a scalable vector element-wise at compile time, this function
+  /// returns true for a scalable vector only if the entire vector is undef or
+  /// poison.
   LLVM_ABI bool containsUndefOrPoisonElement() const;
 
-  /// Return true if this is a vector constant that includes any poison
-  /// elements.
+  /// Return true if this is a vector or aggregate constant that includes any
+  /// poison elements. Nested aggregates are inspected recursively.
   LLVM_ABI bool containsPoisonElement() const;
 
-  /// Return true if this is a vector constant that includes any strictly undef
-  /// (not poison) elements.
+  /// Return true if this is a vector or aggregate constant that includes any
+  /// strictly undef (not poison) elements. Nested aggregates are inspected
+  /// recursively.
   LLVM_ABI bool containsUndefElement() const;
 
-  /// Return true if this is a fixed width vector constant that includes
-  /// any constant expressions.
+  /// Return true if this is a fixed width vector or aggregate constant
+  /// that includes any constant expressions. Nested aggregates are inspected
+  /// recursively.
   LLVM_ABI bool containsConstantExpression() const;
 
   /// Return true if this is a vector constant where at least one element
@@ -173,6 +178,11 @@ public:
   /// Convert constant to an approximate constant range. For vectors, the
   /// range is the union over the element ranges. Poison elements are ignored.
   LLVM_ABI ConstantRange toConstantRange() const;
+
+  /// Convert constant to an approximate constant floating point range. For
+  /// vectors, the range is the union over the element ranges. Poison elements
+  /// are ignored.
+  LLVM_ABI ConstantFPRange toConstantFPRange() const;
 
   /// Called if some element of this constant is no longer valid.
   /// At this point only other constants may be on the use_list for this

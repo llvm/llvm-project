@@ -49,5 +49,6 @@ if.end21:                                         ; preds = %for.body
   br i1 %tobool, label %if.then12.loopexit, label %for.body
 }
 
-!0 = !{!"omnipotent char", !1}
+!0 = !{!2, !2, i64 0}
 !1 = !{!"Simple C/C++ TBAA"}
+!2 = !{!"omnipotent char", !1}

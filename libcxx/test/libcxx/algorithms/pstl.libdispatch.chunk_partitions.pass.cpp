@@ -8,7 +8,9 @@
 
 // <algorithm>
 
+// REQUIRES: std-at-least-c++17
 // REQUIRES: libcpp-pstl-backend-libdispatch
+// UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // __chunk_partitions __partition_chunks(ptrdiff_t);
 

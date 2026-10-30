@@ -94,10 +94,10 @@ transform.sequence failures(propagate) {
 
 %0 = "test.generate_something"() : () -> !transform.any_op
 // expected-error @below {{does not expect extra operands when used as top-level}}
-"transform.sequence"(%0) ({
+"transform.sequence"(%0) <{failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 0, 1>}> ({
 ^bb0(%arg0: !transform.any_op):
   "transform.yield"() : () -> ()
-}) {failure_propagation_mode = 1 : i32, operandSegmentSizes = array<i32: 0, 1>} : (!transform.any_op) -> ()
+}) : (!transform.any_op) -> ()
 
 // -----
 
@@ -343,7 +343,7 @@ transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
   // expected-note @below {{no effects specified for operand #0}}
-  transform.test_required_memory_effects %arg0 {modifies_payload} : (!transform.any_op) -> !transform.any_op
+  transform.test_required_memory_effects %arg0 modifies_payload : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -352,13 +352,13 @@ transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires 'allocate' memory effect to be specified for results}}
   // expected-note @below {{no 'allocate' effect specified for result #0}}
-  transform.test_required_memory_effects %arg0 {has_operand_effect, modifies_payload} : (!transform.any_op) -> !transform.any_op
+  transform.test_required_memory_effects %arg0 has_operand_effect modifies_payload : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
 
 // expected-error @below {{attribute can only be attached to operations with symbol tables}}
-"test.unknown_container"() { transform.with_named_sequence } : () -> ()
+"test.unknown_container"() {transform.with_named_sequence} : () -> ()
 
 // -----
 
@@ -421,7 +421,7 @@ module attributes { transform.with_named_sequence } {
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !transform.any_op):
     // expected-error @below {{requires attribute 'target'}}
-    "transform.include"() {failure_propagation_mode = 1 : i32} : () -> ()
+    "transform.include"() <{failure_propagation_mode = 1 : i32}> : () -> ()
   }
 }
 
@@ -549,7 +549,7 @@ module attributes { transform.with_named_sequence } {
 
 module attributes { transform.with_named_sequence } {
   // expected-error @below {{argument #0 cannot be both readonly and consumed}}
-  transform.named_sequence @foo(%op: !transform.any_op { transform.readonly, transform.consumed } )
+  transform.named_sequence @foo(%op: !transform.any_op {transform.readonly, transform.consumed} )
 }
 
 // -----
@@ -624,7 +624,7 @@ module attributes { transform.with_named_sequence } {
 
 // Checking that consumptions annotations are used correctly in invocation checks.
 module attributes { transform.with_named_sequence } {
-  transform.named_sequence @foo(%op: !transform.any_op { transform.consumed } )
+  transform.named_sequence @foo(%op: !transform.any_op {transform.consumed} )
 
   // expected-error @below {{'transform.sequence' op block argument #0 has more than one potential consumer}}
   transform.sequence failures(propagate) {

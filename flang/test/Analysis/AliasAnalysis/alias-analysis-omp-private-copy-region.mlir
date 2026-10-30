@@ -20,7 +20,7 @@ omp.private {type = firstprivate} @arr_privatizer : !fir.box<!fir.array<8xi32>> 
   %c1 = arith.constant 1 : index
   %0 = fir.shape %c8 : (index) -> !fir.shape<1>
   %1 = fir.allocmem !fir.array<8xi32> {bindc_name = ".tmp", uniq_name = ""}
-  %2:2 = hlfir.declare %1(%0) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<8xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<8xi32>>, !fir.heap<!fir.array<8xi32>>)
+  %2:2 = hlfir.declare %1(%0) uniq_name(".tmp") : (!fir.heap<!fir.array<8xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<8xi32>>, !fir.heap<!fir.array<8xi32>>)
   %3 = fir.shape_shift %c1, %c8 : (index, index) -> !fir.shapeshift<1>
   %4 = fir.embox %2#0(%3) : (!fir.heap<!fir.array<8xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<8xi32>>
   fir.store %4 to %arg1 : !fir.ref<!fir.box<!fir.array<8xi32>>>

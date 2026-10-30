@@ -4100,6 +4100,7 @@ void kmpc_set_blocktime(int arg);
 void ompc_set_nested(int flag);
 void ompc_set_dynamic(int flag);
 void ompc_set_num_threads(int arg);
+void kmpc_set_num_threads_8(kmp_int64 arg);
 
 extern void __kmp_push_current_task_to_thread(kmp_info_t *this_thr,
                                               kmp_team_t *team, int tid);

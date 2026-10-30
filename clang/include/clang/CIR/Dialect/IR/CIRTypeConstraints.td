@@ -44,6 +44,19 @@ class CIR_TypeSummaries<list<Type> types> {
 }
 
 //===----------------------------------------------------------------------===//
+// Dialect predicates
+//===----------------------------------------------------------------------===//
+
+// Constrains the types nested in a CIR type. Every CIR type admits only CIR
+// types as parameters, so a CIR type holds no foreign type at any depth.
+def CIR_DialectType
+    : Type<CPred<"$_self && " #
+                 "::mlir::isa<::cir::CIRDialect>($_self.getDialect())">,
+           "any type from the CIR dialect"> {
+  let cppFunctionName = "isCIRType";
+}
+
+//===----------------------------------------------------------------------===//
 // Bool Type predicates
 //===----------------------------------------------------------------------===//
 
@@ -202,6 +215,19 @@ def CIR_AnyIntOrBoolOrFloatType
 
 def CIR_AnyComplexType : CIR_TypeBase<"::cir::ComplexType", "complex type">;
 
+class CIR_ComplexElementTypePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::ComplexType>($_self).getElementType()", pred>;
+
+class CIR_ComplexTypeOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyComplexType,
+        [Or<!foreach(type, types, CIR_ComplexElementTypePred<type.predicate>)>],
+        !if(!empty(summary),
+            "complex of " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+def CIR_ComplexOfIntType : CIR_ComplexTypeOf<[CIR_AnyIntType]>;
+def CIR_ComplexOfFloatType : CIR_ComplexTypeOf<[CIR_AnyFloatType]>;
+
 def CIR_AnyComplexOrIntOrBoolOrFloatType
     : AnyTypeOf<[CIR_AnyComplexType, CIR_AnyIntOrBoolOrFloatType],
                 "complex, integer, boolean or floating point type"> {
@@ -268,6 +294,11 @@ class CIR_PtrToAnyOf<list<Type> types, string summary = "">
 def CIR_AnyVoidType : CIR_TypeBase<"::cir::VoidType", "void type">,
       BuildableType<"$_builder.getType<" # cppType # ">()">;
 
+// Void has no layout, so neither does an array of it.
+def CIR_ArrayElementType
+    : Type<And<[CIR_DialectType.predicate, Neg<CIR_AnyVoidType.predicate>]>,
+           "any CIR type except void">;
+
 // Void pointer type constraints
 def CIR_VoidPtrType : CIR_PtrTo<CIR_AnyVoidType, "void type">;
 
@@ -297,8 +328,8 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
 def CIR_VectorElementType
-    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType, CIR_AnyPtrType],
-                "any cir boolean, integer, floating point or pointer type"> {
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point"> {
   let cppFunctionName = "isValidVectorTypeElementType";
 }
 
@@ -342,6 +373,12 @@ def CIR_AnyIntOrVecOfIntType
     let cppFunctionName = "isIntOrVectorOfIntType";
 }
 
+def CIR_AnyIntOrVecOfIntOrBoolType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntOrBoolType],
+        "integer or vector of bool or integer type"> {
+    let cppFunctionName = "isIntOrVecOfIntOrBoolType";
+}
+
 def CIR_AnySIntOrVecOfSIntType
     : AnyTypeOf<[CIR_AnySIntType, CIR_VectorOfSIntType],
         "signed integer or vector of signed integer type"> {
@@ -365,6 +402,44 @@ def CIR_AnyFloatOrVecOfFloatType
 def CIR_AnyBitwiseType
     : AnyTypeOf<[CIR_AnyIntType, CIR_AnyBoolType, CIR_VectorOfIntOrBoolType],
                 "integer, boolean, or vector of bool or integer">;
+
+//===----------------------------------------------------------------------===//
+// Matrix Type predicates
+//===----------------------------------------------------------------------===//
+
+def CIR_MatrixElementType
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
+                "any cir boolean, integer, floating point type"> {
+  let cppFunctionName = "isValidMatrixTypeElementType";
+}
+
+def CIR_AnyMatrixType : CIR_TypeBase<"::cir::MatrixType", "matrix type">;
+
+class CIR_MatrixElementTypePred<Pred pred> : SubstLeaves<"$_self",
+    "::mlir::cast<::cir::MatrixType>($_self).getElementType()", pred>;
+
+class CIR_MatrixTypeOf<list<Type> types, string summary = "">
+    : CIR_ConfinedType<CIR_AnyMatrixType,
+        [Or<!foreach(type, types, CIR_MatrixElementTypePred<type.predicate>)>],
+        !if(!empty(summary),
+            "matrix of " # CIR_TypeSummaries<types>.value,
+            summary)>;
+
+def CIR_MatrixOfIntType : CIR_MatrixTypeOf<[CIR_AnyIntType]>;
+def CIR_MatrixOfFloatType : CIR_MatrixTypeOf<[CIR_AnyFloatType]>;
+
+def CIR_AnyIntOrVecOrMatrixOfIntType
+    : AnyTypeOf<[CIR_AnyIntType, CIR_VectorOfIntType, CIR_MatrixOfIntType],
+        "integer or vector/matrix of integer type"> {
+    let cppFunctionName = "isIntOrVectorOrMatrixOfIntType";
+}
+
+def CIR_AnyFloatOrVecOrMatrixOfFloatType
+    : AnyTypeOf<[CIR_AnyFloatType, CIR_VectorOfFloatType,
+                 CIR_MatrixOfFloatType],
+        "floating point or vector/matrix of floating point type"> {
+    let cppFunctionName = "isFPOrVectorOrMatrixOfFPType";
+}
 
 //===----------------------------------------------------------------------===//
 // Data member type predicates

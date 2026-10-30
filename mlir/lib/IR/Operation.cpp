@@ -804,7 +804,8 @@ ParseResult OpState::genericParseProperties(OpAsmParser &parser,
 }
 
 /// Print the properties as a Attribute with names not included within
-/// 'elidedProps'
+/// 'elidedProps'. A leading space is printed as part of the properties, so
+/// that nothing is emitted at all when every property is elided.
 void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
                                      ArrayRef<StringRef> elidedProps) {
   if (!properties)
@@ -819,14 +820,14 @@ void OpState::genericPrintProperties(OpAsmPrinter &p, Attribute properties,
           return !elidedAttrsSet.contains(attr.getName().strref());
         });
     if (!filteredAttrs.empty()) {
-      p << "<{";
+      p << " <{";
       interleaveComma(filteredAttrs, p, [&](NamedAttribute attr) {
         p.printNamedAttribute(attr);
       });
       p << "}>";
     }
   } else {
-    p << "<" << properties << ">";
+    p << " <" << properties << ">";
   }
 }
 
@@ -1269,7 +1270,8 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
                                                  StringRef attrName,
                                                  StringRef valueGroupName,
                                                  size_t expectedCount) {
-  auto sizeAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrName);
+  auto sizeAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(attrName).value_or(Attribute{}));
   if (!sizeAttr)
     return op->emitOpError("requires dense i32 array attribute '")
            << attrName << "'";

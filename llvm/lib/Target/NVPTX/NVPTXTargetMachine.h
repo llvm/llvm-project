@@ -26,10 +26,6 @@ class NVPTXTargetMachine : public CodeGenTargetMachineImpl {
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   NVPTXSubtarget Subtarget;
 
-  // Hold Strings that can be free'd all together with NVPTXTargetMachine
-  mutable BumpPtrAllocator StrAlloc;
-  mutable UniqueStringSaver StrPool;
-
 public:
   NVPTXTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                      StringRef FS, const TargetOptions &Options,
@@ -45,8 +41,6 @@ public:
     return getTargetTriple().getOS() == Triple::NVCL ? NVPTX::NVCL
                                                      : NVPTX::CUDA;
   }
-  UniqueStringSaver &getStrPool() const { return StrPool; }
-
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
   // Emission of machine code through MCJIT is not supported.

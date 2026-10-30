@@ -633,7 +633,7 @@ define amdgpu_kernel void @no_alias_addr_space_has_meta(ptr addrspace(3) %sptr, 
 !0 = !{i32 2, i32 3, i32 4, i32 10}
 
 ;.
-; CHECK: [[META0]] = !{i32 2, i32 3, i32 4, i32 5, i32 6, i32 10}
-; CHECK: [[META1]] = !{i32 2, i32 3, i32 5, i32 10}
+; CHECK: [[META0]] = !{i32 2, i32 3, i32 4, i32 5, i32 6, i32 16}
+; CHECK: [[META1]] = !{i32 2, i32 3, i32 5, i32 16}
 ; CHECK: [[META2]] = !{i32 2, i32 3, i32 4, i32 10}
 ;.

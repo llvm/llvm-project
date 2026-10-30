@@ -8,8 +8,10 @@
 
 #include "ModulesBuilder.h"
 #include "Compiler.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "support/Logger.h"
+#include "clang/Driver/Types.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Serialization/ASTReader.h"
@@ -25,6 +27,7 @@
 
 #include <chrono>
 #include <ctime>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -36,6 +39,23 @@ llvm::cl::opt<bool> DebugModulesBuilder(
     llvm::cl::desc("Don't remove clangd's built module files for debugging. "
                    "Remember to remove them later after debugging."),
     llvm::cl::init(false));
+
+// Disable reusing prebuilt module files on windows by default.
+// As clangd may lock these module files on windows to prevent
+// these module files to be updated by build system on windows.
+//
+// See https://github.com/clangd/clangd/issues/2497 for details.
+#ifdef _WIN32
+constexpr bool ReusePrebuiltModuleFileDefault = false;
+#else
+constexpr bool ReusePrebuiltModuleFileDefault = true;
+#endif
+
+llvm::cl::opt<bool> ReusePrebuiltModuleFile(
+    "reuse-prebuilt-module-file",
+    llvm::cl::desc("Whether or not to reuse prebuilt module files from existing build "
+                   "artifacts."),
+    llvm::cl::init(ReusePrebuiltModuleFileDefault));
 
 llvm::cl::opt<unsigned> VersionedModuleFileGCThresholdSeconds(
     "modules-builder-versioned-gc-threshold-seconds",
@@ -865,11 +885,71 @@ private:
   llvm::StringMap<llvm::StringMap<std::string>> ModuleNameToMultipleSourceCache;
 };
 
+// Heuristic: identifies candidate module interface files by extension only.
+// Not authoritative. A module interface may use a non-module extension. A file
+// with a module extension may not declare a module or may be a non-importable
+// implementation unit. The later scan by the underlying ProjectModules confirms
+// the actual module declaration.
+bool isCXXModuleFile(PathRef File) {
+  namespace types = clang::driver::types;
+  auto Lang =
+      types::lookupTypeForExtension(llvm::sys::path::extension(File).substr(1));
+  return Lang == types::TY_CXXModule;
+}
+
+// Module files discovered by opening or file-watching, before they are known to
+// the compilation database. Used as a fallback when normal module resolution
+// cannot find the source for a module name.
+class ObservedModuleFiles {
+public:
+  explicit ObservedModuleFiles(const GlobalCompilationDatabase &CDB)
+      : CDB(CDB) {}
+
+  bool add(PathRef File) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    return Sources.try_emplace(maybeCaseFoldPath(File), File.str()).second;
+  }
+
+  bool remove(PathRef File) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    return Sources.erase(maybeCaseFoldPath(File));
+  }
+
+  std::vector<Path> sourcesFor(PathRef File) const {
+    auto PI = CDB.getProjectInfo(File);
+    if (!PI || PI->SourceRoot.empty())
+      return {};
+    const std::string ProjectRoot = maybeCaseFoldPath(PI->SourceRoot);
+
+    std::vector<Path> Observed;
+    {
+      std::lock_guard<std::mutex> Lock(Mutex);
+      Observed.reserve(Sources.size());
+      for (const auto &Source : Sources)
+        Observed.push_back(Source.second);
+    }
+
+    std::vector<Path> Result;
+    for (const auto &Source : Observed) {
+      auto SourcePI = CDB.getProjectInfo(Source);
+      if (SourcePI && maybeCaseFoldPath(SourcePI->SourceRoot) == ProjectRoot)
+        Result.push_back(Source);
+    }
+    return Result;
+  }
+
+private:
+  const GlobalCompilationDatabase &CDB;
+  mutable std::mutex Mutex;
+  llvm::StringMap<Path> Sources;
+};
+
 class CachingProjectModules : public ProjectModules {
 public:
   CachingProjectModules(std::unique_ptr<ProjectModules> MDB,
-                        ModuleNameToSourceCache &Cache)
-      : MDB(std::move(MDB)), Cache(Cache) {
+                        ModuleNameToSourceCache &Cache,
+                        const ObservedModuleFiles &ObservedFiles)
+      : MDB(std::move(MDB)), Cache(Cache), ObservedFiles(ObservedFiles) {
     assert(this->MDB && "CachingProjectModules should only be created with a "
                         "valid underlying ProjectModules");
   }
@@ -906,10 +986,11 @@ public:
         Cache.eraseMultipleEntry(ModuleName, RequiredSrcFile);
       }
 
-      auto Result = MDB->getSourceForModuleName(ModuleName, RequiredSrcFile);
-      if (!Result.empty())
-        Cache.addMultipleEntry(ModuleName, RequiredSrcFile, Result);
-      return Result;
+      auto Result = findSourceForModuleName(ModuleName, RequiredSrcFile);
+      if (!Result)
+        return {};
+      Cache.addMultipleEntry(ModuleName, RequiredSrcFile, *Result);
+      return *Result;
     }
 
     // For unknown module name state, assume it is unique. This may give user
@@ -930,16 +1011,28 @@ public:
       Cache.eraseUniqueEntry(ModuleName);
     }
 
-    auto Result = MDB->getSourceForModuleName(ModuleName, RequiredSrcFile);
-    if (!Result.empty())
-      Cache.addUniqueEntry(ModuleName, Result);
-
-    return Result;
+    auto Result = findSourceForModuleName(ModuleName, RequiredSrcFile);
+    if (!Result)
+      return {};
+    Cache.addUniqueEntry(ModuleName, *Result);
+    return *Result;
   }
 
 private:
+  std::optional<std::string> findSourceForModuleName(llvm::StringRef ModuleName,
+                                                     PathRef RequiredSrcFile) {
+    auto Result = MDB->getSourceForModuleName(ModuleName, RequiredSrcFile);
+    if (!Result.empty())
+      return Result;
+    for (const auto &Source : ObservedFiles.sourcesFor(RequiredSrcFile))
+      if (MDB->getModuleNameForSource(Source) == ModuleName)
+        return Source;
+    return std::nullopt;
+  }
+
   std::unique_ptr<ProjectModules> MDB;
   ModuleNameToSourceCache &Cache;
+  const ObservedModuleFiles &ObservedFiles;
 };
 
 /// Collect the directly and indirectly required module names for \param
@@ -1021,12 +1114,34 @@ void garbageCollectModuleCache(PathRef CacheRoot) {
 
 class ModulesBuilder::ModulesBuilderImpl {
 public:
-  ModulesBuilderImpl(const GlobalCompilationDatabase &CDB) : Cache(CDB) {}
+  ModulesBuilderImpl(const GlobalCompilationDatabase &CDB)
+      : Cache(CDB), ObservedFiles(CDB) {}
 
   ModuleNameToSourceCache &getProjectModulesCache() {
     return ProjectModulesCache;
   }
+  const ObservedModuleFiles &getObservedFiles() const { return ObservedFiles; }
   const GlobalCompilationDatabase &getCDB() const { return Cache.getCDB(); }
+
+  bool observeSourcePath(PathRef File) {
+    return isCXXModuleFile(File) && ObservedFiles.add(File);
+  }
+
+  bool onFileEvent(const FileEvent &Event) {
+    const llvm::StringRef File = Event.uri.file();
+    switch (Event.type) {
+    case FileChangeType::Created:
+      return isCXXModuleFile(File) && ObservedFiles.add(File);
+    case FileChangeType::Changed:
+      if (!isCXXModuleFile(File))
+        return false;
+      ObservedFiles.add(File);
+      return true;
+    case FileChangeType::Deleted:
+      return ObservedFiles.remove(File);
+    }
+    llvm_unreachable("Unhandled FileChangeType");
+  }
 
   llvm::Error
   getOrBuildModuleFile(PathRef RequiredSource, StringRef ModuleName,
@@ -1043,6 +1158,7 @@ private:
   void garbageCollectModuleCacheForProjectRoot(PathRef ProjectRoot);
 
   ModuleFileCache Cache;
+  ObservedModuleFiles ObservedFiles;
   ModuleNameToSourceCache ProjectModulesCache;
   std::mutex GarbageCollectedProjectRootsMutex;
   llvm::StringSet<> GarbageCollectedProjectRoots;
@@ -1075,6 +1191,9 @@ void ModulesBuilder::ModulesBuilderImpl::
 void ModulesBuilder::ModulesBuilderImpl::getPrebuiltModuleFile(
     StringRef ModuleName, PathRef ModuleUnitFileName, const ThreadsafeFS &TFS,
     ReusablePrerequisiteModules &BuiltModuleFiles) {
+  if (!ReusePrebuiltModuleFile)
+    return;
+
   auto Cmd = getCDB().getCompileCommand(ModuleUnitFileName);
   if (!Cmd)
     return;
@@ -1236,8 +1355,8 @@ bool ModulesBuilder::hasRequiredModules(PathRef File) {
   if (!MDB)
     return false;
 
-  CachingProjectModules CachedMDB(std::move(MDB),
-                                  Impl->getProjectModulesCache());
+  CachingProjectModules CachedMDB(
+      std::move(MDB), Impl->getProjectModulesCache(), Impl->getObservedFiles());
   return !CachedMDB.getRequiredModules(File).empty();
 }
 
@@ -1246,8 +1365,8 @@ std::vector<std::string> ModulesBuilder::getRequiredModuleNames(PathRef File) {
   if (!MDB)
     return {};
 
-  CachingProjectModules CachedMDB(std::move(MDB),
-                                  Impl->getProjectModulesCache());
+  CachingProjectModules CachedMDB(
+      std::move(MDB), Impl->getProjectModulesCache(), Impl->getObservedFiles());
   return CachedMDB.getRequiredModules(File);
 }
 
@@ -1259,8 +1378,8 @@ ModulesBuilder::buildPrerequisiteModulesFor(PathRef File,
     elog("Failed to get Project Modules information for {0}", File);
     return std::make_unique<FailedPrerequisiteModules>();
   }
-  CachingProjectModules CachedMDB(std::move(MDB),
-                                  Impl->getProjectModulesCache());
+  CachingProjectModules CachedMDB(
+      std::move(MDB), Impl->getProjectModulesCache(), Impl->getObservedFiles());
 
   std::vector<std::string> RequiredModuleNames =
       CachedMDB.getRequiredModules(File);
@@ -1287,6 +1406,14 @@ ModulesBuilder::ModulesBuilder(const GlobalCompilationDatabase &CDB) {
 }
 
 ModulesBuilder::~ModulesBuilder() {}
+
+bool ModulesBuilder::observeSourcePath(PathRef File) {
+  return Impl->observeSourcePath(File);
+}
+
+bool ModulesBuilder::onFileEvent(const FileEvent &Event) {
+  return Impl->onFileEvent(Event);
+}
 
 } // namespace clangd
 } // namespace clang

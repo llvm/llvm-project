@@ -12,10 +12,12 @@
 
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
+#include "clang/Basic/DiagnosticSema.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
+#include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/ScopeExit.h"
 
@@ -32,9 +34,7 @@ StringLiteral *Parser::ParseCXXDeletedFunctionMessage() {
     ExprResult Res = ParseUnevaluatedStringLiteralExpression();
     if (Res.isUsable()) {
       Message = Res.getAs<StringLiteral>();
-      Diag(Message->getBeginLoc(), getLangOpts().CPlusPlus26
-                                       ? diag::warn_cxx23_delete_with_message
-                                       : diag::ext_delete_with_message)
+      DiagCompat(Message->getBeginLoc(), diag_compat::delete_with_message)
           << Message->getSourceRange();
     }
   } else {
@@ -102,10 +102,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
     bool Delete = false;
     SourceLocation KWLoc;
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 1 /* deleted */;
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
+          << 1 /* deleted */;
       StringLiteral *Message = ParseCXXDeletedFunctionMessage();
       Actions.SetDeclDeleted(FnD, KWLoc, Message);
       Delete = true;
@@ -113,10 +111,8 @@ NamedDecl *Parser::ParseCXXInlineMethodDef(
         DeclAsFunction->setRangeEnd(PrevTokLocation);
       }
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
-        << 0 /* defaulted */;
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
+          << 0 /* defaulted */;
       Actions.SetDeclDefaulted(FnD, KWLoc);
       if (auto *DeclAsFunction = dyn_cast<FunctionDecl>(FnD)) {
         DeclAsFunction->setRangeEnd(PrevTokLocation);
@@ -260,11 +256,7 @@ void Parser::ParseCXXNonStaticMemberInitializer(Decl *VarD) {
 
   // Store an artificial EOF token to ensure that we don't run off the end of
   // the initializer when we come to parse it.
-  Token Eof;
-  Eof.startToken();
-  Eof.setKind(tok::eof);
-  Eof.setLocation(Tok.getLocation());
-  Eof.setEofData(VarD);
+  Token Eof = Token::createEof(Tok.getLocation(), VarD);
   Toks.push_back(Eof);
 }
 
@@ -408,11 +400,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
       // Mark the end of the default argument so that we know when to stop when
       // we parse it later on.
       Token LastDefaultArgToken = Toks->back();
-      Token DefArgEnd;
-      DefArgEnd.startToken();
-      DefArgEnd.setKind(tok::eof);
-      DefArgEnd.setLocation(LastDefaultArgToken.getEndLoc());
-      DefArgEnd.setEofData(Param);
+      Token DefArgEnd =
+          Token::createEof(LastDefaultArgToken.getEndLoc(), Param);
       Toks->push_back(DefArgEnd);
 
       // Parse the default argument from its saved token stream.
@@ -434,7 +423,7 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
       ExprResult DefArgResult;
       if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-        Diag(Tok, diag::warn_cxx98_compat_generalized_initializer_lists);
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
         DefArgResult = ParseBraceInitializer();
       } else
         DefArgResult = ParseAssignmentExpression();
@@ -488,11 +477,8 @@ void Parser::ParseLexedMethodDeclaration(LateParsedMethodDeclaration &LM) {
 
     // Add the 'stop' token.
     Token LastExceptionSpecToken = Toks->back();
-    Token ExceptionSpecEnd;
-    ExceptionSpecEnd.startToken();
-    ExceptionSpecEnd.setKind(tok::eof);
-    ExceptionSpecEnd.setLocation(LastExceptionSpecToken.getEndLoc());
-    ExceptionSpecEnd.setEofData(LM.Method);
+    Token ExceptionSpecEnd =
+        Token::createEof(LastExceptionSpecToken.getEndLoc(), LM.Method);
     Toks->push_back(ExceptionSpecEnd);
 
     // Parse the default argument from its saved token stream.
@@ -586,11 +572,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
 
   assert(!LM.Toks.empty() && "Empty body!");
   Token LastBodyToken = LM.Toks.back();
-  Token BodyEnd;
-  BodyEnd.startToken();
-  BodyEnd.setKind(tok::eof);
-  BodyEnd.setLocation(LastBodyToken.getEndLoc());
-  BodyEnd.setEofData(LM.D);
+  Token BodyEnd = Token::createEof(LastBodyToken.getEndLoc(), LM.D);
   LM.Toks.push_back(BodyEnd);
   // Append the current token at the end of the new token stream so that it
   // doesn't get lost.
@@ -623,22 +605,6 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
         Actions.ActOnFinishInlineFunctionDef(FD);
   });
 
-  if (Tok.is(tok::kw_try)) {
-    ParseFunctionTryBlock(LM.D, FnScope);
-    return;
-  }
-  if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(LM.D);
-
-    // Error recovery.
-    if (!Tok.is(tok::l_brace)) {
-      FnScope.Exit();
-      Actions.ActOnFinishFunctionBody(LM.D, nullptr);
-      return;
-    }
-  } else
-    Actions.ActOnDefaultCtorInitializers(LM.D);
-
   assert((Actions.getDiagnostics().hasErrorOccurred() ||
           !isa<FunctionTemplateDecl>(LM.D) ||
           cast<FunctionTemplateDecl>(LM.D)->getTemplateParameters()->getDepth()
@@ -646,7 +612,7 @@ void Parser::ParseLexedMethodDef(LexedMethod &LM) {
          "TemplateParameterDepth should be greater than the depth of "
          "current template being instantiated!");
 
-  ParseFunctionStatementBody(LM.D, FnScope);
+  ParseFunctionBody(LM.D, FnScope);
 }
 
 void Parser::ParseLexedMemberInitializers(ParsingClass &Class) {
@@ -737,25 +703,83 @@ void Parser::ParseLexedAttributeList(LateParsedAttrList &LAs, Decl *D,
   LAs.clear();
 }
 
+/// Collect the references to parameters in \p Attrs' arguments.
+static void collectParamRefs(const ParsedAttributes &Attrs,
+                             SmallVectorImpl<const DeclRefExpr *> &Refs) {
+  SmallVector<const Stmt *, 8> Worklist;
+  for (const ParsedAttr &AL : Attrs)
+    for (unsigned I = 0, E = AL.getNumArgs(); I != E; ++I)
+      if (AL.isArgExpr(I))
+        Worklist.push_back(AL.getArgAsExpr(I));
+  while (!Worklist.empty()) {
+    const Stmt *S = Worklist.pop_back_val();
+    if (!S)
+      continue;
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(S);
+        DRE && isa<ParmVarDecl>(DRE->getDecl()))
+      Refs.push_back(DRE);
+    llvm::append_range(Worklist, S->children());
+  }
+}
+
+bool Parser::checkLateAttributeParamRefs(
+    const LateParsedAttribute &LPA, const Decl *D,
+    ArrayRef<const DeclRefExpr *> ParamRefs, bool ReenteredProtoParams) {
+  auto IsPointeeParam = [&](const ParmVarDecl *PVD) {
+    return ReenteredProtoParams && llvm::is_contained(LPA.ProtoParams, PVD);
+  };
+
+  // In a C++ class, attributes were always late parsed and a pointee's
+  // parameters were not in scope, so a name that now binds to one used to bind
+  // to whatever else it names outside the prototype. Rather than silently
+  // change its meaning, reject the attribute as ambiguous.
+  if (getLangOpts().CPlusPlus && getCurScope()->isClassScope()) {
+    for (const DeclRefExpr *DRE : ParamRefs) {
+      const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
+      if (!IsPointeeParam(PVD))
+        continue;
+      LookupResult R(Actions, PVD->getDeclName(), DRE->getLocation(),
+                     Sema::LookupOrdinaryName);
+      if (!Actions.LookupName(R, getCurScope()) || R.isAmbiguous())
+        continue;
+      Diag(DRE->getLocation(), diag::err_ambiguous_reference)
+          << PVD->getDeclName();
+      Diag(PVD->getLocation(), diag::note_ambiguous_candidate) << PVD;
+      for (const NamedDecl *Other : R)
+        Diag(Other->getLocation(), diag::note_ambiguous_candidate) << Other;
+      return true;
+    }
+  }
+
+  // A name binds the same way in a template, but instantiation cannot yet map a
+  // pointee's parameters, which are instantiated with the declaration's type
+  // and not kept, nor a parameter declared after the one the attribute is on,
+  // which is instantiated after that parameter's attributes. Reject the
+  // attribute rather than instantiate it wrongly.
+  // FIXME: Map these parameters during template instantiation.
+  if (Actions.CurContext->isDependentContext() ||
+      getCurScope()->getTemplateParamParent() ||
+      Actions.getCurGenericLambda()) {
+    const auto *DParam = dyn_cast_or_null<ParmVarDecl>(D);
+    for (const DeclRefExpr *DRE : ParamRefs) {
+      const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
+      bool Pointee = IsPointeeParam(PVD);
+      if (!Pointee &&
+          !(DParam &&
+            DParam->getFunctionScopeDepth() == PVD->getFunctionScopeDepth() &&
+            DParam->getFunctionScopeIndex() < PVD->getFunctionScopeIndex()))
+        continue;
+      Diag(DRE->getLocation(), diag::err_late_attribute_param_in_template)
+          << &LPA.AttrName << !Pointee << PVD;
+      return true;
+    }
+  }
+  return false;
+}
+
 void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
                                  bool OnDefinition,
                                  ParsedAttributes *OutAttrs) {
-  // Create a fake EOF so that attribute parsing won't go off the end of the
-  // attribute.
-  Token AttrEnd;
-  AttrEnd.startToken();
-  AttrEnd.setKind(tok::eof);
-  AttrEnd.setLocation(Tok.getLocation());
-  AttrEnd.setEofData(LPA.Toks.data());
-  LPA.Toks.push_back(AttrEnd);
-
-  // Append the current token at the end of the new token stream so that it
-  // doesn't get lost.
-  LPA.Toks.push_back(Tok);
-  PP.EnterTokenStream(LPA.Toks, true, /*IsReinject=*/true);
-  // Consume the previously pushed token.
-  ConsumeAnyToken(/*ConsumeCodeCompletionTok=*/true);
-
   ParsedAttributes Attrs(AttrFactory);
 
   if (LPA.Decls.size() > 0) {
@@ -782,20 +806,40 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
       Actions.ActOnReenterFunctionContext(Actions.CurScope, D);
     }
 
-    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
-                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(),
-                          /*D=*/nullptr);
+    // For a function pointer field or variable, the arguments may name a
+    // parameter of the pointee. Re-enter them in a prototype scope nested as it
+    // was when the attribute was written, so they shadow any outer declaration
+    // of the same name. In a C struct, ActOnIdExpression finds the struct's
+    // members only while its scope is innermost, so add the parameters to that
+    // scope instead; it lets them shadow a member of the same name.
+    bool HasProtoParams = !HasFuncScope && !LPA.ProtoParams.empty();
+    bool InCStruct = !IsCPlusPlus && getCurScope()->isClassScope();
+    ParseScope ProtoScope(this,
+                          Scope::FunctionPrototypeScope | Scope::DeclScope,
+                          HasProtoParams && !InCStruct);
+    if (HasProtoParams)
+      Actions.ActOnReenterFunctionPrototypeParams(Actions.getCurScope(),
+                                                  LPA.ProtoParams);
+
+    ParsedAttributes Parsed = ParseLexedAttributeTokens(LPA);
+
+    if (HasProtoParams && InCStruct)
+      Actions.ActOnExitFunctionPrototypeParams(Actions.getCurScope(),
+                                               LPA.ProtoParams);
+    ProtoScope.Exit();
+
+    SmallVector<const DeclRefExpr *, 4> ParamRefs;
+    collectParamRefs(Parsed, ParamRefs);
+    if (!ParamRefs.empty() &&
+        checkLateAttributeParamRefs(LPA, D, ParamRefs, HasProtoParams))
+      Parsed.clear();
+    Attrs.takeAllAppendingFrom(Parsed);
 
     if (HasFuncScope)
       Actions.ActOnExitFunctionContext();
-  } else if (OutAttrs) {
-    ParseGNUAttributeArgs(&LPA.AttrName, LPA.AttrNameLoc, Attrs,
-                          /*EndLoc=*/nullptr, /*ScopeName=*/nullptr,
-                          SourceLocation(), ParsedAttr::Form::GNU(),
-                          /*D=*/nullptr);
   } else {
-    Diag(Tok, diag::warn_attribute_no_decl) << LPA.AttrName.getName();
+    Diag(LPA.AttrNameLoc, diag::warn_attribute_no_decl)
+        << LPA.AttrName.getName();
   }
 
   if (OnDefinition && !Attrs.empty() && !Attrs.begin()->isCXX11Attribute() &&
@@ -804,14 +848,6 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
 
   for (auto *D : LPA.Decls)
     Actions.ActOnFinishDelayedAttribute(getCurScope(), D, Attrs);
-
-  // Due to a parsing error, we either went over the cached tokens or
-  // there are still cached tokens left, so we skip the leftover tokens.
-  while (Tok.isNot(tok::eof))
-    ConsumeAnyToken();
-
-  if (Tok.is(tok::eof) && Tok.getEofData() == AttrEnd.getEofData())
-    ConsumeAnyToken();
 
   if (OutAttrs)
     OutAttrs->takeAllAppendingFrom(Attrs);
@@ -866,7 +902,6 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       // Ran out of tokens.
       return false;
 

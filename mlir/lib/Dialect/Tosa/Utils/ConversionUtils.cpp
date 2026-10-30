@@ -62,6 +62,14 @@ bool mlir::tosa::validIntegerRange(IntegerType ty, int64_t value) {
   return value >= intMin.getSExtValue() && value <= intMax.getSExtValue();
 }
 
+APFloat mlir::tosa::getFloatMinMaxIdentity(const llvm::fltSemantics &semantics,
+                                           bool negative,
+                                           bool allowNonFinites) {
+  if (allowNonFinites && APFloat::semanticsHasInf(semantics))
+    return APFloat::getInf(semantics, negative);
+  return APFloat::getLargest(semantics, negative);
+}
+
 namespace {
 // Given two tensors of high and low ranks, derive the output shape
 // to reshape the lower rank to.
@@ -191,8 +199,7 @@ bool mlir::tosa::getConstShapeValues(Operation *op,
     return false;
   }
   if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
-    Attribute constOpAttr = constOp->getAttr("values");
-    DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
+    DenseElementsAttr elementsAttr = constOp.getValuesAttr();
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];
       resultShape.push_back(val);

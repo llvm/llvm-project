@@ -53,10 +53,6 @@ functions:
     in-latest-posix: ''
   pthread_cancel:
     in-latest-posix: ''
-  pthread_cleanup_pop:
-    in-latest-posix: ''
-  pthread_cleanup_push:
-    in-latest-posix: ''
   pthread_cond_broadcast:
     in-latest-posix: ''
   pthread_cond_clockwait:
@@ -259,4 +255,8 @@ macros:
   PTHREAD_SCOPE_PROCESS:
     in-latest-posix: ''
   PTHREAD_SCOPE_SYSTEM:
+    in-latest-posix: ''
+  pthread_cleanup_pop:
+    in-latest-posix: ''
+  pthread_cleanup_push:
     in-latest-posix: ''

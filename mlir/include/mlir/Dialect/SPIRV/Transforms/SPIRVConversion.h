@@ -198,6 +198,13 @@ Value getElementPtr(const SPIRVTypeConverter &typeConverter,
                     MemRefType baseType, Value basePtr, ValueRange indices,
                     Location loc, OpBuilder &builder);
 
+/// As above, with the number of contiguous memref elements accessed through
+/// the pointer. This lets vector conversions retain their full access range.
+Value getElementPtr(const SPIRVTypeConverter &typeConverter,
+                    MemRefType baseType, Value basePtr, ValueRange indices,
+                    Location loc, OpBuilder &builder,
+                    uint64_t accessElementCount);
+
 // GetElementPtr implementation for Kernel/OpenCL flavored SPIR-V.
 Value getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
@@ -207,6 +214,13 @@ Value getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 Value getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
                           MemRefType baseType, Value basePtr,
                           ValueRange indices, Location loc, OpBuilder &builder);
+
+/// As above, with the number of contiguous memref elements accessed through
+/// the pointer.
+Value getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
+                          MemRefType baseType, Value basePtr,
+                          ValueRange indices, Location loc, OpBuilder &builder,
+                          uint64_t accessElementCount);
 
 // Find the largest factor of size among {2,3,4} for the lowest dimension of
 // the target shape.

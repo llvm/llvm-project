@@ -165,6 +165,8 @@ public:
     eCore_arm_arm64_32,
     eCore_arm_aarch64,
 
+    eCore_arm_arm64ex1,
+
     eCore_mips32,
     eCore_mips32r2,
     eCore_mips32r3,
@@ -305,6 +307,7 @@ public:
     eCore_amd_gpu_gcn_GFX1172,
     eCore_amd_gpu_gcn_GFX1200,
     eCore_amd_gpu_gcn_GFX1201,
+    eCore_amd_gpu_gcn_GFX1250_STRICT,
     eCore_amd_gpu_gcn_GFX1250,
     eCore_amd_gpu_gcn_GFX1251,
     eCore_amd_gpu_gcn_GFX1310,

@@ -78,10 +78,26 @@ public:
     possible mutations that may take place within a pattern. For example, this
     means that an operation should not be erased via its `erase` method. To
     erase an operation, the appropriate `PatternRewriter` hook (in this case
-    `eraseOp`) should be used instead.
+    `eraseOp`) should be used instead. Note that changes to nested ops, regions,
+    and blocks need to go through the rewriter as well.
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
 *   `matchAndRewrite` must return "success" if and only if the IR was modified.
+    In particular, this means that the pattern is not allowed to have made any
+    modification if it returns "failure".
+
+Additionally, there are some best practices that patterns are advised to follow:
+
+*   Patterns *should* transform verifiable IR into verifiable IR, i.e., the IR
+    should remain verifiable after every pattern application. However, there are
+    cases where rewrites are best split into several patterns and ensuring
+    verifiability would be cumbersome, such as changing a function declaration
+    and its call sites. In such cases it may be acceptable to temporarily have
+    unverifiable IR.
+
+**Note:** These restrictions and best practices can be checked at runtime by
+building with `-DMLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS=ON` (ideally paired
+with ASan).
 
 
 ### Application Recursion
@@ -364,6 +380,19 @@ from being added to the worklist throughout the rewrite process:
     worklist.
 *   `GreedyRewriteStrictness::ExistingOps`: Only pre-existing ops (with which
     the worklist was initialized) are added to the worklist.
+
+Both drivers skip operations in blocks that are unreachable from their region's
+entry block, including operations nested within such blocks. Unreachable code
+can contain SSA cycles that cause folds or patterns to crash or loop indefinitely.
+Reachability is checked between rewrites, so a block connected before a rewrite
+returns can be processed. If an operation is skipped, reconnecting its block in a
+later rewrite does not automatically add it back to the worklist. It may remain
+unprocessed even if the driver returns success, regardless of strictness.
+
+The region-based driver erases unreachable blocks at the start of worklist
+processing in each iteration. The op-based driver leaves unreachable blocks and
+their operations in place, even if those operations were explicitly provided to
+the driver.
 
 Note: This driver listens for IR changes via the callbacks provided by
 `RewriterBase`. It is important that patterns announce all IR changes to the

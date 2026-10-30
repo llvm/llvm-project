@@ -127,16 +127,6 @@ createMCSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                    LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
                    MCContext *Ctx, std::unique_ptr<MCRelocationInfo> &&RelInfo);
 
-LLVM_ABI mca::CustomBehaviour *
-createCustomBehaviour(const MCSubtargetInfo &STI, const mca::SourceMgr &SrcMgr,
-                      const MCInstrInfo &MCII);
-
-LLVM_ABI mca::InstrPostProcess *
-createInstrPostProcess(const MCSubtargetInfo &STI, const MCInstrInfo &MCII);
-
-LLVM_ABI mca::InstrumentManager *
-createInstrumentManager(const MCSubtargetInfo &STI, const MCInstrInfo &MCII);
-
 /// Target - Wrapper for Target specific information.
 ///
 /// For registration purposes, this is a POD type so that targets can be
@@ -575,7 +565,7 @@ public:
   MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) const {
     if (NullTargetStreamerCtorFn)
       return NullTargetStreamerCtorFn(S);
-    return nullptr;
+    reportFatalUsageError("target did not implement null MCTargetStreamer");
   }
 
   MCLFIRewriter *

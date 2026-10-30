@@ -40,11 +40,18 @@ enum MemcpyKind {
   MemcpyDefault = 4
 };
 
-enum HostAllocFlags : unsigned int {
+/// Flags passed to HostAlloc
+enum : unsigned int {
   HostAllocDefault = 0x00,
   HostAllocPortable = 0x01,
   HostAllocMapped = 0x02,
   HostAllocWriteCombined = 0x04,
+};
+
+/// Flags passed to StreamCreateWithFlags
+enum : unsigned int {
+  StreamDefault = 0x00,
+  StreamNonBlocking = 0x01,
 };
 
 typedef struct Stream_st *Stream_t;
@@ -98,6 +105,8 @@ Error_t FreeHost(void *Ptr);
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo);
 
 Error_t StreamCreate(Stream_t *stream);
+
+Error_t StreamCreateWithFlags(Stream_t *stream, unsigned int flags);
 
 Error_t StreamDestroy(Stream_t stream);
 

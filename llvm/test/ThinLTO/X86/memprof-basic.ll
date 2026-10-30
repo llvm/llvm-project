@@ -124,6 +124,30 @@
 ; RUN:  %t.o -S 2>&1 | FileCheck %s --check-prefix=IR \
 ; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS
 
+;; Try again with distributed ThinLTO, but disable the alloc context in the
+;; combined index (the default in NDEBUG builds). This simulates the case where
+;; the thin link is performed by a release build and the backend has assertions
+;; enabled. Ensure the backend's assertion checking of the alloc contexts
+;; gracefully handles their absence.
+; RUN: cp %t.o %t.nocontext.o
+; RUN: llvm-lto2 run %t.nocontext.o -enable-memprof-context-disambiguation \
+; RUN:	-supports-hot-cold-new \
+; RUN:  -thinlto-distributed-indexes \
+; RUN:  -combined-index-memprof-context=false \
+; RUN:	-r=%t.nocontext.o,main,plx \
+; RUN:	-r=%t.nocontext.o,_ZdaPv, \
+; RUN:	-r=%t.nocontext.o,sleep, \
+; RUN:	-r=%t.nocontext.o,_Znam, \
+; RUN:	-o %t3.out
+; RUN: llvm-dis %t.nocontext.o.thinlto.bc -o - | FileCheck %s --check-prefix=DISTRIB-NOCONTEXT
+; RUN: opt -passes=memprof-context-disambiguation \
+; RUN:	-memprof-import-summary=%t.nocontext.o.thinlto.bc \
+; RUN:  -stats -pass-remarks=memprof-context-disambiguation \
+; RUN:  %t.nocontext.o -S 2>&1 | FileCheck %s --check-prefix=IR \
+; RUN:  --check-prefix=STATS-BE --check-prefix=REMARKS
+
+; DISTRIB-NOCONTEXT: allocs: ((versions: (notcold, cold), memProf: ((type: notcold, stackIds: ()), (type: cold, stackIds: ()))))
+
 source_filename = "memprof-basic.ll"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

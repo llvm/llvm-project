@@ -106,10 +106,10 @@ func.func @entry() {
   // Allocate.
   //
 
-  %AVAL = memref.alloc()    {alignment = 64} : memref<8xvector<4xf32>>
-  %AIDX = memref.alloc()    {alignment = 64} : memref<8xvector<4xi32>>
-  %X    = memref.alloc(%c8) {alignment = 64} : memref<?xf32>
-  %B    = memref.alloc(%c8) {alignment = 64} : memref<?xf32>
+  %AVAL = memref.alloc() alignment = 64 : memref<8xvector<4xf32>>
+  %AIDX = memref.alloc() alignment = 64 : memref<8xvector<4xi32>>
+  %X    = memref.alloc(%c8) alignment = 64 : memref<?xf32>
+  %B    = memref.alloc(%c8) alignment = 64 : memref<?xf32>
 
   //
   // Initialize.

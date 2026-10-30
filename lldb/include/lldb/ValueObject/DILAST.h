@@ -24,6 +24,7 @@ enum class NodeKind {
   eBitExtractionNode,
   eBooleanLiteralNode,
   eCastNode,
+  eConditionalNode,
   eErrorNode,
   eFloatLiteralNode,
   eIdentifierNode,
@@ -58,6 +59,14 @@ enum class BinaryOpKind {
   Shr,       ///< ">>"
   AddAssign, ///< "+="
   SubAssign, ///< "-="
+  MulAssign, ///< "*="
+  DivAssign, ///< "/="
+  RemAssign, ///< "%="
+  AndAssign, ///< "&="
+  XorAssign, ///< "^="
+  OrAssign,  ///< "|="
+  ShlAssign, ///< "<<="
+  ShrAssign, ///< ">>="
   LAnd,      ///< "&&"
   LOr,       ///< "||"
   LT,        ///< "<"
@@ -339,6 +348,30 @@ private:
   CastKind m_cast_kind;
 };
 
+class ConditionalNode : public ASTNode {
+public:
+  ConditionalNode(uint32_t location, ASTNodeUP condition, ASTNodeUP true_op,
+                  ASTNodeUP false_op)
+      : ASTNode(location, NodeKind::eConditionalNode),
+        m_condition(std::move(condition)), m_true_op(std::move(true_op)),
+        m_false_op(std::move(false_op)) {}
+
+  llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
+
+  ASTNode &GetCondition() const { return *m_condition; }
+  ASTNode &GetTrueOperand() const { return *m_true_op; }
+  ASTNode &GetFalseOperand() const { return *m_false_op; }
+
+  static bool classof(const ASTNode &node) {
+    return node.GetKind() == NodeKind::eConditionalNode;
+  }
+
+private:
+  ASTNodeUP m_condition;
+  ASTNodeUP m_true_op;
+  ASTNodeUP m_false_op;
+};
+
 class SizeOfNode : public ASTNode {
 public:
   SizeOfNode(uint32_t location, ASTNodeUP node)
@@ -388,6 +421,8 @@ public:
   virtual llvm::Expected<lldb::ValueObjectSP>
   Visit(const BooleanLiteralNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP> Visit(const CastNode &node) = 0;
+  virtual llvm::Expected<lldb::ValueObjectSP>
+  Visit(const ConditionalNode &node) = 0;
   virtual llvm::Expected<lldb::ValueObjectSP> Visit(const SizeOfNode &node) = 0;
 };
 

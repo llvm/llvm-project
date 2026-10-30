@@ -27,11 +27,9 @@ define void @test_blend_feeding_replicated_store_1(i64 %N, ptr noalias %src, ptr
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE30:.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i32>, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp slt <16 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP24:%.*]] = select <16 x i1> [[TMP22]], <16 x i1> [[BROADCAST_SPLAT]], <16 x i1> zeroinitializer
-; CHECK-NEXT:    [[TMP26:%.*]] = xor <16 x i1> [[TMP22]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5:%.*]] = or <16 x i1> [[TMP24]], [[TMP26]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP22]], <16 x ptr> [[BROADCAST_SPLAT2]], <16 x ptr> [[BROADCAST_SPLAT3]]
+; CHECK-NEXT:    [[TMP22:%.*]] = icmp sge <16 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP5:%.*]] = select <16 x i1> [[TMP22]], <16 x i1> splat (i1 true), <16 x i1> [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <16 x i1> [[TMP22]], <16 x ptr> [[BROADCAST_SPLAT3]], <16 x ptr> [[BROADCAST_SPLAT2]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <16 x i1> [[TMP5]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:

@@ -348,10 +348,8 @@ FlatSymbolRefAttr SymbolRefAttr::get(StringAttr value) {
 }
 
 FlatSymbolRefAttr SymbolRefAttr::get(Operation *symbol) {
-  auto symName =
-      symbol->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName());
-  assert(symName && "value does not have a valid symbol name");
-  return SymbolRefAttr::get(symName);
+  auto symbolOp = cast<SymbolOpInterface>(symbol);
+  return SymbolRefAttr::get(symbolOp.getNameAttr());
 }
 
 StringAttr SymbolRefAttr::getLeafReference() const {

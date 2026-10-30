@@ -891,8 +891,8 @@ static Args ReconstituteArgsAfterParsing(llvm::ArrayRef<char *> parsed,
 
 /// Find the index of the given option in the arguments. If the option takes an
 /// argument, the second index is the index of the value in args. Otherwise, the
-/// second index is LLDB_INVALID_INDEX64.
-static std::pair<size_t, size_t>
+/// second index is std::nullopt.
+static std::pair<std::optional<size_t>, std::optional<size_t>>
 FindArgumentIndexForOption(const Args &args, const Option &long_option) {
   std::string short_opt = llvm::formatv("-{0}", char(long_option.val)).str();
   std::string long_opt =
@@ -901,7 +901,7 @@ FindArgumentIndexForOption(const Args &args, const Option &long_option) {
     llvm::StringRef arg = entry.value().ref();
     size_t idx = entry.index();
     if (long_option.definition->option_has_arg == OptionParser::eNoArgument)
-      return {idx, LLDB_INVALID_INDEX64};
+      return {idx, std::nullopt};
     size_t val_idx;
     if (arg == short_opt || arg.starts_with(long_opt))
       val_idx = idx + 1;
@@ -910,7 +910,7 @@ FindArgumentIndexForOption(const Args &args, const Option &long_option) {
     return {idx, val_idx};
   }
 
-  return {LLDB_INVALID_INDEX64, LLDB_INVALID_INDEX64};
+  return {std::nullopt, std::nullopt};
 }
 
 static std::string BuildShortOptions(const Option *long_options) {
@@ -1034,8 +1034,8 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     auto [idx, val_idx] = FindArgumentIndexForOption(args_copy, opt);
     std::string option_to_insert;
     if (option_arg) {
-      if (val_idx != LLDB_INVALID_INDEX64 && val_idx < args_copy.size()) {
-        bool arg_has_backtick = args_copy[val_idx].GetQuoteChar() == '`';
+      if (val_idx && *val_idx < args_copy.size()) {
+        bool arg_has_backtick = args_copy[*val_idx].GetQuoteChar() == '`';
         if (arg_has_backtick)
           option_to_insert = "`";
         option_to_insert += option_arg;
@@ -1049,26 +1049,26 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
     option_arg_vector->emplace_back(std::string(option_str.GetString()),
                                     has_arg, option_to_insert);
 
-    if (idx == LLDB_INVALID_INDEX64)
+    if (!idx)
       continue;
 
     if (!input_line.empty()) {
-      llvm::StringRef tmp_arg = args_copy[idx].ref();
+      llvm::StringRef tmp_arg = args_copy[*idx].ref();
       size_t pos = input_line.find(tmp_arg);
       if (pos != std::string::npos)
         input_line.erase(pos, tmp_arg.size());
     }
-    args_copy.DeleteArgumentAtIndex(idx);
+    args_copy.DeleteArgumentAtIndex(*idx);
     if ((option_to_insert != CommandInterpreter::g_no_argument) &&
         (OptionParser::GetOptionArgument() != nullptr) &&
-        (idx < args_copy.GetArgumentCount()) &&
-        (args_copy[idx].ref() == OptionParser::GetOptionArgument())) {
+        (*idx < args_copy.GetArgumentCount()) &&
+        (args_copy[*idx].ref() == OptionParser::GetOptionArgument())) {
       if (input_line.size() > 0) {
         size_t pos = input_line.find(option_to_insert);
         if (pos != std::string::npos)
           input_line.erase(pos, option_to_insert.size());
       }
-      args_copy.DeleteArgumentAtIndex(idx);
+      args_copy.DeleteArgumentAtIndex(*idx);
     }
   }
 

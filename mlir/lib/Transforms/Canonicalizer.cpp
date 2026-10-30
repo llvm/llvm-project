@@ -84,11 +84,14 @@ struct Canonicalizer : public impl::CanonicalizerPassBase<Canonicalizer> {
     return success();
   }
   void runOnOperation() override {
+    bool changed = false;
     LogicalResult converged =
-        applyPatternsGreedily(getOperation(), *patterns, config);
+        applyPatternsGreedily(getOperation(), *patterns, config, &changed);
     // Canonicalization is best-effort. Non-convergence is not a pass failure.
     if (testConvergence && failed(converged))
       signalPassFailure();
+    if (!changed)
+      markAllAnalysesPreserved();
   }
   GreedyRewriteConfig config;
   std::shared_ptr<const FrozenRewritePatternSet> patterns;

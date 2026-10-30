@@ -27,8 +27,8 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[2:3]
 ; GCN-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[4:5]
 ; GCN-NEXT:    buffer_store_dword v0, v0, s[4:7], 0 offen
-; GCN-NEXT:    s_andn2_wrexec_b32 s9, s9
 ; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GCN-NEXT:    s_andn2_wrexec_b32 s9, s9
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_2
 ; GCN-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
 ; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
@@ -60,8 +60,8 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[0:1], v[2:3]
 ; GFX11-NEXT:    v_cmpx_eq_u64_e32 s[2:3], v[4:5]
 ; GFX11-NEXT:    buffer_store_b32 v0, v0, s[0:3], 0 offen
-; GFX11-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX11-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GFX11-NEXT:    s_and_not1_wrexec_b32 s5, s5
 ; GFX11-NEXT:    s_cbranch_execnz .LBB0_2
 ; GFX11-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
 ; GFX11-NEXT:    s_mov_b32 exec_lo, s4

@@ -87,20 +87,14 @@ void bar() {
 
 // CHECK: "analysis_name": "UnsafeBufferReachableAnalysisResult"
 
-// 'bar' contributes unsafe pointer 'y' but not 'x':
-// CHECK: "@": [[CONTRIBUTOR_BAR]]$WS},$WS[
-// CHECK: "@": [[BAR_Y]]$PTR_L1
-// CHECK-NOT: "@": [[BAR_X]]$PTR_L1
-
-// 'foo' contributes unsafe pointers 'q' and 'r':
-// CHECK: "@": [[CONTRIBUTOR_FOO]]$WS},$WS[
+// 'bar' contributes 'y' but not 'x'; 'foo' contributes 'q' and 'r'; 'operator
+// delete' contributes 'delete_local'. None of the type-constrained pointers
+// appear.
+// CHECK-DAG: "@": [[BAR_Y]]$PTR_L1
 // CHECK-DAG: "@": [[FOO_Q]]$PTR_L1
 // CHECK-DAG: "@": [[FOO_R]]$PTR_L1
-// CHECK-NOT: "@":
-
-// 'operator delete' contributes unsafe pointer 'delete_local':
-// CHECK: "@": [[CONTRIBUTOR_DELETE]]$WS},$WS[
 // CHECK-DAG: "@": [[DELETE_LOCAL]]$PTR_L1
+// CHECK-NOT: "@": [[BAR_X]]$PTR_L1
 
 // The type-constrained pointers never appear in the reachable result:
 // CHECK-NOT: "@": [[NEW_RET]]$WS

@@ -1,8 +1,8 @@
-add_custom_target(libc_sys_auxv_unittests)
+add_libc_testsuite(libc-sys-auxv-tests)
 add_libc_test(
   getauxval_test
   SUITE
-    libc_sys_auxv_unittests
+    libc-sys-auxv-tests
   SRCS
     getauxval_test.cpp
   DEPENDS

@@ -10,4 +10,5 @@
 
 #include "src/math/fmaximum_magl.h"
 
-LIST_FMAXIMUM_MAG_TESTS(long double, LIBC_NAMESPACE::fmaximum_magl)
+LIST_FMAXIMUM_MAG_TESTS(FmaximumMagl, long double,
+                        LIBC_NAMESPACE::fmaximum_magl)

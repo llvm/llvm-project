@@ -4,7 +4,7 @@
 # RUN:    | FileCheck %s --check-prefix=DOESCOALESCE
 # RUN: llc %s -o - -mtriple=x86_64-unknown-unknown \
 # RUN:    -experimental-debug-variable-locations \
-# RUN:    -run-pass=phi-node-elimination,register-coalescer,livedebugvars,greedy,virtregrewriter \
+# RUN:    -run-pass=phi-node-elimination,register-coalescer,livedebugvars,greedy,virt-reg-rewriter \
 # RUN:    | FileCheck %s --check-prefix=CHECK
 #
 # Test that a PHI with a debug instruction number attached survives register

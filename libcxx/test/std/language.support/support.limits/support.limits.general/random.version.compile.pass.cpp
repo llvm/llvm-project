@@ -68,7 +68,7 @@
 #    error "__cpp_lib_philox_engine should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_generate_random
@@ -96,6 +96,34 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generate_random
+#      error "__cpp_lib_generate_random should be defined in c++29"
+#    endif
+#    if __cpp_lib_generate_random != 202403L
+#      error "__cpp_lib_generate_random should have the value 202403L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_generate_random
+#      error "__cpp_lib_generate_random should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_philox_engine
+#      error "__cpp_lib_philox_engine should be defined in c++29"
+#    endif
+#    if __cpp_lib_philox_engine != 202406L
+#      error "__cpp_lib_philox_engine should have the value 202406L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_philox_engine
+#      error "__cpp_lib_philox_engine should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

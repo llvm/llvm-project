@@ -40,10 +40,13 @@ class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
+class SCEVAddRecExpr;
 class TargetLibraryInfo;
 class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
+class ConditionalInductionDescriptor;
+
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
@@ -339,15 +342,17 @@ LLVM_ABI void addStringMetadataToLoop(Loop *TheLoop, StringRef MDString);
 /// - \c std::nullopt, if the implementation is unable to handle the loop form
 ///   of \p L (e.g., \p L must have a latch block that controls the loop exit).
 /// - The value of \c llvm.loop.estimated_trip_count from the loop metadata of
-///   \p L, if that metadata is present.  In the special case that the value is
-///   zero, return \c std::nullopt instead as that is historically what callers
-///   expect when a loop is estimated to execute no iterations (i.e., its header
-///   is not reached).
+///   \p L, if that metadata is present.
 /// - Else, a new estimate of the trip count from the latch branch weights of
 ///   \p L.
 ///
-/// An estimated trip count is always a valid positive trip count, saturated at
-/// \c UINT_MAX.
+/// An estimate of zero is meaningful: it indicates that \p L is estimated not
+/// to be entered, that is, that its header is not reached.  For example, after
+/// peeling 10 or more iterations from a loop with an estimated trip count of
+/// 10, \c llvm.loop.estimated_trip_count becomes 0 on the remaining loop.
+/// Callers that need a positive trip count must check for zero.
+///
+/// An estimated trip count is saturated at \c UINT_MAX.
 ///
 /// In addition, if \p EstimatedLoopInvocationWeight, then either:
 /// - Set \c *EstimatedLoopInvocationWeight to the weight of the latch's branch
@@ -548,11 +553,6 @@ LLVM_ABI Value *createSimpleReduction(IRBuilderBase &B, Value *Src,
                                       RecurKind RdxKind, Value *Mask,
                                       Value *EVL);
 
-/// Create a reduction of the given vector \p Src for a reduction of kind
-/// RecurKind::AnyOf. The start value of the reduction is \p InitVal.
-LLVM_ABI Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
-                                     Value *InitVal, PHINode *OrigPhi);
-
 /// Create an ordered reduction intrinsic using the given recurrence
 /// kind \p RdxKind.
 LLVM_ABI Value *createOrderedReduction(IRBuilderBase &B, RecurKind RdxKind,
@@ -704,6 +704,24 @@ struct IVConditionInfo {
 LLVM_ABI std::optional<IVConditionInfo>
 hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
                       const MemorySSA &MSSA, AAResults &AA);
+
+/// Collect pointer values used by loads and stores whose addresses are derived
+/// from the conditional induction described by \p CondID. Add each pointer and
+/// an approximate SCEV expression for it to \p CompressedPtrs. The expression
+/// assumes that the conditional induction is incremented on every iteration.
+///
+/// Except for its backedge update, every value derived from \p CondID must be
+/// used only to compute an in-loop load/store address. The following
+/// restrictions also apply:
+/// - A value derived from \p CondID cannot be stored.
+/// - The allocation size of each access type must equal its type size. For
+///   example, types smaller than a byte, such as `i4`, are not supported.
+/// - The step of each pointer add recurrence must equal the access type's
+///   allocation size.
+/// Return true otherwise.
+LLVM_ABI bool collectCompressedPtrs(
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
+    const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE);
 
 } // end namespace llvm
 

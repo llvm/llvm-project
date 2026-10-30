@@ -373,9 +373,6 @@ public:
     // Function arguments
     llvm::PointerUnion<const Expr *const *, til::SExpr *> FunArgs = nullptr;
 
-    // is Self referred to with -> or .?
-    bool SelfArrow = false;
-
     CallingContext(CallingContext *P, const NamedDecl *D = nullptr)
         : Prev(P), AttrDecl(D) {}
   };

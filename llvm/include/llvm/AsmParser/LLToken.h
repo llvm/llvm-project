@@ -186,6 +186,7 @@ enum Kind {
   kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_wasm_emscripten_invokecc,
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
@@ -380,6 +381,8 @@ enum Kind {
   kw_dso_local_equivalent,
   kw_no_cfi,
   kw_ptrauth,
+  kw_bitinsert,
+  kw_bitextract,
 
   kw_freeze,
 
@@ -429,6 +432,7 @@ enum Kind {
   kw_unknown,
   kw_critical,
   kw_relbf,
+  kw_indirect,
   kw_variable,
   kw_vTableFuncs,
   kw_virtFunc,

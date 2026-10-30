@@ -1,9 +1,9 @@
 # RUN: llc -mcpu=pwr10 -enable-subreg-liveness -filetype=null  \
-# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virtregrewriter \
+# RUN:   -mtriple=powerpc64le-unknown-linux-gnu -run-pass=greedy,virt-reg-rewriter \
 # RUN:   -debug-only=regalloc -o - %s 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# Keep track of all of the lanemasks for various subregsiters.
+# Keep track of all of the lanemasks for various subregisters.
 #
 # CHECK: %3 [80r,80d:0) 0@80r  L000000000000000C [80r,80d:0) 0@80r  weight:0.000000e+00
 # CHECK: %4 [96r,96d:0) 0@96r  L0000000000003000 [96r,96d:0) 0@96r  weight:0.000000e+00

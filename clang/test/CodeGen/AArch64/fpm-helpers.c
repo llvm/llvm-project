@@ -132,6 +132,19 @@ fpm_t test_of_cvt_2() {
 //
 fpm_t test_lscale() { return __arm_set_fpm_lscale(INIT_ZERO, 127); }
 
+// CHECK-LABEL: define dso_local i64 @test_lscale_variable(
+// CHECK-SAME: i64 noundef [[FPM:%.*]], i64 noundef [[SCALE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[FPM]], -8323073
+// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SCALE]], 16
+// CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 8323072
+// CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], [[TMP0]]
+// CHECK-NEXT:    ret i64 [[TMP3]]
+//
+fpm_t test_lscale_variable(fpm_t fpm, uint64_t scale) {
+  return __arm_set_fpm_lscale(fpm, scale);
+}
+
 // CHECK-LABEL: define dso_local noundef i64 @test_lscale2(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -139,26 +152,52 @@ fpm_t test_lscale() { return __arm_set_fpm_lscale(INIT_ZERO, 127); }
 //
 fpm_t test_lscale2() { return __arm_set_fpm_lscale2(INIT_ZERO, 63); }
 
-// CHECK-LABEL: define dso_local noundef range(i64 0, 4278190081) i64 @test_nscale_1(
+// CHECK-LABEL: define dso_local i64 @test_lscale2_variable(
+// CHECK-SAME: i64 noundef [[FPM:%.*]], i64 noundef [[SCALE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[FPM]], -270582939649
+// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SCALE]], 32
+// CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 270582939648
+// CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], [[TMP0]]
+// CHECK-NEXT:    ret i64 [[TMP3]]
+//
+fpm_t test_lscale2_variable(fpm_t fpm, uint64_t scale) {
+  return __arm_set_fpm_lscale2(fpm, scale);
+}
+
+// CHECK-LABEL: define dso_local noundef i64 @test_nscale_1(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 2147483648
 //
 fpm_t test_nscale_1() { return __arm_set_fpm_nscale(INIT_ZERO, -128); }
 
-// CHECK-LABEL: define dso_local noundef range(i64 0, 4278190081) i64 @test_nscale_2(
+// CHECK-LABEL: define dso_local noundef i64 @test_nscale_2(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 2130706432
 //
 fpm_t test_nscale_2() { return __arm_set_fpm_nscale(INIT_ZERO, 127); }
 
-// CHECK-LABEL: define dso_local noundef range(i64 0, 4278190081) i64 @test_nscale_3(
+// CHECK-LABEL: define dso_local noundef i64 @test_nscale_3(
 // CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret i64 4278190080
 //
 fpm_t test_nscale_3() { return __arm_set_fpm_nscale(INIT_ZERO, -1); }
+
+// CHECK-LABEL: define dso_local i64 @test_nscale_variable(
+// CHECK-SAME: i64 noundef [[FPM:%.*]], i64 noundef [[SCALE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[FPM]], -4278190081
+// CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[SCALE]], 24
+// CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], 4278190080
+// CHECK-NEXT:    [[TMP3:%.*]] = or disjoint i64 [[TMP2]], [[TMP0]]
+// CHECK-NEXT:    ret i64 [[TMP3]]
+//
+fpm_t test_nscale_variable(fpm_t fpm, int64_t scale) {
+  return __arm_set_fpm_nscale(fpm, scale);
+}
 
 #ifdef __cplusplus
 }

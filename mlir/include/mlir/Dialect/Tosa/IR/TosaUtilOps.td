@@ -52,10 +52,12 @@ def Tosa_ApplyScaleOp :
   );
 
   let extraClassDeclaration = [{
-    std::optional<SmallVector<int64_t, 4>> getShapeForUnroll();
+    std::optional<SmallVector<int64_t, 4>> getIterationShapeToUnroll();
   }];
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat =
+      "operands `rounding_mode` `` $rounding_mode attr-dict `:` "
+      "functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//

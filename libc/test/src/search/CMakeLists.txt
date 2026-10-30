@@ -1,8 +1,8 @@
-add_custom_target(libc_search_unittests)
+add_libc_testsuite(libc-search-tests)
 add_libc_test(
   hsearch_test
   SUITE
-    libc_search_unittests
+    libc-search-tests
   SRCS
     hsearch_test.cpp
   DEPENDS
@@ -18,7 +18,7 @@ add_libc_test(
 add_libc_test(
   insque_test
   SUITE
-    libc_search_unittests
+    libc-search-tests
   SRCS
     insque_test.cpp
   DEPENDS
@@ -29,7 +29,7 @@ add_libc_test(
 add_libc_test(
   lfind_test
   SUITE
-    libc_search_unittests
+    libc-search-tests
   SRCS
     lfind_test.cpp
   DEPENDS
@@ -39,7 +39,7 @@ add_libc_test(
 add_libc_test(
   lsearch_test
   SUITE
-    libc_search_unittests
+    libc-search-tests
   SRCS
     lsearch_test.cpp
   DEPENDS
@@ -49,7 +49,7 @@ add_libc_test(
 add_libc_test(
   tsearch_test
   SUITE
-    libc_search_unittests
+    libc-search-tests
   SRCS
     tsearch_test.cpp
   DEPENDS

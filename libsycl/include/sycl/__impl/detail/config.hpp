@@ -21,7 +21,8 @@
 #define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
 
 #define _LIBSYCL_BEGIN_NAMESPACE_SYCL                                          \
-  _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL inline namespace _LIBSYCL_ABI_NAMESPACE {
+  _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL                                    \
+  inline namespace _LIBSYCL_ABI_NAMESPACE {
 #define _LIBSYCL_END_NAMESPACE_SYCL                                            \
   }                                                                            \
   _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL
@@ -63,7 +64,7 @@ static_assert(__cplusplus >= 201703L, "Libsycl requires C++17 or later.");
 #endif
 
 #ifndef __SYCL2020_DEPRECATED
-#  if SYCL_LANGUAGE_VERSION == 202012L &&                                      \
+#  if defined(SYCL_LANGUAGE_VERSION) && SYCL_LANGUAGE_VERSION == 202012L &&    \
       !defined(SYCL2020_DISABLE_DEPRECATION_WARNINGS)
 #    define __SYCL2020_DEPRECATED(message) [[deprecated(message)]]
 #  else

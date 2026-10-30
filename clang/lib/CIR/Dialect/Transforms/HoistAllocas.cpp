@@ -64,11 +64,23 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
   // let's not depend on the default staying that way.
   func.getBody().walk<mlir::WalkOrder::PostOrder>([&](cir::AllocaOp alloca) {
     mlir::Block *destBlock = getHoistDestBlock(alloca);
-    if (alloca->getBlock() == destBlock)
-      return;
     // Don't hoist allocas with dynamic alloca size.
     if (alloca.getDynAllocSize())
       return;
+    if (alloca->getBlock() == destBlock) {
+      // Already in the right block, but not necessarily ahead of the control
+      // flow in it. This pass runs before FlattenCFG, which splits the body at
+      // each structured control-flow op, so an alloca that sits after one ends
+      // up in a non-entry block and SROA only ever collects allocas from the
+      // entry block, so it would never be promoted at all.
+      // Only a region-carrying op ahead of the alloca can strand it that way;
+      // straight-line code cannot.
+      if (std::all_of(destBlock->begin(), alloca->getIterator(),
+                      [](mlir::Operation &blockOp) {
+                        return blockOp.getNumRegions() == 0;
+                      }))
+        return;
+    }
 
     // Hoist allocas into the entry block.
 
@@ -82,8 +94,14 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
     if (alloca.getConstant())
       alloca.setConstant(false);
 
-    mlir::Operation *&insertPoint =
-        insertPoints.try_emplace(destBlock, &*destBlock->begin()).first->second;
+    // Hoisted allocas go after the allocas already at the start of the
+    // destination block, so the return value and parameter allocas stay
+    // first.
+    mlir::Operation *&insertPoint = insertPoints[destBlock];
+    if (!insertPoint)
+      insertPoint = &*llvm::find_if(*destBlock, [](mlir::Operation &blockOp) {
+        return !mlir::isa<cir::AllocaOp>(blockOp);
+      });
     alloca->moveBefore(insertPoint);
   });
 }

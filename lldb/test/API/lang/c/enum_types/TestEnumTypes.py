@@ -15,6 +15,7 @@ class EnumTypesTestCase(TestBase):
         self.line = line_number("main.c", "// Set break point at this line.")
 
     @requireExpressionEvaluation
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_command_line(self):
         """Test 'image lookup -t enum_test_days' and check for correct display and enum value printing."""
         self.build()

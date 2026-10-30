@@ -2,16 +2,16 @@
 ; -nvptx-allow-ftz-atomics forces atomicrmw fadd to lower to atom.add even when
 ; the hardware's FTZ behavior doesn't match the function's denormal mode, where
 ; we'd otherwise emit a CAS loop. Compare the lowering with the option disabled
-; (DISALLOW) against the option enabled or default (ALLOW).
+; or default (DISALLOW) against the option enabled (ALLOW).
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=false | FileCheck %s --check-prefixes=CHECK,DISALLOW
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=true | FileCheck %s --check-prefixes=CHECK,ALLOW
-; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | FileCheck %s --check-prefixes=CHECK,ALLOW
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | FileCheck %s --check-prefixes=CHECK,DISALLOW
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.7 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=false | %ptxas-verify -arch=sm_90 %}
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.7 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 -nvptx-allow-ftz-atomics=true | %ptxas-verify -arch=sm_90 %}
 ; RUN: %if ptxas-sm_90 && ptxas-isa-8.7 %{ llc < %s -march=nvptx64 -mcpu=sm_90 -mattr=+ptx87 | %ptxas-verify -arch=sm_90 %}
 
 ; global f32: atom.add flushes, so we'd normally use a CAS loop (function is not FTZ)
-; when the option is disabled; when enabled (default), it lowers to atom.add.
+; when the option is disabled (default); when enabled, it lowers to atom.add.
 define float @fadd_f32_global(ptr addrspace(1) %addr, float %val) {
 ;
 ; DISALLOW-LABEL: fadd_f32_global(
@@ -51,7 +51,7 @@ define float @fadd_f32_global(ptr addrspace(1) %addr, float %val) {
 }
 
 ; generic f32: we can't know the memory space, so we'd normally use a CAS loop
-; when the option is disabled; when enabled (default), it lowers to atom.add.
+; when the option is disabled (default); when enabled, it lowers to atom.add.
 define float @fadd_f32_generic(ptr %addr, float %val) {
 ;
 ; DISALLOW-LABEL: fadd_f32_generic(

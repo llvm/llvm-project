@@ -4,6 +4,10 @@ add_clang_library(CIROpenACCSupport
 
   DEPENDS
   MLIRCIRTypeConstraintsIncGen
+  MLIRArithOpsIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
+  MLIRCallInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR

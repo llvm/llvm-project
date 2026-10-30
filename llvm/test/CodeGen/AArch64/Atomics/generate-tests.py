@@ -158,6 +158,8 @@ class FPFeature(enum.Flag):
     def mattr(self):
         if self == FPFeature.v8a_fp:
             return "+v8a"
+        if self == FPFeature.lsfe:
+            return "+lsfe,+fullfp16"
         return "+" + self.name
 
 
@@ -195,7 +197,7 @@ def relpath():
 
 
 def generate_unused_res_test(featname, ordering, op, alignval):
-    if featname != "lsfe" or op == "fsub" or alignval == 1:
+    if featname != "lsfe" or alignval == 1:
         return False
     if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
         return False
@@ -241,6 +243,18 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                             )
                         )
 
+    if featname == "lsfe":
+        tests.append(
+            textwrap.dedent(
+                f"""
+                define dso_local fp128 @atomicrmw_fadd_fp128_aligned_monotonic(ptr %ptr, fp128 %value){attrs} {{
+                    %r = {instr} fadd ptr %ptr, fp128 %value monotonic, align 16
+                    ret fp128 %r
+                }}
+            """
+            )
+        )
+
     if generate_unused:
         f.write(
             "\n; NOTE: '_unused' tests are added to ensure we do not lower to "
@@ -262,6 +276,16 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
 
                 define dso_local float @atomicrmw_fadd_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
                     %r = atomicrmw fadd ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                define dso_local float @atomicrmw_fsub_float_aligned_seq_cst_trapping(ptr %ptr, float %value) {
+                    %r = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
+                    ret float %r
+                }
+
+                define dso_local float @atomicrmw_fsub_float_aligned_seq_cst_strictfp(ptr %ptr, float %value) #1 {
+                    %r = atomicrmw fsub ptr %ptr, float %value seq_cst, align 4
                     ret float %r
                 }
 
@@ -404,6 +428,8 @@ def write_lit_tests(feature, datatypes, ops):
         for feat in feature:
             with open(f"{triple}-atomicrmw-{feat.name}.ll", "w") as f:
                 filter_args = r'--filter-out "\b(sp)\b" --filter "^\s*(ld[^r]|st[^r]|swp|cas|bl|add|and|eor|orn|orr|sub|mvn|sxt|cmp|ccmp|csel|dmb)"'
+                if feat.name == "lsfe":
+                    filter_args = filter_args.replace("|orn", "|fneg|orn")
                 header(f, triple, [feat], filter_args)
                 all_atomicrmw(f, datatypes, ops, feat.name)
 

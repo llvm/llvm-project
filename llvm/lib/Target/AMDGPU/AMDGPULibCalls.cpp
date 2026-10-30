@@ -19,7 +19,6 @@
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include <cmath>
@@ -115,9 +114,6 @@ private:
   // __read_pipe/__write_pipe
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
                             const FuncInfo &FInfo);
-
-  // Get a scalar native builtin single argument FP function
-  FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
   /// Substitute a call to a known libcall with an intrinsic call. If \p
   /// AllowMinSize is true, allow the replacement in a minsize function.
@@ -458,8 +454,7 @@ bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
 }
 
 AMDGPULibCalls::AMDGPULibCalls(Function &F, FunctionAnalysisManager &FAM)
-    : SQ(F.getParent()->getDataLayout(),
-         &FAM.getResult<TargetLibraryAnalysis>(F),
+    : SQ(F.getDataLayout(), &FAM.getResult<TargetLibraryAnalysis>(F),
          FAM.getCachedResult<DominatorTreeAnalysis>(F),
          &FAM.getResult<AssumptionAnalysis>(F)) {}
 
@@ -562,7 +557,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (!PacketSize || !PacketAlign)
     return false;
 
-  unsigned Size = PacketSize->getZExtValue();
+  uint64_t Size = PacketSize->getZExtValue();
   Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
@@ -899,7 +894,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
           FInfo.getId() == AMDGPULibFunc::EI_POWN_FAST) &&
          "fold_pow: encounter a wrong function call");
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Type *eltType = FPOp->getType()->getScalarType();
   Value *opr0 = FPOp->getOperand(0);
   Value *opr1 = FPOp->getOperand(1);
@@ -912,41 +907,15 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   // 0x1111111 means that we don't do anything for this call.
   int ci_opr1 = (CINT ? (int)CINT->getSExtValue() : 0x1111111);
 
-  if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
-    //  pow/powr/pown(x, 0) == 1
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
-    }
-    replaceCall(FPOp, cnval);
-    return true;
-  }
-  if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
-    // pow/powr/pown(x, 1.0) = x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
-    replaceCall(FPOp, opr0);
-    return true;
-  }
-  if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
-    // pow/powr/pown(x, 2.0) = x*x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
-                      << *opr0 << "\n");
-    Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
-    replaceCall(FPOp, nval);
-    return true;
-  }
-  if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
-    // pow/powr/pown(x, -1.0) = 1.0/x
-    LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
-    Constant *cnval = ConstantFP::get(eltType, 1.0);
-    if (getVecSize(FInfo) > 1) {
-      cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
-    }
-    Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
-    replaceCall(FPOp, nval);
-    return true;
-  }
+  // OpenCL powr(x<0, y) = NaN, but the folds below would turn it into a
+  // finite number. Skip them unless NaNs are ignored or the base is known
+  // non-negative.
+  bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
+                FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+  bool SkipConstantFolds =
+      IsPowr && !FPOp->hasNoNaNs() &&
+      !cannotBeOrderedLessThanZero(
+          opr0, SQ.getWithInstruction(cast<Instruction>(FPOp)));
 
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
     // pow[r](x, [-]0.5) = sqrt(x) / rsqrt(x)
@@ -957,9 +926,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
     // powr requires x >= 0 by the OpenCL spec, so -Inf is undefined behaviour
     // and the ninf check can be skipped for powr/powr_fast. -0.0 is a valid
     // input for powr since -0.0 >= 0 by IEEE comparison, so nsz is still
-    // required for all variants.
-    bool IsPowr = FInfo.getId() == AMDGPULibFunc::EI_POWR ||
-                  FInfo.getId() == AMDGPULibFunc::EI_POWR_FAST;
+    // required for all variants. sqrt/rsqrt already return NaN for a
+    // negative base like powr does, so this fold skips the base-sign check.
     if (FPOp->hasNoSignedZeros() && (IsPowr || FPOp->hasNoInfs())) {
       bool issqrt = CF->isExactlyValue(0.5);
       if (FunctionCallee FPExpr =
@@ -973,6 +941,44 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
         replaceCall(FPOp, nval);
         return true;
       }
+    }
+  }
+
+  if (!SkipConstantFolds) {
+    if ((CF && CF->isZero()) || (CINT && ci_opr1 == 0)) {
+      //  pow/powr/pown(x, 0) == 1
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      replaceCall(FPOp, cnval);
+      return true;
+    }
+    if ((CF && CF->isOne()) || (CINT && ci_opr1 == 1)) {
+      // pow/powr/pown(x, 1.0) = x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << "\n");
+      replaceCall(FPOp, opr0);
+      return true;
+    }
+    if ((CF && CF->isExactlyValue(2.0)) || (CINT && ci_opr1 == 2)) {
+      // pow/powr/pown(x, 2.0) = x*x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> " << *opr0 << " * "
+                        << *opr0 << "\n");
+      Value *nval = B.CreateFMul(opr0, opr0, "__pow2");
+      replaceCall(FPOp, nval);
+      return true;
+    }
+    if ((CF && CF->isMinusOne()) || (CINT && ci_opr1 == -1)) {
+      // pow/powr/pown(x, -1.0) = 1.0/x
+      LLVM_DEBUG(errs() << "AMDIC: " << *FPOp << " ---> 1 / " << *opr0 << "\n");
+      Constant *cnval = ConstantFP::get(eltType, 1.0);
+      if (getVecSize(FInfo) > 1) {
+        cnval = ConstantDataVector::getSplat(getVecSize(FInfo), cnval);
+      }
+      Value *nval = B.CreateFDiv(cnval, opr0, "__powrecip");
+      replaceCall(FPOp, nval);
+      return true;
     }
   }
 
@@ -1148,7 +1154,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   nval = Exp2Call;
 
   if (needcopysign) {
-    Type* nTyS = B.getIntNTy(eltType->getPrimitiveSizeInBits());
+    Type *nTyS =
+        B.getIntNTy(static_cast<unsigned>(eltType->getPrimitiveSizeInBits()));
     Type *nTy = FPOp->getType()->getWithNewType(nTyS);
     Value *opr_n = FPOp->getOperand(1);
     if (opr_n->getType()->getScalarType()->isIntegerTy())
@@ -1192,7 +1199,7 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
     return true;
   }
 
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
 
   CallInst *CI = cast<CallInst>(FPOp);
 
@@ -1600,16 +1607,6 @@ bool AMDGPULibCalls::tryOptimizePow(FPMathOperator *FPOp, IRBuilder<> &B,
   return expandFastPow(FPOp, B, PowKind::Pow);
 }
 
-// Get a scalar native builtin single argument FP function
-FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
-                                                 const FuncInfo &FInfo) {
-  if (getArgType(FInfo) == AMDGPULibFunc::F64 || !HasNative(FInfo.getId()))
-    return nullptr;
-  FuncInfo nf = FInfo;
-  nf.setPrefix(AMDGPULibFunc::NATIVE);
-  return getFunction(M, nf);
-}
-
 // Some library calls are just wrappers around llvm intrinsics, but compiled
 // conservatively. Preserve the flags from the original call site by
 // substituting them with direct calls with all the flags.
@@ -1685,7 +1682,7 @@ AMDGPULibCalls::insertSinCos(Value *Arg, FastMathFlags FMF, IRBuilder<> &B,
     // sincos call there. Otherwise, right after the allocas works well enough
     // if it's an argument or constant.
 
-    B.SetInsertPoint(ArgInst->getParent(), ++ArgInst->getIterator());
+    B.SetInsertPoint(*ArgInst->getInsertionPointAfterDef());
 
     // SetInsertPoint unwelcomely always tries to set the debug loc.
     B.SetCurrentDebugLocation(DL);
@@ -1796,6 +1793,11 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   }
 
   if (SinCalls.empty() || CosCalls.empty())
+    return false;
+
+  // insertSinCos needs an insertion point after the argument's def.
+  if (auto *ArgInst = dyn_cast<Instruction>(CArgVal);
+      ArgInst && !ArgInst->getInsertionPointAfterDef())
     return false;
 
   B.setFastMathFlags(FMF);

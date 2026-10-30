@@ -1,4 +1,4 @@
-add_custom_target(libc-libgen-tests)
+add_libc_testsuite(libc-libgen-tests)
 
 add_libc_test(
   basename_test

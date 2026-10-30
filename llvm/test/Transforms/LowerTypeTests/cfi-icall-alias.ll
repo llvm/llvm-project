@@ -8,7 +8,7 @@ RUN: llvm-modextract test.bc -n 0 -o test0.bc
 RUN: llvm-modextract test.bc -n 1 -o test1.bc
 
 ;; Check that a CFI jumptable is generated.
-RUN: opt test1.bc -passes=lowertypetests -lowertypetests-read-summary=in.yaml \
+RUN: opt test1.bc -passes=lowertypetests -lowertypetests-read-summary=in.ll \
 RUN:   -lowertypetests-summary-action=export -lowertypetests-write-summary=exported.yaml \
 RUN:   -S -o - | FileCheck %s --check-prefix=REGULAR
 REGULAR: @__typeid__ZTSFvvE_global_addr = hidden alias i8, ptr @.cfi.jumptable
@@ -40,15 +40,8 @@ define i1 @test() {
 declare i1 @llvm.type.test(ptr, metadata)
 
 !0 = !{i64 0, !"_ZTSFvvE"}
-;--- in.yaml
----
-GlobalValueMap:
-  8346051122425466633: # guid("test")
-    - Live: true
-      Refs: [5833419078793185394] # guid("alias")
-      TypeTests: [9080559750644022485] # guid("_ZTSFvvE")
-  5833419078793185394: # guid("alias")
-    - Aliasee: 14740650423002898831 # guid("f")
-  14740650423002898831: # guid("f")
-    -
-...
+;--- in.ll
+^0 = module: (path: "test.bc", hash: (0, 0, 0, 0, 0))
+^1 = gv: (guid: 8346051122425466633,  summaries: (function: (module: ^0, flags: (live: 1), insts: 1, refs: (^2), typeIdInfo: (typeTests: (9080559750644022485)))))
+^2 = gv: (guid: 5833419078793185394,  summaries: (alias:    (module: ^0, flags: (live: 1), aliasee: ^3)))
+^3 = gv: (guid: 14740650423002898831, summaries: (function: (module: ^0, flags: (linkage: weak, live: 1), insts: 1)))

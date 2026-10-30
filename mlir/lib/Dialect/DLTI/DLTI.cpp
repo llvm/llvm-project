@@ -16,9 +16,12 @@
 #include "mlir/IR/DialectImplementation.h"
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
+
+#include "mlir/Dialect/DLTI/DLTIOpInterfaces.cpp.inc"
 
 #include "mlir/Dialect/DLTI/DLTIDialect.cpp.inc"
 
@@ -516,21 +519,61 @@ void TargetSystemSpecAttr::print(AsmPrinter &printer) const {
 // DLTIDialect
 //===----------------------------------------------------------------------===//
 
-/// Retrieve the first `DLTIQueryInterface`-implementing attribute that is
-/// attached to `op` or such an attr on as close as possible an ancestor. The
-/// op the attribute is attached to is returned as well.
-static std::pair<DLTIQueryInterface, Operation *>
-getClosestQueryable(Operation *op) {
-  DLTIQueryInterface queryable = {};
+static constexpr llvm::StringLiteral kDltiAttrName = "dlti";
 
-  // Search op and its ancestors for the first attached DLTIQueryInterface attr.
-  do {
-    for (NamedAttribute attr : op->getAttrs())
-      if ((queryable = dyn_cast<DLTIQueryInterface>(attr.getValue())))
-        break;
-  } while (!queryable && (op = op->getParentOp()));
+FailureOr<Attribute> mlir::dlti::detail::queryDlti(Operation *op,
+                                                   DataLayoutEntryKey key) {
+  auto queryable = op->getInherentAttrOfType<DLTIQueryInterface>(kDltiAttrName);
+  if (!queryable)
+    return failure();
+  return queryable.query(key);
+}
 
-  return std::pair(queryable, op);
+LogicalResult mlir::dlti::detail::setDlti(Operation *op, DataLayoutEntryKey key,
+                                          Attribute value) {
+  if (key.isNull())
+    return failure();
+  if (auto stringKey = dyn_cast<StringAttr>(key);
+      stringKey && stringKey.getValue().empty())
+    return failure();
+
+  std::optional<Attribute> inherent = op->getInherentAttr(kDltiAttrName);
+  if (!inherent)
+    return failure();
+  auto current = dyn_cast_or_null<DLTIQueryInterface>(*inherent);
+  if (current && !isa<MapAttr>(current))
+    return failure();
+
+  SmallVector<DataLayoutEntryInterface> entries;
+  if (auto map = dyn_cast_or_null<MapAttr>(current))
+    llvm::append_range(entries, map.getEntries());
+
+  auto makeEntry = [&]() -> DataLayoutEntryInterface {
+    if (auto type = dyn_cast<Type>(key))
+      return DataLayoutEntryAttr::get(type, value);
+    return DataLayoutEntryAttr::get(cast<StringAttr>(key), value);
+  };
+  auto entry = llvm::find_if(entries, [&](DataLayoutEntryInterface entry) {
+    return entry.getKey() == key;
+  });
+  if (entry != entries.end()) {
+    if (value)
+      *entry = makeEntry();
+    else
+      entries.erase(entry);
+  } else if (value) {
+    entries.push_back(makeEntry());
+  } else {
+    return success();
+  }
+
+  StringAttr attrName = StringAttr::get(op->getContext(), kDltiAttrName);
+  if (entries.empty()) {
+    op->setInherentAttr(attrName, {});
+    return success();
+  }
+  op->setInherentAttr(attrName, MapAttr::get(op->getContext(), entries));
+  return success();
 }
 
 FailureOr<Attribute>
@@ -546,26 +589,37 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
     return failure();
   }
 
-  auto [queryable, queryOp] = getClosestQueryable(op);
-  Operation *reportOp = (queryOp ? queryOp : op);
+  Attribute currentAttr;
+  Operation *queryOp = op;
+  for (; queryOp; queryOp = queryOp->getParentOp()) {
+    auto queryable = dyn_cast<DLTIQueryOpInterface>(queryOp);
+    if (!queryable)
+      continue;
+    FailureOr<Attribute> result = queryable.queryDlti(keys.front());
+    if (succeeded(result)) {
+      currentAttr = *result;
+      break;
+    }
+  }
 
-  if (!queryable) {
+  if (!currentAttr) {
     if (emitError) {
       auto diag = op->emitError() << "target op of failed DLTI query";
-      diag.attachNote(reportOp->getLoc())
-          << "no DLTI-queryable attrs on target op or any of its ancestors";
+      diag.attachNote(op->getLoc())
+          << "no DLTI-queryable operation on the target or any of its "
+             "ancestors could answer key "
+          << keyToStr(keys.front());
     }
     return failure();
   }
 
-  Attribute currentAttr = queryable;
-  for (auto &&[idx, key] : llvm::enumerate(keys)) {
+  for (auto &&[idx, key] : llvm::enumerate(keys.drop_front())) {
     if (auto map = dyn_cast<DLTIQueryInterface>(currentAttr)) {
       auto maybeAttr = map.query(key);
       if (failed(maybeAttr)) {
         if (emitError) {
           auto diag = op->emitError() << "target op of failed DLTI query";
-          diag.attachNote(reportOp->getLoc())
+          diag.attachNote(queryOp->getLoc())
               << "key " << keyToStr(key)
               << " has no DLTI-mapping per attr: " << map;
         }
@@ -576,12 +630,12 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
       if (emitError) {
         std::string commaSeparatedKeys;
         llvm::interleave(
-            keys.take_front(idx), // All prior keys.
+            keys.take_front(idx + 1), // All prior keys.
             [&](auto key) { commaSeparatedKeys += keyToStr(key); },
             [&]() { commaSeparatedKeys += ","; });
 
         auto diag = op->emitError() << "target op of failed DLTI query";
-        diag.attachNote(reportOp->getLoc())
+        diag.attachNote(queryOp->getLoc())
             << "got non-DLTI-queryable attribute upon looking up keys ["
             << commaSeparatedKeys << "] at op";
       }
@@ -607,6 +661,10 @@ FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
 }
 
 namespace {
+struct ModuleDLTIQueryOpInterface
+    : DLTIQueryOpInterface::ExternalModel<ModuleDLTIQueryOpInterface,
+                                          ModuleOp> {};
+
 class TargetDataLayoutInterface : public DataLayoutDialectInterface {
 public:
   using DataLayoutDialectInterface::DataLayoutDialectInterface;
@@ -645,6 +703,7 @@ void DLTIDialect::initialize() {
 #include "mlir/Dialect/DLTI/DLTIAttrs.cpp.inc"
       >();
   addInterfaces<TargetDataLayoutInterface>();
+  ModuleOp::attachInterface<ModuleDLTIQueryOpInterface>(*getContext());
 }
 
 LogicalResult DLTIDialect::verifyOperationAttribute(Operation *op,

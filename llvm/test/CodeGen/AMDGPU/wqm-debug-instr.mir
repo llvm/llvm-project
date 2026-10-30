@@ -20,7 +20,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: dead [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; CHECK-NEXT: [[ENTER_STRICT_WQM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WQM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[ENTER_STRICT_WQM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WQM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; CHECK-NEXT: [[DS_PARAM_LOAD:%[0-9]+]]:vgpr_32 = DS_PARAM_LOAD 0, 0, 0, 1, implicit $m0, implicit $exec
@@ -67,7 +67,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; CHECK-NEXT:   $exec = EXIT_STRICT_WWM [[ENTER_STRICT_WWM]]
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr2
@@ -79,7 +79,7 @@ body:             |
   ; CHECK-NEXT:   S_CMP_LT_I32 0, [[COPY3]], implicit-def $scc
   ; CHECK-NEXT:   [[BUFFER_LOAD_DWORD_OFFEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_OFFEN [[COPY]], [[DEF]], 0, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:sreg_32_xm0 = COPY $scc
-  ; CHECK-NEXT:   [[ENTER_STRICT_WWM1:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   [[ENTER_STRICT_WWM1:%[0-9]+]]:sreg_64 = ENTER_STRICT_WWM -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   $scc = COPY [[COPY4]]
   ; CHECK-NEXT:   [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 [[COPY]], [[COPY]], implicit-def $vcc, implicit $exec
   ; CHECK-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sgpr_32 = S_CSELECT_B32 [[COPY1]], [[COPY2]], implicit $scc

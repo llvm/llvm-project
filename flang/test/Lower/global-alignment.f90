@@ -5,18 +5,18 @@ module m
 
   ! Array globals that should get alignment 64 by default.
   integer :: int_array(10)
-  ! CHECK-DAG: fir.global @_QMmEint_array {alignment = 64 : i64} : !fir.array<10xi32>
+  ! CHECK-DAG: fir.global @_QMmEint_array <{alignment = 64 : i64}> : !fir.array<10xi32>
   real :: real_array(5, 5)
-  ! CHECK-DAG: fir.global @_QMmEreal_array {alignment = 64 : i64} : !fir.array<5x5xf32>
+  ! CHECK-DAG: fir.global @_QMmEreal_array <{alignment = 64 : i64}> : !fir.array<5x5xf32>
   complex :: complex_array(3)
-  ! CHECK-DAG: fir.global @_QMmEcomplex_array {alignment = 64 : i64} : !fir.array<3xcomplex<f32>>
+  ! CHECK-DAG: fir.global @_QMmEcomplex_array <{alignment = 64 : i64}> : !fir.array<3xcomplex<f32>>
   logical :: logical_array(4)
-  ! CHECK-DAG: fir.global @_QMmElogical_array {alignment = 64 : i64} : !fir.array<4x!fir.logical<4>>
+  ! CHECK-DAG: fir.global @_QMmElogical_array <{alignment = 64 : i64}> : !fir.array<4x!fir.logical<4>>
   character(len=10) :: char_array(2)
-  ! CHECK-DAG: fir.global @_QMmEchar_array {alignment = 64 : i64} : !fir.array<2x!fir.char<1,10>>
+  ! CHECK-DAG: fir.global @_QMmEchar_array <{alignment = 64 : i64}> : !fir.array<2x!fir.char<1,10>>
 
   integer, target :: target_array(8)
-  ! CHECK-DAG: fir.global @_QMmEtarget_array {alignment = 64 : i64} target : !fir.array<8xi32>
+  ! CHECK-DAG: fir.global @_QMmEtarget_array <{alignment = 64 : i64}> target : !fir.array<8xi32>
 
   ! Currently not align 64
   integer, allocatable :: alloc_array(:)
@@ -48,7 +48,7 @@ subroutine sub_with_common()
   integer :: cb_int(10)
   real :: cb_real
   common /myblock/ cb_int, cb_real
-  ! CHECK-DAG: fir.global common @myblock_(dense<0> : vector<44xi8>) {alignment = 4 : i64} : !fir.array<44xi8>
+  ! CHECK-DAG: fir.global common @myblock_(dense<0> : vector<44xi8>) <{alignment = 4 : i64}> : !fir.array<44xi8>
 end subroutine
 
 block data
@@ -56,5 +56,5 @@ block data
   integer :: bd_array(5)
   common /initblock/ bd_array
   data bd_array /1, 2, 3, 4, 5/
-  ! CHECK-DAG: fir.global @initblock_ {alignment = 4 : i64} : tuple<!fir.array<5xi32>>
+  ! CHECK-DAG: fir.global @initblock_ <{alignment = 4 : i64}> : tuple<!fir.array<5xi32>>
 end block data

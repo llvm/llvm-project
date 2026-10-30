@@ -57,13 +57,14 @@ define void @move_down_inc_loop_zext(i16 %n, ptr %p) {
 ; CHECK-LABEL: define void @move_down_inc_loop_zext(
 ; CHECK-SAME: i16 [[N:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 -1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 1)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i64
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[P]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[SCEVGEP]], i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_EXT:%.*]] = zext nneg i16 [[IV]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 [[IV_EXT]], 1
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IV_EXT]]
@@ -79,7 +80,7 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i16 [ %iv.next, %loop ], [ 0, %entry ]
+  %iv = phi i16 [ %iv.next, %loop ], [ 1, %entry ]
   %iv.ext = zext nneg i16 %iv to i64
   %sub = sub nuw nsw i64 %iv.ext, 1
   %src = getelementptr inbounds nuw i8, ptr %p, i64 %iv.ext
@@ -148,13 +149,14 @@ define void @move_down_inc_loop_sext(i16 %n, ptr %p) {
 ; CHECK-LABEL: define void @move_down_inc_loop_sext(
 ; CHECK-SAME: i16 [[N:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 -1
-; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 1)
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i16 [[SMAX]] to i64
-; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[SCEVGEP]], ptr align 1 [[P]], i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[TMP0]], -1
+; CHECK-NEXT:    call void @llvm.memmove.p0.p0.i64(ptr align 1 [[P]], ptr align 1 [[SCEVGEP]], i64 [[TMP1]], i1 false)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_EXT:%.*]] = sext i16 [[IV]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 [[IV_EXT]], 1
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[IV_EXT]]
@@ -170,7 +172,7 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i16 [ %iv.next, %loop ], [ 0, %entry ]
+  %iv = phi i16 [ %iv.next, %loop ], [ 1, %entry ]
   %iv.ext = sext i16 %iv to i64
   %sub = sub nuw nsw i64 %iv.ext, 1
   %src = getelementptr inbounds nuw i8, ptr %p, i64 %iv.ext
@@ -232,7 +234,7 @@ define void @move_up_inc_loop_zext(i16 %n, ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_EXT:%.*]] = zext nneg i16 [[IV]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 [[IV_EXT]], 1
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[SUB]]
@@ -249,7 +251,7 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i16 [ %iv.next, %loop ], [ 0, %entry ]
+  %iv = phi i16 [ %iv.next, %loop ], [ 1, %entry ]
   %iv.ext = zext nneg i16 %iv to i64
   %sub = sub nuw nsw i64 %iv.ext, 1
   %src = getelementptr inbounds nuw i8, ptr %p, i64 %sub
@@ -308,7 +310,7 @@ define void @move_up_inc_loop_sext(i16 %n, ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[IV_EXT:%.*]] = sext i16 [[IV]] to i64
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nuw nsw i64 [[IV_EXT]], 1
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[SUB]]
@@ -325,7 +327,7 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i16 [ %iv.next, %loop ], [ 0, %entry ]
+  %iv = phi i16 [ %iv.next, %loop ], [ 1, %entry ]
   %iv.ext = sext i16 %iv to i64
   %sub = sub nuw nsw i64 %iv.ext, 1
   %src = getelementptr inbounds nuw i8, ptr %p, i64 %sub

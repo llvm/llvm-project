@@ -145,6 +145,46 @@ func.func @extf_vector() -> vector<8xbf16> {
 }
 
 // -----
+// CHECK-LABEL: func.func @bitcast_shuffle_pack
+func.func @bitcast_shuffle_pack(%arg0: vector<4xi16>) -> i64 {
+  // CHECK: xevm.bitcast_shuffle %{{.*}} : (vector<4xi16>) -> i64
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<4xi16>) -> i64
+  return %0 : i64
+}
+
+// -----
+// CHECK-LABEL: func.func @bitcast_shuffle_unpack
+func.func @bitcast_shuffle_unpack(%arg0: i32) -> vector<4xi8> {
+  // CHECK: xevm.bitcast_shuffle %{{.*}} : (i32) -> vector<4xi8>
+  %0 = xevm.bitcast_shuffle %arg0 : (i32) -> vector<4xi8>
+  return %0 : vector<4xi8>
+}
+
+// -----
+// CHECK-LABEL: func.func @bitcast_shuffle_pack_i8
+func.func @bitcast_shuffle_pack_i8(%arg0: vector<2xi8>) -> i16 {
+  // CHECK: xevm.bitcast_shuffle %{{.*}} : (vector<2xi8>) -> i16
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<2xi8>) -> i16
+  return %0 : i16
+}
+
+// -----
+// CHECK-LABEL: func.func @bitcast_shuffle_pack_i32
+func.func @bitcast_shuffle_pack_i32(%arg0: vector<2xi32>) -> i64 {
+  // CHECK: xevm.bitcast_shuffle %{{.*}} : (vector<2xi32>) -> i64
+  %0 = xevm.bitcast_shuffle %arg0 : (vector<2xi32>) -> i64
+  return %0 : i64
+}
+
+// -----
+// CHECK-LABEL: func.func @bitcast_shuffle_unpack_i16
+func.func @bitcast_shuffle_unpack_i16(%arg0: i64) -> vector<4xi16> {
+  // CHECK: xevm.bitcast_shuffle %{{.*}} : (i64) -> vector<4xi16>
+  %0 = xevm.bitcast_shuffle %arg0 : (i64) -> vector<4xi16>
+  return %0 : vector<4xi16>
+}
+
+// -----
 // CHECK-LABEL: func.func @memfence()
 func.func @memfence() {
   // CHECK: xevm.memfence

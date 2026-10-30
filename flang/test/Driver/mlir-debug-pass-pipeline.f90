@@ -6,7 +6,7 @@
 ! RUN: %flang -g -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
 ! RUN: %flang -g1 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
 ! RUN: %flang -gline-tables-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
-! RUN: %flang -gline-directives-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-DIRECTIVES %s
+! RUN: %flang -gline-directives-only -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG %s
 ! RUN: %flang -g2 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
 ! RUN: %flang -g3 -S -mmlir --mlir-pass-statistics -mmlir --mlir-pass-statistics-display=pipeline %s -o /dev/null 2>&1 | FileCheck --check-prefixes=ALL,DEBUG,DEBUG-CONSTRUCT %s
 
@@ -17,7 +17,6 @@
 end program
 
 ! DEBUG-CONSTRUCT: warning: Unsupported debug option: constructor
-! DEBUG-DIRECTIVES: warning: Unsupported debug option: line-directives-only
 !
 ! DEBUG-ERR: error: invalid value 'invalid' in '-debug-info-kind=invalid'
 ! DEBUG-ERR-NOT: Pass statistics report
@@ -32,18 +31,23 @@ end program
 ! ALL-NEXT: 'fir.global' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_mapper' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.private' Pipeline
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
+! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: LowerHLFIROrderedAssignments
 ! ALL-NEXT: LowerHLFIRIntrinsics
 ! ALL-NEXT: BufferizeHLFIR
@@ -75,6 +79,7 @@ end program
 ! ALL-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   CudaHeapAllocPromotion
 ! ALL-NEXT:   MemoryAllocationOpt
 
 ! ALL-NEXT: Inliner
@@ -107,7 +112,7 @@ end program
 ! ALL-NEXT:     StackReclaim
 ! ALL-NEXT:     CFGConversion
 ! ALL-NEXT: SCFToControlFlow
-! ALL-NEXT: Canonicalizer
+! ALL-NEXT: O0CanonicalizerPass
 ! ALL-NEXT: SimplifyRegionLite
 ! ALL-NEXT: ConvertComplexPow
 ! ALL-NEXT: CSE

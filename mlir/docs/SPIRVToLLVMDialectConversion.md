@@ -422,6 +422,21 @@ modelled with `xor` operation with a mask with all bits set.
 %0 = spirv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
 
+The floating-point classification ops are mapped to the `llvm.intr.is.fpclass`
+intrinsic with the corresponding `FPClassTest` mask. The intrinsic operates per
+component and returns `i1` or a vector of `i1`, exactly like the SPIR-V ops.
+
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------------------------------------:
+`spirv.IsInf`     | `llvm.intr.is.fpclass` with `fcInf` (`0x204`)
+`spirv.IsNan`     | `llvm.intr.is.fpclass` with `fcNan` (`0x003`)
+`spirv.IsFinite`  | `llvm.intr.is.fpclass` with `fcFinite` (`0x1f8`)
+`spirv.IsNormal`  | `llvm.intr.is.fpclass` with `fcNormal` (`0x108`)
+
+```mlir
+%0 = spirv.IsNan %op : f32  =>  %0 = "llvm.intr.is.fpclass"(%op) <{bit = 3 : i32}> : (f32) -> i1
+```
+
 ### Memory ops
 
 This section describes the conversion patterns for SPIR-V dialect operations
@@ -446,6 +461,27 @@ order to go through the pointer.
 %el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr, i32, i32, i32), !llvm.struct<packed (f32, array<4 x f32>)>
 ```
 
+#### `spirv.CopyMemory`
+
+`spirv.CopyMemory` is converted to the `llvm.intr.memcpy` intrinsic. The number
+of bytes copied is the static size of the converted pointee type as reported by
+the module's data layout (`DataLayout::closest(op).getTypeSize(...)`), passed as
+an `i64` constant. Pointee types that are, or include, a runtime array have no
+static size and are not supported.
+
+Memory-access attributes on `spirv.CopyMemory` are mapped as follows (following
+SPIR-V 1.4 rules where a single mask applies to both Target and Source, and a
+second mask, if present, overrides Source):
+
+*   **Volatile**: if either the Target or the Source mask has `Volatile` set,
+    `isVolatile` on `llvm.intr.memcpy` is set to `true`.
+*   **Aligned**: Target and Source alignments are attached as `llvm.align`
+    parameter attributes in `arg_attrs` on the destination and source pointer
+    arguments of `llvm.intr.memcpy`.
+*   **None** / **Nontemporal**: accepted (no extra attribute on `memcpy`).
+*   Other memory-access flags (`MakePointerAvailable`, `MakePointerVisible`,
+    `NonPrivatePointer`) are not supported and cause the conversion to fail.
+
 #### `spirv.Load` and `spirv.Store`
 
 These ops are converted to their LLVM counterparts: `llvm.load` and
@@ -453,12 +489,12 @@ These ops are converted to their LLVM counterparts: `llvm.load` and
 following cases, based on the value of the attribute:
 
 *   **Aligned**: alignment is passed on to LLVM op builder, for example: `mlir
-    // llvm.store %ptr, %val {alignment = 4 : i64} : !llvm.ptr spirv.Store
+    // llvm.store %ptr, %val <alignment = 4> : !llvm.ptr spirv.Store
     "Function" %ptr, %val ["Aligned", 4] : f32`
 *   **None**: same case as if there is no memory access attribute.
 
 *   **Nontemporal**: set `nontemporal` flag, for example: `mlir // %res =
-    llvm.load %ptr {nontemporal} : !llvm.ptr %res = spirv.Load "Function"
+    llvm.load %ptr <nontemporal> : !llvm.ptr %res = spirv.Load "Function"
     %ptr ["Nontemporal"] : f32`
 
 *   **Volatile**: mark the op as `volatile`, for example: `mlir // %res =
@@ -628,7 +664,6 @@ As well as:
 
 *   spirv.CompositeConstruct
 *   spirv.ControlBarrier
-*   spirv.CopyMemory
 *   spirv.FMod
 *   spirv.GL.Acos
 *   spirv.GL.Asin

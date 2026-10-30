@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_random_unittests)
+add_libc_testsuite(libc-sys-random-tests)
 
 add_libc_test(
   getrandom_test
   SUITE
-    libc_sys_random_unittests
+    libc-sys-random-tests
   SRCS
     getrandom_test.cpp
   DEPENDS
@@ -11,6 +11,20 @@ add_libc_test(
     libc.src.errno.errno
     libc.src.math.fabs
     libc.src.sys.random.getrandom
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  getentropy_test
+  SUITE
+    libc-sys-random-tests
+  SRCS
+    getentropy_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.errno.errno
+    libc.src.sys.random.getentropy
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
