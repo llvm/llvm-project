@@ -166,6 +166,10 @@ page](https://llvm.org/releases/).
 ## Windows Support
 
 ## Fortran Language Changes in Flang
+- With `-fbackslash`, backslash escape sequences are now interpreted in
+  character string edit descriptors in FORMAT statements, matching their
+  behavior in character format expressions. Hollerith edit descriptors are
+  unchanged.
 - Standard intrinsic functions are now classified as `SIMPLE` (F2023 16.1 p2).
   A procedure pointer or dummy procedure whose interface is an intrinsic
   function, such as `procedure(sqrt)`, can no longer be associated with a
