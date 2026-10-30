@@ -460,3 +460,76 @@ __device__ int foo4() {
   const char* s = "format str%d";
   return printf(s, 10);
 }
+
+// A 32-bit pointer, here to LDS or private memory, is stored in 4 bytes but
+// still takes an 8-byte slot, so the argument after it starts 8 bytes later.
+// CHECK-LABEL: define dso_local noundef i32 @_Z4foo5PU3AS3vPU3AS5v
+// CHECK-SAME: (ptr addrspace(3) noundef [[LDS:%.*]], ptr addrspace(5) noundef [[PRIV:%.*]]) #{{[0-9]+}} {
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[LDS_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
+// CHECK-NEXT:    [[PRIV_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK-NEXT:    [[LDS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LDS_ADDR]] to ptr
+// CHECK-NEXT:    [[PRIV_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PRIV_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(3) [[LDS]], ptr [[LDS_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store ptr addrspace(5) [[PRIV]], ptr [[PRIV_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(3), ptr [[LDS_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr addrspace(5), ptr [[PRIV_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 44)
+// CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK-NEXT:    br i1 [[TMP2]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK:       end.block:
+// CHECK-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+// CHECK-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP3]] to i32
+// CHECK-NEXT:    ret i32 [[PRINTF_RESULT]]
+// CHECK:       argpush.block:
+// CHECK-NEXT:    store i32 178, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK-NEXT:    store i64 -2001953306523763028, ptr addrspace(1) [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 8
+// CHECK-NEXT:    store ptr addrspace(3) [[TMP0]], ptr addrspace(1) [[TMP5]], align 4
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i32 8
+// CHECK-NEXT:    store i64 1, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
+// CHECK-NEXT:    store ptr addrspace(5) [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
+// CHECK-NEXT:    store i64 2, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
+// CHECK-NEXT:    br label [[END_BLOCK]]
+//
+// CHECK_CONSTRAINED-LABEL: define dso_local noundef i32 @_Z4foo5PU3AS3vPU3AS5v
+// CHECK_CONSTRAINED-SAME: (ptr addrspace(3) noundef [[LDS:%.*]], ptr addrspace(5) noundef [[PRIV:%.*]]) #{{[0-9]+}} {
+// CHECK_CONSTRAINED-NEXT:  entry:
+// CHECK_CONSTRAINED-NEXT:    [[LDS_ADDR:%.*]] = alloca ptr addrspace(3), align 4, addrspace(5)
+// CHECK_CONSTRAINED-NEXT:    [[PRIV_ADDR:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
+// CHECK_CONSTRAINED-NEXT:    [[LDS_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[LDS_ADDR]] to ptr
+// CHECK_CONSTRAINED-NEXT:    [[PRIV_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[PRIV_ADDR]] to ptr
+// CHECK_CONSTRAINED-NEXT:    store ptr addrspace(3) [[LDS]], ptr [[LDS_ADDR_ASCAST]], align 4
+// CHECK_CONSTRAINED-NEXT:    store ptr addrspace(5) [[PRIV]], ptr [[PRIV_ADDR_ASCAST]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[TMP0:%.*]] = load ptr addrspace(3), ptr [[LDS_ADDR_ASCAST]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[TMP1:%.*]] = load ptr addrspace(5), ptr [[PRIV_ADDR_ASCAST]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 44)
+// CHECK_CONSTRAINED-NEXT:    [[TMP2:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+// CHECK_CONSTRAINED-NEXT:    br i1 [[TMP2]], label [[ARGPUSH_BLOCK:%.*]], label [[END_BLOCK:%.*]]
+// CHECK_CONSTRAINED:       end.block:
+// CHECK_CONSTRAINED-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP2]], true
+// CHECK_CONSTRAINED-NEXT:    [[PRINTF_RESULT:%.*]] = sext i1 [[TMP3]] to i32
+// CHECK_CONSTRAINED-NEXT:    ret i32 [[PRINTF_RESULT]]
+// CHECK_CONSTRAINED:       argpush.block:
+// CHECK_CONSTRAINED-NEXT:    store i32 178, ptr addrspace(1) [[PRINTF_ALLOC_FN]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+// CHECK_CONSTRAINED-NEXT:    store i64 -2001953306523763028, ptr addrspace(1) [[TMP4]], align 8
+// CHECK_CONSTRAINED-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP4]], i32 8
+// CHECK_CONSTRAINED-NEXT:    store ptr addrspace(3) [[TMP0]], ptr addrspace(1) [[TMP5]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP5]], i32 8
+// CHECK_CONSTRAINED-NEXT:    store i64 1, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 8
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR]], i32 8
+// CHECK_CONSTRAINED-NEXT:    store ptr addrspace(5) [[TMP1]], ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], align 4
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR2:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR1]], i32 8
+// CHECK_CONSTRAINED-NEXT:    store i64 2, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], align 8
+// CHECK_CONSTRAINED-NEXT:    [[PRINTBUFFNEXTPTR3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[PRINTBUFFNEXTPTR2]], i32 8
+// CHECK_CONSTRAINED-NEXT:    br label [[END_BLOCK]]
+//
+__device__ int foo5(__attribute__((address_space(3))) void *lds,
+                    __attribute__((address_space(5))) void *priv) {
+  return printf("%p %d %p %d\n", lds, 1, priv, 2);
+}

@@ -274,10 +274,11 @@ static Value *callBufferedPrintfStart(
             StringData(StringRef(), LenWithNull, LenWithNullAligned, false));
       }
     } else {
-      int AllocSize = M->getDataLayout().getTypeAllocSize(Args[i]->getType());
+      uint64_t AllocSize =
+          M->getDataLayout().getTypeAllocSize(Args[i]->getType());
       // We end up expanding non string arguments to 8 bytes
       // (args smaller than 8 bytes)
-      BufSize += std::max(AllocSize, 8);
+      BufSize += alignTo(AllocSize, 8);
     }
   }
 
@@ -377,34 +378,47 @@ callBufferedPrintfArgPush(IRBuilder<> &Builder, ArrayRef<Value *> Args,
   auto StrIt = StringContents.begin();
   size_t i = IsConstFmtStr ? 1 : 0;
   for (; i < Args.size(); i++) {
-    SmallVector<Value *, 32> WhatToStore;
-    if ((i == 0) || SpecIsCString.test(i)) {
-      if (StrIt->IsConst) {
-        processConstantStringArg(StrIt, Builder, WhatToStore);
-        StrIt++;
-      } else {
-        // This copies the contents of the string, however the next offset
-        // is at aligned length, the extra space that might be created due
-        // to alignment padding is not populated with any specific value
-        // here. This would be safe as long as runtime is sync with
-        // the offsets.
-        Builder.CreateMemCpy(PtrToStore, /*DstAlign*/ Align(1), Args[i],
-                             /*SrcAlign*/ Args[i]->getPointerAlignment(DL),
-                             StrIt->RealSize);
-
-        PtrToStore =
-            Builder.CreateInBoundsGEP(Builder.getInt8Ty(), PtrToStore,
-                                      {StrIt->AlignedSize}, "PrintBuffNextPtr");
-        LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:"
-                          << *PtrToStore << '\n');
-
-        // done with current argument, move to next
-        StrIt++;
-        continue;
-      }
-    } else {
-      WhatToStore.push_back(processNonStringArg(Args[i], Builder));
+    if (i != 0 && !SpecIsCString.test(i)) {
+      // The runtime reads each non-string argument from a whole number of
+      // 8-byte slots, also when the stored value is smaller.
+      Value *ToStore = processNonStringArg(Args[i], Builder);
+      StoreInst *StBuff = Builder.CreateStore(ToStore, PtrToStore);
+      LLVM_DEBUG(dbgs() << "inserting store to printf buffer:" << *StBuff
+                        << '\n');
+      (void)StBuff;
+      PtrToStore = Builder.CreateConstInBoundsGEP1_32(
+          Builder.getInt8Ty(), PtrToStore,
+          alignTo(DL.getTypeAllocSize(ToStore->getType()), 8),
+          "PrintBuffNextPtr");
+      LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:" << *PtrToStore
+                        << '\n');
+      continue;
     }
+
+    if (!StrIt->IsConst) {
+      // This copies the contents of the string, however the next offset
+      // is at aligned length, the extra space that might be created due
+      // to alignment padding is not populated with any specific value
+      // here. This would be safe as long as runtime is sync with
+      // the offsets.
+      Builder.CreateMemCpy(PtrToStore, /*DstAlign*/ Align(1), Args[i],
+                           /*SrcAlign*/ Args[i]->getPointerAlignment(DL),
+                           StrIt->RealSize);
+
+      PtrToStore =
+          Builder.CreateInBoundsGEP(Builder.getInt8Ty(), PtrToStore,
+                                    {StrIt->AlignedSize}, "PrintBuffNextPtr");
+      LLVM_DEBUG(dbgs() << "inserting gep to the printf buffer:" << *PtrToStore
+                        << '\n');
+
+      // done with current argument, move to next
+      StrIt++;
+      continue;
+    }
+
+    SmallVector<Value *, 32> WhatToStore;
+    processConstantStringArg(StrIt, Builder, WhatToStore);
+    StrIt++;
 
     for (Value *toStore : WhatToStore) {
       StoreInst *StBuff = Builder.CreateStore(toStore, PtrToStore);
