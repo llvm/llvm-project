@@ -79,6 +79,12 @@ interface CompileUnit {
    * The path of the compile unit.
    */
   compileUnitPath: string;
+
+  /**
+   * The language of the compile unit, with its version where known, for
+   * example `c11` or `c++17`. Omitted if the language is unknown.
+   */
+  language?: string;
 }
 ```
 
