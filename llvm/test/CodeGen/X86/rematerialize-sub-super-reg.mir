@@ -237,8 +237,8 @@ body:             |
     $rsi = COPY %1
     $rdx = COPY %1
     FAKE_USE implicit killed $rsi, implicit killed $rdx
-    %4:gr8 = COPY killed %1.sub_8bit
-    $al = COPY killed %4
+    %4:gr8 = COPY %1.sub_8bit
+    $al = COPY %4
     FAKE_USE implicit killed $al
     $eax = MOV32r0 implicit-def dead $eflags
     RET 0, killed $eax
