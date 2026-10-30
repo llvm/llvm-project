@@ -2116,6 +2116,7 @@ Verifier::visitModuleFlag(const MDNode *Op,
   case Module::Error:
   case Module::Warning:
   case Module::Override:
+  case Module::Ignore:
     // These behavior types accept any value.
     break;
 

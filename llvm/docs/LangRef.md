@@ -9485,6 +9485,11 @@ The following behaviors are supported:
   - **Min**
     :   Takes the min of the two values, which are required to be non-negative integers.
         An absent module flag is treated as having the value 0.
+
+* - 9
+  - **Ignore**
+    :   Ignores differences between the values without warning. The result value
+        will be the operand for the flag from the first module being linked.
 ```
 
 It is an error for a particular unique flag ID to have multiple behaviors,
