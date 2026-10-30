@@ -175,6 +175,36 @@ namespace cwg1653 { // cwg1653: 4 c++17
   }
 } // namespace cwg1653
 
+namespace cwg1657 { // cwg1657: 3.6
+#if __cplusplus >= 201103L
+enum {
+  one [[]]
+  // cxx11-14-error@-1 {{attributes on an enumerator declaration are a C++17 extension}}
+};
+enum E {
+  two [[]]
+  // cxx11-14-error@-1 {{attributes on an enumerator declaration are a C++17 extension}}
+};
+enum struct E2 {
+  three [[]]
+  // cxx11-14-error@-1 {{attributes on an enumerator declaration are a C++17 extension}}
+};
+
+inline namespace [[]] {} // #cwg1657-unnamed
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+namespace [[]] {}
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+// since-cxx11-warning@-2 {{inline namespace reopened as a non-inline namespace}}
+//   since-cxx11-note@#cwg1657-unnamed {{previous definition is here}}
+
+inline namespace [[]] N {}
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+
+namespace [[]] M {}
+// cxx11-14-error@-1 {{attributes on a namespace declaration are a C++17 extension}}
+#endif
+} // namespace cwg1657
+
 namespace cwg1658 { // cwg1658: 5
   namespace DefCtor {
     class A { A(); }; // #cwg1658-A1

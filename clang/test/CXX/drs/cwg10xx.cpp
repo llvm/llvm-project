@@ -47,6 +47,10 @@ namespace cwg1004 { // cwg1004: 5
   Third<A<int> > t; // #cwg1004-t
 } // namespace cwg1004
 
+namespace cwg1012 { // cwg1012: 2.7
+static void f() {}
+} // namespace cwg1012
+
 namespace cwg1042 { // cwg1042: 3.5
 #if __cplusplus >= 201402L
   // C++14 added an attribute that we can test the semantics of.
@@ -111,6 +115,32 @@ namespace cwg1070 { // cwg1070: 3.5
   C c = {};
 #endif
 } // namespace cwg1070
+
+namespace cwg1077 { // cwg1077: 2.7
+namespace N {
+  template <typename>
+  void f(); // #cwg1077-f
+
+  template <typename, typename>
+  struct S; // #cwg1077-S
+}
+namespace M {
+  template <>
+  void N::f<int>();
+  // expected-error@-1 {{function template specialization of 'f' not in a namespace enclosing 'N'}}
+  //   expected-note@#cwg1077-f {{explicitly specialized declaration is here}}
+
+  template <>
+  struct N::S<int, int>;
+  // expected-error@-1 {{class template specialization of 'S' not in a namespace enclosing 'N'}}
+  //   expected-note@#cwg1077-S {{explicitly specialized declaration is here}}
+
+  template <typename T>
+  struct N::S<int, T>;
+  // expected-error@-1 {{class template partial specialization of 'S' not in a namespace enclosing 'N'}}
+  //   expected-note@#cwg1077-S {{explicitly specialized declaration is here}}
+}
+} // namespace cwg1077
 
 namespace cwg1094 { // cwg1094: 24
 #if __cplusplus >= 201103L

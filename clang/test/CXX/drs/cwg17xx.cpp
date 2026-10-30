@@ -264,3 +264,14 @@ template auto GLL::operator()<int>(int a) const -> int;
 
 #endif
 } // namespace cwg1780
+
+namespace cwg1795 { // cwg1975: 2.7
+namespace N {
+  struct S{}; // #cwg1795-S
+}
+namespace N {
+  struct S{};
+  // expected-error@-1 {{redefinition of 'S'}}
+  //   expected-note@#cwg1795-S {{previous definition is here}}
+}
+} // namespace cwg1795

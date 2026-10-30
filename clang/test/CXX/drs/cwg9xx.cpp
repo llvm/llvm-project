@@ -15,6 +15,52 @@ namespace std {
   };
 } // namespace std
 
+namespace cwg919 { // cwg919: 2.7
+#if __cplusplus >= 201103L
+namespace N {
+  inline namespace M {
+    template <typename, typename>
+    struct S;
+
+    template <typename>
+    void f();
+  }
+}
+
+template <>
+struct N::S<int, int> {};
+
+template <typename T>
+struct N::S<float, T> {};
+
+template <>
+void N::f<int>() {}
+#endif
+} // namespace cwg919
+
+namespace cwg921 { // cwg921: 3.1
+#if __cplusplus >= 201103L
+namespace N {
+  struct S {};
+  inline namespace M {
+    int f(S);
+  }
+}
+int i = f(N::S{});
+#endif
+} // namespace cwg921
+
+namespace cwg926 { // cwg926: 2.8
+#if __cplusplus >= 201103L
+namespace N {
+  inline namespace {
+    struct S {};
+  }
+}
+N::S s;
+#endif
+} // namespace cwg926
+
 namespace cwg930 { // cwg930: 2.7
 #if __cplusplus >= 201103L
 static_assert(alignof(int[]) == alignof(int), "");
@@ -206,6 +252,24 @@ enum struct E3 { e = static_cast<int>(E3()) };
 enum struct E4 : int { e = static_cast<int>(E4()) };
 #endif
 } // namespace cwg977
+
+namespace cwg986 { // cwg986: 2.7
+namespace A {
+  int f(); // #cwg986-A-f
+}
+namespace B {
+  using namespace A;
+  int f();  // #cwg986-B-f
+}
+namespace C {
+  using namespace B;
+  int i = C::f();
+  int j = f();
+  // expected-error@-1 {{call to 'f' is ambiguous}}
+  //   expected-note@#cwg986-A-f {{candidate function}}
+  //   expected-note@#cwg986-B-f {{candidate function}}
+}
+} // namespace cwg986
 
 namespace cwg988 { // cwg988: 2.7
 #if __cplusplus >= 201103L
