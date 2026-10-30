@@ -92,7 +92,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
 
-  bool IsAllowedRuntimeValue(ConstString name) override;
+  bool IsAllowedRuntimeValue(llvm::StringRef name) override;
 
   bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
 
