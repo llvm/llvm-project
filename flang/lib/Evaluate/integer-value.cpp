@@ -16,9 +16,33 @@ static_assert(alignof(IntegerValueImpl) == detail::kIntegerObjectAlign);
 static_assert(sizeof(IntegerValue) == sizeof(IntegerValueImpl));
 static_assert(alignof(IntegerValue) == alignof(IntegerValueImpl));
 
+#if FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
 static_assert(std::is_trivially_copyable_v<IntegerValueImpl>);
+#endif
 
 IntegerValue::IntegerValue() { new (this) IntegerValueImpl(); }
+
+#if !FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
+IntegerValue::~IntegerValue() { impl().~IntegerValueImpl(); }
+
+IntegerValue::IntegerValue(const IntegerValue &x) {
+  new (this) IntegerValueImpl(x.impl());
+}
+
+IntegerValue::IntegerValue(IntegerValue &&x) {
+  new (this) IntegerValueImpl(std::move(x.impl()));
+}
+
+IntegerValue &IntegerValue::operator=(const IntegerValue &x) {
+  impl() = x.impl();
+  return *this;
+}
+
+IntegerValue &IntegerValue::operator=(IntegerValue &&x) {
+  impl() = std::move(x.impl());
+  return *this;
+}
+#endif
 
 IntegerValue IntegerValue::Zero(int kind) {
   return FromImpl(IntegerValueImpl::Zero(kind));

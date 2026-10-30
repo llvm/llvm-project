@@ -33,11 +33,19 @@ public:
   using Word = IntegerValue;
 
   RealValue();
+#if FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
   ~RealValue() = default;
   RealValue(const RealValue &) = default;
   RealValue(RealValue &&) = default;
   RealValue &operator=(const RealValue &) = default;
   RealValue &operator=(RealValue &&) = default;
+#else
+  ~RealValue();
+  RealValue(const RealValue &);
+  RealValue(RealValue &&);
+  RealValue &operator=(const RealValue &);
+  RealValue &operator=(RealValue &&);
+#endif
 
   RealValue(int kind, const RealValue &v) : RealValue(v) {
     CHECK(kind == v.kind());

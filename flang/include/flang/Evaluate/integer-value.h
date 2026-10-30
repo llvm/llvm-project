@@ -42,11 +42,19 @@ public:
   struct PowerWithErrors;
 
   IntegerValue();
+#if FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL
   ~IntegerValue() = default;
   IntegerValue(const IntegerValue &) = default;
   IntegerValue(IntegerValue &&) = default;
   IntegerValue &operator=(const IntegerValue &) = default;
   IntegerValue &operator=(IntegerValue &&) = default;
+#else
+  ~IntegerValue();
+  IntegerValue(const IntegerValue &);
+  IntegerValue(IntegerValue &&);
+  IntegerValue &operator=(const IntegerValue &);
+  IntegerValue &operator=(IntegerValue &&);
+#endif
 
   IntegerValue(int kind, const IntegerValue &x) : IntegerValue(x) {
     CHECK(x.kind() == kind);
