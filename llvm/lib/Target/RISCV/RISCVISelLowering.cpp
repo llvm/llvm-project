@@ -20021,12 +20021,57 @@ static SDValue combineNegOfSelectCCSubs(SDNode *N, SelectionDAG &DAG) {
                      FalseV, TrueV);
 }
 
+static SDValue combineNegAbsDiff(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  MVT VT = Subtarget.getXLenVT();
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZicond() ||
+      Subtarget.hasStdExtP() || N->getValueType(0) != VT)
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  SDValue Mask, Diff;
+  if (!sd_match(
+          N, m_Sub(m_Value(Mask, m_Sra(m_Value(Diff),
+                                       m_SpecificInt(VT.getSizeInBits() - 1))),
+                   m_OneUse(m_c_BinOp(ISD::XOR, m_Deferred(Diff),
+                                      m_Deferred(Mask))))) ||
+      !Mask->hasNUsesOfValue(2, 0) || !Diff->hasNUsesOfValue(2, 0))
+    return SDValue();
+
+  SDValue Sub = Diff;
+  if (Sub.getOpcode() == ISD::FREEZE) {
+    Sub = Sub.getOperand(0);
+    if (!Sub.hasOneUse())
+      return SDValue();
+  }
+  SDValue LHS, RHS;
+  if (!sd_match(Sub, m_Sub(m_Value(LHS), m_Value(RHS))))
+    return SDValue();
+
+  if (!DAG.isGuaranteedNotToBeUndefOrPoison(LHS) ||
+      !DAG.isGuaranteedNotToBeUndefOrPoison(RHS) ||
+      !DAG.willNotOverflowSub(true, LHS, RHS))
+    return SDValue();
+
+  SDLoc DL(N);
+  ISD::CondCode CC = DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS)
+                         ? ISD::SETULT
+                         : ISD::SETLT;
+  SDValue AB = DAG.getNode(ISD::SUB, DL, VT, LHS, RHS);
+  SDValue BA = DAG.getNode(ISD::SUB, DL, VT, RHS, LHS);
+  return DAG.getNode(RISCVISD::SELECT_CC, DL, VT, LHS, RHS, DAG.getCondCode(CC),
+                     AB, BA);
+}
+
 static SDValue performSUBCombine(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
   if (SDValue V = combineSubOfBoolean(N, DAG))
     return V;
 
   if (SDValue V = combineNegOfSelectCCSubs(N, DAG))
+    return V;
+
+  if (SDValue V = combineNegAbsDiff(N, DAG, Subtarget))
     return V;
 
   EVT VT = N->getValueType(0);
