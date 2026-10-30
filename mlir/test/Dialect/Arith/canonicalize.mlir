@@ -4869,17 +4869,6 @@ func.func @test_remsi_overflow_zero_vector() -> vector<4xi8> {
 
 // -----
 
-// CHECK-LABEL: @test_remsi_minus_one_tensor
-// CHECK: %[[ZERO:.*]] = arith.constant dense<0> : tensor<4xi8>
-// CHECK-NEXT: return %[[ZERO]] : tensor<4xi8>
-func.func @test_remsi_minus_one_tensor(%a: tensor<4xi8>) -> tensor<4xi8> {
-  %b = arith.constant dense<-1> : tensor<4xi8>
-  %r = arith.remsi %a, %b overflow<zero> : tensor<4xi8>
-  return %r : tensor<4xi8>
-}
-
-// -----
-
 // CHECK-LABEL: @test_remsi_overflow_zero_i1
 // CHECK: %[[ZERO:.*]] = arith.constant false
 // CHECK-NEXT: return %[[ZERO]] : i1

@@ -457,19 +457,17 @@ public:
     Type type = getTypeConverter()->convertType(op.getType());
     if (!type)
       return rewriter.notifyMatchFailure(op, "converting result type failed");
-    Value lhs = adaptor.getLhs();
-    Value rhs = adaptor.getRhs();
-    Type remainderType = type;
+    if (op.getIsOverflowZero() && !isa<IntegerType>(type) &&
+        !emitc::isPointerWideType(type))
+      return rewriter.notifyMatchFailure(op, "unsupported result type");
+    Type remainderType =
+        adaptIntegralTypeSignedness(type, /*needsUnsigned=*/false);
+    Value lhs = adaptValueType(adaptor.getLhs(), rewriter, remainderType);
+    Value rhs = adaptValueType(adaptor.getRhs(), rewriter, remainderType);
     if (op.getIsOverflowZero()) {
       // C/C++ '%' is undefined for INT_MIN % -1. Since x % -1 is zero,
       // replace the dividend with zero when rhs is -1 before evaluating '%'.
-      if (!isa<IntegerType>(type) && !emitc::isPointerWideType(type))
-        return rewriter.notifyMatchFailure(op, "unsupported result type");
       Location loc = op.getLoc();
-      remainderType =
-          adaptIntegralTypeSignedness(type, /*needsUnsigned=*/false);
-      lhs = adaptValueType(lhs, rewriter, remainderType);
-      rhs = adaptValueType(rhs, rewriter, remainderType);
       Type attrType = emitc::isPointerWideType(remainderType)
                           ? rewriter.getIndexType()
                           : remainderType;

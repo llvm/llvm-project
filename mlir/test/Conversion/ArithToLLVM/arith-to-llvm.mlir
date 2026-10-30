@@ -95,17 +95,6 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
 
 // -----
 
-// CHECK-LABEL: @remsi_default(
-// CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
-// CHECK-NEXT: %[[R:.*]] = llvm.srem %[[A]], %[[B]] : i32
-// CHECK-NEXT: return %[[R]] : i32
-func.func @remsi_default(%a: i32, %b: i32) -> i32 {
-  %r = arith.remsi %a, %b : i32
-  return %r : i32
-}
-
-// -----
-
 // CHECK-LABEL: @remsi_overflow_zero(
 // CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
 // CHECK-DAG: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32

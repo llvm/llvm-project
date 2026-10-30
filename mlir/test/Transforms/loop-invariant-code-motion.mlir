@@ -1592,13 +1592,15 @@ func.func @do_not_hoist_vector_transfer_ops_memref(
 // CHECK-NEXT: %{{.*}} = arith.remsi %[[MIN]], %[[MINUS_ONE]] overflow<zero> : i32
 // CHECK-NEXT: scf.for
 // CHECK-NEXT: %{{.*}} = arith.remsi %[[MIN]], %[[MINUS_ONE]] : i32
+// CHECK-NEXT: %{{.*}} = arith.remsi %[[MIN]], %{{.*}} overflow<zero> : i32
 // CHECK-NEXT: }
-func.func @remsi_overflow_zero(%lb: index, %ub: index, %step: index) {
+func.func @remsi_overflow_zero(%lb: index, %ub: index, %step: index, %unknown: i32) {
   %min = arith.constant -2147483648 : i32
   %minus_one = arith.constant -1 : i32
   scf.for %i = %lb to %ub step %step {
     %default = arith.remsi %min, %minus_one : i32
     %defined = arith.remsi %min, %minus_one overflow<zero> : i32
+    %unkw = arith.remsi %min, %unknown overflow<zero> : i32
   }
   return
 }

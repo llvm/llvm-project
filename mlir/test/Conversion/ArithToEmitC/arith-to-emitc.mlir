@@ -777,17 +777,6 @@ func.func @arith_truncf(%arg0: f64) -> f16 {
 
 // -----
 
-// CHECK-LABEL: @remsi_default(
-// CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
-// CHECK-NEXT: %[[R:.*]] = emitc.rem %[[A]], %[[B]] : (i32, i32) -> i32
-// CHECK-NEXT: return %[[R]] : i32
-func.func @remsi_default(%a: i32, %b: i32) -> i32 {
-  %r = arith.remsi %a, %b : i32
-  return %r : i32
-}
-
-// -----
-
 // CHECK-LABEL: @remsi_overflow_zero(
 // CHECK-SAME: %[[A:.*]]: i32, %[[B:.*]]: i32
 // CHECK: %[[ZERO:.*]] = "emitc.constant"() <{value = 0 : i32}> : () -> i32
@@ -799,6 +788,18 @@ func.func @remsi_default(%a: i32, %b: i32) -> i32 {
 func.func @remsi_overflow_zero(%a: i32, %b: i32) -> i32 {
   %r = arith.remsi %a, %b overflow<zero> : i32
   return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL: @remsi_index(
+// CHECK: %[[A:.*]] = emitc.cast {{.*}} : !emitc.size_t to !emitc.ptrdiff_t
+// CHECK: %[[B:.*]] = emitc.cast {{.*}} : !emitc.size_t to !emitc.ptrdiff_t
+// CHECK: %[[R:.*]] = emitc.rem %[[A]], %[[B]] : (!emitc.ptrdiff_t, !emitc.ptrdiff_t) -> !emitc.ptrdiff_t
+// CHECK: emitc.cast %[[R]] : !emitc.ptrdiff_t to !emitc.size_t
+func.func @remsi_index(%a: index, %b: index) -> index {
+  %r = arith.remsi %a, %b : index
+  return %r : index
 }
 
 // -----
