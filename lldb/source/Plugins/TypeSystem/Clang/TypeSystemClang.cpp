@@ -4699,14 +4699,13 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 CompilerType
 TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
                                          uint32_t address_space) {
-  if (type && address_space <= clang::Qualifiers::MaxAddressSpace) {
-    clang::QualType qual_type = GetQualType(type);
-    auto lang_as = static_cast<clang::LangAS>(address_space);
-    if (lang_as == clang::LangAS::Default || qual_type.hasAddressSpace())
-      return GetType(qual_type);
-    return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
-  }
-  return CompilerType();
+  assert(type);
+  assert(address_space <= clang::Qualifiers::MaxAddressSpace);
+  clang::QualType qual_type = GetQualType(type);
+  auto lang_as = static_cast<clang::LangAS>(address_space);
+  if (lang_as == clang::LangAS::Default || qual_type.hasAddressSpace())
+    return GetType(qual_type);
+  return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
 }
 
 CompilerType

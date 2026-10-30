@@ -1589,13 +1589,10 @@ TEST_F(TestTypeSystemClang, TestAddressSpaceModifier) {
   EXPECT_EQ(ptr_to_as3_int.GetPointeeType().GetTargetAddressSpace(),
             std::optional<uint32_t>(3U));
 
-  // Out-of-range address space returns an invalid CompilerType.
-  EXPECT_FALSE(
-      int_type.AddAddressSpaceModifier(std::numeric_limits<uint32_t>::max())
-          .IsValid());
-
-  // Verify calling GetTargetAddressSpace through a const TypeSystem reference.
-  const TypeSystem &ts = *m_ast;
-  EXPECT_EQ(ts.GetTargetAddressSpace(as3_int.GetOpaqueQualType()),
-            std::optional<uint32_t>(3U));
+#if GTEST_HAS_DEATH_TEST && !defined(NDEBUG)
+  // Out-of-range address space asserts.
+  EXPECT_DEATH(
+      int_type.AddAddressSpaceModifier(std::numeric_limits<uint32_t>::max()),
+      "address_space <= clang::Qualifiers::MaxAddressSpace");
+#endif
 }

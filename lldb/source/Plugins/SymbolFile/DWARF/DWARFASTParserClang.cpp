@@ -471,18 +471,18 @@ ParsedDWARFTypeAttributes::ParsedDWARFTypeAttributes(const DWARFDIE &die) {
 
     case DW_AT_address_class: {
       uint64_t val = form_value.Unsigned();
-      if (val != llvm::dwarf::DW_ADDR_none) {
-        constexpr uint64_t max_target_as =
-            clang::Qualifiers::MaxAddressSpace -
-            static_cast<unsigned>(clang::LangAS::FirstTargetAddressSpace);
-        if (val <= max_target_as) {
-          address_class =
-              clang::getLangASFromTargetAS(static_cast<unsigned>(val));
-        } else {
-          die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
-              "[{0:x16}]: invalid DW_AT_address_class {1:x}", die.GetOffset(),
-              val);
-        }
+      if (val == llvm::dwarf::DW_ADDR_none)
+        break;
+      constexpr uint64_t max_target_as =
+          clang::Qualifiers::MaxAddressSpace -
+          llvm::to_underlying(clang::LangAS::FirstTargetAddressSpace);
+      if (val <= max_target_as) {
+        address_class =
+            clang::getLangASFromTargetAS(static_cast<unsigned>(val));
+      } else {
+        die.GetDWARF()->GetObjectFile()->GetModule()->ReportError(
+            "[{0:x16}]: invalid DW_AT_address_class {1:x}", die.GetOffset(),
+            val);
       }
       break;
     }
