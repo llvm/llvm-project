@@ -28,6 +28,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -40,10 +41,12 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
@@ -142,6 +145,8 @@ private:
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
 
+  SmallVector<WeakTrackingVH> PromotedVectorPHIs;
+
   std::pair<Value *, Value *> getLocalSizeYZ(IRBuilder<> &Builder);
   Value *getWorkitemID(IRBuilder<> &Builder, unsigned N);
 
@@ -161,6 +166,7 @@ private:
   FixedVectorType *getVectorTypeForAlloca(Type *AllocaTy) const;
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
+  void splitLaneOnlyVectors(Function &F);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
   bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
                              SetVector<IntrinsicInst *> &DeferredIntrs);
@@ -443,6 +449,11 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       Changed = true;
   }
   finishDeferredAllocaToLDSPromotion(DeferredIntrs);
+
+  // Only the vector-only pass runs before the IR optimizations that do better
+  // with the split form, such as SLP.
+  if (!PromoteToLDS)
+    splitLaneOnlyVectors(F);
 
   // NOTE: tryPromoteAllocaToVector removes the alloca, so Allocas contains
   // dangling pointers. If we want to reuse it past this point, the loop above
@@ -1158,7 +1169,8 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
 
   // Alloca is uninitialized memory. Imitate that by making the first value
   // undef.
-  SSAUpdater Updater;
+  SmallVector<PHINode *> NewPHIs;
+  SSAUpdater Updater(&NewPHIs);
   Updater.Initialize(AA.Vector.Ty, "promotealloca");
 
   BasicBlock *EntryBB = AA.Alloca->getParent();
@@ -1229,6 +1241,180 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   // Alloca should now be dead too.
   assert(AA.Alloca->use_empty());
   AA.Alloca->eraseFromParent();
+
+  for (PHINode *PN : NewPHIs)
+    PromotedVectorPHIs.emplace_back(PN);
+}
+
+/// Splits webs of phis and constant-index insertelements created by vector
+/// promotion into one scalar per element, if the only other users of the web
+/// are constant-index extractelements.
+void AMDGPUPromoteAllocaImpl::splitLaneOnlyVectors(Function &F) {
+  if (PromotedVectorPHIs.empty())
+    return;
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  SmallPtrSet<BasicBlock *, 32> Reachable;
+  Reachable.insert_range(RPOT);
+
+  SmallPtrSet<Instruction *, 32> Visited;
+  for (WeakTrackingVH &VH : PromotedVectorPHIs) {
+    auto *Seed = dyn_cast_or_null<PHINode>(VH);
+    if (!Seed || Visited.contains(Seed))
+      continue;
+    auto *VecTy = cast<FixedVectorType>(Seed->getType());
+    unsigned NumElts = VecTy->getNumElements();
+    auto IsLane = [NumElts](Value *Idx) {
+      auto *CI = dyn_cast<ConstantInt>(Idx);
+      return CI && CI->getValue().ult(NumElts);
+    };
+    // Constant expressions have no elements to split into.
+    auto HasLanes = [NumElts](Value *V) {
+      auto *C = dyn_cast<Constant>(V);
+      if (!C)
+        return false;
+      for (unsigned K = 0; K != NumElts; ++K)
+        if (!C->getAggregateElement(K))
+          return false;
+      return true;
+    };
+
+    SetVector<Instruction *> Web;
+    SmallSetVector<FreezeInst *, 2> Frozen;
+    SmallVector<ExtractElementInst *> Extracts;
+    SmallVector<Value *> Worklist{Seed};
+    bool Splittable = true;
+    while (Splittable && !Worklist.empty()) {
+      Value *V = Worklist.pop_back_val();
+      if (isa<Constant>(V)) {
+        Splittable = HasLanes(V);
+        continue;
+      }
+      if (auto *FI = dyn_cast<FreezeInst>(V);
+          FI && FI->getType() == VecTy && HasLanes(FI->getOperand(0))) {
+        Frozen.insert(FI);
+        continue;
+      }
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || I->getType() != VecTy || !Reachable.contains(I->getParent())) {
+        Splittable = false;
+        break;
+      }
+      if (!Web.insert(I))
+        continue;
+      if (auto *PN = dyn_cast<PHINode>(I)) {
+        append_range(Worklist, PN->incoming_values());
+      } else if (auto *IE = dyn_cast<InsertElementInst>(I);
+                 IE && IsLane(IE->getOperand(2))) {
+        Worklist.push_back(IE->getOperand(0));
+      } else {
+        Splittable = false;
+        break;
+      }
+      for (User *U : I->users()) {
+        if (auto *EE = dyn_cast<ExtractElementInst>(U);
+            EE && IsLane(EE->getIndexOperand())) {
+          Extracts.push_back(EE);
+        } else if (isa<PHINode>(U) ||
+                   (isa<InsertElementInst>(U) && U->getOperand(0) == I)) {
+          Worklist.push_back(U);
+        } else {
+          Splittable = false;
+          break;
+        }
+      }
+    }
+    Visited.insert_range(Web);
+    if (!Splittable)
+      continue;
+
+    Type *EltTy = VecTy->getElementType();
+    DenseMap<Value *, SmallVector<Value *>> Lanes;
+    auto GetLanes = [&](Value *V) {
+      if (auto *C = dyn_cast<Constant>(V)) {
+        SmallVector<Value *> L;
+        for (unsigned K = 0; K != NumElts; ++K)
+          L.push_back(C->getAggregateElement(K));
+        return L;
+      }
+      return Lanes.lookup(V);
+    };
+    SmallVector<WeakTrackingVH> LaneFreezes;
+    for (FreezeInst *FI : Frozen) {
+      auto *C = cast<Constant>(FI->getOperand(0));
+      SmallVector<Value *> &L = Lanes[FI];
+      for (unsigned K = 0; K != NumElts; ++K) {
+        L.push_back(new FreezeInst(C->getAggregateElement(K),
+                                   FI->getName() + "." + Twine(K),
+                                   std::next(FI->getIterator())));
+        LaneFreezes.emplace_back(L.back());
+      }
+    }
+    SmallVector<WeakTrackingVH> LanePHIs;
+    for (Instruction *I : Web) {
+      auto *PN = dyn_cast<PHINode>(I);
+      if (!PN)
+        continue;
+      SmallVector<Value *> &L = Lanes[PN];
+      for (unsigned K = 0; K != NumElts; ++K) {
+        PHINode *LanePN =
+            PHINode::Create(EltTy, PN->getNumIncomingValues(),
+                            PN->getName() + "." + Twine(K), PN->getIterator());
+        LanePN->setDebugLoc(PN->getDebugLoc());
+        L.push_back(LanePN);
+        LanePHIs.emplace_back(LanePN);
+      }
+    }
+    for (BasicBlock *BB : RPOT) {
+      for (Instruction &I : *BB) {
+        auto *IE = dyn_cast<InsertElementInst>(&I);
+        if (!IE || !Web.contains(IE))
+          continue;
+        SmallVector<Value *> L = GetLanes(IE->getOperand(0));
+        L[cast<ConstantInt>(IE->getOperand(2))->getZExtValue()] =
+            IE->getOperand(1);
+        Lanes[IE] = std::move(L);
+      }
+    }
+    for (Instruction *I : Web) {
+      auto *PN = dyn_cast<PHINode>(I);
+      if (!PN)
+        continue;
+      for (unsigned In = 0, E = PN->getNumIncomingValues(); In != E; ++In) {
+        SmallVector<Value *> L = GetLanes(PN->getIncomingValue(In));
+        BasicBlock *InBB = PN->getIncomingBlock(In);
+        for (unsigned K = 0; K != NumElts; ++K)
+          cast<PHINode>(Lanes[PN][K])->addIncoming(L[K], InBB);
+      }
+    }
+
+    // A lane can be another extract from the web, which may get replaced
+    // first.
+    SmallVector<WeakTrackingVH> Replacements;
+    for (ExtractElementInst *EE : Extracts) {
+      unsigned K = cast<ConstantInt>(EE->getIndexOperand())->getZExtValue();
+      Replacements.emplace_back(GetLanes(EE->getVectorOperand())[K]);
+    }
+    for (auto [EE, Repl] : zip_equal(Extracts, Replacements)) {
+      EE->replaceAllUsesWith(Repl);
+      EE->eraseFromParent();
+    }
+    for (Instruction *I : Web)
+      I->dropAllReferences();
+    for (Instruction *I : Web)
+      I->eraseFromParent();
+    for (FreezeInst *FI : Frozen)
+      if (FI->use_empty())
+        FI->eraseFromParent();
+    for (WeakTrackingVH &LaneVH : LanePHIs)
+      if (auto *PN = dyn_cast_or_null<PHINode>(LaneVH))
+        RecursivelyDeleteDeadPHINode(PN);
+    for (WeakTrackingVH &LaneVH : LaneFreezes)
+      if (auto *LaneFI = dyn_cast_or_null<Instruction>(LaneVH);
+          LaneFI && LaneFI->use_empty())
+        LaneFI->eraseFromParent();
+  }
+  PromotedVectorPHIs.clear();
 }
 
 std::pair<Value *, Value *>
