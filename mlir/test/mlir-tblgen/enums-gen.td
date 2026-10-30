@@ -32,12 +32,12 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DECL: ::std::optional<MyBitEnum> symbolizeMyBitEnum(::llvm::StringRef);
 
 // DECL: struct FieldParser<::MyBitEnum, ::MyBitEnum> {
-// DECL-NEXT:   static FailureOr<::MyBitEnum> parse(AsmParser &parser);
+// DECL-NEXT:   static ::llvm::FailureOr<::MyBitEnum> parse(AsmParser &parser);
 // DECL-NEXT: };
 
 // DECL: struct FieldParser<std::optional<::MyBitEnum>, std::optional<::MyBitEnum>> {
 // DECL:   static constexpr bool isKeyValueCompositional = false;
-// DECL:   static FailureOr<std::optional<::MyBitEnum>> parse(AsmParser &parser);
+// DECL:   static ::llvm::FailureOr<std::optional<::MyBitEnum>> parse(AsmParser &parser);
 // DECL-NEXT: };
 
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyBitEnum value) {
@@ -93,7 +93,7 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DEF: .Case("tagged", 1)
 // DEF: .Case("Bit1", 2)
 
-// DEF-LABEL: FailureOr<::MyBitEnum> FieldParser<::MyBitEnum, ::MyBitEnum>::parse(AsmParser &parser) {
+// DEF-LABEL: ::llvm::FailureOr<::MyBitEnum> FieldParser<::MyBitEnum, ::MyBitEnum>::parse(AsmParser &parser) {
 // DEF:   // Parse the keyword/string containing the enum.
 // DEF:   std::string enumKeyword;
 // DEF:   auto loc = parser.getCurrentLocation();
@@ -105,7 +105,7 @@ def MyBitEnum: I32BitEnumAttr<"MyBitEnum", "An example bit enum",
 // DEF:   return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for An example bit enum, got: ") << enumKeyword;
 // DEF: }
 
-// DEF-LABEL: FailureOr<std::optional<::MyBitEnum>>
+// DEF-LABEL: ::llvm::FailureOr<std::optional<::MyBitEnum>>
 // DEF-NEXT: FieldParser<std::optional<::MyBitEnum>, std::optional<::MyBitEnum>>::parse(AsmParser &parser) {
 // DEF:   if (failed(parser.parseOptionalKeywordOrString(&enumKeyword, {"none", "tagged", "Bit1", "Bit2", "Bit3", "BitGroup"})))
 // DEF-NEXT:     return std::optional<::MyBitEnum>{};
@@ -147,10 +147,10 @@ def MyNonQuotedPrintBitEnum
 
 // DECL: struct FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum> {
 // DECL:   static constexpr bool isKeyValueCompositional = true;
-// DECL:   static FailureOr<::MyNonQuotedPrintBitEnum> parse(AsmParser &parser);
+// DECL:   static ::llvm::FailureOr<::MyNonQuotedPrintBitEnum> parse(AsmParser &parser);
 // DECL-NEXT: };
 
-// DEF-LABEL: FailureOr<::MyNonQuotedPrintBitEnum> FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum>::parse(AsmParser &parser) {
+// DEF-LABEL: ::llvm::FailureOr<::MyNonQuotedPrintBitEnum> FieldParser<::MyNonQuotedPrintBitEnum, ::MyNonQuotedPrintBitEnum>::parse(AsmParser &parser) {
 // DEF:   ::MyNonQuotedPrintBitEnum flags = {};
 // DEF:   do {
 // DEF:     // Parse the keyword containing a part of the enum.

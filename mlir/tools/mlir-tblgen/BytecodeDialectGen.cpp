@@ -25,7 +25,6 @@ static cl::opt<std::string>
                       cl::cat(dialectGenCat), cl::CommaSeparated);
 
 namespace {
-
 /// Helper class to generate C++ bytecode parser helpers.
 class Generator {
 public:
@@ -260,7 +259,7 @@ void Generator::emitParseHelper(StringRef kind, StringRef returnType,
       continue;
 
     std::string returnType = getCType(def);
-    ios << "auto " << listHelperName(name) << " = [&]() -> FailureOr<"
+    ios << "auto " << listHelperName(name) << " = [&]() -> ::llvm::FailureOr<"
         << returnType << "> ";
     SmallVector<const Init *> args;
     SmallVector<std::string> argNames;

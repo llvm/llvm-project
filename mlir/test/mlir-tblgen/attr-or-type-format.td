@@ -42,8 +42,8 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 
 // ATTR: ::mlir::Attribute TestAAttr::parse(::mlir::AsmParser &odsParser,
 // ATTR:                                    ::mlir::Type odsType) {
-// ATTR:   FailureOr<IntegerAttr> _result_value;
-// ATTR:   FailureOr<TestParamA> _result_complex;
+// ATTR:   ::llvm::FailureOr<IntegerAttr> _result_value;
+// ATTR:   ::llvm::FailureOr<TestParamA> _result_complex;
 // ATTR:   if (odsParser.parseKeyword("hello"))
 // ATTR:     return {};
 // ATTR:   if (odsParser.parseEqual())
@@ -289,8 +289,8 @@ def AttrWithBitEnumAttrStruct : TestAttr<"AttrWithBitEnumAttrStruct"> {
 /// correctly.
 
 // TYPE: ::mlir::Type TestCType::parse(::mlir::AsmParser &odsParser) {
-// TYPE:  FailureOr<IntegerAttr> _result_value;
-// TYPE:  FailureOr<TestParamC> _result_complex;
+// TYPE:  ::llvm::FailureOr<IntegerAttr> _result_value;
+// TYPE:  ::llvm::FailureOr<TestParamC> _result_complex;
 // TYPE:  if (odsParser.parseKeyword("foo"))
 // TYPE:    return {};
 // TYPE:  if (odsParser.parseComma())
@@ -420,10 +420,10 @@ def TypeB : TestType<"TestD"> {
 /// printer.
 
 // TYPE: ::mlir::Type TestEType::parse(::mlir::AsmParser &odsParser) {
-// TYPE:   FailureOr<IntegerAttr> _result_v0;
-// TYPE:   FailureOr<IntegerAttr> _result_v1;
-// TYPE:   FailureOr<IntegerAttr> _result_v2;
-// TYPE:   FailureOr<IntegerAttr> _result_v3;
+// TYPE:   ::llvm::FailureOr<IntegerAttr> _result_v0;
+// TYPE:   ::llvm::FailureOr<IntegerAttr> _result_v1;
+// TYPE:   ::llvm::FailureOr<IntegerAttr> _result_v2;
+// TYPE:   ::llvm::FailureOr<IntegerAttr> _result_v3;
 // TYPE:   bool _seen_v0 = false;
 // TYPE:   bool _seen_v2 = false;
 // TYPE:   const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
@@ -648,7 +648,7 @@ def TypeJ : TestType<"TestL"> {
 }
 
 // TYPE: ::mlir::Type TestMType::parse
-// TYPE: FailureOr<float> _result_a
+// TYPE: ::llvm::FailureOr<float> _result_a
 // TYPE: return TestMType::get
 // TYPE: static_cast<int>((*_result_a))
 
