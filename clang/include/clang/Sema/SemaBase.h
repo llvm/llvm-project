@@ -35,16 +35,16 @@ class DiagnosticsEngine;
 class LangOptions;
 class Sema;
 
-/// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
-/// key in a hashtable, both the FD and location are hashed.
-struct FunctionDeclAndLoc {
-  CanonicalDeclPtr<const FunctionDecl> FD;
-  SourceLocation Loc;
-};
-
 class SemaBase {
 public:
   SemaBase(Sema &S);
+
+  /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
+  /// key in a hashtable, both the FD and location are hashed.
+  struct FunctionDeclAndLoc {
+    CanonicalDeclPtr<const FunctionDecl> FD;
+    SourceLocation Loc;
+  };
 
   Sema &SemaRef;
 
@@ -238,8 +238,8 @@ public:
 namespace llvm {
 // Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
 // SourceLocation.
-template <> struct DenseMapInfo<clang::FunctionDeclAndLoc> {
-  using FunctionDeclAndLoc = clang::FunctionDeclAndLoc;
+template <> struct DenseMapInfo<clang::SemaBase::FunctionDeclAndLoc> {
+  using FunctionDeclAndLoc = clang::SemaBase::FunctionDeclAndLoc;
   using FDBaseInfo =
       DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
 
