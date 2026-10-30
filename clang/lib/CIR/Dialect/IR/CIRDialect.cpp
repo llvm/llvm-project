@@ -32,6 +32,7 @@
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LogicalResult.h"
@@ -255,6 +256,16 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
     if (failed(verifyOffloadKind(module, cir::OffloadKind::Device)))
       return failure();
   }
+
+  llvm::StringSet<> bundleIDs;
+  for (auto module : container.getOps<mlir::ModuleOp>()) {
+    auto bundleID = module->getAttrOfType<mlir::StringAttr>(
+        cir::CIRDialect::getOffloadBundleIDAttrName());
+    if (bundleID && !bundleIDs.insert(bundleID.getValue()).second)
+      return module.emitOpError()
+             << "duplicate '" << cir::CIRDialect::getOffloadBundleIDAttrName()
+             << "' value '" << bundleID.getValue() << "'";
+  }
   return success();
 }
 
@@ -304,6 +315,18 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     return op->emitOpError() << "expects '" << getOffloadKindAttrName()
                              << "' attribute to be attached to '"
                              << mlir::ModuleOp::getOperationName() << "'";
+
+  if (attrName == getOffloadBundleIDAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getOffloadBundleIDAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto bundleID = mlir::dyn_cast<mlir::StringAttr>(attr.getValue());
+    if (!bundleID || bundleID.getValue().empty())
+      return op->emitOpError() << "expects '" << getOffloadBundleIDAttrName()
+                               << "' to be a non-empty string";
+    return success();
+  }
 
   if (attrName == getModuleFramePointerAttrName()) {
     if (!mlir::isa<mlir::ModuleOp>(op))

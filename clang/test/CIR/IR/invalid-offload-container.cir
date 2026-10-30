@@ -78,3 +78,44 @@ module attributes {cir.offload.container = 0 : i32} {
   module @device_0 attributes {cir.offload.kind = #cir.offload<device>} {
   }
 }
+
+// -----
+
+module attributes {cir.offload.container} {
+  module @host attributes {cir.offload.bundle_id = "host-x86_64-unknown-linux-gnu", cir.offload.kind = #cir.offload<host>} {
+  }
+  module @device_0 attributes {cir.offload.bundle_id = "cuda-nvptx64-nvidia-cuda--sm_80", cir.offload.kind = #cir.offload<device>} {
+  }
+  module @device_1 attributes {cir.offload.bundle_id = "cuda-nvptx64-nvidia-cuda--sm_80", cir.offload.kind = #cir.offload<device>} { // expected-error {{duplicate 'cir.offload.bundle_id' value 'cuda-nvptx64-nvidia-cuda--sm_80'}}
+  }
+}
+
+// -----
+
+module {
+  cir.func @f() {
+    cir.return {cir.offload.bundle_id = "host-x86_64-unknown-linux-gnu"} // expected-error {{expects 'cir.offload.bundle_id' attribute to be attached to 'builtin.module'}}
+  }
+}
+
+// -----
+
+module {
+  cir.func @f() {
+    cir.return
+  }
+  // expected-error@+1 {{expects 'cir.offload.bundle_id' to be a non-empty string}}
+  module @m attributes {cir.offload.bundle_id = 0 : i32} {
+  }
+}
+
+// -----
+
+module {
+  cir.func @f() {
+    cir.return
+  }
+  // expected-error@+1 {{expects 'cir.offload.bundle_id' to be a non-empty string}}
+  module @m attributes {cir.offload.bundle_id = ""} {
+  }
+}
