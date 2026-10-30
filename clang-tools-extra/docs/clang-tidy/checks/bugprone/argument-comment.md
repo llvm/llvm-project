@@ -29,6 +29,14 @@ underscores and case when comparing names -- otherwise they are taken into
 account. Default is `false`.
 ```
 
+```{option} IgnoreMacros
+When `false`, the check also adds missing comments to calls in a macro
+argument, such as `ASSERT(f(0))`. It never adds them to calls in a macro body,
+or to arguments that you pass through another macro, such as `f(ID(0))`. The
+check compares argument comments with parameter names regardless of this
+option. Default is `true`.
+```
+
 ```{option} IgnoreSingleArgument
 When `true`, the check will ignore the single argument. Default is `false`.
 ```
