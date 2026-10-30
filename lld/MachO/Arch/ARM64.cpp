@@ -44,6 +44,10 @@ struct ARM64 : ARM64Common {
 
 struct ARM64e final : ARM64 {
   ARM64e();
+  void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
+  void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                            uint64_t &stubOffset, uint64_t selrefVA,
+                            Symbol *objcMsgSend) const override;
 };
 } // namespace
 
@@ -243,8 +247,56 @@ TargetInfo *macho::createARM64TargetInfo() {
   return &t;
 }
 
+// arm64e stubs authenticate the target they load from __auth_got.
+static constexpr uint32_t authStubCode[] = {
+    0x90000011, // 00: adrp  x17, __auth_got@page
+    0x91000231, // 04: add   x17, x17, __auth_got@pageoff
+    0xf9400230, // 08: ldr   x16, [x17]
+    0xd71f0a11, // 0c: braa  x16, x17
+};
+
+void ARM64e::writeStub(uint8_t *buf8, const Symbol &sym,
+                       uint64_t pointerVA) const {
+  auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
+  SymbolDiagnostic d = {&sym, "stub"};
+  uint64_t pcPageBits = pageBits(in.stubs->addr + sym.stubsIndex * stubSize);
+  encodePage21(&buf32[0], d, authStubCode[0], pageBits(pointerVA) - pcPageBits);
+  encodePageOff12(&buf32[1], d, authStubCode[1], pointerVA);
+  buf32[2] = authStubCode[2];
+  buf32[3] = authStubCode[3];
+}
+
+// The fast stubs reach _objc_msgSend through __auth_got in the same way.
+static constexpr uint32_t authObjcStubsFastCode[] = {
+    0x90000001, // adrp  x1, __objc_selrefs@page
+    0xf9400021, // ldr   x1, [x1, @selector("foo")@pageoff]
+    0x90000011, // adrp  x17, __auth_got@page
+    0x91000231, // add   x17, x17, _objc_msgSend@pageoff
+    0xf9400230, // ldr   x16, [x17]
+    0xd71f0a11, // braa  x16, x17
+    0xd4200020, // brk   #0x1
+    0xd4200020, // brk   #0x1
+};
+
+void ARM64e::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                                  uint64_t &stubOffset, uint64_t selrefVA,
+                                  Symbol *objcMsgSend) const {
+  // Small stubs branch to _objc_msgSend or its stub, as on arm64.
+  if (config->objcStubsMode == ObjCStubsMode::small) {
+    ARM64::writeObjCMsgSendStub(buf, sym, stubsAddr, stubOffset, selrefVA,
+                                objcMsgSend);
+    return;
+  }
+  ::writeObjCMsgSendFastStub<LP64>(buf, authObjcStubsFastCode, sym, stubsAddr,
+                                   stubOffset, selrefVA,
+                                   in.authGot->getVA(objcMsgSend),
+                                   /*msgSendIndex=*/0);
+  stubOffset += objcStubsFastSize;
+}
+
 ARM64e::ARM64e() {
   cpuSubtype = CPU_SUBTYPE_ARM64E;
+  stubSize = sizeof(authStubCode);
   relocAttrs = relocAttrsArray;
 }
 
