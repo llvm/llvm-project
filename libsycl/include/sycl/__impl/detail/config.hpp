@@ -17,7 +17,7 @@
 
 #include <sycl/__impl/version.hpp>
 
-#define SYCL_IMPLEMENTATION_ONEAPI
+#define SYCL_IMPLEMENTATION_LLVM
 
 #define _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL namespace sycl {
 #define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
