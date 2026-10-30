@@ -941,27 +941,15 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
       DerefBytes = Call->getRetDereferenceableOrNullBytes();
       CanBeNull = true;
     }
-  } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
-    if (MDNode *MD = LI->getMetadata(LLVMContext::MD_dereferenceable)) {
+  } else if (isa<LoadInst, IntToPtrInst>(this)) {
+    auto *I = cast<Instruction>(this);
+    if (MDNode *MD = I->getMetadata(LLVMContext::MD_dereferenceable)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
       DerefBytes = CI->getLimitedValue();
     }
     if (DerefBytes == 0) {
       if (MDNode *MD =
-              LI->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
-        ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
-        DerefBytes = CI->getLimitedValue();
-      }
-      CanBeNull = true;
-    }
-  } else if (auto *IP = dyn_cast<IntToPtrInst>(this)) {
-    if (MDNode *MD = IP->getMetadata(LLVMContext::MD_dereferenceable)) {
-      ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
-      DerefBytes = CI->getLimitedValue();
-    }
-    if (DerefBytes == 0) {
-      if (MDNode *MD =
-              IP->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
+              I->getMetadata(LLVMContext::MD_dereferenceable_or_null)) {
         ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));
         DerefBytes = CI->getLimitedValue();
       }
@@ -1033,10 +1021,7 @@ Align Value::getPointerAlignment(const DataLayout &DL) const {
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(this)) {
     return AI->getAlign();
   } else if (const auto *Call = dyn_cast<CallBase>(this)) {
-    MaybeAlign Alignment = Call->getRetAlign();
-    if (!Alignment && Call->getCalledFunction())
-      Alignment = Call->getCalledFunction()->getAttributes().getRetAlignment();
-    return Alignment.valueOrOne();
+    return Call->getRetAlign().valueOrOne();
   } else if (const LoadInst *LI = dyn_cast<LoadInst>(this)) {
     if (MDNode *MD = LI->getMetadata(LLVMContext::MD_align)) {
       ConstantInt *CI = mdconst::extract<ConstantInt>(MD->getOperand(0));

@@ -516,7 +516,7 @@ void IteratorModeling::processComparison(CheckerContext &C,
                                    (TruthVal->getValue()->getBoolValue())))) {
       C.addTransition(State);
     } else {
-      C.generateSink(State, C.getPredecessor());
+      C.addSink(State);
     }
     return;
   }

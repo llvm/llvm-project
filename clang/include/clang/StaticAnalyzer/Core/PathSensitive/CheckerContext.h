@@ -229,49 +229,25 @@ public:
   }
 
   /// Creates a new ExplodedNode which is marked as a sink and adds it to the
-  /// ExplodedGraph as a child of the parameter \p Pred. A sink node terminates
-  /// the execution path: it cannot have children and prevents the default
-  /// behavior that the path "passes through" the checker callback without
-  /// changes if the checker doesn't create any node.
+  /// ExplodedGraph.
+  /// A sink node terminates the execution path: it cannot have children and
+  /// prevents the default behavior that the path "passes through" the checker
+  /// callback without changes if the checker doesn't create any node.
   /// Can return nullptr if the node creation fails (when it would recreate
   /// an existing node or when the state is posteriorly overconstrained).
   ///
-  /// @param State The state of the generated sink node.
-  /// @param Pred The node that will become the predecessor of the new node.
-  /// @param Tag A ProgramPointTag that will be attached to the node. This is
-  ///        doesn't have any compelling use case, but could perhaps be used
-  ///        debugging purposes. When \p Tag is nullptr, node creation will
-  ///        default to using the active checker as the tag.
-  ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
+  /// @param State The state of the generated sink node; nullptr (the default)
+  ///        means keeping the state of the parent node.
+  /// @param Pred The node that will become the predecessor of the new node;
+  ///        nullptr (the default) means the node that was passed to the
+  ///        constructor of CheckerContext.
+  /// @param Tag A ProgramPointTag that will be attached to the node; nullptr
+  ///        (the default) means using the active checker as the tag. Using
+  ///        another tag has no compelling use case (apart from debugging).
+  ExplodedNode *addSink(ProgramStateRef State = nullptr,
+                        ExplodedNode *Pred = nullptr,
+                        const ProgramPointTag *Tag = nullptr) {
     return addTransitionImpl(State, true, Pred, Tag);
-  }
-
-  /// Calls generateSink, passing getPredecessor() (i.e. as the node that was
-  /// passed to the constructor of CheckerContext) to its 'Pred' argument and
-  /// not returning its result.
-  ///
-  /// FIXME: This should be unified with generateSink().
-  void addSink(ProgramStateRef State = nullptr) {
-    generateSink(State, getPredecessor());
-  }
-
-  /// Calls generateSink, passing getPredecessor() (i.e. as the node that was
-  /// passed to the constructor of CheckerContext) to its 'Pred' argument.
-  ///
-  /// FIXME: This should be unified with generateSink().
-  ExplodedNode *generateErrorNode(ProgramStateRef State = nullptr,
-                                  const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, getPredecessor(), Tag);
-  }
-
-  /// Calls generateSink, forwarding all argument without any difference.
-  ///
-  /// FIXME: This should be unified with generateSink().
-  ExplodedNode *generateErrorNode(ProgramStateRef State,
-                                  ExplodedNode *Pred,
-                                  const ProgramPointTag *Tag = nullptr) {
-    return generateSink(State, Pred, Tag);
   }
 
   /// Creates a new ExplodedNode and adds it to the ExplodedGraph as a child of

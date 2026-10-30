@@ -29,7 +29,7 @@ body: |
     %a:vr = COPY $v8
     %cmp1:vr = PseudoVMSLT_VV_M1 %a, %b, %avl, 5 /* e32 */
     %cmp2:vr = PseudoVMSLT_VV_M1 %b, %c, %avl, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp1, killed %cmp2, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp1, %cmp2, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -59,7 +59,7 @@ body: |
     %a:vr = COPY $v8
     %cmp1:vr = PseudoVMSLT_VV_M1 %a, %b, %avl, 5 /* e32 */
     %cmp2:vr = PseudoVMSLT_VV_M1 %b, %c, %avl, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp2, killed %cmp1, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp2, %cmp1, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -86,7 +86,7 @@ body: |
     %b:vr = COPY $v9
     %a:vr = COPY $v8
     %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, 4, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, 2, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp, %mask, 2, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -105,14 +105,14 @@ body: |
     ; CHECK-NEXT: %b:vr = COPY $v9
     ; CHECK-NEXT: %a:vr = COPY $v8
     ; CHECK-NEXT: %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, 2 /* vl */, 5 /* e32 */
-    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, 4 /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 %cmp, %mask, 4 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %and
     ; CHECK-NEXT: PseudoRET implicit $v0
     %mask:vr = COPY $v10
     %b:vr = COPY $v9
     %a:vr = COPY $v8
     %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, 2, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, 4, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp, %mask, 4, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -132,7 +132,7 @@ body: |
     ; CHECK-NEXT: %b:vr = COPY $v9
     ; CHECK-NEXT: %a:vr = COPY $v8
     ; CHECK-NEXT: %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, %cmp_avl /* vl */, 5 /* e32 */
-    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, %and_avl /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 %cmp, %mask, %and_avl /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %and
     ; CHECK-NEXT: PseudoRET implicit $v0
     %cmp_avl:gprnox0 = COPY $x10
@@ -141,7 +141,7 @@ body: |
     %b:vr = COPY $v9
     %a:vr = COPY $v8
     %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, %cmp_avl, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp, killed %mask, %and_avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp, %mask, %and_avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -171,7 +171,7 @@ body: |
     %cmp:vr = PseudoVMSLT_VV_M1 %a, %b, %avl, 5 /* e32 */
     %copy1:vr = COPY %cmp
     %copy2:vr = COPY %copy1
-    %and:vr = PseudoVMAND_MM_B32 killed %copy2, killed %mask, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %copy2, %mask, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -201,7 +201,7 @@ body: |
     %a:vr = COPY $v8
     %cmp1:vr = nofpexcept PseudoVMFLT_VV_M1 %a, %b, %avl, 5 /* e32 */
     %cmp2:vr = nofpexcept PseudoVMFLT_VV_M1 %b, %c, %avl, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp1, killed %cmp2, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp1, %cmp2, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -222,7 +222,7 @@ body: |
     ; CHECK-NEXT: %a:vr = COPY $v8
     ; CHECK-NEXT: %cmp1:vr = PseudoVMFLT_VV_M1 %a, %b, %avl /* vl */, 5 /* e32 */
     ; CHECK-NEXT: %cmp2:vr = PseudoVMFLT_VV_M1 %b, %c, %avl /* vl */, 5 /* e32 */
-    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 killed %cmp1, killed %cmp2, %avl /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 %cmp1, %cmp2, %avl /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %and
     ; CHECK-NEXT: PseudoRET implicit $v0
     %avl:gprnox0 = COPY $x10
@@ -231,7 +231,7 @@ body: |
     %a:vr = COPY $v8
     %cmp1:vr = PseudoVMFLT_VV_M1 %a, %b, %avl, 5 /* e32 */
     %cmp2:vr = PseudoVMFLT_VV_M1 %b, %c, %avl, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B32 killed %cmp1, killed %cmp2, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %cmp1, %cmp2, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -253,7 +253,7 @@ body: |
     ; CHECK-NEXT: %a:vrm2 = COPY $v8m2
     ; CHECK-NEXT: early-clobber %cmp1:vr = PseudoVMSLT_VV_M2 %a, %b, %avl /* vl */, 5 /* e32 */
     ; CHECK-NEXT: early-clobber %cmp2:vr = PseudoVMSLT_VV_M2 %b, %c, %avl /* vl */, 5 /* e32 */
-    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B16 killed %cmp1, killed %cmp2, %avl /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B16 %cmp1, %cmp2, %avl /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %and
     ; CHECK-NEXT: PseudoRET implicit $v0
     %avl:gprnox0 = COPY $x10
@@ -262,7 +262,7 @@ body: |
     %a:vrm2 = COPY $v8m2
     %cmp1:vr = PseudoVMSLT_VV_M2 %a, %b, %avl, 5 /* e32 */
     %cmp2:vr = PseudoVMSLT_VV_M2 %b, %c, %avl, 5 /* e32 */
-    %and:vr = PseudoVMAND_MM_B16 killed %cmp1, killed %cmp2, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B16 %cmp1, %cmp2, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
@@ -349,14 +349,14 @@ body: |
     ; CHECK-NEXT: %b:vr = COPY $v9
     ; CHECK-NEXT: %a:vr = COPY $v8
     ; CHECK-NEXT: early-clobber %sbf:vr = PseudoVMSBF_M_B32 %a, %avl /* vl */, 0 /* e8 */
-    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 killed %sbf, %b, %avl /* vl */, 0 /* e8 */
+    ; CHECK-NEXT: %and:vr = PseudoVMAND_MM_B32 %sbf, %b, %avl /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY %and
     ; CHECK-NEXT: PseudoRET implicit $v0
     %avl:gprnox0 = COPY $x10
     %b:vr = COPY $v9
     %a:vr = COPY $v8
     %sbf:vr = PseudoVMSBF_M_B32 %a, %avl, 0 /* e8 */
-    %and:vr = PseudoVMAND_MM_B32 killed %sbf, %b, %avl, 0 /* e8 */
+    %and:vr = PseudoVMAND_MM_B32 %sbf, %b, %avl, 0 /* e8 */
     $v0 = COPY %and
     PseudoRET implicit $v0
 ...
