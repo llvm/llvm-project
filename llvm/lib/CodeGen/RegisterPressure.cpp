@@ -610,10 +610,22 @@ void RegisterOperands::adjustLaneLiveness(LiveIntervals &LIS,
         getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, I->VRegOrUnit,
                        Pos.getDeadSlot(), /*ComputePhysRegs=*/true);
     // If the def is all that is live after the instruction, then in case
-    // of a subregister def we need a read-undef flag.
+    // of a subregister def we need a read-undef flag. A def tied to a non-undef
+    // use is excluded: it reads the value of that use, so it must not be
+    // read-undef.
     VirtRegOrUnit VRegOrUnit = I->VRegOrUnit;
-    if (VRegOrUnit.isVirtualReg() && (LiveAfter & ~I->LaneMask).none())
-      MI.setRegisterDefReadUndef(VRegOrUnit.asVirtualReg());
+    if (VRegOrUnit.isVirtualReg() && (LiveAfter & ~I->LaneMask).none()) {
+      Register Reg = VRegOrUnit.asVirtualReg();
+      bool TiedToNotUndef =
+          llvm::any_of(MI.all_defs(), [&](const MachineOperand &MO) {
+            if (MO.getReg() != Reg || MO.getSubReg() == 0 || !MO.isTied())
+              return false;
+            unsigned TiedIdx = MI.findTiedOperandIdx(MI.getOperandNo(&MO));
+            return !MI.getOperand(TiedIdx).isUndef();
+          });
+      if (!TiedToNotUndef)
+        MI.setRegisterDefReadUndef(Reg);
+    }
     I = adjustDef(*I, LiveAfter);
   }
 
