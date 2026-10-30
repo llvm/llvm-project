@@ -96,12 +96,12 @@ static int sectionOrder(OutputSection *osec) {
   // Sections are uniquely identified by their segment + section name.
   if (segname == segment_names::text) {
     if (osec->name == section_names::header)
-      return -7;
+      return -8;
     // `__text` needs to precede the other code sections since its
     // expected to be the largest. This means in effect that it will
     // be the section that determines whether we need thunks or not.
     if (osec->name == section_names::text)
-      return -6;
+      return -7;
 
     // Prioritize specific section ordering based on our knowledge. This ensures
     // that certain sections are placed in a particular order, even if they
@@ -109,7 +109,7 @@ static int sectionOrder(OutputSection *osec) {
     // precedence over the general code section ordering.
     int knownPriority =
         StringSwitch<int>(osec->name)
-            .Case(section_names::stubs, -4)
+            .Case(section_names::stubs, -5)
             // needsThunks() assumes that the stubs follow __text.
             .Case(section_names::authStubs, -4)
             .Case(section_names::stubHelper, -3)
@@ -126,7 +126,7 @@ static int sectionOrder(OutputSection *osec) {
     // Ensure all code sections are contiguous with `__text` for thunk
     // calculations.
     if (sections::isCodeSection(osec->name, segment_names::text, osec->flags)) {
-      return -5;
+      return -6;
     }
 
     return osec->inputOrder;
