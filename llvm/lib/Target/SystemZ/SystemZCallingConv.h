@@ -102,7 +102,7 @@ inline bool CC_XPLINK64_Shadow_Reg(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   if (LocVT == MVT::f32 || LocVT == MVT::f64) {
     State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
   }
-  if (LocVT == MVT::f128 || LocVT.is128BitVector()) {
+  if (LocVT == MVT::f128 || LocVT.is128BitVector() || LocVT == MVT::i128) {
     // Shadow next two GPRs, if available.
     State.AllocateReg(SystemZ::XPLINK64ArgGPRs);
     State.AllocateReg(SystemZ::XPLINK64ArgGPRs);

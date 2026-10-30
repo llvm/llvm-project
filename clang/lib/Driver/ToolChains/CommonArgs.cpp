@@ -922,7 +922,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
-    systemz::getSystemZTargetFeatures(D, Args, Features);
+    systemz::getSystemZTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_32:
