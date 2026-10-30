@@ -1337,13 +1337,12 @@ void Writer::buildFixupChains() {
 
       if (offset < target->wordSize)
         return fail("fixups overlap");
-      // arm64e ignores -no_fixup_chains, so don't suggest it there.
       if (offset % stride != 0)
         return fail("fixups are unaligned (offset " + Twine(offset) +
                     " is not a multiple of the stride)" +
-                    (config->arch() == AK_arm64e
-                         ? ""
-                         : ". Re-link with -no_fixup_chains"));
+                    (canDisableChainedFixups()
+                         ? ". Re-link with -no_fixup_chains"
+                         : ""));
 
       // The "next" field is in the same location for bind and rebase entries.
       uint8_t *prev = buf + loc[i - 1].offset;

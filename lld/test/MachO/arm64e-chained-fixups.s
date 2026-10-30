@@ -45,6 +45,18 @@
 # RUN:   %t/unaligned.o -o /dev/null 2>&1 | FileCheck %s \
 # RUN:   --check-prefix=UNALIGNED --implicit-check-not=-no_fixup_chains
 
+## Nor do the page-boundary and page-index errors.
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos -o %t/straddle.o \
+# RUN:   %t/straddle.s
+# RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 -dylib \
+# RUN:   %t/straddle.o -o /dev/null 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=STRADDLE --implicit-check-not=-no_fixup_chains
+# RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos -o %t/big.o %t/big.s
+# RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 -dylib \
+# RUN:   %t/big.o -sectalign __DATA __big 0x80000000 -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=PAGE-INDEX \
+# RUN:   --implicit-check-not=-no_fixup_chains
+
 ## arm64 still honors -no_fixup_chains.
 # RUN: %lld -arch arm64 -platform_version macos 13.0 13.0 -dylib \
 # RUN:   -no_fixup_chains %t/arm64.o -o %t/arm64.dylib
@@ -86,6 +98,8 @@
 
 # WARN: warning: bind opcodes are no longer supported with arm64e, switching to chained fixups
 # UNALIGNED: error: __DATA,__data, offset 12: fixups are unaligned (offset 12 is not a multiple of the stride)
+# STRADDLE: error: {{.*}}straddle.o:(symbol _p+0x0): fixup straddles page boundary; stop packing structs containing pointers{{$}}
+# PAGE-INDEX: error: page index in __DATA,__big too large for chained fixups{{$}}
 
 # INIT-OFFSETS: sectname __init_offsets
 # MOD-INIT:     sectname __mod_init_func
@@ -146,3 +160,21 @@ _a:
   .quad _a
   .long 0
   .quad _a
+
+#--- straddle.s
+.data
+.p2align 14
+.space 0x3ffc
+_p:
+  .quad _p
+
+#--- big.s
+.data
+.p2align 3
+_p1:
+  .quad _p1
+
+.section __DATA,__big
+.p2align 3
+_p2:
+  .quad _p2
