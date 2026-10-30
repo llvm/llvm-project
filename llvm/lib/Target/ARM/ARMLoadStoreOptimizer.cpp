@@ -2078,10 +2078,41 @@ bool ARMLoadStoreOpt::MergeReturnIntoLDM(MachineBasicBlock &MBB) {
       unsigned NewOpc = (isThumb2 ? ARM::t2LDMIA_RET : ARM::LDMIA_RET);
       assert(((isThumb2 && Opcode == ARM::t2LDMIA_UPD) ||
               Opcode == ARM::LDMIA_UPD) && "Unsupported multiple load-return!");
+
+      // Keep debug instructions before the folded return because the verifier
+      // rejects non-terminators after a terminator. Register-based debug
+      // values that use the updated stack pointer or a restored register
+      // cannot be moved before PrevMI, so make those locations unavailable.
+      // DBG_INSTR_REFs that refer to PrevMI are moved before their definition;
+      // LiveDebugValues will make those locations unavailable.
+      for (MachineInstr &DebugMI :
+           make_early_inc_range(make_range(std::next(PrevI), MBB.end()))) {
+        if (!DebugMI.isDebugInstr())
+          continue;
+        if (DebugMI.isDebugPHI()) {
+          const MachineOperand &RegOp = DebugMI.getOperand(0);
+          if (!RegOp.isReg() || !RegOp.getReg() ||
+              !PrevMI.modifiesRegister(RegOp.getReg(), TRI))
+            continue;
+          // Deleting a DBG_PHI makes its DBG_INSTR_REF users unavailable.
+          DebugMI.eraseFromParent();
+          continue;
+        }
+        if (!DebugMI.isDebugValue())
+          continue;
+        if (llvm::any_of(DebugMI.debug_operands(),
+                         [&](const MachineOperand &Op) {
+                           return Op.isReg() && Op.getReg() &&
+                                  PrevMI.modifiesRegister(Op.getReg(), TRI);
+                         }))
+          DebugMI.setDebugValueUndef();
+      }
+
       PrevMI.setDesc(TII->get(NewOpc));
       MO.setReg(ARM::PC);
       PrevMI.copyImplicitOps(*MBB.getParent(), *MBBI);
       eraseInstr(MBBI);
+      MBB.splice(PrevI, &MBB, std::next(PrevI), MBB.end());
       return true;
     }
   }
