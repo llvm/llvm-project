@@ -611,8 +611,8 @@ static void InitializeLongjmpSpMangling() {
   const uptr d = sp1 ^ sp2;
   CHECK_NE(d, 0);
   CHECK_NE(d, (uptr)-1);
-  const uptr kRot = 2 * sizeof(uptr) + 1;
-  const uptr kBits = sizeof(uptr) * 8;
+  constexpr uptr kRot = 2 * sizeof(uptr) + 1;
+  constexpr uptr kBits = sizeof(uptr) * 8;
   const uptr r1 = (m1 >> kRot) | (m1 << (kBits - kRot));
   const uptr r2 = (m2 >> kRot) | (m2 << (kBits - kRot));
   if ((m1 ^ sp1) == (m2 ^ sp2)) {
