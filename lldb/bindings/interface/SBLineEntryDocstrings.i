@@ -28,3 +28,6 @@ produces: ::
 
 See also :py:class:`SBCompileUnit` ."
 ) lldb::SBLineEntry;
+
+// Emit one Python wrapper for the default-argument overload.
+%feature("compactdefaultargs") lldb::SBLineEntry::SBLineEntry;

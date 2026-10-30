@@ -212,3 +212,22 @@ produces this following output: ::
     relied upon. Use SBDebugger::MemoryPressureDetected instead to reduce
     LLDB's memory consumption during execution.
 ") lldb::SBModule::GarbageCollectAllocatedModules;
+
+%feature("autodoc",
+"FindSymbolContexts(self, line_spec: SBLineSpec) -> SBSymbolContextList"
+) lldb::SBModule::FindSymbolContexts;
+%feature("docstring", "
+    Find every symbol context in this module that maps to the source
+    location in `line_spec`. Each returned :py:class:`SBSymbolContext` carries
+    the module, compile unit, function, block, line entry, and symbol
+    for one match.
+
+    :param line_spec:
+        The source location to resolve, plus any search flags such as
+        :py:meth:`SBLineSpec.SetCheckInlines`.
+    :type line_spec: :py:class:`SBLineSpec`
+    :return:
+        A list of matching symbol contexts, or an empty list if this
+        module has no debug info for the requested location.
+    :rtype: :py:class:`SBSymbolContextList`"
+) lldb::SBModule::FindSymbolContexts;
