@@ -94,9 +94,11 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   bool VerOK = MinVerOK && MaxVerOK;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
+  // A met minimum version makes the extension unnecessary.
+  if (VerOK && !ReqMinVer.empty())
+    ReqExts.clear();
   if (ReqCaps.empty()) {
-    // A met minimum version makes the extension unnecessary.
-    if (ReqExts.empty() || (VerOK && !ReqMinVer.empty())) {
+    if (ReqExts.empty()) {
       if (VerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
       return {false, {}, {}, VersionTuple(), VersionTuple()};
@@ -1073,6 +1075,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
+                    Capability::Geometry,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
@@ -1101,7 +1104,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Became core in Vulkan 1.1.
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
-    addAvailableCaps({Capability::DrawParameters});
+    addAvailableCaps({Capability::DrawParameters, Capability::MultiView});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1177,6 +1180,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
       addCoreInSPIRV13Capability(
           Reqs, ST, SPIRV::Capability::DrawParameters,
           SPIRV::Extension::SPV_KHR_shader_draw_parameters);
+      break;
+    case SPIRV::BuiltIn::ViewIndex:
+      addCoreInSPIRV13Capability(Reqs, ST, SPIRV::Capability::MultiView,
+                                 SPIRV::Extension::SPV_KHR_multiview);
       break;
     default:
       Reqs.addRequirements(getSymbolicOperandRequirements(
@@ -1841,6 +1848,9 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpTypePipe:
   case SPIRV::OpTypeReserveId:
     Reqs.addCapability(SPIRV::Capability::Pipes);
+    break;
+  case SPIRV::OpTypePipeStorage:
+    Reqs.addCapability(SPIRV::Capability::PipeStorage);
     break;
   case SPIRV::OpTypeDeviceEvent:
   case SPIRV::OpTypeQueue:

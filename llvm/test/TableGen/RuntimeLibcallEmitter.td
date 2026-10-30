@@ -349,8 +349,8 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
@@ -382,10 +382,10 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:   }
 // CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
 // CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
 // CHECK-NEXT:     };
 // CHECK-EMPTY:
 // CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {

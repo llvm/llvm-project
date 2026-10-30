@@ -1975,6 +1975,26 @@ class SADInst<string OpcStr, NVPTXRegClass t_regclass,
         [(set t_regclass:$dst, (IntOP s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2))]>,
           Requires<Preds>;
 
+multiclass F_MATH_3_RND_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                           TImmLeaf rnd, list<Predicate> Preds = []> {
+  def NAME : BasicNVPTXInst<(outs t.RC:$dst),
+        (ins t.SrcOp:$src0, t.SrcOp:$src1, t.SrcOp:$src2), OpcStr>;
+  def : Pat<(t.Ty (IntOP t.Ty:$src0, t.Ty:$src1, t.Ty:$src2, rnd)),
+            (!cast<Instruction>(NAME) t.InOp:$src0, t.InOp:$src1, t.InOp:$src2)>,
+        Requires<Preds>;
+}
+
+multiclass F_MATH_3_RNDOP_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                             list<Predicate> Preds = []> {
+  def NAME : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+        (ins t.SrcOp:$src0, t.SrcOp:$src1, t.SrcOp:$src2),
+        (ins FPRoundingMode:$rnd), OpcStr>;
+  def : Pat<(t.Ty (IntOP t.Ty:$src0, t.Ty:$src1, t.Ty:$src2, timm:$rnd)),
+            (!cast<Instruction>(NAME) t.InOp:$src0, t.InOp:$src1, t.InOp:$src2,
+             $rnd)>,
+        Requires<Preds>;
+}
+
 defvar FPRoundingModes = ["rn", "rz", "rm", "rp"];
 
 //
@@ -2171,7 +2191,7 @@ foreach t = [F16RT, F16X2RT] in
       defm MUL_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
         F_MATH_2_RND_TY<StrJoin<".", ["mul.rn", ftz, sat, t.PtxType]>.ret, t,
                         !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
-                        fp_rnd_rn_imm>;
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
@@ -2244,6 +2264,10 @@ defm DIV_RZ_F64 : F_MATH_2<"div.rz.f64", F64RT, int_nvvm_div_rz_d>;
 defm DIV_RM_F64 : F_MATH_2<"div.rm.f64", F64RT, int_nvvm_div_rm_d>;
 defm DIV_RP_F64 : F_MATH_2<"div.rp.f64", F64RT, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, FTZ)>;
 def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
           (DIV_FULL_F32 reg_or_fpimm:$a, reg_or_fpimm:$b, NoFTZ)>;
 def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
@@ -2379,72 +2403,61 @@ def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_F32 reg_or_fpimm:$a, NoFTZ
 // Fma
 //
 
-class FMA_TUPLE<string V, Intrinsic I, RegTyInfo RT, list<Predicate> Preds = []> {
-  string Variant = V;
-  Intrinsic Intr = I;
-  RegTyInfo RegType = RT;
-  list<Predicate> Predicates = Preds;
-}
+// f16/f16x2
+foreach t = [F16RT, F16X2RT] in {
+  foreach ftz = ["", "ftz"] in {
+    foreach sat = ["", "sat"] in
+      defm FMA_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
+        F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
-multiclass FMA_INST {
-  foreach P = [
-    FMA_TUPLE<"_rn_f64", int_nvvm_fma_rn_d, F64RT>,
-    FMA_TUPLE<"_rz_f64", int_nvvm_fma_rz_d, F64RT>,
-    FMA_TUPLE<"_rm_f64", int_nvvm_fma_rm_d, F64RT>,
-    FMA_TUPLE<"_rp_f64", int_nvvm_fma_rp_d, F64RT>,
-
-    FMA_TUPLE<"_rn_ftz_f32", int_nvvm_fma_rn_ftz_f, F32RT>,
-    FMA_TUPLE<"_rn_ftz_sat_f32", int_nvvm_fma_rn_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rn_f32", int_nvvm_fma_rn_f, F32RT>,
-    FMA_TUPLE<"_rn_sat_f32", int_nvvm_fma_rn_sat_f, F32RT>,
-    FMA_TUPLE<"_rz_ftz_f32", int_nvvm_fma_rz_ftz_f, F32RT>,
-    FMA_TUPLE<"_rz_ftz_sat_f32", int_nvvm_fma_rz_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rz_f32", int_nvvm_fma_rz_f, F32RT>,
-    FMA_TUPLE<"_rz_sat_f32", int_nvvm_fma_rz_sat_f, F32RT>,
-    FMA_TUPLE<"_rm_f32", int_nvvm_fma_rm_f, F32RT>,
-    FMA_TUPLE<"_rm_sat_f32", int_nvvm_fma_rm_sat_f, F32RT>,
-    FMA_TUPLE<"_rm_ftz_f32", int_nvvm_fma_rm_ftz_f, F32RT>,
-    FMA_TUPLE<"_rm_ftz_sat_f32", int_nvvm_fma_rm_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, F32RT>,
-    FMA_TUPLE<"_rp_sat_f32", int_nvvm_fma_rp_sat_f, F32RT>,
-    FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, F32RT>,
-    FMA_TUPLE<"_rp_ftz_sat_f32", int_nvvm_fma_rp_ftz_sat_f, F32RT>,
-
-    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, F16RT, [SM80]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, F16RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, BF16RT, [SM80]>,
-    FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, BF16RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16x2", int_nvvm_fma_rn_ftz_sat_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, F16X2RT, [SM80]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2, F16X2RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, BF16X2RT, [SM80]>,
-    FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, BF16X2RT, [SM80]>,
-  ] in {
-    defm !toupper(P.Variant) : F_MATH_3<!strconcat("fma", !subst("_", ".", P.Variant)),
-        P.RegType, P.Intr, P.Predicates>;
+    defm FMA_RN_ # !toupper(StrJoin<"_", [ftz, "relu", t.PtxType]>.ret) :
+      F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", ftz, "relu", t.PtxType]>.ret, t,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, "relu"]>.ret),
+                      fp_rnd_rn_imm, [SM80]>;
   }
 }
 
-defm FMA : FMA_INST;
+// bf16/bf16x2
+foreach t = [BF16RT, BF16X2RT] in
+  foreach relu = ["", "relu"] in
+    defm FMA_RN_ # !toupper(StrJoin<"_", [relu, t.PtxType]>.ret) :
+      F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", relu, t.PtxType]>.ret, t,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", relu]>.ret),
+                      fp_rnd_rn_imm, [hasBF16Math, PTX70, SM80]>;
 
-foreach rnd = FPRoundingModes in
+// f32/f32x2/f64
+// Note: these are prefixed with FMA_RND to avoid clashing with the
+// fixed-rounding fma instructions for the generic fma node (FMA_F32 etc.).
+foreach ftz = ["", "ftz"] in {
+  foreach sat = ["", "sat"] in
+    defm StrJoin<"_", ["FMA_RND", !toupper(ftz), !toupper(sat), "F32"]>.ret :
+      F_MATH_3_RNDOP_TY<StrJoin<".", ["fma.${rnd}", ftz, sat, "f32"]>.ret, F32RT,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, sat]>.ret)>;
+
+  defm StrJoin<"_", ["FMA_RND", !toupper(ftz), "F32X2"]>.ret :
+    F_MATH_3_RNDOP_TY<StrJoin<".", ["fma.${rnd}", ftz, "f32x2"]>.ret, F32X2RT,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz]>.ret),
+                      [hasF32x2Instructions]>;
+}
+
+defm FMA_RND_F64 :
+  F_MATH_3_RNDOP_TY<"fma.${rnd}.f64", F64RT, int_nvvm_fma>;
+
+// Mixed Precision
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
+
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
       def FMA_ # !toupper(StrJoin<"_", [rnd, sat, "f32", type.LLVMName]>.ret) :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
           StrJoin<".", ["fma", rnd, sat, "f32", type.LLVMName]>.ret, [(set f32:$dst,
-           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", rnd, sat, "f"]>.ret)
-             (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c))]>, Requires<[SM100]>;
+           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
+             (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
+        Requires<[SM100]>;
+}
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
 let Predicates = [SM100, doNoF32FTZ] in {
@@ -2554,8 +2567,9 @@ foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
     foreach sat = ["", "sat"] in
       defm ADD_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
-        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t, !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret), fp_rnd_rn_imm>;
+        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in

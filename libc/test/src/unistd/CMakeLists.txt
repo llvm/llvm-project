@@ -881,6 +881,20 @@ add_libc_test(
 )
 
 add_libc_test(
+  getgroups_test
+  SUITE
+    libc-unistd-tests
+  SRCS
+    getgroups_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.gid_t
+    libc.src.unistd.getgroups
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   getpid_test
   SUITE
     libc-unistd-tests
