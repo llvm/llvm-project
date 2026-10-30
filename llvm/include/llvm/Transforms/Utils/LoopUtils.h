@@ -192,7 +192,8 @@ LLVM_ABI bool sinkRegionForLoopNest(DomTreeNode *, const LICMDependencies &,
 /// \p AllowSpeculation is whether values should be hoisted even if they are not
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 LLVM_ABI bool hoistRegion(DomTreeNode *, const LICMDependencies &, Loop *,
-                          SinkAndHoistLICMFlags &, bool, bool AllowSpeculation);
+                          SinkAndHoistLICMFlags &, bool LoopNestMode,
+                          bool AllowSpeculation);
 
 /// Return true if the induction variable \p IV in a Loop whose latch is
 /// \p LatchBlock would become dead if the exit test \p Cond were removed.
