@@ -1244,7 +1244,7 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    pushq %r13
 ; AVX512F-NEXT:    pushq %r12
 ; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    subq $360, %rsp # imm = 0x168
+; AVX512F-NEXT:    subq $344, %rsp # imm = 0x158
 ; AVX512F-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    movq %rdi, %rbx
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -1586,7 +1586,7 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX512F-NEXT:    movq %rax, 16(%rbx)
 ; AVX512F-NEXT:    movq %rbx, %rax
-; AVX512F-NEXT:    addq $360, %rsp # imm = 0x168
+; AVX512F-NEXT:    addq $344, %rsp # imm = 0x158
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %r12
 ; AVX512F-NEXT:    popq %r13
@@ -1603,7 +1603,7 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    pushq %r13
 ; AVX512-NEXT:    pushq %r12
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    subq $360, %rsp # imm = 0x168
+; AVX512-NEXT:    subq $344, %rsp # imm = 0x158
 ; AVX512-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -1953,7 +1953,7 @@ define <16 x i128> @test_signed_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX512-NEXT:    movq %rax, 16(%rbx)
 ; AVX512-NEXT:    movq %rbx, %rax
-; AVX512-NEXT:    addq $360, %rsp # imm = 0x168
+; AVX512-NEXT:    addq $344, %rsp # imm = 0x158
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12
 ; AVX512-NEXT:    popq %r13
@@ -5875,7 +5875,7 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    pushq %r13
 ; AVX512F-NEXT:    pushq %r12
 ; AVX512F-NEXT:    pushq %rbx
-; AVX512F-NEXT:    subq $648, %rsp # imm = 0x288
+; AVX512F-NEXT:    subq $600, %rsp # imm = 0x258
 ; AVX512F-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512F-NEXT:    movq %rdi, %rbx
 ; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -6584,7 +6584,7 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX512F-NEXT:    movq %rax, 16(%rbx)
 ; AVX512F-NEXT:    movq %rbx, %rax
-; AVX512F-NEXT:    addq $648, %rsp # imm = 0x288
+; AVX512F-NEXT:    addq $600, %rsp # imm = 0x258
 ; AVX512F-NEXT:    popq %rbx
 ; AVX512F-NEXT:    popq %r12
 ; AVX512F-NEXT:    popq %r13
@@ -6601,7 +6601,7 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    pushq %r13
 ; AVX512-NEXT:    pushq %r12
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    subq $648, %rsp # imm = 0x288
+; AVX512-NEXT:    subq $600, %rsp # imm = 0x258
 ; AVX512-NEXT:    vmovdqu64 %zmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -7310,7 +7310,7 @@ define <32 x i128> @test_signed_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX512-NEXT:    movq %rax, 16(%rbx)
 ; AVX512-NEXT:    movq %rbx, %rax
-; AVX512-NEXT:    addq $648, %rsp # imm = 0x288
+; AVX512-NEXT:    addq $600, %rsp # imm = 0x258
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12
 ; AVX512-NEXT:    popq %r13

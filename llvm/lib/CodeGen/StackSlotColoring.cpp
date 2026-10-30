@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
@@ -41,11 +40,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Target/TargetMachine.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
-#include <limits>
 #include <vector>
 
 using namespace llvm;
@@ -142,9 +139,6 @@ class StackSlotColoring {
 
   // Assignments - Color to intervals mapping.
   SmallVector<ColorAssignmentInfo, 16> Assignments;
-
-  // Scale to add (scale * slot size) to weight; when > 0, also use best-fit.
-  float SizeWeightScale;
 
 public:
   StackSlotColoring(MachineFunction &MF, LiveStacks *LS,
@@ -285,7 +279,7 @@ void StackSlotColoring::InitializeSlots() {
 
     SSIntervals.push_back(&li);
     OrigAlignments[FI] = MFI->getObjectAlign(FI);
-    OrigSizes[FI] = MFI->getObjectSize(FI);
+    OrigSizes[FI]      = MFI->getObjectSize(FI);
 
     auto StackID = MFI->getStackID(FI);
     if (StackID != 0) {
@@ -301,15 +295,13 @@ void StackSlotColoring::InitializeSlots() {
   }
   LLVM_DEBUG(dbgs() << '\n');
 
-  // Sort by weight (heaviest first). When TTI provides a scale, use weight +
-  // scale*size as the sort key so larger slots are ordered earlier when weights
-  // are similar.
+  // Sort them by weight. Among equally weighted slots, color the larger ones
+  // first so that smaller ones can share their colors without growing them.
   llvm::stable_sort(SSIntervals, [this](LiveInterval *LHS, LiveInterval *RHS) {
-    float L = LHS->weight() +
-              SizeWeightScale * OrigSizes[LHS->reg().stackSlotIndex()];
-    float R = RHS->weight() +
-              SizeWeightScale * OrigSizes[RHS->reg().stackSlotIndex()];
-    return L > R;
+    if (LHS->weight() != RHS->weight())
+      return LHS->weight() > RHS->weight();
+    return OrigSizes[LHS->reg().stackSlotIndex()] >
+           OrigSizes[RHS->reg().stackSlotIndex()];
   });
 
   NextColors.resize(AllColors.size());
@@ -327,45 +319,16 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   uint8_t StackID = MFI->getStackID(FI);
 
   if (!DisableSharing) {
-    int64_t RequiredSize = OrigSizes[FI];
 
-    if (SizeWeightScale > 0.0f) {
-      // Best-fit: choose the color that minimizes final size after sharing.
-      int BestColor = -1;
-      int64_t BestFinalSize = std::numeric_limits<int64_t>::max();
-
-      Color = UsedColors[StackID].find_first();
-      while (Color != -1) {
-        if (!Assignments[Color].overlaps(li)) {
-          int64_t ColorSize = MFI->getObjectSize(Color);
-          int64_t FinalSize = std::max(ColorSize, RequiredSize);
-          if (FinalSize < BestFinalSize) {
-            BestColor = Color;
-            BestFinalSize = FinalSize;
-          }
-        }
-        Color = UsedColors[StackID].find_next(Color);
-      }
-
-      if (BestColor != -1) {
-        Color = BestColor;
+    // Check if it's possible to reuse any of the used colors.
+    Color = UsedColors[StackID].find_first();
+    while (Color != -1) {
+      if (!Assignments[Color].overlaps(li)) {
         Share = true;
         ++NumEliminated;
-        LLVM_DEBUG(dbgs() << "  Best-fit: fi#" << FI
-                          << " (size=" << RequiredSize << ") -> fi#" << Color
-                          << " (final=" << BestFinalSize << ")\n");
+        break;
       }
-    } else {
-      // First-fit: use the first non-overlapping color.
-      Color = UsedColors[StackID].find_first();
-      while (Color != -1) {
-        if (!Assignments[Color].overlaps(li)) {
-          Share = true;
-          ++NumEliminated;
-          break;
-        }
-        Color = UsedColors[StackID].find_next(Color);
-      }
+      Color = UsedColors[StackID].find_next(Color);
     }
   }
 
@@ -374,8 +337,8 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
     Share = false;
   }
 
-  // Assign it to a new color if it's not possible to share a used color
-  // with other objects.
+  // Assign it to the first available color (assumed to be the best) if it's
+  // not possible to share a used color with other objects.
   if (!Share) {
     assert(NextColors[StackID] != -1 && "No more spill slots?");
     Color = NextColors[StackID];
@@ -584,10 +547,6 @@ bool StackSlotColoring::run(MachineFunction &MF) {
   // resulting in the wrong value being used afterwards.
   if (MF.exposesReturnsTwice())
     return false;
-
-  SizeWeightScale = MF.getSubtarget()
-                        .getFrameLowering()
-                        ->getStackSlotColoringSizeWeightScale();
 
   // Gather spill slot references
   ScanForSpillSlotRefs(MF);

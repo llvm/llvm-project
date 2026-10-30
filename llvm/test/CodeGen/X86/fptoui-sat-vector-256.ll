@@ -730,7 +730,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f32(<8 x float> %f) nounwind {
 ; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $168, %rsp
+; CHECK-NEXT:    subq $152, %rsp
 ; CHECK-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
@@ -877,7 +877,7 @@ define <8 x i128> @test_unsigned_v8i128_v8f32(<8 x float> %f) nounwind {
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-NEXT:    movq %rax, 16(%rbx)
 ; CHECK-NEXT:    movq %rbx, %rax
-; CHECK-NEXT:    addq $168, %rsp
+; CHECK-NEXT:    addq $152, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13
@@ -2365,7 +2365,7 @@ define <16 x i128> @test_unsigned_v16i128_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    pushq %r13
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
-; AVX2-NEXT:    subq $328, %rsp # imm = 0x148
+; AVX2-NEXT:    subq $264, %rsp # imm = 0x108
 ; AVX2-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    movq %rdi, %rbx
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -2672,7 +2672,7 @@ define <16 x i128> @test_unsigned_v16i128_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX2-NEXT:    movq %rax, 16(%rbx)
 ; AVX2-NEXT:    movq %rbx, %rax
-; AVX2-NEXT:    addq $328, %rsp # imm = 0x148
+; AVX2-NEXT:    addq $264, %rsp # imm = 0x108
 ; AVX2-NEXT:    popq %rbx
 ; AVX2-NEXT:    popq %r12
 ; AVX2-NEXT:    popq %r13
@@ -2689,7 +2689,7 @@ define <16 x i128> @test_unsigned_v16i128_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    pushq %r13
 ; AVX512-NEXT:    pushq %r12
 ; AVX512-NEXT:    pushq %rbx
-; AVX512-NEXT:    subq $328, %rsp # imm = 0x148
+; AVX512-NEXT:    subq $264, %rsp # imm = 0x108
 ; AVX512-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512-NEXT:    movq %rdi, %rbx
 ; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm1
@@ -2991,7 +2991,7 @@ define <16 x i128> @test_unsigned_v16i128_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; AVX512-NEXT:    movq %rax, 16(%rbx)
 ; AVX512-NEXT:    movq %rbx, %rax
-; AVX512-NEXT:    addq $328, %rsp # imm = 0x148
+; AVX512-NEXT:    addq $264, %rsp # imm = 0x108
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12
 ; AVX512-NEXT:    popq %r13

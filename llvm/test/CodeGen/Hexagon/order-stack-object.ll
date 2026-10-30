@@ -3,7 +3,7 @@
 ; Check that ordering objects on the stack from the largest to the smallest has
 ; decreased the space allocated on the stack by 512 Bytes.
 
-; CHECK: allocframe(r29,#2432):raw
+; CHECK: allocframe(r29,#1920):raw
 
 define void @test(ptr nocapture readonly %arg, ptr nocapture writeonly %arg1, i32 %arg2) local_unnamed_addr {
 bb:

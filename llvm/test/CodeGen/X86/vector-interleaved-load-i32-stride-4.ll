@@ -2298,7 +2298,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ;
 ; AVX2-LABEL: load_i32_stride4_vf32:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $680, %rsp # imm = 0x2A8
+; AVX2-NEXT:    subq $648, %rsp # imm = 0x288
 ; AVX2-NEXT:    vmovaps 192(%rdi), %ymm12
 ; AVX2-NEXT:    vmovaps 416(%rdi), %ymm8
 ; AVX2-NEXT:    vmovups %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2449,7 +2449,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-NEXT:    vpermps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm13 # 32-byte Folded Reload
 ; AVX2-NEXT:    vblendps {{.*#+}} xmm12 = xmm12[0,1],xmm13[2,3]
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm10 = ymm12[0,1,2,3],ymm11[4,5,6,7]
-; AVX2-NEXT:    vmovups %ymm10, (%rsp) # 32-byte Spill
+; AVX2-NEXT:    vmovups %ymm10, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-NEXT:    vpermps %ymm15, %ymm0, %ymm11
 ; AVX2-NEXT:    vpermps %ymm14, %ymm0, %ymm12
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm11 = ymm12[0,1,2,3,4,5],ymm11[6,7]
@@ -2507,7 +2507,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-NEXT:    vmovaps %ymm1, (%rdx)
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-NEXT:    vmovaps %ymm1, 64(%rdx)
-; AVX2-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-NEXT:    vmovaps %ymm1, 32(%rcx)
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-NEXT:    vmovaps %ymm1, 96(%rcx)
@@ -2518,13 +2518,13 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-NEXT:    vmovaps %ymm5, 32(%r8)
 ; AVX2-NEXT:    vmovaps %ymm3, 64(%r8)
 ; AVX2-NEXT:    vmovaps %ymm2, (%r8)
-; AVX2-NEXT:    addq $680, %rsp # imm = 0x2A8
+; AVX2-NEXT:    addq $648, %rsp # imm = 0x288
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX2-FP-LABEL: load_i32_stride4_vf32:
 ; AVX2-FP:       # %bb.0:
-; AVX2-FP-NEXT:    subq $680, %rsp # imm = 0x2A8
+; AVX2-FP-NEXT:    subq $648, %rsp # imm = 0x288
 ; AVX2-FP-NEXT:    vmovaps 192(%rdi), %ymm12
 ; AVX2-FP-NEXT:    vmovaps 416(%rdi), %ymm8
 ; AVX2-FP-NEXT:    vmovups %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2675,7 +2675,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FP-NEXT:    vpermps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm13 # 32-byte Folded Reload
 ; AVX2-FP-NEXT:    vblendps {{.*#+}} xmm12 = xmm12[0,1],xmm13[2,3]
 ; AVX2-FP-NEXT:    vblendps {{.*#+}} ymm10 = ymm12[0,1,2,3],ymm11[4,5,6,7]
-; AVX2-FP-NEXT:    vmovups %ymm10, (%rsp) # 32-byte Spill
+; AVX2-FP-NEXT:    vmovups %ymm10, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FP-NEXT:    vpermps %ymm15, %ymm0, %ymm11
 ; AVX2-FP-NEXT:    vpermps %ymm14, %ymm0, %ymm12
 ; AVX2-FP-NEXT:    vblendps {{.*#+}} ymm11 = ymm12[0,1,2,3,4,5],ymm11[6,7]
@@ -2733,7 +2733,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FP-NEXT:    vmovaps %ymm1, (%rdx)
 ; AVX2-FP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-FP-NEXT:    vmovaps %ymm1, 64(%rdx)
-; AVX2-FP-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX2-FP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-FP-NEXT:    vmovaps %ymm1, 32(%rcx)
 ; AVX2-FP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-FP-NEXT:    vmovaps %ymm1, 96(%rcx)
@@ -2744,13 +2744,13 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FP-NEXT:    vmovaps %ymm5, 32(%r8)
 ; AVX2-FP-NEXT:    vmovaps %ymm3, 64(%r8)
 ; AVX2-FP-NEXT:    vmovaps %ymm2, (%r8)
-; AVX2-FP-NEXT:    addq $680, %rsp # imm = 0x2A8
+; AVX2-FP-NEXT:    addq $648, %rsp # imm = 0x288
 ; AVX2-FP-NEXT:    vzeroupper
 ; AVX2-FP-NEXT:    retq
 ;
 ; AVX2-FCP-LABEL: load_i32_stride4_vf32:
 ; AVX2-FCP:       # %bb.0:
-; AVX2-FCP-NEXT:    subq $680, %rsp # imm = 0x2A8
+; AVX2-FCP-NEXT:    subq $648, %rsp # imm = 0x288
 ; AVX2-FCP-NEXT:    vmovaps 192(%rdi), %ymm12
 ; AVX2-FCP-NEXT:    vmovaps 416(%rdi), %ymm8
 ; AVX2-FCP-NEXT:    vmovups %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2901,7 +2901,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FCP-NEXT:    vpermps {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm13 # 32-byte Folded Reload
 ; AVX2-FCP-NEXT:    vblendps {{.*#+}} xmm12 = xmm12[0,1],xmm13[2,3]
 ; AVX2-FCP-NEXT:    vblendps {{.*#+}} ymm10 = ymm12[0,1,2,3],ymm11[4,5,6,7]
-; AVX2-FCP-NEXT:    vmovups %ymm10, (%rsp) # 32-byte Spill
+; AVX2-FCP-NEXT:    vmovups %ymm10, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX2-FCP-NEXT:    vpermps %ymm15, %ymm0, %ymm11
 ; AVX2-FCP-NEXT:    vpermps %ymm14, %ymm0, %ymm12
 ; AVX2-FCP-NEXT:    vblendps {{.*#+}} ymm11 = ymm12[0,1,2,3,4,5],ymm11[6,7]
@@ -2959,7 +2959,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, (%rdx)
 ; AVX2-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, 64(%rdx)
-; AVX2-FCP-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX2-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, 32(%rcx)
 ; AVX2-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
 ; AVX2-FCP-NEXT:    vmovaps %ymm1, 96(%rcx)
@@ -2970,7 +2970,7 @@ define void @load_i32_stride4_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FCP-NEXT:    vmovaps %ymm5, 32(%r8)
 ; AVX2-FCP-NEXT:    vmovaps %ymm3, 64(%r8)
 ; AVX2-FCP-NEXT:    vmovaps %ymm2, (%r8)
-; AVX2-FCP-NEXT:    addq $680, %rsp # imm = 0x2A8
+; AVX2-FCP-NEXT:    addq $648, %rsp # imm = 0x288
 ; AVX2-FCP-NEXT:    vzeroupper
 ; AVX2-FCP-NEXT:    retq
 ;
@@ -4636,7 +4636,7 @@ define void @load_i32_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ;
 ; AVX2-LABEL: load_i32_stride4_vf64:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    subq $1944, %rsp # imm = 0x798
+; AVX2-NEXT:    subq $1864, %rsp # imm = 0x748
 ; AVX2-NEXT:    vmovaps 704(%rdi), %ymm13
 ; AVX2-NEXT:    vmovaps 416(%rdi), %ymm8
 ; AVX2-NEXT:    vmovups %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5119,13 +5119,13 @@ define void @load_i32_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-NEXT:    vmovaps %ymm4, 96(%r8)
 ; AVX2-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-NEXT:    vmovaps %ymm0, 32(%r8)
-; AVX2-NEXT:    addq $1944, %rsp # imm = 0x798
+; AVX2-NEXT:    addq $1864, %rsp # imm = 0x748
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
 ; AVX2-FP-LABEL: load_i32_stride4_vf64:
 ; AVX2-FP:       # %bb.0:
-; AVX2-FP-NEXT:    subq $1944, %rsp # imm = 0x798
+; AVX2-FP-NEXT:    subq $1864, %rsp # imm = 0x748
 ; AVX2-FP-NEXT:    vmovaps 704(%rdi), %ymm13
 ; AVX2-FP-NEXT:    vmovaps 416(%rdi), %ymm8
 ; AVX2-FP-NEXT:    vmovups %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5608,13 +5608,13 @@ define void @load_i32_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FP-NEXT:    vmovaps %ymm4, 96(%r8)
 ; AVX2-FP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-FP-NEXT:    vmovaps %ymm0, 32(%r8)
-; AVX2-FP-NEXT:    addq $1944, %rsp # imm = 0x798
+; AVX2-FP-NEXT:    addq $1864, %rsp # imm = 0x748
 ; AVX2-FP-NEXT:    vzeroupper
 ; AVX2-FP-NEXT:    retq
 ;
 ; AVX2-FCP-LABEL: load_i32_stride4_vf64:
 ; AVX2-FCP:       # %bb.0:
-; AVX2-FCP-NEXT:    subq $1944, %rsp # imm = 0x798
+; AVX2-FCP-NEXT:    subq $1864, %rsp # imm = 0x748
 ; AVX2-FCP-NEXT:    vmovaps 704(%rdi), %ymm13
 ; AVX2-FCP-NEXT:    vmovaps 416(%rdi), %ymm8
 ; AVX2-FCP-NEXT:    vmovups %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -6097,7 +6097,7 @@ define void @load_i32_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX2-FCP-NEXT:    vmovaps %ymm4, 96(%r8)
 ; AVX2-FCP-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
 ; AVX2-FCP-NEXT:    vmovaps %ymm0, 32(%r8)
-; AVX2-FCP-NEXT:    addq $1944, %rsp # imm = 0x798
+; AVX2-FCP-NEXT:    addq $1864, %rsp # imm = 0x748
 ; AVX2-FCP-NEXT:    vzeroupper
 ; AVX2-FCP-NEXT:    retq
 ;

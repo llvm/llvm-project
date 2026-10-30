@@ -2507,35 +2507,32 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
 ;
 ; CHECK-i32-GI-LABEL: lrint_v16fp128:
 ; CHECK-i32-GI:       // %bb.0:
-; CHECK-i32-GI-NEXT:    sub sp, sp, #384
-; CHECK-i32-GI-NEXT:    stp q6, q5, [sp, #160] // 32-byte Folded Spill
-; CHECK-i32-GI-NEXT:    stp q4, q3, [sp, #192] // 32-byte Folded Spill
-; CHECK-i32-GI-NEXT:    stp q2, q1, [sp, #224] // 32-byte Folded Spill
+; CHECK-i32-GI-NEXT:    sub sp, sp, #368
+; CHECK-i32-GI-NEXT:    stp q6, q5, [sp, #144] // 32-byte Folded Spill
+; CHECK-i32-GI-NEXT:    stp q4, q3, [sp, #176] // 32-byte Folded Spill
+; CHECK-i32-GI-NEXT:    stp q2, q1, [sp, #208] // 32-byte Folded Spill
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #368]
+; CHECK-i32-GI-NEXT:    stp x29, x30, [sp, #272] // 16-byte Folded Spill
+; CHECK-i32-GI-NEXT:    stp q1, q7, [sp, #112] // 32-byte Folded Spill
 ; CHECK-i32-GI-NEXT:    ldr q1, [sp, #384]
-; CHECK-i32-GI-NEXT:    stp x29, x30, [sp, #288] // 16-byte Folded Spill
-; CHECK-i32-GI-NEXT:    stp q1, q7, [sp, #128] // 32-byte Folded Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #400]
-; CHECK-i32-GI-NEXT:    stp x28, x27, [sp, #304] // 16-byte Folded Spill
-; CHECK-i32-GI-NEXT:    str q1, [sp, #112] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #416]
-; CHECK-i32-GI-NEXT:    stp x26, x25, [sp, #320] // 16-byte Folded Spill
+; CHECK-i32-GI-NEXT:    stp x28, x27, [sp, #288] // 16-byte Folded Spill
 ; CHECK-i32-GI-NEXT:    str q1, [sp, #96] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #432]
-; CHECK-i32-GI-NEXT:    stp x24, x23, [sp, #336] // 16-byte Folded Spill
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #400]
+; CHECK-i32-GI-NEXT:    stp x26, x25, [sp, #304] // 16-byte Folded Spill
 ; CHECK-i32-GI-NEXT:    str q1, [sp, #80] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #448]
-; CHECK-i32-GI-NEXT:    stp x22, x21, [sp, #352] // 16-byte Folded Spill
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #416]
+; CHECK-i32-GI-NEXT:    stp x24, x23, [sp, #320] // 16-byte Folded Spill
 ; CHECK-i32-GI-NEXT:    str q1, [sp, #64] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #464]
-; CHECK-i32-GI-NEXT:    stp x20, x19, [sp, #368] // 16-byte Folded Spill
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #432]
+; CHECK-i32-GI-NEXT:    stp x22, x21, [sp, #336] // 16-byte Folded Spill
 ; CHECK-i32-GI-NEXT:    str q1, [sp, #48] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #480]
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #448]
+; CHECK-i32-GI-NEXT:    stp x20, x19, [sp, #352] // 16-byte Folded Spill
 ; CHECK-i32-GI-NEXT:    str q1, [sp, #32] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q1, [sp, #496]
-; CHECK-i32-GI-NEXT:    str q1, [sp, #272] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    bl rintl
-; CHECK-i32-GI-NEXT:    str q0, [sp, #256] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q0, [sp, #240] // 16-byte Reload
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #464]
+; CHECK-i32-GI-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-i32-GI-NEXT:    ldr q1, [sp, #480]
+; CHECK-i32-GI-NEXT:    str q1, [sp, #256] // 16-byte Spill
 ; CHECK-i32-GI-NEXT:    bl rintl
 ; CHECK-i32-GI-NEXT:    str q0, [sp, #240] // 16-byte Spill
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #224] // 16-byte Reload
@@ -2577,115 +2574,115 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-i32-GI-NEXT:    bl rintl
 ; CHECK-i32-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
-; CHECK-i32-GI-NEXT:    ldr q0, [sp, #272] // 16-byte Reload
+; CHECK-i32-GI-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-i32-GI-NEXT:    bl rintl
 ; CHECK-i32-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #256] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    bl __fixtfsi
+; CHECK-i32-GI-NEXT:    bl rintl
+; CHECK-i32-GI-NEXT:    str q0, [sp, #256] // 16-byte Spill
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #240] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    str w0, [sp, #12] // 4-byte Spill
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #224] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    str w0, [sp, #272] // 4-byte Spill
+; CHECK-i32-GI-NEXT:    str w0, [sp, #12] // 4-byte Spill
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #208] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    str w0, [sp, #256] // 4-byte Spill
-; CHECK-i32-GI-NEXT:    bl __fixtfsi
-; CHECK-i32-GI-NEXT:    ldr q0, [sp, #192] // 16-byte Reload
 ; CHECK-i32-GI-NEXT:    str w0, [sp, #240] // 4-byte Spill
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
+; CHECK-i32-GI-NEXT:    ldr q0, [sp, #192] // 16-byte Reload
+; CHECK-i32-GI-NEXT:    str w0, [sp, #224] // 4-byte Spill
+; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #176] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w26, w0
+; CHECK-i32-GI-NEXT:    str w0, [sp, #208] // 4-byte Spill
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #160] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w23, w0
+; CHECK-i32-GI-NEXT:    mov w26, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #144] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w24, w0
+; CHECK-i32-GI-NEXT:    mov w23, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #128] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w25, w0
+; CHECK-i32-GI-NEXT:    mov w24, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #112] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w27, w0
+; CHECK-i32-GI-NEXT:    mov w25, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w28, w0
+; CHECK-i32-GI-NEXT:    mov w27, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #80] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w29, w0
+; CHECK-i32-GI-NEXT:    mov w28, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w19, w0
+; CHECK-i32-GI-NEXT:    mov w29, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w20, w0
+; CHECK-i32-GI-NEXT:    mov w19, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-i32-GI-NEXT:    mov w21, w0
+; CHECK-i32-GI-NEXT:    mov w20, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-i32-GI-NEXT:    mov w21, w0
+; CHECK-i32-GI-NEXT:    bl __fixtfsi
+; CHECK-i32-GI-NEXT:    ldr q0, [sp, #256] // 16-byte Reload
 ; CHECK-i32-GI-NEXT:    mov w22, w0
 ; CHECK-i32-GI-NEXT:    bl __fixtfsi
 ; CHECK-i32-GI-NEXT:    fmov s1, w26
 ; CHECK-i32-GI-NEXT:    fmov s2, w27
 ; CHECK-i32-GI-NEXT:    ldr s0, [sp, #12] // 4-byte Reload
 ; CHECK-i32-GI-NEXT:    fmov s3, w20
-; CHECK-i32-GI-NEXT:    ldr w8, [sp, #272] // 4-byte Reload
+; CHECK-i32-GI-NEXT:    ldr w8, [sp, #240] // 4-byte Reload
 ; CHECK-i32-GI-NEXT:    mov v1.s[1], w23
 ; CHECK-i32-GI-NEXT:    mov v2.s[1], w28
 ; CHECK-i32-GI-NEXT:    mov v0.s[1], w8
 ; CHECK-i32-GI-NEXT:    mov v3.s[1], w21
-; CHECK-i32-GI-NEXT:    ldr w8, [sp, #256] // 4-byte Reload
-; CHECK-i32-GI-NEXT:    ldp x28, x27, [sp, #304] // 16-byte Folded Reload
+; CHECK-i32-GI-NEXT:    ldr w8, [sp, #224] // 4-byte Reload
+; CHECK-i32-GI-NEXT:    ldp x28, x27, [sp, #288] // 16-byte Folded Reload
 ; CHECK-i32-GI-NEXT:    mov v1.s[2], w24
 ; CHECK-i32-GI-NEXT:    mov v2.s[2], w29
 ; CHECK-i32-GI-NEXT:    mov v0.s[2], w8
 ; CHECK-i32-GI-NEXT:    mov v3.s[2], w22
-; CHECK-i32-GI-NEXT:    ldr w8, [sp, #240] // 4-byte Reload
-; CHECK-i32-GI-NEXT:    ldp x22, x21, [sp, #352] // 16-byte Folded Reload
-; CHECK-i32-GI-NEXT:    ldp x24, x23, [sp, #336] // 16-byte Folded Reload
+; CHECK-i32-GI-NEXT:    ldr w8, [sp, #208] // 4-byte Reload
+; CHECK-i32-GI-NEXT:    ldp x22, x21, [sp, #336] // 16-byte Folded Reload
+; CHECK-i32-GI-NEXT:    ldp x24, x23, [sp, #320] // 16-byte Folded Reload
 ; CHECK-i32-GI-NEXT:    mov v1.s[3], w25
 ; CHECK-i32-GI-NEXT:    mov v2.s[3], w19
 ; CHECK-i32-GI-NEXT:    mov v0.s[3], w8
-; CHECK-i32-GI-NEXT:    ldp x20, x19, [sp, #368] // 16-byte Folded Reload
+; CHECK-i32-GI-NEXT:    ldp x20, x19, [sp, #352] // 16-byte Folded Reload
 ; CHECK-i32-GI-NEXT:    mov v3.s[3], w0
-; CHECK-i32-GI-NEXT:    ldp x26, x25, [sp, #320] // 16-byte Folded Reload
-; CHECK-i32-GI-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
-; CHECK-i32-GI-NEXT:    add sp, sp, #384
+; CHECK-i32-GI-NEXT:    ldp x26, x25, [sp, #304] // 16-byte Folded Reload
+; CHECK-i32-GI-NEXT:    ldp x29, x30, [sp, #272] // 16-byte Folded Reload
+; CHECK-i32-GI-NEXT:    add sp, sp, #368
 ; CHECK-i32-GI-NEXT:    ret
 ;
 ; CHECK-i64-GI-LABEL: lrint_v16fp128:
 ; CHECK-i64-GI:       // %bb.0:
-; CHECK-i64-GI-NEXT:    sub sp, sp, #384
-; CHECK-i64-GI-NEXT:    stp q6, q5, [sp, #160] // 32-byte Folded Spill
-; CHECK-i64-GI-NEXT:    stp q4, q3, [sp, #192] // 32-byte Folded Spill
-; CHECK-i64-GI-NEXT:    stp q2, q1, [sp, #224] // 32-byte Folded Spill
+; CHECK-i64-GI-NEXT:    sub sp, sp, #368
+; CHECK-i64-GI-NEXT:    stp q6, q5, [sp, #144] // 32-byte Folded Spill
+; CHECK-i64-GI-NEXT:    stp q4, q3, [sp, #176] // 32-byte Folded Spill
+; CHECK-i64-GI-NEXT:    stp q2, q1, [sp, #208] // 32-byte Folded Spill
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #368]
+; CHECK-i64-GI-NEXT:    stp x29, x30, [sp, #272] // 16-byte Folded Spill
+; CHECK-i64-GI-NEXT:    stp q1, q7, [sp, #112] // 32-byte Folded Spill
 ; CHECK-i64-GI-NEXT:    ldr q1, [sp, #384]
-; CHECK-i64-GI-NEXT:    stp x29, x30, [sp, #288] // 16-byte Folded Spill
-; CHECK-i64-GI-NEXT:    stp q1, q7, [sp, #128] // 32-byte Folded Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #400]
-; CHECK-i64-GI-NEXT:    stp x28, x27, [sp, #304] // 16-byte Folded Spill
-; CHECK-i64-GI-NEXT:    str q1, [sp, #112] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #416]
-; CHECK-i64-GI-NEXT:    stp x26, x25, [sp, #320] // 16-byte Folded Spill
+; CHECK-i64-GI-NEXT:    stp x28, x27, [sp, #288] // 16-byte Folded Spill
 ; CHECK-i64-GI-NEXT:    str q1, [sp, #96] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #432]
-; CHECK-i64-GI-NEXT:    stp x24, x23, [sp, #336] // 16-byte Folded Spill
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #400]
+; CHECK-i64-GI-NEXT:    stp x26, x25, [sp, #304] // 16-byte Folded Spill
 ; CHECK-i64-GI-NEXT:    str q1, [sp, #80] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #448]
-; CHECK-i64-GI-NEXT:    stp x22, x21, [sp, #352] // 16-byte Folded Spill
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #416]
+; CHECK-i64-GI-NEXT:    stp x24, x23, [sp, #320] // 16-byte Folded Spill
 ; CHECK-i64-GI-NEXT:    str q1, [sp, #64] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #464]
-; CHECK-i64-GI-NEXT:    stp x20, x19, [sp, #368] // 16-byte Folded Spill
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #432]
+; CHECK-i64-GI-NEXT:    stp x22, x21, [sp, #336] // 16-byte Folded Spill
 ; CHECK-i64-GI-NEXT:    str q1, [sp, #48] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #480]
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #448]
+; CHECK-i64-GI-NEXT:    stp x20, x19, [sp, #352] // 16-byte Folded Spill
 ; CHECK-i64-GI-NEXT:    str q1, [sp, #32] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q1, [sp, #496]
-; CHECK-i64-GI-NEXT:    str q1, [sp, #272] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    bl rintl
-; CHECK-i64-GI-NEXT:    str q0, [sp, #256] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q0, [sp, #240] // 16-byte Reload
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #464]
+; CHECK-i64-GI-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-i64-GI-NEXT:    ldr q1, [sp, #480]
+; CHECK-i64-GI-NEXT:    str q1, [sp, #256] // 16-byte Spill
 ; CHECK-i64-GI-NEXT:    bl rintl
 ; CHECK-i64-GI-NEXT:    str q0, [sp, #240] // 16-byte Spill
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #224] // 16-byte Reload
@@ -2727,16 +2724,16 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
 ; CHECK-i64-GI-NEXT:    bl rintl
 ; CHECK-i64-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
-; CHECK-i64-GI-NEXT:    ldr q0, [sp, #272] // 16-byte Reload
+; CHECK-i64-GI-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-i64-GI-NEXT:    bl rintl
 ; CHECK-i64-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #256] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    bl __fixtfdi
+; CHECK-i64-GI-NEXT:    bl rintl
+; CHECK-i64-GI-NEXT:    str q0, [sp, #256] // 16-byte Spill
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #240] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    str x0, [sp, #256] // 8-byte Spill
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #224] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    str x0, [sp, #272] // 8-byte Spill
+; CHECK-i64-GI-NEXT:    str x0, [sp, #8] // 8-byte Spill
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #208] // 16-byte Reload
 ; CHECK-i64-GI-NEXT:    str x0, [sp, #240] // 8-byte Spill
@@ -2745,63 +2742,66 @@ define <16 x iXLen> @lrint_v16fp128(<16 x fp128> %x) nounwind {
 ; CHECK-i64-GI-NEXT:    str x0, [sp, #224] // 8-byte Spill
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #176] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x24, x0
+; CHECK-i64-GI-NEXT:    str x0, [sp, #208] // 8-byte Spill
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #160] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x23, x0
+; CHECK-i64-GI-NEXT:    mov x24, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #144] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x25, x0
+; CHECK-i64-GI-NEXT:    mov x23, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #128] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x26, x0
+; CHECK-i64-GI-NEXT:    mov x25, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #112] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x27, x0
+; CHECK-i64-GI-NEXT:    mov x26, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #96] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x28, x0
+; CHECK-i64-GI-NEXT:    mov x27, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #80] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x29, x0
+; CHECK-i64-GI-NEXT:    mov x28, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #64] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x19, x0
+; CHECK-i64-GI-NEXT:    mov x29, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x20, x0
+; CHECK-i64-GI-NEXT:    mov x19, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
-; CHECK-i64-GI-NEXT:    mov x21, x0
+; CHECK-i64-GI-NEXT:    mov x20, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; CHECK-i64-GI-NEXT:    mov x21, x0
+; CHECK-i64-GI-NEXT:    bl __fixtfdi
+; CHECK-i64-GI-NEXT:    ldr q0, [sp, #256] // 16-byte Reload
 ; CHECK-i64-GI-NEXT:    mov x22, x0
 ; CHECK-i64-GI-NEXT:    bl __fixtfdi
 ; CHECK-i64-GI-NEXT:    fmov d2, x24
 ; CHECK-i64-GI-NEXT:    fmov d3, x25
-; CHECK-i64-GI-NEXT:    ldr d0, [sp, #256] // 8-byte Reload
+; CHECK-i64-GI-NEXT:    ldr d0, [sp, #8] // 8-byte Reload
 ; CHECK-i64-GI-NEXT:    fmov d4, x27
 ; CHECK-i64-GI-NEXT:    fmov d5, x29
-; CHECK-i64-GI-NEXT:    ldr x8, [sp, #272] // 8-byte Reload
+; CHECK-i64-GI-NEXT:    ldr x8, [sp, #240] // 8-byte Reload
 ; CHECK-i64-GI-NEXT:    fmov d6, x20
 ; CHECK-i64-GI-NEXT:    fmov d7, x22
-; CHECK-i64-GI-NEXT:    ldr d1, [sp, #240] // 8-byte Reload
+; CHECK-i64-GI-NEXT:    ldr d1, [sp, #224] // 8-byte Reload
 ; CHECK-i64-GI-NEXT:    mov v0.d[1], x8
-; CHECK-i64-GI-NEXT:    ldr x8, [sp, #224] // 8-byte Reload
+; CHECK-i64-GI-NEXT:    ldr x8, [sp, #208] // 8-byte Reload
 ; CHECK-i64-GI-NEXT:    mov v2.d[1], x23
 ; CHECK-i64-GI-NEXT:    mov v3.d[1], x26
 ; CHECK-i64-GI-NEXT:    mov v4.d[1], x28
 ; CHECK-i64-GI-NEXT:    mov v5.d[1], x19
 ; CHECK-i64-GI-NEXT:    mov v6.d[1], x21
-; CHECK-i64-GI-NEXT:    ldp x20, x19, [sp, #368] // 16-byte Folded Reload
-; CHECK-i64-GI-NEXT:    ldp x22, x21, [sp, #352] // 16-byte Folded Reload
+; CHECK-i64-GI-NEXT:    ldp x20, x19, [sp, #352] // 16-byte Folded Reload
+; CHECK-i64-GI-NEXT:    ldp x22, x21, [sp, #336] // 16-byte Folded Reload
 ; CHECK-i64-GI-NEXT:    mov v1.d[1], x8
-; CHECK-i64-GI-NEXT:    ldp x24, x23, [sp, #336] // 16-byte Folded Reload
+; CHECK-i64-GI-NEXT:    ldp x24, x23, [sp, #320] // 16-byte Folded Reload
 ; CHECK-i64-GI-NEXT:    mov v7.d[1], x0
-; CHECK-i64-GI-NEXT:    ldp x26, x25, [sp, #320] // 16-byte Folded Reload
-; CHECK-i64-GI-NEXT:    ldp x28, x27, [sp, #304] // 16-byte Folded Reload
-; CHECK-i64-GI-NEXT:    ldp x29, x30, [sp, #288] // 16-byte Folded Reload
-; CHECK-i64-GI-NEXT:    add sp, sp, #384
+; CHECK-i64-GI-NEXT:    ldp x26, x25, [sp, #304] // 16-byte Folded Reload
+; CHECK-i64-GI-NEXT:    ldp x28, x27, [sp, #288] // 16-byte Folded Reload
+; CHECK-i64-GI-NEXT:    ldp x29, x30, [sp, #272] // 16-byte Folded Reload
+; CHECK-i64-GI-NEXT:    add sp, sp, #368
 ; CHECK-i64-GI-NEXT:    ret
   %a = call <16 x iXLen> @llvm.lrint.v16iXLen.v16fp128(<16 x fp128> %x)
   ret <16 x iXLen> %a

@@ -32,8 +32,6 @@ public:
   /// \returns The number of 32-bit sub-registers that are used when storing
   /// values to the stack.
   unsigned getStackWidth(const MachineFunction &MF) const;
-
-  float getStackSlotColoringSizeWeightScale() const override { return 0.01f; }
 };
 
 } // end namespace llvm

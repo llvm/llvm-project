@@ -1326,7 +1326,7 @@ define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov.f32 s2, s31
 ; CHECK-NEXT:    vins.f16 s2, s0
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, #16]
-; CHECK-NEXT:    vstr s2, [sp, #52] @ 4-byte Spill
+; CHECK-NEXT:    vstr s2, [sp, #4] @ 4-byte Spill
 ; CHECK-NEXT:    vmovx.f16 s2, s6
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmovx.f16 s0, s30
@@ -1353,7 +1353,7 @@ define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmovx.f16 s19, s11
 ; CHECK-NEXT:    vmovx.f16 s10, s21
 ; CHECK-NEXT:    vins.f16 s19, s6
-; CHECK-NEXT:    vstrw.32 q1, [sp, #16] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q1, [sp, #24] @ 16-byte Spill
 ; CHECK-NEXT:    vmovx.f16 s9, s24
 ; CHECK-NEXT:    vmovx.f16 s6, s0
 ; CHECK-NEXT:    vins.f16 s25, s10
@@ -1375,9 +1375,9 @@ define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vmov.f32 s6, s17
 ; CHECK-NEXT:    vins.f16 s26, s0
 ; CHECK-NEXT:    vmovx.f16 s0, s13
-; CHECK-NEXT:    vstrw.32 q1, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q1, [sp, #8] @ 16-byte Spill
 ; CHECK-NEXT:    vldrw.u32 q1, [sp, #72] @ 16-byte Reload
-; CHECK-NEXT:    vstrw.32 q4, [sp, #32] @ 16-byte Spill
+; CHECK-NEXT:    vstrw.32 q4, [sp, #40] @ 16-byte Spill
 ; CHECK-NEXT:    vmovx.f16 s18, s8
 ; CHECK-NEXT:    vins.f16 s22, s2
 ; CHECK-NEXT:    vmovx.f16 s2, s29
@@ -1390,10 +1390,10 @@ define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vins.f16 s18, s1
 ; CHECK-NEXT:    vmovx.f16 s1, s9
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #72] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #40] @ 16-byte Reload
 ; CHECK-NEXT:    vins.f16 s14, s10
 ; CHECK-NEXT:    vins.f16 s1, s2
-; CHECK-NEXT:    vldr s6, [sp, #52] @ 4-byte Reload
+; CHECK-NEXT:    vldr s6, [sp, #4] @ 4-byte Reload
 ; CHECK-NEXT:    vmov.f32 s0, s29
 ; CHECK-NEXT:    vins.f16 s12, s8
 ; CHECK-NEXT:    vmov.f32 s2, s14
@@ -1403,10 +1403,10 @@ define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1, #16]
 ; CHECK-NEXT:    vldrw.u32 q0, [sp, #72] @ 16-byte Reload
 ; CHECK-NEXT:    vmov q2, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #24] @ 16-byte Reload
 ; CHECK-NEXT:    vmov.f32 s16, s12
 ; CHECK-NEXT:    vstrw.32 q0, [r1, #48]
-; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q0, [sp, #8] @ 16-byte Reload
 ; CHECK-NEXT:    vmov.f32 s17, s28
 ; CHECK-NEXT:    vstrw.32 q2, [r1, #32]
 ; CHECK-NEXT:    vmov.f32 s19, s13
