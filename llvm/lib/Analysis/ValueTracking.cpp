@@ -560,7 +560,10 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
       !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
     return;
 
-  // For Y other than signed minimum, adding abs(Y) to a negative remainder gives a non-negative result without overflow. For signed minimum, the wrapping addition clears the remainder's sign bit. Poison-producing cases do not invalidate this deduction.
+  // For Y other than signed minimum, adding abs(Y) to a negative remainder
+  // gives a non-negative result without overflow. For signed minimum, the
+  // wrapping addition clears the remainder's sign bit. Poison-producing cases
+  // do not invalidate this deduction.
   KnownOut.makeNonNegative();
 }
 
