@@ -1828,45 +1828,25 @@ let TargetPrefix = "nvvm" in {
   //
   // Fma
   //
-  foreach variant = ["", "_sat", "_relu"] in {
-    foreach ftz = ["", "_ftz"] in {
-      def int_nvvm_fma_rn # ftz # variant # _f16 :
-        PureIntrinsic<[llvm_half_ty],
-          [llvm_half_ty, llvm_half_ty, llvm_half_ty]>;
+  // TODO: Add tests for commutativity along with missing mixed precision 
+  // patterns.
+  foreach ftz = ["", "_ftz"] in
+    foreach variant = ["", "_sat", "_relu"] in
+      def int_nvvm_fma # ftz # variant :
+        PureIntrinsic<[llvm_anyfloat_ty],
+                      [LLVMMatchType<0>, LLVMMatchType<0>,
+                       LLVMMatchType<0>, llvm_i32_ty],
+                      [Commutative, ImmArg<ArgIndex<3>>,
+                       Range<ArgIndex<3>, 0, 4>,
+                       ArgInfo<ArgIndex<3>,
+                               [ArgName<"rnd">,
+                                ImmArgPrinter<"printFPRoundingMode">]>]>;
 
-      def int_nvvm_fma_rn # ftz # variant # _f16x2 :
-        PureIntrinsic<[llvm_v2f16_ty],
-          [llvm_v2f16_ty, llvm_v2f16_ty, llvm_v2f16_ty]>;
-    } // ftz
-  } // variant
-  
-  foreach relu = ["", "_relu"] in { 
-    def int_nvvm_fma_rn # relu # _bf16 : NVVMBuiltin,
-      PureIntrinsic<[llvm_bfloat_ty],
-        [llvm_bfloat_ty, llvm_bfloat_ty, llvm_bfloat_ty]>;
-
-    def int_nvvm_fma_rn # relu # _bf16x2 : NVVMBuiltin,
-      PureIntrinsic<[llvm_v2bf16_ty],
-        [llvm_v2bf16_ty, llvm_v2bf16_ty, llvm_v2bf16_ty]>;
-    
-    // oob (out-of-bounds) - clamps the result to 0 if either of the operand is 
-    // an OOB NaN value.
+  // oob (out-of-bounds) - clamps the result to 0 if either of the operand is
+  // an OOB NaN value.
+  foreach relu = ["", "_relu"] in
     def int_nvvm_fma_rn_oob # relu : PureIntrinsic<[llvm_anyfloat_ty],
         [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
-  } // relu
-
-  foreach rnd = ["_rn", "_rz", "_rm", "_rp"] in {
-    foreach ftz = ["", "_ftz"] in {
-      foreach sat = ["", "_sat"] in {
-        def int_nvvm_fma # rnd # ftz # sat # _f : NVVMBuiltin,
-          PureIntrinsic<[llvm_float_ty],
-            [llvm_float_ty, llvm_float_ty, llvm_float_ty]>;
-      } // sat
-    } // ftz
-    def int_nvvm_fma # rnd # _d : NVVMBuiltin,
-      PureIntrinsic<[llvm_double_ty],
-        [llvm_double_ty, llvm_double_ty, llvm_double_ty]>;
-  } // rnd
 
   //
   // Rcp

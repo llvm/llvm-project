@@ -22,11 +22,11 @@ ld3q {z21.q, z22.q, z23.q}, p2.q, [x10, x21, lsl #4]
 // Invalid immediate offset
 
 ld3q {z23.q, z24.q, z25.q}, p3/z, [x13, #-25, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-24, 21].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 3 in range [-24, 21].
 // CHECK-NEXT: ld3q {z23.q, z24.q, z25.q}, p3/z, [x13, #-25, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld3q {z23.q, z24.q, z25.q}, p3/z, [x13, #22, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 3 in range [-24, 21].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 3 in range [-24, 21].
 // CHECK-NEXT: ld3q {z23.q, z24.q, z25.q}, p3/z, [x13, #22, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

@@ -293,64 +293,64 @@ body:             |
     %55:gr64 = IMPLICIT_DEF
     %56:gr64 = IMPLICIT_DEF
     %57:gr64 = IMPLICIT_DEF
-    %58:gr64 = COPY killed %21
+    %58:gr64 = COPY %21
     %59:gr32 = COPY %22
 
   bb.1.bb1:
     successors: %bb.6(0x40000000), %bb.3(0x40000000)
 
-    %5:gr32 = COPY killed %59
-    %4:gr64 = COPY killed %58
-    %3:gr64 = COPY killed %57
-    %2:gr64 = COPY killed %56
-    %1:gr64 = COPY killed %55
-    %0:gr64 = COPY killed %54
+    %5:gr32 = COPY %59
+    %4:gr64 = COPY %58
+    %3:gr64 = COPY %57
+    %2:gr64 = COPY %56
+    %1:gr64 = COPY %55
+    %0:gr64 = COPY %54
     %30:gr32 = MOV32rm undef %31:gr64, 1, $noreg, 0, $noreg :: (load unordered (s32) from `ptr addrspace(1) undef`, align 8, addrspace 1)
-    %32:gr32 = MOV32rm killed %0, 1, $noreg, 0, $noreg :: (load unordered (s32) from %ir.tmp2, addrspace 1)
-    %33:gr32 = COPY killed %30
+    %32:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load unordered (s32) from %ir.tmp2, addrspace 1)
+    %33:gr32 = COPY %30
     %33:gr32 = SUB32rr %33, %32, implicit-def dead $eflags
     undef %65.sub_32bit:gr64 = COPY %33
     undef %66.sub_32bit:gr64_nosp = COPY %5
-    %6:gr32 = LEA64_32r killed %65, 1, killed %66, 0, $noreg
+    %6:gr32 = LEA64_32r %65, 1, %66, 0, $noreg
     MOV32mr %stack.0, 1, $noreg, 0, $noreg, %5 :: (store (s32) into %stack.0)
     MOV32mr %stack.1, 1, $noreg, 0, $noreg, %33 :: (store (s32) into %stack.1)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $rdi = COPY %2
-    $esi = COPY killed %5
+    $esi = COPY %5
     $edx = COPY %6
-    $r8d = COPY killed %32
-    %26:gr64 = COPY killed %2
-    %28:gr64 = COPY killed %4
-    %25:gr64 = COPY killed %1
-    %27:gr64 = COPY killed %3
+    $r8d = COPY %32
+    %26:gr64 = COPY %2
+    %28:gr64 = COPY %4
+    %25:gr64 = COPY %1
+    %27:gr64 = COPY %3
     %25:gr64, %26:gr64, %27:gr64, %28:gr64 = STATEPOINT 2, 5, 5, undef %35:gr64, killed $rdi, killed $esi, killed $edx, undef $rcx, killed $r8d, 2, 0, 2, 0, 2, 85, 2, 0, 2, 2, 2, 0, 2, 43, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %28, 2, 7, 2, 0, 2, 0, %28, 2, 10, 2, 5, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, %28, 2, 0, %28, 2, 7, 2, 0, 2, 0, %28, 2, 2, 2, 11, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 15, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 21, 2, 63, 2, 0, 2, 9, 2, 1, 2, 0, %27, 2, 0, %26, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %25, 2, 3, 1, 4, %stack.0, 0, 2, 3, 2, 4278124286, 2, 3, 1, 4, %stack.1, 0, 2, 7, 2, 0, 2, 0, %25, 2, 4, %25(tied-def 0), %26(tied-def 1), %27(tied-def 2), %28(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1)
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CMP32rr killed %33, undef %37:gr32, implicit-def $eflags
+    CMP32rr %33, undef %37:gr32, implicit-def $eflags
     JCC_1 %bb.3, 13, implicit killed $eflags
 
   bb.6:
     successors: %bb.2(0x80000000)
 
     %60:gr64 = IMPLICIT_DEF
-    %61:gr64 = COPY killed %25
-    %62:gr64 = COPY killed %26
-    %63:gr64 = COPY killed %27
-    %64:gr64 = COPY killed %28
+    %61:gr64 = COPY %25
+    %62:gr64 = COPY %26
+    %63:gr64 = COPY %27
+    %64:gr64 = COPY %28
 
   bb.2.bb21:
     successors: %bb.1(0x80000000)
 
-    %15:gr64 = COPY killed %64
-    %14:gr64 = COPY killed %63
-    %13:gr64 = COPY killed %62
-    %12:gr64 = COPY killed %61
-    %11:gr64 = COPY killed %60
-    %54:gr64 = COPY killed %11
-    %55:gr64 = COPY killed %12
-    %56:gr64 = COPY killed %13
-    %57:gr64 = COPY killed %14
-    %58:gr64 = COPY killed %15
-    %59:gr32 = COPY killed %6
+    %15:gr64 = COPY %64
+    %14:gr64 = COPY %63
+    %13:gr64 = COPY %62
+    %12:gr64 = COPY %61
+    %11:gr64 = COPY %60
+    %54:gr64 = COPY %11
+    %55:gr64 = COPY %12
+    %56:gr64 = COPY %13
+    %57:gr64 = COPY %14
+    %58:gr64 = COPY %15
+    %59:gr32 = COPY %6
     JMP_1 %bb.1
 
   bb.3.bb28:
@@ -360,10 +360,10 @@ body:             |
     EH_LABEL <mcsymbol .Ltmp0>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $ecx = COPY %22
-    %46:gr64 = COPY killed %26
-    %39:gr64 = COPY killed %28
-    %40:gr64 = COPY killed %25
-    %38:gr64 = COPY killed %27
+    %46:gr64 = COPY %26
+    %39:gr64 = COPY %28
+    %40:gr64 = COPY %25
+    %38:gr64 = COPY %27
     %38:gr64, %39:gr64, %40:gr64, dead %46:gr64 = STATEPOINT 1, 16, 5, undef %47:gr64, undef $edi, undef $rsi, undef $rdx, killed $ecx, undef $r8d, 2, 0, 2, 0, 2, 99, 2, 0, 2, 2, 2, 0, 2, 43, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %39, 2, 7, 2, 0, 2, 0, %39, 2, 10, 2, 5, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, %39, 2, 0, %39, 2, 7, 2, 0, 2, 0, %39, 2, 2, 2, 11, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 15, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 21, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, %38, 2, 0, %46, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %40, 2, 3, 1, 4, %stack.0, 0, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %40, 2, 8, 2, 12, 2, 34, 2, 0, 2, 3, 2, 1, 2, 0, %38, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 0, 2, 4278124286, 2, 5, %38(tied-def 0), %39(tied-def 1), %40(tied-def 2), %46(tied-def 3), 2, 4278124286, 2, 0, 2, 5, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, csr_64, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s32) on %stack.0)
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     EH_LABEL <mcsymbol .Ltmp1>
@@ -372,18 +372,18 @@ body:             |
   bb.4.bb30:
     successors: %bb.2(0x80000000)
 
-    %16:gr64 = COPY killed %39
+    %16:gr64 = COPY %39
     %17:gr64 = COPY %38
-    %18:gr64 = COPY killed %38
+    %18:gr64 = COPY %38
     %18:gr64 = nuw ADD64ri8 %18, 28, implicit-def dead $eflags
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     CALL64pcrel32 target-flags(x86-plt) @barney, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %60:gr64 = COPY killed %18
+    %60:gr64 = COPY %18
     %61:gr64 = IMPLICIT_DEF
     %62:gr64 = IMPLICIT_DEF
-    %63:gr64 = COPY killed %17
-    %64:gr64 = COPY killed %16
+    %63:gr64 = COPY %17
+    %64:gr64 = COPY %16
     JMP_1 %bb.2
 
   bb.5.bb35 (landing-pad):
@@ -392,10 +392,10 @@ body:             |
     EH_LABEL <mcsymbol .Ltmp2>
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     %50:gr32 = MOV32ri 3
-    $edi = COPY killed %50
-    %52:gr64 = COPY killed %40
-    %51:gr64 = COPY killed %39
-    dead %51:gr64, dead %52:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @wombat, killed $edi, 2, 0, 2, 2, 2, 97, 2, 0, 2, 2, 2, 0, 2, 43, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %51, 2, 7, 2, 0, 2, 0, %51, 2, 10, 2, 5, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, %51, 2, 0, %51, 2, 7, 2, 0, 2, 0, %51, 2, 2, 2, 11, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 15, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 21, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %52, 2, 3, killed %6, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %52, 2, 0, 2, 12, 2, 51, 2, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 3, %51(tied-def 0), 2, 4278124286, %52(tied-def 1), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
+    $edi = COPY %50
+    %52:gr64 = COPY %40
+    %51:gr64 = COPY %39
+    dead %51:gr64, dead %52:gr64 = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @wombat, killed $edi, 2, 0, 2, 2, 2, 97, 2, 0, 2, 2, 2, 0, 2, 43, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 1, 2, 10, 2, 0, 2, 4, 2, 1, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %51, 2, 7, 2, 0, 2, 0, %51, 2, 10, 2, 5, 2, 12, 2, 0, 2, 3, 2, 1, 2, 0, %51, 2, 0, %51, 2, 7, 2, 0, 2, 0, %51, 2, 2, 2, 11, 2, 4, 2, 0, 2, 1, 2, 0, 2, 7, 2, 0, 2, 2, 2, 15, 2, 7, 2, 0, 2, 2, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 10, 2, 21, 2, 96, 2, 0, 2, 9, 2, 1, 2, 0, 2, 4278124286, 2, 0, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %52, 2, 3, %6, 2, 3, 2, 4278124286, 2, 7, 2, 0, 2, 7, 2, 0, 2, 0, %52, 2, 0, 2, 12, 2, 51, 2, 0, 2, 3, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 7, 2, 0, 2, 3, %51(tied-def 0), 2, 4278124286, %52(tied-def 1), 2, 0, 2, 3, 0, 0, 1, 1, 2, 2, csr_64, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 
 ...

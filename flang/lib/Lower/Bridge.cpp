@@ -879,13 +879,13 @@ public:
     return owningProc.labelEvaluationMap.lookup(label);
   }
 
-  fir::ExtendedValue
-  genExprAddr(const Fortran::lower::SomeExpr &expr,
-              Fortran::lower::StatementContext &context,
-              mlir::Location *locPtr = nullptr) override final {
+  fir::ExtendedValue genExprAddr(const Fortran::lower::SomeExpr &expr,
+                                 Fortran::lower::StatementContext &context,
+                                 mlir::Location *locPtr = nullptr,
+                                 bool allowCoarray = false) override final {
     mlir::Location loc = locPtr ? *locPtr : toLocation();
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    if (coarrayRef.has_value())
+    if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprAddr of coarray reference.");
     return Fortran::lower::convertExprToAddress(loc, *this, expr, localSymbols,
                                                 context);
@@ -903,11 +903,12 @@ public:
                                               context);
   }
 
-  fir::ExtendedValue
-  genExprBox(mlir::Location loc, const Fortran::lower::SomeExpr &expr,
-             Fortran::lower::StatementContext &stmtCtx) override final {
+  fir::ExtendedValue genExprBox(mlir::Location loc,
+                                const Fortran::lower::SomeExpr &expr,
+                                Fortran::lower::StatementContext &stmtCtx,
+                                bool allowCoarray = false) override final {
     auto coarrayRef = Fortran::evaluate::ExtractCoarrayRef(expr);
-    if (coarrayRef.has_value())
+    if (coarrayRef.has_value() && !allowCoarray)
       TODO(loc, "coarray: genExprBox of coarray reference.");
     return Fortran::lower::convertExprToBox(loc, *this, expr, localSymbols,
                                             stmtCtx);
@@ -4595,6 +4596,11 @@ private:
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
               *std::get<Fortran::parser::Name>(assoc.t).symbol;
+          if (Fortran::evaluate::IsCoarray(sym) ||
+              Fortran::evaluate::IsCoarray(
+                  Fortran::semantics::GetAssociationRoot(sym)))
+            TODO(toLocation(),
+                 "coarray: associating coarray entity in associate construct.");
           const Fortran::lower::SomeExpr &selector =
               *sym.get<Fortran::semantics::AssocEntityDetails>().expr();
           addSymbol(sym, genAssociateSelector(selector, stmtCtx));
@@ -5034,6 +5040,12 @@ private:
           for (auto &symbol : typeCaseScopes[typeGuardIdx]->GetSymbols()) {
             if (symbol->GetUltimate()
                     .detailsIf<Fortran::semantics::AssocEntityDetails>()) {
+              if (Fortran::evaluate::IsCoarray(*symbol) ||
+                  Fortran::evaluate::IsCoarray(
+                      Fortran::semantics::GetAssociationRoot(symbol)))
+                TODO(loc, "coarray: associating coarray entity in select type "
+                          "construct.");
+
               addSymbol(symbol, exv);
               break;
             }
@@ -6886,7 +6898,12 @@ private:
     createGlobals();
     if (mlir::Region *region = func.getCallableRegion())
       region->dropAllReferences();
-    func.erase();
+    // createFunction registered the sham function in the symbol table: erase
+    // it through the table so that no dangling entry is left behind.
+    if (symbolTable)
+      symbolTable->erase(func);
+    else
+      func.erase();
     delete builder;
     builder = nullptr;
     localSymbols.clear();
@@ -7306,10 +7323,10 @@ private:
   /// utilities to deal with procedure pointer components whose arguments have
   /// the type of the containing derived type.
   Fortran::lower::TypeConstructionStack typeConstructionStack;
-  /// MLIR symbol table of the fir.global/func.func operations. Note that it is
-  /// not guaranteed to contain all operations of the ModuleOp with Symbol
-  /// attribute since mlirSymbolTable must pro-actively be maintained when
-  /// new Symbol operations are created.
+  /// MLIR symbol table of the fir.global/func.func/fir.type_info operations.
+  /// The FirOpBuilder lookups trust it, so it must pro-actively be maintained:
+  /// every one of these operations created during lowering must go through the
+  /// FirOpBuilder creation helpers or be registered with fir::registerSymbol.
   mlir::SymbolTable mlirSymbolTable;
 
   /// Used to store context while recursing into regions during lowering.
