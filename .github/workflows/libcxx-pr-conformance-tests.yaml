@@ -50,8 +50,8 @@ jobs:
           'generic-cxx29',
           'generic-modules'
         ]
-        cc: [  'clang-23' ]
-        cxx: [ 'clang++-23' ]
+        cc: [  'clang-24' ]
+        cxx: [ 'clang++-24' ]
         include:
           - config: 'generic-gcc'
             cc: 'gcc-16'
@@ -104,18 +104,18 @@ jobs:
           'generic-cxx23',
           'generic-cxx26',
         ]
-        cc: [ 'clang-23' ]
-        cxx: [ 'clang++-23' ]
+        cc: [ 'clang-24' ]
+        cxx: [ 'clang++-24' ]
         include:
           - config: 'generic-gcc-cxx11'
             cc: 'gcc-16'
             cxx: 'g++-16'
           - config: 'generic-cxx26'
+            cc: 'clang-23'
+            cxx: 'clang++-23'
+          - config: 'generic-cxx26'
             cc: 'clang-22'
             cxx: 'clang++-22'
-          - config: 'generic-cxx26'
-            cc: 'clang-21'
-            cxx: 'clang++-21'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -193,8 +193,8 @@ jobs:
           pip install -r libcxx/test/requirements.txt
           libcxx/utils/ci/run-buildbot ${{ matrix.config }}
         env:
-          CC: clang-23
-          CXX: clang++-23
+          CC: clang-24
+          CXX: clang++-24
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
