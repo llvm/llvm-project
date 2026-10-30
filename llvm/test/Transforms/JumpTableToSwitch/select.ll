@@ -17,14 +17,14 @@ define i32 @f1() !guid !1 {
   ret i32 1
 }
 
-define i32 @select(i1 %c) {
+define i32 @select(i1 %c) !prof !2 {
 ; CHECK-LABEL: define i32 @select(
-; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-SAME: i1 [[C:%.*]]) !prof [[PROF2:![0-9]+]] {
 ; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[C]], ptr @f1, ptr @f0
 ; CHECK-NEXT:    switch i1 [[C]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
 ; CHECK-NEXT:      i1 false, label %[[CALL_0:.*]]
 ; CHECK-NEXT:      i1 true, label %[[CALL_1:.*]]
-; CHECK-NEXT:    ], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF3:![0-9]+]]
 ; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CALL_0]]:
@@ -38,18 +38,18 @@ define i32 @select(i1 %c) {
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
   %fptr = select i1 %c, ptr @f1, ptr @f0
-  %result = call i32 %fptr(), !prof !2
+  %result = call i32 %fptr(), !prof !3
   ret i32 %result
 }
 
-define i32 @select_with_branch_weights(i1 %c) {
+define i32 @select_with_branch_weights(i1 %c) !prof !4  {
 ; CHECK-LABEL: define i32 @select_with_branch_weights(
-; CHECK-SAME: i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[C]], ptr @f1, ptr @f0, !prof [[PROF3:![0-9]+]]
+; CHECK-SAME: i1 [[C:%.*]]) !prof [[PROF4:![0-9]+]] {
+; CHECK-NEXT:    [[FPTR:%.*]] = select i1 [[C]], ptr @f1, ptr @f0, !prof [[PROF5:![0-9]+]]
 ; CHECK-NEXT:    switch i1 [[C]], label %[[DEFAULT_SWITCH_CASE_UNREACHABLE:.*]] [
 ; CHECK-NEXT:      i1 false, label %[[CALL_0:.*]]
 ; CHECK-NEXT:      i1 true, label %[[CALL_1:.*]]
-; CHECK-NEXT:    ], !prof [[PROF4:![0-9]+]]
+; CHECK-NEXT:    ], !prof [[PROF6:![0-9]+]]
 ; CHECK:       [[DEFAULT_SWITCH_CASE_UNREACHABLE]]:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       [[CALL_0]]:
@@ -62,19 +62,23 @@ define i32 @select_with_branch_weights(i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ [[TMP1]], %[[CALL_0]] ], [ [[TMP2]], %[[CALL_1]] ]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
-  %fptr = select i1 %c, ptr @f1, ptr @f0, !prof !3
+  %fptr = select i1 %c, ptr @f1, ptr @f0, !prof !5
   %result = call i32 %fptr()
   ret i32 %result
 }
 
 !0 = !{i64 5678}
 !1 = !{i64 5555}
-!2 = !{!"VP", i32 0, i64 25, i64 5678, i64 20, i64 5555, i64 5}
-!3 = !{!"branch_weights", i32 90, i32 10}
+!2 = !{!"function_entry_count", i32 60}
+!3 = !{!"VP", i32 0, i64 25, i64 5678, i64 20, i64 5555, i64 5}
+!4 = !{!"function_entry_count", i32 70}
+!5 = !{!"branch_weights", i32 90, i32 10}
 ;.
 ; CHECK: [[META0]] = !{i64 5678}
 ; CHECK: [[META1]] = !{i64 5555}
-; CHECK: [[PROF2]] = !{!"branch_weights", i32 0, i32 20, i32 5}
-; CHECK: [[PROF3]] = !{!"branch_weights", i32 90, i32 10}
-; CHECK: [[PROF4]] = !{!"branch_weights", i32 0, i32 10, i32 90}
+; CHECK: [[PROF2]] = !{!"function_entry_count", i32 60}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 0, i32 20, i32 5}
+; CHECK: [[PROF4]] = !{!"function_entry_count", i32 70}
+; CHECK: [[PROF5]] = !{!"branch_weights", i32 90, i32 10}
+; CHECK: [[PROF6]] = !{!"branch_weights", i32 0, i32 10, i32 90}
 ;.
