@@ -5,8 +5,20 @@
 ; RUN: llc < %s --mtriple=xtensa --mcpu=esp32 2>&1 | FileCheck -check-prefix=XTENSA-ESP32 %s
 ; RUN: llc < %s --mtriple=xtensa --mcpu=esp32s2 2>&1 | FileCheck -check-prefix=XTENSA-ESP32S2 %s
 ; RUN: llc < %s --mtriple=xtensa --mcpu=generic 2>&1 | FileCheck -check-prefix=XTENSA-GENERIC %s
+; RUN: llc < %s --mtriple=xtensa --mcpu=intel_tgl_adsp 2>&1 | FileCheck -check-prefix=XTENSA-INTEL-ADSP %s
+; RUN: llc < %s --mtriple=xtensa --mcpu=intel_ace15_adsp 2>&1 | FileCheck -check-prefix=XTENSA-INTEL-ADSP %s
+; RUN: llc < %s --mtriple=xtensa --mcpu=intel_ace30_ptl 2>&1 | FileCheck -check-prefix=XTENSA-INTEL-ADSP %s
+; RUN: llc < %s --mtriple=xtensa --mcpu=intel_ace40 2>&1 | FileCheck -check-prefix=XTENSA-INTEL-ADSP %s
 
 define i32 @f(i32 %z) {
+; XTENSA-INTEL-ADSP-LABEL: f:
+; XTENSA-INTEL-ADSP:         .cfi_startproc
+; XTENSA-INTEL-ADSP-NEXT:  # %bb.0:
+; XTENSA-INTEL-ADSP-NEXT:    entry a1, 32
+; XTENSA-INTEL-ADSP-NEXT:    .cfi_def_cfa_offset 32
+; XTENSA-INTEL-ADSP-NEXT:    movi a2, 0
+; XTENSA-INTEL-ADSP-NEXT:    retw.n
+;
 ; XTENSA-ESP8266-LABEL: f:
 ; XTENSA-ESP8266:         .cfi_startproc
 ; XTENSA-ESP8266-NEXT:  # %bb.0:
