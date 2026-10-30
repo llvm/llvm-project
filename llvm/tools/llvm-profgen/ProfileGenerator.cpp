@@ -212,7 +212,7 @@ void ProfileGeneratorBase::showDensitySuggestion(double Density) {
 
 bool ProfileGeneratorBase::filterAmbiguousProfile(FunctionSamples &FS) {
   for (const auto &Prefix : FuncPrefixsToFilter) {
-    if (FS.getFuncName().starts_with(Prefix))
+    if (FS.getFunction().stringRef().starts_with(Prefix))
       return true;
   }
 

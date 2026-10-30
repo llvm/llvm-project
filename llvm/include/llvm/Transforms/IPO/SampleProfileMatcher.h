@@ -36,7 +36,7 @@ class SampleProfileMatcher {
   // For each function, the matcher generates a map, of which each entry is a
   // mapping from the source location of current build to the source location
   // in the profile.
-  StringMap<LocToLocMap> FuncMappings;
+  DenseMap<uint64_t, LocToLocMap> FuncMappings;
   // Hash mapping cache for matched anchor pairs in stale profile matching
   DenseMap<FunctionId, const Function *> MatchedAnchorCache;
 
@@ -61,7 +61,8 @@ class SampleProfileMatcher {
   // For each function, store every callsite and its matching state into this
   // map, of which each entry is a pair of callsite location and MatchState.
   // This is used for profile staleness computation and report.
-  StringMap<DenseMap<LineLocation, MatchState>> FuncCallsiteMatchStates;
+  DenseMap<uint64_t, DenseMap<LineLocation, MatchState>>
+      FuncCallsiteMatchStates;
 
   // A map from a pair of function and profile name to a boolean value
   // indicating whether they are matched. This is used as a cache for the
@@ -197,7 +198,7 @@ private:
   void UpdateWithSalvagedProfiles();
 
   LocToLocMap &getIRToProfileLocationMap(const FunctionSamples &FS) {
-    return FuncMappings[FS.getFuncName()];
+    return FuncMappings[FS.getGUID()];
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);

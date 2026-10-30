@@ -1206,8 +1206,6 @@ public:
   /// Optionally scale samples by \p Weight.
   sampleprof_error merge(const FunctionSamples &Other, uint64_t Weight = 1) {
     sampleprof_error Result = sampleprof_error::success;
-    if (!GUIDToFuncNameMap)
-      GUIDToFuncNameMap = Other.GUIDToFuncNameMap;
     if (Context.getFunction().empty())
       Context = Other.getContext();
     if (FunctionHash == 0) {
@@ -1289,9 +1287,6 @@ public:
   /// Return the function name.
   FunctionId getFunction() const { return Context.getFunction(); }
 
-  /// Return the original function name.
-  StringRef getFuncName() const { return getFuncName(getFunction()); }
-
   void setFunctionHash(uint64_t Hash) { FunctionHash = Hash; }
 
   uint64_t getFunctionHash() const { return FunctionHash; }
@@ -1371,22 +1366,6 @@ public:
     return FnName;
   }
 
-  /// Translate \p Func into its original name.
-  /// When profile doesn't use MD5, \p Func needs no translation.
-  /// When profile uses MD5, \p Func in current FunctionSamples
-  /// is actually GUID of the original function name. getFuncName will
-  /// translate \p Func in current FunctionSamples into its original name
-  /// by looking up in the function map GUIDToFuncNameMap.
-  /// If the original name doesn't exist in the map, return empty StringRef.
-  StringRef getFuncName(FunctionId Func) const {
-    if (!UseMD5)
-      return Func.stringRef();
-
-    assert(GUIDToFuncNameMap &&
-           "GUIDToFuncNameMap needs to be populated first");
-    return GUIDToFuncNameMap->lookup(Func.getHashCode());
-  }
-
   /// Returns the line offset to the start line of the subprogram.
   /// We assume that a single function will not exceed 65535 LOC.
   LLVM_ABI static unsigned getOffset(const DILocation *DIL);
@@ -1446,10 +1425,6 @@ public:
   /// If this profile uses flow sensitive discriminators.
   LLVM_ABI static std::atomic<bool> ProfileIsFS;
 
-  /// GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
-  /// all the function symbols defined or declared in current module.
-  DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap = nullptr;
-
   /// Return the GUID of the context's name. If the context is already using
   /// MD5, don't hash it again.
   uint64_t getGUID() const { return getFunction().getHashCode(); }
@@ -1459,10 +1434,7 @@ public:
   LLVM_ABI void findAllNames(DenseSet<FunctionId> &NameSet) const;
 
   bool operator==(const FunctionSamples &Other) const {
-    return (GUIDToFuncNameMap == Other.GUIDToFuncNameMap ||
-            (GUIDToFuncNameMap && Other.GUIDToFuncNameMap &&
-             *GUIDToFuncNameMap == *Other.GUIDToFuncNameMap)) &&
-           FunctionHash == Other.FunctionHash && Context == Other.Context &&
+    return FunctionHash == Other.FunctionHash && Context == Other.Context &&
            TotalSamples == Other.TotalSamples &&
            TotalHeadSamples == Other.TotalHeadSamples &&
            BodySamples == Other.BodySamples &&

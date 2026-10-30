@@ -347,74 +347,6 @@ using Edge = std::pair<const BasicBlock *, const BasicBlock *>;
 using BlockEdgeMap =
     DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>;
 
-class GUIDToFuncNameMapper {
-public:
-  GUIDToFuncNameMapper(Module &M, SampleProfileReader &Reader,
-                       DenseMap<uint64_t, StringRef> &GUIDToFuncNameMap)
-      : CurrentReader(Reader), CurrentModule(M),
-        CurrentGUIDToFuncNameMap(GUIDToFuncNameMap) {
-    if (!CurrentReader.useMD5())
-      return;
-
-    for (const auto &F : CurrentModule) {
-      StringRef OrigName = F.getName();
-      CurrentGUIDToFuncNameMap.insert(
-          {Function::getGUIDAssumingExternalLinkage(OrigName), OrigName});
-
-      // Local to global var promotion used by optimization like thinlto
-      // will rename the var and add suffix like ".llvm.xxx" to the
-      // original local name. In sample profile, the suffixes of function
-      // names are all stripped. Since it is possible that the mapper is
-      // built in post-thin-link phase and var promotion has been done,
-      // we need to add the substring of function name without the suffix
-      // into the GUIDToFuncNameMap.
-      StringRef CanonName = FunctionSamples::getCanonicalFnName(F);
-      if (CanonName != OrigName)
-        CurrentGUIDToFuncNameMap.insert(
-            {Function::getGUIDAssumingExternalLinkage(CanonName), CanonName});
-    }
-
-    // Update GUIDToFuncNameMap for each function including inlinees.
-    SetGUIDToFuncNameMapForAll(&CurrentGUIDToFuncNameMap);
-  }
-
-  ~GUIDToFuncNameMapper() {
-    if (!CurrentReader.useMD5())
-      return;
-
-    CurrentGUIDToFuncNameMap.clear();
-
-    // Reset GUIDToFuncNameMap for of each function as they're no
-    // longer valid at this point.
-    SetGUIDToFuncNameMapForAll(nullptr);
-  }
-
-private:
-  void SetGUIDToFuncNameMapForAll(DenseMap<uint64_t, StringRef> *Map) {
-    std::queue<FunctionSamples *> FSToUpdate;
-    for (auto &IFS : CurrentReader.getProfiles()) {
-      FSToUpdate.push(&IFS.second);
-    }
-
-    while (!FSToUpdate.empty()) {
-      FunctionSamples *FS = FSToUpdate.front();
-      FSToUpdate.pop();
-      FS->GUIDToFuncNameMap = Map;
-      for (const auto &ICS : FS->getCallsiteSamples()) {
-        const FunctionSamplesMap &FSMap = ICS.second;
-        for (const auto &IFS : FSMap) {
-          FunctionSamples &FS = const_cast<FunctionSamples &>(IFS.second);
-          FSToUpdate.push(&FS);
-        }
-      }
-    }
-  }
-
-  SampleProfileReader &CurrentReader;
-  Module &CurrentModule;
-  DenseMap<uint64_t, StringRef> &CurrentGUIDToFuncNameMap;
-};
-
 // Inline candidate used by iterative callsite prioritized inliner
 struct InlineCandidate {
   CallBase *CallInstr;
@@ -567,10 +499,6 @@ protected:
     uint64_t entryCount;
   };
   DenseMap<Function *, NotInlinedProfileInfo> notInlinedCallInfo;
-
-  // GUIDToFuncNameMap saves the mapping from GUID to the symbol name, for
-  // all the function symbols defined or declared in current module.
-  DenseMap<uint64_t, StringRef> GUIDToFuncNameMap;
 
   // For symbol in profile symbol list, whether to regard their profiles
   // to be accurate. It is mainly decided by existance of profile symbol
@@ -1145,8 +1073,6 @@ bool SampleProfileLoader::inlineHotFunctions(
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (!isa<IntrinsicInst>(I)) {
             if ((FS = findCalleeFunctionSamples(*CB))) {
-              assert((!FunctionSamples::UseMD5 || FS->GUIDToFuncNameMap) &&
-                     "GUIDToFuncNameMap has to be populated");
               AllCandidates.push_back(CB);
               if (FS->getHeadSamplesEstimate() > 0 ||
                   FunctionSamples::ProfileIsCS)
@@ -2035,8 +1961,8 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
   if (Reader->profileIsCS()) {
     // Tracker for profiles under different context
-    ContextTracker = std::make_unique<SampleContextTracker>(
-        Reader->getProfiles(), &GUIDToFuncNameMap);
+    ContextTracker =
+        std::make_unique<SampleContextTracker>(Reader->getProfiles());
   }
 
   // Load pseudo probe descriptors for probe-based function samples.
@@ -2139,8 +2065,6 @@ void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
 
 bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
                                       ProfileSummaryInfo *_PSI) {
-  GUIDToFuncNameMapper Mapper(M, *Reader, GUIDToFuncNameMap);
-
   PSI = _PSI;
   if (M.getProfileSummary(/* IsCS */ false) == nullptr) {
     M.setProfileSummary(Reader->getSummary().getMD(M.getContext()),
