@@ -682,8 +682,8 @@ define float @fabs_sqrt_nnan_nsz__no_nzero(float nofpclass(nzero) %a) {
 ; nnan a false promise in the ieee nsub and sub rows, so those two only fold by
 ; way of poison.
 
-define float @fabs_sqrt_nnan__psub__mode_ieee_ieee(float nofpclass(nan inf zero nsub norm) %a) #0 {
-; CHECK-LABEL: @fabs_sqrt_nnan__psub__mode_ieee_ieee(
+define float @fabs_sqrt_nnan__psub__ieee_ieee(float nofpclass(nan inf zero nsub norm) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_ieee(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -692,8 +692,8 @@ define float @fabs_sqrt_nnan__psub__mode_ieee_ieee(float nofpclass(nan inf zero 
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__nsub__mode_ieee_ieee(float nofpclass(nan inf zero psub norm) %a) #0 {
-; CHECK-LABEL: @fabs_sqrt_nnan__nsub__mode_ieee_ieee(
+define float @fabs_sqrt_nnan__nsub__ieee_ieee(float nofpclass(nan inf zero psub norm) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_ieee(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -702,8 +702,8 @@ define float @fabs_sqrt_nnan__nsub__mode_ieee_ieee(float nofpclass(nan inf zero 
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__sub__mode_ieee_ieee(float nofpclass(nan inf zero norm) %a) #0 {
-; CHECK-LABEL: @fabs_sqrt_nnan__sub__mode_ieee_ieee(
+define float @fabs_sqrt_nnan__sub__ieee_ieee(float nofpclass(nan inf zero norm) %a) #0 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_ieee(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -712,8 +712,8 @@ define float @fabs_sqrt_nnan__sub__mode_ieee_ieee(float nofpclass(nan inf zero n
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__psub__mode_ieee_daz(float nofpclass(nan inf zero nsub norm) %a) #1 {
-; CHECK-LABEL: @fabs_sqrt_nnan__psub__mode_ieee_daz(
+define float @fabs_sqrt_nnan__psub__ieee_daz(float nofpclass(nan inf zero nsub norm) %a) #1 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_daz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -722,8 +722,8 @@ define float @fabs_sqrt_nnan__psub__mode_ieee_daz(float nofpclass(nan inf zero n
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__nsub__mode_ieee_daz(float nofpclass(nan inf zero psub norm) %a) #1 {
-; CHECK-LABEL: @fabs_sqrt_nnan__nsub__mode_ieee_daz(
+define float @fabs_sqrt_nnan__nsub__ieee_daz(float nofpclass(nan inf zero psub norm) %a) #1 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_daz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
 ; CHECK-NEXT:    ret float [[FABS]]
@@ -733,8 +733,8 @@ define float @fabs_sqrt_nnan__nsub__mode_ieee_daz(float nofpclass(nan inf zero p
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__sub__mode_ieee_daz(float nofpclass(nan inf zero norm) %a) #1 {
-; CHECK-LABEL: @fabs_sqrt_nnan__sub__mode_ieee_daz(
+define float @fabs_sqrt_nnan__sub__ieee_daz(float nofpclass(nan inf zero norm) %a) #1 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_daz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
 ; CHECK-NEXT:    ret float [[FABS]]
@@ -744,8 +744,8 @@ define float @fabs_sqrt_nnan__sub__mode_ieee_daz(float nofpclass(nan inf zero no
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__psub__mode_ieee_dapz(float nofpclass(nan inf zero nsub norm) %a) #2 {
-; CHECK-LABEL: @fabs_sqrt_nnan__psub__mode_ieee_dapz(
+define float @fabs_sqrt_nnan__psub__ieee_dapz(float nofpclass(nan inf zero nsub norm) %a) #2 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_dapz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -754,8 +754,8 @@ define float @fabs_sqrt_nnan__psub__mode_ieee_dapz(float nofpclass(nan inf zero 
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__nsub__mode_ieee_dapz(float nofpclass(nan inf zero psub norm) %a) #2 {
-; CHECK-LABEL: @fabs_sqrt_nnan__nsub__mode_ieee_dapz(
+define float @fabs_sqrt_nnan__nsub__ieee_dapz(float nofpclass(nan inf zero psub norm) %a) #2 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_dapz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -764,8 +764,8 @@ define float @fabs_sqrt_nnan__nsub__mode_ieee_dapz(float nofpclass(nan inf zero 
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__sub__mode_ieee_dapz(float nofpclass(nan inf zero norm) %a) #2 {
-; CHECK-LABEL: @fabs_sqrt_nnan__sub__mode_ieee_dapz(
+define float @fabs_sqrt_nnan__sub__ieee_dapz(float nofpclass(nan inf zero norm) %a) #2 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_dapz(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -774,8 +774,8 @@ define float @fabs_sqrt_nnan__sub__mode_ieee_dapz(float nofpclass(nan inf zero n
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__psub__mode_ieee_dynamic(float nofpclass(nan inf zero nsub norm) %a) #3 {
-; CHECK-LABEL: @fabs_sqrt_nnan__psub__mode_ieee_dynamic(
+define float @fabs_sqrt_nnan__psub__ieee_dynamic(float nofpclass(nan inf zero nsub norm) %a) #3 {
+; CHECK-LABEL: @fabs_sqrt_nnan__psub__ieee_dynamic(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    ret float [[SQRT]]
 ;
@@ -784,8 +784,8 @@ define float @fabs_sqrt_nnan__psub__mode_ieee_dynamic(float nofpclass(nan inf ze
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__nsub__mode_ieee_dynamic(float nofpclass(nan inf zero psub norm) %a) #3 {
-; CHECK-LABEL: @fabs_sqrt_nnan__nsub__mode_ieee_dynamic(
+define float @fabs_sqrt_nnan__nsub__ieee_dynamic(float nofpclass(nan inf zero psub norm) %a) #3 {
+; CHECK-LABEL: @fabs_sqrt_nnan__nsub__ieee_dynamic(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
 ; CHECK-NEXT:    ret float [[FABS]]
@@ -795,8 +795,8 @@ define float @fabs_sqrt_nnan__nsub__mode_ieee_dynamic(float nofpclass(nan inf ze
   ret float %fabs
 }
 
-define float @fabs_sqrt_nnan__sub__mode_ieee_dynamic(float nofpclass(nan inf zero norm) %a) #3 {
-; CHECK-LABEL: @fabs_sqrt_nnan__sub__mode_ieee_dynamic(
+define float @fabs_sqrt_nnan__sub__ieee_dynamic(float nofpclass(nan inf zero norm) %a) #3 {
+; CHECK-LABEL: @fabs_sqrt_nnan__sub__ieee_dynamic(
 ; CHECK-NEXT:    [[SQRT:%.*]] = call nnan float @llvm.sqrt.f32(float [[A:%.*]])
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SQRT]])
 ; CHECK-NEXT:    ret float [[FABS]]
