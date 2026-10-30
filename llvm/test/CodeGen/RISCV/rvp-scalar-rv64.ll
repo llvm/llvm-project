@@ -809,9 +809,7 @@ define i64 @mulsu_w00_sexti32_and(i32 signext %a, i64 %b) nounwind {
 define i64 @mulsu_w11(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulsu_w11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a0, a0, 32
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    mulsu.w11 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_hi = ashr i64 %a, 32
   %b_hi = lshr i64 %b, 32
@@ -833,9 +831,7 @@ define i64 @mulsu_w00_sexti32_and_commute(i32 signext %a, i64 %b) nounwind {
 define i64 @mulsu_w11_commute(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: mulsu_w11_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a0, a0, 32
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    mul a0, a1, a0
+; CHECK-NEXT:    mulsu.w11 a0, a0, a1
 ; CHECK-NEXT:    ret
   %a_hi = ashr i64 %a, 32
   %b_hi = lshr i64 %b, 32
@@ -1181,9 +1177,7 @@ define i64 @maccsu_w00(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @maccsu_w11(i64 %rd, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: maccsu_w11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a1, 32
-; CHECK-NEXT:    srli a2, a2, 32
-; CHECK-NEXT:    maccsu.w00 a0, a1, a2
+; CHECK-NEXT:    maccsu.w11 a0, a1, a2
 ; CHECK-NEXT:    ret
   %ahi = ashr i64 %a, 32
   %bhi = lshr i64 %b, 32
@@ -1207,9 +1201,7 @@ define i64 @maccsu_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @maccsu_w11_commute(i64 %rd, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: maccsu_w11_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a1, 32
-; CHECK-NEXT:    srli a2, a2, 32
-; CHECK-NEXT:    maccsu.w00 a0, a1, a2
+; CHECK-NEXT:    maccsu.w11 a0, a1, a2
 ; CHECK-NEXT:    ret
   %ahi = ashr i64 %a, 32
   %bhi = lshr i64 %b, 32
@@ -1233,9 +1225,7 @@ define i64 @maccsu_w00_swap_operands(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @maccsu_w11_swap_operands(i64 %rd, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: maccsu_w11_swap_operands:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    srai a2, a2, 32
-; CHECK-NEXT:    maccsu.w00 a0, a2, a1
+; CHECK-NEXT:    maccsu.w11 a0, a2, a1
 ; CHECK-NEXT:    ret
   %ahi = lshr i64 %a, 32
   %bhi = ashr i64 %b, 32
@@ -1259,9 +1249,7 @@ define i64 @maccsu_w00_swap_operands_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @maccsu_w11_swap_operands_commute(i64 %rd, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: maccsu_w11_swap_operands_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a1, a1, 32
-; CHECK-NEXT:    srai a2, a2, 32
-; CHECK-NEXT:    maccsu.w00 a0, a2, a1
+; CHECK-NEXT:    maccsu.w11 a0, a2, a1
 ; CHECK-NEXT:    ret
   %ahi = lshr i64 %a, 32
   %bhi = ashr i64 %b, 32
