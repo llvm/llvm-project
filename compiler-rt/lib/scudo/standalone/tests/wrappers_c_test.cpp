@@ -312,10 +312,26 @@ TEST_F(ScudoWrappersCTest, AlignedAlloc) {
   free(P);
   verifyDeallocHookPtr(P);
 
-  errno = 0;
+  // The aligned_alloc standard was relaxed, so verify that Size not a multiple
+  // of Alignment works.
   P = aligned_alloc(Alignment, Size);
+  EXPECT_NE(P, nullptr);
+  free(P);
+
+#if defined(__has_warning) && __has_warning("-Wnon-power-of-two-alignment")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-power-of-two-alignment"
+#endif
+  // Verify that a non-power of two alignment fails.
+  errno = 0;
+  P = aligned_alloc(13, Size);
   EXPECT_EQ(P, nullptr);
   EXPECT_EQ(errno, EINVAL);
+#if defined(__has_warning) && __has_warning("-Wnon-power-of-two-alignment")
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wnon-power-of-two-alignment"
+#endif
+
 }
 
 TEST_F(ScudoWrappersCDeathTest, Realloc) {
