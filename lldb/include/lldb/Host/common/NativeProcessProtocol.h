@@ -87,6 +87,23 @@ public:
   ///     Returns an error object.
   virtual Status Interrupt();
 
+  /// Interrupt the running process like Interrupt, and report \a stop_reason
+  /// for the stop instead of the interrupt, so that the client can tell why
+  /// the process stopped.
+  ///
+  /// The first pending reason is kept until the process resumes; another
+  /// request is a successful no-op and cannot replace it. Meanwhile,
+  /// GDBRemoteCommunicationServerLLGS reports it in place of the SIGSTOP of
+  /// each thread that reports one, which is how process plugins report the
+  /// thread that an interrupt stopped. A thread that stopped for anything
+  /// else, such as a breakpoint it hit before the interrupt got to it, keeps
+  /// its own reason.
+  Status InterruptWithStopReason(lldb::StopReason stop_reason);
+
+  /// The stop reason that InterruptWithStopReason asked for, until the process
+  /// resumes.
+  std::optional<lldb::StopReason> GetInterruptStopReason() const;
+
   virtual Status Kill() = 0;
 
   // Tells a process not to stop the inferior on given signals and just
@@ -551,6 +568,14 @@ protected:
 private:
   llvm::Expected<SoftwareBreakpoint>
   EnableSoftwareBreakpoint(lldb::addr_t addr, uint32_t size_hint);
+
+  /// The stop reason that InterruptWithStopReason asked for, until the process
+  /// resumes. Guarded by m_state_mutex.
+  std::optional<lldb::StopReason> m_interrupt_stop_reason;
+
+  /// Serialize InterruptWithStopReason requests so a later request cannot
+  /// interleave with installation or rollback of the first request's reason.
+  std::mutex m_interrupt_mutex;
 };
 } // namespace lldb_private
 

@@ -2403,6 +2403,13 @@ following keys and values:
     the `description` key/value pair to describe the
     exceptional event the user should see as the stop
     reason.
+  * `target sync` - the process was stopped to stay in sync with another
+    target, for example a CPU process whose accelerator stopped. The signal is
+    the one that stopped the thread, which a client that does not know this
+    reason reports instead. A `sync-plugin` key/value pair can name the
+    accelerator plugin whose target the process stopped for, so the client can
+    name that target. Its stop-reply field value is the plugin name encoded as
+    ASCII hex; its `jThreadsInfo` or `jstopinfo` value is a JSON string.
   * `description` -
     An ASCII hex string that contains a more descriptive
     reason that the thread stopped. This is only needed

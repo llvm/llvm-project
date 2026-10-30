@@ -18,3 +18,8 @@ LLDBServerAcceleratorPlugin::LLDBServerAcceleratorPlugin(
       m_native_main_loop(native_main_loop) {}
 
 LLDBServerAcceleratorPlugin::~LLDBServerAcceleratorPlugin() = default;
+
+void LLDBServerAcceleratorPlugin::HaltNativeProcessIfNeeded(lldb::pid_t pid) {
+  m_native_gdb_server.QueueInterrupt(pid, lldb::eStopReasonTargetSync,
+                                     GetPluginName());
+}

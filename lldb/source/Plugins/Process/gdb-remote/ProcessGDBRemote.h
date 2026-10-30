@@ -419,7 +419,8 @@ protected:
                     lldb::addr_t dispatch_queue_t, std::string &queue_name,
                     lldb::QueueKind queue_kind, uint64_t queue_serial,
                     std::vector<lldb::addr_t> &added_binaries,
-                    StructuredData::ObjectSP &detailed_binaries_info);
+                    StructuredData::ObjectSP &detailed_binaries_info,
+                    llvm::StringRef sync_plugin = {});
 
   void ClearThreadIDList();
 
@@ -526,6 +527,11 @@ private:
   /// reply with a '?' packet we can be handed the same actions again; this
   /// guards against handling them (e.g. setting the same breakpoints) twice.
   std::map<std::string, int64_t> m_processed_accelerator_actions;
+
+  /// The target created for each accelerator plugin. The target group owns the
+  /// relationship; these weak references only resolve target-sync stop
+  /// descriptions received from the server.
+  std::map<std::string, lldb::TargetWP> m_accelerator_targets;
 
   // ContinueDelegate interface
   void HandleAsyncStdout(llvm::StringRef out) override;

@@ -810,6 +810,8 @@ static const char *GetStopReasonString(StopReason stop_reason) {
     return "vforkdone";
   case eStopReasonInterrupt:
     return "async interrupt";
+  case eStopReasonTargetSync:
+    return "target sync";
   case eStopReasonHistoryBoundary:
   case eStopReasonInstrumentation:
   case eStopReasonInvalid:
@@ -821,8 +823,25 @@ static const char *GetStopReasonString(StopReason stop_reason) {
   return nullptr;
 }
 
+// Report the stop reason that NativeProcessProtocol::InterruptWithStopReason
+// asked for in place of the SIGSTOP of a thread that the interrupt stopped.
+// The signal stays, for clients that do not know the reason. Returns whether
+// the thread reports the interrupt's reason.
+static bool ApplyInterruptStopReason(NativeProcessProtocol &process,
+                                     ThreadStopInfo &stop_info) {
+  if (stop_info.reason != eStopReasonSignal || stop_info.signo != SIGSTOP)
+    return false;
+  std::optional<lldb::StopReason> stop_reason =
+      process.GetInterruptStopReason();
+  if (!stop_reason)
+    return false;
+  stop_info.reason = *stop_reason;
+  return true;
+}
+
 static llvm::Expected<json::Array>
-GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
+GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged,
+                   llvm::StringRef interrupt_plugin_name) {
   Log *log = GetLog(LLDBLog::Process | LLDBLog::Thread);
 
   json::Array threads_array;
@@ -835,6 +854,8 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     std::string description;
     if (!thread.GetStopReason(tid_stop_info, description))
       return llvm::createStringError("failed to get stop reason");
+    const bool interrupt_stop =
+        ApplyInterruptStopReason(process, tid_stop_info);
 
     const int signum = tid_stop_info.signo;
     LLDB_LOGF(log,
@@ -863,6 +884,9 @@ GetJSONThreadsInfo(NativeProcessProtocol &process, bool abridged) {
     const char *stop_reason = GetStopReasonString(tid_stop_info.reason);
     if (stop_reason)
       thread_obj.try_emplace("reason", stop_reason);
+
+    if (interrupt_stop && !interrupt_plugin_name.empty())
+      thread_obj.try_emplace("sync-plugin", interrupt_plugin_name);
 
     if (!description.empty())
       thread_obj.try_emplace("description", description);
@@ -901,6 +925,7 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
   std::string description;
   if (!thread.GetStopReason(tid_stop_info, description))
     return response;
+  const bool interrupt_stop = ApplyInterruptStopReason(process, tid_stop_info);
 
   // FIXME implement register handling for exec'd inferiors.
   // if (tid_stop_info.reason == eStopReasonExec) {
@@ -968,8 +993,10 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
     // thread otherwise this packet has all the info it needs.
     if (thread_num > 1) {
       const bool threads_with_valid_stop_info_only = true;
+      std::string interrupt_plugin_name =
+          GetInterruptPluginName(process.GetID());
       llvm::Expected<json::Array> threads_info = GetJSONThreadsInfo(
-          *m_current_process, threads_with_valid_stop_info_only);
+          process, threads_with_valid_stop_info_only, interrupt_plugin_name);
       if (threads_info) {
         response.PutCString("jstopinfo:");
         StreamString unescaped_response;
@@ -1047,6 +1074,13 @@ GDBRemoteCommunicationServerLLGS::PrepareStopReplyPacketForThread(
   const char *reason_str = GetStopReasonString(tid_stop_info.reason);
   if (reason_str != nullptr) {
     response.Printf("reason:%s;", reason_str);
+  }
+
+  std::string interrupt_plugin_name = GetInterruptPluginName(process.GetID());
+  if (interrupt_stop && !interrupt_plugin_name.empty()) {
+    response.PutCString("sync-plugin:");
+    response.PutStringAsRawHex8(interrupt_plugin_name);
+    response.PutChar(';');
   }
 
   if (!description.empty()) {
@@ -1156,6 +1190,10 @@ void GDBRemoteCommunicationServerLLGS::HandleInferiorState_Exited(
     auto find_it = m_debugged_processes.find(pid);
     assert(find_it != m_debugged_processes.end());
     bool vkilled = bool(find_it->second.flags & DebuggedProcess::Flag::vkilled);
+    {
+      std::lock_guard<std::mutex> guard(m_interrupt_plugin_mutex);
+      m_interrupt_plugin_names.erase(pid);
+    }
     m_debugged_processes.erase(find_it);
     // Terminate the main loop only if vKill has not been used.
     // When running in non-stop mode, wait for the vStopped to clear
@@ -3885,6 +3923,10 @@ GDBRemoteCommunicationServerLLGS::Handle_D(StringExtractorGDBRemote &packet) {
           m_current_process = nullptr;
         if (it->second.process_up.get() == m_continue_process)
           m_continue_process = nullptr;
+        {
+          std::lock_guard<std::mutex> guard(m_interrupt_plugin_mutex);
+          m_interrupt_plugin_names.erase(it->first);
+        }
         it = m_debugged_processes.erase(it);
         detached = true;
         continue;
@@ -3936,8 +3978,11 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
 
   StreamString response;
   const bool threads_with_valid_stop_info_only = false;
+  std::string interrupt_plugin_name =
+      GetInterruptPluginName(m_current_process->GetID());
   llvm::Expected<json::Value> threads_info =
-      GetJSONThreadsInfo(*m_current_process, threads_with_valid_stop_info_only);
+      GetJSONThreadsInfo(*m_current_process, threads_with_valid_stop_info_only,
+                         interrupt_plugin_name);
   if (!threads_info) {
     LLDB_LOG_ERROR(log, threads_info.takeError(),
                    "failed to prepare a packet for pid {1}: {0}",
@@ -4665,6 +4710,58 @@ lldb_private::process_gdb_remote::LLGSArgToURL(llvm::StringRef url_arg,
 void GDBRemoteCommunicationServerLLGS::InstallPlugin(
     std::unique_ptr<LLDBServerAcceleratorPlugin> plugin_up) {
   m_accelerator_plugins.emplace_back(std::move(plugin_up));
+}
+
+bool GDBRemoteCommunicationServerLLGS::ProcessIsAlive(lldb::pid_t pid) const {
+  auto process_it = m_debugged_processes.find(pid);
+  return process_it != m_debugged_processes.end() &&
+         process_it->second.process_up->IsAlive();
+}
+
+bool GDBRemoteCommunicationServerLLGS::ProcessIsRunning(lldb::pid_t pid) const {
+  auto process_it = m_debugged_processes.find(pid);
+  return process_it != m_debugged_processes.end() &&
+         process_it->second.process_up->IsRunning();
+}
+
+std::string GDBRemoteCommunicationServerLLGS::GetInterruptPluginName(
+    lldb::pid_t pid) const {
+  std::lock_guard<std::mutex> guard(m_interrupt_plugin_mutex);
+  auto plugin_it = m_interrupt_plugin_names.find(pid);
+  if (plugin_it == m_interrupt_plugin_names.end())
+    return {};
+  return plugin_it->second;
+}
+
+void GDBRemoteCommunicationServerLLGS::QueueInterrupt(
+    lldb::pid_t pid, lldb::StopReason stop_reason,
+    llvm::StringRef plugin_name) {
+  auto interrupt = [this, pid, stop_reason,
+                    plugin_name = plugin_name.str()](MainLoopBase &) {
+    auto process_it = m_debugged_processes.find(pid);
+    if (process_it == m_debugged_processes.end())
+      return;
+    DebuggedProcess &debugged_process = process_it->second;
+    NativeProcessProtocol &process = *debugged_process.process_up;
+    if (!process.IsRunning())
+      return;
+    const bool first_interrupt = !process.GetInterruptStopReason().has_value();
+    // Set first: a process can report the stop before Interrupt returns.
+    if (first_interrupt) {
+      std::lock_guard<std::mutex> guard(m_interrupt_plugin_mutex);
+      m_interrupt_plugin_names[pid] = plugin_name;
+    }
+    Status error = process.InterruptWithStopReason(stop_reason);
+    if (error.Fail()) {
+      if (first_interrupt) {
+        std::lock_guard<std::mutex> guard(m_interrupt_plugin_mutex);
+        m_interrupt_plugin_names.erase(pid);
+      }
+      LLDB_LOG(GetLog(LLDBLog::Process), "failed to interrupt process {0}: {1}",
+               pid, error);
+    }
+  };
+  m_mainloop.AddPendingCallback(interrupt);
 }
 
 GDBRemoteCommunication::PacketResult
