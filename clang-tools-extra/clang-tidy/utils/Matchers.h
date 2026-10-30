@@ -22,6 +22,10 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
+AST_MATCHER(FunctionDecl, isOverloadedOperator) {
+  return Node.isOverloadedOperator();
+}
+
 AST_MATCHER(Decl, isOutOfLine) { return Node.isOutOfLine(); }
 
 AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
