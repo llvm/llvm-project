@@ -17,33 +17,66 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-using uint128_t = generic_v128;
-using uint256_t = generic_v256;
-using uint512_t = generic_v512;
-
-LIBC_INLINE void inline_memmove_aarch64(Ptr dst, CPtr src, size_t count) {
+LIBC_INLINE bool inline_memmove_small_size_aarch64(Ptr dst, CPtr src,
+                                                   size_t count) {
+#if defined(__ARM_NEON)
+  using uint128_t = generic_v128;
+  using uint256_t = generic_v256;
+  using uint512_t = generic_v512;
+#else
+  using uint128_t = cpp::array<uint64_t, 2>;
+  using uint256_t = cpp::array<uint64_t, 4>;
+#endif
   if (count == 0)
-    return;
-  if (count == 1)
-    return generic::Memmove<uint8_t>::block(dst, src);
-  if (count <= 4)
-    return generic::Memmove<uint16_t>::head_tail(dst, src, count);
-  if (count <= 8)
-    return generic::Memmove<uint32_t>::head_tail(dst, src, count);
-  if (count <= 16)
-    return generic::Memmove<uint64_t>::head_tail(dst, src, count);
-  if (count <= 32)
-    return generic::Memmove<uint128_t>::head_tail(dst, src, count);
-  if (count <= 64)
-    return generic::Memmove<uint256_t>::head_tail(dst, src, count);
-  if (count <= 128)
-    return generic::Memmove<uint512_t>::head_tail(dst, src, count);
+    return true;
+  if (count == 1) {
+    generic::Memmove<uint8_t>::block(dst, src);
+    return true;
+  }
+  if (count <= 4) {
+    generic::Memmove<uint16_t>::head_tail(dst, src, count);
+    return true;
+  }
+  if (count <= 8) {
+    generic::Memmove<uint32_t>::head_tail(dst, src, count);
+    return true;
+  }
+  if (count <= 16) {
+    generic::Memmove<uint64_t>::head_tail(dst, src, count);
+    return true;
+  }
+  if (count <= 32) {
+    generic::Memmove<uint128_t>::head_tail(dst, src, count);
+    return true;
+  }
+  if (count <= 64) {
+    generic::Memmove<uint256_t>::head_tail(dst, src, count);
+    return true;
+  }
+#if defined(__ARM_NEON)
+  if (count <= 128) {
+    generic::Memmove<uint512_t>::head_tail(dst, src, count);
+    return true;
+  }
+#endif
+  return false;
+}
+
+LIBC_INLINE void inline_memmove_follow_up_aarch64(Ptr dst, CPtr src,
+                                                  size_t count) {
+#if defined(__ARM_NEON)
+  using AlignT = generic_v256;
+  using LoopT = generic_v512;
+#else
+  using AlignT = cpp::array<uint64_t, 2>;
+  using LoopT = cpp::array<uint64_t, 4>;
+#endif
   if (dst < src) {
-    generic::Memmove<uint256_t>::align_forward<Arg::Src>(dst, src, count);
-    return generic::Memmove<uint512_t>::loop_and_tail_forward(dst, src, count);
+    generic::Memmove<AlignT>::align_forward<Arg::Src>(dst, src, count);
+    return generic::Memmove<LoopT>::loop_and_tail_forward(dst, src, count);
   } else {
-    generic::Memmove<uint256_t>::align_backward<Arg::Src>(dst, src, count);
-    return generic::Memmove<uint512_t>::loop_and_tail_backward(dst, src, count);
+    generic::Memmove<AlignT>::align_backward<Arg::Src>(dst, src, count);
+    return generic::Memmove<LoopT>::loop_and_tail_backward(dst, src, count);
   }
 }
 
