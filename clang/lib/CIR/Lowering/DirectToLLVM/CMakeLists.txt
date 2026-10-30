@@ -7,6 +7,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   LowerToLLVM.cpp
   LowerToLLVMIR.cpp
   LowerToLLVMOffloadPrintf.cpp
+  LowerToLLVMOffloadPrintfAMDGPU.cpp
+  LowerToLLVMOffloadPrintfNVPTX.cpp
   LowerToLLVMOpenCLMetadata.cpp
 
   DEPENDS
