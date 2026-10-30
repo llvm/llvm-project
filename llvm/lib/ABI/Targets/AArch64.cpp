@@ -210,9 +210,9 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
     }
 
     // Predicates and svcount_t are passed in a predicate register. Legal
-    // vectors, SVE data vectors, and floating-point types are passed in a
-    // SIMD and floating-point register. A tuple occupies one register of the
-    // appropriate kind per vector it contains.
+    // vectors, SVE data vectors, floating-point types, and opaque 8-bit
+    // floats are passed in a SIMD and floating-point register. A tuple
+    // occupies one register of the appropriate kind per vector it contains.
     if (const auto *VT = dyn_cast<VectorType>(Ty)) {
       if (VT->isSVEPredicate() || VT->isSVECount())
         NPRN = std::min(NPRN + 1, 4u);
@@ -223,7 +223,7 @@ ArgInfo AArch64TargetInfo::classifyArgumentType(
         NPRN = std::min(NPRN + TT->getNumVectors(), 4u);
       else
         NSRN = std::min(NSRN + TT->getNumVectors(), 8u);
-    } else if (Ty->isFloat()) {
+    } else if (Ty->isFloat() || Ty->isOpaqueFloat8()) {
       NSRN = std::min(NSRN + 1, 8u);
     }
 
@@ -385,9 +385,6 @@ bool AArch64TargetInfo::passAsAggregateType(const Type *Ty) const {
 /// how many elements the fixed-length type has.
 const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
     const VectorType *VT) const {
-  // TODO: Verify that this correctly handles MFloat8 when we decide on a
-  // mapping for that type.
-
   if (VT->isFixedLengthSVEPredicate())
     return TB.getScalablePredicateOrCountVectorType(Align(2),
                                                     VectorKind::SVEPredicate);
@@ -395,6 +392,10 @@ const VectorType *AArch64TargetInfo::convertFixedToScalableVectorType(
   assert(VT->isFixedLengthSVEData() && "expected a fixed-length SVE vector!");
 
   const Type *EltTy = VT->getElementType();
+  // A vector of opaque 8-bit floats should be mapped as a vector of i8.
+  assert(!EltTy->isOpaqueFloat8() &&
+         "opaque 8-bit float is not a valid vector element type");
+
   uint64_t EltBits = EltTy->getSizeInBits().getFixedValue();
   assert(EltBits >= 8 && EltBits <= 64 && isPowerOf2_64(EltBits) &&
          "unexpected element type for SVE data vector!");
