@@ -1326,6 +1326,12 @@ public:
     return FPImmAction::ConstantPool;
   }
 
+  /// \copydoc getFPImmAction(const APFloat&,EVT,bool) const
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, LLT /*Ty*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
   /// Returns true if the specified FP immediate can be materialized without a
   /// load from the constant pool.
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
