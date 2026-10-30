@@ -388,7 +388,7 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
     if (HSOpts.AllowModuleMapSubdirectorySearch) {
       // If we've already performed the exhaustive search for module maps in
       // this search directory, don't do it again.
-      if (Dir.haveSearchedAllModuleMaps())
+      if (Dir.haveLoadedAllModuleMaps())
         continue;
 
       // Load all module maps in the immediate subdirectories of this search
@@ -2407,7 +2407,7 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   assert(HSOpts.ImplicitModuleMaps &&
          "Should not be loading subdirectory module maps");
 
-  if (SearchDir.haveSearchedAllModuleMaps())
+  if (SearchDir.haveLoadedAllModuleMaps())
     return;
 
   std::error_code EC;
@@ -2427,7 +2427,7 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
           /*ImplicitlyDiscovered=*/true, SearchDir.isFramework());
   }
 
-  SearchDir.setSearchedAllModuleMaps(true);
+  SearchDir.setLoadedAllModuleMaps(true);
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(

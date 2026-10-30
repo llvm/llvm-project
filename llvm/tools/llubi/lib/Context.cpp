@@ -1179,7 +1179,7 @@ void Context::exposeProvenance(Provenance &Prov) {
   if (Prov.Wildcard)
     return;
   MemoryObject *Obj = Prov.getMemoryObject();
-  if (!Obj)
+  if (!Obj || Obj->State != MemoryObjectState::Alive)
     return;
   uint64_t Address = Obj->getAddress();
   ExposedProvenanceSet &Set = ExposedProvenances[Address];

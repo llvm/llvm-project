@@ -3312,7 +3312,7 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
 /// Is there a floating point cmov for the specific X86 condition code?
 /// Current x86 isa includes the following FP cmov instructions:
 /// fcmovb, fcomvbe, fcomve, fcmovu, fcmovae, fcmova, fcmovne, fcmovnu.
-static bool hasFPCMov(unsigned X86CC) {
+static bool hasFPCMov(X86::CondCode X86CC) {
   switch (X86CC) {
   default:
     return false;
@@ -26052,7 +26052,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     bool IllegalFPCMov = false;
     if (VT.isFloatingPoint() && !VT.isVector() &&
         !isScalarFPTypeInSSEReg(VT) && Subtarget.canUseCMOV())  // FPStack?
-      IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
+      IllegalFPCMov = !hasFPCMov(
+          static_cast<X86::CondCode>(cast<ConstantSDNode>(CC)->getZExtValue()));
 
     if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
         Cmp.getOpcode() == X86ISD::BT) { // FIXME
