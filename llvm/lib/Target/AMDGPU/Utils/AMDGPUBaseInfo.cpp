@@ -1565,26 +1565,8 @@ struct CounterFieldFeature {
 };
 } // namespace
 
-// Mirrors CounterFieldFeature defs in GCNFeatures.td.
-static constexpr CounterFieldFeature CounterFieldFeatures[] = {
-    {FeatureVmcntLoShift10, &CounterLayout::VmcntLoShift, 10},
-    {FeatureVmcntLoBits6, &CounterLayout::VmcntLoBits, 6},
-    {FeatureVmcntHiBits2, &CounterLayout::VmcntHiBits, 2},
-    {FeatureExpcntShift0, &CounterLayout::ExpcntShift, 0},
-    {FeatureLgkmcntShift4, &CounterLayout::LgkmcntShift, 4},
-    {FeatureLgkmcntBits6, &CounterLayout::LgkmcntBits, 6},
-    {FeatureLoadStorecntShift8, &CounterLayout::LoadStorecntShift, 8},
-    {FeatureLoadcntBits6, &CounterLayout::LoadcntBits, 6},
-    {FeatureSamplecntBits6, &CounterLayout::SamplecntBits, 6},
-    {FeatureBvhcntBits3, &CounterLayout::BvhcntBits, 3},
-    {FeatureDscntBits6, &CounterLayout::DscntBits, 6},
-    {FeatureStorecntBits6, &CounterLayout::StorecntBits, 6},
-    {FeatureKmcntBits5, &CounterLayout::KmcntBits, 5},
-    {FeatureXcntBits6, &CounterLayout::XcntBits, 6},
-    {FeatureAsynccntBits6, &CounterLayout::AsynccntBits, 6},
-    {FeatureHoldCntBits1, &CounterLayout::HoldCntBits, 1},
-    {FeatureBarrierMemberCountBits8, &CounterLayout::BarrierMemberCountBits, 8},
-};
+#define GET_CounterFieldFeatures_IMPL
+#include "AMDGPUGenSearchableTables.inc"
 
 CounterLayout getCounterLayout(const MCSubtargetInfo &STI) {
   CounterLayout L;

@@ -88,26 +88,8 @@ protected:
   /// set from tablegen subtarget features, 0 is unknown.
   unsigned BufferResourceNumRecordsWidth = 0;
 
-  // Required by CounterFieldFeature's FieldName; never read. Generated code
-  // keeps the larger value, wrong for fields a feature lowers. Use
-  // AMDGPU::getCounterLayout instead.
-  unsigned VmcntLoShift = 0;
-  unsigned VmcntLoBits = 0;
-  unsigned VmcntHiBits = 0;
-  unsigned ExpcntShift = 0;
-  unsigned LgkmcntShift = 0;
-  unsigned LgkmcntBits = 0;
-  unsigned LoadStorecntShift = 0;
-  unsigned LoadcntBits = 0;
-  unsigned SamplecntBits = 0;
-  unsigned BvhcntBits = 0;
-  unsigned DscntBits = 0;
-  unsigned StorecntBits = 0;
-  unsigned KmcntBits = 0;
-  unsigned XcntBits = 0;
-  unsigned AsynccntBits = 0;
-  unsigned HoldCntBits = 0;
-  unsigned BarrierMemberCountBits = 0;
+  // Write-only FieldName of CounterFieldFeature. Use AMDGPU::getCounterLayout.
+  unsigned CounterFieldSink = 0;
 
   // Dynamically set bits that enable features.
   const bool BufferOOBRelaxed;

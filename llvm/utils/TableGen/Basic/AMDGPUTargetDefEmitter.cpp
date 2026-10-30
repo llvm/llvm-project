@@ -571,22 +571,25 @@ emitFeatureBitset(raw_ostream &OS, StringRef BitsetType, StringRef EnumPrefix,
   OS << "})";
 }
 
-// The value of the SubtargetFeature in \p GPU's closure that sets \p FieldName,
-// or \p Default if it has none. Two features setting the same field to
-// different values is an error: SubtargetFeature silently takes the larger.
+// The \p ValueField of the SubtargetFeature in \p GPU's closure whose
+// \p KeyField is \p FieldName, or \p Default if it has none. Two features
+// setting the same field to different values is an error: SubtargetFeature
+// silently takes the larger.
 static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
-                               int64_t Default) {
+                               int64_t Default,
+                               StringRef KeyField = "FieldName",
+                               StringRef ValueField = "Value") {
   SetVector<const Record *> Closure;
   collectFeatureClosure(GPU, Closure);
 
   const Record *Found = nullptr;
   int64_t Value = Default;
   for (const Record *F : Closure) {
-    if (F->getValueAsString("FieldName") != FieldName)
+    if (F->getValueAsOptionalString(KeyField) != FieldName)
       continue;
 
     int64_t V;
-    if (!to_integer(F->getValueAsString("Value"), V)) {
+    if (!to_integer(F->getValueAsString(ValueField), V)) {
       PrintFatalError(F->getLoc(), "feature '" + F->getValueAsString("Name") +
                                        "' must have an integer value");
     }
@@ -603,7 +606,7 @@ static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
   return Value;
 }
 
-// CounterLayout members by FieldName, in declaration order. Defaults come
+// CounterLayout members by CounterField, in declaration order. Defaults come
 // from CounterLayout's member initializers.
 static constexpr std::pair<StringLiteral, uint8_t AMDGPU::CounterLayout::*>
     CounterLayoutFields[] = {
@@ -661,7 +664,9 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
     ListSeparator LS;
     static constexpr AMDGPU::CounterLayout Defaults;
     for (const auto &[Field, Member] : CounterLayoutFields)
-      OS << LS << getFeatureValue(R, Field, Defaults.*Member);
+      OS << LS
+         << getFeatureValue(R, Field, Defaults.*Member, "CounterField",
+                            "CounterValue");
     OS << "}},\n";
   }
   OS << "};\n"
