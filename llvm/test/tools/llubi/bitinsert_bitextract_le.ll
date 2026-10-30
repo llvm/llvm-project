@@ -39,6 +39,15 @@ entry:
   %bitextract_ptr_bytes = bitextract b64, b128 %bitinsert_ptr, i32 32
   %bitinsert_ptr_bytes = bitinsert b128 0, b64 %bitextract_ptr_bytes, i32 5
   %bitextract_ptr_via_bytes = bitextract ptr, b128 %bitinsert_ptr_bytes, i32 5
+
+  ; Inserting concrete bits into an all-poison value must zero the padding.
+  %bitinsert_b12_mixed = bitinsert b12 poison, i4 5, i32 0
+  %bitinsert_b12_poison = bitinsert b12 0, i12 poison, i32 0
+  %alloca16 = alloca i16
+  store b12 %bitinsert_b12_mixed, ptr %alloca16
+  %bitinsert_b12_mixed_bytes = load b16, ptr %alloca16
+  store b12 %bitinsert_b12_poison, ptr %alloca16
+  %bitinsert_b12_poison_bytes = load b16, ptr %alloca16
   ret void
 }
 ; CHECK: Entering function: main
@@ -74,5 +83,12 @@ entry:
 ; CHECK-NEXT:   %bitextract_ptr_bytes = bitextract b64, b128 %bitinsert_ptr, i32 32 => b64 ptr 0x8 [ptr] 
 ; CHECK-NEXT:   %bitinsert_ptr_bytes = bitinsert b128 0, b64 %bitextract_ptr_bytes, i32 5 => b128 00000000(110!!!!!) 00000001(10000111) 00000000(00111011) 00000000(01101000) 00000000(10111001) 00000000(11111000) 00000000(00000110) 00000000(00011101) 00000000(!!!00101) 0x00 0x00 0x00 0x00 0x00 0x00 0x00 
 ; CHECK-NEXT:   %bitextract_ptr_via_bytes = bitextract ptr, b128 %bitinsert_ptr_bytes, i32 5 => ptr 0x8 [ptr]
+; CHECK-NEXT:   %bitinsert_b12_mixed = bitinsert b12 poison, i4 5, i32 0 => b12 !!!!0101 !!!! 
+; CHECK-NEXT:   %bitinsert_b12_poison = bitinsert b12 0, i12 poison, i32 0 => b12 0x!! !!!! 
+; CHECK-NEXT:   %alloca16 = alloca i16, align 2 => ptr 0xE [alloca16]
+; CHECK-NEXT:   store b12 %bitinsert_b12_mixed, ptr %alloca16, align 2
+; CHECK-NEXT:   %bitinsert_b12_mixed_bytes = load b16, ptr %alloca16, align 2 => b16 !!!!0101 0000!!!! 
+; CHECK-NEXT:   store b12 %bitinsert_b12_poison, ptr %alloca16, align 2
+; CHECK-NEXT:   %bitinsert_b12_poison_bytes = load b16, ptr %alloca16, align 2 => b16 0x!! 0000!!!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

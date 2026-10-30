@@ -152,11 +152,12 @@ define void @main() {
   %bytes_mixed = load b32, ptr %alloc_byte
   store b32 u0xDEADBEEF, ptr %alloc_byte
   %bytes_endianness = load b32, ptr %alloc_byte
-  %bytes_non_pow2 = load b28, ptr %alloc_byte
+  ; Non-byte-sized byte loads ignore the padding bits.
+  %bytes_trunc_b28 = load b28, ptr %alloc_byte
   store b28 u0xEADBEEF, ptr %alloc_byte
   %bytes_zextd = load b32, ptr %alloc_byte
   store b8 255, ptr %alloc_byte
-  %bytes_zextd_poison = load b7, ptr %alloc_byte
+  %bytes_trunc_b7 = load b7, ptr %alloc_byte
 
   %alloc_ptr_array = alloca [4 x ptr]
   store i64 0, ptr %alloc_ptr_array
@@ -167,6 +168,31 @@ define void @main() {
   %ptr_array_2_middle = getelementptr i8, ptr %alloc_ptr_array, i64 20
   store i8 0, ptr %ptr_array_2_middle
   %mixed_alloc = load b256, ptr %alloc_ptr_array
+
+  ; A byte value with mixed concrete and poison bits is not a poison value.
+  ; Its padding bits are written as zero.
+  %mixed_b7 = bitinsert b7 poison, i3 5, i32 0
+  store b7 %mixed_b7, ptr %alloc_byte
+  %mixed_b7_bytes = load b8, ptr %alloc_byte
+  ; A poison byte value writes poison padding bits.
+  store b7 poison, ptr %alloc_byte
+  %poison_b7_bytes = load b8, ptr %alloc_byte
+  ; Undef bits in a non-byte-sized byte load become poison, so the padding
+  ; bits must be poison as well.
+  %undef_alloc = alloca i8
+  call void @llvm.lifetime.start.p0(ptr %undef_alloc)
+  %undef_b7 = load b7, ptr %undef_alloc
+  store b7 %undef_b7, ptr %alloc_byte
+  %undef_b7_bytes = load b8, ptr %alloc_byte
+
+  ; Store-to-load forwarding across a non-byte-sized byte type with interior
+  ; poison bits: store b13 zero-pads to b16 without disturbing the poison bits.
+  %b13_poison = bitinsert b13 poison, i3 5, i32 0
+  %b13_val = bitinsert b13 %b13_poison, i3 3, i32 10
+  %b13_dst = alloca i16
+  store b13 %b13_val, ptr %b13_dst
+  %b13_forward_b16 = load b16, ptr %b13_dst
+  %b13_forward_b13 = load b13, ptr %b13_dst
 
   ret void
 }
@@ -284,11 +310,11 @@ define void @main() {
 ; CHECK-NEXT:   %bytes_mixed = load b32, ptr %alloc_byte, align 4 => b32 0x7F 11000000(00101100) 0x!! 0x!! 
 ; CHECK-NEXT:   store b32 -559038737, ptr %alloc_byte, align 4
 ; CHECK-NEXT:   %bytes_endianness = load b32, ptr %alloc_byte, align 4 => b32 0xEF 0xBE 0xAD 0xDE 
-; CHECK-NEXT:   %bytes_non_pow2 = load b28, ptr %alloc_byte, align 4 => b28 0x!! 0x!! 0x!! !!!! 
+; CHECK-NEXT:   %bytes_trunc_b28 = load b28, ptr %alloc_byte, align 4 => b28 0x!! 0x!! 0x!! !!!! 
 ; CHECK-NEXT:   store b28 -22167825, ptr %alloc_byte, align 4
 ; CHECK-NEXT:   %bytes_zextd = load b32, ptr %alloc_byte, align 4 => b32 0xEF 0xBE 0xAD 0x0E 
 ; CHECK-NEXT:   store b8 -1, ptr %alloc_byte, align 1
-; CHECK-NEXT:   %bytes_zextd_poison = load b7, ptr %alloc_byte, align 1 => b7 !!!!!!! 
+; CHECK-NEXT:   %bytes_trunc_b7 = load b7, ptr %alloc_byte, align 1 => b7 !!!!!!! 
 ; CHECK-NEXT:   %alloc_ptr_array = alloca [4 x ptr], align 8 => ptr 0xD8 [alloc_ptr_array]
 ; CHECK-NEXT:   store i64 0, ptr %alloc_ptr_array, align 8
 ; CHECK-NEXT:   %ptr_array_1 = getelementptr ptr, ptr %alloc_ptr_array, i64 1 => ptr 0xE0 [alloc_ptr_array + 8]
@@ -298,5 +324,21 @@ define void @main() {
 ; CHECK-NEXT:   %ptr_array_2_middle = getelementptr i8, ptr %alloc_ptr_array, i64 20 => ptr 0xEC [alloc_ptr_array + 20]
 ; CHECK-NEXT:   store i8 0, ptr %ptr_array_2_middle, align 1
 ; CHECK-NEXT:   %mixed_alloc = load b256, ptr %alloc_ptr_array, align 8 => b256 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 ptr 0xD8 [alloc_ptr_array] 11011000(00101111) 00000000(10110101) 00000000(11111000) 00000000(10010110) 0x00 00000000(01100011) 00000000(00011010) 00000000(00000101) 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 0x!! 
+; CHECK-NEXT:   %mixed_b7 = bitinsert b7 poison, i3 -3, i32 0 => b7 !!!!101 
+; CHECK-NEXT:   store b7 %mixed_b7, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %mixed_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!101 
+; CHECK-NEXT:   store b7 poison, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %poison_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!!!! 
+; CHECK-NEXT:   %undef_alloc = alloca i8, align 1 => ptr 0xF9 [undef_alloc (dead)]
+; CHECK-NEXT:   call void @llvm.lifetime.start.p0(ptr %undef_alloc)
+; CHECK-NEXT:   %undef_b7 = load b7, ptr %undef_alloc, align 1 => b7 !!!!!!! 
+; CHECK-NEXT:   store b7 %undef_b7, ptr %alloc_byte, align 1
+; CHECK-NEXT:   %undef_b7_bytes = load b8, ptr %alloc_byte, align 1 => b8 0!!!!!!! 
+; CHECK-NEXT:   %b13_poison = bitinsert b13 poison, i3 -3, i32 0 => b13 !!!!!101 !!!!! 
+; CHECK-NEXT:   %b13_val = bitinsert b13 %b13_poison, i3 3, i32 10 => b13 !!!!!101 011!! 
+; CHECK-NEXT:   %b13_dst = alloca i16, align 2 => ptr 0xFC [b13_dst]
+; CHECK-NEXT:   store b13 %b13_val, ptr %b13_dst, align 2
+; CHECK-NEXT:   %b13_forward_b16 = load b16, ptr %b13_dst, align 2 => b16 !!!!!101 000011!! 
+; CHECK-NEXT:   %b13_forward_b13 = load b13, ptr %b13_dst, align 2 => b13 !!!!!101 011!! 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
