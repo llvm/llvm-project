@@ -14196,7 +14196,6 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   auto *SrcType = IntegerType::getIntNTy(ScalarTy->getContext(),
                                          Stride * LhsTE->getVectorFactor());
   FastMathFlags FMF;
-  SmallPtrSet<Value *, 4> CheckedExtracts;
   auto *VecTy =
       cast<VectorType>(getWidenedType(ScalarTy, TE.getVectorFactor()));
   auto *SrcVecTy =
@@ -23969,6 +23968,15 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               Vec = ShuffleBuilder.gather(NonConstants, Mask.size(), Vec);
             } else {
               Value *V = *find_if_not(NonConstants, IsaPred<UndefValue>);
+              // The splat replaces undefs by the splatted value, freeze it if
+              // it may be poison.
+              if constexpr (std::is_same_v<ResTy, Value *>)
+                if (any_of(NonConstants,
+                           [](Value *U) {
+                             return isa<UndefValue>(U) && !isa<PoisonValue>(U);
+                           }) &&
+                    !isGuaranteedNotToBePoison(V, AC))
+                  V = ShuffleBuilder.createFreeze(V);
               SmallVector<Value *> Values(NonConstants.size(),
                                           PoisonValue::get(ScalarTy));
               Values[0] = V;
@@ -30958,7 +30966,6 @@ bool SLPVectorizerPass::vectorizeStores(
   SmallVector<unsigned> RangeSizesByIdx(Stores.size(), 1);
 
   auto ExtendContexts = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    BoUpSLP::ValueList Operands;
     const unsigned MaxStride =
         Opts->slp_enable_strided_stores ? Opts->slp_max_stride : 1;
 
@@ -34757,10 +34764,11 @@ private:
         // For flattened fadd reductions the reduced value may be consumed by
         // an fsub/fneg chain link instead of an fadd. No reassoc/nsz gating
         // is needed: the result is only a cost context.
+        // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
         if (getRdxKind(U) == RdxKind ||
             (RdxKind == RecurKind::FAdd &&
              (match(U, m_FSub(m_Value(), m_Value())) ||
-              match(U, m_FNeg(m_Value())))))
+              match(U, m_FNegOrFSubNegZero(m_Value())))))
           return cast<Instruction>(U);
       return cast<Instruction>(RdxVal);
     };

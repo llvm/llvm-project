@@ -154,7 +154,7 @@ function(_get_compile_options_from_config output_var)
     endif()
   endif()
 
-  if(LIBC_CONF_ERRNO_MODE)
+  if(LIBC_CONF_ERRNO_MODE AND NOT "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_MODE_DEFAULT")
     libc_add_definition(config_options "LIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
   endif()
 
@@ -208,6 +208,10 @@ function(_get_compile_options_from_config output_var)
 
   if(LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES)
     list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
+  endif()
+
+  if(LIBC_COPT_PROVIDE_GNU_ALIASES)
+    libc_add_definition(config_options "LIBC_COPT_PROVIDE_GNU_ALIASES")
   endif()
 
   set(${output_var} ${config_options} PARENT_SCOPE)
