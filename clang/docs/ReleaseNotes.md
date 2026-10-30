@@ -1531,9 +1531,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 ### SYCL Support
 
 - On a `spirv32-unknown-unknown` or `spirv64-unknown-unknown` offload target,
-  `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU, or
-  `generic`. Any other value, e.g. a misspelled `xe-pcv`, is an error rather
-  than a device job for a device that does not exist.
+  `--offload-arch` and `--no-offload-arch` must now name an Intel GPU or CPU, an
+  IGCA target or `generic`. Any other value, e.g. a misspelled `xe-pcv`, is an
+  error rather than a device job for a device that does not exist.
 
 #### Improvements
 

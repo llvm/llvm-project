@@ -58,7 +58,8 @@
 // RUN:   | FileCheck -check-prefixes=CHK-CUDA %s
 // CHK-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
 
-/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, or "generic".
+/// On a plain SPIR-V target, a SYCL device must be an Intel GPU or CPU, an IGCA
+/// target or "generic".
 // RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH %s
@@ -100,6 +101,9 @@
 /// Only a plain SPIR-V target is checked.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-intel --offload-arch=foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=foo -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
 // CHK-NOT-CHECKED-NOT: error:
 /// An Intel name needs a plain SPIR-V target.
