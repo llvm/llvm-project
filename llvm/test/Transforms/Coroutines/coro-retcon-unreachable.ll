@@ -9,13 +9,16 @@ target datalayout = "E-p:64:64"
 
 define hidden swiftcc { ptr, ptr } @no_suspends(ptr %buffer, i64 %arg) #1 {
 ; CHECK-LABEL: @no_suspends(
-; CHECK-NEXT:  AllocaSpillBB:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr [[BUFFER:%.*]], ptr @prototype, ptr @malloc, ptr @free)
-; CHECK-NEXT:    call void @print(i64 [[ARG:%.*]])
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, ptr }, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr [[BUFFER:%.*]], ptr @prototype, ptr @malloc, ptr @free, ptr [[CORO_RET]])
+; CHECK-NEXT:    call void @print(i64 [[ARG:%.*]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
-  %id = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr %buffer, ptr @prototype, ptr @malloc, ptr @free)
+  %coro.ret = alloca { ptr, ptr }
+  %id = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr %buffer, ptr @prototype, ptr @malloc, ptr @free, ptr %coro.ret)
   %begin = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @print(i64 %arg)
   call void @llvm.trap()
@@ -24,7 +27,8 @@ define hidden swiftcc { ptr, ptr } @no_suspends(ptr %buffer, i64 %arg) #1 {
 bb1:
   call void @print(i64 %arg)
   call void @llvm.coro.end(ptr %begin, i1 false, token none)
-  unreachable
+  %coro.ret.load = load { ptr, ptr }, ptr %coro.ret
+  ret { ptr, ptr } %coro.ret.load
 }
 
 declare swiftcc void @prototype(ptr noalias dereferenceable(32), i1)
@@ -33,7 +37,7 @@ declare void @print(i64)
 declare noalias ptr @malloc(i64) #5
 declare void @free(ptr nocapture) #5
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr) #5
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr) #5
 declare ptr @llvm.coro.begin(token, ptr writeonly) #5
 declare token @llvm.coro.alloca.alloc.i64(i64, i32) #5
 declare ptr @llvm.coro.alloca.get(token) #5

@@ -11,6 +11,8 @@ define { ptr, i32 } @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: define { ptr, i32 } @f(
 ; CHECK-SAME: ptr [[BUFFER:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[CORO_RET:%.*]] = alloca { ptr, i32 }, align 8
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[CORO_RET]])
 ; CHECK-NEXT:    store i32 [[N]], ptr [[BUFFER]], align 4
 ; CHECK-NEXT:    call void @print(i32 [[N]])
 ; CHECK-NEXT:    [[INC1:%.*]] = add i32 [[N]], 1
@@ -19,12 +21,13 @@ define { ptr, i32 } @f(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    [[INC4:%.*]] = add i32 [[INC3]], 4
 ; CHECK-NEXT:    [[INC5:%.*]] = add i32 [[INC4]], 5
 ; CHECK-NEXT:    [[INC6:%.*]] = add i32 [[INC5]], 6
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } poison, ptr @f.resume.0, 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } [[TMP0]], i32 [[INC6]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } { ptr @f.coro.body.resume.0, i32 poison }, i32 [[INC6]], 1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[CORO_RET]])
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP1]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @f_prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca { ptr, i32 }
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @f_prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -50,10 +53,11 @@ resume1:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load { ptr, i32 }, ptr %coro.ret
+  ret { ptr, i32 } %coro.ret.load
 }
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)

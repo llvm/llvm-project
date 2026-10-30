@@ -2222,12 +2222,60 @@ static void replacePrepare(CallInst *Prepare, LazyCallGraph &CG,
 }
 
 static bool replaceAllPrepares(Function *PrepareFn, LazyCallGraph &CG,
-                               LazyCallGraph::SCC &C) {
+                               LazyCallGraph::SCC *&C, CGSCCAnalysisManager &AM,
+                               CGSCCUpdateResult &UR,
+                               FunctionAnalysisManager &FAM) {
   bool Changed = false;
   for (Use &P : llvm::make_early_inc_range(PrepareFn->uses())) {
     // Intrinsics can only be used in calls.
     auto *Prepare = cast<CallInst>(P.getUser());
-    replacePrepare(Prepare, CG, C);
+    auto *Body =
+        dyn_cast<Function>(Prepare->getArgOperand(0)->stripPointerCasts());
+    bool IsSeparatedBody = Body && Body->hasFnAttribute("coro-retcon-body");
+    if (IsSeparatedBody) {
+      // Exposing a body before it has been split would allow IPO to confuse
+      // body exits with ramp returns again. A recursive body can cause its
+      // wrapper's SCC to be visited before the body, so revisit it once ready.
+      if (Body->isPresplitCoroutine() && !Body->isDeclaration())
+        continue;
+      // ThinLTO may import the forwarding entry without importing its body.
+      // That body is split in its defining module; here it is an opaque
+      // declaration of the eventual ramp, not an analyzable coroutine body.
+      if (Body->isDeclaration()) {
+        Body->setSplittedCoroutine();
+        Body->removeFnAttr(Attribute::NoReturn);
+        Body->removeRetAttr(Attribute::NoAlias);
+        Body->removeRetAttr(Attribute::NonNull);
+      }
+      auto &Caller = CG.get(*Prepare->getFunction());
+      auto *CallerSCC = CG.lookupSCC(Caller);
+      if (CallerSCC != C) {
+        // An unvisited RefSCC does not have call SCCs yet and will be reached
+        // naturally by the bottom-up traversal.
+        if (CallerSCC)
+          UR.CWorklist.insert(CallerSCC);
+        continue;
+      }
+      auto *Forward = Prepare->hasOneUse()
+                          ? dyn_cast<CallInst>(*Prepare->user_begin())
+                          : nullptr;
+      bool IsForwardingCall = Forward &&
+                              Forward->getCalledOperand() == Prepare &&
+                              Forward->isMustTailCall();
+      replacePrepare(Prepare, CG, *C);
+      // Materialize the concrete ramp in a generated forwarding entry. If
+      // forwarding cannot be inlined (for example a variadic body), the direct
+      // tail call remains correct and can be optimized normally.
+      if (IsForwardingCall && !Body->isDeclaration() &&
+          !Body->hasFnAttribute(Attribute::OptimizeNone)) {
+        InlineFunctionInfo IFI;
+        (void)InlineFunction(*Forward, IFI);
+      }
+      C = &updateCGAndAnalysisManagerForCGSCCPass(CG, *C, Caller, AM, UR, FAM);
+      UR.CWorklist.insert(C);
+    } else {
+      replacePrepare(Prepare, CG, *C);
+    }
     Changed = true;
   }
 
@@ -2403,7 +2451,7 @@ PreservedAnalyses CoroSplitPass::run(LazyCallGraph::SCC &C,
   }
 
   for (auto *PrepareFn : PrepareFns) {
-    replaceAllPrepares(PrepareFn, CG, *CurrentSCC);
+    replaceAllPrepares(PrepareFn, CG, CurrentSCC, AM, UR, FAM);
   }
 
   return PreservedAnalyses::none();

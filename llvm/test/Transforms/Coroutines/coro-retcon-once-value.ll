@@ -6,7 +6,8 @@ target triple = "x86_64-apple-macosx10.12.0"
 
 define {ptr, i32} @f(ptr %buffer, ptr %array) {
 entry:
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, i32}
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
   %load.pos = icmp sgt i32 %load, 0
@@ -30,7 +31,8 @@ neg.cont:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load {ptr, i32}, ptr %coro.ret
+  ret {ptr, i32} %coro.ret.load
 }
 
 define void @test.f(ptr %array) {
@@ -47,7 +49,8 @@ entry:
 
 define {ptr, i32} @g(ptr %buffer, ptr %array, i32 %val) {
 entry:
-  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, i32}
+  %id = call token @llvm.coro.id.retcon.once(i32 8, i32 8, ptr %buffer, ptr @prototype2, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   %load = load i32, ptr %array
   %load.pos = icmp sgt i32 %load, 0
@@ -73,7 +76,8 @@ cleanup:
   %new.val = add i32 %val, 123
   %tok = call token (...) @llvm.coro.end.results(ptr null, i32 %new.val, ptr @deallocate)
   call void @llvm.coro.end(ptr %hdl, i1 0, token %tok)
-  unreachable
+  %coro.ret.load = load {ptr, i32}, ptr %coro.ret
+  ret {ptr, i32} %coro.ret.load
 }
 
 define void @test.g(ptr %array) {
@@ -93,7 +97,7 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i1 @llvm.coro.suspend.retcon.i1(...)
 declare void @llvm.coro.end(ptr, i1, token)
@@ -109,18 +113,18 @@ declare void @deallocate(ptr %ptr)
 declare void @print(i32)
 
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  PostSpill:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS:%.*]] = icmp sgt i32 [[LOAD]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LOAD_POS]], ptr @f.resume.0, ptr @f.resume.1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LOAD_POS]], ptr @f.coro.body.resume.0, ptr @f.coro.body.resume.1
 ; CHECK-NEXT:    [[SPEC_SELECT4:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD]], i32 0)
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } poison, ptr [[SPEC_SELECT]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } [[TMP0]], i32 [[SPEC_SELECT4]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP1]]
 ;
 ;
-; CHECK-LABEL: @f.resume.0(
+; CHECK-LABEL: @f.coro.body.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
 ; CHECK:       cleanup.sink.split:
@@ -131,7 +135,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    ret void
 ;
 ;
-; CHECK-LABEL: @f.resume.1(
+; CHECK-LABEL: @f.coro.body.resume.1(
 ; CHECK-NEXT:  entryresume.1:
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
 ; CHECK:       cleanup.sink.split:
@@ -148,7 +152,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS_I:%.*]] = icmp sgt i32 [[LOAD_I]], 0
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[LOAD_POS_I]], ptr @f.resume.0, ptr @f.resume.1
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[LOAD_POS_I]], ptr @f.coro.body.resume.0, ptr @f.coro.body.resume.1
 ; CHECK-NEXT:    [[SPEC_SELECT4_I:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD_I]], i32 0)
 ; CHECK-NEXT:    tail call void @print(i32 [[SPEC_SELECT4_I]])
 ; CHECK-NEXT:    call void [[SPEC_SELECT_I]](ptr nonnull [[TMP0]], i1 zeroext false)
@@ -156,7 +160,7 @@ declare void @print(i32)
 ;
 ;
 ; CHECK-LABEL: @g(
-; CHECK-NEXT:  PostSpill:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 12)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
@@ -164,14 +168,14 @@ declare void @print(i32)
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS:%.*]] = icmp sgt i32 [[LOAD]], 0
-; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LOAD_POS]], ptr @g.resume.0, ptr @g.resume.1
+; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LOAD_POS]], ptr @g.coro.body.resume.0, ptr @g.coro.body.resume.1
 ; CHECK-NEXT:    [[SPEC_SELECT4:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD]], i32 0)
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } poison, ptr [[SPEC_SELECT]], 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr, i32 } [[TMP1]], i32 [[SPEC_SELECT4]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP2]]
 ;
 ;
-; CHECK-LABEL: @g.resume.0(
+; CHECK-LABEL: @g.coro.body.resume.0(
 ; CHECK-NEXT:  entryresume.0:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
@@ -189,7 +193,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    ret { ptr, i32, ptr } [[TMP4]]
 ;
 ;
-; CHECK-LABEL: @g.resume.1(
+; CHECK-LABEL: @g.coro.body.resume.1(
 ; CHECK-NEXT:  entryresume.1:
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[TMP0:%.*]], align 8
 ; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[COROEND:%.*]], label [[CLEANUP_SINK_SPLIT:%.*]]
@@ -213,7 +217,7 @@ declare void @print(i32)
 ; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[ARRAY]], align 4
 ; CHECK-NEXT:    [[LOAD_POS_I:%.*]] = icmp sgt i32 [[LOAD_I]], 0
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[LOAD_POS_I]], ptr @f.resume.0, ptr @f.resume.1
+; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[LOAD_POS_I]], ptr @f.coro.body.resume.0, ptr @f.coro.body.resume.1
 ; CHECK-NEXT:    [[SPEC_SELECT4_I:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD_I]], i32 0)
 ; CHECK-NEXT:    tail call void @print(i32 [[SPEC_SELECT4_I]])
 ; CHECK-NEXT:    [[NORMAL_RESULT:%.*]] = call { ptr, i32, ptr } [[SPEC_SELECT_I]](ptr nonnull [[TMP0]], i1 zeroext false)

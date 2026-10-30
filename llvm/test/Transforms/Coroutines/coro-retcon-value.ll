@@ -4,13 +4,14 @@
 
 define {ptr, i32} @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:  coro.return:
+; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.resume.0, i32 poison }, i32 [[N]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.coro.body.resume.0, i32 poison }, i32 [[N]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %coro.ret = alloca {ptr, i32}
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate, ptr %coro.ret)
   %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
@@ -26,7 +27,8 @@ resume:
 
 cleanup:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
-  unreachable
+  %coro.ret.load = load {ptr, i32}, ptr %coro.ret
+  ret {ptr, i32} %coro.ret.load
 }
 
 
@@ -34,9 +36,9 @@ cleanup:
 define i32 @main() {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @print(i32 4)
-; CHECK-NEXT:    call void @print(i32 5)
-; CHECK-NEXT:    call void @print(i32 6)
+; CHECK-NEXT:    tail call void @print(i32 4)
+; CHECK-NEXT:    tail call void @print(i32 5)
+; CHECK-NEXT:    tail call void @print(i32 6)
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -61,7 +63,7 @@ entry:
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
 declare i8 @llvm.coro.suspend.retcon.i8(...)
 declare void @llvm.coro.end(ptr, i1, token)
