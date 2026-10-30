@@ -156,13 +156,17 @@ class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
       : Loc(Builtin->getFieldLoc("Prototype")), Substitution(Substitution),
-        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")) {
+        EnableOpenCLLong(Builtin->getValueAsBit("EnableOpenCLLong")),
+        IsLibBuiltin(Builtin->isSubClassOf("LibBuiltin") ||
+                     Builtin->isSubClassOf("TargetLibBuiltin")) {
     ParsePrototype(Builtin->getValueAsString("Prototype"));
   }
 
   std::string takeTypeString() && { return std::move(Type); }
 
 private:
+  static bool isIdentifierChar(char C) { return isAlnum(C) || C == '_'; }
+
   void ParsePrototype(StringRef Prototype) {
     Prototype = Prototype.trim();
 
@@ -295,6 +299,15 @@ private:
     } else if (T.consume_back(")")) {
       ParseType(T);
       Type += "&";
+    } else if (T.consume_front("const ")) {
+      if (!T.empty())
+        ParseType(T);
+      Type += "C";
+    } else if (IsLibBuiltin && T.consume_front("struct ")) {
+      T = T.trim();
+      if (T.empty() || !llvm::all_of(T, isIdentifierChar))
+        PrintFatalError(Loc, "Expected struct name after 'struct'");
+      Type += "r" + std::to_string(T.size()) + T.str();
     } else if (EnableOpenCLLong && T.consume_front("long long")) {
       Type += "O";
       ParseType(T);
@@ -394,8 +407,16 @@ private:
                                .Case("wchar_t", "w")
                                .Case("...", ".")
                                .Default("error");
-      if (ReturnTypeVal == "error")
+      if (ReturnTypeVal == "error") {
+        // For LibBuiltins, allow unrecognized `*_t` typedef names (e.g.
+        // mode_t, nfds_t, ssize_t) to be resolved by translation-unit lookup.
+        if (IsLibBuiltin && T.ends_with("_t") &&
+            llvm::all_of(T, isIdentifierChar)) {
+          Type += "t" + std::to_string(T.size()) + T.str();
+          return;
+        }
         PrintFatalError(Loc, "Unknown Type: " + T);
+      }
       Type += ReturnTypeVal;
     }
   }
@@ -403,6 +424,7 @@ private:
   SMLoc Loc;
   StringRef Substitution;
   bool EnableOpenCLLong;
+  bool IsLibBuiltin;
   std::string Type;
 };
 

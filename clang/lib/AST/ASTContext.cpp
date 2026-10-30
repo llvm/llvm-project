@@ -13014,6 +13014,44 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
   case 'm':
     Type = Context.MFloat8Ty;
     break;
+  case 'r': {
+    char *End;
+    unsigned Len = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing struct name length");
+    StringRef Name(End, Len);
+    Str = End + Len;
+    for (NamedDecl *ND :
+         Context.getTranslationUnitDecl()->lookup(&Context.Idents.get(Name))) {
+      if (const auto *RD = dyn_cast<RecordDecl>(ND); RD && RD->isStruct()) {
+        Type = Context.getCanonicalTagType(RD);
+        break;
+      }
+    }
+    if (Type.isNull()) {
+      Error = ASTContext::GE_Missing_type;
+      return {};
+    }
+    break;
+  }
+  case 't': {
+    char *End;
+    unsigned Len = strtoul(Str, &End, 10);
+    assert(End != Str && "Missing typedef name length");
+    StringRef Name(End, Len);
+    Str = End + Len;
+    for (NamedDecl *ND :
+         Context.getTranslationUnitDecl()->lookup(&Context.Idents.get(Name))) {
+      if (const auto *TD = dyn_cast<TypedefNameDecl>(ND)) {
+        Type = Context.getTypeDeclType(TD);
+        break;
+      }
+    }
+    if (Type.isNull()) {
+      Error = ASTContext::GE_Missing_type;
+      return {};
+    }
+    break;
+  }
   }
 
   // If there are modifiers and if we're allowed to parse them, go for it.

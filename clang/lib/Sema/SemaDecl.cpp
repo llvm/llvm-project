@@ -2470,9 +2470,171 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
   return New;
 }
 
+/// Return true if the builtin type descriptor string \p Str contains a struct
+/// tag ('r<len><name>') or typedef ('t<len><name>') that must be looked up in
+/// the translation unit.
+static bool hasTargetDependentBuiltinType(const char *Str) {
+  for (const char *P = Str; *P; ++P) {
+    if (*P == 'Q' && P[1]) {
+      ++P;
+      continue;
+    }
+    if (*P == 'r' || *P == 't') {
+      char *End;
+      (void)strtoul(P + 1, &End, 10);
+      if (End != P + 1)
+        return true;
+    }
+  }
+  return false;
+}
+
+/// Decode a single return or parameter type from \p TypeStr into \p BuiltinTy.
+/// Sets \p IsTargetTypedef if the descriptor is a typedef ('t<len><name>' or
+/// 'z' for size_t) whose underlying integer type may vary across targets.
+///
+/// If a 't<len><name>' typedef has not been declared in the translation unit
+/// (e.g., when a translation unit or non-POSIX header like Winsock declares
+/// `int recv(...)` or `int recvfrom(..., int *fromlen)` without defining
+/// `ssize_t` or `socklen_t`), falls back to `int` and applies any trailing
+/// pointer/reference/qualifier modifiers so integer compatibility checks still
+/// succeed.
+static bool decodeNextBuiltinType(ASTContext &Context, const char *&TypeStr,
+                                  QualType &BuiltinTy, bool &IsTargetTypedef) {
+  IsTargetTypedef = (*TypeStr == 't' || *TypeStr == 'z');
+
+  bool RequireICE = false;
+  ASTContext::GetBuiltinTypeError Error = ASTContext::GE_None;
+  BuiltinTy = Context.DecodeTypeStr(TypeStr, Context, Error, RequireICE,
+                                    /*AllowTypeModifiers=*/true);
+  if (Error == ASTContext::GE_None)
+    return true;
+  if (!IsTargetTypedef || Error != ASTContext::GE_Missing_type)
+    return false;
+
+  // The 't<len><name>' typedef was not declared in the translation unit.
+  // Substitute `int` as a placeholder integer base type and consume any
+  // trailing pointer/reference/qualifier modifiers on this descriptor.
+  BuiltinTy = Context.IntTy;
+  while (*TypeStr) {
+    char C = *TypeStr;
+    if (C == '*' || C == '&') {
+      BuiltinTy = (C == '*') ? Context.getPointerType(BuiltinTy)
+                             : Context.getLValueReferenceType(BuiltinTy);
+      ++TypeStr;
+      char *End;
+      (void)strtoul(TypeStr, &End, 10);
+      TypeStr = End;
+    } else if (C == 'C' || C == 'D' || C == 'R') {
+      ++TypeStr;
+    } else {
+      break;
+    }
+  }
+  return true;
+}
+
+/// Return true if a declared parameter or return type \p DeclTy is compatible
+/// with the expected builtin type \p BuiltinTy, accounting for platform
+/// variations in integer typedefs, transparent_union pointer wrappers, and
+/// char*/void* buffer pointers.
+static bool isCompatibleBuiltinParamOrReturnType(ASTContext &Context,
+                                                 QualType DeclTy,
+                                                 QualType BuiltinTy,
+                                                 bool IsTargetTypedef) {
+  if (Context.hasSameUnqualifiedType(DeclTy, BuiltinTy))
+    return true;
+
+  // Target-dependent typedefs (e.g. mode_t, ssize_t, size_t, nfds_t, off_t)
+  // may vary in integer rank or signedness across targets and headers (e.g.
+  // Winsock's recv uses int instead of size_t/ssize_t).
+  if (IsTargetTypedef && DeclTy->isIntegerType() && BuiltinTy->isIntegerType())
+    return true;
+
+  // Allow transparent_union wrappers (such as glibc's __SOCKADDR_ARG for
+  // struct sockaddr * in recvfrom) if any member of the union is compatible
+  // with the expected builtin type.
+  if (const auto *RT = DeclTy->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+    if (RD->hasAttr<TransparentUnionAttr>())
+      return llvm::any_of(RD->fields(), [&](const FieldDecl *FD) {
+        return isCompatibleBuiltinParamOrReturnType(Context, FD->getType(),
+                                                    BuiltinTy, IsTargetTypedef);
+      });
+  }
+
+  const auto *DeclPtr = DeclTy->getAs<PointerType>();
+  const auto *BuiltinPtr = BuiltinTy->getAs<PointerType>();
+  if (!DeclPtr || !BuiltinPtr)
+    return false;
+
+  QualType DeclPointee = DeclPtr->getPointeeType();
+  QualType BuiltinPointee = BuiltinPtr->getPointeeType();
+  if (Context.hasSameUnqualifiedType(DeclPointee, BuiltinPointee))
+    return true;
+
+  // A void* in the builtin prototype (such as the buffer in recv) may be
+  // declared as char* (Winsock).
+  if (BuiltinPointee->isVoidType() && DeclPointee->isCharType())
+    return true;
+
+  // Pointer to integer typedefs such as socklen_t* in recvfrom may be declared
+  // as int* or unsigned int*.
+  if (IsTargetTypedef && DeclPointee->isIntegerType() &&
+      BuiltinPointee->isIntegerType())
+    return true;
+
+  return false;
+}
+
+/// Return true if a function declaration's type \p DeclaredType matches the
+/// builtin prototype string \p TypeStr when resolving translation-unit struct
+/// tags ('r<len><name>') and typedefs ('t<len><name>').
+static bool isCompatibleBuiltinFunctionType(ASTContext &Context,
+                                            QualType DeclaredType,
+                                            const char *TypeStr) {
+  if (!TypeStr || TypeStr[0] == '\0')
+    return false;
+
+  const auto *DeclFn = DeclaredType->getAs<FunctionProtoType>();
+  if (!DeclFn)
+    return false;
+
+  QualType BuiltinRetTy;
+  bool IsTargetTypedef = false;
+  if (!decodeNextBuiltinType(Context, TypeStr, BuiltinRetTy, IsTargetTypedef))
+    return false;
+  if (!isCompatibleBuiltinParamOrReturnType(Context, DeclFn->getReturnType(),
+                                            BuiltinRetTy, IsTargetTypedef))
+    return false;
+
+  unsigned ParamIdx = 0;
+  while (TypeStr[0] && TypeStr[0] != '.') {
+    if (ParamIdx >= DeclFn->getNumParams())
+      return false;
+    QualType BuiltinParamTy;
+    if (!decodeNextBuiltinType(Context, TypeStr, BuiltinParamTy,
+                               IsTargetTypedef))
+      return false;
+    if (!isCompatibleBuiltinParamOrReturnType(Context,
+                                              DeclFn->getParamType(ParamIdx),
+                                              BuiltinParamTy, IsTargetTypedef))
+      return false;
+    ++ParamIdx;
+  }
+
+  bool BuiltinVariadic = (TypeStr[0] == '.');
+  return ParamIdx == DeclFn->getNumParams() &&
+         DeclFn->isVariadic() == BuiltinVariadic;
+}
+
 NamedDecl *Sema::LazilyCreateBuiltin(IdentifierInfo *II, unsigned ID,
                                      Scope *S, bool ForRedeclaration,
                                      SourceLocation Loc) {
+  if (ForRedeclaration &&
+      hasTargetDependentBuiltinType(Context.BuiltinInfo.getTypeString(ID)))
+    return nullptr;
+
   LookupNecessaryTypesForBuiltin(S, ID);
 
   ASTContext::GetBuiltinTypeError Error;
@@ -11274,10 +11436,15 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
               ASTContext::GetBuiltinTypeError Error;
               LookupNecessaryTypesForBuiltin(S, BuiltinID);
               QualType BuiltinType = Context.GetBuiltinType(BuiltinID, Error);
+              const char *TypeStr =
+                  Context.BuiltinInfo.getTypeString(BuiltinID);
 
-              if (!Error && !BuiltinType.isNull() &&
-                  Context.hasSameFunctionTypeIgnoringExceptionSpec(
-                      NewFD->getType(), BuiltinType))
+              if ((!Error && !BuiltinType.isNull() &&
+                   Context.hasSameFunctionTypeIgnoringExceptionSpec(
+                       NewFD->getType(), BuiltinType)) ||
+                  (hasTargetDependentBuiltinType(TypeStr) &&
+                   isCompatibleBuiltinFunctionType(Context, NewFD->getType(),
+                                                   TypeStr)))
                 NewFD->addAttr(BuiltinAttr::CreateImplicit(Context, BuiltinID));
             }
           }
