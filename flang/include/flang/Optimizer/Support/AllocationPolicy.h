@@ -109,10 +109,12 @@ AllocationSizeContext getAllocationSizeContext(mlir::Operation *op);
 
 /// Return true if a copy-in buffer should be allocated on the stack. Unlike
 /// general array allocation placement, copy-in buffers with dynamic size are
-/// kept on the heap even under -fstack-arrays.
-bool shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
-                             const AllocationPolicy &policy,
-                             const AllocationSizeContext &sizeContext);
+/// kept on the heap even under -fstack-arrays. \p alignment is the alignment
+/// requested for the buffer, if any; its padding counts against the budget.
+bool shouldUseStackForCopyin(
+    mlir::Location loc, mlir::Type sequenceType, const AllocationPolicy &policy,
+    const AllocationSizeContext &sizeContext,
+    std::optional<std::int64_t> alignment = std::nullopt);
 
 /// Facts about a single existing array allocation used to decide its placement.
 struct AllocationInfo : PendingAllocationInfo {

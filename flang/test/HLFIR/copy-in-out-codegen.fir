@@ -13,6 +13,15 @@ func.func @test_copy_in(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.
 // CHECK:         fir.store %{{.*}} to %{{.*}} : !fir.ref<!fir.box<!fir.array<?xf64>>>
 // CHECK-NOT:     fir.call @_FortranACopyInAssign
 
+// A copy-in carrying an alignment allocates its buffer with that alignment.
+func.func @test_copy_in_aligned(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+  %0:3 = hlfir.copy_in %box to %temp alignment(64) : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
+  return
+}
+// CHECK-LABEL: func.func @test_copy_in_aligned(
+// CHECK:         fir.allocmem !fir.array<?xf64>, %{{.*}} <{alignment = 64 : i64, bindc_name = ".tmp.copy_in"
+// CHECK:         fir.call @_FortranAShallowCopyDirect
+
 func.func @test_copy_in_poly_pair(%poly : !fir.class<!fir.array<?x!fir.type<test_copy_in_poly_pairTt1{i:i32}>>>, %temp: !fir.ref<!fir.class<!fir.array<?x!fir.type<test_copy_in_poly_pairTt1{i:i32}>>>>) {
   %0:3 = hlfir.copy_in %poly to %temp : (!fir.class<!fir.array<?x!fir.type<test_copy_in_poly_pairTt1{i:i32}>>>, !fir.ref<!fir.class<!fir.array<?x!fir.type<test_copy_in_poly_pairTt1{i:i32}>>>>) -> (!fir.class<!fir.array<?x!fir.type<test_copy_in_poly_pairTt1{i:i32}>>>, i1, i1)
   hlfir.copy_out %temp, %0#1, %0#2 : (!fir.ref<!fir.class<!fir.array<?x!fir.type<test_copy_in_poly_pairTt1{i:i32}>>>>, i1, i1) -> ()

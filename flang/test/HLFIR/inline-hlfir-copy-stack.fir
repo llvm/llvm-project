@@ -46,6 +46,22 @@ func.func @big_constant_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir
   return
 }
 
+// A copy-in carrying an alignment: the buffer gets it.
+func.func @aligned_copy_in(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<i32>) {
+  %tmpBox = fir.alloca !fir.box<!fir.array<8xf64>>
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  %1 = fir.load %arg1 : !fir.ref<i32>
+  %2 = fir.convert %1 : (i32) -> i64
+  %3 = fir.shape %c8 : (index) -> !fir.shape<1>
+  %4 = hlfir.designate %arg0 (%2, %c1:%c8:%c1)  shape %3 : (!fir.box<!fir.array<?x?xf64>>, i64, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<8xf64>>
+  %5:3 = hlfir.copy_in %4 to %tmpBox alignment(64) : (!fir.box<!fir.array<8xf64>>, !fir.ref<!fir.box<!fir.array<8xf64>>>) -> (!fir.box<!fir.array<8xf64>>, i1, i1)
+  %6 = fir.box_addr %5#0 : (!fir.box<!fir.array<8xf64>>) -> !fir.ref<!fir.array<8xf64>>
+  fir.call @callee8(%6) : (!fir.ref<!fir.array<8xf64>>) -> ()
+  hlfir.copy_out %tmpBox, %5#1, %5#2 : (!fir.ref<!fir.box<!fir.array<8xf64>>>, i1, i1) -> ()
+  return
+}
+
 // Runtime extent: the buffer stays on the heap whatever the threshold is,
 // because a dynamically sized fir.alloca cannot be hoisted out of the copy-in
 // branch and would grow the stack if the copy-in were inside a loop.
@@ -103,6 +119,13 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // CHECK:             %[[FREE_HEAP:.*]] = fir.convert %[[FREE_ADDR]]
 // CHECK:             fir.freemem %[[FREE_HEAP]]
 
+// The copy-in's alignment lands on the buffer allocation.
+
+// CHECK-LABEL:   func.func @aligned_copy_in(
+// CHECK:           fir.alloca !fir.array<8xf64> <{alignment = 64 : i64, bindc_name = ".tmp.copy_in"}>
+// CHECK:           fir.call @callee8
+// CHECK-NOT:       fir.allocmem
+
 // A runtime extent always stays on the heap.
 
 // CHECK-LABEL:   func.func @dynamic_buffer(
@@ -124,6 +147,9 @@ func.func @dynamic_buffer(%arg0: !fir.box<!fir.array<?x?xf64>>, %arg1: !fir.ref<
 // BIGTHRESHOLD:           fir.call @callee100
 // BIGTHRESHOLD-NOT:       fir.allocmem
 // BIGTHRESHOLD-NOT:       fir.freemem
+
+// BIGTHRESHOLD-LABEL:   func.func @aligned_copy_in(
+// BIGTHRESHOLD:           fir.alloca !fir.array<8xf64> <{alignment = 64 : i64, bindc_name = ".tmp.copy_in"}>
 
 // BIGTHRESHOLD-LABEL:   func.func @dynamic_buffer(
 // BIGTHRESHOLD:           fir.allocmem !fir.array<?xf64>, %{{.*}} <{bindc_name = ".tmp.copy_in"

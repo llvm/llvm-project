@@ -255,21 +255,25 @@ public:
 
   /// Create a temporary using `fir.alloca`. This function does not hoist.
   /// It is the callers responsibility to set the insertion point if
-  /// hoisting is required.
+  /// hoisting is required. \p alignment, when given, is the requested byte
+  /// alignment of the allocation.
   mlir::Value createTemporaryAlloc(
       mlir::Location loc, mlir::Type type, llvm::StringRef name,
       mlir::ValueRange lenParams = {}, mlir::ValueRange shape = {},
       llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt);
+      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt,
+      std::optional<std::int64_t> alignment = std::nullopt);
 
   /// Create a temporary. A temp is allocated using `fir.alloca` and can be read
   /// and written using `fir.load` and `fir.store`, resp.  The temporary can be
-  /// given a name via a front-end `Symbol` or a `StringRef`.
+  /// given a name via a front-end `Symbol` or a `StringRef`. \p alignment,
+  /// when given, is the requested byte alignment of the allocation.
   mlir::Value createTemporary(
       mlir::Location loc, mlir::Type type, llvm::StringRef name = {},
       mlir::ValueRange shape = {}, mlir::ValueRange lenParams = {},
       llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
-      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt);
+      std::optional<Fortran::common::CUDADataAttr> cudaAttr = std::nullopt,
+      std::optional<std::int64_t> alignment = std::nullopt);
 
   /// Create an unnamed and untracked temporary on the stack.
   mlir::Value createTemporary(mlir::Location loc, mlir::Type type,
@@ -288,12 +292,14 @@ public:
     return createTemporary(loc, type, name, {}, {}, attrs);
   }
 
-  /// Create a temporary on the heap.
+  /// Create a temporary on the heap. \p alignment, when given, is the
+  /// requested byte alignment of the allocation.
   mlir::Value
   createHeapTemporary(mlir::Location loc, mlir::Type type,
                       llvm::StringRef name = {}, mlir::ValueRange shape = {},
                       mlir::ValueRange lenParams = {},
-                      llvm::ArrayRef<mlir::NamedAttribute> attrs = {});
+                      llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                      std::optional<std::int64_t> alignment = std::nullopt);
 
   /// Sample genDeclare callback for createArrayTemp() below.
   /// It creates fir.declare operation using the given operands.
@@ -317,6 +323,9 @@ public:
   /// just passes through the base of the temporary.
   /// If \p useStack is true, the function will try to do the allocation
   /// in stack memory (which is not always possible currently).
+  /// \p alignment, when given, is the requested byte alignment of the
+  /// allocation (polymorphic temporaries, allocated by the runtime, do not
+  /// honor it yet).
   /// The first return value is the base of the temporary object,
   /// which may be !fir.ref<!fir.array<>> or !fir.box/class<>.
   /// The second return value is true, if the actual allocation
@@ -326,7 +335,8 @@ public:
       llvm::ArrayRef<mlir::Value> extents,
       llvm::ArrayRef<mlir::Value> typeParams,
       const std::function<decltype(genTempDeclareOp)> &genDeclare,
-      mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName);
+      mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName,
+      std::optional<std::int64_t> alignment = std::nullopt);
   /// Create and declare an array temporary.
   std::pair<mlir::Value, bool>
   createArrayTemp(mlir::Location loc, fir::SequenceType arrayType,
@@ -334,9 +344,11 @@ public:
                   llvm::ArrayRef<mlir::Value> typeParams,
                   const std::function<decltype(genTempDeclareOp)> &genDeclare,
                   mlir::Value polymorphicMold, bool useStack = false,
-                  llvm::StringRef tmpName = ".tmp.array") {
+                  llvm::StringRef tmpName = ".tmp.array",
+                  std::optional<std::int64_t> alignment = std::nullopt) {
     return createAndDeclareTemp(loc, arrayType, shape, extents, typeParams,
-                                genDeclare, polymorphicMold, useStack, tmpName);
+                                genDeclare, polymorphicMold, useStack, tmpName,
+                                alignment);
   }
 
   /// Create an LLVM stack save intrinsic op. Returns the saved stack pointer.

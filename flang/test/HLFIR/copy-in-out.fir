@@ -6,6 +6,7 @@
 func.func @test_copy_in(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>, %is_present: i1) {
   %0:3 = hlfir.copy_in %box to %temp : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   %1:3 = hlfir.copy_in %box to %temp handle_optional %is_present : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>, i1) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
+  %2:3 = hlfir.copy_in %box to %temp alignment(64) : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
   return
 }
 // CHECK-LABEL:   func.func @test_copy_in(
@@ -14,6 +15,7 @@ func.func @test_copy_in(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.
 // CHECK-SAME:    %[[VAL_2:.*]]: i1
 // CHECK:  hlfir.copy_in %[[VAL_0]] to %[[VAL_1]] : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
 // CHECK:  hlfir.copy_in %[[VAL_0]] to %[[VAL_1]] handle_optional %[[VAL_2]] : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>, i1) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
+// CHECK:  hlfir.copy_in %[[VAL_0]] to %[[VAL_1]] alignment(64) : (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.array<?xf64>>>) -> (!fir.box<!fir.array<?xf64>>, i1, i1)
 
 func.func @test_copy_out(%box: !fir.box<!fir.array<?xf64>>, %temp: !fir.ref<!fir.box<!fir.array<?xf64>>>, %was_copied: i1, %must_free: i1) {
   hlfir.copy_out %temp, %was_copied, %must_free : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1, i1) -> ()
