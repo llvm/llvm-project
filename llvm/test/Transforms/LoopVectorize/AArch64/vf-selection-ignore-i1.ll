@@ -6,10 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define i1 @contains_either(ptr readonly %values, i64 %count, ptr %key0, ptr %key1) vscale_range(1, 16) {
 ; CHECK-LABEL: define i1 @contains_either(
 ; CHECK-SAME: ptr readonly [[VALUES:%.*]], i64 [[COUNT:%.*]], ptr [[KEY0:%.*]], ptr [[KEY1:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i64 [[COUNT]], 0
-; CHECK-NEXT:    br i1 [[EMPTY]], label %[[EXIT:.*]], label %[[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]
-; CHECK:       [[VECTOR_MAIN_LOOP_ITER_CHECK]]:
+; CHECK-NEXT:  [[VECTOR_MAIN_LOOP_ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[COUNT]], [[TMP1]]
@@ -70,8 +67,8 @@ define i1 @contains_either(ptr readonly %values, i64 %count, ptr %key0, ptr %key
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i1 [ [[TMP26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ false, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ]
-; CHECK-NEXT:    [[FOUND:%.*]] = phi i1 [ [[FOUND_NEXT:%.*]], %[[LOOP]] ], [ [[BC_MERGE_RDX]], %[[VEC_EPILOG_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FOUND:%.*]] = phi i1 [ [[BC_MERGE_RDX]], %[[VEC_EPILOG_PH]] ], [ [[FOUND_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[ELEMENT_PTR:%.*]] = getelementptr ptr, ptr [[VALUES]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[ELEMENT:%.*]] = load ptr, ptr [[ELEMENT_PTR]], align 8
 ; CHECK-NEXT:    [[MATCHES_KEY0:%.*]] = icmp eq ptr [[ELEMENT]], [[KEY0]]
@@ -82,15 +79,11 @@ define i1 @contains_either(ptr readonly %values, i64 %count, ptr %key0, ptr %key
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[COUNT]]
 ; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT_LOOPEXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    [[FOUND_NEXT_LCSSA:%.*]] = phi i1 [ [[FOUND_NEXT]], %[[LOOP]] ], [ [[TMP26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ [[FOUND_NEXT_LCSSA]], %[[EXIT_LOOPEXIT]] ]
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i1 [ [[FOUND_NEXT]], %[[LOOP]] ], [ [[TMP26]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
 entry:
-  %empty = icmp eq i64 %count, 0
-  br i1 %empty, label %exit, label %loop
+  br label %loop
 
 loop:
   %index = phi i64 [ 0, %entry ], [ %index.next, %loop ]
@@ -106,6 +99,5 @@ loop:
   br i1 %done, label %exit, label %loop
 
 exit:
-  %result = phi i1 [ false, %entry ], [ %found.next, %loop ]
-  ret i1 %result
+  ret i1 %found.next
 }
