@@ -20,6 +20,7 @@ func.func @master_recursive_memory_effects() {
 
 func.func @sections_effects() {
   // An implicit barrier reads and writes unspecified memory.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@+2 {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@+1 {{found an instance of 'write' on resource '<Default>'}}
   omp.sections {
@@ -30,6 +31,7 @@ func.func @sections_effects() {
 
 func.func @sections_nowait_effects() {
   // Nowait removes the implicit barrier effects.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@+1 {{operation has no memory effects}}
   omp.sections nowait {
     omp.terminator
@@ -48,6 +50,7 @@ omp.private {type = firstprivate} @private_i32 : memref<i32> copy {
 omp.private {type = private} @private_ptr : !llvm.ptr
 
 func.func @sections_bounded_private_effects(%x: memref<i32>, %y: !llvm.ptr) {
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
@@ -65,6 +68,7 @@ func.func @sections_bounded_private_effects(%x: memref<i32>, %y: !llvm.ptr) {
 
 func.func @sections_unbounded_private_effects(%x: memref<i32>) {
   // Without the flag, all private recipe effects are arbitrary.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
@@ -92,6 +96,7 @@ combiner {
 func.func @sections_bounded_reduction_effects(%x: memref<f32>) {
   // TODO: nowait does not currently eliminate the barrier with reductions.
   // The first two effects come from the implicit barrier.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
@@ -108,6 +113,7 @@ func.func @sections_bounded_reduction_effects(%x: memref<f32>) {
 
 func.func @sections_unbounded_reduction_effects(%x: memref<f32>) {
   // Without the flag, even a pure recipe is modeled with arbitrary effects.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
@@ -120,6 +126,7 @@ func.func @sections_unbounded_reduction_effects(%x: memref<f32>) {
 
 func.func @sections_bounded_private_unbounded_reduction(%x: memref<i32>, %y: memref<f32>) {
   // A bounded private clause does not constrain an unbounded reduction clause.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
@@ -133,6 +140,7 @@ func.func @sections_bounded_private_unbounded_reduction(%x: memref<i32>, %y: mem
 
 func.func @sections_unbounded_private_bounded_reduction(%x: memref<i32>, %y: memref<f32>) {
   // A bounded reduction clause does not constrain an unbounded private clause.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
@@ -146,6 +154,7 @@ func.func @sections_unbounded_private_bounded_reduction(%x: memref<i32>, %y: mem
 
 func.func @sections_bounded_private_bounded_reduction(%x: memref<i32>, %y: memref<f32>) {
   // The private and reduction clauses make independent assumptions.
+  // expected-remark@below {{recursive memory effects}}
   // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
