@@ -82,6 +82,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
   initializeAArch64ExpandPseudoLegacyPass(PR);
+  initializeAArch64HotpatchPaddingLegacyPass(PR);
   initializeAArch64LoadStoreOptLegacyPass(PR);
   initializeAArch64MIPeepholeOptLegacyPass(PR);
   initializeAArch64PTrueCoalescingLegacyPass(PR);
@@ -787,6 +788,7 @@ void AArch64PassConfig::addPostBBSections() {
   addPass(createAArch64PointerAuthPass());
   if (CLOpts.enable_branch_targets)
     addPass(createAArch64BranchTargetsPass());
+  addPass(createAArch64HotpatchPaddingPass());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (CLOpts.enable_branch_relax)
