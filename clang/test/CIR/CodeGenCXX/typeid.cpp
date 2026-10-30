@@ -99,6 +99,6 @@ const char *f(void *arg) {
   return 0;
 }
 
-// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn}
+// CIR: cir.func private dso_local @__cxa_bad_typeid() attributes {noreturn, runtime_func}
 
 }

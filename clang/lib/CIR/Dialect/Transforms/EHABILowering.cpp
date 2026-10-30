@@ -73,6 +73,8 @@ static cir::FuncOp getOrCreateRuntimeFuncDecl(mlir::ModuleOp mod,
   auto funcOp = cir::FuncOp::create(builder, loc, name, funcTy);
   funcOp.setLinkage(cir::GlobalLinkageKind::ExternalLinkage);
   funcOp.setPrivate();
+  funcOp->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+                  builder.getUnitAttr());
   return funcOp;
 }
 

@@ -259,12 +259,12 @@ static void addTrivialDefaultFunctionAttributes(
 
     // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
     // should be done here: less-recise-fpmad null-pointer-is-valid
-    // no-trapping-math
     // various inf/nan/nsz/etc work here.
     //
-    // TODO(cir): set stack-protector buffer size attribute (sorted oddly in
-    // classic compiler inside of the above region, but should be done on its
-    // own).
+    // no-trapping-math and stack-protector-buffer-size are TU-wide, so they
+    // live in #cir.lowering_lang_options and LowerToLLVM adds them to every
+    // function not marked as a runtime function.
+
     // TODO(cir): other attributes here:
     // reciprocal estimates, prefer-vector-width, stackrealign, backchain,
     // split-stack, speculative-load-hardening.

@@ -99,6 +99,11 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTrapFuncNameAttrName() { return "trap_func_name"; }
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
+    // Marks a runtime library function (classic codegen's
+    // CreateRuntimeFunction). Unlike every other function, it does not get the
+    // TU-wide default function attributes recorded in
+    // #cir.lowering_lang_options.
+    static llvm::StringRef getRuntimeFuncAttrName() { return "runtime_func"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }

@@ -63,31 +63,31 @@ struct CtorDtor {
 // CIR:  }
 // CIR:  cir.return
 
-// LLVM: define weak_odr hidden ptr @_ZTW19tls_cd_dyn_not_used() comdat {
+// LLVM: define weak_odr hidden ptr @_ZTW19tls_cd_dyn_not_used() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH19tls_cd_dyn_not_used()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn_not_used)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_ref() comdat {
+// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_ref() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH10tls_cd_ref()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_ref)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_dyn() comdat {
+// LLVM: define weak_odr hidden ptr @_ZTW10tls_cd_dyn() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH10tls_cd_dyn()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define weak_odr hidden ptr @_ZTW6tls_cd() comdat {
+// LLVM: define weak_odr hidden ptr @_ZTW6tls_cd() #{{[0-9]+}} comdat {
 // LLVM:   call void @_ZTH6tls_cd()
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd)
 // LLVM:   ret ptr %[[GET_GLOB]]
 // LLVM: }
 //
-// LLVM: define internal void @__tls_init() {
+// LLVM: define internal void @__tls_init() #{{[0-9]+}} {
 // LLVM:   %[[GET_GUARD:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @__tls_guard)
 // LLVM:   %[[LOAD_GUARD:.*]] = load i8, ptr %[[GET_GUARD]], align 1
 // LLVM:   %[[IS_UNINIT:.*]] = icmp eq i8 %[[LOAD_GUARD]], 0
@@ -114,7 +114,7 @@ thread_local CtorDtor tls_cd = 5;
 // CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_INIT:.*]]() {{.*}}{
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd)
 // LLVM:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
@@ -143,7 +143,7 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i 
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_DYN_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_DYN_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_DYN_INIT:.*]]() {{.*}} {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn)
 // LLVM-BOTH:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()
@@ -167,7 +167,7 @@ thread_local CtorDtor &tls_cd_ref = tls_cd_dyn;
 // CIR:   cir.store align(8) %[[GET_DYN]], %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor>, !cir.ptr<!cir.ptr<!rec_CtorDtor>>
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_REF_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_REF_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_REF_INIT:.*]]() {{.*}} {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_ref)
 // LLVM-BOTH:   %[[CALL:.*]] = call ptr @_ZTW10tls_cd_dyn()
@@ -203,7 +203,7 @@ thread_local CtorDtor tls_cd_dyn_not_used = get_i();
 // CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<!u8i>) -> !s32i
 // CIR:   cir.return
 //
-// LLVM: define internal void @[[TLS_CD_DYN_NOT_USED_INIT]]() {
+// LLVM: define internal void @[[TLS_CD_DYN_NOT_USED_INIT]]() #{{[0-9]+}} {
 // OGCG: define internal void @[[TLS_CD_DYN_NOT_USED_INIT:.*]]() {{.*}} {
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn_not_used)
 // LLVM-BOTH:   %[[CALL:.*]] = call noundef i32 @_Z5get_iv()

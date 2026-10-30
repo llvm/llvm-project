@@ -27,7 +27,9 @@ int x;
 // PLAIN-SAME: openmp = false
 // PLAIN-SAME: openmp_is_target_device = false
 // PLAIN-SAME: clang_abi_compat = {{[0-9]+}}
-// PLAIN-SAME: long_double_size = 0>
+// PLAIN-SAME: long_double_size = 0
+// PLAIN-SAME: no_trapping_math = true
+// PLAIN-SAME: ssp_buffer_size = 8>
 
 // -fexceptions -fcxx-exceptions flips exceptions. (OpenMP is exercised in the
 // #cir.lowering_lang_options round-trip test, since -fopenmp on a global here hits
@@ -40,4 +42,4 @@ int x;
 // EXC-SAME: clang_abi_compat = {{[0-9]+}}
 
 // LD: cir.lowering_lang_options = #cir.lowering_lang_options<
-// LD-SAME: long_double_size = 128>
+// LD-SAME: long_double_size = 128,

@@ -207,7 +207,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*openmp_is_target_device=*/langOpts.OpenMPIsTargetDevice,
           /*clang_abi_compat=*/
           static_cast<int32_t>(langOpts.getClangABICompat()),
-          static_cast<int32_t>(langOpts.LongDoubleSize)));
+          static_cast<int32_t>(langOpts.LongDoubleSize),
+          /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
+              LangOptions::FPE_Ignore,
+          /*ssp_buffer_size=*/cgo.SSPBufferSize));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
@@ -3326,6 +3329,10 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
                          retAttrs, callingConv,
                          /*attrOnCallSite=*/false, isThunk);
 
+  // A function declared by the source gets the default function attributes,
+  // even if it was first created as a runtime function.
+  func->removeAttr(cir::CIRDialect::getRuntimeFuncAttrName());
+
   for (mlir::NamedAttribute attr : pal)
     func->setAttr(attr.getName(), attr.getValue());
 
@@ -3996,10 +4003,16 @@ cir::FuncOp CIRGenModule::createRuntimeFunction(cir::FuncType ty,
   if (assumeConvergent)
     errorNYI("createRuntimeFunction: assumeConvergent");
 
+  bool isNew = !getGlobalValue(name);
   cir::FuncOp entry = getOrCreateCIRFunction(name, ty, GlobalDecl(),
                                              /*forVtable=*/false, extraAttrs);
 
   if (entry) {
+    // Like classic codegen, a runtime function does not get the default
+    // function attributes, unless the source already declared it.
+    if (isNew)
+      entry->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+                     mlir::UnitAttr::get(&getMLIRContext()));
     // TODO(cir): set the attributes of the function.
     assert(!cir::MissingFeatures::setLLVMFunctionFEnvAttributes());
     assert(!cir::MissingFeatures::opFuncCallingConv());

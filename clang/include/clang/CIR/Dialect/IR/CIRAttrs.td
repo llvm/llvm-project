@@ -2654,7 +2654,8 @@ def CIR_DynamicInitInfoAttr
 
 def CIR_LoweringLangOptionsAttr
     : CIR_Attr<"LoweringLangOptions", "lowering_lang_options"> {
-  let summary = "LangOptions facts that post-CIRGen lowering consumes";
+  let summary =
+    "LangOptions and CodeGenOptions facts that post-CIRGen lowering consumes";
   let description = [{
     Serializes the subset of `clang::LangOptions` that post-CIRGen lowering
     reads, as plain data, so a reloaded `.cir` module lowers the same way it
@@ -2671,12 +2672,19 @@ def CIR_LoweringLangOptionsAttr
     `clang/Basic/ABIVersions.def`), and the ordinal round-trips fine within a
     single toolchain.
 
+    `no_trapping_math` is set when `LangOptions::getDefaultExceptionMode()` is
+    `FPE_Ignore`, and `ssp_buffer_size` mirrors `CodeGenOptions::SSPBufferSize`.
+    Both are TU-wide, and `LowerToLLVM` emits them as the
+    `"no-trapping-math"` and `"stack-protector-buffer-size"` LLVM function
+    attributes on each function marked with `module_default_attrs`.
+
     Example:
     ```
     module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<
       exceptions = false, threadsafe_statics = true, cuda = false,
-      cuda_is_device = false, hip = false, gpu_rdc = false, openmp = false,
-      openmp_is_target_device = false, clang_abi_compat = 17>} { }
+      cuda_is_device = false, hip = false, hlsl = false, gpu_rdc = false,
+      openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
+      long_double_size = 0, no_trapping_math = true, ssp_buffer_size = 8>} { }
     ```
   }];
 
@@ -2691,13 +2699,16 @@ def CIR_LoweringLangOptionsAttr
     "bool":$openmp,
     "bool":$openmp_is_target_device,
     "int32_t":$clang_abi_compat,
-    "int32_t":$long_double_size
+    "int32_t":$long_double_size,
+    "bool":$no_trapping_math,
+    "uint32_t":$ssp_buffer_size
   );
 
   let assemblyFormat = [{
     `<` struct($exceptions, $threadsafe_statics, $cuda, $cuda_is_device, $hip,
                $hlsl, $gpu_rdc, $openmp, $openmp_is_target_device,
-               $clang_abi_compat, $long_double_size) `>`
+               $clang_abi_compat, $long_double_size, $no_trapping_math,
+               $ssp_buffer_size) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

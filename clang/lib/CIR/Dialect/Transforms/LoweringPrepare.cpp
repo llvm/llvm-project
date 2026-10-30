@@ -181,6 +181,15 @@ struct LoweringPreparePass
       cir::FuncType type,
       cir::GlobalLinkageKind linkage = cir::GlobalLinkageKind::ExternalLinkage);
 
+  /// Build a compiler-generated init or cleanup function. Like classic
+  /// codegen's CreateGlobalInitOrCleanUpFunction, and unlike a runtime
+  /// function, it gets the default function attributes.
+  cir::FuncOp buildGlobalInitOrCleanUpFunction(mlir::OpBuilder &builder,
+                                               llvm::StringRef name,
+                                               mlir::Location loc,
+                                               cir::FuncType type,
+                                               cir::GlobalLinkageKind linkage);
+
   cir::GlobalOp getOrCreateRuntimeVariable(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       mlir::Type type,
@@ -665,9 +674,19 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
         cir::GlobalLinkageKindAttr::get(builder.getContext(), linkage));
     mlir::SymbolTable::setSymbolVisibility(
         f, mlir::SymbolTable::Visibility::Private);
+    f->setAttr(cir::CIRDialect::getRuntimeFuncAttrName(),
+               builder.getUnitAttr());
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
   }
+  return f;
+}
+
+cir::FuncOp LoweringPreparePass::buildGlobalInitOrCleanUpFunction(
+    mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
+    cir::FuncType type, cir::GlobalLinkageKind linkage) {
+  cir::FuncOp f = buildRuntimeFunction(builder, name, loc, type, linkage);
+  f->removeAttr(cir::CIRDialect::getRuntimeFuncAttrName());
   return f;
 }
 
@@ -1234,8 +1253,8 @@ LoweringPreparePass::buildGlobalArrayDtorFunc(CIRBaseBuilderTy &builder,
   auto fnType =
       cir::FuncType::get({builder.getVoidPtrTy()}, builder.getVoidTy());
   cir::FuncOp dtorFunc =
-      buildRuntimeFunction(builder, fnName, op->getLoc(), fnType,
-                           cir::GlobalLinkageKind::InternalLinkage);
+      buildGlobalInitOrCleanUpFunction(builder, fnName, op->getLoc(), fnType,
+                                       cir::GlobalLinkageKind::InternalLinkage);
 
   SmallVector<mlir::NamedAttribute> paramAttrs;
   paramAttrs.push_back(
@@ -1403,8 +1422,9 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   builder.setInsertionPointAfter(op);
   cir::VoidType voidTy = builder.getVoidTy();
   auto fnType = cir::FuncType::get({}, voidTy);
-  FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
-                                  cir::GlobalLinkageKind::InternalLinkage);
+  FuncOp f =
+      buildGlobalInitOrCleanUpFunction(builder, fnName, op.getLoc(), fnType,
+                                       cir::GlobalLinkageKind::InternalLinkage);
 
   // Forward the constrained floating-point marker recorded on the global by
   // CodeGen onto the generated initializer function. The marker on the global
@@ -1542,8 +1562,9 @@ cir::FuncOp LoweringPreparePass::getTlsInitFn() {
   builder.setInsertionPointToStart(mlirModule.getBody());
   mlir::Location loc = mlirModule.getLoc();
   auto fnType = builder.getVoidFnTy();
-  return buildRuntimeFunction(builder, "__tls_init", loc, fnType,
-                              cir::GlobalLinkageKind::InternalLinkage);
+  return buildGlobalInitOrCleanUpFunction(
+      builder, "__tls_init", loc, fnType,
+      cir::GlobalLinkageKind::InternalLinkage);
 }
 
 cir::GlobalOp LoweringPreparePass::createGuardGlobalOp(
@@ -2238,8 +2259,8 @@ cir::FuncOp LoweringPreparePass::buildGlobalInitCallerFunc(
   CIRBaseBuilderTy builder(getContext());
   builder.setInsertionPointToEnd(&mlirModule.getBodyRegion().back());
   auto fnType = cir::FuncType::get({}, builder.getVoidTy());
-  cir::FuncOp fn = buildRuntimeFunction(builder, fnName, mlirModule.getLoc(),
-                                        fnType, linkage);
+  cir::FuncOp fn = buildGlobalInitOrCleanUpFunction(
+      builder, fnName, mlirModule.getLoc(), fnType, linkage);
   builder.setInsertionPointToStart(fn.addEntryBlock());
   mlir::Location loc = fn.getLoc();
   auto emitCalls = [&] {
