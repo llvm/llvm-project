@@ -45,11 +45,11 @@ llvm::InlineCost getInlineCostWrapper(CallBase &CB,
   };
 
   Function &Callee = *CB.getCalledFunction();
-  auto &CalleeTTI = FAM.getResult<TargetIRAnalysis>(Callee);
+  auto &CallerTTI = FAM.getResult<TargetIRAnalysis>(Caller);
   bool RemarksEnabled =
       Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
-  return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
+  return getInlineCost(CB, Params, CallerTTI, GetAssumptionCache, GetTLI,
                        GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
 }
 

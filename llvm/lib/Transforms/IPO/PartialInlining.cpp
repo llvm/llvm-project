@@ -723,12 +723,12 @@ bool PartialInlinerImpl::shouldPartialInline(
     return isInlineViable(*Callee).isSuccess();
 
   Function *Caller = CB.getCaller();
-  auto &CalleeTTI = GetTTI(*Callee);
+  auto &CallerTTI = GetTTI(*Caller);
   bool RemarksEnabled =
       Callee->getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
           DEBUG_TYPE);
   InlineCost IC =
-      getInlineCost(CB, getInlineParams(), CalleeTTI, GetAssumptionCache,
+      getInlineCost(CB, getInlineParams(), CallerTTI, GetAssumptionCache,
                     GetTLI, GetBFI, &PSI, RemarksEnabled ? &ORE : nullptr);
 
   if (IC.isAlways()) {
@@ -763,7 +763,7 @@ bool PartialInlinerImpl::shouldPartialInline(
   const DataLayout &DL = Caller->getDataLayout();
 
   // The savings of eliminating the call:
-  int NonWeightedSavings = getCallsiteCost(CalleeTTI, CB, DL);
+  int NonWeightedSavings = getCallsiteCost(CallerTTI, CB, DL);
   BlockFrequency NormWeightedSavings(NonWeightedSavings);
 
   // Weighted saving is smaller than weighted cost, return false
