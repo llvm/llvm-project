@@ -128,6 +128,10 @@ struct AsyncInfoWrapperTy {
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 
+  /// Indicate whether the operation is synchronous, i.e., the caller did not
+  /// provide a __tgt_async_info.
+  bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
+
   /// Get the queue.
   template <typename Ty> Ty getQueueAs() {
     static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
@@ -432,12 +436,6 @@ struct GenericKernelTy {
     return std::numeric_limits<uint32_t>::max();
   }
 
-  /// Get the kernel image.
-  DeviceImageTy &getImage() const {
-    assert(ImagePtr && "Kernel is not initialized!");
-    return *ImagePtr;
-  }
-
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
@@ -467,9 +465,6 @@ protected:
 private:
   /// The kernel name.
   std::string Name;
-
-  /// The image that contains this kernel.
-  DeviceImageTy *ImagePtr = nullptr;
 
 protected:
   /// The static memory sized per block.

@@ -291,7 +291,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
-    [[maybe_unused]] int Src0Idx = NumOperands;
 
     DPPInst.add(*Src0);
     DPPInst->getOperand(NumOperands).setIsKill(false);

@@ -4643,13 +4643,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
       // All instructions in an Any-of reduction chain are narrowed to bool.
       // Check if that is the case for this phi node.
-      auto *HeaderUser = cast_if_present<PHINode>(
-          find_singleton<User>(Phi->users(), [this](User *U, bool) -> User * {
+      auto *HeaderUser = find_singleton<PHINode>(
+          Phi->users(), [this](User *U, bool) -> PHINode * {
             auto *Phi = dyn_cast<PHINode>(U);
             if (Phi && Phi->getParent() == TheLoop->getHeader())
               return Phi;
             return nullptr;
-          }));
+          });
       if (HeaderUser) {
         auto &ReductionVars = Legal->getReductionVars();
         auto Iter = ReductionVars.find(HeaderUser);
@@ -5895,10 +5895,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findSingleUser<VPBlendRecipe>(Val))
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+          VPlanPatternMatch::findSingleUser<VPReductionPHIRecipe>(Val);
       assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
@@ -6554,8 +6554,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
-          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
+      auto *AnyOfSelect = findSingleUser<VPSingleDefRecipe>(
+          PhiR,
+          m_Select(m_Unless(m_Specific(HeaderMask)), m_VPValue(), m_VPValue()));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.

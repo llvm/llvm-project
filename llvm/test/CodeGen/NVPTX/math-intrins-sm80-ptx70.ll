@@ -36,14 +36,14 @@ declare bfloat @llvm.nvvm.fmax.nan.bf16(bfloat, bfloat)
 declare <2 x bfloat> @llvm.nvvm.fmax.bf16x2(<2 x bfloat>, <2 x bfloat>)
 declare <2 x bfloat> @llvm.nvvm.fmax.nan.bf16x2(<2 x bfloat>, <2 x bfloat>)
 
-declare half @llvm.nvvm.fma.rn.relu.f16(half, half, half)
-declare half @llvm.nvvm.fma.rn.ftz.relu.f16(half, half, half)
-declare <2 x half> @llvm.nvvm.fma.rn.relu.f16x2(<2 x half>, <2 x half>, <2 x half>)
-declare <2 x half> @llvm.nvvm.fma.rn.ftz.relu.f16x2(<2 x half>, <2 x half>, <2 x half>)
-declare bfloat @llvm.nvvm.fma.rn.bf16(bfloat, bfloat, bfloat)
-declare bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat, bfloat, bfloat)
-declare <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
-declare <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>)
+declare half @llvm.nvvm.fma.relu.f16(half, half, half, i32)
+declare half @llvm.nvvm.fma.ftz.relu.f16(half, half, half, i32)
+declare <2 x half> @llvm.nvvm.fma.relu.v2f16(<2 x half>, <2 x half>, <2 x half>, i32)
+declare <2 x half> @llvm.nvvm.fma.ftz.relu.v2f16(<2 x half>, <2 x half>, <2 x half>, i32)
+declare bfloat @llvm.nvvm.fma.bf16(bfloat, bfloat, bfloat, i32)
+declare bfloat @llvm.nvvm.fma.relu.bf16(bfloat, bfloat, bfloat, i32)
+declare <2 x bfloat> @llvm.nvvm.fma.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>, i32)
+declare <2 x bfloat> @llvm.nvvm.fma.relu.v2bf16(<2 x bfloat>, <2 x bfloat>, <2 x bfloat>, i32)
 
 ; CHECK-LABEL: abs_bf16
 define bfloat @abs_bf16(bfloat %0) {
@@ -305,7 +305,7 @@ define <2 x bfloat> @fmax_nan_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1) {
 define half @fma_rn_relu_f16(half %0, half %1, half %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.relu.f16
-  %res = call half @llvm.nvvm.fma.rn.relu.f16(half %0, half %1, half %2)
+  %res = call half @llvm.nvvm.fma.relu.f16(half %0, half %1, half %2, /* rnd=rn */ i32 1)
   ret half %res
 }
 
@@ -313,7 +313,7 @@ define half @fma_rn_relu_f16(half %0, half %1, half %2) {
 define half @fma_rn_ftz_relu_f16(half %0, half %1, half %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.ftz.relu.f16
-  %res = call half @llvm.nvvm.fma.rn.ftz.relu.f16(half %0, half %1, half %2)
+  %res = call half @llvm.nvvm.fma.ftz.relu.f16(half %0, half %1, half %2, /* rnd=rn */ i32 1)
   ret half %res
 }
 
@@ -321,7 +321,7 @@ define half @fma_rn_ftz_relu_f16(half %0, half %1, half %2) {
 define <2 x half> @fma_rn_relu_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.relu.f16x2
-  %res = call <2 x half> @llvm.nvvm.fma.rn.relu.f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2)
+  %res = call <2 x half> @llvm.nvvm.fma.relu.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, /* rnd=rn */ i32 1)
   ret <2 x half> %res
 }
 
@@ -329,7 +329,7 @@ define <2 x half> @fma_rn_relu_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2
 define <2 x half> @fma_rn_ftz_relu_f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.ftz.relu.f16x2
-  %res = call <2 x half> @llvm.nvvm.fma.rn.ftz.relu.f16x2(<2 x half> %0, <2 x half> %1, <2 x half> %2)
+  %res = call <2 x half> @llvm.nvvm.fma.ftz.relu.v2f16(<2 x half> %0, <2 x half> %1, <2 x half> %2, /* rnd=rn */ i32 1)
   ret <2 x half> %res
 }
 
@@ -337,7 +337,7 @@ define <2 x half> @fma_rn_ftz_relu_f16x2(<2 x half> %0, <2 x half> %1, <2 x half
 define bfloat @fma_rn_bf16(bfloat %0, bfloat %1, bfloat %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.bf16
-  %res = call bfloat @llvm.nvvm.fma.rn.bf16(bfloat %0, bfloat %1, bfloat %2)
+  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat %0, bfloat %1, bfloat %2, /* rnd=rn */ i32 1)
   ret bfloat %res
 }
 
@@ -345,7 +345,7 @@ define bfloat @fma_rn_bf16(bfloat %0, bfloat %1, bfloat %2) {
 define bfloat @fma_rn_relu_bf16(bfloat %0, bfloat %1, bfloat %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.relu.bf16
-  %res = call bfloat @llvm.nvvm.fma.rn.relu.bf16(bfloat %0, bfloat %1, bfloat %2)
+  %res = call bfloat @llvm.nvvm.fma.relu.bf16(bfloat %0, bfloat %1, bfloat %2, /* rnd=rn */ i32 1)
   ret bfloat %res
 }
 
@@ -353,7 +353,7 @@ define bfloat @fma_rn_relu_bf16(bfloat %0, bfloat %1, bfloat %2) {
 define <2 x bfloat> @fma_rn_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.bf16x2
-  %res = call <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2)
+  %res = call <2 x bfloat> @llvm.nvvm.fma.v2bf16(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2, /* rnd=rn */ i32 1)
   ret <2 x bfloat> %res
 }
 
@@ -361,6 +361,6 @@ define <2 x bfloat> @fma_rn_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat
 define <2 x bfloat> @fma_rn_relu_bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2) {
   ; CHECK-NOT: call
   ; CHECK: fma.rn.relu.bf16x2
-  %res = call <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2)
+  %res = call <2 x bfloat> @llvm.nvvm.fma.relu.v2bf16(<2 x bfloat> %0, <2 x bfloat> %1, <2 x bfloat> %2, /* rnd=rn */ i32 1)
   ret <2 x bfloat> %res
 }

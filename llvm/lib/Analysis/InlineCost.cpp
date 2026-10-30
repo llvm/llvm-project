@@ -3205,10 +3205,15 @@ InlineCost llvm::getInlineCost(
                           << "... (caller:" << Call.getCaller()->getName()
                           << ")\n");
 
-  InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
-                            /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache);
+  // If requested, make the analysis independent of any profile information by
+  // not providing the profile summary or block frequency info.
+  const bool IgnoreProfile = Params.IgnoreProfile.value_or(false);
+  function_ref<BlockFrequencyInfo &(Function &)> GetBFIForAnalysis =
+      IgnoreProfile ? nullptr : GetBFI;
+  InlineCostCallAnalyzer CA(
+      *Callee, Call, Params, CalleeTTI, GetAssumptionCache, GetBFIForAnalysis,
+      GetTLI, IgnoreProfile ? nullptr : PSI, ORE,
+      /*BoostIndirect=*/true, /*IgnoreThreshold=*/false, GetEphValuesCache);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());

@@ -375,6 +375,9 @@ def GPROutgoingArg : RegisterClass<"SP", [i32, i64], 32, (sequence "O%u", 0, 5)>
 def GPRIncomingArg : RegisterClass<"SP", [i32, i64], 32, (sequence "I%u", 0, 5)>;
 
 let isAllocatable = 0 in {
+  // Integer condition codes, for inline assembly clobbers.
+  def ICCRegs : RegisterClass<"SP", [i32], 32, (add ICC)>;
+
   // Ancillary state registers
   // FIXME: TICK is special-cased here as it can be accessed
   // from the ASR (as ASR4) or the privileged register set.

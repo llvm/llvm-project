@@ -527,9 +527,6 @@ def HasAtomicBufferGlobalPkAddF16NoRtnInsts
   : Predicate<"Subtarget->hasAtomicBufferGlobalPkAddF16NoRtnInsts() || Subtarget->hasAtomicBufferGlobalPkAddF16Insts()">,
   AssemblerPredicate<(any_of FeatureAtomicBufferGlobalPkAddF16NoRtnInsts, FeatureAtomicBufferGlobalPkAddF16Insts)>;
 
-def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
-  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
-
 def HasFlatScratchEnabled : Predicate<"Subtarget->hasFlatScratchEnabled()">;
 
 def NotHasFlatScratchEnabled : Predicate<"!Subtarget->hasFlatScratchEnabled()">;
