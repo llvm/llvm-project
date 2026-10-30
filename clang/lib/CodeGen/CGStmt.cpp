@@ -3389,9 +3389,9 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      // The integer isn't the destination's type, so a TBAA tag for it would
-      // claim that the store doesn't alias accesses to the destination's
-      // members.
+      // The store writes all of the destination's members at once, so it must
+      // be allowed to alias an access to any of them. A TBAA access type must
+      // be a scalar, so use may-alias (char), which aliases any access.
       Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
                                 TBAAAccessInfo::getMayAliasInfo());
     }
