@@ -4198,6 +4198,73 @@ defset list<RuntimeLibcallImpl> LIBMVEC_AARCH64_VECFUNCS = {
 }
 
 //===----------------------------------------------------------------------===//
+// LLVM Vector Math library MATHVEC functions
+//===----------------------------------------------------------------------===//
+
+defvar MATHVECPrefix = "MATHVEC_";
+
+class MathvecLibcall<RuntimeLibcall P>
+    : RuntimeLibcallImpl<P, !substr(NAME, !size(MATHVECPrefix))>;
+
+defset list<RuntimeLibcallImpl> MATHVEC_X86_VECFUNCS = {
+  def MATHVEC__ZGVdN8v_acosf : MathvecLibcall<ACOS_V8F32>;
+  def MATHVEC__ZGVdN8v_acoshf : MathvecLibcall<ACOSH_V8F32>;
+  def MATHVEC__ZGVdN8v_asinf : MathvecLibcall<ASIN_V8F32>;
+  def MATHVEC__ZGVdN8v_asinhf : MathvecLibcall<ASINH_V8F32>;
+  def MATHVEC__ZGVdN8v_atanf : MathvecLibcall<ATAN_V8F32>;
+  def MATHVEC__ZGVdN8v_atanhf : MathvecLibcall<ATANH_V8F32>;
+  def MATHVEC__ZGVdN8v_cbrtf : MathvecLibcall<CBRT_V8F32>;
+  def MATHVEC__ZGVdN8v_cosf : MathvecLibcall<COS_V8F32>;
+  def MATHVEC__ZGVdN8v_coshf : MathvecLibcall<COSH_V8F32>;
+  def MATHVEC__ZGVdN8v_cospif : MathvecLibcall<COSPI_V8F32>;
+  def MATHVEC__ZGVdN8v_erff : MathvecLibcall<ERF_V8F32>;
+  def MATHVEC__ZGVdN8v_exp2f : MathvecLibcall<EXP2_V8F32>;
+  def MATHVEC__ZGVdN8v_exp10f : MathvecLibcall<EXP10_V8F32>;
+  def MATHVEC__ZGVdN8v_expf : MathvecLibcall<EXP_V8F32>;
+  def MATHVEC__ZGVdN8v_expm1f : MathvecLibcall<EXPM1_V8F32>;
+  def MATHVEC__ZGVdN8v_log10f : MathvecLibcall<LOG10_V8F32>;
+  def MATHVEC__ZGVdN8v_log1pf : MathvecLibcall<LOG1P_V8F32>;
+  def MATHVEC__ZGVdN8v_log2f : MathvecLibcall<LOG2_V8F32>;
+  def MATHVEC__ZGVdN8v_logf : MathvecLibcall<LOG_V8F32>;
+  def MATHVEC__ZGVdN8v_sinf : MathvecLibcall<SIN_V8F32>;
+  def MATHVEC__ZGVdN8v_sinhf : MathvecLibcall<SINH_V8F32>;
+  def MATHVEC__ZGVdN8v_sinpif : MathvecLibcall<SINPI_V8F32>;
+  def MATHVEC__ZGVdN8v_sqrtf : MathvecLibcall<SQRT_V8F32>;
+  def MATHVEC__ZGVdN8v_tanf : MathvecLibcall<TAN_V8F32>;
+  def MATHVEC__ZGVdN8v_tanhf : MathvecLibcall<TANH_V8F32>;
+  def MATHVEC__ZGVdN8v_tanpif : MathvecLibcall<TANPI_V8F32>;
+}
+
+defset list<RuntimeLibcallImpl> MATHVEC_AARCH64_VECFUNCS = {
+  def MATHVEC__ZGVnN4v_acosf : MathvecLibcall<ACOS_V4F32>;
+  def MATHVEC__ZGVnN4v_acoshf : MathvecLibcall<ACOSH_V4F32>;
+  def MATHVEC__ZGVnN4v_asinf : MathvecLibcall<ASIN_V4F32>;
+  def MATHVEC__ZGVnN4v_asinhf : MathvecLibcall<ASINH_V4F32>;
+  def MATHVEC__ZGVnN4v_atanf : MathvecLibcall<ATAN_V4F32>;
+  def MATHVEC__ZGVnN4v_atanhf : MathvecLibcall<ATANH_V4F32>;
+  def MATHVEC__ZGVnN4v_cbrtf : MathvecLibcall<CBRT_V4F32>;
+  def MATHVEC__ZGVnN4v_cosf : MathvecLibcall<COS_V4F32>;
+  def MATHVEC__ZGVnN4v_coshf : MathvecLibcall<COSH_V4F32>;
+  def MATHVEC__ZGVnN4v_cospif : MathvecLibcall<COSPI_V4F32>;
+  def MATHVEC__ZGVnN4v_erff : MathvecLibcall<ERF_V4F32>;
+  def MATHVEC__ZGVnN4v_exp2f : MathvecLibcall<EXP2_V4F32>;
+  def MATHVEC__ZGVnN4v_exp10f : MathvecLibcall<EXP10_V4F32>;
+  def MATHVEC__ZGVnN4v_expf : MathvecLibcall<EXP_V4F32>;
+  def MATHVEC__ZGVnN4v_expm1f : MathvecLibcall<EXPM1_V4F32>;
+  def MATHVEC__ZGVnN4v_log10f : MathvecLibcall<LOG10_V4F32>;
+  def MATHVEC__ZGVnN4v_log1pf : MathvecLibcall<LOG1P_V4F32>;
+  def MATHVEC__ZGVnN4v_log2f : MathvecLibcall<LOG2_V4F32>;
+  def MATHVEC__ZGVnN4v_logf : MathvecLibcall<LOG_V4F32>;
+  def MATHVEC__ZGVnN4v_sinf : MathvecLibcall<SIN_V4F32>;
+  def MATHVEC__ZGVnN4v_sinhf : MathvecLibcall<SINH_V4F32>;
+  def MATHVEC__ZGVnN4v_sinpif : MathvecLibcall<SINPI_V4F32>;
+  def MATHVEC__ZGVnN4v_sqrtf : MathvecLibcall<SQRT_V4F32>;
+  def MATHVEC__ZGVnN4v_tanf : MathvecLibcall<TAN_V4F32>;
+  def MATHVEC__ZGVnN4v_tanhf : MathvecLibcall<TANH_V4F32>;
+  def MATHVEC__ZGVnN4v_tanpif : MathvecLibcall<TANPI_V4F32>;
+}
+
+//===----------------------------------------------------------------------===//
 // IBM MASS vector library (MASSV) functions
 //===----------------------------------------------------------------------===//
 
@@ -4953,6 +5020,16 @@ def LIBMVECAArch64Library : LibcallLibrary<"libmvec",
                                    !match(entry.LibCallFuncName, "^_ZGVnN"))),
                       AARCH64_VECTORCALL>,
        !filter(entry, LIBMVEC_AARCH64_VECFUNCS,
+               !match(entry.LibCallFuncName, "^_ZGVsMx"))), isAArch64>;
+
+def MATHVECX86Library : LibcallLibrary<"mathvec",
+  (add MATHVEC_X86_VECFUNCS), isX86>;
+
+def MATHVECAArch64Library : LibcallLibrary<"mathvec",
+  (add LibcallsWithCC<(add !filter(entry, MATHVEC_AARCH64_VECFUNCS,
+                                   !match(entry.LibCallFuncName, "^_ZGVnN"))),
+                      AARCH64_VECTORCALL>,
+       !filter(entry, MATHVEC_AARCH64_VECFUNCS,
                !match(entry.LibCallFuncName, "^_ZGVsMx"))), isAArch64>;
 
 def MASSVLibrary : LibcallLibrary<"massv", (add MASSV_VECFUNCS)>;

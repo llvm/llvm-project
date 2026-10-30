@@ -25,6 +25,8 @@ convertDriverVectorLibraryToVectorLibrary(llvm::driver::VectorLibrary VecLib) {
     return llvm::VectorLibrary::DarwinLibSystemM;
   case llvm::driver::VectorLibrary::LIBMVEC:
     return llvm::VectorLibrary::LIBMVEC;
+  case llvm::driver::VectorLibrary::MATHVEC:
+    return llvm::VectorLibrary::MATHVEC;
   case llvm::driver::VectorLibrary::MASSV:
     return llvm::VectorLibrary::MASSV;
   case llvm::driver::VectorLibrary::SVML:

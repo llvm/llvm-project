@@ -59,6 +59,7 @@
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
+#include <algorithm>
 #include <optional>
 
 using namespace clang::driver;
@@ -573,6 +574,40 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
         CmdArgs.push_back(Args.MakeArgString("-lm"));
       if (Triple.isOSLinux())
         CmdArgs.push_back(Args.MakeArgString("--pop-state"));
+    } else if (V == "mathvec") {
+      SmallVector<std::string> CandidateLibPaths(TC.getArchSpecificLibPaths());
+      if (const auto StdlibPath = TC.getStdlibPath()) {
+        for (const Multilib &M : llvm::reverse(TC.getSelectedMultilibs())) {
+          if (M.isDefault())
+            continue;
+          SmallString<128> P(*StdlibPath);
+          llvm::sys::path::append(P, M.gccSuffix());
+          CandidateLibPaths.emplace_back(std::string(P));
+        }
+        CandidateLibPaths.emplace_back(*StdlibPath);
+      }
+      for (const auto &CandidateLibPath : CandidateLibPaths) {
+        SmallString<128> P(CandidateLibPath);
+        llvm::sys::path::append(P, "libmvec.a");
+        if (TC.getVFS().exists(std::string(P))) {
+          if (Triple.isOSLinux()) {
+            CmdArgs.push_back(Args.MakeArgString("--push-state"));
+            CmdArgs.push_back(Args.MakeArgString("--as-needed"));
+          }
+          CmdArgs.push_back(Args.MakeArgString("-L" + CandidateLibPath));
+          CmdArgs.push_back(Args.MakeArgString("-lmvec"));
+          if (Triple.isOSLinux())
+            CmdArgs.push_back(Args.MakeArgString("--pop-state"));
+          SmallVector<ArgStringList::iterator> Lms;
+          for (auto it = CmdArgs.begin(); it != CmdArgs.end(); ++it) {
+            if (std::string(*it) == "-lm")
+              Lms.push_back(it);
+          }
+          for (ArgStringList::iterator &Lm : Lms)
+            std::rotate(Lm, Lm + 1, CmdArgs.end());
+          break;
+        }
+      }
     }
   }
 
@@ -1140,6 +1175,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         llvm::StringSwitch<std::optional<StringRef>>(ArgVecLib->getValue())
             .Case("Accelerate", "Accelerate")
             .Case("libmvec", "LIBMVEC")
+            .Case("mathvec", "MATHVEC")
             .Case("AMDLIBM", "AMDLIBM")
             .Case("MASSV", "MASSV")
             .Case("SVML", "SVML")
