@@ -396,10 +396,7 @@ SarifDocumentWriter::createCodeFlow(ArrayRef<ThreadFlow> ThreadFlows) {
 json::Object SarifDocumentWriter::createOriginalUriBaseIds(
     const llvm::StringMap<SarifUriBase> &OriginalUriBaseIds) const {
   json::Object BaseIds;
-  for (const llvm::StringMapEntry<clang::SarifUriBase> &Entry :
-       OriginalUriBaseIds) {
-    StringRef Id = Entry.getKey();
-    const SarifUriBase &Base = Entry.second;
+  for (const auto &[Id, Base] : OriginalUriBaseIds) {
     json::Object Loc;
     if (!Base.URI.empty()) {
       StringRef ParentId;
