@@ -2572,12 +2572,23 @@ Instruction *InstCombinerImpl::foldSPFofSPF(Instruction *Inner,
   if (Outer.getType() != Inner->getType())
     return nullptr;
 
-  if (C == A || C == B) {
+  if ((C == A || C == B)) {
     // MAX(MAX(A, B), B) -> MAX(A, B)
     // MIN(MIN(a, b), a) -> MIN(a, b)
     // TODO: This could be done in instsimplify.
-    if (SPF1 == SPF2 && SelectPatternResult::isMinOrMax(SPF1))
-      return replaceInstUsesWith(Outer, Inner);
+    
+    if (SPF1 == SPF2 && SelectPatternResult::isMinOrMax(SPF1)){
+      Value *L, *R;
+      SelectPatternResult InnerSPR = matchSelectPattern(Inner, L, R);
+      SelectPatternResult OuterSPR = matchSelectPattern(&Outer, L, R);
+        
+      SelectPatternNaNBehavior InnerNaNBehavior = InnerSPR.NaNBehavior;
+      SelectPatternNaNBehavior OuterNaNBehavior = OuterSPR.NaNBehavior;
+      
+      if(InnerNaNBehavior == OuterNaNBehavior){
+        return replaceInstUsesWith(Outer, Inner);
+      }
+    }
   }
 
   return nullptr;
