@@ -1205,10 +1205,25 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
 
+    // vector.gather adds each element of its index vector to the innermost
+    // base coordinate. Flatten the source to match the linearized indices.
+    Value source = extractOp.getTensor();
+    auto sourceType = cast<RankedTensorType>(source.getType());
+    if (sourceType.getRank() > 1) {
+      SmallVector<ReassociationIndices> reassociation{
+          llvm::to_vector<2>(llvm::seq<int64_t>(0, sourceType.getRank()))};
+      // Infer the type without an encoding that may depend on the source rank.
+      auto collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
+          sourceType, reassociation);
+      source = tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
+                                               source, reassociation);
+      baseIndices.resize(1);
+    }
+
     // Generate the gather load
-    Operation *gatherOp = vector::GatherOp::create(
-        rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
-        maskConstantOp, passThruConstantOp);
+    Operation *gatherOp =
+        vector::GatherOp::create(rewriter, loc, resultType, source, baseIndices,
+                                 offset, maskConstantOp, passThruConstantOp);
     gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
@@ -1494,6 +1509,18 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
 
   if (linalgOp.getNumDpsInits() == 0)
     return failure();
+
+  // A static gather source needs a flattened extent that fits in int64.
+  for (auto extractOp : block->getOps<tensor::ExtractOp>()) {
+    auto sourceType = extractOp.getTensor().getType();
+    if (sourceType.hasStaticShape() &&
+        !ShapedType::tryGetNumElements(sourceType.getShape()) &&
+        getTensorExtractMemoryAccessPattern(
+            extractOp, linalgOp,
+            state.getCanonicalVecType(extractOp.getType())) ==
+            VectorMemoryAccessKind::Gather)
+      return failure();
+  }
 
   // 3. Turn all BBArgs into vector.transfer_read / load.
   Location loc = linalgOp.getLoc();
