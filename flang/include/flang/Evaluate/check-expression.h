@@ -139,9 +139,6 @@ std::optional<bool> IsContiguous(const A &, FoldingContext &,
 extern template std::optional<bool> IsContiguous(const Expr<SomeType> &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
-extern template std::optional<bool> IsContiguous(const ActualArgument &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous,
-    bool firstDimensionStride1);
 extern template std::optional<bool> IsContiguous(const ArrayRef &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
@@ -160,6 +157,9 @@ extern template std::optional<bool> IsContiguous(const CoarrayRef &,
 extern template std::optional<bool> IsContiguous(const Symbol &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
+std::optional<bool> IsContiguous(const ActualArgument &, FoldingContext &,
+    bool namedConstantSectionsAreContiguous = true,
+    bool firstDimensionStride1 = false);
 static inline std::optional<bool> IsContiguous(const SymbolRef &s,
     FoldingContext &c, bool namedConstantSectionsAreContiguous = true) {
   return IsContiguous(s.get(), c, namedConstantSectionsAreContiguous);

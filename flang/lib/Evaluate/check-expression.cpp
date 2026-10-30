@@ -1383,18 +1383,18 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
 std::optional<bool> IsContiguous(const ActualArgument &actual,
     FoldingContext &fc, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1) {
-  if (auto *expr{actual.UnwrapExpr()}) {
-    return IsContiguous(
+  std::optional<bool> result;
+  if (const auto *expr{actual.UnwrapExpr()}) {
+    result = IsContiguous(
         *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
-  } else {
-    return std::nullopt;
+  } else if (const Symbol *assumedType{actual.GetAssumedTypeDummy()}) {
+    result = IsContiguous(*assumedType, fc, namedConstantSectionsAreContiguous,
+        firstDimensionStride1);
   }
+  return result;
 }
 
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous,
-    bool firstDimensionStride1);
-template std::optional<bool> IsContiguous(const ActualArgument &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
