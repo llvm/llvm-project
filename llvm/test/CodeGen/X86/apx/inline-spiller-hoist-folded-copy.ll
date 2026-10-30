@@ -5,7 +5,7 @@
 ; of the other source plus the two-address form, and InlineSpiller extends the
 ; original live interval back to the COPY. A spill later folded into that COPY
 ; is outside HoistSpillHelper's snapshot of the interval, which used to cause
-; a null VNInfo dereference. Reduced from 549.fotonik3d_r.
+; a null VNInfo dereference.
 
 declare i64 @llvm.smax.i64(i64, i64)
 
