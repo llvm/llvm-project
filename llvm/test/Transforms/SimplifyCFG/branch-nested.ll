@@ -343,8 +343,6 @@ define void @fold_nested_branch_same_dest(i1 %cond1, i1 %cond2, i1 %cond3) {
 ; CHECK-LABEL: define void @fold_nested_branch_same_dest(
 ; CHECK-SAME: i1 [[COND1:%.*]], i1 [[COND2:%.*]], i1 [[COND3:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[COND2_NOT:%.*]] = xor i1 [[COND2]], true
-; CHECK-NEXT:    [[BRMERGE:%.*]] = select i1 [[COND1]], i1 true, i1 [[COND2_NOT]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
