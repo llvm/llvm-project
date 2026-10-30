@@ -578,8 +578,8 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   // Values with |x| < 0.5 round to signed zero. Adding 0.5 to the predecessor
   // of 0.5 can round to 1.0 before the integer truncation.
   Value minusOne = createIntConst(loc, i32Ty, -1, b, operand);
-  Value isBelowHalf = arith::CmpIOp::create(
-      b, arith::CmpIPredicate::slt, operandBiasedExp, minusOne);
+  Value isBelowHalf = arith::CmpIOp::create(b, arith::CmpIPredicate::slt,
+                                            operandBiasedExp, minusOne);
   Value zero = createFloatConst(loc, opType, 0.0, b, operand);
   Value signedZero = math::CopySignOp::create(b, zero, operand);
   result = arith::SelectOp::create(b, isBelowHalf, signedZero, result);
