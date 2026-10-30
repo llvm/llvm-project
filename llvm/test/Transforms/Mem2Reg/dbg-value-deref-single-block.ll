@@ -166,6 +166,20 @@ define i32 @declare_value(i32 %a, i32 %b) {
   ret i32 %v
 }
 
+; Lifetime markers shouldn't affect the debug record.
+define void @lifetime(ptr %v) {
+; CHECK-LABEL: define void @lifetime(
+; CHECK-SAME:    ptr [[V:%.*]])
+; CHECK-NEXT:    #dbg_value(ptr [[V]], {{.*}}, !DIExpression(),
+; CHECK-NEXT:    ret void
+  %a = alloca ptr
+    #dbg_value(ptr %a, !22, !DIExpression(DW_OP_deref), !30)
+  call void @llvm.lifetime.start.p0(ptr %a)
+  store ptr %v, ptr %a
+  call void @llvm.lifetime.end.p0(ptr %a)
+  ret void
+}
+
 declare void @step()
 
 !llvm.module.flags = !{!1, !2}

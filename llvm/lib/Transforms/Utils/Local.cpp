@@ -1710,6 +1710,9 @@ void llvm::InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
   DIExpr = dropInitialDeref(DIExpr);
   Value *DV = SI->getValueOperand();
 
+  if (isa<UndefValue>(DV) && !isa<PoisonValue>(DV))
+    return;
+
   DebugLoc NewLoc = getDebugValueLoc(DVR);
 
   insertDbgValueOrDbgVariableRecord(Builder, DV, DIVar, DIExpr, NewLoc,
