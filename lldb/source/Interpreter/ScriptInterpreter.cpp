@@ -152,30 +152,24 @@ ScriptInterpreter::StringToExtension(llvm::StringRef string) {
       .Default(eScriptedExtensionInvalid);
 }
 
-Status ScriptInterpreter::SetBreakpointCommandCallback(
+llvm::Error ScriptInterpreter::SetBreakpointCommandCallback(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     const char *callback_text) {
-  Status error;
-  for (BreakpointOptions &bp_options : bp_options_vec) {
-    error = SetBreakpointCommandCallback(bp_options, callback_text,
-                                         /*is_callback=*/false);
-    if (!error.Success())
-      break;
-  }
-  return error;
+  for (BreakpointOptions &bp_options : bp_options_vec)
+    if (llvm::Error error = SetBreakpointCommandCallback(
+            bp_options, callback_text, /*is_callback=*/false))
+      return error;
+  return llvm::Error::success();
 }
 
-Status ScriptInterpreter::SetBreakpointCommandCallbackFunction(
+llvm::Error ScriptInterpreter::SetBreakpointCommandCallbackFunction(
     std::vector<std::reference_wrapper<BreakpointOptions>> &bp_options_vec,
     const char *function_name, StructuredData::ObjectSP extra_args_sp) {
-  Status error;
-  for (BreakpointOptions &bp_options : bp_options_vec) {
-    error = SetBreakpointCommandCallbackFunction(bp_options, function_name,
-                                                 extra_args_sp);
-    if (!error.Success())
+  for (BreakpointOptions &bp_options : bp_options_vec)
+    if (llvm::Error error = SetBreakpointCommandCallbackFunction(
+            bp_options, function_name, extra_args_sp))
       return error;
-  }
-  return error;
+  return llvm::Error::success();
 }
 
 std::unique_ptr<ScriptInterpreterLocker>

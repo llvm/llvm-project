@@ -175,6 +175,8 @@ public:
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
+  VPBasicBlock *getInsertBlock() const { return InsertPt.getBlock(); }
+
   /// Create a builder to insert after \p R.
   static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
     return {R->getParent(), std::next(R->getIterator())};
@@ -206,10 +208,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "",
-                              Type *ResultTy = nullptr) {
-    VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
+                              const Twine &Name = "", Type *ResultTy = nullptr,
+                              const VPIRAttributes &Attrs = {}) {
+    VPInstruction *NewVPInst = tryInsertInstruction(new VPInstruction(
+        Opcode, Operands, Flags, MD, DL, Name, ResultTy, Attrs));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -449,12 +451,13 @@ public:
   /// result type \p ResultTy
   VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
                                        ArrayRef<VPValue *> Operands,
-                                       Type *ResultTy, DebugLoc DL) {
+                                       Type *ResultTy, DebugLoc DL,
+                                       const Twine &Name = "") {
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
     return tryInsertInstruction(new VPInstruction(VPInstruction::Intrinsic, Ops,
-                                                  {}, {}, DL, "", ResultTy));
+                                                  {}, {}, DL, Name, ResultTy));
   }
 
   /// Create a scalar llvm.vscale call.
@@ -894,13 +897,12 @@ class LoopVectorizationPlanner {
   LoopVectorizationLegality *Legal;
 
   /// The profitability analysis. Cleared after making cost based decisions.
+  /// This instance should never be used in any function that takes an explicit
+  /// PlanCM reference, since that instance overrides this one.
   std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
-
-  /// The interleaved access analysis.
-  InterleavedAccessInfo &IAI;
 
   PredicatedScalarEvolution &PSE;
 
@@ -917,7 +919,8 @@ class LoopVectorizationPlanner {
   /// A builder used to construct the current plan.
   VPBuilder Builder;
 
-  /// Computes the cost of \p Plan for vectorization factor \p VF.
+  /// Computes the cost of \p Plan for vectorization factor \p VF, using
+  /// \p PlanCM as the cost model.
   ///
   /// The current implementation requires access to the
   /// LoopVectorizationLegality to handle inductions and reductions, which is
@@ -925,7 +928,8 @@ class LoopVectorizationPlanner {
   ///
   /// TODO: Move to VPlan::cost once the use of LoopVectorizationLegality has
   /// been retired.
-  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU) const;
+  InstructionCost cost(VPlan &Plan, ElementCount VF, VPRegisterUsage *RU,
+                       LoopVectorizationCostModel &PlanCM) const;
 
   /// Precompute costs for certain instructions using the legacy cost model. The
   /// function is used to bring up the VPlan-based cost model to initially avoid
@@ -938,8 +942,8 @@ public:
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       std::unique_ptr<LoopVectorizationCostModel> CM,
-      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
-      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      VFSelectionContext &Config, PredicatedScalarEvolution &PSE,
+      OptimizationRemarkEmitter *ORE,
       std::function<const BranchProbabilityInfo &()> GetBPI);
 
   ~LoopVectorizationPlanner();
@@ -989,6 +993,9 @@ public:
   /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
   ///
+  /// When vectorizing the main loop, \p TrackedBlocks are updated to the
+  /// VPIRBasicBlocks wrapping the blocks generated for them.
+  ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
@@ -1001,7 +1008,8 @@ public:
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               EpilogueVectorizationKind EpilogueVecKind =
-                  EpilogueVectorizationKind::None);
+                  EpilogueVectorizationKind::None,
+              MutableArrayRef<VPBasicBlock *> TrackedBlocks = {});
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);
@@ -1064,8 +1072,9 @@ public:
 private:
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
-  /// be built.
-  VPlanPtr tryToBuildVPlan1();
+  /// be built. \p PlanCM is the cost model to use for decisions made while
+  /// building the plan.
+  VPlanPtr tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM);
 
   /// Build a VPlan using VPRecipes according to the information gathered by
   /// Legal and VPlan-based analysis. For outer loops, performs basic recipe
@@ -1074,19 +1083,25 @@ private:
   /// can be built for the input range, set the largest included VF to the
   /// maximum VF for which no plan could be built. Each VPlan is built starting
   /// from a copy of \p InitialPlan, which is a plain CFG VPlan wrapping the
-  /// original scalar loop.
-  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range);
+  /// original scalar loop. \p PlanCM is the cost model used for legality
+  /// and widening decisions while building the plan.
+  VPlanPtr tryToBuildVPlan(VPlanPtr InitialPlan, VFRange &Range,
+                           LoopVectorizationCostModel &PlanCM);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// based on \p VPlan1 and according to the information gathered by Legal
-  /// when it checked if it is legal to vectorize the loop.
-  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF);
+  /// when it checked if it is legal to vectorize the loop. \p PlanCM is
+  /// the cost model to build these VPlans.
+  void buildVPlans(VPlan &VPlan1, ElementCount MinVF, ElementCount MaxVF,
+                   LoopVectorizationCostModel &PlanCM);
 
   /// Add ComputeReductionResult recipes to the middle block to compute the
   /// final reduction results. Add Select recipes to the latch block when
   /// folding tail, to feed ComputeReductionResult with the last or penultimate
-  /// iteration values according to the header mask.
-  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF);
+  /// iteration values according to the header mask. \p PlanCM is the cost
+  /// model used to build \p Plan.
+  void addReductionResultComputation(VPlanPtr &Plan, ElementCount MinVF,
+                                     LoopVectorizationCostModel &PlanCM);
 
   /// Returns true if the per-lane cost of VectorizationFactor A is lower than
   /// that of B.

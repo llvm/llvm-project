@@ -1017,7 +1017,7 @@ PreservedAnalyses PGOIndirectCallPromotion::run(Module &M,
                                                 ModuleAnalysisManager &MAM) {
   ProfileSummaryInfo *PSI = &MAM.getResult<ProfileSummaryAnalysis>(M);
 
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   if (!promoteIndirectCalls(Opts, M, PSI, InLTO | Opts.icp_lto,
                             SamplePGO | Opts.icp_samplepgo, MAM))
     return PreservedAnalyses::all();

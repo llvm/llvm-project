@@ -14,6 +14,7 @@
 #include "src/__support/regex/regex_expr_pool.h"
 #include "hdr/regex_macros.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/CPP/utility.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
@@ -38,6 +39,15 @@ uint32_t hash_expr(const Expr &e) {
   case ExprKind::Literal:
     hasher.update(&e.ch, sizeof(e.ch));
     break;
+  case ExprKind::Anchor:
+    hasher.update(&e.anchor_mask, sizeof(e.anchor_mask));
+    break;
+  case ExprKind::ByteSet:
+    hasher.update(&e.byte_set_id, sizeof(e.byte_set_id));
+    break;
+  case ExprKind::Star:
+    hasher.update(&e.body, sizeof(e.body));
+    break;
   case ExprKind::Concat:
   case ExprKind::Alt:
     hasher.update(&e.bin.left, sizeof(e.bin.left));
@@ -53,45 +63,48 @@ uint32_t hash_expr(const Expr &e) {
 // Bounded linear-probing range over a power-of-two open-addressing table.
 class BucketProber {
   cpp::span<ExprId> table;
-  size_t mask;
   size_t start_idx;
 
+  constexpr size_t mask() const { return table.size() - 1; }
+
 public:
+  struct Sentinel {};
+
   struct Iterator {
     cpp::span<ExprId> table;
-    size_t mask;
     size_t idx;
     size_t step;
 
+    constexpr size_t mask() const { return table.size() - 1; }
+
     ExprId &operator*() const { return table[idx]; }
     Iterator &operator++() {
-      idx = (idx + 1) & mask;
+      idx = (idx + 1) & mask();
       ++step;
       return *this;
     }
-    constexpr bool operator!=(const Iterator &other) const {
-      return step != other.step;
-    }
+    constexpr bool operator!=(Sentinel) const { return step != table.size(); }
   };
 
   BucketProber(cpp::span<ExprId> t, uint32_t hash)
-      : table(t), mask(t.size() - 1), start_idx(hash & mask) {
-    LIBC_ASSERT(!t.empty() && (t.size() & mask) == 0);
+      : table(t), start_idx(hash & (t.size() - 1)) {
+    LIBC_ASSERT(!t.empty() && (t.size() & mask()) == 0);
   }
 
-  Iterator begin() const { return {table, mask, start_idx, 0}; }
-  Iterator end() const { return {table, mask, start_idx, table.size()}; }
+  Iterator begin() const { return {table, start_idx, 0}; }
+  Sentinel end() const { return {}; }
 };
 
 } // namespace
 
 // TODO: When cpp::unique_ptr and cpp::make_unique are added to
 // src/__support/CPP/, replace the manual AllocChecker + new[]/delete[] calls in
-// ensure_initialized(), ~ExprPool(), allocate_block(), and grow_hashtable()
-// with cpp::make_unique<ExprId[]>(...) and cpp::make_unique<Block>(),
-// eliminating explicit zeroing via inline_memset and the destructor cleanup
-// loop.
+// ensure_initialized(), ~ExprPool(), allocate_block(), make_byte_set(), and
+// grow_hashtable() with cpp::make_unique<ExprId[]>(...) and
+// cpp::make_unique<Block>(), eliminating explicit zeroing via inline_memset and
+// the destructor cleanup loop.
 ExprPool::~ExprPool() {
+  delete[] byte_sets.data();
   delete[] hashtable.data();
   for (Block *blk : active_blocks())
     delete blk;
@@ -99,25 +112,23 @@ ExprPool::~ExprPool() {
 }
 
 bool ExprPool::ensure_initialized() {
-  if (node_count >= EMPTY_STR_ID)
+  if (block_count > 0)
     return true;
-  if (hashtable.empty()) {
-    AllocChecker ac;
-    ExprId *raw_table = new (ac) ExprId[INITIAL_HASH_CAPACITY];
-    if (!ac)
-      return false;
-    hashtable = cpp::span<ExprId>(raw_table, INITIAL_HASH_CAPACITY);
-    inline_memset(hashtable.data(), 0, hashtable.size_bytes());
-  }
-  if (block_count == 0 && !allocate_block())
+  AllocChecker ac;
+  ExprId *raw_table = new (ac) ExprId[INITIAL_HASH_CAPACITY];
+  if (!ac)
     return false;
+  cpp::scope_exit table_guard([raw_table] { delete[] raw_table; });
+  if (!allocate_block())
+    return false;
+  table_guard.release();
+  hashtable = cpp::span<ExprId>(raw_table, INITIAL_HASH_CAPACITY);
+  inline_memset(hashtable.data(), 0, hashtable.size_bytes());
 
-  auto empty_set_id = intern(Expr::make_empty_set());
-  auto empty_str_id = intern(Expr::make_empty_str());
-  if (!empty_set_id.has_value() || !empty_str_id.has_value())
-    return false;
-  LIBC_ASSERT(*empty_set_id == EMPTY_SET_ID);
-  LIBC_ASSERT(*empty_str_id == EMPTY_STR_ID);
+  [[maybe_unused]] auto empty_set_id = intern(Expr::make_empty_set());
+  [[maybe_unused]] auto empty_str_id = intern(Expr::make_empty_str());
+  LIBC_ASSERT(empty_set_id.has_value() && *empty_set_id == EMPTY_SET_ID);
+  LIBC_ASSERT(empty_str_id.has_value() && *empty_str_id == EMPTY_STR_ID);
   return true;
 }
 
@@ -135,8 +146,8 @@ ExprId &ExprPool::find_bucket(cpp::span<ExprId> table, const Expr &e) const {
 bool ExprPool::allocate_block() {
   AllocChecker ac;
   if (block_count == blocks.size()) {
-    size_t new_cap =
-        blocks.empty() ? INITIAL_BLOCKS_CAPACITY : blocks.size() * 2;
+    size_t new_cap = blocks.empty() ? INITIAL_BLOCKS_CAPACITY
+                                    : blocks.size() * GROWTH_FACTOR;
     Block **new_blocks = new (ac) Block *[new_cap];
     if (!ac)
       return false;
@@ -157,7 +168,7 @@ bool ExprPool::allocate_block() {
 }
 
 bool ExprPool::grow_hashtable() {
-  size_t new_cap = hashtable.size() * 2;
+  size_t new_cap = hashtable.size() * GROWTH_FACTOR;
   AllocChecker ac;
   ExprId *raw_table = new (ac) ExprId[new_cap];
   if (!ac)
@@ -175,7 +186,7 @@ bool ExprPool::grow_hashtable() {
 }
 
 ErrorOr<ExprId> ExprPool::intern(Expr e) {
-  if ((hashtable.empty() || block_count == 0) && !ensure_initialized())
+  if (!ensure_initialized())
     return Error(REG_ESPACE);
 
   // Probe for an existing node with identical content.
@@ -221,6 +232,66 @@ ErrorOr<ExprId> ExprPool::empty_str() {
 ErrorOr<ExprId> ExprPool::make_lit(char c) {
   return intern(Expr::make_literal(c));
 }
+ErrorOr<ExprId> ExprPool::make_anchor(uint8_t mask) {
+  return intern(Expr::make_anchor(mask));
+}
+
+ErrorOr<ExprId> ExprPool::make_byte_set(const ByteSet &bs) {
+  size_t count = 0;
+  size_t last_bit = 0;
+  for (size_t b = 0; b < BYTE_SET_BITS; ++b) {
+    if (bs.test(b)) {
+      ++count;
+      last_bit = b;
+    }
+  }
+  if (count == 0)
+    return empty_set();
+  if (count == 1)
+    return make_lit(static_cast<char>(last_bit));
+
+  uint32_t bs_id = 0;
+  for (const ByteSet &existing : active_byte_sets()) {
+    if (existing == bs)
+      return intern(Expr::make_byte_set(bs_id));
+    ++bs_id;
+  }
+
+  if (byte_set_count == byte_sets.size()) {
+    size_t new_cap = byte_sets.empty() ? INITIAL_BYTE_SETS_CAPACITY
+                                       : byte_sets.size() * GROWTH_FACTOR;
+    AllocChecker ac;
+    ByteSet *new_sets = new (ac) ByteSet[new_cap];
+    if (!ac)
+      return Error(REG_ESPACE);
+    ByteSet *dst = new_sets;
+    for (const ByteSet &existing : active_byte_sets()) {
+      *dst = existing;
+      ++dst;
+    }
+    delete[] byte_sets.data();
+    byte_sets = cpp::span<ByteSet>(new_sets, new_cap);
+  }
+
+  ErrorOr<ExprId> id = intern(Expr::make_byte_set(bs_id));
+  if (!id.has_value())
+    return id;
+  byte_sets[byte_set_count] = bs;
+  ++byte_set_count;
+  return id;
+}
+
+ErrorOr<ExprId> ExprPool::make_star(ExprId body) {
+  if (body == INVALID_EXPR_ID)
+    return Error(REG_BADPAT);
+  // Ø* = ε and ε* = ε
+  if (body == EMPTY_SET_ID || body == EMPTY_STR_ID)
+    return empty_str();
+  // (R*)* = R* (Idempotency)
+  if (get(body).kind == ExprKind::Star)
+    return body;
+  return intern(Expr::make_star(body, has_anchors(body)));
+}
 
 ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
@@ -234,8 +305,18 @@ ErrorOr<ExprId> ExprPool::make_concat(ExprId l, ExprId r) {
     return r;
   if (r == EMPTY_STR_ID)
     return l;
-  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r)));
+  // (A · B) · C = A · (B · C) (Right-associative canonical form)
+  const Expr le = get(l);
+  if (le.kind == ExprKind::Concat) {
+    ErrorOr<ExprId> tail = make_concat(le.bin.right, r);
+    if (!tail.has_value())
+      return tail;
+    return make_concat(le.bin.left, *tail);
+  }
+  return intern(Expr::make_concat(l, r, is_nullable(l) && is_nullable(r),
+                                  has_anchors(l) || has_anchors(r)));
 }
+
 ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   if (l == INVALID_EXPR_ID || r == INVALID_EXPR_ID)
     return Error(REG_BADPAT);
@@ -248,9 +329,38 @@ ErrorOr<ExprId> ExprPool::make_alt(ExprId l, ExprId r) {
   // R | R = R (Idempotency)
   if (l == r)
     return l;
-  if (l > r)
-    cpp::swap(l, r);
-  return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r)));
+
+  const Expr le = get(l);
+  const Expr re = get(r);
+  if (le.kind != ExprKind::Alt && re.kind != ExprKind::Alt) {
+    if (l > r)
+      cpp::swap(l, r);
+    return intern(Expr::make_alt(l, r, is_nullable(l) || is_nullable(r),
+                                 has_anchors(l) || has_anchors(r)));
+  }
+
+  // Merge two right-associated sorted Alt spines in ascending ExprId order so
+  // multi-way alternations canonicalize to a single deduplicated tree and
+  // derivative state spaces under '*' stay finite.
+  ExprId hl = (le.kind == ExprKind::Alt) ? le.bin.left : l;
+  ExprId tl = (le.kind == ExprKind::Alt) ? le.bin.right : EMPTY_SET_ID;
+  ExprId hr = (re.kind == ExprKind::Alt) ? re.bin.left : r;
+  ExprId tr = (re.kind == ExprKind::Alt) ? re.bin.right : EMPTY_SET_ID;
+  ExprId head = hl;
+  ErrorOr<ExprId> rest = EMPTY_SET_ID;
+  if (hl == hr) {
+    rest = make_alt(tl, tr);
+  } else if (hl < hr) {
+    rest = make_alt(tl, r);
+  } else {
+    head = hr;
+    rest = make_alt(l, tr);
+  }
+  if (!rest.has_value())
+    return rest;
+  return intern(Expr::make_alt(head, *rest,
+                               is_nullable(head) || is_nullable(*rest),
+                               has_anchors(head) || has_anchors(*rest)));
 }
 
 } // namespace regex

@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_inotify_unittests)
+add_libc_testsuite(libc-sys-inotify-tests)
 
 add_libc_test(
   inotify_init_test
   SUITE
-    libc_sys_inotify_unittests
+    libc-sys-inotify-tests
   SRCS
     inotify_init_test.cpp
   DEPENDS
@@ -23,7 +23,7 @@ add_libc_test(
 add_libc_test(
   inotify_init1_test
   SUITE
-    libc_sys_inotify_unittests
+    libc-sys-inotify-tests
   SRCS
     inotify_init1_test.cpp
   DEPENDS
@@ -39,7 +39,7 @@ add_libc_test(
 add_libc_test(
   inotify_add_watch_test
   SUITE
-    libc_sys_inotify_unittests
+    libc-sys-inotify-tests
   SRCS
     inotify_add_watch_test.cpp
   DEPENDS
@@ -56,7 +56,7 @@ add_libc_test(
 add_libc_test(
   inotify_rm_watch_test
   SUITE
-    libc_sys_inotify_unittests
+    libc-sys-inotify-tests
   SRCS
     inotify_rm_watch_test.cpp
   DEPENDS

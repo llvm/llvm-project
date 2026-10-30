@@ -66,10 +66,11 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
 
   if (!extractor_sp || !extractor_sp->HasData()) {
     const bool file_exists = FileSystem::Instance().Exists(*file);
+    const bool module_has_name = !module_sp->GetObjectName().empty();
     // We have an object name which most likely means we have a .o file in
     // a static archive (.a file). Try and see if we have a cached archive
     // first without reading any data first
-    if (file_exists && module_sp->GetObjectName()) {
+    if (file_exists && module_has_name) {
       ObjectFileSP object_file_sp = CreateObjectFromContainer(
           module_sp, file, file_offset, file_size, DataBufferSP(), data_offset);
       if (object_file_sp)
@@ -96,14 +97,14 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     module_sp->GetFileSpec().GetPath(path_with_object);
 
     FileSpec archive_file;
-    ConstString archive_object;
+    llvm::StringRef archive_object;
     const bool must_exist = true;
     if (ObjectFile::SplitArchivePathWithObject(path_with_object, archive_file,
                                                archive_object, must_exist)) {
       file_size = FileSystem::Instance().GetByteSize(archive_file);
       if (file_size > 0) {
         file = &archive_file;
-        module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
+        module_sp->SetFileSpecAndObjectName(archive_file, archive_object.str());
         // Check if this is a object container by iterating through all
         // object container plugin instances and then trying to get an
         // object file from the container plugins since we had a name.
@@ -580,19 +581,21 @@ size_t ObjectFile::ReadSectionData(Section *section,
 
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
                                             FileSpec &archive_file,
-                                            ConstString &archive_object,
+                                            llvm::StringRef &archive_object,
                                             bool must_exist) {
   size_t len = path_with_object.size();
   if (len < 2 || path_with_object.back() != ')')
     return false;
-  llvm::StringRef archive = path_with_object.substr(0, path_with_object.rfind('('));
+  llvm::StringRef archive =
+      path_with_object.substr(0, path_with_object.rfind('('));
   if (archive.empty())
     return false;
-  llvm::StringRef object = path_with_object.substr(archive.size() + 1).drop_back();
+  llvm::StringRef object =
+      path_with_object.substr(archive.size() + 1).drop_back();
   archive_file.SetFile(archive, FileSpec::Style::native);
   if (must_exist && !FileSystem::Instance().Exists(archive_file))
     return false;
-  archive_object.SetString(object);
+  archive_object = object;
   return true;
 }
 
@@ -616,7 +619,7 @@ SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
     return m_sections_up.get();
   if (update_module_section_list) {
     if (ModuleSP module_sp = GetModule()) {
-      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      std::lock_guard<std::recursive_mutex> guard(module_sp->m_sections_mutex);
       CreateSections(*module_sp->GetUnifiedSectionList());
     }
   } else {
@@ -821,9 +824,9 @@ uint32_t ObjectFile::GetCacheHash() {
 
 std::string ObjectFile::GetObjectName() const {
   if (ModuleSP module_sp = GetModule())
-    if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(),
-                           object_name.GetString())
+    if (llvm::StringRef object_name = module_sp->GetObjectName();
+        !object_name.empty())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(), object_name)
           .str();
   return GetFileSpec().GetFilename().str();
 }

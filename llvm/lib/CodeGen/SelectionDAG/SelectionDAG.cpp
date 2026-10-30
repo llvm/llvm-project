@@ -5297,6 +5297,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     break;
   }
   case ISD::GET_ACTIVE_LANE_MASK:
+  case ISD::MASK_BEFOREFIRST:
     // Semantically similar to icmp ult.
     if (TLI->getBooleanContents(VT.isVector(), /*isFloat=*/false) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
@@ -6243,8 +6244,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   switch (Opcode) {
   case ISD::POISON: {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     break;
   }
   case ISD::FNEG: {
@@ -6286,7 +6286,7 @@ KnownFPClass SelectionDAG::computeKnownFPClass(SDValue Op,
                                     Depth + 1);
       } else {
         // Out of bounds index is poison.
-        Known.setKnownFPClasses(fcNone);
+        Known = KnownFPClass::getEmpty();
       }
     } else {
       Known = computeKnownFPClass(Src, InterestedClasses, Depth + 1);
@@ -7824,6 +7824,8 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
           return V;
         break;
       case ISD::BITCAST:
+        if (C->isOpaque())
+          break;
         if (VT == MVT::f16 && C->getValueType(0) == MVT::i16)
           return getConstantFP(APFloat(APFloat::IEEEhalf(), Val), DL, VT);
         if (VT == MVT::f32 && C->getValueType(0) == MVT::i32)
@@ -10362,6 +10364,14 @@ SDValue SelectionDAG::getMemcpy(
   return CallResult.second;
 }
 
+static TargetLoweringBase::ArgListEntry
+getAtomicMemOpSizeArg(SelectionDAG *DAG, const SDLoc &dl, SDValue Size) {
+  const Module &M = *DAG->getMachineFunction().getFunction().getParent();
+  Type *SizeTTy = DAG->getLibInfo().getSizeTType(M);
+  return TargetLoweringBase::ArgListEntry(
+      DAG->getZExtOrTrunc(Size, dl, MVT::getVT(SizeTTy)), SizeTTy);
+}
+
 SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
                                       SDValue Dst, SDValue Src, SDValue Size,
                                       Type *SizeTy, unsigned ElemSz,
@@ -10377,7 +10387,7 @@ SDValue SelectionDAG::getAtomicMemcpy(SDValue Chain, const SDLoc &dl,
   Type *ArgTy = getDataLayout().getIntPtrType(*getContext());
   Args.emplace_back(Dst, ArgTy);
   Args.emplace_back(Src, ArgTy);
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10494,7 +10504,7 @@ SDValue SelectionDAG::getAtomicMemmove(SDValue Chain, const SDLoc &dl,
   Type *IntPtrTy = getDataLayout().getIntPtrType(*getContext());
   Args.emplace_back(Dst, IntPtrTy);
   Args.emplace_back(Src, IntPtrTy);
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMMOVE_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10630,10 +10640,13 @@ SDValue SelectionDAG::getAtomicMemset(SDValue Chain, const SDLoc &dl,
   isTailCall &= !hasSwiftErrorArg();
 
   // Emit a library call.
+  MVT IntVT = MVT::getIntegerVT(LibInfo->getIntSize());
   TargetLowering::ArgListTy Args;
   Args.emplace_back(Dst, getDataLayout().getIntPtrType(*getContext()));
-  Args.emplace_back(Value, Type::getInt8Ty(*getContext()));
-  Args.emplace_back(Size, SizeTy);
+  Args.emplace_back(getAnyExtOrTrunc(Value, dl, IntVT),
+                    Type::getIntNTy(*getContext(), LibInfo->getIntSize()),
+                    LibInfo->getExtAttrForI32Param());
+  Args.emplace_back(getAtomicMemOpSizeArg(this, dl, Size));
 
   RTLIB::Libcall LibraryCall =
       RTLIB::getMEMSET_ELEMENT_UNORDERED_ATOMIC(ElemSz);
@@ -10709,6 +10722,8 @@ SDValue SelectionDAG::getAtomic(unsigned Opcode, const SDLoc &dl, EVT MemVT,
           Opcode == ISD::ATOMIC_LOAD_FMIN ||
           Opcode == ISD::ATOMIC_LOAD_FMINIMUM ||
           Opcode == ISD::ATOMIC_LOAD_FMAXIMUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMINIMUMNUM ||
+          Opcode == ISD::ATOMIC_LOAD_FMAXIMUMNUM ||
           Opcode == ISD::ATOMIC_LOAD_UINC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_UDEC_WRAP ||
           Opcode == ISD::ATOMIC_LOAD_USUB_COND ||
@@ -12598,8 +12613,8 @@ SDNode *SelectionDAG::SelectNodeTo(SDNode *N, unsigned MachineOpc,
 /// UpdateSDLocOnMergeSDNode - If the opt level is -O0 then it throws away
 /// the line number information on the merged node since it is not possible to
 /// preserve the information that operation is associated with multiple lines.
-/// This will make the debugger working better at -O0, were there is a higher
-/// probability having other instructions associated with that line.
+/// This will make the debugger work better at -O0, where there is a higher
+/// probability of having other instructions associated with that line.
 ///
 /// For IROrder, we keep the smaller of the two
 SDNode *SelectionDAG::UpdateSDLocOnMergeSDNode(SDNode *N, const SDLoc &OLoc) {

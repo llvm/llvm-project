@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_AST_INTERP_POINTER_H
 #define LLVM_CLANG_AST_INTERP_POINTER_H
 
+#include "Block.h"
 #include "Descriptor.h"
 #include "Function.h"
 #include "InitMap.h"
-#include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -919,23 +919,21 @@ public:
   }
 
   bool isWeak() const {
-    if (isFunctionPointer()) {
+    switch (StorageKind) {
+    case Storage::Fn:
       if (!Fn.Func || !Fn.Func->getDecl())
         return false;
-
       return Fn.Func->getDecl()->isWeak();
-    }
-
-    if (isOpaquePointer()) {
+    case Storage::Opaque:
       if (const VarDecl *BaseDecl = Opaque.getBaseVarDecl())
         return BaseDecl->isWeak();
       return false;
-    }
-    if (!isBlockPointer())
+    case Storage::Block:
+      return BS.Pointee->isWeak();
+    default:
       return false;
-
-    assert(isBlockPointer());
-    return BS.Pointee->isWeak();
+    }
+    llvm_unreachable("Unhandled storage kind");
   }
   /// Checks if the object is active.
   bool isActive() const {

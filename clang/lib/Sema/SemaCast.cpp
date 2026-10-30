@@ -24,6 +24,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -986,6 +987,11 @@ void CastOperation::CheckDynamicCast() {
     SrcExpr = ExprError();
     return;
   }
+
+  // Similarly, dynamic_cast is not available in CUDA device code, except for
+  // dynamic_cast to void*.
+  if (Self.getLangOpts().CUDA && !DestPointee->isVoidType())
+    Self.CUDA().checkRTTIUse(OpRange.getBegin(), "dynamic_cast");
 
   // Warns when dynamic_cast is used with RTTI data disabled.
   if (!Self.getLangOpts().RTTIData) {

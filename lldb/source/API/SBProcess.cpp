@@ -702,7 +702,7 @@ void SBProcess::SendAsyncInterrupt() {
   }
 }
 
-SBThread SBProcess::GetThreadByID(tid_t tid) {
+SBThread SBProcess::GetThreadByID(lldb::tid_t tid) {
   LLDB_INSTRUMENT_VA(this, tid);
 
   SBThread sb_thread;

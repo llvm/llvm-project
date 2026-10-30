@@ -289,7 +289,7 @@ struct test_signed : to_chars_test_base
 
 TEST_CONSTEXPR_CXX23 bool test()
 {
-    types::for_each(integrals(), test_basics());
+    types::for_each(types::integer_types(), test_basics());
     types::for_each(types::signed_integer_types(), test_signed());
 
     return true;

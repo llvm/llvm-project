@@ -177,7 +177,9 @@ public:
   bool prefersVectorizedAddressing() const override;
 
   /// Check whether Opcode1 has less throughput according to the scheduling
-  /// model than Opcode2.
+  /// model than Opcode2. For variant scheduling classes, the lowest throughput
+  /// of Opcode1 and the highest throughput of Opcode2 are compared among all
+  /// the scheduling classes they may be resolved to.
   bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
                                                   unsigned Opcode2) const;
 
@@ -542,6 +544,8 @@ public:
                                        int64_t Scale,
                                        unsigned AddrSpace) const override;
 
+  bool LSRWithInstrQueries() const override { return true; }
+
   bool enableSelectOptimize() const override {
     return ST->enableSelectOptimize();
   }
@@ -571,6 +575,9 @@ public:
     return ST->enableAggressiveInterleaving();
   }
   /// @}
+
+  bool hasPossibleIncompatibleOps(const Function *F, bool ConsiderZA,
+                                  bool ConsiderZT, bool ConsiderSM) const;
 };
 
 } // end namespace llvm

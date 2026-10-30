@@ -976,11 +976,12 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE:       [[VECTOR_PH]]:
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = icmp ult i64 0, [[TMP0]]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_ENTRY1:%.*]] = icmp ult i64 1, [[TMP0]]
+; TFA_INTERLEAVE-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 2)
 ; TFA_INTERLEAVE-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; TFA_INTERLEAVE:       [[VECTOR_BODY]]:
-; TFA_INTERLEAVE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE4:.*]] ]
+; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT1:%.*]], %[[PRED_STORE_CONTINUE4:.*]] ]
 ; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[PRED_STORE_CONTINUE4]] ]
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT5:%.*]], %[[PRED_STORE_CONTINUE4]] ]
+; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK2:%.*]] = phi i1 [ [[ACTIVE_LANE_MASK_ENTRY1]], %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE4]] ]
 ; TFA_INTERLEAVE-NEXT:    [[TMP1:%.*]] = load double, ptr [[P2]], align 8
 ; TFA_INTERLEAVE-NEXT:    [[TMP2:%.*]] = tail call double @llvm.exp.f64(double [[TMP1]]) #[[ATTR7:[0-9]+]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP3:%.*]] = fcmp ogt double [[TMP2]], 0.000000e+00
@@ -995,11 +996,11 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFA_INTERLEAVE-NEXT:    store double [[PREDPHI]], ptr [[P]], align 8
 ; TFA_INTERLEAVE-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
 ; TFA_INTERLEAVE:       [[PRED_STORE_CONTINUE4]]:
-; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 2
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[TMP0]]
+; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = icmp ult i64 [[INDEX_NEXT]], [[TRIP_COUNT_MINUS_VF]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX_NEXT]], 1
-; TFA_INTERLEAVE-NEXT:    [[ACTIVE_LANE_MASK_NEXT5]] = icmp ult i64 [[TMP4]], [[TMP0]]
+; TFA_INTERLEAVE-NEXT:    [[TMP8]] = icmp ult i64 [[TMP4]], [[TRIP_COUNT_MINUS_VF]]
 ; TFA_INTERLEAVE-NEXT:    [[TMP5:%.*]] = xor i1 [[ACTIVE_LANE_MASK_NEXT]], true
+; TFA_INTERLEAVE-NEXT:    [[INDEX_NEXT1]] = add i64 [[INDEX_NEXT]], 2
 ; TFA_INTERLEAVE-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; TFA_INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; TFA_INTERLEAVE-NEXT:    br label %[[END:.*]]

@@ -30,7 +30,7 @@ StringRef Builder::Parameter::getCppType() const {
   // Inlining the first part of `Record::getValueAsString` to give better
   // error messages.
   const llvm::RecordVal *type = record->getValue("type");
-  if (!type || !type->getValue()) {
+  if (!type) {
     llvm::PrintFatalError("Builder DAG arguments must be either strings or "
                           "defs which inherit from CArg");
   }

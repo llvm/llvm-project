@@ -588,7 +588,7 @@ let test_global_variables () =
 let test_uses () =
   let ty = function_type i32_type [| i32_type; i32_type |] in
   let fn = define_function "use_function" ty m in
-  let b = builder_at_end context (entry_block fn) in
+  let b = builder_at_end (entry_block fn) in
 
   let p1 = param fn 0 in
   let p2 = param fn 1 in
@@ -615,7 +615,7 @@ let test_uses () =
 let test_users () =
   let ty = function_type i32_type [| i32_type; i32_type |] in
   let fn = define_function "user_function" ty m in
-  let b = builder_at_end context (entry_block fn) in
+  let b = builder_at_end (entry_block fn) in
 
   let p1 = param fn 0 in
   let p2 = param fn 1 in
@@ -678,7 +678,7 @@ let test_functions () =
   let fn = define_function "Fn3" ty m in
   insist (not (is_declaration fn));
   insist (1 = Array.length (basic_blocks fn));
-  ignore (build_unreachable (builder_at_end context (entry_block fn)));
+  ignore (build_unreachable (builder_at_end (entry_block fn)));
 
   (* CHECK: define{{.*}}Fn4{{.*}}Param1{{.*}}Param2
    *)
@@ -692,7 +692,7 @@ let test_functions () =
   insist (i64_type = type_of params.(1));
   set_value_name "Param1" params.(0);
   set_value_name "Param2" params.(1);
-  ignore (build_unreachable (builder_at_end context (entry_block fn)));
+  ignore (build_unreachable (builder_at_end (entry_block fn)));
 
   group "intrinsics";
   insist (not (is_intrinsic fn));
@@ -717,7 +717,7 @@ let test_functions () =
   insist (CallConv.c = function_call_conv fn);
   set_function_call_conv CallConv.fast fn;
   insist (CallConv.fast = function_call_conv fn);
-  ignore (build_unreachable (builder_at_end context (entry_block fn)));
+  ignore (build_unreachable (builder_at_end (entry_block fn)));
 
   begin group "gc";
     (* CHECK: Fn6{{.*}}gc{{.*}}shadowstack
@@ -729,7 +729,7 @@ let test_functions () =
     set_gc None fn;
     insist (None = gc fn);
     set_gc (Some "shadowstack") fn;
-    ignore (build_unreachable (builder_at_end context (entry_block fn)));
+    ignore (build_unreachable (builder_at_end (entry_block fn)));
   end;
 
   begin group "iteration";
@@ -806,7 +806,7 @@ let test_basic_blocks () =
   let fn = declare_function "X" ty m in
   let bb = append_block context "Bb1" fn in
   insist (bb = entry_block fn);
-  ignore (build_unreachable (builder_at_end context bb));
+  ignore (build_unreachable (builder_at_end bb));
 
   (* CHECK-NOWHERE-NOT: Bb2
    *)
@@ -820,15 +820,15 @@ let test_basic_blocks () =
   let bbb = append_block context "b" fn in
   let bba = insert_block context "a" bbb in
   insist ([| bba; bbb |] = basic_blocks fn);
-  ignore (build_unreachable (builder_at_end context bba));
-  ignore (build_unreachable (builder_at_end context bbb));
+  ignore (build_unreachable (builder_at_end bba));
+  ignore (build_unreachable (builder_at_end bbb));
 
   (* CHECK: Bb3
    *)
   group "name/value";
   let fn = define_function "X4" ty m in
   let bb = entry_block fn in
-  ignore (build_unreachable (builder_at_end context bb));
+  ignore (build_unreachable (builder_at_end bb));
   let bbv = value_of_block bb in
   set_value_name "Bb3" bbv;
   insist ("Bb3" = value_name bbv);
@@ -836,7 +836,7 @@ let test_basic_blocks () =
   group "casts";
   let fn = define_function "X5" ty m in
   let bb = entry_block fn in
-  ignore (build_unreachable (builder_at_end context bb));
+  ignore (build_unreachable (builder_at_end bb));
   insist (bb = block_of_value (value_of_block bb));
   insist (value_is_block (value_of_block bb));
   insist (not (value_is_block (const_null i32_type)));
@@ -877,7 +877,7 @@ let test_instructions () =
     let fty = function_type void_type [| i32_type; i32_type |] in
     let f = define_function "f" fty m in
     let bb = entry_block f in
-    let b = builder_at context (At_end bb) in
+    let b = builder_at (At_end bb) in
 
     insist (At_end bb = instr_begin bb);
     insist (At_start bb = instr_end bb);
@@ -909,7 +909,7 @@ let test_instructions () =
     let fty = function_type void_type [| i32_type |] in
     let fn = define_function "BuilderParent" fty m in
     let bb = entry_block fn in
-    let b = builder_at_end context bb in
+    let b = builder_at_end bb in
     let p = param fn 0 in
     let sum = build_add p p "sum" b in
     let y = const_int i32_type 2 in
@@ -928,7 +928,7 @@ let test_builder () =
 
   begin group "parent";
     insist (try
-              ignore (insertion_block (builder context));
+              ignore (insertion_block (builder m));
               false
             with Not_found ->
               true);
@@ -936,7 +936,7 @@ let test_builder () =
     let fty = function_type void_type [| i32_type |] in
     let fn = define_function "BuilderParent" fty m in
     let bb = entry_block fn in
-    let b = builder_at_end context bb in
+    let b = builder_at_end bb in
     let p = param fn 0 in
     let sum = build_add p p "sum" b in
     ignore (build_ret_void b);
@@ -953,7 +953,7 @@ let test_builder () =
      *)
     let fty = function_type void_type [| |] in
     let fn = declare_function "X6" fty m in
-    let b = builder_at_end context (append_block context "Bb01" fn) in
+    let b = builder_at_end (append_block context "Bb01" fn) in
     ignore (build_ret_void b)
   end;
 
@@ -964,7 +964,7 @@ let test_builder () =
       let sty = struct_type context [| i8_type; i64_type |] in
       let fty = function_type sty [| |] in
       let fn = declare_function "XA6" fty m in
-      let b = builder_at_end context (append_block context "Bb01" fn) in
+      let b = builder_at_end (append_block context "Bb01" fn) in
       let agg = [| const_int i8_type 4; const_int i64_type 5 |] in
       ignore (build_aggregate_ret agg b)
   end;
@@ -972,14 +972,14 @@ let test_builder () =
   (* The rest of the tests will use one big function. *)
   let fty = function_type i32_type [| i32_type; i32_type |] in
   let fn = define_function "X7" fty m in
-  let atentry = builder_at_end context (entry_block fn) in
+  let atentry = builder_at_end (entry_block fn) in
   let p1 = param fn 0 ++ set_value_name "P1" in
   let p2 = param fn 1 ++ set_value_name "P2" in
   let f1 = build_uitofp p1 float_type "F1" atentry in
   let f2 = build_uitofp p2 float_type "F2" atentry in
 
   let bb00 = append_block context "Bb00" fn in
-  ignore (build_unreachable (builder_at_end context bb00));
+  ignore (build_unreachable (builder_at_end bb00));
 
   group "function attribute";
   begin
@@ -1213,13 +1213,13 @@ let test_builder () =
       set_global_constant true ztid;
       set_global_constant true ztipkc;
       let lp = build_landingpad rt personality 0 "lpad"
-       (builder_at_end context bblpad) in begin
+       (builder_at_end bblpad) in begin
            set_cleanup lp true;
            add_clause lp ztic;
            insist((pointer_type context) = type_of ztid);
            let ety = pointer_type context in
            add_clause lp (const_array ety [| ztipkc; ztid |]);
-           ignore (build_resume lp (builder_at_end context bblpad));
+           ignore (build_resume lp (builder_at_end bblpad));
       end;
       (* CHECK: landingpad
        * CHECK: cleanup
@@ -1233,7 +1233,7 @@ let test_builder () =
     (* CHECK: br{{.*}}Bb02
      *)
     let bb02 = append_block context "Bb02" fn in
-    let b = builder_at_end context bb02 in
+    let b = builder_at_end bb02 in
     let br = build_br bb02 b in
     insist (successors br = [| bb02 |]) ;
     insist (is_conditional br = false) ;
@@ -1244,7 +1244,7 @@ let test_builder () =
     (* CHECK: br{{.*}}build_br{{.*}}Bb03{{.*}}Bb00
      *)
     let bb03 = append_block context "Bb03" fn in
-    let b = builder_at_end context bb03 in
+    let b = builder_at_end bb03 in
     let cond = build_trunc p1 i1_type "build_br" b in
     let br = build_cond_br cond bb03 bb00 b in
     insist (num_successors br = 2) ;
@@ -1260,10 +1260,10 @@ let test_builder () =
      *)
     let bb1 = append_block context "SwiBlock1" fn in
     let bb2 = append_block context "SwiBlock2" fn in
-    ignore (build_unreachable (builder_at_end context bb2));
+    ignore (build_unreachable (builder_at_end bb2));
     let bb3 = append_block context "SwiBlock3" fn in
-    ignore (build_unreachable (builder_at_end context bb3));
-    let si = build_switch p1 bb3 1 (builder_at_end context bb1) in begin
+    ignore (build_unreachable (builder_at_end bb3));
+    let si = build_switch p1 bb3 1 (builder_at_end bb1) in begin
         ignore (add_case si (const_int i32_type 2) bb2);
         insist (switch_default_dest si = bb3);
     end;
@@ -1278,10 +1278,10 @@ let test_builder () =
        *)
       let bb1 = append_block context "MallocBlock1" fn in
       let m1 = (build_malloc (pointer_type context) "m1"
-      (builder_at_end context bb1)) in
-      ignore (build_free m1 (builder_at_end context bb1));
-      ignore (build_array_malloc i32_type p1 "m2" (builder_at_end context bb1));
-      ignore (build_unreachable (builder_at_end context bb1));
+      (builder_at_end bb1)) in
+      ignore (build_free m1 (builder_at_end bb1));
+      ignore (build_array_malloc i32_type p1 "m2" (builder_at_end bb1));
+      ignore (build_unreachable (builder_at_end bb1));
   end;
 
   group "indirectbr"; begin
@@ -1290,13 +1290,13 @@ let test_builder () =
     let bb1 = append_block context "IBRBlock1" fn in
 
     let bb2 = append_block context "IBRBlock2" fn in
-    ignore (build_unreachable (builder_at_end context bb2));
+    ignore (build_unreachable (builder_at_end bb2));
 
     let bb3 = append_block context "IBRBlock3" fn in
-    ignore (build_unreachable (builder_at_end context bb3));
+    ignore (build_unreachable (builder_at_end bb3));
 
     let addr = block_address fn bb2 in
-    let ibr = build_indirect_br addr 2 (builder_at_end context bb1) in
+    let ibr = build_indirect_br addr 2 (builder_at_end bb1) in
     ignore (add_destination ibr bb2);
     ignore (add_destination ibr bb3)
   end;
@@ -1306,7 +1306,7 @@ let test_builder () =
      * CHECK: to{{.*}}Bb04{{.*}}unwind{{.*}}Bblpad
      *)
     let bb04 = append_block context "Bb04" fn in
-    let b = builder_at_end context bb04 in
+    let b = builder_at_end bb04 in
     ignore (build_invoke fty fn [| p1; p2 |] bb04 bblpad "build_invoke" b)
   end;
 
@@ -1314,13 +1314,13 @@ let test_builder () =
     (* CHECK: unreachable
      *)
     let bb06 = append_block context "Bb06" fn in
-    let b = builder_at_end context bb06 in
+    let b = builder_at_end bb06 in
     ignore (build_unreachable b)
   end;
 
   group "arithmetic"; begin
     let bb07 = append_block context "Bb07" fn in
-    let b = builder_at_end context bb07 in
+    let b = builder_at_end bb07 in
 
     (* CHECK: %build_add = add i32 %P1, %P2
      * CHECK: %build_nsw_add = add nsw i32 %P1, %P2
@@ -1388,7 +1388,7 @@ let test_builder () =
 
   group "memory"; begin
     let bb08 = append_block context "Bb08" fn in
-    let b = builder_at_end context bb08 in
+    let b = builder_at_end bb08 in
 
     (* CHECK: %build_alloca = alloca i32
      * CHECK: %build_array_alloca = alloca i32, i32 %P2
@@ -1431,7 +1431,7 @@ let test_builder () =
 
   group "string"; begin
     let bb09 = append_block context "Bb09" fn in
-    let b = builder_at_end context bb09 in
+    let b = builder_at_end bb09 in
     let p = build_alloca (pointer_type context) "p" b in
     (* build_global_string is emitted above.
      * CHECK: store{{.*}}build_global_string1{{.*}}p
@@ -1449,9 +1449,9 @@ let test_builder () =
     let b2 = append_block context "PhiBlock2" fn in
 
     let jb = append_block context "PhiJoinBlock" fn in
-    ignore (build_br jb (builder_at_end context b1));
-    ignore (build_br jb (builder_at_end context b2));
-    let at_jb = builder_at_end context jb in
+    ignore (build_br jb (builder_at_end b1));
+    ignore (build_br jb (builder_at_end b2));
+    let at_jb = builder_at_end jb in
 
     let phi = build_phi [(p1, b1)] "PhiNode" at_jb in
     insist ([(p1, b1)] = incoming phi);

@@ -27,9 +27,9 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -46,6 +46,7 @@
 namespace llvm {
 
 class OverflowingBinaryOperator;
+struct AnalysisOptions;
 class AssumptionCache;
 class BasicBlock;
 class Constant;
@@ -604,7 +605,7 @@ public:
   /// and the given predicate \p N.
   SCEVUnionPredicate getUnionWith(const SCEVPredicate *N,
                                   ScalarEvolution &SE) const {
-    SCEVUnionPredicate Result(Preds, SE);
+    SCEVUnionPredicate Result = *this;
     Result.add(N, SE);
     return Result;
   }
@@ -815,10 +816,10 @@ public:
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
                                   ArrayRef<SCEVUse> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
-                                  ArrayRef<SCEVUse> IndexExprs,
-                                  Type *SrcElementTy,
-                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
+  LLVM_ABI const SCEV *
+  getGEPExpr(SCEVUse BaseExpr, ArrayRef<SCEVUse> IndexExprs, Type *SrcElementTy,
+             GEPNoWrapFlags BaseNW = GEPNoWrapFlags::none(),
+             GEPNoWrapFlags OffsetNW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<SCEVUse> &Operands);
@@ -1272,6 +1273,9 @@ public:
   /// Returns true if \p Op is guaranteed to not be poison.
   LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
+  /// Returns true if \p Op is guaranteed not to cause immediate UB.
+  LLVM_ABI bool isGuaranteedNotToCauseUB(const SCEV *Op);
+
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
@@ -1700,6 +1704,8 @@ private:
   // Needs getWithOperands to rebuild a node from its canonical operands.
   friend void SCEV::computeAndSetCanonical(ScalarEvolution &SE);
 
+  const AnalysisOptions &Opts;
+
   /// The function we are analyzing.
   Function &F;
 
@@ -1733,8 +1739,7 @@ private:
   HasRecMapType HasRecMap;
 
   /// The type for ExprValueMap.
-  using ValueSetVector = SmallSetVector<Value *, 4>;
-  using ExprValueMapType = DenseMap<const SCEV *, ValueSetVector>;
+  using ExprValueMapType = DenseMap<const SCEV *, TinyPtrVector<Value *>>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
@@ -2328,6 +2333,14 @@ private:
                                       const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
 
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by FoundLHS, FoundRHS, and Pred with the
+  /// other signedness is true.
+  bool isImpliedCondViaSignFlippedPred(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const SCEV *FoundLHS,
+                                       const SCEV *FoundRHS,
+                                       const Instruction *CtxI);
+
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
   /// by a call to @llvm.experimental.guard in \p BB.
   bool isImpliedViaGuard(const BasicBlock *BB, CmpPredicate Pred,
@@ -2486,9 +2499,6 @@ private:
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
-
-  /// Returns true if \p Op is guaranteed not to cause immediate UB.
-  bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since

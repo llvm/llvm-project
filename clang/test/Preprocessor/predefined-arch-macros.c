@@ -4809,6 +4809,7 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V9
 // CHECK_SPARC-V9-NOT: #define __sparcv8 1
 // CHECK_SPARC-V9-NOT: #define __sparcv8__ 1
+// CHECK_SPARC-V9-NOT: #define __sparc_v8__ 1
 // CHECK_SPARC-V9: #define __sparc_v9__ 1
 // CHECK_SPARC-V9-NOT: #define __sparcv9 1
 // CHECK_SPARC-V9-NOT: #define __sparcv9__ 1
@@ -4833,9 +4834,17 @@
 // RUN:     -target sparcel-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARCEL
 // CHECK_SPARCEL: #define __LITTLE_ENDIAN__ 1
+// CHECK_SPARCEL-NOT: #define __leon__ 1
 // CHECK_SPARCEL: #define __sparc 1
 // CHECK_SPARCEL: #define __sparc__ 1
+// CHECK_SPARCEL: #define __sparc_v8__ 1
 // CHECK_SPARCEL: #define __sparcv8 1
+
+// RUN: %clang -mcpu=leon3 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-LEON
+// CHECK_SPARC-LEON: #define __leon__ 1
+// CHECK_SPARC-LEON: #define __sparc_v8__ 1
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparcv9-unknown-linux \

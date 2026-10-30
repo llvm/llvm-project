@@ -109,6 +109,11 @@ static cl::opt<bool> ExhaustiveSearch(
              "and interference cutoffs of last chance recoloring"),
     cl::Hidden);
 
+static cl::opt<bool> CompactSlotIndexes(
+    "greedy-compact-slot-indexes", cl::Hidden, cl::init(false),
+    cl::desc("Drop SlotIndexes entries for erased instructions before "
+             "allocating, so live range sizes reflect real code distance"));
+
 // This option should be deprecated!
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned>
@@ -755,9 +760,11 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 /// interference pattern in Physreg and its aliases. Add the constraints to
 /// SpillPlacement and return the static cost of this split in Cost, assuming
 /// that all preferences in SplitConstraints are met.
-/// Return false if there are no bundles with positive bias.
+/// Return false if there are no bundles with positive bias, or if the static
+/// cost reaches MaxCost.
 bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
-                                   BlockFrequency &Cost) {
+                                   BlockFrequency &Cost,
+                                   BlockFrequency MaxCost) {
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
 
   // Reset interference dependent info.
@@ -818,6 +825,9 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
     // Accumulate the total frequency of inserted spill code.
     while (Ins--)
       StaticCost += SpillPlacer->getBlockFrequency(BC.Number);
+
+    if (StaticCost >= MaxCost)
+      return false;
   }
   Cost = StaticCost;
 
@@ -984,7 +994,7 @@ bool RAGreedy::calcCompactRegion(GlobalSplitCandidate &Cand) {
 
   // The static split cost will be zero since Cand.Intf reports no interference.
   BlockFrequency Cost;
-  if (!addSplitConstraints(Cand.Intf, Cost)) {
+  if (!addSplitConstraints(Cand.Intf, Cost, BlockFrequency::max())) {
     LLVM_DEBUG(dbgs() << ", none.\n");
     return false;
   }
@@ -1288,8 +1298,9 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
 
   SpillPlacer->prepare(Cand.LiveBundles);
   BlockFrequency Cost;
-  if (!addSplitConstraints(Cand.Intf, Cost)) {
-    LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
+  if (!addSplitConstraints(Cand.Intf, Cost, BestCost)) {
+    LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
+                      << "\tno positive bundles or too expensive\n");
     return BestCand;
   }
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
@@ -3071,7 +3082,16 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
-  Indexes->packIndexes();
+  bool Compact = CompactSlotIndexes.getNumOccurrences()
+                     ? CompactSlotIndexes
+                     : TRI->shouldCompactSlotIndexes(*MF);
+  if (Compact) {
+    // Compaction unlinks what it erases; this is what makes that safe.
+    LIS->removeUnreferencedIntervals();
+    Indexes->compactIndexes();
+  } else {
+    Indexes->packIndexes();
+  }
 
   initializeCSRCost();
 
