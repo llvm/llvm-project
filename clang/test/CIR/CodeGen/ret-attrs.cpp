@@ -16,7 +16,7 @@ struct Struct{};
 using MemPtrTy = void (Struct::*)();
 
 MemPtrTy not_noundef_memptr(MemPtrTy t){}
-// CIR: cir.func no_inline dso_local @_Z18not_noundef_memptrM6StructFvvE({{.*}}) -> !rec_anon_struct attributes {{{.*}}nothrow, optnone} {
+// CIR: cir.func no_inline dso_local @_Z18not_noundef_memptrM6StructFvvE({{.*}}) -> !rec_anon_struct call_conv_lowered attributes {{{.*}}nothrow, optnone} {
 // LLVM: define dso_local { i64, i64 } @_Z18not_noundef_memptrM6StructFvvE(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 
 void not_noundef_void(){}

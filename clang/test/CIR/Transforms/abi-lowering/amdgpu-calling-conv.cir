@@ -55,7 +55,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @takes_pair32(%[[ARR:.*]]: !cir.array<!u32i x 2>) {
+  // CHECK: cir.func{{.*}} @takes_pair32(%[[ARR:.*]]: !cir.array<!u32i x 2>) call_conv_lowered {
   // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.array<!u32i x 2>>
   // CHECK-NEXT: cir.store %[[ARR]], %[[TMP]] : !cir.array<!u32i x 2>, !cir.ptr<!cir.array<!u32i x 2>>
   // CHECK-NEXT: %[[TMP_REC:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!cir.array<!u32i x 2>> -> !cir.ptr<!rec_Pair32>
@@ -68,7 +68,7 @@ module attributes {
     cir.return %0 : !rec_Pair32
   }
 
-  // CHECK: cir.func{{.*}} @ret_pair32(%[[SRC:.*]]: !cir.ptr<!rec_Pair32>) -> !cir.array<!u32i x 2> {
+  // CHECK: cir.func{{.*}} @ret_pair32(%[[SRC:.*]]: !cir.ptr<!rec_Pair32>) -> !cir.array<!u32i x 2> call_conv_lowered {
   // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_Pair32>
   // CHECK-NEXT: cir.copy %[[SRC]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_Pair32>
   // CHECK-NEXT: %[[TMP_ARR:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!rec_Pair32> -> !cir.ptr<!cir.array<!u32i x 2>>
@@ -106,7 +106,7 @@ module attributes {
     cir.return %2 : !s32i
   }
 
-  // CHECK: cir.func{{.*}} @takes_triple(%[[ARG0:[^:]*]]: !s32i, %[[ARG1:[^:]*]]: !s32i, %[[ARG2:[^:]*]]: !s32i) -> !s32i {
+  // CHECK: cir.func{{.*}} @takes_triple(%[[ARG0:[^:]*]]: !s32i, %[[ARG1:[^:]*]]: !s32i, %[[ARG2:[^:]*]]: !s32i) -> !s32i call_conv_lowered {
   // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_Triple>
   // CHECK-NEXT: %[[SLOT0:.*]] = cir.get_member %[[TMP]][0] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[ARG0]], %[[SLOT0]] : !s32i, !cir.ptr<!s32i>
@@ -126,7 +126,7 @@ module attributes {
     cir.return %0 : !rec_Triple
   }
 
-  // CHECK: cir.func{{.*}} @ret_triple(%[[SRC:.*]]: !cir.ptr<!rec_Triple>) -> !rec_Triple {
+  // CHECK: cir.func{{.*}} @ret_triple(%[[SRC:.*]]: !cir.ptr<!rec_Triple>) -> !rec_Triple call_conv_lowered {
   // CHECK-NEXT: %[[V:.*]] = cir.load %[[SRC]] : !cir.ptr<!rec_Triple>, !rec_Triple
   // CHECK-NEXT: cir.return %[[V]] : !rec_Triple
 
@@ -158,7 +158,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @takes_outer(%[[I:[^:]*]]: !s32i, %[[INNER:[^:]*]]: !rec_Triple) {
+  // CHECK: cir.func{{.*}} @takes_outer(%[[I:[^:]*]]: !s32i, %[[INNER:[^:]*]]: !rec_Triple) call_conv_lowered {
   // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_Outer>
   // CHECK-NEXT: %[[SLOT0:.*]] = cir.get_member %[[TMP]][0] {name = ""} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s32i>
   // CHECK-NEXT: cir.store %[[I]], %[[SLOT0]] : !s32i, !cir.ptr<!s32i>

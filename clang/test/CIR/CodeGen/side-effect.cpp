@@ -50,11 +50,11 @@ int const_variadic(int n, ...) { return n; }
 
 // A definition also gets llvm.noalias on the sret slot, so this is where
 // noalias, writable and the widened effect have to coexist.
-// CIR: cir.func{{.*}}@const_sret_def(%{{[^,)]+}}: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable}{{.*}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
+// CIR: cir.func{{.*}}@const_sret_def(%{{[^,)]+}}: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable}{{.*}}) call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} {
 __attribute__((const))
 Big const_sret_def() { Big r{}; return r; }
 
-// CIR: cir.func{{.*}}@pure_sret_def(%{{[^,)]+}}: !cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}{{.*}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} {
+// CIR: cir.func{{.*}}@pure_sret_def(%{{[^,)]+}}: !cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}{{.*}}) call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>} {
 __attribute__((pure))
 Big pure_sret_def() { Big r{}; return r; }
 
@@ -123,19 +123,19 @@ void use() {
 
 // The declarations print after @use(), in the order the calls above reach
 // them.
-// CIR: cir.func private @const_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @pure_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
-// CIR: cir.func private @const_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @pure_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
-// CIR: cir.func private @const_small() -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @const_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @pure_sret(!cir.ptr<!rec_Big> {{{.*}}llvm.sret = !rec_Big{{.*}}}) call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
+// CIR: cir.func private @const_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @pure_byval(!cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = read, arg_mem = readwrite, inaccessible_mem = read, errno_mem = read, target_mem0 = read, target_mem1 = read>}
+// CIR: cir.func private @const_small() -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
 // CIR: cir.func private @const_ptr(!cir.ptr<!s32i> {llvm.noundef}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
 // CIR: cir.func private @const_variadic_decl(!s32i {llvm.noundef}, ...) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @const_byval2(!s32i {llvm.noundef}, !cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @const_byval2(!s32i {llvm.noundef}, !cir.ptr<!rec_Big> {{{.*}}llvm.byval = !rec_Big{{.*}}}) -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
 // CIR: cir.func private @const_bigref(!cir.ptr<!rec_Big> {{{.*}}llvm.nonnull{{.*}}}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @const_non_byval(!cir.ptr<!rec_WithDtor> {{{.*}}llvm.nofreeobj{{.*}}}) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @const_ignore() -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @const_coerced(!u64i) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
-// CIR: cir.func private @const_flattened(!s64i, !s64i) -> !s32i attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @const_non_byval(!cir.ptr<!rec_WithDtor> {{{.*}}llvm.nofreeobj{{.*}}}) -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @const_ignore() -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @const_coerced(!u64i) -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
+// CIR: cir.func private @const_flattened(!s64i, !s64i) -> !s32i call_conv_lowered attributes {{{.*}}memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>}
 
 }
 

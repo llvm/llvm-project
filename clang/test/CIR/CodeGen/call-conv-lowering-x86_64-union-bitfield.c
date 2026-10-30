@@ -81,7 +81,7 @@ void take_wraps_union(WrapsUnion s) {}
 // LLVM: define{{.*}} void @take_wraps_union(i64 %{{[^,)]+}})
 
 void take_wrap16(Wrap16 s) {}
-// CIR: cir.func{{.*}} @take_wrap16(%arg0: !u64i loc{{.*}}, %arg1: !s64i loc{{.*}}) attributes
+// CIR: cir.func{{.*}} @take_wrap16(%arg0: !u64i loc{{.*}}, %arg1: !s64i loc{{.*}}) call_conv_lowered attributes
 // LLVM: define{{.*}} void @take_wrap16(i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
 
 Wrap16 ret_wrap16(void) {
@@ -90,7 +90,7 @@ Wrap16 ret_wrap16(void) {
   s.k = 2;
   return s;
 }
-// CIR: cir.func{{.*}} @ret_wrap16() -> ![[PAIR_RET]] attributes
+// CIR: cir.func{{.*}} @ret_wrap16() -> ![[PAIR_RET]] call_conv_lowered attributes
 // LLVM: define{{.*}} { i64, i64 } @ret_wrap16()
 
 void take_wrap40(Wrap40 s) {}

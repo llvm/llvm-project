@@ -4351,6 +4351,12 @@ def CIR_FuncOp : CIR_Op<"func", [
     without a prototype and, consequently, may contain calls with invalid
     arguments and undefined behavior.
 
+    The `call_conv_lowered` keyword marks a function whose signature
+    CallConvLowering has already rewritten to match the target ABI. A lowered
+    signature uses ordinary CIR types and cannot be told apart from one that
+    still needs lowering, so the pass records what it lowered here and skips
+    it when run again.
+
     The `global_ctor` keyword indicates whether a function should execute before
     `main()` function, as specified by `__attribute__((constructor))`. An
     execution priority can also be specified `global_ctor(<priority>)`.
@@ -4411,6 +4417,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<CIR_InlineKindAttr>:$inline_kind,
     UnitAttr:$lambda,
     UnitAttr:$no_proto,
+    UnitAttr:$call_conv_lowered,
     UnitAttr:$dso_local,
     DefaultValuedAttr<
       CIR_GlobalLinkageKindAttr,
