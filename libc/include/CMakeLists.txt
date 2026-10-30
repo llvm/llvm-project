@@ -942,6 +942,21 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_shm
+  ../libc/include/sys/shm.yaml
+  sys/shm.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_shm_macros
+    .llvm-libc-types.pid_t
+    .llvm-libc-types.shmatt_t
+    .llvm-libc-types.size_t
+    .llvm-libc-types.time_t
+    .stdint
+    .sys_ipc
+)
+
+add_header_macro(
   sys_socket
   ../libc/include/sys/socket.yaml
   sys/socket.h
