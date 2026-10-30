@@ -1418,24 +1418,17 @@ shouldUpgradeNVPTXTcgen05CommitSharedIntrinsic(Function *F, StringRef Name) {
 }
 
 static Intrinsic::ID
-shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(Function *F, StringRef Name) {
+shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(Function *F, StringRef Name) {
   if (F->arg_size() != 2)
     return Intrinsic::not_intrinsic;
 
-  if (Name.consume_front("tcgen05.alloc.shared.") ||
-      Name.consume_front("tcgen05.alloc."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
-        .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
-        .Default(Intrinsic::not_intrinsic);
+  if (!Name.consume_front("tcgen05.alloc.shared."))
+    return Intrinsic::not_intrinsic;
 
-  if (Name.consume_front("tcgen05.dealloc."))
-    return StringSwitch<Intrinsic::ID>(Name)
-        .Case("cg1", Intrinsic::nvvm_tcgen05_dealloc_cg1)
-        .Case("cg2", Intrinsic::nvvm_tcgen05_dealloc_cg2)
-        .Default(Intrinsic::not_intrinsic);
-
-  return Intrinsic::not_intrinsic;
+  return StringSwitch<Intrinsic::ID>(Name)
+      .Case("cg1", Intrinsic::nvvm_tcgen05_alloc_cg1)
+      .Case("cg2", Intrinsic::nvvm_tcgen05_alloc_cg2)
+      .Default(Intrinsic::not_intrinsic);
 }
 
 static Intrinsic::ID shouldUpgradeNVPTXBF16Intrinsic(StringRef Name) {
@@ -2151,16 +2144,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
-      // Upgrade tcgen05.alloc/dealloc with the is_exclusive argument and
-      // tcgen05.alloc shared variants to anyptr intrinsics.
-      IID = shouldUpgradeNVPTXTcgen05AllocDeallocIntrinsic(F, Name);
+      // Upgrade tcgen05.alloc.shared.* to the anyptr alloc intrinsic.
+      IID = shouldUpgradeNVPTXTcgen05AllocSharedIntrinsic(F, Name);
       if (IID != Intrinsic::not_intrinsic) {
         rename(F);
-        if (Intrinsic::isOverloaded(IID))
-          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                    {F->getArg(0)->getType()});
-        else
-          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  {F->getArg(0)->getType()});
         return true;
       }
 
@@ -6325,14 +6314,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     break;
   }
-  case Intrinsic::nvvm_tcgen05_alloc_cg1:
-  case Intrinsic::nvvm_tcgen05_alloc_cg2:
-  case Intrinsic::nvvm_tcgen05_dealloc_cg1:
-  case Intrinsic::nvvm_tcgen05_dealloc_cg2:
-    NewCall =
-        Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
-                                   Builder.getFalse()});
-    break;
   case Intrinsic::nvvm_mbarrier_init: {
     SmallVector<Value *, 3> Args(CI->args());
     // The .shared variant folded into the overloaded form without gaining an
