@@ -604,4 +604,39 @@ __device__ void df_copy_init(T t) {
   static T l_t_constexpr_copy = ce;
 }
 
+__device__ constexpr T d_t_ce = {3};
+
+// Field T, initializer copies a global.
+struct T_I_G {
+  T t;
+  __device__ T_I_G() : t(d_t_i) {}
+};
+
+// Field T, initializer copies a constexpr global.
+struct T_I_CE {
+  T t;
+  __device__ T_I_CE() : t(d_t_ce) {}
+};
+
+// Field T, initializer value-initializes it.
+struct T_I {
+  T t;
+  __device__ T_I() : t() {}
+};
+
+// Base T_I_G, initializer calls its default constructor.
+struct T_B_T_I_G : T_I_G {
+  __device__ T_B_T_I_G() : T_I_G() {}
+};
+
+__device__ void df_member_copy_init() {
+  static T_I_G l_t_i_g;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static T_I_CE l_t_i_ce;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static T_B_T_I_G l_t_b_t_i_g;
+  // expected-error@-1 {{cannot use 'static' local variable requiring runtime initialization or destruction in __device__ function}}
+  static T_I l_t_i;
+}
+
 

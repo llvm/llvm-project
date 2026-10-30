@@ -620,12 +620,15 @@ bool SemaCUDA::isEmptyConstructor(SourceLocation Loc, CXXConstructorDecl *CD) {
   if (CD->getParent()->isUnion())
     return true;
 
-  // The only form of initializer allowed is an empty constructor.
+  // The only form of initializer allowed is an empty default constructor.
   // This will recursively check all base classes and member initializers
   if (!llvm::all_of(CD->inits(), [&](const CXXCtorInitializer *CI) {
         if (const CXXConstructExpr *CE =
-                dyn_cast<CXXConstructExpr>(CI->getInit()))
-          return isEmptyConstructor(Loc, CE->getConstructor());
+                dyn_cast<CXXConstructExpr>(CI->getInit())) {
+          CXXConstructorDecl *InitCD = CE->getConstructor();
+          return InitCD->isDefaultConstructor() &&
+                 isEmptyConstructor(Loc, InitCD);
+        }
         return false;
       }))
     return false;
