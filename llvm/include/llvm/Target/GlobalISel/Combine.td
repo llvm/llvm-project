@@ -1751,7 +1751,6 @@ def ubfx_sign_bit_to_lshr : GICombineRule<
   (apply [{ LLT Ty = MRI.getType(${dst}.getReg());
             LLT ShiftAmtTy =
                 Helper.getTargetLowering().getPreferredShiftAmountTy(Ty);
-            B.setInstrAndDebugLoc(*${root});
             auto Amt = B.buildConstant(ShiftAmtTy, Ty.getSizeInBits() - 1);
             B.buildLShr(${dst}.getReg(), ${src}.getReg(), Amt);
             ${root}->eraseFromParent(); }])>;
