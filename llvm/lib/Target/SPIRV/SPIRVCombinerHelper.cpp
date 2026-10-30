@@ -415,8 +415,8 @@ void SPIRVCombinerHelper::applySPIRVLerp(MachineInstr &MI) const {
   Register ResultReg = MI.getOperand(0).getReg();
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildIntrinsic(Intrinsic::spv_lerp, ResultReg)
-      .addUse(XReg) 
-      .addUse(YReg) 
+      .addUse(XReg)
+      .addUse(YReg)
       .addUse(SReg);
 
   MI.eraseFromParent();
