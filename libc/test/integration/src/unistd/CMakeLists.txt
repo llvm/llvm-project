@@ -46,13 +46,18 @@ add_integration_test(
   SRCS
     wait_status_test.cpp
   DEPENDS
-    libc.include.signal
-    libc.include.sys_wait
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.osutil
     libc.src.signal.kill
     libc.src.signal.raise
-    libc.src.stdlib.exit
     libc.src.sys.wait.waitpid
+    libc.src.unistd.close
     libc.src.unistd.fork
+    libc.src.unistd.pipe
+    libc.src.unistd.read
 )
 
 add_integration_test(

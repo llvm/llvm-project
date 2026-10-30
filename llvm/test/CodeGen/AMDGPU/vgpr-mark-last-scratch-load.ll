@@ -119,6 +119,10 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    global_store_b32 v[0:1], v10, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    scratch_load_b32 v0, off, off offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; kill: killed $vgpr2
+; CHECK-NEXT:    ; implicit-def: $vgpr2
+; CHECK-NEXT:    ; kill: killed $vgpr2
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
@@ -146,10 +150,6 @@ define amdgpu_cs void @max_11_vgprs_branch(ptr addrspace(1) %p, i32 %tmp) "amdgp
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; kill: killed $vgpr0
-; CHECK-NEXT:    ; implicit-def: $vgpr0
-; CHECK-NEXT:    ; kill: killed $vgpr0
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:  .LBB1_2: ; %Flow
 ; CHECK-NEXT:    s_and_not1_saveexec_b32 s0, s0

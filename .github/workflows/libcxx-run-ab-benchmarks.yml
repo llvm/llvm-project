@@ -1,5 +1,6 @@
 # This file defines a reusable workflow that runs the libc++ benchmarks against a baseline and a candidate
 # commit on the given machine setup, compares the results, and uploads the comparison as an artifact.
+# The results of each run are also uploaded as LNT v5 reports in a separate artifact.
 #
 # The baseline and the candidate are run interleaved on the same machine to mitigate the impact of
 # environmental noise. Both are benchmarked using the same version of the benchmark suite.
@@ -45,6 +46,12 @@ on:
         description: 'The name of the artifact to upload the results as'
         required: true
         type: string
+      lnt-artifact-name:
+        description: |
+          The name of the artifact to upload the LNT reports as. There is one report per run of the baseline and
+          the candidate.
+        required: true
+        type: string
 
 jobs:
   run-ab-benchmarks:
@@ -62,6 +69,9 @@ jobs:
       CMAKE_CACHE: ${{ fromJSON(inputs.setup).cmake-cache }}
       COMPILER: ${{ fromJSON(inputs.setup).cxx }}
       LIT_PARAMS: ${{ join(fromJSON(inputs.setup).lit-params, ' ') }}
+      # The results are reported under a machine distinct from the one holding historical results, since they
+      # are not comparable (e.g. they use a different version of the benchmark suite).
+      LNT_MACHINE: ${{ inputs.lnt-machine }}-ab
       SAMPLES: ${{ inputs.samples }}
       TEST_CONFIG: ${{ fromJSON(inputs.setup).test-config }}
       TOOLING: ${{ github.workspace }}/tooling
@@ -169,12 +179,42 @@ jobs:
             benchmarks+=("benchmark-suite/${path}")
           done
 
-          for _ in $(seq 1 "${SAMPLES}"); do
+          mkdir -p iterations lnt
+          for i in $(seq 1 "${SAMPLES}"); do
             for build in baseline candidate; do
+              case "${build}" in
+                baseline) commit="${BASELINE}" ;;
+                candidate) commit="${CANDIDATE}" ;;
+              esac
               "${TOOLING}/libcxx/utils/test-at-commit" --test-suite-commit "${BENCHMARK_SUITE_VERSION}" --tmp-src-dir benchmark-suite --test-config "${TEST_CONFIG}" -B "benchmarks/${build}" --compiler "${COMPILER}" -- -v -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/${build}" "${benchmarks[@]}"
-              "${TOOLING}/libcxx/utils/consolidate-benchmarks" "benchmarks/${build}" | tee -a "${build}.lnt"
+              "${TOOLING}/libcxx/utils/consolidate-benchmarks" "benchmarks/${build}" > "iterations/${build}-${i}.lnt"
+              tee -a "${build}.lnt" < "iterations/${build}-${i}.lnt"
+
+              # The version of the benchmark suite is reported as a run parameter, since it changes for every
+              # pull request while LNT requires the information about a machine to remain the same.
+              "${TOOLING}/libcxx/utils/ci/lnt/create-lnt-report"                                        \
+                --input "iterations/${build}-${i}.lnt"                                                  \
+                --output "lnt/${build}-${i}.json"                                                       \
+                --machine "${LNT_MACHINE}"                                                              \
+                --commit "${commit}"                                                                    \
+                --compiler "${COMPILER}"                                                                \
+                --no-ordinal                                                                            \
+                --untracked-machine                                                                     \
+                --delete-after-inactive-days 180                                                        \
+                --run-parameter "test_suite_commit=${BENCHMARK_SUITE_VERSION}"                          \
+                --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+                --lit-build-dir "benchmarks/${build}"                                                   \
+                -- "${lit_params[@]}" --param libcxx_installation="${PWD}/install/${build}"
             done
           done
+
+      # Upload the reports before comparing the results, so they are available even if the comparison fails.
+      - name: Upload the LNT reports
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.lnt-artifact-name }}
+          path: lnt/*.json
+          if-no-files-found: error
 
       - name: Compare baseline and candidate runs
         run: |

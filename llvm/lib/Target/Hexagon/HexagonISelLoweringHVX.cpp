@@ -2502,9 +2502,8 @@ HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
     MachineFunction &MF = DAG.getMachineFunction();
     auto &HST = MF.getSubtarget<HexagonSubtarget>();
-    // Generate the call only on v79 and beyond.
-    // FIXME: On v81, this may not be needed.
-    if (!HST.useHVXV79Ops())
+    // Generate the call only on v79 only.
+    if (!HST.useHVXV79OpsOnly())
       return Op;
 
     ArgListTy Args;
