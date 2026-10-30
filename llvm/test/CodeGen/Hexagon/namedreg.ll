@@ -1,4 +1,9 @@
-; RUN: llc -mattr=+reserved-r19 -mtriple=hexagon < %s | FileCheck %s
+;; This test explicitly disables machine verifier to make this test pass with
+;; EXPENSIVE_CHECKS because cs0/1 registers are used for global register
+;; variables but there is no option to reserve those registers.
+
+; RUN: llc -mattr=+reserved-r19 -mtriple=hexagon -verify-machineinstrs=0 < %s \
+; RUN:    | FileCheck %s
 define dso_local i32 @r19f() #0 {
 entry:
   %0 = call i32 @llvm.read_register.i32(metadata !0)

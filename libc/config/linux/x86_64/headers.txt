@@ -71,6 +71,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_select
     libc.include.sys_sem
     libc.include.sys_sendfile
+    libc.include.sys_shm
     libc.include.sys_signal
     libc.include.sys_socket
     libc.include.sys_stat
