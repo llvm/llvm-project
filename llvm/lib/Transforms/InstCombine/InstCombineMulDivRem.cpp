@@ -2740,15 +2740,14 @@ Instruction *InstCombinerImpl::visitFRem(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
-  Value *Op1 = I.getOperand(1), *Y;
-
-  // frem(x, -y) -> frem(x, y)
-  if (match(Op1, m_FNeg(m_Value(Y))))
-    return replaceOperand(I, 1, Y);
-
-  // frem(x, |y|) -> frem(x, y)
-  if (match(Op1, m_FAbs(m_Value(Y))))
-    return replaceOperand(I, 1, Y);
+  // Cases:
+  //  frem(x, -y) -> frem(x, y)
+  //  frem(x, |y|) -> frem(x, y)
+  //  frem(x, copysign(y, z)) -> frem(x, y)
+  Value *Y = I.getOperand(1);
+  Value *StrippedY = stripSignOnlyFPOps(Y);
+  if (StrippedY != Y)
+    return replaceOperand(I, 1, StrippedY);
 
   return nullptr;
 }

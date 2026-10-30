@@ -3,6 +3,8 @@
 
 declare float @llvm.fabs.f32(float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
+declare float @llvm.copysign.f32(float, float)
+declare <2 x float> @llvm.copysign.v2f32(<2 x float>, <2 x float>)
 
 define float @preserve_negated_dividend(float %x, float %y) {
 ; CHECK-LABEL: define float @preserve_negated_dividend(
@@ -69,5 +71,27 @@ define <2 x float> @fold_abs_y_vector(<2 x float> %x, <2 x float> %y) {
 ;
   %abs_y = call <2 x float> @llvm.fabs.v2f32(<2 x float> %y)
   %rem = frem <2 x float> %x, %abs_y
+  ret <2 x float> %rem
+}
+
+define float @fold_copysign_y(float %x, float %y, float %z) {
+; CHECK-LABEL: define float @fold_copysign_y(
+; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]], float [[Z:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = frem float [[X]], [[Y]]
+; CHECK-NEXT:    ret float [[REM]]
+;
+  %copysign_y = call float @llvm.copysign.f32(float %y, float %z)
+  %rem = frem float %x, %copysign_y
+  ret float %rem
+}
+
+define <2 x float> @fold_copysign_y_vector(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
+; CHECK-LABEL: define <2 x float> @fold_copysign_y_vector(
+; CHECK-SAME: <2 x float> [[X:%.*]], <2 x float> [[Y:%.*]], <2 x float> [[Z:%.*]]) {
+; CHECK-NEXT:    [[REM:%.*]] = frem <2 x float> [[X]], [[Y]]
+; CHECK-NEXT:    ret <2 x float> [[REM]]
+;
+  %copysign_y = call <2 x float> @llvm.copysign.v2f32(<2 x float> %y, <2 x float> %z)
+  %rem = frem <2 x float> %x, %copysign_y
   ret <2 x float> %rem
 }
