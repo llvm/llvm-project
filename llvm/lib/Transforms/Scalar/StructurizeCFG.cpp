@@ -1419,6 +1419,12 @@ void StructurizeCFG::handleIsland(BasicBlock *IslandBB) {
     EntryFlow->setName(FlowBlockName);
     FlowSet.insert(EntryFlow);
     ParentRegion->getRegionInfo()->setRegionFor(EntryFlow, ParentRegion);
+    // The split also moved the exit edges of any subregion that exited to the
+    // island onto EntryFlow. Keep RegionInfo in sync, or the parent's
+    // changeExit finds no exit edges to rewire.
+    for (const auto &Sub : *ParentRegion)
+      if (Sub->getExit() == IslandBB)
+        Sub->replaceExitRecursive(EntryFlow);
   }
 
   // 3. Build the dispatch ladder shown in the diagram above. sel_k is the i1
