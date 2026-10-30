@@ -28,11 +28,13 @@ public:
 private:
   void clear();
   void extract(DWARFDataExtractor DebugArangesData,
+               uint64_t LowestAllocatedAddress,
                function_ref<void(Error)> RecoverableErrorHandler,
                function_ref<void(Error)> WarningHandler);
 
   /// Call appendRange multiple times and then call construct.
-  void appendRange(uint64_t CUOffset, uint64_t LowPC, uint64_t HighPC);
+  void appendRange(uint64_t CUOffset, uint64_t LowPC, uint64_t HighPC,
+                   uint64_t LowestAllocatedAddress);
   void construct();
 
   struct Range {
