@@ -20,17 +20,17 @@ define float @add_sat_f32(float %a, float %b) {
 ; CHECK-NEXT:    add.rp.ftz.sat.f32 %r10, %r1, %r9;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %b, i32 1)
-  %r2 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r1, i32 1)
+  %r1 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %b, /* rnd=rn */ i32 1)
+  %r2 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r1, /* rnd=rn */ i32 1)
 
-  %r3 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %r2, i32 0)
-  %r4 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r3, i32 0)
+  %r3 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %r2, /* rnd=rz */ i32 0)
+  %r4 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r3, /* rnd=rz */ i32 0)
 
-  %r5 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %r4, i32 3)
-  %r6 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r5, i32 3)
+  %r5 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %r4, /* rnd=rm */ i32 3)
+  %r6 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r5, /* rnd=rm */ i32 3)
 
-  %r7 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %r6, i32 2)
-  %r8 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r7, i32 2)
+  %r7 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %r6, /* rnd=rp */ i32 2)
+  %r8 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %r7, /* rnd=rp */ i32 2)
 
   ret float %r8
 }
@@ -54,28 +54,28 @@ define float @sub_sat_f32(float %a, float %b) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-NEXT:    ret;
   %f0 = fneg float %b
-  %r1 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f0, i32 1)
+  %r1 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f0, /* rnd=rn */ i32 1)
 
   %f1 = fneg float %r1
-  %r2 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f1, i32 1)
+  %r2 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f1, /* rnd=rn */ i32 1)
 
   %f2 = fneg float %r2
-  %r3 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f2, i32 0)
+  %r3 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f2, /* rnd=rz */ i32 0)
 
   %f3 = fneg float %r3
-  %r4 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f3, i32 0)
+  %r4 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f3, /* rnd=rz */ i32 0)
 
   %f4 = fneg float %r4
-  %r5 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f4, i32 3)
+  %r5 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f4, /* rnd=rm */ i32 3)
 
   %f5 = fneg float %r5
-  %r6 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f5, i32 3)
+  %r6 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f5, /* rnd=rm */ i32 3)
 
   %f6 = fneg float %r6
-  %r7 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f6, i32 2)
+  %r7 = call float @llvm.nvvm.fadd.sat.f32(float %a, float %f6, /* rnd=rp */ i32 2)
 
   %f7 = fneg float %r7
-  %r8 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f7, i32 2)
+  %r8 = call float @llvm.nvvm.fadd.ftz.sat.f32(float %a, float %f7, /* rnd=rp */ i32 2)
 
   ret float %r8
 }
@@ -98,17 +98,17 @@ define float @mul_sat_f32(float %a, float %b) {
 ; CHECK-NEXT:    mul.rp.ftz.sat.f32 %r10, %r1, %r9;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r10;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %b, i32 1)
-  %r2 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r1, i32 1)
+  %r1 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %b, /* rnd=rn */ i32 1)
+  %r2 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r1, /* rnd=rn */ i32 1)
 
-  %r3 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r2, i32 0)
-  %r4 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r3, i32 0)
+  %r3 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r2, /* rnd=rz */ i32 0)
+  %r4 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r3, /* rnd=rz */ i32 0)
 
-  %r5 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r4, i32 3)
-  %r6 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r5, i32 3)
+  %r5 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r4, /* rnd=rm */ i32 3)
+  %r6 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r5, /* rnd=rm */ i32 3)
 
-  %r7 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r6, i32 2)
-  %r8 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r7, i32 2)
+  %r7 = call float @llvm.nvvm.fmul.sat.f32(float %a, float %r6, /* rnd=rp */ i32 2)
+  %r8 = call float @llvm.nvvm.fmul.ftz.sat.f32(float %a, float %r7, /* rnd=rp */ i32 2)
 
   ret float %r8
 }
@@ -132,17 +132,17 @@ define float @fma_sat_f32(float %a, float %b, float %c) {
 ; CHECK-NEXT:    fma.rp.ftz.sat.f32 %r11, %r1, %r2, %r10;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r11;
 ; CHECK-NEXT:    ret;
-  %r1 = call float @llvm.nvvm.fma.rn.sat.f(float %a, float %b, float %c)
-  %r2 = call float @llvm.nvvm.fma.rn.ftz.sat.f(float %a, float %b, float %r1)
+  %r1 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %c, /* rnd=rn */ i32 1)
+  %r2 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r1, /* rnd=rn */ i32 1)
 
-  %r3 = call float @llvm.nvvm.fma.rz.sat.f(float %a, float %b, float %r2)
-  %r4 = call float @llvm.nvvm.fma.rz.ftz.sat.f(float %a, float %b, float %r3)
+  %r3 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %r2, /* rnd=rz */ i32 0)
+  %r4 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r3, /* rnd=rz */ i32 0)
 
-  %r5 = call float @llvm.nvvm.fma.rm.sat.f(float %a, float %b, float %r4)
-  %r6 = call float @llvm.nvvm.fma.rm.ftz.sat.f(float %a, float %b, float %r5)
+  %r5 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %r4, /* rnd=rm */ i32 3)
+  %r6 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r5, /* rnd=rm */ i32 3)
 
-  %r7 = call float @llvm.nvvm.fma.rp.sat.f(float %a, float %b, float %r6)
-  %r8 = call float @llvm.nvvm.fma.rp.ftz.sat.f(float %a, float %b, float %r7)
+  %r7 = call float @llvm.nvvm.fma.sat.f32(float %a, float %b, float %r6, /* rnd=rp */ i32 2)
+  %r8 = call float @llvm.nvvm.fma.ftz.sat.f32(float %a, float %b, float %r7, /* rnd=rp */ i32 2)
 
   ret float %r8
 }

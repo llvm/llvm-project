@@ -787,8 +787,8 @@ def testCustomTypeTypeCaster():
         except RuntimeError as e:
             print(e)
 
-        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
-        # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
+        # A caster for RankedTensorType is already registered (the builtin one).
+        # So this one replaces that one (successfully). And then we register the custom caster below.
         @register_type_caster(c.typeid, replace=True)
         def type_caster(pytype):
             return RankedTensorType(pytype)

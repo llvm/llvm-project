@@ -960,7 +960,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lround
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -976,7 +975,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -992,7 +990,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1008,7 +1005,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1024,7 +1020,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1041,7 +1036,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1058,7 +1052,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llround
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1074,7 +1067,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1090,7 +1082,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1106,7 +1097,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1122,7 +1112,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1139,7 +1128,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1242,7 +1230,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrint
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1258,7 +1245,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1274,7 +1260,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1290,7 +1275,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1306,7 +1290,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1323,7 +1306,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1340,7 +1322,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrint
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1356,7 +1337,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1372,7 +1352,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1388,7 +1367,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1404,7 +1382,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1421,7 +1398,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
