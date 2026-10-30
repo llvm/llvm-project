@@ -1,6 +1,6 @@
 # Macros and functions related to detecting details of the Python environment.
 
-set(MLIR_MINIMUM_PYTHON_VERSION 3.11)
+set(MLIR_MINIMUM_PYTHON_VERSION 3.10)
 # Finds and configures python packages needed to build MLIR Python bindings.
 macro(mlir_configure_python_dev_packages)
   if(NOT MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES)
@@ -81,15 +81,7 @@ macro(mlir_configure_python_dev_packages)
       endif()
       set(nanobind_INCLUDE_DIR "${PACKAGE_DIR}")
     endif()
-    # nanobind < 2.13 doesn't list Python 3.15's PyFrozenDict_Type in
-    # darwin-ld-cpython.sym, so linking against 3.15 fails on macOS.
-    if(Python3_VERSION VERSION_GREATER_EQUAL 3.15)
-      set(_nanobind_min_version 2.13)
-    else()
-      set(_nanobind_min_version 2.9)
-    endif()
-    find_package(nanobind ${_nanobind_min_version} CONFIG REQUIRED)
-    unset(_nanobind_min_version)
+    find_package(nanobind 2.9 CONFIG REQUIRED)
     message(STATUS "Found nanobind v${nanobind_VERSION}")
   endif()
 endmacro()
