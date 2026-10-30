@@ -14627,7 +14627,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
       *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
       LI0->getPointerOperand(), CommonAlignment,
       TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
-  if (StridedCost >= CompressedCost)
+  if (StridedCost >= CompressedCost && !Opts.slp_force_strided_loads)
     return;
 
   LLVM_DEBUG({
