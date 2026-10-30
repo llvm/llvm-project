@@ -169,11 +169,11 @@ void func() {
 // CIR: %[[INIT:.*]] = cir.alloca "e" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[INIT_2:.*]] = cir.alloca "e2" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.get_element inbounds %[[ARR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR" cir.store %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.get_element inbounds %[[ARR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR" cir.store %[[TMP]], %[[INIT_2]] : !s32i, !cir.ptr<!s32i>
 
@@ -181,10 +181,10 @@ void func() {
 // LLVM-NEXT: %[[ARR:.*]] = alloca [10 x i32], align 16
 // LLVM-NEXT: %[[INIT:.*]] = alloca i32, align 4
 // LLVM-NEXT: %[[INIT_2:.*]] = alloca i32, align 4
-// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR]], i32 0, i64 0
+// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR]], i32 0, i64 0
 // LLVM-NEXT: %[[TMP_1:.*]] = load i32, ptr %[[ELE_PTR]], align 16
 // LLVM-NEXT: store i32 %[[TMP_1]], ptr %[[INIT]], align 4
-// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr [10 x i32], ptr %[[ARR]], i32 0, i64 1
+// LLVM-NEXT: %[[ELE_PTR:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR]], i32 0, i64 1
 // LLVM-NEXT: %[[TMP_2:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // LLVM-NEXT: store i32 %[[TMP_2]], ptr %[[INIT_2]], align 4
 
@@ -229,7 +229,7 @@ void func3() {
 // CIR: cir.store{{.*}} %[[IDX_V]], %[[IDX]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP_IDX:.*]] = cir.load{{.*}} %[[IDX]] : !cir.ptr<!s32i>, !s32i
 // CIR: %[[TMP_IDX_64:.*]] = cir.cast integral %[[TMP_IDX]] : !s32i -> !s64i
-// CIR: %[[ELE_PTR:.*]] = cir.get_element %[[ARR]][%[[TMP_IDX_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
+// CIR: %[[ELE_PTR:.*]] = cir.get_element inbounds %[[ARR]][%[[TMP_IDX_64]] : !s64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: %[[ELE_TMP:.*]] = cir.load{{.*}} %[[ELE_PTR]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[ELE_TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -241,7 +241,7 @@ void func3() {
 // LLVM:  store i32 1, ptr %[[IDX]], align 4
 // LLVM:  %[[TMP1:.*]] = load i32, ptr %[[IDX]], align 4
 // LLVM:  %[[IDX_I64:.*]] = sext i32 %[[TMP1]] to i64
-// LLVM:  %[[ELE:.*]] = getelementptr [2 x i32], ptr %[[ARR]], i32 0, i64 %[[IDX_I64]]
+// LLVM:  %[[ELE:.*]] = getelementptr inbounds [2 x i32], ptr %[[ARR]], i32 0, i64 %[[IDX_I64]]
 // LLVM:  %[[TMP2:.*]] = load i32, ptr %[[ELE]], align 4
 // LLVM:  store i32 %[[TMP2]], ptr %[[INIT]], align 4
 
@@ -266,9 +266,9 @@ void func4() {
 // CIR: %[[CONST:.*]] = cir.get_global @[[FUNC4_ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
 // CIR: cir.copy %[[CONST]] to %[[ARR]] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>>
 // CIR: %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
-// CIR: %[[ARR_1:.*]] = cir.get_element %[[ARR]][%[[IDX_1]] : !s64i] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>> -> !cir.ptr<!cir.array<!s32i x 1>>
+// CIR: %[[ARR_1:.*]] = cir.get_element inbounds %[[ARR]][%[[IDX_1]] : !s64i] : !cir.ptr<!cir.array<!cir.array<!s32i x 1> x 2>> -> !cir.ptr<!cir.array<!s32i x 1>>
 // CIR: %[[IDX:.*]] = cir.const #cir.int<0> : !s64i
-// CIR: %[[ELE_0:.*]] = cir.get_element %[[ARR_1]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
+// CIR: %[[ELE_0:.*]] = cir.get_element inbounds %[[ARR_1]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 1>> -> !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[ELE_0]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[TMP]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -276,8 +276,8 @@ void func4() {
 // LLVM:  %[[ARR:.*]] = alloca [2 x [1 x i32]], align 4
 // LLVM:  %[[INIT:.*]] = alloca i32, align 4
 // LLVM:  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[ARR]], ptr align 4 @[[FUNC4_ARR:.*]], i64 8, i1 false)
-// LLVM:  %[[ARR_1:.*]] = getelementptr [2 x [1 x i32]], ptr %[[ARR]], i32 0, i64 1
-// LLVM:  %[[ELE_PTR:.*]] = getelementptr [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
+// LLVM:  %[[ARR_1:.*]] = getelementptr inbounds [2 x [1 x i32]], ptr %[[ARR]], i32 0, i64 1
+// LLVM:  %[[ELE_PTR:.*]] = getelementptr inbounds [1 x i32], ptr %[[ARR_1]], i32 0, i64 0
 // LLVM:  %[[TMP:.*]] = load i32, ptr %[[ELE_PTR]], align 4
 // LLVM:  store i32 %[[TMP]], ptr %[[INIT]], align 4
 
@@ -414,7 +414,7 @@ void func9(int arr[10][5]) {
 // CIR:  %[[IDX_1:.*]] = cir.const #cir.int<1> : !s64i
 // CIR:  %[[ARR_1:.*]] = cir.ptr_stride %[[TMP_1]], %[[IDX_1]] : (!cir.ptr<!cir.array<!s32i x 5>>, !s64i) -> !cir.ptr<!cir.array<!s32i x 5>>
 // CIR:  %[[IDX:.*]] = cir.const #cir.int<2> : !s64i
-// CIR: %[[ARR_1_2:.*]] = cir.get_element %[[ARR_1]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
+// CIR: %[[ARR_1_2:.*]] = cir.get_element inbounds %[[ARR_1]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!s32i>
 // CIR:  %[[TMP_2:.*]] = cir.load{{.*}} %[[ARR_1_2]] : !cir.ptr<!s32i>, !s32i
 // CIR:  cir.store{{.*}} %[[TMP_2]], %[[INIT]] : !s32i, !cir.ptr<!s32i>
 
@@ -424,7 +424,7 @@ void func9(int arr[10][5]) {
 // LLVM:  store ptr %[[ARG]], ptr %[[ARR]], align 8
 // LLVM:  %[[TMP_1:.*]] = load ptr, ptr %[[ARR]], align 8
 // LLVM:  %[[ARR_1:.*]] = getelementptr [5 x i32], ptr %[[TMP_1]], i64 1
-// LLVM:  %[[ARR_1_2:.*]] = getelementptr [5 x i32], ptr %[[ARR_1]], i32 0, i64 2
+// LLVM:  %[[ARR_1_2:.*]] = getelementptr inbounds [5 x i32], ptr %[[ARR_1]], i32 0, i64 2
 // LLVM:  %[[TMP_2:.*]] = load i32, ptr %[[ARR_1_2]], align 4
 // LLVM:  store i32 %[[TMP_2]], ptr %[[INIT]], align 4
 
@@ -517,7 +517,7 @@ void boolean_index_access(int x) {
 // CIR: %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
 // CIR: %[[CMP:.*]] = cir.cmp gt %[[X]], %[[FOUR]] : !s32i
 // CIR: %[[IDX:.*]] = cir.cast bool_to_int %[[CMP]] : !cir.bool -> !u64i
-// CIR: %[[ELE:.*]] = cir.get_element %[[ARR_ADDR]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
+// CIR: %[[ELE:.*]] = cir.get_element inbounds nuw %[[ARR_ADDR]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!s32i>
 // CIR: %[[VAL:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.store{{.*}} %[[VAL]], %[[N_ADDR]] : !s32i, !cir.ptr<!s32i>
 
@@ -527,7 +527,7 @@ void boolean_index_access(int x) {
 // LLVM: %[[X:.*]] = load i32, ptr %[[X_ADDR]]
 // LLVM: %[[CMP:.*]] = icmp sgt i32 %[[X]], 4
 // LLVM: %[[IDX:.*]] = zext i1 %[[CMP]] to i64
-// LLVM: %[[ELE:.*]] = getelementptr [2 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
+// LLVM: %[[ELE:.*]] = getelementptr inbounds nuw [2 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
 // LLVM: %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // LLVM: store i32 %[[VAL]], ptr %[[N_ADDR]]
 
@@ -555,7 +555,7 @@ void bitint_index_access(_BitInt(7) i) {
 // CIR:   %[[N_ADDR:.*]] = cir.alloca "n" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[I:.*]] = cir.load{{.*}} %[[I_ADDR]] : !cir.ptr<!cir.int<s, 7, bitint>>, !cir.int<s, 7, bitint>
 // CIR:   %[[IDX:.*]] = cir.cast integral %[[I]] : !cir.int<s, 7, bitint> -> !s64i
-// CIR:   %[[ELE:.*]] = cir.get_element %[[ARR_ADDR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
+// CIR:   %[[ELE:.*]] = cir.get_element inbounds %[[ARR_ADDR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!s32i x 10>> -> !cir.ptr<!s32i>
 // CIR:   %[[VAL:.*]] = cir.load{{.*}} %[[ELE]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[VAL]], %[[N_ADDR]] : !s32i, !cir.ptr<!s32i>
 
@@ -566,7 +566,7 @@ void bitint_index_access(_BitInt(7) i) {
 // LLVM:   %[[I:.*]] = load i8, ptr %[[I_ADDR]]
 // LLVM:   %[[I_CAST:.*]] = trunc i8 %[[I]] to i7
 // LLVM:   %[[IDX:.*]] = sext i7 %[[I_CAST]] to i64
-// LLVM:   %[[ELE:.*]] = getelementptr [10 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
+// LLVM:   %[[ELE:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_ADDR]], i32 0, i64 %[[IDX]]
 // LLVM:   %[[VAL:.*]] = load i32, ptr %[[ELE]]
 // LLVM:   store i32 %[[VAL]], ptr %[[N_ADDR]]
 
@@ -588,7 +588,7 @@ char access_last_element_of_huge_array() {
 // CIR: cir.func{{.*}} @_Z33access_last_element_of_huge_arrayv
 // CIR:   %[[HUGE:.*]] = cir.get_global @huge : !cir.ptr<!cir.array<!s8i x 2305843009213693951>>
 // CIR:   %[[IDX:.*]] = cir.const #cir.int<2305843009213693950> : !u64i
-// CIR:   %[[ELE:.*]] = cir.get_element %[[HUGE]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s8i x 2305843009213693951>> -> !cir.ptr<!s8i>
+// CIR:   %[[ELE:.*]] = cir.get_element inbounds nuw %[[HUGE]][%[[IDX]] : !u64i] : !cir.ptr<!cir.array<!s8i x 2305843009213693951>> -> !cir.ptr<!s8i>
 // CIR:   cir.load{{.*}} %[[ELE]] : !cir.ptr<!s8i>, !s8i
 
 // LLVM: define{{.*}} @_Z33access_last_element_of_huge_arrayv()

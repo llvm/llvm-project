@@ -202,7 +202,7 @@ _BitInt(128) get_bi(void) { return l128[1].bi; }
 // CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @l128 : !cir.ptr<!cir.array<!rec_Last128 x 2>>
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element %[[GET_GLOB]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!rec_Last128 x 2>> -> !cir.ptr<!rec_Last128>
+// CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element inbounds %[[GET_GLOB]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!rec_Last128 x 2>> -> !cir.ptr<!rec_Last128>
 // CIR-NEXT: %[[GET_BI:.*]] = cir.get_member %[[ARR_GEP]][2] {name = "bi"} : !cir.ptr<!rec_Last128> -> !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[LOAD_BI:.*]] = cir.load align(8) %[[GET_BI]] : !cir.ptr<!s128i_bitint>, !s128i_bitint
 // CIR-NEXT: cir.store %[[LOAD_BI]], %[[RET_ALLOC]] : !s128i_bitint, !cir.ptr<!s128i_bitint>
@@ -216,10 +216,10 @@ _BitInt(128) get_bi2(void) { return arrMem[1].bi[1]; }
 // CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @arrMem : !cir.ptr<!cir.array<!rec_ArrMem x 2>>
 // CIR-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1> : !s64i
-// CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element %[[GET_GLOB]][%[[ONE_2]] : !s64i] : !cir.ptr<!cir.array<!rec_ArrMem x 2>> -> !cir.ptr<!rec_ArrMem>
+// CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element inbounds %[[GET_GLOB]][%[[ONE_2]] : !s64i] : !cir.ptr<!cir.array<!rec_ArrMem x 2>> -> !cir.ptr<!rec_ArrMem>
 // CIR-NEXT: %[[GET_BI_ARR:.*]] = cir.get_member %[[ARR_GEP]][2] {name = "bi"} : !cir.ptr<!rec_ArrMem> -> !cir.ptr<!cir.array<!s128i_bitint x 2>>
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
-// CIR-NEXT: %[[GET_BI_ELT:.*]] = cir.get_element %[[GET_BI_ARR]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!s128i_bitint x 2>> -> !cir.ptr<!s128i_bitint>
+// CIR-NEXT: %[[GET_BI_ELT:.*]] = cir.get_element inbounds %[[GET_BI_ARR]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!s128i_bitint x 2>> -> !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[LOAD_BI:.*]] = cir.load align(8) %[[GET_BI_ELT]] : !cir.ptr<!s128i_bitint>, !s128i_bitint
 // CIR-NEXT: cir.store %[[LOAD_BI]], %[[RET_ALLOC]] : !s128i_bitint, !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[RET_LOAD:.*]] = cir.load %[[RET_ALLOC]] : !cir.ptr<!s128i_bitint>, !s128i_bitint

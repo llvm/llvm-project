@@ -1,0 +1,40 @@
+// RUN: cir-translate -cir-to-llvmir --disable-cc-lowering -o %t.ll %s
+// RUN: FileCheck --input-file=%t.ll -check-prefix=LLVM %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!u64i = !cir.int<u, 64>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func @plain(%arg0: !cir.ptr<!cir.array<!s32i x 4>>, %arg1: !s64i) -> !cir.ptr<!s32i> {
+    %0 = cir.get_element %arg0[%arg1 : !s64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+
+  cir.func @inbounds(%arg0: !cir.ptr<!cir.array<!s32i x 4>>, %arg1: !s64i) -> !cir.ptr<!s32i> {
+    %0 = cir.get_element inbounds %arg0[%arg1 : !s64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+
+  cir.func @nuw(%arg0: !cir.ptr<!cir.array<!s32i x 4>>, %arg1: !u64i) -> !cir.ptr<!s32i> {
+    %0 = cir.get_element nuw %arg0[%arg1 : !u64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+
+  cir.func @inbounds_nuw(%arg0: !cir.ptr<!cir.array<!s32i x 4>>, %arg1: !u64i) -> !cir.ptr<!s32i> {
+    %0 = cir.get_element inbounds nuw %arg0[%arg1 : !u64i] : !cir.ptr<!cir.array<!s32i x 4>> -> !cir.ptr<!s32i>
+    cir.return %0 : !cir.ptr<!s32i>
+  }
+}
+
+// LLVM-LABEL: define ptr @plain(
+// LLVM:         getelementptr [4 x i32], ptr %{{.*}}, i32 0, i64 %{{.*}}
+
+// LLVM-LABEL: define ptr @inbounds(
+// LLVM:         getelementptr inbounds [4 x i32], ptr %{{.*}}, i32 0, i64 %{{.*}}
+
+// LLVM-LABEL: define ptr @nuw(
+// LLVM:         getelementptr nuw [4 x i32], ptr %{{.*}}, i32 0, i64 %{{.*}}
+
+// LLVM-LABEL: define ptr @inbounds_nuw(
+// LLVM:         getelementptr inbounds nuw [4 x i32], ptr %{{.*}}, i32 0, i64 %{{.*}}
