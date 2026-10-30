@@ -7006,7 +7006,7 @@ namespace {
 ///
 ///   vector<4x1x1xi1> --> vector<4x1xi1>
 ///
-static VectorType trimTrailingUnitDims(VectorType oldType, 
+static VectorType trimTrailingUnitDims(VectorType oldType,
                                        bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
@@ -7034,7 +7034,7 @@ static VectorType trimTrailingUnitDims(VectorType oldType,
 ///
 ///   vector<1x1x4xi1> --> vector<4x1xi1>
 ///
-static VectorType trimLeadingUnitDims(VectorType oldType, 
+static VectorType trimLeadingUnitDims(VectorType oldType,
                                       bool allowRank0 = false) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
@@ -7129,9 +7129,10 @@ public:
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
 
-      auto maskOperandsToDrop = (Side == UnitDimSide::Trailing)
-                                    ? maskOperands.take_back(numMaskDimsToDrop)
-                                    : maskOperands.take_front(numMaskDimsToDrop);
+      auto maskOperandsToDrop =
+          (Side == UnitDimSide::Trailing)
+              ? maskOperands.take_back(numMaskDimsToDrop)
+              : maskOperands.take_front(numMaskDimsToDrop);
 
       // Check that every mask-dim-size to-be-dropped is constant and == 1. We
       // could also check for == 0, but that's left as a TODO.
