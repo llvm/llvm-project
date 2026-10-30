@@ -244,6 +244,9 @@
 /clang/tools/clang-linker-wrapper/ @jhuber6
 /clang/tools/clang-nvlink-wrapper/ @jhuber6
 
+# OpenMP runtime library
+/openmp @mjklemm @TerryLWilmarth
+
 # Offloading runtime
 /offload/plugins-nextgen/common @jhuber6
 /offload/plugins-nextgen/amdgpu @jhuber6
