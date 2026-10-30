@@ -1230,11 +1230,24 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
     // If the comparison result is 'i1 false', then the truncation was lossy.
   }
 
+  // A failed trap overflow behavior type check branches to the overflow
+  // handler label, if one is visible, instead of trapping.
+  const LabelDecl *OverflowHandler =
+      OBTrapInvolved && !SrcType.isWrapType() && !DstType.isWrapType()
+          ? CGF.getOverflowHandler()
+          : nullptr;
+  assert((!OverflowHandler || isOverflowHandlerCheckedConversion(
+                                  CGF.getContext(), SrcType, DstType)) &&
+         "overflow handler branch from a conversion Sema did not check");
+
   // Do we care about this type of truncation?
   if (!CGF.SanOpts.has(Check.second.second)) {
     // Just emit a trap check if an __ob_trap was involved but appropriate
     // sanitizer isn't enabled.
-    if (OBTrapInvolved)
+    if (OverflowHandler)
+      CGF.EmitOverflowHandlerBranch(Builder.CreateNot(Check.second.first),
+                                    OverflowHandler);
+    else if (OBTrapInvolved)
       CGF.EmitTrapCheck(Check.second.first, CheckHandler);
     return;
   }
@@ -1260,7 +1273,12 @@ void ScalarExprEmitter::EmitIntegerTruncationCheck(Value *Src, QualType SrcType,
       llvm::ConstantInt::get(Builder.getInt8Ty(), Check.first),
       llvm::ConstantInt::get(Builder.getInt32Ty(), 0)};
 
-  CGF.EmitCheck(Check.second, CheckHandler, StaticArgs, {Src, Dst});
+  if (!OverflowHandler ||
+      CGF.shouldReportBeforeOverflowHandler(Check.second.second))
+    CGF.EmitCheck(Check.second, CheckHandler, StaticArgs, {Src, Dst});
+  if (OverflowHandler)
+    CGF.EmitOverflowHandlerBranch(Builder.CreateNot(Check.second.first),
+                                  OverflowHandler);
 }
 
 static llvm::Value *EmitIsNegativeTestHelper(Value *V, QualType VType,
@@ -1416,8 +1434,26 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
     // If the comparison result is 'i1 false', then the truncation was lossy.
   }
 
+  // A failed trap overflow behavior type check branches to the overflow
+  // handler label, if one is visible, instead of trapping.
+  const LabelDecl *OverflowHandler =
+      OBTrapInvolved && !SrcType.isWrapType() && !DstType.isWrapType()
+          ? CGF.getOverflowHandler()
+          : nullptr;
+  assert((!OverflowHandler || isOverflowHandlerCheckedConversion(
+                                  CGF.getContext(), SrcType, DstType)) &&
+         "overflow handler branch from a conversion Sema did not check");
+  auto EmitHandlerBranch = [&] {
+    llvm::Value *Combined = Checks.front().first;
+    for (const auto &C : llvm::drop_begin(Checks))
+      Combined = Builder.CreateAnd(Combined, C.first);
+    CGF.EmitOverflowHandlerBranch(Builder.CreateNot(Combined), OverflowHandler);
+  };
+
   if (!CGF.SanOpts.has(SanitizerKind::SO_ImplicitIntegerSignChange)) {
-    if (OBTrapInvolved) {
+    if (OverflowHandler) {
+      EmitHandlerBranch();
+    } else if (OBTrapInvolved) {
       llvm::Value *Combined = Check.second.first;
       for (const auto &C : Checks)
         Combined = Builder.CreateAnd(Combined, C.first);
@@ -1432,7 +1468,12 @@ void ScalarExprEmitter::EmitIntegerSignChangeCheck(Value *Src, QualType SrcType,
       llvm::ConstantInt::get(Builder.getInt8Ty(), CheckKind),
       llvm::ConstantInt::get(Builder.getInt32Ty(), 0)};
   // EmitCheck() will 'and' all the checks together.
-  CGF.EmitCheck(Checks, CheckHandler, StaticArgs, {Src, Dst});
+  if (!OverflowHandler || llvm::any_of(Checks, [&](const auto &C) {
+        return CGF.shouldReportBeforeOverflowHandler(C.second);
+      }))
+    CGF.EmitCheck(Checks, CheckHandler, StaticArgs, {Src, Dst});
+  if (OverflowHandler)
+    EmitHandlerBranch();
 }
 
 // Should be called within CodeGenFunction::SanitizerScope RAII scope.

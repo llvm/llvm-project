@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types -foverflow-behavior-label=efault -emit-llvm -o - %s | FileCheck %s --check-prefix=RENAMED
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types -fsanitize=signed-integer-overflow -fsanitize-recover=signed-integer-overflow -emit-llvm -o - %s | FileCheck %s --check-prefix=RECOVER
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types -fsanitize=signed-integer-overflow -fsanitize-trap=signed-integer-overflow -emit-llvm -o - %s | FileCheck %s --check-prefix=SANTRAP
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change -fsanitize-recover=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change -emit-llvm -o - %s | FileCheck %s --check-prefix=CONVRECOVER
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-overflow-behavior-types -fsanitize=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change -fsanitize-trap=implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change -emit-llvm -o - %s | FileCheck %s --check-prefix=CONVTRAP
 
 // CHECK-LABEL: define {{.*}} @add(
 // CHECK: [[R:%.*]] = call { i32, i1 } @llvm.sadd.with.overflow.i32
@@ -117,3 +119,64 @@ int out_of_cleanup(int __ob_trap n) {
 __overflow:
   return -1;
 }
+
+// Implicit truncation into a plain type branches before the store.
+// CHECK-LABEL: define {{.*}} @trunc_assign(
+// CHECK: [[T:%.*]] = trunc i64 {{.*}} to i8
+// CHECK: [[OK:%.*]] = icmp eq i64
+// CHECK: [[BAD:%.*]] = xor i1 [[OK]], true
+// CHECK: br i1 [[BAD]], label %[[H:[a-z.0-9]+]], label %[[CONT:[a-z.0-9]+]]
+// CHECK: [[H]]:
+// CHECK-NEXT: br label %__overflow
+// CHECK: [[CONT]]:
+// CHECK-NEXT: store i8 [[T]]
+// CHECK-NOT: ubsantrap
+// CHECK: ret
+
+// CONVRECOVER-LABEL: define {{.*}} @trunc_assign(
+// CONVRECOVER: call void @__ubsan_handle_implicit_conversion(
+// CONVRECOVER: br label %__overflow
+
+// CONVTRAP-LABEL: define {{.*}} @trunc_assign(
+// CONVTRAP: trunc i64 {{.*}} to i8
+// CONVTRAP-NOT: ubsantrap
+// CONVTRAP: br label %__overflow
+// CONVTRAP-LABEL: define {{.*}} @sign_change(
+int trunc_assign(unsigned long long __ob_trap v) {
+  unsigned char old = 5;
+  old = v;
+  return old;
+__overflow:
+  return -old;
+}
+
+// CHECK-LABEL: define {{.*}} @sign_change(
+// CHECK: icmp slt i32
+// CHECK: br label %__overflow
+// CHECK-NOT: ubsantrap
+// CHECK: ret
+// CONVRECOVER-LABEL: define {{.*}} @sign_change(
+// CONVRECOVER: call void @__ubsan_handle_implicit_conversion(
+// CONVRECOVER: br label %__overflow
+unsigned sign_change(int __ob_trap v) {
+  unsigned u = v;
+  return u;
+__overflow:
+  return 0;
+}
+
+// The conversion back to the left-hand type of a compound assignment is
+// checked even when the operator itself is not.
+// CHECK-LABEL: define {{.*}} @shift_assign(
+// CHECK: shl i32
+// CHECK: trunc i32 {{.*}} to i8
+// CHECK: br label %__overflow
+// CHECK-NOT: ubsantrap
+// CHECK: ret
+int shift_assign(unsigned char __ob_trap x) {
+  x <<= 4;
+  return x;
+__overflow:
+  return -1;
+}
+
