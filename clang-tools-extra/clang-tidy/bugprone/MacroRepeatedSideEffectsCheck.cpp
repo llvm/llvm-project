@@ -12,6 +12,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 #include <stack>
 
 namespace clang::tidy::bugprone {
@@ -31,6 +32,8 @@ private:
 
   unsigned countArgumentExpansions(const MacroInfo *MI,
                                    const IdentifierInfo *Arg) const;
+
+  bool isNonZeroLiteral(const Token &T) const;
 
   bool hasSideEffects(const Token *ResultArgToks) const;
 };
@@ -84,10 +87,30 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
   // Has a __builtin_constant_p been found?
   bool FoundBuiltin = false;
   bool PrevTokenIsHash = false;
+  int ParenDepth = 0;
+  // Paren depth of the false branch of "(1 ? a : b)" while we are skipping it.
+  std::optional<int> DeadBranchDepth;
   // Count when "?" is reached. The "Current" will get this value when the ":"
-  // is reached.
-  std::stack<unsigned, SmallVector<unsigned, 8>> CountAtQuestion;
-  for (const auto &T : MI->tokens()) {
+  // is reached. Also remembers if the condition was a non-zero literal.
+  std::stack<std::pair<unsigned, bool>,
+             SmallVector<std::pair<unsigned, bool>, 8>>
+      CountAtQuestion;
+  const ArrayRef<Token> Tokens = MI->tokens();
+  for (const auto [I, T] : llvm::enumerate(Tokens)) {
+    if (T.is(tok::l_paren))
+      ParenDepth++;
+    else if (T.is(tok::r_paren))
+      ParenDepth--;
+
+    // The false branch of "(1 ? a : b)" is never evaluated. Skip it until the
+    // closing parenthesis or a comma.
+    if (DeadBranchDepth) {
+      if (ParenDepth > *DeadBranchDepth ||
+          (ParenDepth == *DeadBranchDepth && T.isNot(tok::comma)))
+        continue;
+      DeadBranchDepth.reset();
+    }
+
     // The result of __builtin_constant_p(x) is 0 if x is a macro argument
     // with side effects. If we see a __builtin_constant_p(x) followed by a
     // "?" "&&" or "||", then we need to reason about control flow to report
@@ -108,12 +131,19 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
 
     // Handling of ? and :.
     if (T.is(tok::question)) {
-      CountAtQuestion.push(Current);
+      CountAtQuestion.emplace(Current, I >= 2 &&
+                                           Tokens[I - 2].is(tok::l_paren) &&
+                                           isNonZeroLiteral(Tokens[I - 1]));
     } else if (T.is(tok::colon)) {
       if (CountAtQuestion.empty())
         return 0;
-      Current = CountAtQuestion.top();
+      bool SkipFalseBranch = false;
+      std::tie(Current, SkipFalseBranch) = CountAtQuestion.top();
       CountAtQuestion.pop();
+      if (SkipFalseBranch) {
+        DeadBranchDepth = ParenDepth;
+        continue;
+      }
     }
 
     // If current token is a parenthesis, skip it.
@@ -131,6 +161,12 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
     // If not existent, skip it.
     if (TII == nullptr)
       continue;
+
+    // Arguments of sizeof and alignof are not evaluated.
+    if (T.isOneOf(tok::kw_sizeof, tok::kw_alignof, tok::kw__Alignof)) {
+      SkipParen = true;
+      continue;
+    }
 
     // If a __builtin_constant_p is found within the macro definition, don't
     // count arguments inside the parentheses and remember that it has been
@@ -157,6 +193,14 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
     }
   }
   return Max;
+}
+
+bool MacroRepeatedPPCallbacks::isNonZeroLiteral(const Token &T) const {
+  if (T.isNot(tok::numeric_constant))
+    return false;
+  SmallString<16> Buffer;
+  uint64_t Value = 0;
+  return !PP.getSpelling(T, Buffer).getAsInteger(0, Value) && Value != 0;
 }
 
 bool MacroRepeatedPPCallbacks::hasSideEffects(

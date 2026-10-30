@@ -123,3 +123,28 @@ void log(const char *s, int v);
 void test_log(int a) {
   LOG(a++);
 }
+
+_Bool single_arg(_Bool);
+void fail(const char *);
+#define sizeofgood(x)   (sizeof(x) + _Alignof(x) + (x))
+#define sizeofbad(x)    (sizeof(x) + (x) + (x))
+#define assertc(...)    (((void)sizeof(single_arg(__VA_ARGS__)), __VA_ARGS__) ? (void)0 : fail(#__VA_ARGS__))
+#define assertcpp(...)  ((__VA_ARGS__) ? (void)(1 ? 1 : (_Bool)(__VA_ARGS__)) : fail(#__VA_ARGS__))
+#define deadbad1(x)     ((x) + (0 ? 1 : (x)))
+#define deadbad2(x)     ((x) + (1 ? 1 : (x), (x)))
+void unevaluated(int ret, int a) {
+  ret += sizeofgood(a++);
+  ret += sizeofbad(a++);
+  // CHECK-NOTES: :[[@LINE-1]]:20: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-9]]:9: note: macro 'sizeofbad' defined here
+
+  assertc(++a == 1);
+  assertcpp(++a == 1);
+
+  ret += deadbad1(a++);
+  // CHECK-NOTES: :[[@LINE-1]]:19: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-13]]:9: note: macro 'deadbad1' defined here
+  ret += deadbad2(a++);
+  // CHECK-NOTES: :[[@LINE-1]]:19: warning: side effects in the 1st macro argument 'x'
+  // CHECK-NOTES: :[[@LINE-15]]:9: note: macro 'deadbad2' defined here
+}
