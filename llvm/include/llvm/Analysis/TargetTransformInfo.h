@@ -2099,9 +2099,11 @@ public:
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function
   /// \p Ops contains the Uses to sink ordered by dominance (dominating users
-  /// come first).
+  /// come first). \p LI, when available, lets targets account for loop
+  /// boundaries when deciding profitability.
   LLVM_ABI bool isProfitableToSinkOperands(Instruction *I,
-                                           SmallVectorImpl<Use *> &Ops) const;
+                                           SmallVectorImpl<Use *> &Ops,
+                                           const LoopInfo *LI = nullptr) const;
 
   /// Return true if it's significantly cheaper to shift a vector by a uniform
   /// scalar than by an amount which will vary across each lane. On x86 before
