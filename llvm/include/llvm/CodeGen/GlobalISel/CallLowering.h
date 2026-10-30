@@ -568,6 +568,14 @@ public:
     return false;
   }
 
+  /// \return true if a call to \p Callee, which is marked nonlazybind, has to
+  /// go through the GOT. Targets that do not need the GOT here can return
+  /// false to get a direct call instead.
+  virtual bool shouldCallNonLazyBindViaGOT(const MachineFunction &MF,
+                                           const Function &Callee) const {
+    return true;
+  }
+
   /// This hook must be implemented to lower the incoming (formal)
   /// arguments, described by \p VRegs, for GlobalISel. Each argument
   /// must end up in the related virtual registers described by \p VRegs.

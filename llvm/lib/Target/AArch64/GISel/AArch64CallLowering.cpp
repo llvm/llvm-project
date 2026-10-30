@@ -660,6 +660,13 @@ bool AArch64CallLowering::fallBackToDAGISel(const MachineFunction &MF) const {
   return !IsGlobalISelPreferred;
 }
 
+bool AArch64CallLowering::shouldCallNonLazyBindViaGOT(
+    const MachineFunction &MF, const Function &Callee) const {
+  const AArch64Subtarget &STI = MF.getSubtarget<AArch64Subtarget>();
+  return STI.classifyGlobalFunctionReference(&Callee, MF.getTarget()) &
+         AArch64II::MO_GOT;
+}
+
 void AArch64CallLowering::saveVarArgRegisters(
     MachineIRBuilder &MIRBuilder, CallLowering::IncomingValueHandler &Handler,
     CCState &CCInfo) const {

@@ -41,6 +41,9 @@ public:
 
   bool fallBackToDAGISel(const MachineFunction &MF) const override;
 
+  bool shouldCallNonLazyBindViaGOT(const MachineFunction &MF,
+                                   const Function &Callee) const override;
+
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
                             ArrayRef<ArrayRef<Register>> VRegs,
                             FunctionLoweringInfo &FLI) const override;
