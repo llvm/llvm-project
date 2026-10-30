@@ -5,10 +5,9 @@ define <vscale x 4 x i32> @load(ptr %x) {
 ; CHECK-LABEL: define <vscale x 4 x i32> @load
 ; CHECK-SAME: (ptr [[X:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
-; CHECK-NEXT:    [[A_ELT1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[TMP2]]
-; CHECK-NEXT:    [[A_UNPACK2:%.*]] = load <vscale x 4 x i32>, ptr [[A_ELT1]], align 16
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[A_UNPACK2]]
+; CHECK-NEXT:    [[A_ELT:%.*]] = getelementptr inbounds [16 x i8], ptr [[X]], i64 [[TMP1]]
+; CHECK-NEXT:    [[A_UNPACK1:%.*]] = load <vscale x 4 x i32>, ptr [[A_ELT]], align 16
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[A_UNPACK1]]
 ;
   %a = load [2 x <vscale x 4 x i32>], ptr %x
   %b = extractvalue [2 x <vscale x 4 x i32>] %a, 1
@@ -20,9 +19,8 @@ define void @store(ptr %x, <vscale x 4 x i32> %y, <vscale x 4 x i32> %z) {
 ; CHECK-SAME: (ptr [[X:%.*]], <vscale x 4 x i32> [[Y:%.*]], <vscale x 4 x i32> [[Z:%.*]]) {
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[Y]], ptr [[X]], align 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 4
-; CHECK-NEXT:    [[X_REPACK1:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[TMP2]]
-; CHECK-NEXT:    store <vscale x 4 x i32> [[Z]], ptr [[X_REPACK1]], align 16
+; CHECK-NEXT:    [[X_REPACK:%.*]] = getelementptr inbounds [16 x i8], ptr [[X]], i64 [[TMP1]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[Z]], ptr [[X_REPACK]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %a = insertvalue [2 x <vscale x 4 x i32>] poison, <vscale x 4 x i32> %y, 0
