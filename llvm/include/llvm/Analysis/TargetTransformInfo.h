@@ -1581,6 +1581,13 @@ public:
       PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const;
 
+  /// Return the factor by which the input VF should be reduced for a partial
+  /// reduction from elements of type \p InputType to \p AccumType at \p VF.
+  /// Return zero if the types cannot form a scaled partial reduction.
+  LLVM_ABI unsigned getPartialReductionScaleFactor(Type *InputType,
+                                                   Type *AccumType,
+                                                   ElementCount VF) const;
+
   /// \return The maximum interleave factor that any transform should try to
   /// perform for this target. This number depends on the level of parallelism
   /// and the number of execution units in the CPU. HasUnorderedReductions

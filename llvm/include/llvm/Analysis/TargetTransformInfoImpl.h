@@ -741,6 +741,16 @@ public:
     return InstructionCost::getInvalid();
   }
 
+  virtual unsigned getPartialReductionScaleFactor(Type *InputType,
+                                                  Type *AccumType,
+                                                  ElementCount VF) const {
+    TypeSize InputSize = InputType->getPrimitiveSizeInBits();
+    TypeSize AccumSize = AccumType->getPrimitiveSizeInBits();
+    if (!AccumSize.hasKnownScalarFactor(InputSize))
+      return 0;
+    return AccumSize.getKnownScalarFactor(InputSize);
+  }
+
   virtual unsigned getMaxInterleaveFactor(ElementCount VF,
                                           bool HasUnorderedReductions) const {
     return 1;
