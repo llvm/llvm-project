@@ -369,25 +369,26 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a4, a2
 ; CHECK-RV32-NEXT:    slli a2, a2, 1
 ; CHECK-RV32-NEXT:    add a4, a4, a2
-; CHECK-RV32-NEXT:    slli a2, a2, 1
-; CHECK-RV32-NEXT:    add a4, a4, a2
-; CHECK-RV32-NEXT:    slli a2, a2, 3
+; CHECK-RV32-NEXT:    slli a2, a2, 4
 ; CHECK-RV32-NEXT:    add a2, a2, a4
 ; CHECK-RV32-NEXT:    sub sp, sp, a2
 ; CHECK-RV32-NEXT:    andi sp, sp, -32
 ; CHECK-RV32-NEXT:    csrr a2, vlenb
 ; CHECK-RV32-NEXT:    slli a2, a2, 3
 ; CHECK-RV32-NEXT:    mv a4, a2
-; CHECK-RV32-NEXT:    slli a2, a2, 2
-; CHECK-RV32-NEXT:    add a4, a4, a2
-; CHECK-RV32-NEXT:    slli a2, a2, 3
+; CHECK-RV32-NEXT:    slli a2, a2, 5
 ; CHECK-RV32-NEXT:    add a2, a2, a4
 ; CHECK-RV32-NEXT:    add a2, sp, a2
 ; CHECK-RV32-NEXT:    addi a2, a2, 2047
 ; CHECK-RV32-NEXT:    addi a2, a2, 33
 ; CHECK-RV32-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-RV32-NEXT:    csrr a2, vlenb
-; CHECK-RV32-NEXT:    slli a2, a2, 8
+; CHECK-RV32-NEXT:    slli a2, a2, 5
+; CHECK-RV32-NEXT:    mv a4, a2
+; CHECK-RV32-NEXT:    slli a2, a2, 1
+; CHECK-RV32-NEXT:    add a4, a4, a2
+; CHECK-RV32-NEXT:    slli a2, a2, 1
+; CHECK-RV32-NEXT:    add a2, a2, a4
 ; CHECK-RV32-NEXT:    add a2, sp, a2
 ; CHECK-RV32-NEXT:    addi a2, a2, 2047
 ; CHECK-RV32-NEXT:    addi a2, a2, 33
@@ -398,9 +399,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a4, vlenb
 ; CHECK-RV32-NEXT:    slli a4, a4, 4
 ; CHECK-RV32-NEXT:    mv a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 1
-; CHECK-RV32-NEXT:    add a5, a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 3
+; CHECK-RV32-NEXT:    slli a4, a4, 4
 ; CHECK-RV32-NEXT:    add a4, a4, a5
 ; CHECK-RV32-NEXT:    add a4, sp, a4
 ; CHECK-RV32-NEXT:    addi a4, a4, 2047
@@ -412,9 +411,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a5, a4
 ; CHECK-RV32-NEXT:    slli a4, a4, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 1
-; CHECK-RV32-NEXT:    add a5, a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 1
+; CHECK-RV32-NEXT:    slli a4, a4, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a4
 ; CHECK-RV32-NEXT:    slli a4, a4, 1
 ; CHECK-RV32-NEXT:    add a4, a4, a5
@@ -425,10 +422,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi a4, a7, 256
 ; CHECK-RV32-NEXT:    vle8.v v16, (a4)
 ; CHECK-RV32-NEXT:    csrr a4, vlenb
-; CHECK-RV32-NEXT:    slli a4, a4, 5
-; CHECK-RV32-NEXT:    mv a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 3
-; CHECK-RV32-NEXT:    add a4, a4, a5
+; CHECK-RV32-NEXT:    slli a4, a4, 8
 ; CHECK-RV32-NEXT:    add a4, sp, a4
 ; CHECK-RV32-NEXT:    addi a4, a4, 2047
 ; CHECK-RV32-NEXT:    addi a4, a4, 33
@@ -438,9 +432,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a4, vlenb
 ; CHECK-RV32-NEXT:    slli a4, a4, 4
 ; CHECK-RV32-NEXT:    mv a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 1
-; CHECK-RV32-NEXT:    add a5, a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 1
+; CHECK-RV32-NEXT:    slli a4, a4, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a4
 ; CHECK-RV32-NEXT:    slli a4, a4, 1
 ; CHECK-RV32-NEXT:    add a4, a4, a5
@@ -453,9 +445,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a4, vlenb
 ; CHECK-RV32-NEXT:    slli a4, a4, 3
 ; CHECK-RV32-NEXT:    mv a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 2
-; CHECK-RV32-NEXT:    add a5, a5, a4
-; CHECK-RV32-NEXT:    slli a4, a4, 1
+; CHECK-RV32-NEXT:    slli a4, a4, 3
 ; CHECK-RV32-NEXT:    add a5, a5, a4
 ; CHECK-RV32-NEXT:    slli a4, a4, 1
 ; CHECK-RV32-NEXT:    add a4, a4, a5
@@ -471,9 +461,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -483,10 +471,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v8, (a5)
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    slli a5, a5, 5
+; CHECK-RV32-NEXT:    slli a5, a5, 6
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
@@ -500,9 +486,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    slli a5, a5, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -516,9 +500,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
-; CHECK-RV32-NEXT:    add a6, a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -529,9 +513,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 4
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -545,7 +527,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 4
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -556,7 +542,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 4
+; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -567,7 +555,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a1, vlenb
 ; CHECK-RV32-NEXT:    slli a1, a1, 4
 ; CHECK-RV32-NEXT:    mv a5, a1
-; CHECK-RV32-NEXT:    slli a1, a1, 4
+; CHECK-RV32-NEXT:    slli a1, a1, 1
+; CHECK-RV32-NEXT:    add a5, a5, a1
+; CHECK-RV32-NEXT:    slli a1, a1, 1
+; CHECK-RV32-NEXT:    add a5, a5, a1
+; CHECK-RV32-NEXT:    slli a1, a1, 1
 ; CHECK-RV32-NEXT:    add a1, a1, a5
 ; CHECK-RV32-NEXT:    add a1, sp, a1
 ; CHECK-RV32-NEXT:    addi a1, a1, 2047
@@ -582,9 +574,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 4
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
-; CHECK-RV32-NEXT:    add a6, a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -597,9 +589,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a6, a5
 ; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -612,7 +602,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -622,9 +616,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 4
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -639,9 +631,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 3
+; CHECK-RV32-NEXT:    slli a5, a5, 5
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -652,9 +642,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 4
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -663,7 +651,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 5
+; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -673,9 +665,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 4
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    slli a5, a5, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -686,9 +676,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
 ; CHECK-RV32-NEXT:    slli a6, a6, 3
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 2
-; CHECK-RV32-NEXT:    add a7, a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    slli a6, a6, 3
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -699,9 +687,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 3
+; CHECK-RV32-NEXT:    slli a5, a5, 2
 ; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    slli a5, a5, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -710,7 +698,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vx v8, v8, a4
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    slli a5, a5, 7
+; CHECK-RV32-NEXT:    slli a5, a5, 5
+; CHECK-RV32-NEXT:    mv a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
 ; CHECK-RV32-NEXT:    addi a5, a5, 33
@@ -721,9 +712,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 4
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -739,7 +728,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
 ; CHECK-RV32-NEXT:    slli a6, a6, 4
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 4
+; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    add a7, a7, a6
+; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    add a7, a7, a6
+; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -750,7 +743,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
 ; CHECK-RV32-NEXT:    slli a6, a6, 4
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 2
+; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -761,7 +754,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a7, a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 4
+; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    add a7, a7, a6
+; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    add a7, a7, a6
+; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -773,7 +770,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a7, a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 2
+; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -781,20 +778,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vs8r.v v24, (a6) # vscale x 64-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi a6, s0, 640
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
-; CHECK-RV32-NEXT:    slli a7, a7, 5
-; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
-; CHECK-RV32-NEXT:    add a7, a7, t0
+; CHECK-RV32-NEXT:    slli a7, a7, 8
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
 ; CHECK-RV32-NEXT:    addi a7, a7, 33
 ; CHECK-RV32-NEXT:    vl8r.v v16, (a7) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vslidedown.vx v8, v16, a4
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
-; CHECK-RV32-NEXT:    slli a7, a7, 5
-; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 2
-; CHECK-RV32-NEXT:    add a7, a7, t0
+; CHECK-RV32-NEXT:    slli a7, a7, 7
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
 ; CHECK-RV32-NEXT:    addi a7, a7, 33
@@ -802,9 +793,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v8, (a6)
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
-; CHECK-RV32-NEXT:    slli a6, a6, 6
+; CHECK-RV32-NEXT:    slli a6, a6, 5
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    slli a6, a6, 2
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -813,10 +804,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vx v8, v8, a4
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
-; CHECK-RV32-NEXT:    slli a6, a6, 5
-; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
-; CHECK-RV32-NEXT:    add a6, a6, a7
+; CHECK-RV32-NEXT:    slli a6, a6, 6
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
 ; CHECK-RV32-NEXT:    addi a6, a6, 33
@@ -827,10 +815,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslidedown.vx v16, v0, a1
 ; CHECK-RV32-NEXT:    vmv2r.v v18, v20
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
-; CHECK-RV32-NEXT:    slli a6, a6, 5
-; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 2
-; CHECK-RV32-NEXT:    add a6, a6, a7
+; CHECK-RV32-NEXT:    slli a6, a6, 7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
 ; CHECK-RV32-NEXT:    addi a6, a6, 33
@@ -843,9 +828,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
 ; CHECK-RV32-NEXT:    slli a6, a6, 3
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 2
-; CHECK-RV32-NEXT:    add a7, a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    slli a6, a6, 3
 ; CHECK-RV32-NEXT:    add a7, a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
@@ -860,9 +843,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a7, a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 2
-; CHECK-RV32-NEXT:    add a7, a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    add a7, a7, a6
+; CHECK-RV32-NEXT:    slli a6, a6, 2
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
 ; CHECK-RV32-NEXT:    addi a6, a6, 2047
@@ -872,9 +855,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
 ; CHECK-RV32-NEXT:    slli a6, a6, 4
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
-; CHECK-RV32-NEXT:    add a7, a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
+; CHECK-RV32-NEXT:    slli a6, a6, 2
 ; CHECK-RV32-NEXT:    add a7, a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
@@ -885,10 +866,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslidedown.vx v16, v0, a1
 ; CHECK-RV32-NEXT:    vmv2r.v v18, v20
 ; CHECK-RV32-NEXT:    csrr a6, vlenb
-; CHECK-RV32-NEXT:    slli a6, a6, 5
+; CHECK-RV32-NEXT:    slli a6, a6, 6
 ; CHECK-RV32-NEXT:    mv a7, a6
-; CHECK-RV32-NEXT:    slli a6, a6, 1
-; CHECK-RV32-NEXT:    add a7, a7, a6
 ; CHECK-RV32-NEXT:    slli a6, a6, 1
 ; CHECK-RV32-NEXT:    add a6, a6, a7
 ; CHECK-RV32-NEXT:    add a6, sp, a6
@@ -901,7 +880,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vsseg4e8.v v16, (a6)
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
-; CHECK-RV32-NEXT:    slli a7, a7, 8
+; CHECK-RV32-NEXT:    slli a7, a7, 5
+; CHECK-RV32-NEXT:    mv t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
 ; CHECK-RV32-NEXT:    addi a7, a7, 33
@@ -913,7 +897,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t0, a7
 ; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add t0, t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
+; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -924,9 +910,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t0, a7
 ; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add t0, t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 1
-; CHECK-RV32-NEXT:    add t0, t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    slli a7, a7, 2
 ; CHECK-RV32-NEXT:    add t0, t0, a7
 ; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add a7, a7, t0
@@ -936,7 +920,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v8, (a7) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vslidedown.vx v16, v8, a4
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
-; CHECK-RV32-NEXT:    slli a7, a7, 6
+; CHECK-RV32-NEXT:    slli a7, a7, 5
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
 ; CHECK-RV32-NEXT:    addi a7, a7, 33
@@ -945,9 +929,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t0, vlenb
 ; CHECK-RV32-NEXT:    slli t0, t0, 4
 ; CHECK-RV32-NEXT:    mv t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 1
-; CHECK-RV32-NEXT:    add t1, t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 3
+; CHECK-RV32-NEXT:    slli t0, t0, 4
 ; CHECK-RV32-NEXT:    add t0, t0, t1
 ; CHECK-RV32-NEXT:    add t0, sp, t0
 ; CHECK-RV32-NEXT:    addi t0, t0, 2047
@@ -957,7 +939,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t0, vlenb
 ; CHECK-RV32-NEXT:    slli t0, t0, 4
 ; CHECK-RV32-NEXT:    mv t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 3
+; CHECK-RV32-NEXT:    slli t0, t0, 1
+; CHECK-RV32-NEXT:    add t1, t1, t0
+; CHECK-RV32-NEXT:    slli t0, t0, 1
 ; CHECK-RV32-NEXT:    add t0, t0, t1
 ; CHECK-RV32-NEXT:    add t0, sp, t0
 ; CHECK-RV32-NEXT:    addi t0, t0, 2047
@@ -970,7 +954,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a7, 3
 ; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
+; CHECK-RV32-NEXT:    slli a7, a7, 2
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -984,7 +968,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t0, a7
 ; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add t0, t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
+; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -995,7 +981,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a7, 4
 ; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
+; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -1009,7 +997,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a7, 3
 ; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 5
+; CHECK-RV32-NEXT:    slli a7, a7, 2
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 1
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -1020,9 +1012,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a7, 3
 ; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
+; CHECK-RV32-NEXT:    slli a7, a7, 2
 ; CHECK-RV32-NEXT:    add t0, t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    slli a7, a7, 2
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -1032,9 +1024,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a7, 3
 ; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 2
-; CHECK-RV32-NEXT:    add t0, t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 3
+; CHECK-RV32-NEXT:    slli a7, a7, 5
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -1045,9 +1035,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a7, vlenb
 ; CHECK-RV32-NEXT:    slli a7, a7, 4
 ; CHECK-RV32-NEXT:    mv t0, a7
-; CHECK-RV32-NEXT:    slli a7, a7, 2
-; CHECK-RV32-NEXT:    add t0, t0, a7
 ; CHECK-RV32-NEXT:    slli a7, a7, 1
+; CHECK-RV32-NEXT:    add t0, t0, a7
+; CHECK-RV32-NEXT:    slli a7, a7, 2
 ; CHECK-RV32-NEXT:    add a7, a7, t0
 ; CHECK-RV32-NEXT:    add a7, sp, a7
 ; CHECK-RV32-NEXT:    addi a7, a7, 2047
@@ -1063,7 +1053,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t1, t0
 ; CHECK-RV32-NEXT:    slli t0, t0, 1
 ; CHECK-RV32-NEXT:    add t1, t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 4
+; CHECK-RV32-NEXT:    slli t0, t0, 1
+; CHECK-RV32-NEXT:    add t1, t1, t0
+; CHECK-RV32-NEXT:    slli t0, t0, 1
+; CHECK-RV32-NEXT:    add t1, t1, t0
+; CHECK-RV32-NEXT:    slli t0, t0, 1
 ; CHECK-RV32-NEXT:    add t0, t0, t1
 ; CHECK-RV32-NEXT:    add t0, sp, t0
 ; CHECK-RV32-NEXT:    addi t0, t0, 2047
@@ -1072,9 +1066,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-RV32-NEXT:    csrr t0, vlenb
-; CHECK-RV32-NEXT:    slli t0, t0, 6
+; CHECK-RV32-NEXT:    slli t0, t0, 5
 ; CHECK-RV32-NEXT:    mv t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 1
+; CHECK-RV32-NEXT:    slli t0, t0, 2
 ; CHECK-RV32-NEXT:    add t0, t0, t1
 ; CHECK-RV32-NEXT:    add t0, sp, t0
 ; CHECK-RV32-NEXT:    addi t0, t0, 2047
@@ -1084,7 +1078,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t0, vlenb
 ; CHECK-RV32-NEXT:    slli t0, t0, 4
 ; CHECK-RV32-NEXT:    mv t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 4
+; CHECK-RV32-NEXT:    slli t0, t0, 1
+; CHECK-RV32-NEXT:    add t1, t1, t0
+; CHECK-RV32-NEXT:    slli t0, t0, 1
+; CHECK-RV32-NEXT:    add t1, t1, t0
+; CHECK-RV32-NEXT:    slli t0, t0, 1
 ; CHECK-RV32-NEXT:    add t0, t0, t1
 ; CHECK-RV32-NEXT:    add t0, sp, t0
 ; CHECK-RV32-NEXT:    addi t0, t0, 2047
@@ -1093,10 +1091,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslidedown.vx v4, v16, a1
 ; CHECK-RV32-NEXT:    vmv2r.v v6, v8
 ; CHECK-RV32-NEXT:    csrr t0, vlenb
-; CHECK-RV32-NEXT:    slli t0, t0, 5
-; CHECK-RV32-NEXT:    mv t1, t0
-; CHECK-RV32-NEXT:    slli t0, t0, 3
-; CHECK-RV32-NEXT:    add t0, t0, t1
+; CHECK-RV32-NEXT:    slli t0, t0, 8
 ; CHECK-RV32-NEXT:    add t0, sp, t0
 ; CHECK-RV32-NEXT:    addi t0, t0, 2047
 ; CHECK-RV32-NEXT:    addi t0, t0, 33
@@ -1111,9 +1106,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t2, t1
 ; CHECK-RV32-NEXT:    slli t1, t1, 1
 ; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
-; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 2
+; CHECK-RV32-NEXT:    slli t1, t1, 3
 ; CHECK-RV32-NEXT:    add t1, t1, t2
 ; CHECK-RV32-NEXT:    add t1, sp, t1
 ; CHECK-RV32-NEXT:    addi t1, t1, 2047
@@ -1124,9 +1117,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t2, t1
 ; CHECK-RV32-NEXT:    slli t1, t1, 1
 ; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
-; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
+; CHECK-RV32-NEXT:    slli t1, t1, 2
 ; CHECK-RV32-NEXT:    add t1, t1, t2
 ; CHECK-RV32-NEXT:    add t1, sp, t1
 ; CHECK-RV32-NEXT:    addi t1, t1, 2047
@@ -1136,9 +1127,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t1, vlenb
 ; CHECK-RV32-NEXT:    slli t1, t1, 4
 ; CHECK-RV32-NEXT:    mv t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
-; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 2
+; CHECK-RV32-NEXT:    slli t1, t1, 3
 ; CHECK-RV32-NEXT:    add t1, t1, t2
 ; CHECK-RV32-NEXT:    add t1, sp, t1
 ; CHECK-RV32-NEXT:    addi t1, t1, 2047
@@ -1148,7 +1137,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t1, vlenb
 ; CHECK-RV32-NEXT:    slli t1, t1, 3
 ; CHECK-RV32-NEXT:    mv t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 4
+; CHECK-RV32-NEXT:    slli t1, t1, 2
+; CHECK-RV32-NEXT:    add t2, t2, t1
+; CHECK-RV32-NEXT:    slli t1, t1, 1
 ; CHECK-RV32-NEXT:    add t1, t1, t2
 ; CHECK-RV32-NEXT:    add t1, sp, t1
 ; CHECK-RV32-NEXT:    addi t1, t1, 2047
@@ -1162,9 +1153,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t2, t1
 ; CHECK-RV32-NEXT:    slli t1, t1, 1
 ; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
-; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
+; CHECK-RV32-NEXT:    slli t1, t1, 2
 ; CHECK-RV32-NEXT:    add t2, t2, t1
 ; CHECK-RV32-NEXT:    slli t1, t1, 1
 ; CHECK-RV32-NEXT:    add t1, t1, t2
@@ -1176,7 +1165,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-RV32-NEXT:    vslidedown.vx v12, v24, a1
 ; CHECK-RV32-NEXT:    csrr t1, vlenb
-; CHECK-RV32-NEXT:    slli t1, t1, 8
+; CHECK-RV32-NEXT:    slli t1, t1, 5
+; CHECK-RV32-NEXT:    mv t2, t1
+; CHECK-RV32-NEXT:    slli t1, t1, 1
+; CHECK-RV32-NEXT:    add t2, t2, t1
+; CHECK-RV32-NEXT:    slli t1, t1, 1
+; CHECK-RV32-NEXT:    add t1, t1, t2
 ; CHECK-RV32-NEXT:    add t1, sp, t1
 ; CHECK-RV32-NEXT:    addi t1, t1, 2047
 ; CHECK-RV32-NEXT:    addi t1, t1, 33
@@ -1186,9 +1180,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t1, vlenb
 ; CHECK-RV32-NEXT:    slli t1, t1, 4
 ; CHECK-RV32-NEXT:    mv t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 1
-; CHECK-RV32-NEXT:    add t2, t2, t1
-; CHECK-RV32-NEXT:    slli t1, t1, 3
+; CHECK-RV32-NEXT:    slli t1, t1, 4
 ; CHECK-RV32-NEXT:    add t1, t1, t2
 ; CHECK-RV32-NEXT:    add t1, sp, t1
 ; CHECK-RV32-NEXT:    addi t1, t1, 2047
@@ -1202,9 +1194,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
 ; CHECK-RV32-NEXT:    slli t2, t2, 3
 ; CHECK-RV32-NEXT:    mv t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 2
-; CHECK-RV32-NEXT:    add t3, t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 2
+; CHECK-RV32-NEXT:    slli t2, t2, 4
 ; CHECK-RV32-NEXT:    add t2, t2, t3
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
@@ -1213,9 +1203,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
 ; CHECK-RV32-NEXT:    slli t2, t2, 4
 ; CHECK-RV32-NEXT:    mv t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 1
-; CHECK-RV32-NEXT:    add t3, t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 1
+; CHECK-RV32-NEXT:    slli t2, t2, 2
 ; CHECK-RV32-NEXT:    add t2, t2, t3
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
@@ -1225,9 +1213,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
 ; CHECK-RV32-NEXT:    slli t2, t2, 3
 ; CHECK-RV32-NEXT:    mv t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 2
-; CHECK-RV32-NEXT:    add t3, t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 1
+; CHECK-RV32-NEXT:    slli t2, t2, 3
 ; CHECK-RV32-NEXT:    add t2, t2, t3
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
@@ -1235,7 +1221,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vmv2r.v v12, v16
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
-; CHECK-RV32-NEXT:    slli t2, t2, 7
+; CHECK-RV32-NEXT:    slli t2, t2, 5
+; CHECK-RV32-NEXT:    mv t3, t2
+; CHECK-RV32-NEXT:    slli t2, t2, 1
+; CHECK-RV32-NEXT:    add t2, t2, t3
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
 ; CHECK-RV32-NEXT:    addi t2, t2, 33
@@ -1246,7 +1235,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
 ; CHECK-RV32-NEXT:    slli t2, t2, 4
 ; CHECK-RV32-NEXT:    mv t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 2
+; CHECK-RV32-NEXT:    slli t2, t2, 1
 ; CHECK-RV32-NEXT:    add t2, t2, t3
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
@@ -1257,7 +1246,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t3, t2
 ; CHECK-RV32-NEXT:    slli t2, t2, 1
 ; CHECK-RV32-NEXT:    add t3, t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 2
+; CHECK-RV32-NEXT:    slli t2, t2, 1
 ; CHECK-RV32-NEXT:    add t2, t2, t3
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
@@ -1265,20 +1254,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vmv2r.v v10, v16
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
-; CHECK-RV32-NEXT:    slli t2, t2, 5
-; CHECK-RV32-NEXT:    mv t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 2
-; CHECK-RV32-NEXT:    add t2, t2, t3
+; CHECK-RV32-NEXT:    slli t2, t2, 7
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
 ; CHECK-RV32-NEXT:    addi t2, t2, 33
 ; CHECK-RV32-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vmv2r.v v12, v16
 ; CHECK-RV32-NEXT:    csrr t2, vlenb
-; CHECK-RV32-NEXT:    slli t2, t2, 5
-; CHECK-RV32-NEXT:    mv t3, t2
-; CHECK-RV32-NEXT:    slli t2, t2, 1
-; CHECK-RV32-NEXT:    add t2, t2, t3
+; CHECK-RV32-NEXT:    slli t2, t2, 6
 ; CHECK-RV32-NEXT:    add t2, sp, t2
 ; CHECK-RV32-NEXT:    addi t2, t2, 2047
 ; CHECK-RV32-NEXT:    addi t2, t2, 33
@@ -1289,9 +1272,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t3, vlenb
 ; CHECK-RV32-NEXT:    slli t3, t3, 4
 ; CHECK-RV32-NEXT:    mv t4, t3
-; CHECK-RV32-NEXT:    slli t3, t3, 1
-; CHECK-RV32-NEXT:    add t4, t4, t3
-; CHECK-RV32-NEXT:    slli t3, t3, 1
+; CHECK-RV32-NEXT:    slli t3, t3, 2
 ; CHECK-RV32-NEXT:    add t4, t4, t3
 ; CHECK-RV32-NEXT:    slli t3, t3, 1
 ; CHECK-RV32-NEXT:    add t3, t3, t4
@@ -1302,9 +1283,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t3, vlenb
 ; CHECK-RV32-NEXT:    slli t3, t3, 3
 ; CHECK-RV32-NEXT:    mv t4, t3
-; CHECK-RV32-NEXT:    slli t3, t3, 2
-; CHECK-RV32-NEXT:    add t4, t4, t3
-; CHECK-RV32-NEXT:    slli t3, t3, 1
+; CHECK-RV32-NEXT:    slli t3, t3, 3
 ; CHECK-RV32-NEXT:    add t4, t4, t3
 ; CHECK-RV32-NEXT:    slli t3, t3, 1
 ; CHECK-RV32-NEXT:    add t3, t3, t4
@@ -1314,10 +1293,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v16, (t3) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vmv2r.v v10, v16
 ; CHECK-RV32-NEXT:    csrr t3, vlenb
-; CHECK-RV32-NEXT:    slli t3, t3, 5
+; CHECK-RV32-NEXT:    slli t3, t3, 6
 ; CHECK-RV32-NEXT:    mv t4, t3
-; CHECK-RV32-NEXT:    slli t3, t3, 1
-; CHECK-RV32-NEXT:    add t4, t4, t3
 ; CHECK-RV32-NEXT:    slli t3, t3, 1
 ; CHECK-RV32-NEXT:    add t3, t3, t4
 ; CHECK-RV32-NEXT:    add t3, sp, t3
@@ -1330,9 +1307,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t4, t3
 ; CHECK-RV32-NEXT:    slli t3, t3, 1
 ; CHECK-RV32-NEXT:    add t4, t4, t3
-; CHECK-RV32-NEXT:    slli t3, t3, 2
-; CHECK-RV32-NEXT:    add t4, t4, t3
 ; CHECK-RV32-NEXT:    slli t3, t3, 1
+; CHECK-RV32-NEXT:    add t4, t4, t3
+; CHECK-RV32-NEXT:    slli t3, t3, 2
 ; CHECK-RV32-NEXT:    add t3, t3, t4
 ; CHECK-RV32-NEXT:    add t3, sp, t3
 ; CHECK-RV32-NEXT:    addi t3, t3, 2047
@@ -1346,14 +1323,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t5, t4
 ; CHECK-RV32-NEXT:    slli t4, t4, 1
 ; CHECK-RV32-NEXT:    add t5, t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 3
+; CHECK-RV32-NEXT:    slli t4, t4, 1
+; CHECK-RV32-NEXT:    add t5, t5, t4
+; CHECK-RV32-NEXT:    slli t4, t4, 1
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
 ; CHECK-RV32-NEXT:    addi t4, t4, 33
 ; CHECK-RV32-NEXT:    vl8r.v v8, (t4) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
-; CHECK-RV32-NEXT:    slli t4, t4, 6
+; CHECK-RV32-NEXT:    slli t4, t4, 5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
 ; CHECK-RV32-NEXT:    addi t4, t4, 33
@@ -1362,7 +1341,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
 ; CHECK-RV32-NEXT:    slli t4, t4, 4
 ; CHECK-RV32-NEXT:    mv t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 3
+; CHECK-RV32-NEXT:    slli t4, t4, 1
+; CHECK-RV32-NEXT:    add t5, t5, t4
+; CHECK-RV32-NEXT:    slli t4, t4, 1
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
@@ -1372,7 +1353,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
 ; CHECK-RV32-NEXT:    slli t4, t4, 3
 ; CHECK-RV32-NEXT:    mv t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 3
+; CHECK-RV32-NEXT:    slli t4, t4, 2
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
@@ -1384,9 +1365,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
 ; CHECK-RV32-NEXT:    slli t4, t4, 3
 ; CHECK-RV32-NEXT:    mv t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 2
-; CHECK-RV32-NEXT:    add t5, t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 3
+; CHECK-RV32-NEXT:    slli t4, t4, 5
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
@@ -1395,7 +1374,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
 ; CHECK-RV32-NEXT:    slli t4, t4, 3
 ; CHECK-RV32-NEXT:    mv t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 5
+; CHECK-RV32-NEXT:    slli t4, t4, 2
+; CHECK-RV32-NEXT:    add t5, t5, t4
+; CHECK-RV32-NEXT:    slli t4, t4, 1
+; CHECK-RV32-NEXT:    add t5, t5, t4
+; CHECK-RV32-NEXT:    slli t4, t4, 1
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
@@ -1405,9 +1388,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
 ; CHECK-RV32-NEXT:    slli t4, t4, 4
 ; CHECK-RV32-NEXT:    mv t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 2
-; CHECK-RV32-NEXT:    add t5, t5, t4
 ; CHECK-RV32-NEXT:    slli t4, t4, 1
+; CHECK-RV32-NEXT:    add t5, t5, t4
+; CHECK-RV32-NEXT:    slli t4, t4, 2
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
@@ -1417,9 +1400,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t4, vlenb
 ; CHECK-RV32-NEXT:    slli t4, t4, 3
 ; CHECK-RV32-NEXT:    mv t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 3
+; CHECK-RV32-NEXT:    slli t4, t4, 2
 ; CHECK-RV32-NEXT:    add t5, t5, t4
-; CHECK-RV32-NEXT:    slli t4, t4, 1
+; CHECK-RV32-NEXT:    slli t4, t4, 2
 ; CHECK-RV32-NEXT:    add t4, t4, t5
 ; CHECK-RV32-NEXT:    add t4, sp, t4
 ; CHECK-RV32-NEXT:    addi t4, t4, 2047
@@ -1431,7 +1414,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t5, vlenb
 ; CHECK-RV32-NEXT:    slli t5, t5, 4
 ; CHECK-RV32-NEXT:    mv t6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 4
+; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    add t6, t6, t5
+; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    add t6, t6, t5
+; CHECK-RV32-NEXT:    slli t5, t5, 1
 ; CHECK-RV32-NEXT:    add t5, t5, t6
 ; CHECK-RV32-NEXT:    add t5, sp, t5
 ; CHECK-RV32-NEXT:    addi t5, t5, 2047
@@ -1442,7 +1429,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv t6, t5
 ; CHECK-RV32-NEXT:    slli t5, t5, 1
 ; CHECK-RV32-NEXT:    add t6, t6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 4
+; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    add t6, t6, t5
+; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    add t6, t6, t5
+; CHECK-RV32-NEXT:    slli t5, t5, 1
 ; CHECK-RV32-NEXT:    add t5, t5, t6
 ; CHECK-RV32-NEXT:    add t5, sp, t5
 ; CHECK-RV32-NEXT:    addi t5, t5, 2047
@@ -1450,19 +1441,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vmv2r.v v10, v16
 ; CHECK-RV32-NEXT:    csrr t5, vlenb
-; CHECK-RV32-NEXT:    slli t5, t5, 5
-; CHECK-RV32-NEXT:    mv t6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 3
-; CHECK-RV32-NEXT:    add t5, t5, t6
+; CHECK-RV32-NEXT:    slli t5, t5, 8
 ; CHECK-RV32-NEXT:    add t5, sp, t5
 ; CHECK-RV32-NEXT:    addi t5, t5, 2047
 ; CHECK-RV32-NEXT:    addi t5, t5, 33
 ; CHECK-RV32-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vmv2r.v v12, v16
 ; CHECK-RV32-NEXT:    csrr t5, vlenb
-; CHECK-RV32-NEXT:    slli t5, t5, 6
+; CHECK-RV32-NEXT:    slli t5, t5, 5
 ; CHECK-RV32-NEXT:    mv t6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    slli t5, t5, 2
 ; CHECK-RV32-NEXT:    add t5, t5, t6
 ; CHECK-RV32-NEXT:    add t5, sp, t5
 ; CHECK-RV32-NEXT:    addi t5, t5, 2047
@@ -1472,7 +1460,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi t6, sp, 1312
 ; CHECK-RV32-NEXT:    vsseg4e8.v v8, (t6)
 ; CHECK-RV32-NEXT:    csrr t5, vlenb
-; CHECK-RV32-NEXT:    slli t5, t5, 8
+; CHECK-RV32-NEXT:    slli t5, t5, 5
+; CHECK-RV32-NEXT:    mv s6, t5
+; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    add s6, s6, t5
+; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    add t5, t5, s6
 ; CHECK-RV32-NEXT:    add t5, sp, t5
 ; CHECK-RV32-NEXT:    addi t5, t5, 2047
 ; CHECK-RV32-NEXT:    addi t5, t5, 33
@@ -1482,9 +1475,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    mv s6, t5
 ; CHECK-RV32-NEXT:    slli t5, t5, 1
 ; CHECK-RV32-NEXT:    add s6, s6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 1
-; CHECK-RV32-NEXT:    add s6, s6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 1
+; CHECK-RV32-NEXT:    slli t5, t5, 2
 ; CHECK-RV32-NEXT:    add s6, s6, t5
 ; CHECK-RV32-NEXT:    slli t5, t5, 1
 ; CHECK-RV32-NEXT:    add t5, t5, s6
@@ -1496,9 +1487,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr t5, vlenb
 ; CHECK-RV32-NEXT:    slli t5, t5, 4
 ; CHECK-RV32-NEXT:    mv s6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 1
-; CHECK-RV32-NEXT:    add s6, s6, t5
-; CHECK-RV32-NEXT:    slli t5, t5, 3
+; CHECK-RV32-NEXT:    slli t5, t5, 4
 ; CHECK-RV32-NEXT:    add t5, t5, s6
 ; CHECK-RV32-NEXT:    add t5, sp, t5
 ; CHECK-RV32-NEXT:    addi t5, t5, 2047
@@ -1511,11 +1500,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s6, sp, 768
 ; CHECK-RV32-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV32-NEXT:    csrr s6, vlenb
-; CHECK-RV32-NEXT:    slli s6, s6, 4
-; CHECK-RV32-NEXT:    mv ra, s6
-; CHECK-RV32-NEXT:    slli s6, s6, 1
-; CHECK-RV32-NEXT:    add ra, ra, s6
 ; CHECK-RV32-NEXT:    slli s6, s6, 3
+; CHECK-RV32-NEXT:    mv ra, s6
+; CHECK-RV32-NEXT:    slli s6, s6, 2
+; CHECK-RV32-NEXT:    add ra, ra, s6
+; CHECK-RV32-NEXT:    slli s6, s6, 1
 ; CHECK-RV32-NEXT:    add s6, s6, ra
 ; CHECK-RV32-NEXT:    add s6, sp, s6
 ; CHECK-RV32-NEXT:    addi s6, s6, 2047
@@ -1524,11 +1513,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s6, sp, 704
 ; CHECK-RV32-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV32-NEXT:    csrr s6, vlenb
-; CHECK-RV32-NEXT:    slli s6, s6, 3
+; CHECK-RV32-NEXT:    slli s6, s6, 5
 ; CHECK-RV32-NEXT:    mv ra, s6
-; CHECK-RV32-NEXT:    slli s6, s6, 2
-; CHECK-RV32-NEXT:    add ra, ra, s6
-; CHECK-RV32-NEXT:    slli s6, s6, 3
+; CHECK-RV32-NEXT:    slli s6, s6, 1
 ; CHECK-RV32-NEXT:    add s6, s6, ra
 ; CHECK-RV32-NEXT:    add s6, sp, s6
 ; CHECK-RV32-NEXT:    addi s6, s6, 2047
@@ -1537,9 +1524,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s6, sp, 1792
 ; CHECK-RV32-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV32-NEXT:    csrr s6, vlenb
-; CHECK-RV32-NEXT:    slli s6, s6, 5
-; CHECK-RV32-NEXT:    mv ra, s6
 ; CHECK-RV32-NEXT:    slli s6, s6, 3
+; CHECK-RV32-NEXT:    mv ra, s6
+; CHECK-RV32-NEXT:    slli s6, s6, 1
+; CHECK-RV32-NEXT:    add ra, ra, s6
+; CHECK-RV32-NEXT:    slli s6, s6, 2
 ; CHECK-RV32-NEXT:    add s6, s6, ra
 ; CHECK-RV32-NEXT:    add s6, sp, s6
 ; CHECK-RV32-NEXT:    addi s6, s6, 2047
@@ -1548,11 +1537,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s6, sp, 1728
 ; CHECK-RV32-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV32-NEXT:    csrr s6, vlenb
-; CHECK-RV32-NEXT:    slli s6, s6, 3
-; CHECK-RV32-NEXT:    mv ra, s6
-; CHECK-RV32-NEXT:    slli s6, s6, 1
-; CHECK-RV32-NEXT:    add ra, ra, s6
 ; CHECK-RV32-NEXT:    slli s6, s6, 4
+; CHECK-RV32-NEXT:    mv ra, s6
+; CHECK-RV32-NEXT:    slli s6, s6, 2
 ; CHECK-RV32-NEXT:    add s6, s6, ra
 ; CHECK-RV32-NEXT:    add s6, sp, s6
 ; CHECK-RV32-NEXT:    addi s6, s6, 2047
@@ -1567,9 +1554,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s6, sp, 1024
 ; CHECK-RV32-NEXT:    vle8.v v20, (s6)
 ; CHECK-RV32-NEXT:    csrr s6, vlenb
-; CHECK-RV32-NEXT:    slli s6, s6, 4
+; CHECK-RV32-NEXT:    slli s6, s6, 3
 ; CHECK-RV32-NEXT:    mv ra, s6
-; CHECK-RV32-NEXT:    slli s6, s6, 4
+; CHECK-RV32-NEXT:    slli s6, s6, 3
 ; CHECK-RV32-NEXT:    add s6, s6, ra
 ; CHECK-RV32-NEXT:    add s6, sp, s6
 ; CHECK-RV32-NEXT:    addi s6, s6, 2047
@@ -1582,10 +1569,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s5, sp, 960
 ; CHECK-RV32-NEXT:    vle8.v v20, (s5)
 ; CHECK-RV32-NEXT:    csrr s5, vlenb
-; CHECK-RV32-NEXT:    slli s5, s5, 3
-; CHECK-RV32-NEXT:    mv s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 5
-; CHECK-RV32-NEXT:    add s5, s5, s6
+; CHECK-RV32-NEXT:    slli s5, s5, 6
 ; CHECK-RV32-NEXT:    add s5, sp, s5
 ; CHECK-RV32-NEXT:    addi s5, s5, 2047
 ; CHECK-RV32-NEXT:    addi s5, s5, 33
@@ -1601,7 +1585,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a4
 ; CHECK-RV32-NEXT:    csrr s5, vlenb
-; CHECK-RV32-NEXT:    slli s5, s5, 8
+; CHECK-RV32-NEXT:    slli s5, s5, 4
+; CHECK-RV32-NEXT:    mv s6, s5
+; CHECK-RV32-NEXT:    slli s5, s5, 4
+; CHECK-RV32-NEXT:    add s5, s5, s6
 ; CHECK-RV32-NEXT:    add s5, sp, s5
 ; CHECK-RV32-NEXT:    addi s5, s5, 2047
 ; CHECK-RV32-NEXT:    addi s5, s5, 33
@@ -1616,10 +1603,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    slli s5, s5, 1
 ; CHECK-RV32-NEXT:    add s6, s6, s5
 ; CHECK-RV32-NEXT:    slli s5, s5, 1
-; CHECK-RV32-NEXT:    add s6, s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 1
-; CHECK-RV32-NEXT:    add s6, s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 1
 ; CHECK-RV32-NEXT:    add s5, s5, s6
 ; CHECK-RV32-NEXT:    add s5, sp, s5
 ; CHECK-RV32-NEXT:    addi s5, s5, 2047
@@ -1630,10 +1613,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr s5, vlenb
 ; CHECK-RV32-NEXT:    slli s5, s5, 4
 ; CHECK-RV32-NEXT:    mv s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 1
-; CHECK-RV32-NEXT:    add s6, s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 1
-; CHECK-RV32-NEXT:    add s6, s6, s5
 ; CHECK-RV32-NEXT:    slli s5, s5, 1
 ; CHECK-RV32-NEXT:    add s5, s5, s6
 ; CHECK-RV32-NEXT:    add s5, sp, s5
@@ -1648,10 +1627,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    slli s5, s5, 3
 ; CHECK-RV32-NEXT:    mv s6, s5
 ; CHECK-RV32-NEXT:    slli s5, s5, 2
-; CHECK-RV32-NEXT:    add s6, s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 1
-; CHECK-RV32-NEXT:    add s6, s6, s5
-; CHECK-RV32-NEXT:    slli s5, s5, 1
 ; CHECK-RV32-NEXT:    add s5, s5, s6
 ; CHECK-RV32-NEXT:    add s5, sp, s5
 ; CHECK-RV32-NEXT:    addi s5, s5, 2047
@@ -1665,11 +1640,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vle8.v v12, (s4)
 ; CHECK-RV32-NEXT:    csrr s4, vlenb
 ; CHECK-RV32-NEXT:    slli s4, s4, 5
-; CHECK-RV32-NEXT:    mv s5, s4
-; CHECK-RV32-NEXT:    slli s4, s4, 1
-; CHECK-RV32-NEXT:    add s5, s5, s4
-; CHECK-RV32-NEXT:    slli s4, s4, 1
-; CHECK-RV32-NEXT:    add s4, s4, s5
 ; CHECK-RV32-NEXT:    add s4, sp, s4
 ; CHECK-RV32-NEXT:    addi s4, s4, 2047
 ; CHECK-RV32-NEXT:    addi s4, s4, 33
@@ -1687,11 +1657,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr s4, vlenb
 ; CHECK-RV32-NEXT:    slli s4, s4, 3
 ; CHECK-RV32-NEXT:    mv s5, s4
-; CHECK-RV32-NEXT:    slli s4, s4, 1
-; CHECK-RV32-NEXT:    add s5, s5, s4
-; CHECK-RV32-NEXT:    slli s4, s4, 2
-; CHECK-RV32-NEXT:    add s5, s5, s4
-; CHECK-RV32-NEXT:    slli s4, s4, 1
+; CHECK-RV32-NEXT:    slli s4, s4, 5
 ; CHECK-RV32-NEXT:    add s4, s4, s5
 ; CHECK-RV32-NEXT:    add s4, sp, s4
 ; CHECK-RV32-NEXT:    addi s4, s4, 2047
@@ -1701,9 +1667,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v8, (s4)
 ; CHECK-RV32-NEXT:    csrr s4, vlenb
-; CHECK-RV32-NEXT:    slli s4, s4, 4
-; CHECK-RV32-NEXT:    mv s5, s4
 ; CHECK-RV32-NEXT:    slli s4, s4, 2
+; CHECK-RV32-NEXT:    mv s5, s4
+; CHECK-RV32-NEXT:    slli s4, s4, 1
 ; CHECK-RV32-NEXT:    add s5, s5, s4
 ; CHECK-RV32-NEXT:    slli s4, s4, 1
 ; CHECK-RV32-NEXT:    add s4, s4, s5
@@ -1716,8 +1682,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr s4, vlenb
 ; CHECK-RV32-NEXT:    slli s4, s4, 3
 ; CHECK-RV32-NEXT:    mv s5, s4
-; CHECK-RV32-NEXT:    slli s4, s4, 3
-; CHECK-RV32-NEXT:    add s5, s5, s4
 ; CHECK-RV32-NEXT:    slli s4, s4, 1
 ; CHECK-RV32-NEXT:    add s4, s4, s5
 ; CHECK-RV32-NEXT:    add s4, sp, s4
@@ -1740,12 +1704,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v12, (s3)
 ; CHECK-RV32-NEXT:    csrr s3, vlenb
-; CHECK-RV32-NEXT:    slli s3, s3, 3
+; CHECK-RV32-NEXT:    slli s3, s3, 2
 ; CHECK-RV32-NEXT:    mv s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 1
-; CHECK-RV32-NEXT:    add s4, s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 1
-; CHECK-RV32-NEXT:    add s4, s4, s3
 ; CHECK-RV32-NEXT:    slli s3, s3, 2
 ; CHECK-RV32-NEXT:    add s3, s3, s4
 ; CHECK-RV32-NEXT:    add s3, sp, s3
@@ -1756,11 +1716,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vle8.v v24, (s3)
 ; CHECK-RV32-NEXT:    csrr s3, vlenb
 ; CHECK-RV32-NEXT:    slli s3, s3, 4
-; CHECK-RV32-NEXT:    mv s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 1
-; CHECK-RV32-NEXT:    add s4, s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 2
-; CHECK-RV32-NEXT:    add s3, s3, s4
 ; CHECK-RV32-NEXT:    add s3, sp, s3
 ; CHECK-RV32-NEXT:    addi s3, s3, 2047
 ; CHECK-RV32-NEXT:    addi s3, s3, 33
@@ -1768,10 +1723,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vslideup.vx v0, v8, a4
 ; CHECK-RV32-NEXT:    csrr s3, vlenb
-; CHECK-RV32-NEXT:    slli s3, s3, 6
-; CHECK-RV32-NEXT:    mv s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 1
-; CHECK-RV32-NEXT:    add s3, s3, s4
+; CHECK-RV32-NEXT:    slli s3, s3, 8
 ; CHECK-RV32-NEXT:    add s3, sp, s3
 ; CHECK-RV32-NEXT:    addi s3, s3, 2047
 ; CHECK-RV32-NEXT:    addi s3, s3, 33
@@ -1780,11 +1732,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v8, (s3)
 ; CHECK-RV32-NEXT:    csrr s3, vlenb
-; CHECK-RV32-NEXT:    slli s3, s3, 3
+; CHECK-RV32-NEXT:    slli s3, s3, 2
 ; CHECK-RV32-NEXT:    mv s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 2
-; CHECK-RV32-NEXT:    add s4, s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 2
+; CHECK-RV32-NEXT:    slli s3, s3, 1
 ; CHECK-RV32-NEXT:    add s3, s3, s4
 ; CHECK-RV32-NEXT:    add s3, sp, s3
 ; CHECK-RV32-NEXT:    addi s3, s3, 2047
@@ -1794,11 +1744,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vle8.v v8, (s3)
 ; CHECK-RV32-NEXT:    csrr s3, vlenb
 ; CHECK-RV32-NEXT:    slli s3, s3, 3
-; CHECK-RV32-NEXT:    mv s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 1
-; CHECK-RV32-NEXT:    add s4, s4, s3
-; CHECK-RV32-NEXT:    slli s3, s3, 3
-; CHECK-RV32-NEXT:    add s3, s3, s4
 ; CHECK-RV32-NEXT:    add s3, sp, s3
 ; CHECK-RV32-NEXT:    addi s3, s3, 2047
 ; CHECK-RV32-NEXT:    addi s3, s3, 33
@@ -1819,16 +1764,18 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v12, (s2)
 ; CHECK-RV32-NEXT:    csrr s2, vlenb
-; CHECK-RV32-NEXT:    slli s2, s2, 4
-; CHECK-RV32-NEXT:    mv s3, s2
-; CHECK-RV32-NEXT:    slli s2, s2, 3
-; CHECK-RV32-NEXT:    add s2, s2, s3
+; CHECK-RV32-NEXT:    slli s2, s2, 2
 ; CHECK-RV32-NEXT:    add s2, sp, s2
 ; CHECK-RV32-NEXT:    addi s2, s2, 2047
 ; CHECK-RV32-NEXT:    addi s2, s2, 33
 ; CHECK-RV32-NEXT:    vs4r.v v12, (s2) # vscale x 32-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi s2, sp, 1856
 ; CHECK-RV32-NEXT:    vle8.v v20, (s2)
+; CHECK-RV32-NEXT:    addi s2, sp, 2047
+; CHECK-RV32-NEXT:    addi s2, s2, 33
+; CHECK-RV32-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-RV32-NEXT:    vslideup.vx v16, v8, a4
 ; CHECK-RV32-NEXT:    csrr s2, vlenb
 ; CHECK-RV32-NEXT:    slli s2, s2, 3
 ; CHECK-RV32-NEXT:    mv s3, s2
@@ -1837,17 +1784,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    slli s2, s2, 1
 ; CHECK-RV32-NEXT:    add s3, s3, s2
 ; CHECK-RV32-NEXT:    slli s2, s2, 1
-; CHECK-RV32-NEXT:    add s2, s2, s3
-; CHECK-RV32-NEXT:    add s2, sp, s2
-; CHECK-RV32-NEXT:    addi s2, s2, 2047
-; CHECK-RV32-NEXT:    addi s2, s2, 33
-; CHECK-RV32-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-RV32-NEXT:    vslideup.vx v16, v8, a4
-; CHECK-RV32-NEXT:    csrr s2, vlenb
-; CHECK-RV32-NEXT:    slli s2, s2, 5
-; CHECK-RV32-NEXT:    mv s3, s2
-; CHECK-RV32-NEXT:    slli s2, s2, 2
+; CHECK-RV32-NEXT:    add s3, s3, s2
+; CHECK-RV32-NEXT:    slli s2, s2, 1
 ; CHECK-RV32-NEXT:    add s2, s2, s3
 ; CHECK-RV32-NEXT:    add s2, sp, s2
 ; CHECK-RV32-NEXT:    addi s2, s2, 2047
@@ -1859,8 +1797,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi s2, sp, 1344
 ; CHECK-RV32-NEXT:    vle8.v v8, (s2)
 ; CHECK-RV32-NEXT:    csrr s2, vlenb
-; CHECK-RV32-NEXT:    slli s2, s2, 5
+; CHECK-RV32-NEXT:    slli s2, s2, 4
 ; CHECK-RV32-NEXT:    mv s3, s2
+; CHECK-RV32-NEXT:    slli s2, s2, 2
+; CHECK-RV32-NEXT:    add s3, s3, s2
 ; CHECK-RV32-NEXT:    slli s2, s2, 1
 ; CHECK-RV32-NEXT:    add s2, s2, s3
 ; CHECK-RV32-NEXT:    add s2, sp, s2
@@ -1884,16 +1824,27 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v24, (s1)
 ; CHECK-RV32-NEXT:    csrr s1, vlenb
-; CHECK-RV32-NEXT:    slli s1, s1, 7
+; CHECK-RV32-NEXT:    slli s1, s1, 3
+; CHECK-RV32-NEXT:    mv s2, s1
+; CHECK-RV32-NEXT:    slli s1, s1, 2
+; CHECK-RV32-NEXT:    add s2, s2, s1
+; CHECK-RV32-NEXT:    slli s1, s1, 1
+; CHECK-RV32-NEXT:    add s2, s2, s1
+; CHECK-RV32-NEXT:    slli s1, s1, 1
+; CHECK-RV32-NEXT:    add s1, s1, s2
 ; CHECK-RV32-NEXT:    add s1, sp, s1
 ; CHECK-RV32-NEXT:    addi s1, s1, 2047
 ; CHECK-RV32-NEXT:    addi s1, s1, 33
 ; CHECK-RV32-NEXT:    vs8r.v v24, (s1) # vscale x 64-byte Folded Spill
 ; CHECK-RV32-NEXT:    vle8.v v24, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    mv s1, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv s1, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add s1, s1, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add s1, s1, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, s1
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -1902,9 +1853,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vslideup.vx v16, v8, a4
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 6
 ; CHECK-RV32-NEXT:    mv s1, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, s1
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -1916,6 +1867,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv s1, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add s1, s1, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add s1, s1, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
@@ -1926,7 +1879,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; CHECK-RV32-NEXT:    vle8.v v8, (a5)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 5
 ; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a3
@@ -1943,9 +1896,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -1956,8 +1909,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v24, (t6)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 4
 ; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
@@ -1966,8 +1921,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    vle8.v v16, (a6)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 4
 ; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
@@ -1980,7 +1937,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v16, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 6
+; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -1989,7 +1951,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2001,7 +1967,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 4
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2011,9 +1977,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 5
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2023,9 +1989,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2038,7 +2004,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2050,7 +2018,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vle8.v v0, (t5)
 ; CHECK-RV32-NEXT:    vle8.v v8, (t1)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2061,7 +2032,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 7
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2069,6 +2040,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vle8.v v8, (t2)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2079,16 +2057,21 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV32-NEXT:    vle8.v v24, (a3)
 ; CHECK-RV32-NEXT:    vle8.v v8, (t3)
-; CHECK-RV32-NEXT:    addi a3, sp, 2047
+; CHECK-RV32-NEXT:    csrr a3, vlenb
+; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a3, a3, a5
+; CHECK-RV32-NEXT:    add a3, sp, a3
+; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; CHECK-RV32-NEXT:    addi a3, sp, 1888
 ; CHECK-RV32-NEXT:    vle8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    add a3, a3, a5
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2098,17 +2081,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslideup.vx v8, v12, a1
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vse8.v v0, (a0)
-; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a3, a3, a5
-; CHECK-RV32-NEXT:    add a3, sp, a3
-; CHECK-RV32-NEXT:    addi a3, a3, 2047
+; CHECK-RV32-NEXT:    addi a3, sp, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
@@ -2119,7 +2092,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    slli a5, a5, 4
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -2127,11 +2100,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2141,16 +2112,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; CHECK-RV32-NEXT:    addi a3, sp, 2047
+; CHECK-RV32-NEXT:    csrr a3, vlenb
+; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a3, a3, a5
+; CHECK-RV32-NEXT:    add a3, sp, a3
+; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl8r.v v0, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vslideup.vx v0, v8, a1
@@ -2160,9 +2134,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslideup.vx v0, v24, a4
 ; CHECK-RV32-NEXT:    addi a3, a0, 256
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    slli a5, a5, 4
+; CHECK-RV32-NEXT:    slli a5, a5, 6
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -2170,12 +2144,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
@@ -2183,7 +2153,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 7
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2192,17 +2162,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
-; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2213,9 +2185,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vse8.v v0, (a3)
 ; CHECK-RV32-NEXT:    vslideup.vx v16, v24, a4
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
@@ -2226,7 +2198,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2240,8 +2214,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
@@ -2249,7 +2221,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2260,9 +2235,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslideup.vx v16, v24, a4
 ; CHECK-RV32-NEXT:    addi a3, a0, 768
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    slli a5, a5, 5
+; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    add a6, a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -2273,19 +2254,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 2
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 5
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2295,11 +2272,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 5
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2310,9 +2282,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2325,10 +2297,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vmv.v.v v0, v16
 ; CHECK-RV32-NEXT:    addi a3, a0, 1792
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    slli a5, a5, 6
-; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a5, a5, a6
+; CHECK-RV32-NEXT:    slli a5, a5, 8
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
 ; CHECK-RV32-NEXT:    addi a5, a5, 33
@@ -2340,61 +2309,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 6
-; CHECK-RV32-NEXT:    add a3, sp, a3
-; CHECK-RV32-NEXT:    addi a3, a3, 2047
-; CHECK-RV32-NEXT:    addi a3, a3, 33
-; CHECK-RV32-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
-; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
-; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a3, a3, a5
-; CHECK-RV32-NEXT:    add a3, sp, a3
-; CHECK-RV32-NEXT:    addi a3, a3, 2047
-; CHECK-RV32-NEXT:    addi a3, a3, 33
-; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    add a3, a3, a5
-; CHECK-RV32-NEXT:    add a3, sp, a3
-; CHECK-RV32-NEXT:    addi a3, a3, 2047
-; CHECK-RV32-NEXT:    addi a3, a3, 33
-; CHECK-RV32-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
-; CHECK-RV32-NEXT:    vslideup.vx v16, v8, a1
-; CHECK-RV32-NEXT:    addi a3, a0, 1152
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-RV32-NEXT:    vse8.v v0, (a3)
-; CHECK-RV32-NEXT:    vslideup.vx v16, v24, a4
-; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    add a3, a3, a5
-; CHECK-RV32-NEXT:    add a3, sp, a3
-; CHECK-RV32-NEXT:    addi a3, a3, 2047
-; CHECK-RV32-NEXT:    addi a3, a3, 33
-; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a3
@@ -2406,21 +2327,69 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
-; CHECK-RV32-NEXT:    addi a3, a0, 640
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-RV32-NEXT:    vse8.v v16, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    slli a3, a3, 4
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 5
+; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a3, a3, a5
+; CHECK-RV32-NEXT:    add a3, sp, a3
+; CHECK-RV32-NEXT:    addi a3, a3, 2047
+; CHECK-RV32-NEXT:    addi a3, a3, 33
+; CHECK-RV32-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
+; CHECK-RV32-NEXT:    vslideup.vx v16, v8, a1
+; CHECK-RV32-NEXT:    addi a3, a0, 1152
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-RV32-NEXT:    vse8.v v0, (a3)
+; CHECK-RV32-NEXT:    vslideup.vx v16, v24, a4
+; CHECK-RV32-NEXT:    csrr a3, vlenb
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    add a3, a3, a5
+; CHECK-RV32-NEXT:    add a3, sp, a3
+; CHECK-RV32-NEXT:    addi a3, a3, 2047
+; CHECK-RV32-NEXT:    addi a3, a3, 33
+; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; CHECK-RV32-NEXT:    csrr a3, vlenb
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a3, a3, a5
+; CHECK-RV32-NEXT:    add a3, sp, a3
+; CHECK-RV32-NEXT:    addi a3, a3, 2047
+; CHECK-RV32-NEXT:    addi a3, a3, 33
+; CHECK-RV32-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
+; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
+; CHECK-RV32-NEXT:    addi a3, a0, 640
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-RV32-NEXT:    vse8.v v16, (a3)
+; CHECK-RV32-NEXT:    csrr a3, vlenb
+; CHECK-RV32-NEXT:    slli a3, a3, 6
+; CHECK-RV32-NEXT:    add a3, sp, a3
+; CHECK-RV32-NEXT:    addi a3, a3, 2047
+; CHECK-RV32-NEXT:    addi a3, a3, 33
+; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; CHECK-RV32-NEXT:    csrr a3, vlenb
+; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
@@ -2435,11 +2404,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
 ; CHECK-RV32-NEXT:    slli a5, a5, 3
 ; CHECK-RV32-NEXT:    mv a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 2
-; CHECK-RV32-NEXT:    add a6, a6, a5
-; CHECK-RV32-NEXT:    slli a5, a5, 1
+; CHECK-RV32-NEXT:    slli a5, a5, 5
 ; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
@@ -2447,9 +2412,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 5
-; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2458,6 +2425,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
 ; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
@@ -2472,18 +2441,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV32-NEXT:    vse8.v v16, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    slli a3, a3, 5
 ; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a5, a5, a3
@@ -2500,25 +2467,35 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vmv.v.v v0, v16
 ; CHECK-RV32-NEXT:    addi a3, a0, 1408
 ; CHECK-RV32-NEXT:    csrr a5, vlenb
-; CHECK-RV32-NEXT:    slli a5, a5, 8
+; CHECK-RV32-NEXT:    slli a5, a5, 4
+; CHECK-RV32-NEXT:    mv a6, a5
+; CHECK-RV32-NEXT:    slli a5, a5, 4
+; CHECK-RV32-NEXT:    add a5, a5, a6
 ; CHECK-RV32-NEXT:    add a5, sp, a5
 ; CHECK-RV32-NEXT:    addi a5, a5, 2047
 ; CHECK-RV32-NEXT:    addi a5, a5, 33
 ; CHECK-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV32-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 4
-; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 1
-; CHECK-RV32-NEXT:    add a5, a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 7
+; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 2
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
@@ -2526,20 +2503,22 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; CHECK-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    slli a3, a3, 5
 ; CHECK-RV32-NEXT:    mv a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 2
-; CHECK-RV32-NEXT:    add a5, a5, a3
-; CHECK-RV32-NEXT:    slli a3, a3, 3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
 ; CHECK-RV32-NEXT:    addi a3, a3, 33
 ; CHECK-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV32-NEXT:    csrr a3, vlenb
-; CHECK-RV32-NEXT:    slli a3, a3, 3
-; CHECK-RV32-NEXT:    mv a5, a3
 ; CHECK-RV32-NEXT:    slli a3, a3, 4
+; CHECK-RV32-NEXT:    mv a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
+; CHECK-RV32-NEXT:    add a5, a5, a3
+; CHECK-RV32-NEXT:    slli a3, a3, 1
 ; CHECK-RV32-NEXT:    add a3, a3, a5
 ; CHECK-RV32-NEXT:    add a3, sp, a3
 ; CHECK-RV32-NEXT:    addi a3, a3, 2047
@@ -2582,25 +2561,26 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a4, a2
 ; CHECK-RV64-NEXT:    slli a2, a2, 1
 ; CHECK-RV64-NEXT:    add a4, a4, a2
-; CHECK-RV64-NEXT:    slli a2, a2, 1
-; CHECK-RV64-NEXT:    add a4, a4, a2
-; CHECK-RV64-NEXT:    slli a2, a2, 3
+; CHECK-RV64-NEXT:    slli a2, a2, 4
 ; CHECK-RV64-NEXT:    add a2, a2, a4
 ; CHECK-RV64-NEXT:    sub sp, sp, a2
 ; CHECK-RV64-NEXT:    andi sp, sp, -32
 ; CHECK-RV64-NEXT:    csrr a2, vlenb
 ; CHECK-RV64-NEXT:    slli a2, a2, 3
 ; CHECK-RV64-NEXT:    mv a4, a2
-; CHECK-RV64-NEXT:    slli a2, a2, 2
-; CHECK-RV64-NEXT:    add a4, a4, a2
-; CHECK-RV64-NEXT:    slli a2, a2, 3
+; CHECK-RV64-NEXT:    slli a2, a2, 5
 ; CHECK-RV64-NEXT:    add a2, a2, a4
 ; CHECK-RV64-NEXT:    add a2, sp, a2
 ; CHECK-RV64-NEXT:    addi a2, a2, 2047
 ; CHECK-RV64-NEXT:    addi a2, a2, 33
 ; CHECK-RV64-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; CHECK-RV64-NEXT:    csrr a2, vlenb
-; CHECK-RV64-NEXT:    slli a2, a2, 8
+; CHECK-RV64-NEXT:    slli a2, a2, 5
+; CHECK-RV64-NEXT:    mv a4, a2
+; CHECK-RV64-NEXT:    slli a2, a2, 1
+; CHECK-RV64-NEXT:    add a4, a4, a2
+; CHECK-RV64-NEXT:    slli a2, a2, 1
+; CHECK-RV64-NEXT:    add a2, a2, a4
 ; CHECK-RV64-NEXT:    add a2, sp, a2
 ; CHECK-RV64-NEXT:    addi a2, a2, 2047
 ; CHECK-RV64-NEXT:    addi a2, a2, 33
@@ -2611,9 +2591,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    slli a4, a4, 4
 ; CHECK-RV64-NEXT:    mv a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 1
-; CHECK-RV64-NEXT:    add a5, a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 3
+; CHECK-RV64-NEXT:    slli a4, a4, 4
 ; CHECK-RV64-NEXT:    add a4, a4, a5
 ; CHECK-RV64-NEXT:    add a4, sp, a4
 ; CHECK-RV64-NEXT:    addi a4, a4, 2047
@@ -2625,9 +2603,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a5, a4
 ; CHECK-RV64-NEXT:    slli a4, a4, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 1
-; CHECK-RV64-NEXT:    add a5, a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 1
+; CHECK-RV64-NEXT:    slli a4, a4, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a4
 ; CHECK-RV64-NEXT:    slli a4, a4, 1
 ; CHECK-RV64-NEXT:    add a4, a4, a5
@@ -2638,10 +2614,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi a4, a7, 256
 ; CHECK-RV64-NEXT:    vle8.v v16, (a4)
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
-; CHECK-RV64-NEXT:    slli a4, a4, 5
-; CHECK-RV64-NEXT:    mv a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 3
-; CHECK-RV64-NEXT:    add a4, a4, a5
+; CHECK-RV64-NEXT:    slli a4, a4, 8
 ; CHECK-RV64-NEXT:    add a4, sp, a4
 ; CHECK-RV64-NEXT:    addi a4, a4, 2047
 ; CHECK-RV64-NEXT:    addi a4, a4, 33
@@ -2651,9 +2624,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    slli a4, a4, 4
 ; CHECK-RV64-NEXT:    mv a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 1
-; CHECK-RV64-NEXT:    add a5, a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 1
+; CHECK-RV64-NEXT:    slli a4, a4, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a4
 ; CHECK-RV64-NEXT:    slli a4, a4, 1
 ; CHECK-RV64-NEXT:    add a4, a4, a5
@@ -2666,9 +2637,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a4, vlenb
 ; CHECK-RV64-NEXT:    slli a4, a4, 3
 ; CHECK-RV64-NEXT:    mv a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 2
-; CHECK-RV64-NEXT:    add a5, a5, a4
-; CHECK-RV64-NEXT:    slli a4, a4, 1
+; CHECK-RV64-NEXT:    slli a4, a4, 3
 ; CHECK-RV64-NEXT:    add a5, a5, a4
 ; CHECK-RV64-NEXT:    slli a4, a4, 1
 ; CHECK-RV64-NEXT:    add a4, a4, a5
@@ -2684,9 +2653,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2696,10 +2663,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v8, (a5)
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
-; CHECK-RV64-NEXT:    slli a5, a5, 5
+; CHECK-RV64-NEXT:    slli a5, a5, 6
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
@@ -2713,9 +2678,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    slli a5, a5, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2729,9 +2692,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
-; CHECK-RV64-NEXT:    add a6, a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2742,9 +2705,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 4
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2758,7 +2719,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 4
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2769,7 +2734,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 4
+; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2780,7 +2747,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a1, vlenb
 ; CHECK-RV64-NEXT:    slli a1, a1, 4
 ; CHECK-RV64-NEXT:    mv a5, a1
-; CHECK-RV64-NEXT:    slli a1, a1, 4
+; CHECK-RV64-NEXT:    slli a1, a1, 1
+; CHECK-RV64-NEXT:    add a5, a5, a1
+; CHECK-RV64-NEXT:    slli a1, a1, 1
+; CHECK-RV64-NEXT:    add a5, a5, a1
+; CHECK-RV64-NEXT:    slli a1, a1, 1
 ; CHECK-RV64-NEXT:    add a1, a1, a5
 ; CHECK-RV64-NEXT:    add a1, sp, a1
 ; CHECK-RV64-NEXT:    addi a1, a1, 2047
@@ -2795,9 +2766,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 4
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
-; CHECK-RV64-NEXT:    add a6, a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2810,9 +2781,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a6, a5
 ; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2825,7 +2794,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -2835,9 +2808,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 4
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -2852,9 +2823,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 3
+; CHECK-RV64-NEXT:    slli a5, a5, 5
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2865,9 +2834,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 4
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2876,7 +2843,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 5
+; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2886,9 +2857,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 4
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    slli a5, a5, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2899,9 +2868,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
 ; CHECK-RV64-NEXT:    slli a6, a6, 3
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 2
-; CHECK-RV64-NEXT:    add a7, a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    slli a6, a6, 3
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -2912,9 +2879,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 3
+; CHECK-RV64-NEXT:    slli a5, a5, 2
 ; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    slli a5, a5, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2923,7 +2890,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vx v8, v8, a4
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
-; CHECK-RV64-NEXT:    slli a5, a5, 7
+; CHECK-RV64-NEXT:    slli a5, a5, 5
+; CHECK-RV64-NEXT:    mv a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
 ; CHECK-RV64-NEXT:    addi a5, a5, 33
@@ -2934,9 +2904,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 4
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -2952,7 +2920,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
 ; CHECK-RV64-NEXT:    slli a6, a6, 4
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 4
+; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    add a7, a7, a6
+; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    add a7, a7, a6
+; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -2963,7 +2935,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
 ; CHECK-RV64-NEXT:    slli a6, a6, 4
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 2
+; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -2974,7 +2946,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a7, a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 4
+; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    add a7, a7, a6
+; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    add a7, a7, a6
+; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -2986,7 +2962,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a7, a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 2
+; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -2994,20 +2970,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vs8r.v v24, (a6) # vscale x 64-byte Folded Spill
 ; CHECK-RV64-NEXT:    addi a6, s0, 640
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
-; CHECK-RV64-NEXT:    slli a7, a7, 5
-; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
-; CHECK-RV64-NEXT:    add a7, a7, t0
+; CHECK-RV64-NEXT:    slli a7, a7, 8
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
 ; CHECK-RV64-NEXT:    addi a7, a7, 33
 ; CHECK-RV64-NEXT:    vl8r.v v16, (a7) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vslidedown.vx v8, v16, a4
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
-; CHECK-RV64-NEXT:    slli a7, a7, 5
-; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 2
-; CHECK-RV64-NEXT:    add a7, a7, t0
+; CHECK-RV64-NEXT:    slli a7, a7, 7
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
 ; CHECK-RV64-NEXT:    addi a7, a7, 33
@@ -3015,9 +2985,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v8, (a6)
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
-; CHECK-RV64-NEXT:    slli a6, a6, 6
+; CHECK-RV64-NEXT:    slli a6, a6, 5
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    slli a6, a6, 2
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -3026,10 +2996,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vx v8, v8, a4
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
-; CHECK-RV64-NEXT:    slli a6, a6, 5
-; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
-; CHECK-RV64-NEXT:    add a6, a6, a7
+; CHECK-RV64-NEXT:    slli a6, a6, 6
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
 ; CHECK-RV64-NEXT:    addi a6, a6, 33
@@ -3040,10 +3007,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslidedown.vx v16, v0, a1
 ; CHECK-RV64-NEXT:    vmv2r.v v18, v20
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
-; CHECK-RV64-NEXT:    slli a6, a6, 5
-; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 2
-; CHECK-RV64-NEXT:    add a6, a6, a7
+; CHECK-RV64-NEXT:    slli a6, a6, 7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
 ; CHECK-RV64-NEXT:    addi a6, a6, 33
@@ -3056,9 +3020,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
 ; CHECK-RV64-NEXT:    slli a6, a6, 3
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 2
-; CHECK-RV64-NEXT:    add a7, a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    slli a6, a6, 3
 ; CHECK-RV64-NEXT:    add a7, a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
@@ -3073,9 +3035,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a7, a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 2
-; CHECK-RV64-NEXT:    add a7, a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    add a7, a7, a6
+; CHECK-RV64-NEXT:    slli a6, a6, 2
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
 ; CHECK-RV64-NEXT:    addi a6, a6, 2047
@@ -3085,9 +3047,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
 ; CHECK-RV64-NEXT:    slli a6, a6, 4
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
-; CHECK-RV64-NEXT:    add a7, a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
+; CHECK-RV64-NEXT:    slli a6, a6, 2
 ; CHECK-RV64-NEXT:    add a7, a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
@@ -3098,10 +3058,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslidedown.vx v16, v0, a1
 ; CHECK-RV64-NEXT:    vmv2r.v v18, v20
 ; CHECK-RV64-NEXT:    csrr a6, vlenb
-; CHECK-RV64-NEXT:    slli a6, a6, 5
+; CHECK-RV64-NEXT:    slli a6, a6, 6
 ; CHECK-RV64-NEXT:    mv a7, a6
-; CHECK-RV64-NEXT:    slli a6, a6, 1
-; CHECK-RV64-NEXT:    add a7, a7, a6
 ; CHECK-RV64-NEXT:    slli a6, a6, 1
 ; CHECK-RV64-NEXT:    add a6, a6, a7
 ; CHECK-RV64-NEXT:    add a6, sp, a6
@@ -3114,7 +3072,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vsseg4e8.v v16, (a6)
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
-; CHECK-RV64-NEXT:    slli a7, a7, 8
+; CHECK-RV64-NEXT:    slli a7, a7, 5
+; CHECK-RV64-NEXT:    mv t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
 ; CHECK-RV64-NEXT:    addi a7, a7, 33
@@ -3126,7 +3089,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t0, a7
 ; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add t0, t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
+; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3137,9 +3102,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t0, a7
 ; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add t0, t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 1
-; CHECK-RV64-NEXT:    add t0, t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    slli a7, a7, 2
 ; CHECK-RV64-NEXT:    add t0, t0, a7
 ; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add a7, a7, t0
@@ -3149,7 +3112,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v8, (a7) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vslidedown.vx v16, v8, a4
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
-; CHECK-RV64-NEXT:    slli a7, a7, 6
+; CHECK-RV64-NEXT:    slli a7, a7, 5
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
 ; CHECK-RV64-NEXT:    addi a7, a7, 33
@@ -3158,9 +3121,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t0, vlenb
 ; CHECK-RV64-NEXT:    slli t0, t0, 4
 ; CHECK-RV64-NEXT:    mv t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 1
-; CHECK-RV64-NEXT:    add t1, t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 3
+; CHECK-RV64-NEXT:    slli t0, t0, 4
 ; CHECK-RV64-NEXT:    add t0, t0, t1
 ; CHECK-RV64-NEXT:    add t0, sp, t0
 ; CHECK-RV64-NEXT:    addi t0, t0, 2047
@@ -3170,7 +3131,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t0, vlenb
 ; CHECK-RV64-NEXT:    slli t0, t0, 4
 ; CHECK-RV64-NEXT:    mv t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 3
+; CHECK-RV64-NEXT:    slli t0, t0, 1
+; CHECK-RV64-NEXT:    add t1, t1, t0
+; CHECK-RV64-NEXT:    slli t0, t0, 1
 ; CHECK-RV64-NEXT:    add t0, t0, t1
 ; CHECK-RV64-NEXT:    add t0, sp, t0
 ; CHECK-RV64-NEXT:    addi t0, t0, 2047
@@ -3183,7 +3146,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a7, 3
 ; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
+; CHECK-RV64-NEXT:    slli a7, a7, 2
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3197,7 +3160,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t0, a7
 ; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add t0, t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
+; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3208,7 +3173,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a7, 4
 ; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
+; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3222,7 +3189,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a7, 3
 ; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 5
+; CHECK-RV64-NEXT:    slli a7, a7, 2
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 1
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3233,9 +3204,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a7, 3
 ; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
+; CHECK-RV64-NEXT:    slli a7, a7, 2
 ; CHECK-RV64-NEXT:    add t0, t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    slli a7, a7, 2
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3245,9 +3216,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a7, 3
 ; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 2
-; CHECK-RV64-NEXT:    add t0, t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 3
+; CHECK-RV64-NEXT:    slli a7, a7, 5
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3258,9 +3227,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a7, vlenb
 ; CHECK-RV64-NEXT:    slli a7, a7, 4
 ; CHECK-RV64-NEXT:    mv t0, a7
-; CHECK-RV64-NEXT:    slli a7, a7, 2
-; CHECK-RV64-NEXT:    add t0, t0, a7
 ; CHECK-RV64-NEXT:    slli a7, a7, 1
+; CHECK-RV64-NEXT:    add t0, t0, a7
+; CHECK-RV64-NEXT:    slli a7, a7, 2
 ; CHECK-RV64-NEXT:    add a7, a7, t0
 ; CHECK-RV64-NEXT:    add a7, sp, a7
 ; CHECK-RV64-NEXT:    addi a7, a7, 2047
@@ -3276,7 +3245,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t1, t0
 ; CHECK-RV64-NEXT:    slli t0, t0, 1
 ; CHECK-RV64-NEXT:    add t1, t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 4
+; CHECK-RV64-NEXT:    slli t0, t0, 1
+; CHECK-RV64-NEXT:    add t1, t1, t0
+; CHECK-RV64-NEXT:    slli t0, t0, 1
+; CHECK-RV64-NEXT:    add t1, t1, t0
+; CHECK-RV64-NEXT:    slli t0, t0, 1
 ; CHECK-RV64-NEXT:    add t0, t0, t1
 ; CHECK-RV64-NEXT:    add t0, sp, t0
 ; CHECK-RV64-NEXT:    addi t0, t0, 2047
@@ -3285,9 +3258,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-RV64-NEXT:    csrr t0, vlenb
-; CHECK-RV64-NEXT:    slli t0, t0, 6
+; CHECK-RV64-NEXT:    slli t0, t0, 5
 ; CHECK-RV64-NEXT:    mv t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 1
+; CHECK-RV64-NEXT:    slli t0, t0, 2
 ; CHECK-RV64-NEXT:    add t0, t0, t1
 ; CHECK-RV64-NEXT:    add t0, sp, t0
 ; CHECK-RV64-NEXT:    addi t0, t0, 2047
@@ -3297,7 +3270,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t0, vlenb
 ; CHECK-RV64-NEXT:    slli t0, t0, 4
 ; CHECK-RV64-NEXT:    mv t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 4
+; CHECK-RV64-NEXT:    slli t0, t0, 1
+; CHECK-RV64-NEXT:    add t1, t1, t0
+; CHECK-RV64-NEXT:    slli t0, t0, 1
+; CHECK-RV64-NEXT:    add t1, t1, t0
+; CHECK-RV64-NEXT:    slli t0, t0, 1
 ; CHECK-RV64-NEXT:    add t0, t0, t1
 ; CHECK-RV64-NEXT:    add t0, sp, t0
 ; CHECK-RV64-NEXT:    addi t0, t0, 2047
@@ -3306,10 +3283,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslidedown.vx v4, v16, a1
 ; CHECK-RV64-NEXT:    vmv2r.v v6, v8
 ; CHECK-RV64-NEXT:    csrr t0, vlenb
-; CHECK-RV64-NEXT:    slli t0, t0, 5
-; CHECK-RV64-NEXT:    mv t1, t0
-; CHECK-RV64-NEXT:    slli t0, t0, 3
-; CHECK-RV64-NEXT:    add t0, t0, t1
+; CHECK-RV64-NEXT:    slli t0, t0, 8
 ; CHECK-RV64-NEXT:    add t0, sp, t0
 ; CHECK-RV64-NEXT:    addi t0, t0, 2047
 ; CHECK-RV64-NEXT:    addi t0, t0, 33
@@ -3324,9 +3298,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t2, t1
 ; CHECK-RV64-NEXT:    slli t1, t1, 1
 ; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
-; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 2
+; CHECK-RV64-NEXT:    slli t1, t1, 3
 ; CHECK-RV64-NEXT:    add t1, t1, t2
 ; CHECK-RV64-NEXT:    add t1, sp, t1
 ; CHECK-RV64-NEXT:    addi t1, t1, 2047
@@ -3337,9 +3309,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t2, t1
 ; CHECK-RV64-NEXT:    slli t1, t1, 1
 ; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
-; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
+; CHECK-RV64-NEXT:    slli t1, t1, 2
 ; CHECK-RV64-NEXT:    add t1, t1, t2
 ; CHECK-RV64-NEXT:    add t1, sp, t1
 ; CHECK-RV64-NEXT:    addi t1, t1, 2047
@@ -3349,9 +3319,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t1, vlenb
 ; CHECK-RV64-NEXT:    slli t1, t1, 4
 ; CHECK-RV64-NEXT:    mv t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
-; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 2
+; CHECK-RV64-NEXT:    slli t1, t1, 3
 ; CHECK-RV64-NEXT:    add t1, t1, t2
 ; CHECK-RV64-NEXT:    add t1, sp, t1
 ; CHECK-RV64-NEXT:    addi t1, t1, 2047
@@ -3361,7 +3329,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t1, vlenb
 ; CHECK-RV64-NEXT:    slli t1, t1, 3
 ; CHECK-RV64-NEXT:    mv t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 4
+; CHECK-RV64-NEXT:    slli t1, t1, 2
+; CHECK-RV64-NEXT:    add t2, t2, t1
+; CHECK-RV64-NEXT:    slli t1, t1, 1
 ; CHECK-RV64-NEXT:    add t1, t1, t2
 ; CHECK-RV64-NEXT:    add t1, sp, t1
 ; CHECK-RV64-NEXT:    addi t1, t1, 2047
@@ -3375,9 +3345,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t2, t1
 ; CHECK-RV64-NEXT:    slli t1, t1, 1
 ; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
-; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
+; CHECK-RV64-NEXT:    slli t1, t1, 2
 ; CHECK-RV64-NEXT:    add t2, t2, t1
 ; CHECK-RV64-NEXT:    slli t1, t1, 1
 ; CHECK-RV64-NEXT:    add t1, t1, t2
@@ -3389,7 +3357,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-RV64-NEXT:    vslidedown.vx v12, v24, a1
 ; CHECK-RV64-NEXT:    csrr t1, vlenb
-; CHECK-RV64-NEXT:    slli t1, t1, 8
+; CHECK-RV64-NEXT:    slli t1, t1, 5
+; CHECK-RV64-NEXT:    mv t2, t1
+; CHECK-RV64-NEXT:    slli t1, t1, 1
+; CHECK-RV64-NEXT:    add t2, t2, t1
+; CHECK-RV64-NEXT:    slli t1, t1, 1
+; CHECK-RV64-NEXT:    add t1, t1, t2
 ; CHECK-RV64-NEXT:    add t1, sp, t1
 ; CHECK-RV64-NEXT:    addi t1, t1, 2047
 ; CHECK-RV64-NEXT:    addi t1, t1, 33
@@ -3399,9 +3372,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t1, vlenb
 ; CHECK-RV64-NEXT:    slli t1, t1, 4
 ; CHECK-RV64-NEXT:    mv t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 1
-; CHECK-RV64-NEXT:    add t2, t2, t1
-; CHECK-RV64-NEXT:    slli t1, t1, 3
+; CHECK-RV64-NEXT:    slli t1, t1, 4
 ; CHECK-RV64-NEXT:    add t1, t1, t2
 ; CHECK-RV64-NEXT:    add t1, sp, t1
 ; CHECK-RV64-NEXT:    addi t1, t1, 2047
@@ -3415,9 +3386,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
 ; CHECK-RV64-NEXT:    slli t2, t2, 3
 ; CHECK-RV64-NEXT:    mv t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 2
-; CHECK-RV64-NEXT:    add t3, t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 2
+; CHECK-RV64-NEXT:    slli t2, t2, 4
 ; CHECK-RV64-NEXT:    add t2, t2, t3
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
@@ -3426,9 +3395,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
 ; CHECK-RV64-NEXT:    slli t2, t2, 4
 ; CHECK-RV64-NEXT:    mv t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 1
-; CHECK-RV64-NEXT:    add t3, t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 1
+; CHECK-RV64-NEXT:    slli t2, t2, 2
 ; CHECK-RV64-NEXT:    add t2, t2, t3
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
@@ -3438,9 +3405,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
 ; CHECK-RV64-NEXT:    slli t2, t2, 3
 ; CHECK-RV64-NEXT:    mv t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 2
-; CHECK-RV64-NEXT:    add t3, t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 1
+; CHECK-RV64-NEXT:    slli t2, t2, 3
 ; CHECK-RV64-NEXT:    add t2, t2, t3
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
@@ -3448,7 +3413,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vmv2r.v v12, v16
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
-; CHECK-RV64-NEXT:    slli t2, t2, 7
+; CHECK-RV64-NEXT:    slli t2, t2, 5
+; CHECK-RV64-NEXT:    mv t3, t2
+; CHECK-RV64-NEXT:    slli t2, t2, 1
+; CHECK-RV64-NEXT:    add t2, t2, t3
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
 ; CHECK-RV64-NEXT:    addi t2, t2, 33
@@ -3459,7 +3427,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
 ; CHECK-RV64-NEXT:    slli t2, t2, 4
 ; CHECK-RV64-NEXT:    mv t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 2
+; CHECK-RV64-NEXT:    slli t2, t2, 1
 ; CHECK-RV64-NEXT:    add t2, t2, t3
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
@@ -3470,7 +3438,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t3, t2
 ; CHECK-RV64-NEXT:    slli t2, t2, 1
 ; CHECK-RV64-NEXT:    add t3, t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 2
+; CHECK-RV64-NEXT:    slli t2, t2, 1
 ; CHECK-RV64-NEXT:    add t2, t2, t3
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
@@ -3478,20 +3446,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vmv2r.v v10, v16
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
-; CHECK-RV64-NEXT:    slli t2, t2, 5
-; CHECK-RV64-NEXT:    mv t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 2
-; CHECK-RV64-NEXT:    add t2, t2, t3
+; CHECK-RV64-NEXT:    slli t2, t2, 7
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
 ; CHECK-RV64-NEXT:    addi t2, t2, 33
 ; CHECK-RV64-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vmv2r.v v12, v16
 ; CHECK-RV64-NEXT:    csrr t2, vlenb
-; CHECK-RV64-NEXT:    slli t2, t2, 5
-; CHECK-RV64-NEXT:    mv t3, t2
-; CHECK-RV64-NEXT:    slli t2, t2, 1
-; CHECK-RV64-NEXT:    add t2, t2, t3
+; CHECK-RV64-NEXT:    slli t2, t2, 6
 ; CHECK-RV64-NEXT:    add t2, sp, t2
 ; CHECK-RV64-NEXT:    addi t2, t2, 2047
 ; CHECK-RV64-NEXT:    addi t2, t2, 33
@@ -3502,9 +3464,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t3, vlenb
 ; CHECK-RV64-NEXT:    slli t3, t3, 4
 ; CHECK-RV64-NEXT:    mv t4, t3
-; CHECK-RV64-NEXT:    slli t3, t3, 1
-; CHECK-RV64-NEXT:    add t4, t4, t3
-; CHECK-RV64-NEXT:    slli t3, t3, 1
+; CHECK-RV64-NEXT:    slli t3, t3, 2
 ; CHECK-RV64-NEXT:    add t4, t4, t3
 ; CHECK-RV64-NEXT:    slli t3, t3, 1
 ; CHECK-RV64-NEXT:    add t3, t3, t4
@@ -3515,9 +3475,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t3, vlenb
 ; CHECK-RV64-NEXT:    slli t3, t3, 3
 ; CHECK-RV64-NEXT:    mv t4, t3
-; CHECK-RV64-NEXT:    slli t3, t3, 2
-; CHECK-RV64-NEXT:    add t4, t4, t3
-; CHECK-RV64-NEXT:    slli t3, t3, 1
+; CHECK-RV64-NEXT:    slli t3, t3, 3
 ; CHECK-RV64-NEXT:    add t4, t4, t3
 ; CHECK-RV64-NEXT:    slli t3, t3, 1
 ; CHECK-RV64-NEXT:    add t3, t3, t4
@@ -3527,10 +3485,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v16, (t3) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vmv2r.v v10, v16
 ; CHECK-RV64-NEXT:    csrr t3, vlenb
-; CHECK-RV64-NEXT:    slli t3, t3, 5
+; CHECK-RV64-NEXT:    slli t3, t3, 6
 ; CHECK-RV64-NEXT:    mv t4, t3
-; CHECK-RV64-NEXT:    slli t3, t3, 1
-; CHECK-RV64-NEXT:    add t4, t4, t3
 ; CHECK-RV64-NEXT:    slli t3, t3, 1
 ; CHECK-RV64-NEXT:    add t3, t3, t4
 ; CHECK-RV64-NEXT:    add t3, sp, t3
@@ -3543,9 +3499,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t4, t3
 ; CHECK-RV64-NEXT:    slli t3, t3, 1
 ; CHECK-RV64-NEXT:    add t4, t4, t3
-; CHECK-RV64-NEXT:    slli t3, t3, 2
-; CHECK-RV64-NEXT:    add t4, t4, t3
 ; CHECK-RV64-NEXT:    slli t3, t3, 1
+; CHECK-RV64-NEXT:    add t4, t4, t3
+; CHECK-RV64-NEXT:    slli t3, t3, 2
 ; CHECK-RV64-NEXT:    add t3, t3, t4
 ; CHECK-RV64-NEXT:    add t3, sp, t3
 ; CHECK-RV64-NEXT:    addi t3, t3, 2047
@@ -3559,14 +3515,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t5, t4
 ; CHECK-RV64-NEXT:    slli t4, t4, 1
 ; CHECK-RV64-NEXT:    add t5, t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 3
+; CHECK-RV64-NEXT:    slli t4, t4, 1
+; CHECK-RV64-NEXT:    add t5, t5, t4
+; CHECK-RV64-NEXT:    slli t4, t4, 1
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
 ; CHECK-RV64-NEXT:    addi t4, t4, 33
 ; CHECK-RV64-NEXT:    vl8r.v v8, (t4) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
-; CHECK-RV64-NEXT:    slli t4, t4, 6
+; CHECK-RV64-NEXT:    slli t4, t4, 5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
 ; CHECK-RV64-NEXT:    addi t4, t4, 33
@@ -3575,7 +3533,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
 ; CHECK-RV64-NEXT:    slli t4, t4, 4
 ; CHECK-RV64-NEXT:    mv t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 3
+; CHECK-RV64-NEXT:    slli t4, t4, 1
+; CHECK-RV64-NEXT:    add t5, t5, t4
+; CHECK-RV64-NEXT:    slli t4, t4, 1
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
@@ -3585,7 +3545,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
 ; CHECK-RV64-NEXT:    slli t4, t4, 3
 ; CHECK-RV64-NEXT:    mv t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 3
+; CHECK-RV64-NEXT:    slli t4, t4, 2
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
@@ -3597,9 +3557,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
 ; CHECK-RV64-NEXT:    slli t4, t4, 3
 ; CHECK-RV64-NEXT:    mv t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 2
-; CHECK-RV64-NEXT:    add t5, t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 3
+; CHECK-RV64-NEXT:    slli t4, t4, 5
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
@@ -3608,7 +3566,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
 ; CHECK-RV64-NEXT:    slli t4, t4, 3
 ; CHECK-RV64-NEXT:    mv t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 5
+; CHECK-RV64-NEXT:    slli t4, t4, 2
+; CHECK-RV64-NEXT:    add t5, t5, t4
+; CHECK-RV64-NEXT:    slli t4, t4, 1
+; CHECK-RV64-NEXT:    add t5, t5, t4
+; CHECK-RV64-NEXT:    slli t4, t4, 1
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
@@ -3618,9 +3580,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
 ; CHECK-RV64-NEXT:    slli t4, t4, 4
 ; CHECK-RV64-NEXT:    mv t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 2
-; CHECK-RV64-NEXT:    add t5, t5, t4
 ; CHECK-RV64-NEXT:    slli t4, t4, 1
+; CHECK-RV64-NEXT:    add t5, t5, t4
+; CHECK-RV64-NEXT:    slli t4, t4, 2
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
@@ -3630,9 +3592,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t4, vlenb
 ; CHECK-RV64-NEXT:    slli t4, t4, 3
 ; CHECK-RV64-NEXT:    mv t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 3
+; CHECK-RV64-NEXT:    slli t4, t4, 2
 ; CHECK-RV64-NEXT:    add t5, t5, t4
-; CHECK-RV64-NEXT:    slli t4, t4, 1
+; CHECK-RV64-NEXT:    slli t4, t4, 2
 ; CHECK-RV64-NEXT:    add t4, t4, t5
 ; CHECK-RV64-NEXT:    add t4, sp, t4
 ; CHECK-RV64-NEXT:    addi t4, t4, 2047
@@ -3644,7 +3606,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t5, vlenb
 ; CHECK-RV64-NEXT:    slli t5, t5, 4
 ; CHECK-RV64-NEXT:    mv t6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 4
+; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    add t6, t6, t5
+; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    add t6, t6, t5
+; CHECK-RV64-NEXT:    slli t5, t5, 1
 ; CHECK-RV64-NEXT:    add t5, t5, t6
 ; CHECK-RV64-NEXT:    add t5, sp, t5
 ; CHECK-RV64-NEXT:    addi t5, t5, 2047
@@ -3655,7 +3621,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv t6, t5
 ; CHECK-RV64-NEXT:    slli t5, t5, 1
 ; CHECK-RV64-NEXT:    add t6, t6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 4
+; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    add t6, t6, t5
+; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    add t6, t6, t5
+; CHECK-RV64-NEXT:    slli t5, t5, 1
 ; CHECK-RV64-NEXT:    add t5, t5, t6
 ; CHECK-RV64-NEXT:    add t5, sp, t5
 ; CHECK-RV64-NEXT:    addi t5, t5, 2047
@@ -3663,19 +3633,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vmv2r.v v10, v16
 ; CHECK-RV64-NEXT:    csrr t5, vlenb
-; CHECK-RV64-NEXT:    slli t5, t5, 5
-; CHECK-RV64-NEXT:    mv t6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 3
-; CHECK-RV64-NEXT:    add t5, t5, t6
+; CHECK-RV64-NEXT:    slli t5, t5, 8
 ; CHECK-RV64-NEXT:    add t5, sp, t5
 ; CHECK-RV64-NEXT:    addi t5, t5, 2047
 ; CHECK-RV64-NEXT:    addi t5, t5, 33
 ; CHECK-RV64-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vmv2r.v v12, v16
 ; CHECK-RV64-NEXT:    csrr t5, vlenb
-; CHECK-RV64-NEXT:    slli t5, t5, 6
+; CHECK-RV64-NEXT:    slli t5, t5, 5
 ; CHECK-RV64-NEXT:    mv t6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    slli t5, t5, 2
 ; CHECK-RV64-NEXT:    add t5, t5, t6
 ; CHECK-RV64-NEXT:    add t5, sp, t5
 ; CHECK-RV64-NEXT:    addi t5, t5, 2047
@@ -3685,7 +3652,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi t6, sp, 1312
 ; CHECK-RV64-NEXT:    vsseg4e8.v v8, (t6)
 ; CHECK-RV64-NEXT:    csrr t5, vlenb
-; CHECK-RV64-NEXT:    slli t5, t5, 8
+; CHECK-RV64-NEXT:    slli t5, t5, 5
+; CHECK-RV64-NEXT:    mv s6, t5
+; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    add s6, s6, t5
+; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    add t5, t5, s6
 ; CHECK-RV64-NEXT:    add t5, sp, t5
 ; CHECK-RV64-NEXT:    addi t5, t5, 2047
 ; CHECK-RV64-NEXT:    addi t5, t5, 33
@@ -3695,9 +3667,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    mv s6, t5
 ; CHECK-RV64-NEXT:    slli t5, t5, 1
 ; CHECK-RV64-NEXT:    add s6, s6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 1
-; CHECK-RV64-NEXT:    add s6, s6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 1
+; CHECK-RV64-NEXT:    slli t5, t5, 2
 ; CHECK-RV64-NEXT:    add s6, s6, t5
 ; CHECK-RV64-NEXT:    slli t5, t5, 1
 ; CHECK-RV64-NEXT:    add t5, t5, s6
@@ -3709,9 +3679,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr t5, vlenb
 ; CHECK-RV64-NEXT:    slli t5, t5, 4
 ; CHECK-RV64-NEXT:    mv s6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 1
-; CHECK-RV64-NEXT:    add s6, s6, t5
-; CHECK-RV64-NEXT:    slli t5, t5, 3
+; CHECK-RV64-NEXT:    slli t5, t5, 4
 ; CHECK-RV64-NEXT:    add t5, t5, s6
 ; CHECK-RV64-NEXT:    add t5, sp, t5
 ; CHECK-RV64-NEXT:    addi t5, t5, 2047
@@ -3724,11 +3692,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s6, sp, 768
 ; CHECK-RV64-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV64-NEXT:    csrr s6, vlenb
-; CHECK-RV64-NEXT:    slli s6, s6, 4
-; CHECK-RV64-NEXT:    mv ra, s6
-; CHECK-RV64-NEXT:    slli s6, s6, 1
-; CHECK-RV64-NEXT:    add ra, ra, s6
 ; CHECK-RV64-NEXT:    slli s6, s6, 3
+; CHECK-RV64-NEXT:    mv ra, s6
+; CHECK-RV64-NEXT:    slli s6, s6, 2
+; CHECK-RV64-NEXT:    add ra, ra, s6
+; CHECK-RV64-NEXT:    slli s6, s6, 1
 ; CHECK-RV64-NEXT:    add s6, s6, ra
 ; CHECK-RV64-NEXT:    add s6, sp, s6
 ; CHECK-RV64-NEXT:    addi s6, s6, 2047
@@ -3737,11 +3705,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s6, sp, 704
 ; CHECK-RV64-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV64-NEXT:    csrr s6, vlenb
-; CHECK-RV64-NEXT:    slli s6, s6, 3
+; CHECK-RV64-NEXT:    slli s6, s6, 5
 ; CHECK-RV64-NEXT:    mv ra, s6
-; CHECK-RV64-NEXT:    slli s6, s6, 2
-; CHECK-RV64-NEXT:    add ra, ra, s6
-; CHECK-RV64-NEXT:    slli s6, s6, 3
+; CHECK-RV64-NEXT:    slli s6, s6, 1
 ; CHECK-RV64-NEXT:    add s6, s6, ra
 ; CHECK-RV64-NEXT:    add s6, sp, s6
 ; CHECK-RV64-NEXT:    addi s6, s6, 2047
@@ -3750,9 +3716,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s6, sp, 1792
 ; CHECK-RV64-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV64-NEXT:    csrr s6, vlenb
-; CHECK-RV64-NEXT:    slli s6, s6, 5
-; CHECK-RV64-NEXT:    mv ra, s6
 ; CHECK-RV64-NEXT:    slli s6, s6, 3
+; CHECK-RV64-NEXT:    mv ra, s6
+; CHECK-RV64-NEXT:    slli s6, s6, 1
+; CHECK-RV64-NEXT:    add ra, ra, s6
+; CHECK-RV64-NEXT:    slli s6, s6, 2
 ; CHECK-RV64-NEXT:    add s6, s6, ra
 ; CHECK-RV64-NEXT:    add s6, sp, s6
 ; CHECK-RV64-NEXT:    addi s6, s6, 2047
@@ -3761,11 +3729,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s6, sp, 1728
 ; CHECK-RV64-NEXT:    vle8.v v8, (s6)
 ; CHECK-RV64-NEXT:    csrr s6, vlenb
-; CHECK-RV64-NEXT:    slli s6, s6, 3
-; CHECK-RV64-NEXT:    mv ra, s6
-; CHECK-RV64-NEXT:    slli s6, s6, 1
-; CHECK-RV64-NEXT:    add ra, ra, s6
 ; CHECK-RV64-NEXT:    slli s6, s6, 4
+; CHECK-RV64-NEXT:    mv ra, s6
+; CHECK-RV64-NEXT:    slli s6, s6, 2
 ; CHECK-RV64-NEXT:    add s6, s6, ra
 ; CHECK-RV64-NEXT:    add s6, sp, s6
 ; CHECK-RV64-NEXT:    addi s6, s6, 2047
@@ -3780,9 +3746,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s6, sp, 1024
 ; CHECK-RV64-NEXT:    vle8.v v20, (s6)
 ; CHECK-RV64-NEXT:    csrr s6, vlenb
-; CHECK-RV64-NEXT:    slli s6, s6, 4
+; CHECK-RV64-NEXT:    slli s6, s6, 3
 ; CHECK-RV64-NEXT:    mv ra, s6
-; CHECK-RV64-NEXT:    slli s6, s6, 4
+; CHECK-RV64-NEXT:    slli s6, s6, 3
 ; CHECK-RV64-NEXT:    add s6, s6, ra
 ; CHECK-RV64-NEXT:    add s6, sp, s6
 ; CHECK-RV64-NEXT:    addi s6, s6, 2047
@@ -3795,10 +3761,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s5, sp, 960
 ; CHECK-RV64-NEXT:    vle8.v v20, (s5)
 ; CHECK-RV64-NEXT:    csrr s5, vlenb
-; CHECK-RV64-NEXT:    slli s5, s5, 3
-; CHECK-RV64-NEXT:    mv s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 5
-; CHECK-RV64-NEXT:    add s5, s5, s6
+; CHECK-RV64-NEXT:    slli s5, s5, 6
 ; CHECK-RV64-NEXT:    add s5, sp, s5
 ; CHECK-RV64-NEXT:    addi s5, s5, 2047
 ; CHECK-RV64-NEXT:    addi s5, s5, 33
@@ -3814,7 +3777,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a4
 ; CHECK-RV64-NEXT:    csrr s5, vlenb
-; CHECK-RV64-NEXT:    slli s5, s5, 8
+; CHECK-RV64-NEXT:    slli s5, s5, 4
+; CHECK-RV64-NEXT:    mv s6, s5
+; CHECK-RV64-NEXT:    slli s5, s5, 4
+; CHECK-RV64-NEXT:    add s5, s5, s6
 ; CHECK-RV64-NEXT:    add s5, sp, s5
 ; CHECK-RV64-NEXT:    addi s5, s5, 2047
 ; CHECK-RV64-NEXT:    addi s5, s5, 33
@@ -3829,10 +3795,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    slli s5, s5, 1
 ; CHECK-RV64-NEXT:    add s6, s6, s5
 ; CHECK-RV64-NEXT:    slli s5, s5, 1
-; CHECK-RV64-NEXT:    add s6, s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 1
-; CHECK-RV64-NEXT:    add s6, s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 1
 ; CHECK-RV64-NEXT:    add s5, s5, s6
 ; CHECK-RV64-NEXT:    add s5, sp, s5
 ; CHECK-RV64-NEXT:    addi s5, s5, 2047
@@ -3843,10 +3805,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr s5, vlenb
 ; CHECK-RV64-NEXT:    slli s5, s5, 4
 ; CHECK-RV64-NEXT:    mv s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 1
-; CHECK-RV64-NEXT:    add s6, s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 1
-; CHECK-RV64-NEXT:    add s6, s6, s5
 ; CHECK-RV64-NEXT:    slli s5, s5, 1
 ; CHECK-RV64-NEXT:    add s5, s5, s6
 ; CHECK-RV64-NEXT:    add s5, sp, s5
@@ -3861,10 +3819,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    slli s5, s5, 3
 ; CHECK-RV64-NEXT:    mv s6, s5
 ; CHECK-RV64-NEXT:    slli s5, s5, 2
-; CHECK-RV64-NEXT:    add s6, s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 1
-; CHECK-RV64-NEXT:    add s6, s6, s5
-; CHECK-RV64-NEXT:    slli s5, s5, 1
 ; CHECK-RV64-NEXT:    add s5, s5, s6
 ; CHECK-RV64-NEXT:    add s5, sp, s5
 ; CHECK-RV64-NEXT:    addi s5, s5, 2047
@@ -3878,11 +3832,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vle8.v v12, (s4)
 ; CHECK-RV64-NEXT:    csrr s4, vlenb
 ; CHECK-RV64-NEXT:    slli s4, s4, 5
-; CHECK-RV64-NEXT:    mv s5, s4
-; CHECK-RV64-NEXT:    slli s4, s4, 1
-; CHECK-RV64-NEXT:    add s5, s5, s4
-; CHECK-RV64-NEXT:    slli s4, s4, 1
-; CHECK-RV64-NEXT:    add s4, s4, s5
 ; CHECK-RV64-NEXT:    add s4, sp, s4
 ; CHECK-RV64-NEXT:    addi s4, s4, 2047
 ; CHECK-RV64-NEXT:    addi s4, s4, 33
@@ -3900,11 +3849,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr s4, vlenb
 ; CHECK-RV64-NEXT:    slli s4, s4, 3
 ; CHECK-RV64-NEXT:    mv s5, s4
-; CHECK-RV64-NEXT:    slli s4, s4, 1
-; CHECK-RV64-NEXT:    add s5, s5, s4
-; CHECK-RV64-NEXT:    slli s4, s4, 2
-; CHECK-RV64-NEXT:    add s5, s5, s4
-; CHECK-RV64-NEXT:    slli s4, s4, 1
+; CHECK-RV64-NEXT:    slli s4, s4, 5
 ; CHECK-RV64-NEXT:    add s4, s4, s5
 ; CHECK-RV64-NEXT:    add s4, sp, s4
 ; CHECK-RV64-NEXT:    addi s4, s4, 2047
@@ -3914,9 +3859,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v8, (s4)
 ; CHECK-RV64-NEXT:    csrr s4, vlenb
-; CHECK-RV64-NEXT:    slli s4, s4, 4
-; CHECK-RV64-NEXT:    mv s5, s4
 ; CHECK-RV64-NEXT:    slli s4, s4, 2
+; CHECK-RV64-NEXT:    mv s5, s4
+; CHECK-RV64-NEXT:    slli s4, s4, 1
 ; CHECK-RV64-NEXT:    add s5, s5, s4
 ; CHECK-RV64-NEXT:    slli s4, s4, 1
 ; CHECK-RV64-NEXT:    add s4, s4, s5
@@ -3929,8 +3874,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr s4, vlenb
 ; CHECK-RV64-NEXT:    slli s4, s4, 3
 ; CHECK-RV64-NEXT:    mv s5, s4
-; CHECK-RV64-NEXT:    slli s4, s4, 3
-; CHECK-RV64-NEXT:    add s5, s5, s4
 ; CHECK-RV64-NEXT:    slli s4, s4, 1
 ; CHECK-RV64-NEXT:    add s4, s4, s5
 ; CHECK-RV64-NEXT:    add s4, sp, s4
@@ -3953,12 +3896,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v12, (s3)
 ; CHECK-RV64-NEXT:    csrr s3, vlenb
-; CHECK-RV64-NEXT:    slli s3, s3, 3
+; CHECK-RV64-NEXT:    slli s3, s3, 2
 ; CHECK-RV64-NEXT:    mv s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 1
-; CHECK-RV64-NEXT:    add s4, s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 1
-; CHECK-RV64-NEXT:    add s4, s4, s3
 ; CHECK-RV64-NEXT:    slli s3, s3, 2
 ; CHECK-RV64-NEXT:    add s3, s3, s4
 ; CHECK-RV64-NEXT:    add s3, sp, s3
@@ -3969,11 +3908,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vle8.v v24, (s3)
 ; CHECK-RV64-NEXT:    csrr s3, vlenb
 ; CHECK-RV64-NEXT:    slli s3, s3, 4
-; CHECK-RV64-NEXT:    mv s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 1
-; CHECK-RV64-NEXT:    add s4, s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 2
-; CHECK-RV64-NEXT:    add s3, s3, s4
 ; CHECK-RV64-NEXT:    add s3, sp, s3
 ; CHECK-RV64-NEXT:    addi s3, s3, 2047
 ; CHECK-RV64-NEXT:    addi s3, s3, 33
@@ -3981,10 +3915,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vslideup.vx v0, v8, a4
 ; CHECK-RV64-NEXT:    csrr s3, vlenb
-; CHECK-RV64-NEXT:    slli s3, s3, 6
-; CHECK-RV64-NEXT:    mv s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 1
-; CHECK-RV64-NEXT:    add s3, s3, s4
+; CHECK-RV64-NEXT:    slli s3, s3, 8
 ; CHECK-RV64-NEXT:    add s3, sp, s3
 ; CHECK-RV64-NEXT:    addi s3, s3, 2047
 ; CHECK-RV64-NEXT:    addi s3, s3, 33
@@ -3993,11 +3924,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v8, (s3)
 ; CHECK-RV64-NEXT:    csrr s3, vlenb
-; CHECK-RV64-NEXT:    slli s3, s3, 3
+; CHECK-RV64-NEXT:    slli s3, s3, 2
 ; CHECK-RV64-NEXT:    mv s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 2
-; CHECK-RV64-NEXT:    add s4, s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 2
+; CHECK-RV64-NEXT:    slli s3, s3, 1
 ; CHECK-RV64-NEXT:    add s3, s3, s4
 ; CHECK-RV64-NEXT:    add s3, sp, s3
 ; CHECK-RV64-NEXT:    addi s3, s3, 2047
@@ -4007,11 +3936,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vle8.v v8, (s3)
 ; CHECK-RV64-NEXT:    csrr s3, vlenb
 ; CHECK-RV64-NEXT:    slli s3, s3, 3
-; CHECK-RV64-NEXT:    mv s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 1
-; CHECK-RV64-NEXT:    add s4, s4, s3
-; CHECK-RV64-NEXT:    slli s3, s3, 3
-; CHECK-RV64-NEXT:    add s3, s3, s4
 ; CHECK-RV64-NEXT:    add s3, sp, s3
 ; CHECK-RV64-NEXT:    addi s3, s3, 2047
 ; CHECK-RV64-NEXT:    addi s3, s3, 33
@@ -4032,16 +3956,18 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v12, (s2)
 ; CHECK-RV64-NEXT:    csrr s2, vlenb
-; CHECK-RV64-NEXT:    slli s2, s2, 4
-; CHECK-RV64-NEXT:    mv s3, s2
-; CHECK-RV64-NEXT:    slli s2, s2, 3
-; CHECK-RV64-NEXT:    add s2, s2, s3
+; CHECK-RV64-NEXT:    slli s2, s2, 2
 ; CHECK-RV64-NEXT:    add s2, sp, s2
 ; CHECK-RV64-NEXT:    addi s2, s2, 2047
 ; CHECK-RV64-NEXT:    addi s2, s2, 33
 ; CHECK-RV64-NEXT:    vs4r.v v12, (s2) # vscale x 32-byte Folded Spill
 ; CHECK-RV64-NEXT:    addi s2, sp, 1856
 ; CHECK-RV64-NEXT:    vle8.v v20, (s2)
+; CHECK-RV64-NEXT:    addi s2, sp, 2047
+; CHECK-RV64-NEXT:    addi s2, s2, 33
+; CHECK-RV64-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-RV64-NEXT:    vslideup.vx v16, v8, a4
 ; CHECK-RV64-NEXT:    csrr s2, vlenb
 ; CHECK-RV64-NEXT:    slli s2, s2, 3
 ; CHECK-RV64-NEXT:    mv s3, s2
@@ -4050,17 +3976,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    slli s2, s2, 1
 ; CHECK-RV64-NEXT:    add s3, s3, s2
 ; CHECK-RV64-NEXT:    slli s2, s2, 1
-; CHECK-RV64-NEXT:    add s2, s2, s3
-; CHECK-RV64-NEXT:    add s2, sp, s2
-; CHECK-RV64-NEXT:    addi s2, s2, 2047
-; CHECK-RV64-NEXT:    addi s2, s2, 33
-; CHECK-RV64-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-RV64-NEXT:    vslideup.vx v16, v8, a4
-; CHECK-RV64-NEXT:    csrr s2, vlenb
-; CHECK-RV64-NEXT:    slli s2, s2, 5
-; CHECK-RV64-NEXT:    mv s3, s2
-; CHECK-RV64-NEXT:    slli s2, s2, 2
+; CHECK-RV64-NEXT:    add s3, s3, s2
+; CHECK-RV64-NEXT:    slli s2, s2, 1
 ; CHECK-RV64-NEXT:    add s2, s2, s3
 ; CHECK-RV64-NEXT:    add s2, sp, s2
 ; CHECK-RV64-NEXT:    addi s2, s2, 2047
@@ -4072,8 +3989,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi s2, sp, 1344
 ; CHECK-RV64-NEXT:    vle8.v v8, (s2)
 ; CHECK-RV64-NEXT:    csrr s2, vlenb
-; CHECK-RV64-NEXT:    slli s2, s2, 5
+; CHECK-RV64-NEXT:    slli s2, s2, 4
 ; CHECK-RV64-NEXT:    mv s3, s2
+; CHECK-RV64-NEXT:    slli s2, s2, 2
+; CHECK-RV64-NEXT:    add s3, s3, s2
 ; CHECK-RV64-NEXT:    slli s2, s2, 1
 ; CHECK-RV64-NEXT:    add s2, s2, s3
 ; CHECK-RV64-NEXT:    add s2, sp, s2
@@ -4097,16 +4016,27 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v24, (s1)
 ; CHECK-RV64-NEXT:    csrr s1, vlenb
-; CHECK-RV64-NEXT:    slli s1, s1, 7
+; CHECK-RV64-NEXT:    slli s1, s1, 3
+; CHECK-RV64-NEXT:    mv s2, s1
+; CHECK-RV64-NEXT:    slli s1, s1, 2
+; CHECK-RV64-NEXT:    add s2, s2, s1
+; CHECK-RV64-NEXT:    slli s1, s1, 1
+; CHECK-RV64-NEXT:    add s2, s2, s1
+; CHECK-RV64-NEXT:    slli s1, s1, 1
+; CHECK-RV64-NEXT:    add s1, s1, s2
 ; CHECK-RV64-NEXT:    add s1, sp, s1
 ; CHECK-RV64-NEXT:    addi s1, s1, 2047
 ; CHECK-RV64-NEXT:    addi s1, s1, 33
 ; CHECK-RV64-NEXT:    vs8r.v v24, (s1) # vscale x 64-byte Folded Spill
 ; CHECK-RV64-NEXT:    vle8.v v24, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    mv s1, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv s1, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add s1, s1, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add s1, s1, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, s1
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4115,9 +4045,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vslideup.vx v16, v8, a4
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 6
 ; CHECK-RV64-NEXT:    mv s1, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, s1
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4129,6 +4059,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv s1, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add s1, s1, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add s1, s1, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
@@ -4139,7 +4071,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; CHECK-RV64-NEXT:    vle8.v v8, (a5)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 5
 ; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a3
@@ -4156,9 +4088,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4169,8 +4101,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v24, (t6)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 4
 ; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
@@ -4179,8 +4113,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    vle8.v v16, (a6)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 4
 ; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
@@ -4193,7 +4129,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v16, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 6
+; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4202,7 +4143,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4214,7 +4159,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 4
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4224,9 +4169,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 5
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4236,9 +4181,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4251,7 +4196,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4263,7 +4210,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vle8.v v0, (t5)
 ; CHECK-RV64-NEXT:    vle8.v v8, (t1)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4274,7 +4224,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 7
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4282,6 +4232,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vle8.v v8, (t2)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4292,16 +4249,21 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-RV64-NEXT:    vle8.v v24, (a3)
 ; CHECK-RV64-NEXT:    vle8.v v8, (t3)
-; CHECK-RV64-NEXT:    addi a3, sp, 2047
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a3, a3, a5
+; CHECK-RV64-NEXT:    add a3, sp, a3
+; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; CHECK-RV64-NEXT:    addi a3, sp, 1888
 ; CHECK-RV64-NEXT:    vle8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    add a3, a3, a5
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4311,17 +4273,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslideup.vx v8, v12, a1
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vse8.v v0, (a0)
-; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a3, a3, a5
-; CHECK-RV64-NEXT:    add a3, sp, a3
-; CHECK-RV64-NEXT:    addi a3, a3, 2047
+; CHECK-RV64-NEXT:    addi a3, sp, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
@@ -4332,7 +4284,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    slli a5, a5, 4
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -4340,11 +4292,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4354,16 +4304,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; CHECK-RV64-NEXT:    addi a3, sp, 2047
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a3, a3, a5
+; CHECK-RV64-NEXT:    add a3, sp, a3
+; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl8r.v v0, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vslideup.vx v0, v8, a1
@@ -4373,9 +4326,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslideup.vx v0, v24, a4
 ; CHECK-RV64-NEXT:    addi a3, a0, 256
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
-; CHECK-RV64-NEXT:    slli a5, a5, 4
+; CHECK-RV64-NEXT:    slli a5, a5, 6
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -4383,12 +4336,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
@@ -4396,7 +4345,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 7
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4405,17 +4354,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
-; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4426,9 +4377,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vse8.v v0, (a3)
 ; CHECK-RV64-NEXT:    vslideup.vx v16, v24, a4
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
@@ -4439,7 +4390,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4453,8 +4406,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
@@ -4462,7 +4413,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4473,9 +4427,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslideup.vx v16, v24, a4
 ; CHECK-RV64-NEXT:    addi a3, a0, 768
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
-; CHECK-RV64-NEXT:    slli a5, a5, 5
+; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    add a6, a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -4486,19 +4446,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 2
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 5
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4508,11 +4464,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 5
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4523,9 +4474,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4538,10 +4489,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vmv.v.v v0, v16
 ; CHECK-RV64-NEXT:    addi a3, a0, 1792
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
-; CHECK-RV64-NEXT:    slli a5, a5, 6
-; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a5, a5, a6
+; CHECK-RV64-NEXT:    slli a5, a5, 8
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
 ; CHECK-RV64-NEXT:    addi a5, a5, 33
@@ -4553,61 +4501,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 6
-; CHECK-RV64-NEXT:    add a3, sp, a3
-; CHECK-RV64-NEXT:    addi a3, a3, 2047
-; CHECK-RV64-NEXT:    addi a3, a3, 33
-; CHECK-RV64-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
-; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
-; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a3, a3, a5
-; CHECK-RV64-NEXT:    add a3, sp, a3
-; CHECK-RV64-NEXT:    addi a3, a3, 2047
-; CHECK-RV64-NEXT:    addi a3, a3, 33
-; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    add a3, a3, a5
-; CHECK-RV64-NEXT:    add a3, sp, a3
-; CHECK-RV64-NEXT:    addi a3, a3, 2047
-; CHECK-RV64-NEXT:    addi a3, a3, 33
-; CHECK-RV64-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
-; CHECK-RV64-NEXT:    vslideup.vx v16, v8, a1
-; CHECK-RV64-NEXT:    addi a3, a0, 1152
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-RV64-NEXT:    vse8.v v0, (a3)
-; CHECK-RV64-NEXT:    vslideup.vx v16, v24, a4
-; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    add a3, a3, a5
-; CHECK-RV64-NEXT:    add a3, sp, a3
-; CHECK-RV64-NEXT:    addi a3, a3, 2047
-; CHECK-RV64-NEXT:    addi a3, a3, 33
-; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a3
@@ -4619,21 +4519,69 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
-; CHECK-RV64-NEXT:    addi a3, a0, 640
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; CHECK-RV64-NEXT:    vse8.v v16, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    slli a3, a3, 4
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 5
+; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a3, a3, a5
+; CHECK-RV64-NEXT:    add a3, sp, a3
+; CHECK-RV64-NEXT:    addi a3, a3, 2047
+; CHECK-RV64-NEXT:    addi a3, a3, 33
+; CHECK-RV64-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
+; CHECK-RV64-NEXT:    vslideup.vx v16, v8, a1
+; CHECK-RV64-NEXT:    addi a3, a0, 1152
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-RV64-NEXT:    vse8.v v0, (a3)
+; CHECK-RV64-NEXT:    vslideup.vx v16, v24, a4
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    add a3, a3, a5
+; CHECK-RV64-NEXT:    add a3, sp, a3
+; CHECK-RV64-NEXT:    addi a3, a3, 2047
+; CHECK-RV64-NEXT:    addi a3, a3, 33
+; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a3, a3, a5
+; CHECK-RV64-NEXT:    add a3, sp, a3
+; CHECK-RV64-NEXT:    addi a3, a3, 2047
+; CHECK-RV64-NEXT:    addi a3, a3, 33
+; CHECK-RV64-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
+; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
+; CHECK-RV64-NEXT:    addi a3, a0, 640
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; CHECK-RV64-NEXT:    vse8.v v16, (a3)
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    slli a3, a3, 6
+; CHECK-RV64-NEXT:    add a3, sp, a3
+; CHECK-RV64-NEXT:    addi a3, a3, 2047
+; CHECK-RV64-NEXT:    addi a3, a3, 33
+; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; CHECK-RV64-NEXT:    csrr a3, vlenb
+; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
@@ -4648,11 +4596,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
 ; CHECK-RV64-NEXT:    slli a5, a5, 3
 ; CHECK-RV64-NEXT:    mv a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 2
-; CHECK-RV64-NEXT:    add a6, a6, a5
-; CHECK-RV64-NEXT:    slli a5, a5, 1
+; CHECK-RV64-NEXT:    slli a5, a5, 5
 ; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
@@ -4660,9 +4604,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 5
-; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4671,6 +4617,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
 ; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
@@ -4685,18 +4633,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; CHECK-RV64-NEXT:    vse8.v v16, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    slli a3, a3, 5
 ; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a5, a5, a3
@@ -4713,25 +4659,35 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vmv.v.v v0, v16
 ; CHECK-RV64-NEXT:    addi a3, a0, 1408
 ; CHECK-RV64-NEXT:    csrr a5, vlenb
-; CHECK-RV64-NEXT:    slli a5, a5, 8
+; CHECK-RV64-NEXT:    slli a5, a5, 4
+; CHECK-RV64-NEXT:    mv a6, a5
+; CHECK-RV64-NEXT:    slli a5, a5, 4
+; CHECK-RV64-NEXT:    add a5, a5, a6
 ; CHECK-RV64-NEXT:    add a5, sp, a5
 ; CHECK-RV64-NEXT:    addi a5, a5, 2047
 ; CHECK-RV64-NEXT:    addi a5, a5, 33
 ; CHECK-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; CHECK-RV64-NEXT:    vse8.v v8, (a3)
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 4
-; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 1
-; CHECK-RV64-NEXT:    add a5, a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 7
+; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 2
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
@@ -4739,20 +4695,22 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; CHECK-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; CHECK-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    slli a3, a3, 5
 ; CHECK-RV64-NEXT:    mv a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 2
-; CHECK-RV64-NEXT:    add a5, a5, a3
-; CHECK-RV64-NEXT:    slli a3, a3, 3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
 ; CHECK-RV64-NEXT:    addi a3, a3, 33
 ; CHECK-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; CHECK-RV64-NEXT:    csrr a3, vlenb
-; CHECK-RV64-NEXT:    slli a3, a3, 3
-; CHECK-RV64-NEXT:    mv a5, a3
 ; CHECK-RV64-NEXT:    slli a3, a3, 4
+; CHECK-RV64-NEXT:    mv a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
+; CHECK-RV64-NEXT:    add a5, a5, a3
+; CHECK-RV64-NEXT:    slli a3, a3, 1
 ; CHECK-RV64-NEXT:    add a3, a3, a5
 ; CHECK-RV64-NEXT:    add a3, sp, a3
 ; CHECK-RV64-NEXT:    addi a3, a3, 2047
@@ -4795,25 +4753,26 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a4, a2
 ; ZVBB-RV32-NEXT:    slli a2, a2, 1
 ; ZVBB-RV32-NEXT:    add a4, a4, a2
-; ZVBB-RV32-NEXT:    slli a2, a2, 1
-; ZVBB-RV32-NEXT:    add a4, a4, a2
-; ZVBB-RV32-NEXT:    slli a2, a2, 3
+; ZVBB-RV32-NEXT:    slli a2, a2, 4
 ; ZVBB-RV32-NEXT:    add a2, a2, a4
 ; ZVBB-RV32-NEXT:    sub sp, sp, a2
 ; ZVBB-RV32-NEXT:    andi sp, sp, -32
 ; ZVBB-RV32-NEXT:    csrr a2, vlenb
 ; ZVBB-RV32-NEXT:    slli a2, a2, 3
 ; ZVBB-RV32-NEXT:    mv a4, a2
-; ZVBB-RV32-NEXT:    slli a2, a2, 2
-; ZVBB-RV32-NEXT:    add a4, a4, a2
-; ZVBB-RV32-NEXT:    slli a2, a2, 3
+; ZVBB-RV32-NEXT:    slli a2, a2, 5
 ; ZVBB-RV32-NEXT:    add a2, a2, a4
 ; ZVBB-RV32-NEXT:    add a2, sp, a2
 ; ZVBB-RV32-NEXT:    addi a2, a2, 2047
 ; ZVBB-RV32-NEXT:    addi a2, a2, 33
 ; ZVBB-RV32-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; ZVBB-RV32-NEXT:    csrr a2, vlenb
-; ZVBB-RV32-NEXT:    slli a2, a2, 8
+; ZVBB-RV32-NEXT:    slli a2, a2, 5
+; ZVBB-RV32-NEXT:    mv a4, a2
+; ZVBB-RV32-NEXT:    slli a2, a2, 1
+; ZVBB-RV32-NEXT:    add a4, a4, a2
+; ZVBB-RV32-NEXT:    slli a2, a2, 1
+; ZVBB-RV32-NEXT:    add a2, a2, a4
 ; ZVBB-RV32-NEXT:    add a2, sp, a2
 ; ZVBB-RV32-NEXT:    addi a2, a2, 2047
 ; ZVBB-RV32-NEXT:    addi a2, a2, 33
@@ -4824,9 +4783,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a4, vlenb
 ; ZVBB-RV32-NEXT:    slli a4, a4, 4
 ; ZVBB-RV32-NEXT:    mv a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 3
+; ZVBB-RV32-NEXT:    slli a4, a4, 4
 ; ZVBB-RV32-NEXT:    add a4, a4, a5
 ; ZVBB-RV32-NEXT:    add a4, sp, a4
 ; ZVBB-RV32-NEXT:    addi a4, a4, 2047
@@ -4838,9 +4795,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a5, a4
 ; ZVBB-RV32-NEXT:    slli a4, a4, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 1
+; ZVBB-RV32-NEXT:    slli a4, a4, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a4
 ; ZVBB-RV32-NEXT:    slli a4, a4, 1
 ; ZVBB-RV32-NEXT:    add a4, a4, a5
@@ -4851,10 +4806,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi a4, a7, 256
 ; ZVBB-RV32-NEXT:    vle8.v v16, (a4)
 ; ZVBB-RV32-NEXT:    csrr a4, vlenb
-; ZVBB-RV32-NEXT:    slli a4, a4, 5
-; ZVBB-RV32-NEXT:    mv a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 3
-; ZVBB-RV32-NEXT:    add a4, a4, a5
+; ZVBB-RV32-NEXT:    slli a4, a4, 8
 ; ZVBB-RV32-NEXT:    add a4, sp, a4
 ; ZVBB-RV32-NEXT:    addi a4, a4, 2047
 ; ZVBB-RV32-NEXT:    addi a4, a4, 33
@@ -4864,9 +4816,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a4, vlenb
 ; ZVBB-RV32-NEXT:    slli a4, a4, 4
 ; ZVBB-RV32-NEXT:    mv a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 1
+; ZVBB-RV32-NEXT:    slli a4, a4, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a4
 ; ZVBB-RV32-NEXT:    slli a4, a4, 1
 ; ZVBB-RV32-NEXT:    add a4, a4, a5
@@ -4879,9 +4829,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a4, vlenb
 ; ZVBB-RV32-NEXT:    slli a4, a4, 3
 ; ZVBB-RV32-NEXT:    mv a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 2
-; ZVBB-RV32-NEXT:    add a5, a5, a4
-; ZVBB-RV32-NEXT:    slli a4, a4, 1
+; ZVBB-RV32-NEXT:    slli a4, a4, 3
 ; ZVBB-RV32-NEXT:    add a5, a5, a4
 ; ZVBB-RV32-NEXT:    slli a4, a4, 1
 ; ZVBB-RV32-NEXT:    add a4, a4, a5
@@ -4897,9 +4845,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -4909,10 +4855,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v8, (a5)
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
-; ZVBB-RV32-NEXT:    slli a5, a5, 5
+; ZVBB-RV32-NEXT:    slli a5, a5, 6
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
@@ -4926,9 +4870,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -4942,9 +4884,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -4955,9 +4897,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 4
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -4971,7 +4911,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 4
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -4982,7 +4926,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 4
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -4993,7 +4939,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a1, vlenb
 ; ZVBB-RV32-NEXT:    slli a1, a1, 4
 ; ZVBB-RV32-NEXT:    mv a5, a1
-; ZVBB-RV32-NEXT:    slli a1, a1, 4
+; ZVBB-RV32-NEXT:    slli a1, a1, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a1
+; ZVBB-RV32-NEXT:    slli a1, a1, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a1
+; ZVBB-RV32-NEXT:    slli a1, a1, 1
 ; ZVBB-RV32-NEXT:    add a1, a1, a5
 ; ZVBB-RV32-NEXT:    add a1, sp, a1
 ; ZVBB-RV32-NEXT:    addi a1, a1, 2047
@@ -5008,9 +4958,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 4
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5023,9 +4973,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a6, a5
 ; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5038,7 +4986,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -5048,9 +5000,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 4
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -5065,9 +5015,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 3
+; ZVBB-RV32-NEXT:    slli a5, a5, 5
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5078,9 +5026,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 4
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5089,7 +5035,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 5
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5099,9 +5049,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 4
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5112,9 +5060,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
 ; ZVBB-RV32-NEXT:    slli a6, a6, 3
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 2
-; ZVBB-RV32-NEXT:    add a7, a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    slli a6, a6, 3
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5125,9 +5071,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 3
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
 ; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    slli a5, a5, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5136,7 +5082,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vslidedown.vx v8, v8, a4
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
-; ZVBB-RV32-NEXT:    slli a5, a5, 7
+; ZVBB-RV32-NEXT:    slli a5, a5, 5
+; ZVBB-RV32-NEXT:    mv a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
 ; ZVBB-RV32-NEXT:    addi a5, a5, 33
@@ -5147,9 +5096,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 4
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -5165,7 +5112,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
 ; ZVBB-RV32-NEXT:    slli a6, a6, 4
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 4
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    add a7, a7, a6
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    add a7, a7, a6
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5176,7 +5127,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
 ; ZVBB-RV32-NEXT:    slli a6, a6, 4
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 2
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5187,7 +5138,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 4
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    add a7, a7, a6
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    add a7, a7, a6
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5199,7 +5154,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 2
+; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5207,20 +5162,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vs8r.v v24, (a6) # vscale x 64-byte Folded Spill
 ; ZVBB-RV32-NEXT:    addi a6, s0, 640
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
-; ZVBB-RV32-NEXT:    slli a7, a7, 5
-; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
-; ZVBB-RV32-NEXT:    add a7, a7, t0
+; ZVBB-RV32-NEXT:    slli a7, a7, 8
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV32-NEXT:    addi a7, a7, 33
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (a7) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vslidedown.vx v8, v16, a4
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
-; ZVBB-RV32-NEXT:    slli a7, a7, 5
-; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 2
-; ZVBB-RV32-NEXT:    add a7, a7, t0
+; ZVBB-RV32-NEXT:    slli a7, a7, 7
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV32-NEXT:    addi a7, a7, 33
@@ -5228,9 +5177,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v8, (a6)
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
-; ZVBB-RV32-NEXT:    slli a6, a6, 6
+; ZVBB-RV32-NEXT:    slli a6, a6, 5
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    slli a6, a6, 2
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5239,10 +5188,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vslidedown.vx v8, v8, a4
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
-; ZVBB-RV32-NEXT:    slli a6, a6, 5
-; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a7
+; ZVBB-RV32-NEXT:    slli a6, a6, 6
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
 ; ZVBB-RV32-NEXT:    addi a6, a6, 33
@@ -5253,10 +5199,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslidedown.vx v16, v0, a1
 ; ZVBB-RV32-NEXT:    vmv2r.v v18, v20
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
-; ZVBB-RV32-NEXT:    slli a6, a6, 5
-; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a7
+; ZVBB-RV32-NEXT:    slli a6, a6, 7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
 ; ZVBB-RV32-NEXT:    addi a6, a6, 33
@@ -5269,9 +5212,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
 ; ZVBB-RV32-NEXT:    slli a6, a6, 3
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 2
-; ZVBB-RV32-NEXT:    add a7, a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    slli a6, a6, 3
 ; ZVBB-RV32-NEXT:    add a7, a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
@@ -5286,9 +5227,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 2
-; ZVBB-RV32-NEXT:    add a7, a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    add a7, a7, a6
+; ZVBB-RV32-NEXT:    slli a6, a6, 2
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
 ; ZVBB-RV32-NEXT:    addi a6, a6, 2047
@@ -5298,9 +5239,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
 ; ZVBB-RV32-NEXT:    slli a6, a6, 4
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
-; ZVBB-RV32-NEXT:    add a7, a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
+; ZVBB-RV32-NEXT:    slli a6, a6, 2
 ; ZVBB-RV32-NEXT:    add a7, a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
@@ -5311,10 +5250,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslidedown.vx v16, v0, a1
 ; ZVBB-RV32-NEXT:    vmv2r.v v18, v20
 ; ZVBB-RV32-NEXT:    csrr a6, vlenb
-; ZVBB-RV32-NEXT:    slli a6, a6, 5
+; ZVBB-RV32-NEXT:    slli a6, a6, 6
 ; ZVBB-RV32-NEXT:    mv a7, a6
-; ZVBB-RV32-NEXT:    slli a6, a6, 1
-; ZVBB-RV32-NEXT:    add a7, a7, a6
 ; ZVBB-RV32-NEXT:    slli a6, a6, 1
 ; ZVBB-RV32-NEXT:    add a6, a6, a7
 ; ZVBB-RV32-NEXT:    add a6, sp, a6
@@ -5327,7 +5264,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vsseg4e8.v v16, (a6)
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
-; ZVBB-RV32-NEXT:    slli a7, a7, 8
+; ZVBB-RV32-NEXT:    slli a7, a7, 5
+; ZVBB-RV32-NEXT:    mv t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV32-NEXT:    addi a7, a7, 33
@@ -5339,7 +5281,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t0, a7
 ; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add t0, t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5350,9 +5294,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t0, a7
 ; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add t0, t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 1
-; ZVBB-RV32-NEXT:    add t0, t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    slli a7, a7, 2
 ; ZVBB-RV32-NEXT:    add t0, t0, a7
 ; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
@@ -5362,7 +5304,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a7) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vslidedown.vx v16, v8, a4
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
-; ZVBB-RV32-NEXT:    slli a7, a7, 6
+; ZVBB-RV32-NEXT:    slli a7, a7, 5
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV32-NEXT:    addi a7, a7, 33
@@ -5371,9 +5313,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t0, vlenb
 ; ZVBB-RV32-NEXT:    slli t0, t0, 4
 ; ZVBB-RV32-NEXT:    mv t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 1
-; ZVBB-RV32-NEXT:    add t1, t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 3
+; ZVBB-RV32-NEXT:    slli t0, t0, 4
 ; ZVBB-RV32-NEXT:    add t0, t0, t1
 ; ZVBB-RV32-NEXT:    add t0, sp, t0
 ; ZVBB-RV32-NEXT:    addi t0, t0, 2047
@@ -5383,7 +5323,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t0, vlenb
 ; ZVBB-RV32-NEXT:    slli t0, t0, 4
 ; ZVBB-RV32-NEXT:    mv t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 3
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
+; ZVBB-RV32-NEXT:    add t1, t1, t0
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
 ; ZVBB-RV32-NEXT:    add t0, t0, t1
 ; ZVBB-RV32-NEXT:    add t0, sp, t0
 ; ZVBB-RV32-NEXT:    addi t0, t0, 2047
@@ -5396,7 +5338,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
 ; ZVBB-RV32-NEXT:    slli a7, a7, 3
 ; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
+; ZVBB-RV32-NEXT:    slli a7, a7, 2
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5410,7 +5352,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t0, a7
 ; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add t0, t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5421,7 +5365,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
 ; ZVBB-RV32-NEXT:    slli a7, a7, 4
 ; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5435,7 +5381,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
 ; ZVBB-RV32-NEXT:    slli a7, a7, 3
 ; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 5
+; ZVBB-RV32-NEXT:    slli a7, a7, 2
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 1
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5446,9 +5396,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
 ; ZVBB-RV32-NEXT:    slli a7, a7, 3
 ; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
+; ZVBB-RV32-NEXT:    slli a7, a7, 2
 ; ZVBB-RV32-NEXT:    add t0, t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    slli a7, a7, 2
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5458,9 +5408,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
 ; ZVBB-RV32-NEXT:    slli a7, a7, 3
 ; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 2
-; ZVBB-RV32-NEXT:    add t0, t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 3
+; ZVBB-RV32-NEXT:    slli a7, a7, 5
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5471,9 +5419,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a7, vlenb
 ; ZVBB-RV32-NEXT:    slli a7, a7, 4
 ; ZVBB-RV32-NEXT:    mv t0, a7
-; ZVBB-RV32-NEXT:    slli a7, a7, 2
-; ZVBB-RV32-NEXT:    add t0, t0, a7
 ; ZVBB-RV32-NEXT:    slli a7, a7, 1
+; ZVBB-RV32-NEXT:    add t0, t0, a7
+; ZVBB-RV32-NEXT:    slli a7, a7, 2
 ; ZVBB-RV32-NEXT:    add a7, a7, t0
 ; ZVBB-RV32-NEXT:    add a7, sp, a7
 ; ZVBB-RV32-NEXT:    addi a7, a7, 2047
@@ -5489,7 +5437,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t1, t0
 ; ZVBB-RV32-NEXT:    slli t0, t0, 1
 ; ZVBB-RV32-NEXT:    add t1, t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 4
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
+; ZVBB-RV32-NEXT:    add t1, t1, t0
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
+; ZVBB-RV32-NEXT:    add t1, t1, t0
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
 ; ZVBB-RV32-NEXT:    add t0, t0, t1
 ; ZVBB-RV32-NEXT:    add t0, sp, t0
 ; ZVBB-RV32-NEXT:    addi t0, t0, 2047
@@ -5498,9 +5450,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; ZVBB-RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; ZVBB-RV32-NEXT:    csrr t0, vlenb
-; ZVBB-RV32-NEXT:    slli t0, t0, 6
+; ZVBB-RV32-NEXT:    slli t0, t0, 5
 ; ZVBB-RV32-NEXT:    mv t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 1
+; ZVBB-RV32-NEXT:    slli t0, t0, 2
 ; ZVBB-RV32-NEXT:    add t0, t0, t1
 ; ZVBB-RV32-NEXT:    add t0, sp, t0
 ; ZVBB-RV32-NEXT:    addi t0, t0, 2047
@@ -5510,7 +5462,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t0, vlenb
 ; ZVBB-RV32-NEXT:    slli t0, t0, 4
 ; ZVBB-RV32-NEXT:    mv t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 4
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
+; ZVBB-RV32-NEXT:    add t1, t1, t0
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
+; ZVBB-RV32-NEXT:    add t1, t1, t0
+; ZVBB-RV32-NEXT:    slli t0, t0, 1
 ; ZVBB-RV32-NEXT:    add t0, t0, t1
 ; ZVBB-RV32-NEXT:    add t0, sp, t0
 ; ZVBB-RV32-NEXT:    addi t0, t0, 2047
@@ -5519,10 +5475,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslidedown.vx v4, v16, a1
 ; ZVBB-RV32-NEXT:    vmv2r.v v6, v8
 ; ZVBB-RV32-NEXT:    csrr t0, vlenb
-; ZVBB-RV32-NEXT:    slli t0, t0, 5
-; ZVBB-RV32-NEXT:    mv t1, t0
-; ZVBB-RV32-NEXT:    slli t0, t0, 3
-; ZVBB-RV32-NEXT:    add t0, t0, t1
+; ZVBB-RV32-NEXT:    slli t0, t0, 8
 ; ZVBB-RV32-NEXT:    add t0, sp, t0
 ; ZVBB-RV32-NEXT:    addi t0, t0, 2047
 ; ZVBB-RV32-NEXT:    addi t0, t0, 33
@@ -5537,9 +5490,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t2, t1
 ; ZVBB-RV32-NEXT:    slli t1, t1, 1
 ; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
-; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 2
+; ZVBB-RV32-NEXT:    slli t1, t1, 3
 ; ZVBB-RV32-NEXT:    add t1, t1, t2
 ; ZVBB-RV32-NEXT:    add t1, sp, t1
 ; ZVBB-RV32-NEXT:    addi t1, t1, 2047
@@ -5550,9 +5501,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t2, t1
 ; ZVBB-RV32-NEXT:    slli t1, t1, 1
 ; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
-; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
+; ZVBB-RV32-NEXT:    slli t1, t1, 2
 ; ZVBB-RV32-NEXT:    add t1, t1, t2
 ; ZVBB-RV32-NEXT:    add t1, sp, t1
 ; ZVBB-RV32-NEXT:    addi t1, t1, 2047
@@ -5562,9 +5511,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t1, vlenb
 ; ZVBB-RV32-NEXT:    slli t1, t1, 4
 ; ZVBB-RV32-NEXT:    mv t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
-; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 2
+; ZVBB-RV32-NEXT:    slli t1, t1, 3
 ; ZVBB-RV32-NEXT:    add t1, t1, t2
 ; ZVBB-RV32-NEXT:    add t1, sp, t1
 ; ZVBB-RV32-NEXT:    addi t1, t1, 2047
@@ -5574,7 +5521,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t1, vlenb
 ; ZVBB-RV32-NEXT:    slli t1, t1, 3
 ; ZVBB-RV32-NEXT:    mv t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 4
+; ZVBB-RV32-NEXT:    slli t1, t1, 2
+; ZVBB-RV32-NEXT:    add t2, t2, t1
+; ZVBB-RV32-NEXT:    slli t1, t1, 1
 ; ZVBB-RV32-NEXT:    add t1, t1, t2
 ; ZVBB-RV32-NEXT:    add t1, sp, t1
 ; ZVBB-RV32-NEXT:    addi t1, t1, 2047
@@ -5588,9 +5537,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t2, t1
 ; ZVBB-RV32-NEXT:    slli t1, t1, 1
 ; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
-; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
+; ZVBB-RV32-NEXT:    slli t1, t1, 2
 ; ZVBB-RV32-NEXT:    add t2, t2, t1
 ; ZVBB-RV32-NEXT:    slli t1, t1, 1
 ; ZVBB-RV32-NEXT:    add t1, t1, t2
@@ -5602,7 +5549,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; ZVBB-RV32-NEXT:    vslidedown.vx v12, v24, a1
 ; ZVBB-RV32-NEXT:    csrr t1, vlenb
-; ZVBB-RV32-NEXT:    slli t1, t1, 8
+; ZVBB-RV32-NEXT:    slli t1, t1, 5
+; ZVBB-RV32-NEXT:    mv t2, t1
+; ZVBB-RV32-NEXT:    slli t1, t1, 1
+; ZVBB-RV32-NEXT:    add t2, t2, t1
+; ZVBB-RV32-NEXT:    slli t1, t1, 1
+; ZVBB-RV32-NEXT:    add t1, t1, t2
 ; ZVBB-RV32-NEXT:    add t1, sp, t1
 ; ZVBB-RV32-NEXT:    addi t1, t1, 2047
 ; ZVBB-RV32-NEXT:    addi t1, t1, 33
@@ -5612,9 +5564,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t1, vlenb
 ; ZVBB-RV32-NEXT:    slli t1, t1, 4
 ; ZVBB-RV32-NEXT:    mv t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 1
-; ZVBB-RV32-NEXT:    add t2, t2, t1
-; ZVBB-RV32-NEXT:    slli t1, t1, 3
+; ZVBB-RV32-NEXT:    slli t1, t1, 4
 ; ZVBB-RV32-NEXT:    add t1, t1, t2
 ; ZVBB-RV32-NEXT:    add t1, sp, t1
 ; ZVBB-RV32-NEXT:    addi t1, t1, 2047
@@ -5628,9 +5578,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
 ; ZVBB-RV32-NEXT:    slli t2, t2, 3
 ; ZVBB-RV32-NEXT:    mv t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 2
-; ZVBB-RV32-NEXT:    add t3, t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 2
+; ZVBB-RV32-NEXT:    slli t2, t2, 4
 ; ZVBB-RV32-NEXT:    add t2, t2, t3
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
@@ -5639,9 +5587,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
 ; ZVBB-RV32-NEXT:    slli t2, t2, 4
 ; ZVBB-RV32-NEXT:    mv t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 1
-; ZVBB-RV32-NEXT:    add t3, t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 1
+; ZVBB-RV32-NEXT:    slli t2, t2, 2
 ; ZVBB-RV32-NEXT:    add t2, t2, t3
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
@@ -5651,9 +5597,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
 ; ZVBB-RV32-NEXT:    slli t2, t2, 3
 ; ZVBB-RV32-NEXT:    mv t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 2
-; ZVBB-RV32-NEXT:    add t3, t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 1
+; ZVBB-RV32-NEXT:    slli t2, t2, 3
 ; ZVBB-RV32-NEXT:    add t2, t2, t3
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
@@ -5661,7 +5605,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vmv2r.v v12, v16
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
-; ZVBB-RV32-NEXT:    slli t2, t2, 7
+; ZVBB-RV32-NEXT:    slli t2, t2, 5
+; ZVBB-RV32-NEXT:    mv t3, t2
+; ZVBB-RV32-NEXT:    slli t2, t2, 1
+; ZVBB-RV32-NEXT:    add t2, t2, t3
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
 ; ZVBB-RV32-NEXT:    addi t2, t2, 33
@@ -5672,7 +5619,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
 ; ZVBB-RV32-NEXT:    slli t2, t2, 4
 ; ZVBB-RV32-NEXT:    mv t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 2
+; ZVBB-RV32-NEXT:    slli t2, t2, 1
 ; ZVBB-RV32-NEXT:    add t2, t2, t3
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
@@ -5683,7 +5630,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t3, t2
 ; ZVBB-RV32-NEXT:    slli t2, t2, 1
 ; ZVBB-RV32-NEXT:    add t3, t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 2
+; ZVBB-RV32-NEXT:    slli t2, t2, 1
 ; ZVBB-RV32-NEXT:    add t2, t2, t3
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
@@ -5691,20 +5638,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vmv2r.v v10, v16
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
-; ZVBB-RV32-NEXT:    slli t2, t2, 5
-; ZVBB-RV32-NEXT:    mv t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 2
-; ZVBB-RV32-NEXT:    add t2, t2, t3
+; ZVBB-RV32-NEXT:    slli t2, t2, 7
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
 ; ZVBB-RV32-NEXT:    addi t2, t2, 33
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vmv2r.v v12, v16
 ; ZVBB-RV32-NEXT:    csrr t2, vlenb
-; ZVBB-RV32-NEXT:    slli t2, t2, 5
-; ZVBB-RV32-NEXT:    mv t3, t2
-; ZVBB-RV32-NEXT:    slli t2, t2, 1
-; ZVBB-RV32-NEXT:    add t2, t2, t3
+; ZVBB-RV32-NEXT:    slli t2, t2, 6
 ; ZVBB-RV32-NEXT:    add t2, sp, t2
 ; ZVBB-RV32-NEXT:    addi t2, t2, 2047
 ; ZVBB-RV32-NEXT:    addi t2, t2, 33
@@ -5715,9 +5656,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t3, vlenb
 ; ZVBB-RV32-NEXT:    slli t3, t3, 4
 ; ZVBB-RV32-NEXT:    mv t4, t3
-; ZVBB-RV32-NEXT:    slli t3, t3, 1
-; ZVBB-RV32-NEXT:    add t4, t4, t3
-; ZVBB-RV32-NEXT:    slli t3, t3, 1
+; ZVBB-RV32-NEXT:    slli t3, t3, 2
 ; ZVBB-RV32-NEXT:    add t4, t4, t3
 ; ZVBB-RV32-NEXT:    slli t3, t3, 1
 ; ZVBB-RV32-NEXT:    add t3, t3, t4
@@ -5728,9 +5667,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t3, vlenb
 ; ZVBB-RV32-NEXT:    slli t3, t3, 3
 ; ZVBB-RV32-NEXT:    mv t4, t3
-; ZVBB-RV32-NEXT:    slli t3, t3, 2
-; ZVBB-RV32-NEXT:    add t4, t4, t3
-; ZVBB-RV32-NEXT:    slli t3, t3, 1
+; ZVBB-RV32-NEXT:    slli t3, t3, 3
 ; ZVBB-RV32-NEXT:    add t4, t4, t3
 ; ZVBB-RV32-NEXT:    slli t3, t3, 1
 ; ZVBB-RV32-NEXT:    add t3, t3, t4
@@ -5740,10 +5677,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (t3) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vmv2r.v v10, v16
 ; ZVBB-RV32-NEXT:    csrr t3, vlenb
-; ZVBB-RV32-NEXT:    slli t3, t3, 5
+; ZVBB-RV32-NEXT:    slli t3, t3, 6
 ; ZVBB-RV32-NEXT:    mv t4, t3
-; ZVBB-RV32-NEXT:    slli t3, t3, 1
-; ZVBB-RV32-NEXT:    add t4, t4, t3
 ; ZVBB-RV32-NEXT:    slli t3, t3, 1
 ; ZVBB-RV32-NEXT:    add t3, t3, t4
 ; ZVBB-RV32-NEXT:    add t3, sp, t3
@@ -5756,9 +5691,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t4, t3
 ; ZVBB-RV32-NEXT:    slli t3, t3, 1
 ; ZVBB-RV32-NEXT:    add t4, t4, t3
-; ZVBB-RV32-NEXT:    slli t3, t3, 2
-; ZVBB-RV32-NEXT:    add t4, t4, t3
 ; ZVBB-RV32-NEXT:    slli t3, t3, 1
+; ZVBB-RV32-NEXT:    add t4, t4, t3
+; ZVBB-RV32-NEXT:    slli t3, t3, 2
 ; ZVBB-RV32-NEXT:    add t3, t3, t4
 ; ZVBB-RV32-NEXT:    add t3, sp, t3
 ; ZVBB-RV32-NEXT:    addi t3, t3, 2047
@@ -5772,14 +5707,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t5, t4
 ; ZVBB-RV32-NEXT:    slli t4, t4, 1
 ; ZVBB-RV32-NEXT:    add t5, t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 3
+; ZVBB-RV32-NEXT:    slli t4, t4, 1
+; ZVBB-RV32-NEXT:    add t5, t5, t4
+; ZVBB-RV32-NEXT:    slli t4, t4, 1
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
 ; ZVBB-RV32-NEXT:    addi t4, t4, 33
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (t4) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
-; ZVBB-RV32-NEXT:    slli t4, t4, 6
+; ZVBB-RV32-NEXT:    slli t4, t4, 5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
 ; ZVBB-RV32-NEXT:    addi t4, t4, 33
@@ -5788,7 +5725,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
 ; ZVBB-RV32-NEXT:    slli t4, t4, 4
 ; ZVBB-RV32-NEXT:    mv t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 3
+; ZVBB-RV32-NEXT:    slli t4, t4, 1
+; ZVBB-RV32-NEXT:    add t5, t5, t4
+; ZVBB-RV32-NEXT:    slli t4, t4, 1
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
@@ -5798,7 +5737,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
 ; ZVBB-RV32-NEXT:    slli t4, t4, 3
 ; ZVBB-RV32-NEXT:    mv t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 3
+; ZVBB-RV32-NEXT:    slli t4, t4, 2
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
@@ -5810,9 +5749,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
 ; ZVBB-RV32-NEXT:    slli t4, t4, 3
 ; ZVBB-RV32-NEXT:    mv t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 2
-; ZVBB-RV32-NEXT:    add t5, t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 3
+; ZVBB-RV32-NEXT:    slli t4, t4, 5
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
@@ -5821,7 +5758,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
 ; ZVBB-RV32-NEXT:    slli t4, t4, 3
 ; ZVBB-RV32-NEXT:    mv t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 5
+; ZVBB-RV32-NEXT:    slli t4, t4, 2
+; ZVBB-RV32-NEXT:    add t5, t5, t4
+; ZVBB-RV32-NEXT:    slli t4, t4, 1
+; ZVBB-RV32-NEXT:    add t5, t5, t4
+; ZVBB-RV32-NEXT:    slli t4, t4, 1
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
@@ -5831,9 +5772,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
 ; ZVBB-RV32-NEXT:    slli t4, t4, 4
 ; ZVBB-RV32-NEXT:    mv t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 2
-; ZVBB-RV32-NEXT:    add t5, t5, t4
 ; ZVBB-RV32-NEXT:    slli t4, t4, 1
+; ZVBB-RV32-NEXT:    add t5, t5, t4
+; ZVBB-RV32-NEXT:    slli t4, t4, 2
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
@@ -5843,9 +5784,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t4, vlenb
 ; ZVBB-RV32-NEXT:    slli t4, t4, 3
 ; ZVBB-RV32-NEXT:    mv t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 3
+; ZVBB-RV32-NEXT:    slli t4, t4, 2
 ; ZVBB-RV32-NEXT:    add t5, t5, t4
-; ZVBB-RV32-NEXT:    slli t4, t4, 1
+; ZVBB-RV32-NEXT:    slli t4, t4, 2
 ; ZVBB-RV32-NEXT:    add t4, t4, t5
 ; ZVBB-RV32-NEXT:    add t4, sp, t4
 ; ZVBB-RV32-NEXT:    addi t4, t4, 2047
@@ -5857,7 +5798,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t5, vlenb
 ; ZVBB-RV32-NEXT:    slli t5, t5, 4
 ; ZVBB-RV32-NEXT:    mv t6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 4
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    add t6, t6, t5
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    add t6, t6, t5
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
 ; ZVBB-RV32-NEXT:    add t5, t5, t6
 ; ZVBB-RV32-NEXT:    add t5, sp, t5
 ; ZVBB-RV32-NEXT:    addi t5, t5, 2047
@@ -5868,7 +5813,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv t6, t5
 ; ZVBB-RV32-NEXT:    slli t5, t5, 1
 ; ZVBB-RV32-NEXT:    add t6, t6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 4
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    add t6, t6, t5
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    add t6, t6, t5
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
 ; ZVBB-RV32-NEXT:    add t5, t5, t6
 ; ZVBB-RV32-NEXT:    add t5, sp, t5
 ; ZVBB-RV32-NEXT:    addi t5, t5, 2047
@@ -5876,19 +5825,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vmv2r.v v10, v16
 ; ZVBB-RV32-NEXT:    csrr t5, vlenb
-; ZVBB-RV32-NEXT:    slli t5, t5, 5
-; ZVBB-RV32-NEXT:    mv t6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 3
-; ZVBB-RV32-NEXT:    add t5, t5, t6
+; ZVBB-RV32-NEXT:    slli t5, t5, 8
 ; ZVBB-RV32-NEXT:    add t5, sp, t5
 ; ZVBB-RV32-NEXT:    addi t5, t5, 2047
 ; ZVBB-RV32-NEXT:    addi t5, t5, 33
 ; ZVBB-RV32-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vmv2r.v v12, v16
 ; ZVBB-RV32-NEXT:    csrr t5, vlenb
-; ZVBB-RV32-NEXT:    slli t5, t5, 6
+; ZVBB-RV32-NEXT:    slli t5, t5, 5
 ; ZVBB-RV32-NEXT:    mv t6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    slli t5, t5, 2
 ; ZVBB-RV32-NEXT:    add t5, t5, t6
 ; ZVBB-RV32-NEXT:    add t5, sp, t5
 ; ZVBB-RV32-NEXT:    addi t5, t5, 2047
@@ -5898,7 +5844,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi t6, sp, 1312
 ; ZVBB-RV32-NEXT:    vsseg4e8.v v8, (t6)
 ; ZVBB-RV32-NEXT:    csrr t5, vlenb
-; ZVBB-RV32-NEXT:    slli t5, t5, 8
+; ZVBB-RV32-NEXT:    slli t5, t5, 5
+; ZVBB-RV32-NEXT:    mv s6, t5
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    add s6, s6, t5
+; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    add t5, t5, s6
 ; ZVBB-RV32-NEXT:    add t5, sp, t5
 ; ZVBB-RV32-NEXT:    addi t5, t5, 2047
 ; ZVBB-RV32-NEXT:    addi t5, t5, 33
@@ -5908,9 +5859,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    mv s6, t5
 ; ZVBB-RV32-NEXT:    slli t5, t5, 1
 ; ZVBB-RV32-NEXT:    add s6, s6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 1
+; ZVBB-RV32-NEXT:    slli t5, t5, 2
 ; ZVBB-RV32-NEXT:    add s6, s6, t5
 ; ZVBB-RV32-NEXT:    slli t5, t5, 1
 ; ZVBB-RV32-NEXT:    add t5, t5, s6
@@ -5922,9 +5871,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr t5, vlenb
 ; ZVBB-RV32-NEXT:    slli t5, t5, 4
 ; ZVBB-RV32-NEXT:    mv s6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, t5
-; ZVBB-RV32-NEXT:    slli t5, t5, 3
+; ZVBB-RV32-NEXT:    slli t5, t5, 4
 ; ZVBB-RV32-NEXT:    add t5, t5, s6
 ; ZVBB-RV32-NEXT:    add t5, sp, t5
 ; ZVBB-RV32-NEXT:    addi t5, t5, 2047
@@ -5937,11 +5884,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s6, sp, 768
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV32-NEXT:    csrr s6, vlenb
-; ZVBB-RV32-NEXT:    slli s6, s6, 4
-; ZVBB-RV32-NEXT:    mv ra, s6
-; ZVBB-RV32-NEXT:    slli s6, s6, 1
-; ZVBB-RV32-NEXT:    add ra, ra, s6
 ; ZVBB-RV32-NEXT:    slli s6, s6, 3
+; ZVBB-RV32-NEXT:    mv ra, s6
+; ZVBB-RV32-NEXT:    slli s6, s6, 2
+; ZVBB-RV32-NEXT:    add ra, ra, s6
+; ZVBB-RV32-NEXT:    slli s6, s6, 1
 ; ZVBB-RV32-NEXT:    add s6, s6, ra
 ; ZVBB-RV32-NEXT:    add s6, sp, s6
 ; ZVBB-RV32-NEXT:    addi s6, s6, 2047
@@ -5950,11 +5897,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s6, sp, 704
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV32-NEXT:    csrr s6, vlenb
-; ZVBB-RV32-NEXT:    slli s6, s6, 3
+; ZVBB-RV32-NEXT:    slli s6, s6, 5
 ; ZVBB-RV32-NEXT:    mv ra, s6
-; ZVBB-RV32-NEXT:    slli s6, s6, 2
-; ZVBB-RV32-NEXT:    add ra, ra, s6
-; ZVBB-RV32-NEXT:    slli s6, s6, 3
+; ZVBB-RV32-NEXT:    slli s6, s6, 1
 ; ZVBB-RV32-NEXT:    add s6, s6, ra
 ; ZVBB-RV32-NEXT:    add s6, sp, s6
 ; ZVBB-RV32-NEXT:    addi s6, s6, 2047
@@ -5963,9 +5908,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s6, sp, 1792
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV32-NEXT:    csrr s6, vlenb
-; ZVBB-RV32-NEXT:    slli s6, s6, 5
-; ZVBB-RV32-NEXT:    mv ra, s6
 ; ZVBB-RV32-NEXT:    slli s6, s6, 3
+; ZVBB-RV32-NEXT:    mv ra, s6
+; ZVBB-RV32-NEXT:    slli s6, s6, 1
+; ZVBB-RV32-NEXT:    add ra, ra, s6
+; ZVBB-RV32-NEXT:    slli s6, s6, 2
 ; ZVBB-RV32-NEXT:    add s6, s6, ra
 ; ZVBB-RV32-NEXT:    add s6, sp, s6
 ; ZVBB-RV32-NEXT:    addi s6, s6, 2047
@@ -5974,11 +5921,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s6, sp, 1728
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV32-NEXT:    csrr s6, vlenb
-; ZVBB-RV32-NEXT:    slli s6, s6, 3
-; ZVBB-RV32-NEXT:    mv ra, s6
-; ZVBB-RV32-NEXT:    slli s6, s6, 1
-; ZVBB-RV32-NEXT:    add ra, ra, s6
 ; ZVBB-RV32-NEXT:    slli s6, s6, 4
+; ZVBB-RV32-NEXT:    mv ra, s6
+; ZVBB-RV32-NEXT:    slli s6, s6, 2
 ; ZVBB-RV32-NEXT:    add s6, s6, ra
 ; ZVBB-RV32-NEXT:    add s6, sp, s6
 ; ZVBB-RV32-NEXT:    addi s6, s6, 2047
@@ -5993,9 +5938,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s6, sp, 1024
 ; ZVBB-RV32-NEXT:    vle8.v v20, (s6)
 ; ZVBB-RV32-NEXT:    csrr s6, vlenb
-; ZVBB-RV32-NEXT:    slli s6, s6, 4
+; ZVBB-RV32-NEXT:    slli s6, s6, 3
 ; ZVBB-RV32-NEXT:    mv ra, s6
-; ZVBB-RV32-NEXT:    slli s6, s6, 4
+; ZVBB-RV32-NEXT:    slli s6, s6, 3
 ; ZVBB-RV32-NEXT:    add s6, s6, ra
 ; ZVBB-RV32-NEXT:    add s6, sp, s6
 ; ZVBB-RV32-NEXT:    addi s6, s6, 2047
@@ -6008,10 +5953,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s5, sp, 960
 ; ZVBB-RV32-NEXT:    vle8.v v20, (s5)
 ; ZVBB-RV32-NEXT:    csrr s5, vlenb
-; ZVBB-RV32-NEXT:    slli s5, s5, 3
-; ZVBB-RV32-NEXT:    mv s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 5
-; ZVBB-RV32-NEXT:    add s5, s5, s6
+; ZVBB-RV32-NEXT:    slli s5, s5, 6
 ; ZVBB-RV32-NEXT:    add s5, sp, s5
 ; ZVBB-RV32-NEXT:    addi s5, s5, 2047
 ; ZVBB-RV32-NEXT:    addi s5, s5, 33
@@ -6027,7 +5969,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a4
 ; ZVBB-RV32-NEXT:    csrr s5, vlenb
-; ZVBB-RV32-NEXT:    slli s5, s5, 8
+; ZVBB-RV32-NEXT:    slli s5, s5, 4
+; ZVBB-RV32-NEXT:    mv s6, s5
+; ZVBB-RV32-NEXT:    slli s5, s5, 4
+; ZVBB-RV32-NEXT:    add s5, s5, s6
 ; ZVBB-RV32-NEXT:    add s5, sp, s5
 ; ZVBB-RV32-NEXT:    addi s5, s5, 2047
 ; ZVBB-RV32-NEXT:    addi s5, s5, 33
@@ -6042,10 +5987,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    slli s5, s5, 1
 ; ZVBB-RV32-NEXT:    add s6, s6, s5
 ; ZVBB-RV32-NEXT:    slli s5, s5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 1
 ; ZVBB-RV32-NEXT:    add s5, s5, s6
 ; ZVBB-RV32-NEXT:    add s5, sp, s5
 ; ZVBB-RV32-NEXT:    addi s5, s5, 2047
@@ -6056,10 +5997,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr s5, vlenb
 ; ZVBB-RV32-NEXT:    slli s5, s5, 4
 ; ZVBB-RV32-NEXT:    mv s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, s5
 ; ZVBB-RV32-NEXT:    slli s5, s5, 1
 ; ZVBB-RV32-NEXT:    add s5, s5, s6
 ; ZVBB-RV32-NEXT:    add s5, sp, s5
@@ -6074,10 +6011,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    slli s5, s5, 3
 ; ZVBB-RV32-NEXT:    mv s6, s5
 ; ZVBB-RV32-NEXT:    slli s5, s5, 2
-; ZVBB-RV32-NEXT:    add s6, s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 1
-; ZVBB-RV32-NEXT:    add s6, s6, s5
-; ZVBB-RV32-NEXT:    slli s5, s5, 1
 ; ZVBB-RV32-NEXT:    add s5, s5, s6
 ; ZVBB-RV32-NEXT:    add s5, sp, s5
 ; ZVBB-RV32-NEXT:    addi s5, s5, 2047
@@ -6091,11 +6024,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vle8.v v12, (s4)
 ; ZVBB-RV32-NEXT:    csrr s4, vlenb
 ; ZVBB-RV32-NEXT:    slli s4, s4, 5
-; ZVBB-RV32-NEXT:    mv s5, s4
-; ZVBB-RV32-NEXT:    slli s4, s4, 1
-; ZVBB-RV32-NEXT:    add s5, s5, s4
-; ZVBB-RV32-NEXT:    slli s4, s4, 1
-; ZVBB-RV32-NEXT:    add s4, s4, s5
 ; ZVBB-RV32-NEXT:    add s4, sp, s4
 ; ZVBB-RV32-NEXT:    addi s4, s4, 2047
 ; ZVBB-RV32-NEXT:    addi s4, s4, 33
@@ -6113,11 +6041,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr s4, vlenb
 ; ZVBB-RV32-NEXT:    slli s4, s4, 3
 ; ZVBB-RV32-NEXT:    mv s5, s4
-; ZVBB-RV32-NEXT:    slli s4, s4, 1
-; ZVBB-RV32-NEXT:    add s5, s5, s4
-; ZVBB-RV32-NEXT:    slli s4, s4, 2
-; ZVBB-RV32-NEXT:    add s5, s5, s4
-; ZVBB-RV32-NEXT:    slli s4, s4, 1
+; ZVBB-RV32-NEXT:    slli s4, s4, 5
 ; ZVBB-RV32-NEXT:    add s4, s4, s5
 ; ZVBB-RV32-NEXT:    add s4, sp, s4
 ; ZVBB-RV32-NEXT:    addi s4, s4, 2047
@@ -6127,9 +6051,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s4)
 ; ZVBB-RV32-NEXT:    csrr s4, vlenb
-; ZVBB-RV32-NEXT:    slli s4, s4, 4
-; ZVBB-RV32-NEXT:    mv s5, s4
 ; ZVBB-RV32-NEXT:    slli s4, s4, 2
+; ZVBB-RV32-NEXT:    mv s5, s4
+; ZVBB-RV32-NEXT:    slli s4, s4, 1
 ; ZVBB-RV32-NEXT:    add s5, s5, s4
 ; ZVBB-RV32-NEXT:    slli s4, s4, 1
 ; ZVBB-RV32-NEXT:    add s4, s4, s5
@@ -6142,8 +6066,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr s4, vlenb
 ; ZVBB-RV32-NEXT:    slli s4, s4, 3
 ; ZVBB-RV32-NEXT:    mv s5, s4
-; ZVBB-RV32-NEXT:    slli s4, s4, 3
-; ZVBB-RV32-NEXT:    add s5, s5, s4
 ; ZVBB-RV32-NEXT:    slli s4, s4, 1
 ; ZVBB-RV32-NEXT:    add s4, s4, s5
 ; ZVBB-RV32-NEXT:    add s4, sp, s4
@@ -6166,12 +6088,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v12, (s3)
 ; ZVBB-RV32-NEXT:    csrr s3, vlenb
-; ZVBB-RV32-NEXT:    slli s3, s3, 3
+; ZVBB-RV32-NEXT:    slli s3, s3, 2
 ; ZVBB-RV32-NEXT:    mv s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 1
-; ZVBB-RV32-NEXT:    add s4, s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 1
-; ZVBB-RV32-NEXT:    add s4, s4, s3
 ; ZVBB-RV32-NEXT:    slli s3, s3, 2
 ; ZVBB-RV32-NEXT:    add s3, s3, s4
 ; ZVBB-RV32-NEXT:    add s3, sp, s3
@@ -6182,11 +6100,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vle8.v v24, (s3)
 ; ZVBB-RV32-NEXT:    csrr s3, vlenb
 ; ZVBB-RV32-NEXT:    slli s3, s3, 4
-; ZVBB-RV32-NEXT:    mv s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 1
-; ZVBB-RV32-NEXT:    add s4, s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 2
-; ZVBB-RV32-NEXT:    add s3, s3, s4
 ; ZVBB-RV32-NEXT:    add s3, sp, s3
 ; ZVBB-RV32-NEXT:    addi s3, s3, 2047
 ; ZVBB-RV32-NEXT:    addi s3, s3, 33
@@ -6194,10 +6107,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vslideup.vx v0, v8, a4
 ; ZVBB-RV32-NEXT:    csrr s3, vlenb
-; ZVBB-RV32-NEXT:    slli s3, s3, 6
-; ZVBB-RV32-NEXT:    mv s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 1
-; ZVBB-RV32-NEXT:    add s3, s3, s4
+; ZVBB-RV32-NEXT:    slli s3, s3, 8
 ; ZVBB-RV32-NEXT:    add s3, sp, s3
 ; ZVBB-RV32-NEXT:    addi s3, s3, 2047
 ; ZVBB-RV32-NEXT:    addi s3, s3, 33
@@ -6206,11 +6116,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s3)
 ; ZVBB-RV32-NEXT:    csrr s3, vlenb
-; ZVBB-RV32-NEXT:    slli s3, s3, 3
+; ZVBB-RV32-NEXT:    slli s3, s3, 2
 ; ZVBB-RV32-NEXT:    mv s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 2
-; ZVBB-RV32-NEXT:    add s4, s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 2
+; ZVBB-RV32-NEXT:    slli s3, s3, 1
 ; ZVBB-RV32-NEXT:    add s3, s3, s4
 ; ZVBB-RV32-NEXT:    add s3, sp, s3
 ; ZVBB-RV32-NEXT:    addi s3, s3, 2047
@@ -6220,11 +6128,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s3)
 ; ZVBB-RV32-NEXT:    csrr s3, vlenb
 ; ZVBB-RV32-NEXT:    slli s3, s3, 3
-; ZVBB-RV32-NEXT:    mv s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 1
-; ZVBB-RV32-NEXT:    add s4, s4, s3
-; ZVBB-RV32-NEXT:    slli s3, s3, 3
-; ZVBB-RV32-NEXT:    add s3, s3, s4
 ; ZVBB-RV32-NEXT:    add s3, sp, s3
 ; ZVBB-RV32-NEXT:    addi s3, s3, 2047
 ; ZVBB-RV32-NEXT:    addi s3, s3, 33
@@ -6245,16 +6148,18 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v12, (s2)
 ; ZVBB-RV32-NEXT:    csrr s2, vlenb
-; ZVBB-RV32-NEXT:    slli s2, s2, 4
-; ZVBB-RV32-NEXT:    mv s3, s2
-; ZVBB-RV32-NEXT:    slli s2, s2, 3
-; ZVBB-RV32-NEXT:    add s2, s2, s3
+; ZVBB-RV32-NEXT:    slli s2, s2, 2
 ; ZVBB-RV32-NEXT:    add s2, sp, s2
 ; ZVBB-RV32-NEXT:    addi s2, s2, 2047
 ; ZVBB-RV32-NEXT:    addi s2, s2, 33
 ; ZVBB-RV32-NEXT:    vs4r.v v12, (s2) # vscale x 32-byte Folded Spill
 ; ZVBB-RV32-NEXT:    addi s2, sp, 1856
 ; ZVBB-RV32-NEXT:    vle8.v v20, (s2)
+; ZVBB-RV32-NEXT:    addi s2, sp, 2047
+; ZVBB-RV32-NEXT:    addi s2, s2, 33
+; ZVBB-RV32-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
+; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVBB-RV32-NEXT:    vslideup.vx v16, v8, a4
 ; ZVBB-RV32-NEXT:    csrr s2, vlenb
 ; ZVBB-RV32-NEXT:    slli s2, s2, 3
 ; ZVBB-RV32-NEXT:    mv s3, s2
@@ -6263,17 +6168,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    slli s2, s2, 1
 ; ZVBB-RV32-NEXT:    add s3, s3, s2
 ; ZVBB-RV32-NEXT:    slli s2, s2, 1
-; ZVBB-RV32-NEXT:    add s2, s2, s3
-; ZVBB-RV32-NEXT:    add s2, sp, s2
-; ZVBB-RV32-NEXT:    addi s2, s2, 2047
-; ZVBB-RV32-NEXT:    addi s2, s2, 33
-; ZVBB-RV32-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
-; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVBB-RV32-NEXT:    vslideup.vx v16, v8, a4
-; ZVBB-RV32-NEXT:    csrr s2, vlenb
-; ZVBB-RV32-NEXT:    slli s2, s2, 5
-; ZVBB-RV32-NEXT:    mv s3, s2
-; ZVBB-RV32-NEXT:    slli s2, s2, 2
+; ZVBB-RV32-NEXT:    add s3, s3, s2
+; ZVBB-RV32-NEXT:    slli s2, s2, 1
 ; ZVBB-RV32-NEXT:    add s2, s2, s3
 ; ZVBB-RV32-NEXT:    add s2, sp, s2
 ; ZVBB-RV32-NEXT:    addi s2, s2, 2047
@@ -6285,8 +6181,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi s2, sp, 1344
 ; ZVBB-RV32-NEXT:    vle8.v v8, (s2)
 ; ZVBB-RV32-NEXT:    csrr s2, vlenb
-; ZVBB-RV32-NEXT:    slli s2, s2, 5
+; ZVBB-RV32-NEXT:    slli s2, s2, 4
 ; ZVBB-RV32-NEXT:    mv s3, s2
+; ZVBB-RV32-NEXT:    slli s2, s2, 2
+; ZVBB-RV32-NEXT:    add s3, s3, s2
 ; ZVBB-RV32-NEXT:    slli s2, s2, 1
 ; ZVBB-RV32-NEXT:    add s2, s2, s3
 ; ZVBB-RV32-NEXT:    add s2, sp, s2
@@ -6310,16 +6208,27 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v24, (s1)
 ; ZVBB-RV32-NEXT:    csrr s1, vlenb
-; ZVBB-RV32-NEXT:    slli s1, s1, 7
+; ZVBB-RV32-NEXT:    slli s1, s1, 3
+; ZVBB-RV32-NEXT:    mv s2, s1
+; ZVBB-RV32-NEXT:    slli s1, s1, 2
+; ZVBB-RV32-NEXT:    add s2, s2, s1
+; ZVBB-RV32-NEXT:    slli s1, s1, 1
+; ZVBB-RV32-NEXT:    add s2, s2, s1
+; ZVBB-RV32-NEXT:    slli s1, s1, 1
+; ZVBB-RV32-NEXT:    add s1, s1, s2
 ; ZVBB-RV32-NEXT:    add s1, sp, s1
 ; ZVBB-RV32-NEXT:    addi s1, s1, 2047
 ; ZVBB-RV32-NEXT:    addi s1, s1, 33
 ; ZVBB-RV32-NEXT:    vs8r.v v24, (s1) # vscale x 64-byte Folded Spill
 ; ZVBB-RV32-NEXT:    vle8.v v24, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    mv s1, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv s1, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add s1, s1, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add s1, s1, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, s1
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6328,9 +6237,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vslideup.vx v16, v8, a4
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 6
 ; ZVBB-RV32-NEXT:    mv s1, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, s1
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6342,6 +6251,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv s1, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add s1, s1, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add s1, s1, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
@@ -6352,7 +6263,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; ZVBB-RV32-NEXT:    vle8.v v8, (a5)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 5
 ; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
@@ -6369,9 +6280,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6382,8 +6293,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v24, (t6)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
 ; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
@@ -6392,8 +6305,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vle8.v v16, (a6)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
 ; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
@@ -6406,7 +6321,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v16, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 6
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6415,7 +6335,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6427,7 +6351,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6437,9 +6361,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 5
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6449,9 +6373,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6464,7 +6388,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6476,7 +6402,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vle8.v v0, (t5)
 ; ZVBB-RV32-NEXT:    vle8.v v8, (t1)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6487,7 +6416,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 7
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6495,6 +6424,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vle8.v v8, (t2)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6505,16 +6441,21 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV32-NEXT:    vle8.v v24, (a3)
 ; ZVBB-RV32-NEXT:    vle8.v v8, (t3)
-; ZVBB-RV32-NEXT:    addi a3, sp, 2047
+; ZVBB-RV32-NEXT:    csrr a3, vlenb
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a3, a3, a5
+; ZVBB-RV32-NEXT:    add a3, sp, a3
+; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; ZVBB-RV32-NEXT:    addi a3, sp, 1888
 ; ZVBB-RV32-NEXT:    vle8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    add a3, a3, a5
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6524,17 +6465,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslideup.vx v8, v12, a1
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vse8.v v0, (a0)
-; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a3, a3, a5
-; ZVBB-RV32-NEXT:    add a3, sp, a3
-; ZVBB-RV32-NEXT:    addi a3, a3, 2047
+; ZVBB-RV32-NEXT:    addi a3, sp, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
@@ -6545,7 +6476,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    slli a5, a5, 4
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -6553,11 +6484,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6567,16 +6496,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; ZVBB-RV32-NEXT:    addi a3, sp, 2047
+; ZVBB-RV32-NEXT:    csrr a3, vlenb
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a3, a3, a5
+; ZVBB-RV32-NEXT:    add a3, sp, a3
+; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl8r.v v0, (a3) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vslideup.vx v0, v8, a1
@@ -6586,9 +6518,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslideup.vx v0, v24, a4
 ; ZVBB-RV32-NEXT:    addi a3, a0, 256
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
-; ZVBB-RV32-NEXT:    slli a5, a5, 4
+; ZVBB-RV32-NEXT:    slli a5, a5, 6
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -6596,12 +6528,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
@@ -6609,7 +6537,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 7
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6618,17 +6546,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
-; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6639,9 +6569,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vse8.v v0, (a3)
 ; ZVBB-RV32-NEXT:    vslideup.vx v16, v24, a4
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
@@ -6652,7 +6582,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6666,8 +6598,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
@@ -6675,7 +6605,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6686,9 +6619,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslideup.vx v16, v24, a4
 ; ZVBB-RV32-NEXT:    addi a3, a0, 768
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
-; ZVBB-RV32-NEXT:    slli a5, a5, 5
+; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    add a6, a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -6699,19 +6638,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 2
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 5
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6721,11 +6656,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 5
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6736,9 +6666,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6751,10 +6681,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vmv.v.v v0, v16
 ; ZVBB-RV32-NEXT:    addi a3, a0, 1792
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
-; ZVBB-RV32-NEXT:    slli a5, a5, 6
-; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a6
+; ZVBB-RV32-NEXT:    slli a5, a5, 8
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
 ; ZVBB-RV32-NEXT:    addi a5, a5, 33
@@ -6766,61 +6693,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 6
-; ZVBB-RV32-NEXT:    add a3, sp, a3
-; ZVBB-RV32-NEXT:    addi a3, a3, 2047
-; ZVBB-RV32-NEXT:    addi a3, a3, 33
-; ZVBB-RV32-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
-; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
-; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a3, a3, a5
-; ZVBB-RV32-NEXT:    add a3, sp, a3
-; ZVBB-RV32-NEXT:    addi a3, a3, 2047
-; ZVBB-RV32-NEXT:    addi a3, a3, 33
-; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    add a3, a3, a5
-; ZVBB-RV32-NEXT:    add a3, sp, a3
-; ZVBB-RV32-NEXT:    addi a3, a3, 2047
-; ZVBB-RV32-NEXT:    addi a3, a3, 33
-; ZVBB-RV32-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
-; ZVBB-RV32-NEXT:    vslideup.vx v16, v8, a1
-; ZVBB-RV32-NEXT:    addi a3, a0, 1152
-; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVBB-RV32-NEXT:    vse8.v v0, (a3)
-; ZVBB-RV32-NEXT:    vslideup.vx v16, v24, a4
-; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    add a3, a3, a5
-; ZVBB-RV32-NEXT:    add a3, sp, a3
-; ZVBB-RV32-NEXT:    addi a3, a3, 2047
-; ZVBB-RV32-NEXT:    addi a3, a3, 33
-; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
@@ -6832,21 +6711,69 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
-; ZVBB-RV32-NEXT:    addi a3, a0, 640
-; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVBB-RV32-NEXT:    vse8.v v16, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a3, a3, a5
+; ZVBB-RV32-NEXT:    add a3, sp, a3
+; ZVBB-RV32-NEXT:    addi a3, a3, 2047
+; ZVBB-RV32-NEXT:    addi a3, a3, 33
+; ZVBB-RV32-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
+; ZVBB-RV32-NEXT:    vslideup.vx v16, v8, a1
+; ZVBB-RV32-NEXT:    addi a3, a0, 1152
+; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVBB-RV32-NEXT:    vse8.v v0, (a3)
+; ZVBB-RV32-NEXT:    vslideup.vx v16, v24, a4
+; ZVBB-RV32-NEXT:    csrr a3, vlenb
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    add a3, a3, a5
+; ZVBB-RV32-NEXT:    add a3, sp, a3
+; ZVBB-RV32-NEXT:    addi a3, a3, 2047
+; ZVBB-RV32-NEXT:    addi a3, a3, 33
+; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; ZVBB-RV32-NEXT:    csrr a3, vlenb
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a3, a3, a5
+; ZVBB-RV32-NEXT:    add a3, sp, a3
+; ZVBB-RV32-NEXT:    addi a3, a3, 2047
+; ZVBB-RV32-NEXT:    addi a3, a3, 33
+; ZVBB-RV32-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
+; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
+; ZVBB-RV32-NEXT:    addi a3, a0, 640
+; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVBB-RV32-NEXT:    vse8.v v16, (a3)
+; ZVBB-RV32-NEXT:    csrr a3, vlenb
+; ZVBB-RV32-NEXT:    slli a3, a3, 6
+; ZVBB-RV32-NEXT:    add a3, sp, a3
+; ZVBB-RV32-NEXT:    addi a3, a3, 2047
+; ZVBB-RV32-NEXT:    addi a3, a3, 33
+; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; ZVBB-RV32-NEXT:    csrr a3, vlenb
+; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
@@ -6861,11 +6788,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
 ; ZVBB-RV32-NEXT:    slli a5, a5, 3
 ; ZVBB-RV32-NEXT:    mv a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 2
-; ZVBB-RV32-NEXT:    add a6, a6, a5
-; ZVBB-RV32-NEXT:    slli a5, a5, 1
+; ZVBB-RV32-NEXT:    slli a5, a5, 5
 ; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
@@ -6873,9 +6796,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 5
-; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -6884,6 +6809,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
 ; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
@@ -6898,18 +6825,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV32-NEXT:    vse8.v v16, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    slli a3, a3, 5
 ; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a5, a5, a3
@@ -6926,25 +6851,35 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vmv.v.v v0, v16
 ; ZVBB-RV32-NEXT:    addi a3, a0, 1408
 ; ZVBB-RV32-NEXT:    csrr a5, vlenb
-; ZVBB-RV32-NEXT:    slli a5, a5, 8
+; ZVBB-RV32-NEXT:    slli a5, a5, 4
+; ZVBB-RV32-NEXT:    mv a6, a5
+; ZVBB-RV32-NEXT:    slli a5, a5, 4
+; ZVBB-RV32-NEXT:    add a5, a5, a6
 ; ZVBB-RV32-NEXT:    add a5, sp, a5
 ; ZVBB-RV32-NEXT:    addi a5, a5, 2047
 ; ZVBB-RV32-NEXT:    addi a5, a5, 33
 ; ZVBB-RV32-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV32-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 4
-; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 1
-; ZVBB-RV32-NEXT:    add a5, a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 7
+; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 2
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
@@ -6952,20 +6887,22 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV32-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; ZVBB-RV32-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    slli a3, a3, 5
 ; ZVBB-RV32-NEXT:    mv a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 2
-; ZVBB-RV32-NEXT:    add a5, a5, a3
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV32-NEXT:    addi a3, a3, 33
 ; ZVBB-RV32-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV32-NEXT:    csrr a3, vlenb
-; ZVBB-RV32-NEXT:    slli a3, a3, 3
-; ZVBB-RV32-NEXT:    mv a5, a3
 ; ZVBB-RV32-NEXT:    slli a3, a3, 4
+; ZVBB-RV32-NEXT:    mv a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
+; ZVBB-RV32-NEXT:    add a5, a5, a3
+; ZVBB-RV32-NEXT:    slli a3, a3, 1
 ; ZVBB-RV32-NEXT:    add a3, a3, a5
 ; ZVBB-RV32-NEXT:    add a3, sp, a3
 ; ZVBB-RV32-NEXT:    addi a3, a3, 2047
@@ -7008,25 +6945,26 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a4, a2
 ; ZVBB-RV64-NEXT:    slli a2, a2, 1
 ; ZVBB-RV64-NEXT:    add a4, a4, a2
-; ZVBB-RV64-NEXT:    slli a2, a2, 1
-; ZVBB-RV64-NEXT:    add a4, a4, a2
-; ZVBB-RV64-NEXT:    slli a2, a2, 3
+; ZVBB-RV64-NEXT:    slli a2, a2, 4
 ; ZVBB-RV64-NEXT:    add a2, a2, a4
 ; ZVBB-RV64-NEXT:    sub sp, sp, a2
 ; ZVBB-RV64-NEXT:    andi sp, sp, -32
 ; ZVBB-RV64-NEXT:    csrr a2, vlenb
 ; ZVBB-RV64-NEXT:    slli a2, a2, 3
 ; ZVBB-RV64-NEXT:    mv a4, a2
-; ZVBB-RV64-NEXT:    slli a2, a2, 2
-; ZVBB-RV64-NEXT:    add a4, a4, a2
-; ZVBB-RV64-NEXT:    slli a2, a2, 3
+; ZVBB-RV64-NEXT:    slli a2, a2, 5
 ; ZVBB-RV64-NEXT:    add a2, a2, a4
 ; ZVBB-RV64-NEXT:    add a2, sp, a2
 ; ZVBB-RV64-NEXT:    addi a2, a2, 2047
 ; ZVBB-RV64-NEXT:    addi a2, a2, 33
 ; ZVBB-RV64-NEXT:    vs8r.v v16, (a2) # vscale x 64-byte Folded Spill
 ; ZVBB-RV64-NEXT:    csrr a2, vlenb
-; ZVBB-RV64-NEXT:    slli a2, a2, 8
+; ZVBB-RV64-NEXT:    slli a2, a2, 5
+; ZVBB-RV64-NEXT:    mv a4, a2
+; ZVBB-RV64-NEXT:    slli a2, a2, 1
+; ZVBB-RV64-NEXT:    add a4, a4, a2
+; ZVBB-RV64-NEXT:    slli a2, a2, 1
+; ZVBB-RV64-NEXT:    add a2, a2, a4
 ; ZVBB-RV64-NEXT:    add a2, sp, a2
 ; ZVBB-RV64-NEXT:    addi a2, a2, 2047
 ; ZVBB-RV64-NEXT:    addi a2, a2, 33
@@ -7037,9 +6975,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a4, vlenb
 ; ZVBB-RV64-NEXT:    slli a4, a4, 4
 ; ZVBB-RV64-NEXT:    mv a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 3
+; ZVBB-RV64-NEXT:    slli a4, a4, 4
 ; ZVBB-RV64-NEXT:    add a4, a4, a5
 ; ZVBB-RV64-NEXT:    add a4, sp, a4
 ; ZVBB-RV64-NEXT:    addi a4, a4, 2047
@@ -7051,9 +6987,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a5, a4
 ; ZVBB-RV64-NEXT:    slli a4, a4, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 1
+; ZVBB-RV64-NEXT:    slli a4, a4, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a4
 ; ZVBB-RV64-NEXT:    slli a4, a4, 1
 ; ZVBB-RV64-NEXT:    add a4, a4, a5
@@ -7064,10 +6998,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi a4, a7, 256
 ; ZVBB-RV64-NEXT:    vle8.v v16, (a4)
 ; ZVBB-RV64-NEXT:    csrr a4, vlenb
-; ZVBB-RV64-NEXT:    slli a4, a4, 5
-; ZVBB-RV64-NEXT:    mv a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 3
-; ZVBB-RV64-NEXT:    add a4, a4, a5
+; ZVBB-RV64-NEXT:    slli a4, a4, 8
 ; ZVBB-RV64-NEXT:    add a4, sp, a4
 ; ZVBB-RV64-NEXT:    addi a4, a4, 2047
 ; ZVBB-RV64-NEXT:    addi a4, a4, 33
@@ -7077,9 +7008,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a4, vlenb
 ; ZVBB-RV64-NEXT:    slli a4, a4, 4
 ; ZVBB-RV64-NEXT:    mv a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 1
+; ZVBB-RV64-NEXT:    slli a4, a4, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a4
 ; ZVBB-RV64-NEXT:    slli a4, a4, 1
 ; ZVBB-RV64-NEXT:    add a4, a4, a5
@@ -7092,9 +7021,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a4, vlenb
 ; ZVBB-RV64-NEXT:    slli a4, a4, 3
 ; ZVBB-RV64-NEXT:    mv a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 2
-; ZVBB-RV64-NEXT:    add a5, a5, a4
-; ZVBB-RV64-NEXT:    slli a4, a4, 1
+; ZVBB-RV64-NEXT:    slli a4, a4, 3
 ; ZVBB-RV64-NEXT:    add a5, a5, a4
 ; ZVBB-RV64-NEXT:    slli a4, a4, 1
 ; ZVBB-RV64-NEXT:    add a4, a4, a5
@@ -7110,9 +7037,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7122,10 +7047,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v8, (a5)
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
-; ZVBB-RV64-NEXT:    slli a5, a5, 5
+; ZVBB-RV64-NEXT:    slli a5, a5, 6
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
@@ -7139,9 +7062,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7155,9 +7076,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7168,9 +7089,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 4
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7184,7 +7103,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 4
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7195,7 +7118,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 4
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7206,7 +7131,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a1, vlenb
 ; ZVBB-RV64-NEXT:    slli a1, a1, 4
 ; ZVBB-RV64-NEXT:    mv a5, a1
-; ZVBB-RV64-NEXT:    slli a1, a1, 4
+; ZVBB-RV64-NEXT:    slli a1, a1, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a1
+; ZVBB-RV64-NEXT:    slli a1, a1, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a1
+; ZVBB-RV64-NEXT:    slli a1, a1, 1
 ; ZVBB-RV64-NEXT:    add a1, a1, a5
 ; ZVBB-RV64-NEXT:    add a1, sp, a1
 ; ZVBB-RV64-NEXT:    addi a1, a1, 2047
@@ -7221,9 +7150,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 4
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7236,9 +7165,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a6, a5
 ; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7251,7 +7178,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -7261,9 +7192,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 4
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -7278,9 +7207,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 3
+; ZVBB-RV64-NEXT:    slli a5, a5, 5
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7291,9 +7218,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 4
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7302,7 +7227,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 5
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7312,9 +7241,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 4
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7325,9 +7252,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
 ; ZVBB-RV64-NEXT:    slli a6, a6, 3
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 2
-; ZVBB-RV64-NEXT:    add a7, a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    slli a6, a6, 3
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7338,9 +7263,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 3
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
 ; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    slli a5, a5, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7349,7 +7274,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vslidedown.vx v8, v8, a4
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
-; ZVBB-RV64-NEXT:    slli a5, a5, 7
+; ZVBB-RV64-NEXT:    slli a5, a5, 5
+; ZVBB-RV64-NEXT:    mv a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
 ; ZVBB-RV64-NEXT:    addi a5, a5, 33
@@ -7360,9 +7288,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 4
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -7378,7 +7304,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
 ; ZVBB-RV64-NEXT:    slli a6, a6, 4
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 4
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    add a7, a7, a6
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    add a7, a7, a6
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7389,7 +7319,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
 ; ZVBB-RV64-NEXT:    slli a6, a6, 4
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 2
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7400,7 +7330,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 4
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    add a7, a7, a6
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    add a7, a7, a6
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7412,7 +7346,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 2
+; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7420,20 +7354,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vs8r.v v24, (a6) # vscale x 64-byte Folded Spill
 ; ZVBB-RV64-NEXT:    addi a6, s0, 640
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
-; ZVBB-RV64-NEXT:    slli a7, a7, 5
-; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
-; ZVBB-RV64-NEXT:    add a7, a7, t0
+; ZVBB-RV64-NEXT:    slli a7, a7, 8
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV64-NEXT:    addi a7, a7, 33
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (a7) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vslidedown.vx v8, v16, a4
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
-; ZVBB-RV64-NEXT:    slli a7, a7, 5
-; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 2
-; ZVBB-RV64-NEXT:    add a7, a7, t0
+; ZVBB-RV64-NEXT:    slli a7, a7, 7
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV64-NEXT:    addi a7, a7, 33
@@ -7441,9 +7369,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v8, (a6)
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
-; ZVBB-RV64-NEXT:    slli a6, a6, 6
+; ZVBB-RV64-NEXT:    slli a6, a6, 5
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    slli a6, a6, 2
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7452,10 +7380,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vslidedown.vx v8, v8, a4
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
-; ZVBB-RV64-NEXT:    slli a6, a6, 5
-; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a7
+; ZVBB-RV64-NEXT:    slli a6, a6, 6
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
 ; ZVBB-RV64-NEXT:    addi a6, a6, 33
@@ -7466,10 +7391,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslidedown.vx v16, v0, a1
 ; ZVBB-RV64-NEXT:    vmv2r.v v18, v20
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
-; ZVBB-RV64-NEXT:    slli a6, a6, 5
-; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a7
+; ZVBB-RV64-NEXT:    slli a6, a6, 7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
 ; ZVBB-RV64-NEXT:    addi a6, a6, 33
@@ -7482,9 +7404,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
 ; ZVBB-RV64-NEXT:    slli a6, a6, 3
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 2
-; ZVBB-RV64-NEXT:    add a7, a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    slli a6, a6, 3
 ; ZVBB-RV64-NEXT:    add a7, a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
@@ -7499,9 +7419,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 2
-; ZVBB-RV64-NEXT:    add a7, a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    add a7, a7, a6
+; ZVBB-RV64-NEXT:    slli a6, a6, 2
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
 ; ZVBB-RV64-NEXT:    addi a6, a6, 2047
@@ -7511,9 +7431,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
 ; ZVBB-RV64-NEXT:    slli a6, a6, 4
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
-; ZVBB-RV64-NEXT:    add a7, a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
+; ZVBB-RV64-NEXT:    slli a6, a6, 2
 ; ZVBB-RV64-NEXT:    add a7, a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
@@ -7524,10 +7442,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslidedown.vx v16, v0, a1
 ; ZVBB-RV64-NEXT:    vmv2r.v v18, v20
 ; ZVBB-RV64-NEXT:    csrr a6, vlenb
-; ZVBB-RV64-NEXT:    slli a6, a6, 5
+; ZVBB-RV64-NEXT:    slli a6, a6, 6
 ; ZVBB-RV64-NEXT:    mv a7, a6
-; ZVBB-RV64-NEXT:    slli a6, a6, 1
-; ZVBB-RV64-NEXT:    add a7, a7, a6
 ; ZVBB-RV64-NEXT:    slli a6, a6, 1
 ; ZVBB-RV64-NEXT:    add a6, a6, a7
 ; ZVBB-RV64-NEXT:    add a6, sp, a6
@@ -7540,7 +7456,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vsseg4e8.v v16, (a6)
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
-; ZVBB-RV64-NEXT:    slli a7, a7, 8
+; ZVBB-RV64-NEXT:    slli a7, a7, 5
+; ZVBB-RV64-NEXT:    mv t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV64-NEXT:    addi a7, a7, 33
@@ -7552,7 +7473,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t0, a7
 ; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add t0, t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7563,9 +7486,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t0, a7
 ; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add t0, t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 1
-; ZVBB-RV64-NEXT:    add t0, t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    slli a7, a7, 2
 ; ZVBB-RV64-NEXT:    add t0, t0, a7
 ; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
@@ -7575,7 +7496,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a7) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vslidedown.vx v16, v8, a4
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
-; ZVBB-RV64-NEXT:    slli a7, a7, 6
+; ZVBB-RV64-NEXT:    slli a7, a7, 5
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
 ; ZVBB-RV64-NEXT:    addi a7, a7, 33
@@ -7584,9 +7505,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t0, vlenb
 ; ZVBB-RV64-NEXT:    slli t0, t0, 4
 ; ZVBB-RV64-NEXT:    mv t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 1
-; ZVBB-RV64-NEXT:    add t1, t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 3
+; ZVBB-RV64-NEXT:    slli t0, t0, 4
 ; ZVBB-RV64-NEXT:    add t0, t0, t1
 ; ZVBB-RV64-NEXT:    add t0, sp, t0
 ; ZVBB-RV64-NEXT:    addi t0, t0, 2047
@@ -7596,7 +7515,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t0, vlenb
 ; ZVBB-RV64-NEXT:    slli t0, t0, 4
 ; ZVBB-RV64-NEXT:    mv t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 3
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
+; ZVBB-RV64-NEXT:    add t1, t1, t0
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
 ; ZVBB-RV64-NEXT:    add t0, t0, t1
 ; ZVBB-RV64-NEXT:    add t0, sp, t0
 ; ZVBB-RV64-NEXT:    addi t0, t0, 2047
@@ -7609,7 +7530,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
 ; ZVBB-RV64-NEXT:    slli a7, a7, 3
 ; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
+; ZVBB-RV64-NEXT:    slli a7, a7, 2
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7623,7 +7544,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t0, a7
 ; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add t0, t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7634,7 +7557,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
 ; ZVBB-RV64-NEXT:    slli a7, a7, 4
 ; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7648,7 +7573,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
 ; ZVBB-RV64-NEXT:    slli a7, a7, 3
 ; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 5
+; ZVBB-RV64-NEXT:    slli a7, a7, 2
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 1
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7659,9 +7588,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
 ; ZVBB-RV64-NEXT:    slli a7, a7, 3
 ; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
+; ZVBB-RV64-NEXT:    slli a7, a7, 2
 ; ZVBB-RV64-NEXT:    add t0, t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    slli a7, a7, 2
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7671,9 +7600,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
 ; ZVBB-RV64-NEXT:    slli a7, a7, 3
 ; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 2
-; ZVBB-RV64-NEXT:    add t0, t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 3
+; ZVBB-RV64-NEXT:    slli a7, a7, 5
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7684,9 +7611,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a7, vlenb
 ; ZVBB-RV64-NEXT:    slli a7, a7, 4
 ; ZVBB-RV64-NEXT:    mv t0, a7
-; ZVBB-RV64-NEXT:    slli a7, a7, 2
-; ZVBB-RV64-NEXT:    add t0, t0, a7
 ; ZVBB-RV64-NEXT:    slli a7, a7, 1
+; ZVBB-RV64-NEXT:    add t0, t0, a7
+; ZVBB-RV64-NEXT:    slli a7, a7, 2
 ; ZVBB-RV64-NEXT:    add a7, a7, t0
 ; ZVBB-RV64-NEXT:    add a7, sp, a7
 ; ZVBB-RV64-NEXT:    addi a7, a7, 2047
@@ -7702,7 +7629,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t1, t0
 ; ZVBB-RV64-NEXT:    slli t0, t0, 1
 ; ZVBB-RV64-NEXT:    add t1, t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 4
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
+; ZVBB-RV64-NEXT:    add t1, t1, t0
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
+; ZVBB-RV64-NEXT:    add t1, t1, t0
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
 ; ZVBB-RV64-NEXT:    add t0, t0, t1
 ; ZVBB-RV64-NEXT:    add t0, sp, t0
 ; ZVBB-RV64-NEXT:    addi t0, t0, 2047
@@ -7711,9 +7642,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m4, ta, ma
 ; ZVBB-RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; ZVBB-RV64-NEXT:    csrr t0, vlenb
-; ZVBB-RV64-NEXT:    slli t0, t0, 6
+; ZVBB-RV64-NEXT:    slli t0, t0, 5
 ; ZVBB-RV64-NEXT:    mv t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 1
+; ZVBB-RV64-NEXT:    slli t0, t0, 2
 ; ZVBB-RV64-NEXT:    add t0, t0, t1
 ; ZVBB-RV64-NEXT:    add t0, sp, t0
 ; ZVBB-RV64-NEXT:    addi t0, t0, 2047
@@ -7723,7 +7654,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t0, vlenb
 ; ZVBB-RV64-NEXT:    slli t0, t0, 4
 ; ZVBB-RV64-NEXT:    mv t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 4
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
+; ZVBB-RV64-NEXT:    add t1, t1, t0
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
+; ZVBB-RV64-NEXT:    add t1, t1, t0
+; ZVBB-RV64-NEXT:    slli t0, t0, 1
 ; ZVBB-RV64-NEXT:    add t0, t0, t1
 ; ZVBB-RV64-NEXT:    add t0, sp, t0
 ; ZVBB-RV64-NEXT:    addi t0, t0, 2047
@@ -7732,10 +7667,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslidedown.vx v4, v16, a1
 ; ZVBB-RV64-NEXT:    vmv2r.v v6, v8
 ; ZVBB-RV64-NEXT:    csrr t0, vlenb
-; ZVBB-RV64-NEXT:    slli t0, t0, 5
-; ZVBB-RV64-NEXT:    mv t1, t0
-; ZVBB-RV64-NEXT:    slli t0, t0, 3
-; ZVBB-RV64-NEXT:    add t0, t0, t1
+; ZVBB-RV64-NEXT:    slli t0, t0, 8
 ; ZVBB-RV64-NEXT:    add t0, sp, t0
 ; ZVBB-RV64-NEXT:    addi t0, t0, 2047
 ; ZVBB-RV64-NEXT:    addi t0, t0, 33
@@ -7750,9 +7682,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t2, t1
 ; ZVBB-RV64-NEXT:    slli t1, t1, 1
 ; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
-; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 2
+; ZVBB-RV64-NEXT:    slli t1, t1, 3
 ; ZVBB-RV64-NEXT:    add t1, t1, t2
 ; ZVBB-RV64-NEXT:    add t1, sp, t1
 ; ZVBB-RV64-NEXT:    addi t1, t1, 2047
@@ -7763,9 +7693,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t2, t1
 ; ZVBB-RV64-NEXT:    slli t1, t1, 1
 ; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
-; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
+; ZVBB-RV64-NEXT:    slli t1, t1, 2
 ; ZVBB-RV64-NEXT:    add t1, t1, t2
 ; ZVBB-RV64-NEXT:    add t1, sp, t1
 ; ZVBB-RV64-NEXT:    addi t1, t1, 2047
@@ -7775,9 +7703,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t1, vlenb
 ; ZVBB-RV64-NEXT:    slli t1, t1, 4
 ; ZVBB-RV64-NEXT:    mv t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
-; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 2
+; ZVBB-RV64-NEXT:    slli t1, t1, 3
 ; ZVBB-RV64-NEXT:    add t1, t1, t2
 ; ZVBB-RV64-NEXT:    add t1, sp, t1
 ; ZVBB-RV64-NEXT:    addi t1, t1, 2047
@@ -7787,7 +7713,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t1, vlenb
 ; ZVBB-RV64-NEXT:    slli t1, t1, 3
 ; ZVBB-RV64-NEXT:    mv t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 4
+; ZVBB-RV64-NEXT:    slli t1, t1, 2
+; ZVBB-RV64-NEXT:    add t2, t2, t1
+; ZVBB-RV64-NEXT:    slli t1, t1, 1
 ; ZVBB-RV64-NEXT:    add t1, t1, t2
 ; ZVBB-RV64-NEXT:    add t1, sp, t1
 ; ZVBB-RV64-NEXT:    addi t1, t1, 2047
@@ -7801,9 +7729,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t2, t1
 ; ZVBB-RV64-NEXT:    slli t1, t1, 1
 ; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
-; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
+; ZVBB-RV64-NEXT:    slli t1, t1, 2
 ; ZVBB-RV64-NEXT:    add t2, t2, t1
 ; ZVBB-RV64-NEXT:    slli t1, t1, 1
 ; ZVBB-RV64-NEXT:    add t1, t1, t2
@@ -7815,7 +7741,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; ZVBB-RV64-NEXT:    vslidedown.vx v12, v24, a1
 ; ZVBB-RV64-NEXT:    csrr t1, vlenb
-; ZVBB-RV64-NEXT:    slli t1, t1, 8
+; ZVBB-RV64-NEXT:    slli t1, t1, 5
+; ZVBB-RV64-NEXT:    mv t2, t1
+; ZVBB-RV64-NEXT:    slli t1, t1, 1
+; ZVBB-RV64-NEXT:    add t2, t2, t1
+; ZVBB-RV64-NEXT:    slli t1, t1, 1
+; ZVBB-RV64-NEXT:    add t1, t1, t2
 ; ZVBB-RV64-NEXT:    add t1, sp, t1
 ; ZVBB-RV64-NEXT:    addi t1, t1, 2047
 ; ZVBB-RV64-NEXT:    addi t1, t1, 33
@@ -7825,9 +7756,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t1, vlenb
 ; ZVBB-RV64-NEXT:    slli t1, t1, 4
 ; ZVBB-RV64-NEXT:    mv t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 1
-; ZVBB-RV64-NEXT:    add t2, t2, t1
-; ZVBB-RV64-NEXT:    slli t1, t1, 3
+; ZVBB-RV64-NEXT:    slli t1, t1, 4
 ; ZVBB-RV64-NEXT:    add t1, t1, t2
 ; ZVBB-RV64-NEXT:    add t1, sp, t1
 ; ZVBB-RV64-NEXT:    addi t1, t1, 2047
@@ -7841,9 +7770,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
 ; ZVBB-RV64-NEXT:    slli t2, t2, 3
 ; ZVBB-RV64-NEXT:    mv t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 2
-; ZVBB-RV64-NEXT:    add t3, t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 2
+; ZVBB-RV64-NEXT:    slli t2, t2, 4
 ; ZVBB-RV64-NEXT:    add t2, t2, t3
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
@@ -7852,9 +7779,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
 ; ZVBB-RV64-NEXT:    slli t2, t2, 4
 ; ZVBB-RV64-NEXT:    mv t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 1
-; ZVBB-RV64-NEXT:    add t3, t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 1
+; ZVBB-RV64-NEXT:    slli t2, t2, 2
 ; ZVBB-RV64-NEXT:    add t2, t2, t3
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
@@ -7864,9 +7789,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
 ; ZVBB-RV64-NEXT:    slli t2, t2, 3
 ; ZVBB-RV64-NEXT:    mv t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 2
-; ZVBB-RV64-NEXT:    add t3, t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 1
+; ZVBB-RV64-NEXT:    slli t2, t2, 3
 ; ZVBB-RV64-NEXT:    add t2, t2, t3
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
@@ -7874,7 +7797,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vmv2r.v v12, v16
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
-; ZVBB-RV64-NEXT:    slli t2, t2, 7
+; ZVBB-RV64-NEXT:    slli t2, t2, 5
+; ZVBB-RV64-NEXT:    mv t3, t2
+; ZVBB-RV64-NEXT:    slli t2, t2, 1
+; ZVBB-RV64-NEXT:    add t2, t2, t3
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
 ; ZVBB-RV64-NEXT:    addi t2, t2, 33
@@ -7885,7 +7811,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
 ; ZVBB-RV64-NEXT:    slli t2, t2, 4
 ; ZVBB-RV64-NEXT:    mv t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 2
+; ZVBB-RV64-NEXT:    slli t2, t2, 1
 ; ZVBB-RV64-NEXT:    add t2, t2, t3
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
@@ -7896,7 +7822,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t3, t2
 ; ZVBB-RV64-NEXT:    slli t2, t2, 1
 ; ZVBB-RV64-NEXT:    add t3, t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 2
+; ZVBB-RV64-NEXT:    slli t2, t2, 1
 ; ZVBB-RV64-NEXT:    add t2, t2, t3
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
@@ -7904,20 +7830,14 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vmv2r.v v10, v16
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
-; ZVBB-RV64-NEXT:    slli t2, t2, 5
-; ZVBB-RV64-NEXT:    mv t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 2
-; ZVBB-RV64-NEXT:    add t2, t2, t3
+; ZVBB-RV64-NEXT:    slli t2, t2, 7
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
 ; ZVBB-RV64-NEXT:    addi t2, t2, 33
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (t2) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vmv2r.v v12, v16
 ; ZVBB-RV64-NEXT:    csrr t2, vlenb
-; ZVBB-RV64-NEXT:    slli t2, t2, 5
-; ZVBB-RV64-NEXT:    mv t3, t2
-; ZVBB-RV64-NEXT:    slli t2, t2, 1
-; ZVBB-RV64-NEXT:    add t2, t2, t3
+; ZVBB-RV64-NEXT:    slli t2, t2, 6
 ; ZVBB-RV64-NEXT:    add t2, sp, t2
 ; ZVBB-RV64-NEXT:    addi t2, t2, 2047
 ; ZVBB-RV64-NEXT:    addi t2, t2, 33
@@ -7928,9 +7848,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t3, vlenb
 ; ZVBB-RV64-NEXT:    slli t3, t3, 4
 ; ZVBB-RV64-NEXT:    mv t4, t3
-; ZVBB-RV64-NEXT:    slli t3, t3, 1
-; ZVBB-RV64-NEXT:    add t4, t4, t3
-; ZVBB-RV64-NEXT:    slli t3, t3, 1
+; ZVBB-RV64-NEXT:    slli t3, t3, 2
 ; ZVBB-RV64-NEXT:    add t4, t4, t3
 ; ZVBB-RV64-NEXT:    slli t3, t3, 1
 ; ZVBB-RV64-NEXT:    add t3, t3, t4
@@ -7941,9 +7859,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t3, vlenb
 ; ZVBB-RV64-NEXT:    slli t3, t3, 3
 ; ZVBB-RV64-NEXT:    mv t4, t3
-; ZVBB-RV64-NEXT:    slli t3, t3, 2
-; ZVBB-RV64-NEXT:    add t4, t4, t3
-; ZVBB-RV64-NEXT:    slli t3, t3, 1
+; ZVBB-RV64-NEXT:    slli t3, t3, 3
 ; ZVBB-RV64-NEXT:    add t4, t4, t3
 ; ZVBB-RV64-NEXT:    slli t3, t3, 1
 ; ZVBB-RV64-NEXT:    add t3, t3, t4
@@ -7953,10 +7869,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (t3) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vmv2r.v v10, v16
 ; ZVBB-RV64-NEXT:    csrr t3, vlenb
-; ZVBB-RV64-NEXT:    slli t3, t3, 5
+; ZVBB-RV64-NEXT:    slli t3, t3, 6
 ; ZVBB-RV64-NEXT:    mv t4, t3
-; ZVBB-RV64-NEXT:    slli t3, t3, 1
-; ZVBB-RV64-NEXT:    add t4, t4, t3
 ; ZVBB-RV64-NEXT:    slli t3, t3, 1
 ; ZVBB-RV64-NEXT:    add t3, t3, t4
 ; ZVBB-RV64-NEXT:    add t3, sp, t3
@@ -7969,9 +7883,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t4, t3
 ; ZVBB-RV64-NEXT:    slli t3, t3, 1
 ; ZVBB-RV64-NEXT:    add t4, t4, t3
-; ZVBB-RV64-NEXT:    slli t3, t3, 2
-; ZVBB-RV64-NEXT:    add t4, t4, t3
 ; ZVBB-RV64-NEXT:    slli t3, t3, 1
+; ZVBB-RV64-NEXT:    add t4, t4, t3
+; ZVBB-RV64-NEXT:    slli t3, t3, 2
 ; ZVBB-RV64-NEXT:    add t3, t3, t4
 ; ZVBB-RV64-NEXT:    add t3, sp, t3
 ; ZVBB-RV64-NEXT:    addi t3, t3, 2047
@@ -7985,14 +7899,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t5, t4
 ; ZVBB-RV64-NEXT:    slli t4, t4, 1
 ; ZVBB-RV64-NEXT:    add t5, t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 3
+; ZVBB-RV64-NEXT:    slli t4, t4, 1
+; ZVBB-RV64-NEXT:    add t5, t5, t4
+; ZVBB-RV64-NEXT:    slli t4, t4, 1
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
 ; ZVBB-RV64-NEXT:    addi t4, t4, 33
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (t4) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
-; ZVBB-RV64-NEXT:    slli t4, t4, 6
+; ZVBB-RV64-NEXT:    slli t4, t4, 5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
 ; ZVBB-RV64-NEXT:    addi t4, t4, 33
@@ -8001,7 +7917,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
 ; ZVBB-RV64-NEXT:    slli t4, t4, 4
 ; ZVBB-RV64-NEXT:    mv t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 3
+; ZVBB-RV64-NEXT:    slli t4, t4, 1
+; ZVBB-RV64-NEXT:    add t5, t5, t4
+; ZVBB-RV64-NEXT:    slli t4, t4, 1
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
@@ -8011,7 +7929,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
 ; ZVBB-RV64-NEXT:    slli t4, t4, 3
 ; ZVBB-RV64-NEXT:    mv t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 3
+; ZVBB-RV64-NEXT:    slli t4, t4, 2
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
@@ -8023,9 +7941,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
 ; ZVBB-RV64-NEXT:    slli t4, t4, 3
 ; ZVBB-RV64-NEXT:    mv t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 2
-; ZVBB-RV64-NEXT:    add t5, t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 3
+; ZVBB-RV64-NEXT:    slli t4, t4, 5
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
@@ -8034,7 +7950,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
 ; ZVBB-RV64-NEXT:    slli t4, t4, 3
 ; ZVBB-RV64-NEXT:    mv t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 5
+; ZVBB-RV64-NEXT:    slli t4, t4, 2
+; ZVBB-RV64-NEXT:    add t5, t5, t4
+; ZVBB-RV64-NEXT:    slli t4, t4, 1
+; ZVBB-RV64-NEXT:    add t5, t5, t4
+; ZVBB-RV64-NEXT:    slli t4, t4, 1
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
@@ -8044,9 +7964,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
 ; ZVBB-RV64-NEXT:    slli t4, t4, 4
 ; ZVBB-RV64-NEXT:    mv t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 2
-; ZVBB-RV64-NEXT:    add t5, t5, t4
 ; ZVBB-RV64-NEXT:    slli t4, t4, 1
+; ZVBB-RV64-NEXT:    add t5, t5, t4
+; ZVBB-RV64-NEXT:    slli t4, t4, 2
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
@@ -8056,9 +7976,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t4, vlenb
 ; ZVBB-RV64-NEXT:    slli t4, t4, 3
 ; ZVBB-RV64-NEXT:    mv t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 3
+; ZVBB-RV64-NEXT:    slli t4, t4, 2
 ; ZVBB-RV64-NEXT:    add t5, t5, t4
-; ZVBB-RV64-NEXT:    slli t4, t4, 1
+; ZVBB-RV64-NEXT:    slli t4, t4, 2
 ; ZVBB-RV64-NEXT:    add t4, t4, t5
 ; ZVBB-RV64-NEXT:    add t4, sp, t4
 ; ZVBB-RV64-NEXT:    addi t4, t4, 2047
@@ -8070,7 +7990,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t5, vlenb
 ; ZVBB-RV64-NEXT:    slli t5, t5, 4
 ; ZVBB-RV64-NEXT:    mv t6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 4
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    add t6, t6, t5
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    add t6, t6, t5
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
 ; ZVBB-RV64-NEXT:    add t5, t5, t6
 ; ZVBB-RV64-NEXT:    add t5, sp, t5
 ; ZVBB-RV64-NEXT:    addi t5, t5, 2047
@@ -8081,7 +8005,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv t6, t5
 ; ZVBB-RV64-NEXT:    slli t5, t5, 1
 ; ZVBB-RV64-NEXT:    add t6, t6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 4
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    add t6, t6, t5
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    add t6, t6, t5
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
 ; ZVBB-RV64-NEXT:    add t5, t5, t6
 ; ZVBB-RV64-NEXT:    add t5, sp, t5
 ; ZVBB-RV64-NEXT:    addi t5, t5, 2047
@@ -8089,19 +8017,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vmv2r.v v10, v16
 ; ZVBB-RV64-NEXT:    csrr t5, vlenb
-; ZVBB-RV64-NEXT:    slli t5, t5, 5
-; ZVBB-RV64-NEXT:    mv t6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 3
-; ZVBB-RV64-NEXT:    add t5, t5, t6
+; ZVBB-RV64-NEXT:    slli t5, t5, 8
 ; ZVBB-RV64-NEXT:    add t5, sp, t5
 ; ZVBB-RV64-NEXT:    addi t5, t5, 2047
 ; ZVBB-RV64-NEXT:    addi t5, t5, 33
 ; ZVBB-RV64-NEXT:    vl8r.v v16, (t5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vmv2r.v v12, v16
 ; ZVBB-RV64-NEXT:    csrr t5, vlenb
-; ZVBB-RV64-NEXT:    slli t5, t5, 6
+; ZVBB-RV64-NEXT:    slli t5, t5, 5
 ; ZVBB-RV64-NEXT:    mv t6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    slli t5, t5, 2
 ; ZVBB-RV64-NEXT:    add t5, t5, t6
 ; ZVBB-RV64-NEXT:    add t5, sp, t5
 ; ZVBB-RV64-NEXT:    addi t5, t5, 2047
@@ -8111,7 +8036,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi t6, sp, 1312
 ; ZVBB-RV64-NEXT:    vsseg4e8.v v8, (t6)
 ; ZVBB-RV64-NEXT:    csrr t5, vlenb
-; ZVBB-RV64-NEXT:    slli t5, t5, 8
+; ZVBB-RV64-NEXT:    slli t5, t5, 5
+; ZVBB-RV64-NEXT:    mv s6, t5
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    add s6, s6, t5
+; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    add t5, t5, s6
 ; ZVBB-RV64-NEXT:    add t5, sp, t5
 ; ZVBB-RV64-NEXT:    addi t5, t5, 2047
 ; ZVBB-RV64-NEXT:    addi t5, t5, 33
@@ -8121,9 +8051,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    mv s6, t5
 ; ZVBB-RV64-NEXT:    slli t5, t5, 1
 ; ZVBB-RV64-NEXT:    add s6, s6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 1
+; ZVBB-RV64-NEXT:    slli t5, t5, 2
 ; ZVBB-RV64-NEXT:    add s6, s6, t5
 ; ZVBB-RV64-NEXT:    slli t5, t5, 1
 ; ZVBB-RV64-NEXT:    add t5, t5, s6
@@ -8135,9 +8063,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr t5, vlenb
 ; ZVBB-RV64-NEXT:    slli t5, t5, 4
 ; ZVBB-RV64-NEXT:    mv s6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, t5
-; ZVBB-RV64-NEXT:    slli t5, t5, 3
+; ZVBB-RV64-NEXT:    slli t5, t5, 4
 ; ZVBB-RV64-NEXT:    add t5, t5, s6
 ; ZVBB-RV64-NEXT:    add t5, sp, t5
 ; ZVBB-RV64-NEXT:    addi t5, t5, 2047
@@ -8150,11 +8076,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s6, sp, 768
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV64-NEXT:    csrr s6, vlenb
-; ZVBB-RV64-NEXT:    slli s6, s6, 4
-; ZVBB-RV64-NEXT:    mv ra, s6
-; ZVBB-RV64-NEXT:    slli s6, s6, 1
-; ZVBB-RV64-NEXT:    add ra, ra, s6
 ; ZVBB-RV64-NEXT:    slli s6, s6, 3
+; ZVBB-RV64-NEXT:    mv ra, s6
+; ZVBB-RV64-NEXT:    slli s6, s6, 2
+; ZVBB-RV64-NEXT:    add ra, ra, s6
+; ZVBB-RV64-NEXT:    slli s6, s6, 1
 ; ZVBB-RV64-NEXT:    add s6, s6, ra
 ; ZVBB-RV64-NEXT:    add s6, sp, s6
 ; ZVBB-RV64-NEXT:    addi s6, s6, 2047
@@ -8163,11 +8089,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s6, sp, 704
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV64-NEXT:    csrr s6, vlenb
-; ZVBB-RV64-NEXT:    slli s6, s6, 3
+; ZVBB-RV64-NEXT:    slli s6, s6, 5
 ; ZVBB-RV64-NEXT:    mv ra, s6
-; ZVBB-RV64-NEXT:    slli s6, s6, 2
-; ZVBB-RV64-NEXT:    add ra, ra, s6
-; ZVBB-RV64-NEXT:    slli s6, s6, 3
+; ZVBB-RV64-NEXT:    slli s6, s6, 1
 ; ZVBB-RV64-NEXT:    add s6, s6, ra
 ; ZVBB-RV64-NEXT:    add s6, sp, s6
 ; ZVBB-RV64-NEXT:    addi s6, s6, 2047
@@ -8176,9 +8100,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s6, sp, 1792
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV64-NEXT:    csrr s6, vlenb
-; ZVBB-RV64-NEXT:    slli s6, s6, 5
-; ZVBB-RV64-NEXT:    mv ra, s6
 ; ZVBB-RV64-NEXT:    slli s6, s6, 3
+; ZVBB-RV64-NEXT:    mv ra, s6
+; ZVBB-RV64-NEXT:    slli s6, s6, 1
+; ZVBB-RV64-NEXT:    add ra, ra, s6
+; ZVBB-RV64-NEXT:    slli s6, s6, 2
 ; ZVBB-RV64-NEXT:    add s6, s6, ra
 ; ZVBB-RV64-NEXT:    add s6, sp, s6
 ; ZVBB-RV64-NEXT:    addi s6, s6, 2047
@@ -8187,11 +8113,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s6, sp, 1728
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s6)
 ; ZVBB-RV64-NEXT:    csrr s6, vlenb
-; ZVBB-RV64-NEXT:    slli s6, s6, 3
-; ZVBB-RV64-NEXT:    mv ra, s6
-; ZVBB-RV64-NEXT:    slli s6, s6, 1
-; ZVBB-RV64-NEXT:    add ra, ra, s6
 ; ZVBB-RV64-NEXT:    slli s6, s6, 4
+; ZVBB-RV64-NEXT:    mv ra, s6
+; ZVBB-RV64-NEXT:    slli s6, s6, 2
 ; ZVBB-RV64-NEXT:    add s6, s6, ra
 ; ZVBB-RV64-NEXT:    add s6, sp, s6
 ; ZVBB-RV64-NEXT:    addi s6, s6, 2047
@@ -8206,9 +8130,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s6, sp, 1024
 ; ZVBB-RV64-NEXT:    vle8.v v20, (s6)
 ; ZVBB-RV64-NEXT:    csrr s6, vlenb
-; ZVBB-RV64-NEXT:    slli s6, s6, 4
+; ZVBB-RV64-NEXT:    slli s6, s6, 3
 ; ZVBB-RV64-NEXT:    mv ra, s6
-; ZVBB-RV64-NEXT:    slli s6, s6, 4
+; ZVBB-RV64-NEXT:    slli s6, s6, 3
 ; ZVBB-RV64-NEXT:    add s6, s6, ra
 ; ZVBB-RV64-NEXT:    add s6, sp, s6
 ; ZVBB-RV64-NEXT:    addi s6, s6, 2047
@@ -8221,10 +8145,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s5, sp, 960
 ; ZVBB-RV64-NEXT:    vle8.v v20, (s5)
 ; ZVBB-RV64-NEXT:    csrr s5, vlenb
-; ZVBB-RV64-NEXT:    slli s5, s5, 3
-; ZVBB-RV64-NEXT:    mv s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 5
-; ZVBB-RV64-NEXT:    add s5, s5, s6
+; ZVBB-RV64-NEXT:    slli s5, s5, 6
 ; ZVBB-RV64-NEXT:    add s5, sp, s5
 ; ZVBB-RV64-NEXT:    addi s5, s5, 2047
 ; ZVBB-RV64-NEXT:    addi s5, s5, 33
@@ -8240,7 +8161,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a4
 ; ZVBB-RV64-NEXT:    csrr s5, vlenb
-; ZVBB-RV64-NEXT:    slli s5, s5, 8
+; ZVBB-RV64-NEXT:    slli s5, s5, 4
+; ZVBB-RV64-NEXT:    mv s6, s5
+; ZVBB-RV64-NEXT:    slli s5, s5, 4
+; ZVBB-RV64-NEXT:    add s5, s5, s6
 ; ZVBB-RV64-NEXT:    add s5, sp, s5
 ; ZVBB-RV64-NEXT:    addi s5, s5, 2047
 ; ZVBB-RV64-NEXT:    addi s5, s5, 33
@@ -8255,10 +8179,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    slli s5, s5, 1
 ; ZVBB-RV64-NEXT:    add s6, s6, s5
 ; ZVBB-RV64-NEXT:    slli s5, s5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 1
 ; ZVBB-RV64-NEXT:    add s5, s5, s6
 ; ZVBB-RV64-NEXT:    add s5, sp, s5
 ; ZVBB-RV64-NEXT:    addi s5, s5, 2047
@@ -8269,10 +8189,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr s5, vlenb
 ; ZVBB-RV64-NEXT:    slli s5, s5, 4
 ; ZVBB-RV64-NEXT:    mv s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, s5
 ; ZVBB-RV64-NEXT:    slli s5, s5, 1
 ; ZVBB-RV64-NEXT:    add s5, s5, s6
 ; ZVBB-RV64-NEXT:    add s5, sp, s5
@@ -8287,10 +8203,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    slli s5, s5, 3
 ; ZVBB-RV64-NEXT:    mv s6, s5
 ; ZVBB-RV64-NEXT:    slli s5, s5, 2
-; ZVBB-RV64-NEXT:    add s6, s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 1
-; ZVBB-RV64-NEXT:    add s6, s6, s5
-; ZVBB-RV64-NEXT:    slli s5, s5, 1
 ; ZVBB-RV64-NEXT:    add s5, s5, s6
 ; ZVBB-RV64-NEXT:    add s5, sp, s5
 ; ZVBB-RV64-NEXT:    addi s5, s5, 2047
@@ -8304,11 +8216,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vle8.v v12, (s4)
 ; ZVBB-RV64-NEXT:    csrr s4, vlenb
 ; ZVBB-RV64-NEXT:    slli s4, s4, 5
-; ZVBB-RV64-NEXT:    mv s5, s4
-; ZVBB-RV64-NEXT:    slli s4, s4, 1
-; ZVBB-RV64-NEXT:    add s5, s5, s4
-; ZVBB-RV64-NEXT:    slli s4, s4, 1
-; ZVBB-RV64-NEXT:    add s4, s4, s5
 ; ZVBB-RV64-NEXT:    add s4, sp, s4
 ; ZVBB-RV64-NEXT:    addi s4, s4, 2047
 ; ZVBB-RV64-NEXT:    addi s4, s4, 33
@@ -8326,11 +8233,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr s4, vlenb
 ; ZVBB-RV64-NEXT:    slli s4, s4, 3
 ; ZVBB-RV64-NEXT:    mv s5, s4
-; ZVBB-RV64-NEXT:    slli s4, s4, 1
-; ZVBB-RV64-NEXT:    add s5, s5, s4
-; ZVBB-RV64-NEXT:    slli s4, s4, 2
-; ZVBB-RV64-NEXT:    add s5, s5, s4
-; ZVBB-RV64-NEXT:    slli s4, s4, 1
+; ZVBB-RV64-NEXT:    slli s4, s4, 5
 ; ZVBB-RV64-NEXT:    add s4, s4, s5
 ; ZVBB-RV64-NEXT:    add s4, sp, s4
 ; ZVBB-RV64-NEXT:    addi s4, s4, 2047
@@ -8340,9 +8243,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s4)
 ; ZVBB-RV64-NEXT:    csrr s4, vlenb
-; ZVBB-RV64-NEXT:    slli s4, s4, 4
-; ZVBB-RV64-NEXT:    mv s5, s4
 ; ZVBB-RV64-NEXT:    slli s4, s4, 2
+; ZVBB-RV64-NEXT:    mv s5, s4
+; ZVBB-RV64-NEXT:    slli s4, s4, 1
 ; ZVBB-RV64-NEXT:    add s5, s5, s4
 ; ZVBB-RV64-NEXT:    slli s4, s4, 1
 ; ZVBB-RV64-NEXT:    add s4, s4, s5
@@ -8355,8 +8258,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr s4, vlenb
 ; ZVBB-RV64-NEXT:    slli s4, s4, 3
 ; ZVBB-RV64-NEXT:    mv s5, s4
-; ZVBB-RV64-NEXT:    slli s4, s4, 3
-; ZVBB-RV64-NEXT:    add s5, s5, s4
 ; ZVBB-RV64-NEXT:    slli s4, s4, 1
 ; ZVBB-RV64-NEXT:    add s4, s4, s5
 ; ZVBB-RV64-NEXT:    add s4, sp, s4
@@ -8379,12 +8280,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v12, (s3)
 ; ZVBB-RV64-NEXT:    csrr s3, vlenb
-; ZVBB-RV64-NEXT:    slli s3, s3, 3
+; ZVBB-RV64-NEXT:    slli s3, s3, 2
 ; ZVBB-RV64-NEXT:    mv s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 1
-; ZVBB-RV64-NEXT:    add s4, s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 1
-; ZVBB-RV64-NEXT:    add s4, s4, s3
 ; ZVBB-RV64-NEXT:    slli s3, s3, 2
 ; ZVBB-RV64-NEXT:    add s3, s3, s4
 ; ZVBB-RV64-NEXT:    add s3, sp, s3
@@ -8395,11 +8292,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vle8.v v24, (s3)
 ; ZVBB-RV64-NEXT:    csrr s3, vlenb
 ; ZVBB-RV64-NEXT:    slli s3, s3, 4
-; ZVBB-RV64-NEXT:    mv s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 1
-; ZVBB-RV64-NEXT:    add s4, s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 2
-; ZVBB-RV64-NEXT:    add s3, s3, s4
 ; ZVBB-RV64-NEXT:    add s3, sp, s3
 ; ZVBB-RV64-NEXT:    addi s3, s3, 2047
 ; ZVBB-RV64-NEXT:    addi s3, s3, 33
@@ -8407,10 +8299,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vslideup.vx v0, v8, a4
 ; ZVBB-RV64-NEXT:    csrr s3, vlenb
-; ZVBB-RV64-NEXT:    slli s3, s3, 6
-; ZVBB-RV64-NEXT:    mv s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 1
-; ZVBB-RV64-NEXT:    add s3, s3, s4
+; ZVBB-RV64-NEXT:    slli s3, s3, 8
 ; ZVBB-RV64-NEXT:    add s3, sp, s3
 ; ZVBB-RV64-NEXT:    addi s3, s3, 2047
 ; ZVBB-RV64-NEXT:    addi s3, s3, 33
@@ -8419,11 +8308,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s3)
 ; ZVBB-RV64-NEXT:    csrr s3, vlenb
-; ZVBB-RV64-NEXT:    slli s3, s3, 3
+; ZVBB-RV64-NEXT:    slli s3, s3, 2
 ; ZVBB-RV64-NEXT:    mv s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 2
-; ZVBB-RV64-NEXT:    add s4, s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 2
+; ZVBB-RV64-NEXT:    slli s3, s3, 1
 ; ZVBB-RV64-NEXT:    add s3, s3, s4
 ; ZVBB-RV64-NEXT:    add s3, sp, s3
 ; ZVBB-RV64-NEXT:    addi s3, s3, 2047
@@ -8433,11 +8320,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s3)
 ; ZVBB-RV64-NEXT:    csrr s3, vlenb
 ; ZVBB-RV64-NEXT:    slli s3, s3, 3
-; ZVBB-RV64-NEXT:    mv s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 1
-; ZVBB-RV64-NEXT:    add s4, s4, s3
-; ZVBB-RV64-NEXT:    slli s3, s3, 3
-; ZVBB-RV64-NEXT:    add s3, s3, s4
 ; ZVBB-RV64-NEXT:    add s3, sp, s3
 ; ZVBB-RV64-NEXT:    addi s3, s3, 2047
 ; ZVBB-RV64-NEXT:    addi s3, s3, 33
@@ -8458,16 +8340,18 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v12, (s2)
 ; ZVBB-RV64-NEXT:    csrr s2, vlenb
-; ZVBB-RV64-NEXT:    slli s2, s2, 4
-; ZVBB-RV64-NEXT:    mv s3, s2
-; ZVBB-RV64-NEXT:    slli s2, s2, 3
-; ZVBB-RV64-NEXT:    add s2, s2, s3
+; ZVBB-RV64-NEXT:    slli s2, s2, 2
 ; ZVBB-RV64-NEXT:    add s2, sp, s2
 ; ZVBB-RV64-NEXT:    addi s2, s2, 2047
 ; ZVBB-RV64-NEXT:    addi s2, s2, 33
 ; ZVBB-RV64-NEXT:    vs4r.v v12, (s2) # vscale x 32-byte Folded Spill
 ; ZVBB-RV64-NEXT:    addi s2, sp, 1856
 ; ZVBB-RV64-NEXT:    vle8.v v20, (s2)
+; ZVBB-RV64-NEXT:    addi s2, sp, 2047
+; ZVBB-RV64-NEXT:    addi s2, s2, 33
+; ZVBB-RV64-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
+; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVBB-RV64-NEXT:    vslideup.vx v16, v8, a4
 ; ZVBB-RV64-NEXT:    csrr s2, vlenb
 ; ZVBB-RV64-NEXT:    slli s2, s2, 3
 ; ZVBB-RV64-NEXT:    mv s3, s2
@@ -8476,17 +8360,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    slli s2, s2, 1
 ; ZVBB-RV64-NEXT:    add s3, s3, s2
 ; ZVBB-RV64-NEXT:    slli s2, s2, 1
-; ZVBB-RV64-NEXT:    add s2, s2, s3
-; ZVBB-RV64-NEXT:    add s2, sp, s2
-; ZVBB-RV64-NEXT:    addi s2, s2, 2047
-; ZVBB-RV64-NEXT:    addi s2, s2, 33
-; ZVBB-RV64-NEXT:    vs4r.v v20, (s2) # vscale x 32-byte Folded Spill
-; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVBB-RV64-NEXT:    vslideup.vx v16, v8, a4
-; ZVBB-RV64-NEXT:    csrr s2, vlenb
-; ZVBB-RV64-NEXT:    slli s2, s2, 5
-; ZVBB-RV64-NEXT:    mv s3, s2
-; ZVBB-RV64-NEXT:    slli s2, s2, 2
+; ZVBB-RV64-NEXT:    add s3, s3, s2
+; ZVBB-RV64-NEXT:    slli s2, s2, 1
 ; ZVBB-RV64-NEXT:    add s2, s2, s3
 ; ZVBB-RV64-NEXT:    add s2, sp, s2
 ; ZVBB-RV64-NEXT:    addi s2, s2, 2047
@@ -8498,8 +8373,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi s2, sp, 1344
 ; ZVBB-RV64-NEXT:    vle8.v v8, (s2)
 ; ZVBB-RV64-NEXT:    csrr s2, vlenb
-; ZVBB-RV64-NEXT:    slli s2, s2, 5
+; ZVBB-RV64-NEXT:    slli s2, s2, 4
 ; ZVBB-RV64-NEXT:    mv s3, s2
+; ZVBB-RV64-NEXT:    slli s2, s2, 2
+; ZVBB-RV64-NEXT:    add s3, s3, s2
 ; ZVBB-RV64-NEXT:    slli s2, s2, 1
 ; ZVBB-RV64-NEXT:    add s2, s2, s3
 ; ZVBB-RV64-NEXT:    add s2, sp, s2
@@ -8523,16 +8400,27 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v24, (s1)
 ; ZVBB-RV64-NEXT:    csrr s1, vlenb
-; ZVBB-RV64-NEXT:    slli s1, s1, 7
+; ZVBB-RV64-NEXT:    slli s1, s1, 3
+; ZVBB-RV64-NEXT:    mv s2, s1
+; ZVBB-RV64-NEXT:    slli s1, s1, 2
+; ZVBB-RV64-NEXT:    add s2, s2, s1
+; ZVBB-RV64-NEXT:    slli s1, s1, 1
+; ZVBB-RV64-NEXT:    add s2, s2, s1
+; ZVBB-RV64-NEXT:    slli s1, s1, 1
+; ZVBB-RV64-NEXT:    add s1, s1, s2
 ; ZVBB-RV64-NEXT:    add s1, sp, s1
 ; ZVBB-RV64-NEXT:    addi s1, s1, 2047
 ; ZVBB-RV64-NEXT:    addi s1, s1, 33
 ; ZVBB-RV64-NEXT:    vs8r.v v24, (s1) # vscale x 64-byte Folded Spill
 ; ZVBB-RV64-NEXT:    vle8.v v24, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    mv s1, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv s1, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add s1, s1, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add s1, s1, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, s1
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8541,9 +8429,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vslideup.vx v16, v8, a4
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 6
 ; ZVBB-RV64-NEXT:    mv s1, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, s1
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8555,6 +8443,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv s1, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add s1, s1, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add s1, s1, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
@@ -8565,7 +8455,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; ZVBB-RV64-NEXT:    vle8.v v8, (a5)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 5
 ; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
@@ -8582,9 +8472,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8595,8 +8485,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v24, (t6)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
 ; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
@@ -8605,8 +8497,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vle8.v v16, (a6)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
 ; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
@@ -8619,7 +8513,12 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v16, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 6
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8628,7 +8527,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8640,7 +8543,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8650,9 +8553,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 5
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8662,9 +8565,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8677,7 +8580,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8689,7 +8594,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vle8.v v0, (t5)
 ; ZVBB-RV64-NEXT:    vle8.v v8, (t1)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8700,7 +8608,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 7
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8708,6 +8616,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vle8.v v8, (t2)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8718,16 +8633,21 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; ZVBB-RV64-NEXT:    vle8.v v24, (a3)
 ; ZVBB-RV64-NEXT:    vle8.v v8, (t3)
-; ZVBB-RV64-NEXT:    addi a3, sp, 2047
+; ZVBB-RV64-NEXT:    csrr a3, vlenb
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a3, a3, a5
+; ZVBB-RV64-NEXT:    add a3, sp, a3
+; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vs8r.v v8, (a3) # vscale x 64-byte Folded Spill
 ; ZVBB-RV64-NEXT:    addi a3, sp, 1888
 ; ZVBB-RV64-NEXT:    vle8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    add a3, a3, a5
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8737,17 +8657,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslideup.vx v8, v12, a1
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vse8.v v0, (a0)
-; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a3, a3, a5
-; ZVBB-RV64-NEXT:    add a3, sp, a3
-; ZVBB-RV64-NEXT:    addi a3, a3, 2047
+; ZVBB-RV64-NEXT:    addi a3, sp, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v12, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
@@ -8758,7 +8668,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    slli a5, a5, 4
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -8766,11 +8676,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8780,16 +8688,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; ZVBB-RV64-NEXT:    addi a3, sp, 2047
+; ZVBB-RV64-NEXT:    csrr a3, vlenb
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a3, a3, a5
+; ZVBB-RV64-NEXT:    add a3, sp, a3
+; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl8r.v v0, (a3) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vslideup.vx v0, v8, a1
@@ -8799,9 +8710,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslideup.vx v0, v24, a4
 ; ZVBB-RV64-NEXT:    addi a3, a0, 256
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
-; ZVBB-RV64-NEXT:    slli a5, a5, 4
+; ZVBB-RV64-NEXT:    slli a5, a5, 6
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -8809,12 +8720,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
@@ -8822,7 +8729,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 7
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8831,17 +8738,19 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
-; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8852,9 +8761,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vse8.v v0, (a3)
 ; ZVBB-RV64-NEXT:    vslideup.vx v16, v24, a4
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
@@ -8865,7 +8774,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8879,8 +8790,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
@@ -8888,7 +8797,10 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8899,9 +8811,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslideup.vx v16, v24, a4
 ; ZVBB-RV64-NEXT:    addi a3, a0, 768
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
-; ZVBB-RV64-NEXT:    slli a5, a5, 5
+; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    add a6, a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -8912,19 +8830,15 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 2
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 5
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8934,11 +8848,6 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 5
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -8949,9 +8858,9 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -8964,10 +8873,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vmv.v.v v0, v16
 ; ZVBB-RV64-NEXT:    addi a3, a0, 1792
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
-; ZVBB-RV64-NEXT:    slli a5, a5, 6
-; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a6
+; ZVBB-RV64-NEXT:    slli a5, a5, 8
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
 ; ZVBB-RV64-NEXT:    addi a5, a5, 33
@@ -8979,61 +8885,13 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 6
-; ZVBB-RV64-NEXT:    add a3, sp, a3
-; ZVBB-RV64-NEXT:    addi a3, a3, 2047
-; ZVBB-RV64-NEXT:    addi a3, a3, 33
-; ZVBB-RV64-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
-; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
-; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a3, a3, a5
-; ZVBB-RV64-NEXT:    add a3, sp, a3
-; ZVBB-RV64-NEXT:    addi a3, a3, 2047
-; ZVBB-RV64-NEXT:    addi a3, a3, 33
-; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    add a3, a3, a5
-; ZVBB-RV64-NEXT:    add a3, sp, a3
-; ZVBB-RV64-NEXT:    addi a3, a3, 2047
-; ZVBB-RV64-NEXT:    addi a3, a3, 33
-; ZVBB-RV64-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
-; ZVBB-RV64-NEXT:    vslideup.vx v16, v8, a1
-; ZVBB-RV64-NEXT:    addi a3, a0, 1152
-; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVBB-RV64-NEXT:    vse8.v v0, (a3)
-; ZVBB-RV64-NEXT:    vslideup.vx v16, v24, a4
-; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    add a3, a3, a5
-; ZVBB-RV64-NEXT:    add a3, sp, a3
-; ZVBB-RV64-NEXT:    addi a3, a3, 2047
-; ZVBB-RV64-NEXT:    addi a3, a3, 33
-; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
-; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
@@ -9045,21 +8903,69 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
-; ZVBB-RV64-NEXT:    addi a3, a0, 640
-; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
-; ZVBB-RV64-NEXT:    vse8.v v16, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a3, a3, a5
+; ZVBB-RV64-NEXT:    add a3, sp, a3
+; ZVBB-RV64-NEXT:    addi a3, a3, 2047
+; ZVBB-RV64-NEXT:    addi a3, a3, 33
+; ZVBB-RV64-NEXT:    vl8r.v v16, (a3) # vscale x 64-byte Folded Reload
+; ZVBB-RV64-NEXT:    vslideup.vx v16, v8, a1
+; ZVBB-RV64-NEXT:    addi a3, a0, 1152
+; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVBB-RV64-NEXT:    vse8.v v0, (a3)
+; ZVBB-RV64-NEXT:    vslideup.vx v16, v24, a4
+; ZVBB-RV64-NEXT:    csrr a3, vlenb
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    add a3, a3, a5
+; ZVBB-RV64-NEXT:    add a3, sp, a3
+; ZVBB-RV64-NEXT:    addi a3, a3, 2047
+; ZVBB-RV64-NEXT:    addi a3, a3, 33
+; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; ZVBB-RV64-NEXT:    csrr a3, vlenb
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a3, a3, a5
+; ZVBB-RV64-NEXT:    add a3, sp, a3
+; ZVBB-RV64-NEXT:    addi a3, a3, 2047
+; ZVBB-RV64-NEXT:    addi a3, a3, 33
+; ZVBB-RV64-NEXT:    vl8r.v v24, (a3) # vscale x 64-byte Folded Reload
+; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
+; ZVBB-RV64-NEXT:    addi a3, a0, 640
+; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
+; ZVBB-RV64-NEXT:    vse8.v v16, (a3)
+; ZVBB-RV64-NEXT:    csrr a3, vlenb
+; ZVBB-RV64-NEXT:    slli a3, a3, 6
+; ZVBB-RV64-NEXT:    add a3, sp, a3
+; ZVBB-RV64-NEXT:    addi a3, a3, 2047
+; ZVBB-RV64-NEXT:    addi a3, a3, 33
+; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
+; ZVBB-RV64-NEXT:    csrr a3, vlenb
+; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
@@ -9074,11 +8980,7 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
 ; ZVBB-RV64-NEXT:    slli a5, a5, 3
 ; ZVBB-RV64-NEXT:    mv a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 2
-; ZVBB-RV64-NEXT:    add a6, a6, a5
-; ZVBB-RV64-NEXT:    slli a5, a5, 1
+; ZVBB-RV64-NEXT:    slli a5, a5, 5
 ; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
@@ -9086,9 +8988,11 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 5
-; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
@@ -9097,6 +9001,8 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
 ; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
@@ -9111,18 +9017,16 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a2, e8, m8, ta, ma
 ; ZVBB-RV64-NEXT:    vse8.v v16, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    slli a3, a3, 5
 ; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a5, a5, a3
@@ -9139,25 +9043,35 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vmv.v.v v0, v16
 ; ZVBB-RV64-NEXT:    addi a3, a0, 1408
 ; ZVBB-RV64-NEXT:    csrr a5, vlenb
-; ZVBB-RV64-NEXT:    slli a5, a5, 8
+; ZVBB-RV64-NEXT:    slli a5, a5, 4
+; ZVBB-RV64-NEXT:    mv a6, a5
+; ZVBB-RV64-NEXT:    slli a5, a5, 4
+; ZVBB-RV64-NEXT:    add a5, a5, a6
 ; ZVBB-RV64-NEXT:    add a5, sp, a5
 ; ZVBB-RV64-NEXT:    addi a5, a5, 2047
 ; ZVBB-RV64-NEXT:    addi a5, a5, 33
 ; ZVBB-RV64-NEXT:    vl8r.v v8, (a5) # vscale x 64-byte Folded Reload
 ; ZVBB-RV64-NEXT:    vse8.v v8, (a3)
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 4
-; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 1
-; ZVBB-RV64-NEXT:    add a5, a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 7
+; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 2
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
@@ -9165,20 +9079,22 @@ define <2048 x i8> @vector_interleave4_v512i8_v2048i8(<512 x i8> %v0, <512 x i8>
 ; ZVBB-RV64-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
 ; ZVBB-RV64-NEXT:    vslideup.vx v24, v8, a1
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    slli a3, a3, 5
 ; ZVBB-RV64-NEXT:    mv a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 2
-; ZVBB-RV64-NEXT:    add a5, a5, a3
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047
 ; ZVBB-RV64-NEXT:    addi a3, a3, 33
 ; ZVBB-RV64-NEXT:    vl4r.v v8, (a3) # vscale x 32-byte Folded Reload
 ; ZVBB-RV64-NEXT:    csrr a3, vlenb
-; ZVBB-RV64-NEXT:    slli a3, a3, 3
-; ZVBB-RV64-NEXT:    mv a5, a3
 ; ZVBB-RV64-NEXT:    slli a3, a3, 4
+; ZVBB-RV64-NEXT:    mv a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
+; ZVBB-RV64-NEXT:    add a5, a5, a3
+; ZVBB-RV64-NEXT:    slli a3, a3, 1
 ; ZVBB-RV64-NEXT:    add a3, a3, a5
 ; ZVBB-RV64-NEXT:    add a3, sp, a3
 ; ZVBB-RV64-NEXT:    addi a3, a3, 2047

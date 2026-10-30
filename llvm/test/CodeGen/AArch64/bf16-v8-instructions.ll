@@ -1147,36 +1147,36 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ;
 ; CHECK-BF16-GI-LABEL: test_frem:
 ; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    sub sp, sp, #240
+; CHECK-BF16-GI-NEXT:    sub sp, sp, #224
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[5]
-; CHECK-BF16-GI-NEXT:    stp d15, d14, [sp, #160] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d15, d14, [sp, #144] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h15, v0.h[1]
-; CHECK-BF16-GI-NEXT:    stp d13, d12, [sp, #176] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d13, d12, [sp, #160] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h14, v0.h[4]
 ; CHECK-BF16-GI-NEXT:    mov h12, v1.h[3]
-; CHECK-BF16-GI-NEXT:    stp d11, d10, [sp, #192] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d11, d10, [sp, #176] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h10, v1.h[1]
 ; CHECK-BF16-GI-NEXT:    mov h11, v1.h[2]
-; CHECK-BF16-GI-NEXT:    stp d9, d8, [sp, #208] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d9, d8, [sp, #192] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h8, v0.h[2]
 ; CHECK-BF16-GI-NEXT:    mov h9, v0.h[3]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #64] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #48] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[6]
 ; CHECK-BF16-GI-NEXT:    mov h13, v1.h[4]
-; CHECK-BF16-GI-NEXT:    str x30, [sp, #224] // 8-byte Spill
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #112] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str x30, [sp, #208] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #32] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[7]
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #232] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #216] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[5]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #40] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #8] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[6]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #104] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #16] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[7]
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #152] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #24] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    bl fmodf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v10.4h, #16
@@ -1188,71 +1188,70 @@ define <8 x bfloat> @test_frem(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v11.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v8.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl fmodf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v12.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #96] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v9.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl fmodf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v13.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v14.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl fmodf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #40] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #8] // 8-byte Reload
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #64] // 8-byte Reload
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    bl fmodf
-; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    str q0, [sp, #64] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldp d1, d0, [sp, #104] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    bl fmodf
-; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #152] // 8-byte Reload
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #232] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #48] // 8-byte Reload
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl fmodf
-; CHECK-BF16-GI-NEXT:    ldr q1, [sp, #128] // 16-byte Reload
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldp d9, d8, [sp, #208] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldr x30, [sp, #224] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #16] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #32] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-BF16-GI-NEXT:    bl fmodf
+; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #24] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #216] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-BF16-GI-NEXT:    bl fmodf
+; CHECK-BF16-GI-NEXT:    ldp q2, q1, [sp, #112] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
+; CHECK-BF16-GI-NEXT:    ldp d9, d8, [sp, #192] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldr x30, [sp, #208] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldp d11, d10, [sp, #176] // 16-byte Folded Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Reload
-; CHECK-BF16-GI-NEXT:    ldp d11, d10, [sp, #192] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #176] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldp d15, d14, [sp, #160] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    mov v1.h[3], v3.h[0]
-; CHECK-BF16-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Reload
+; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp, #80] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #160] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldp d15, d14, [sp, #144] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-BF16-GI-NEXT:    mov v1.h[3], v2.h[0]
+; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[5], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #112] // 16-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[6], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    add sp, sp, #240
+; CHECK-BF16-GI-NEXT:    add sp, sp, #224
 ; CHECK-BF16-GI-NEXT:    ret
   %r = frem <8 x bfloat> %a, %b
   ret <8 x bfloat> %r
@@ -8617,36 +8616,36 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ;
 ; CHECK-BF16-GI-LABEL: test_atan2:
 ; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    sub sp, sp, #240
+; CHECK-BF16-GI-NEXT:    sub sp, sp, #224
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[5]
-; CHECK-BF16-GI-NEXT:    stp d15, d14, [sp, #160] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d15, d14, [sp, #144] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h15, v0.h[1]
-; CHECK-BF16-GI-NEXT:    stp d13, d12, [sp, #176] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d13, d12, [sp, #160] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h14, v0.h[4]
 ; CHECK-BF16-GI-NEXT:    mov h12, v1.h[3]
-; CHECK-BF16-GI-NEXT:    stp d11, d10, [sp, #192] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d11, d10, [sp, #176] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h10, v1.h[1]
 ; CHECK-BF16-GI-NEXT:    mov h11, v1.h[2]
-; CHECK-BF16-GI-NEXT:    stp d9, d8, [sp, #208] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d9, d8, [sp, #192] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h8, v0.h[2]
 ; CHECK-BF16-GI-NEXT:    mov h9, v0.h[3]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #64] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #48] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[6]
 ; CHECK-BF16-GI-NEXT:    mov h13, v1.h[4]
-; CHECK-BF16-GI-NEXT:    str x30, [sp, #224] // 8-byte Spill
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #112] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str x30, [sp, #208] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #32] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[7]
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #232] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #216] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[5]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #40] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #8] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[6]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #104] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #16] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[7]
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #152] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #24] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    bl atan2f
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v10.4h, #16
@@ -8658,71 +8657,70 @@ define <8 x bfloat> @test_atan2(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v11.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v8.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl atan2f
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v12.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #96] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v9.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl atan2f
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v13.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v14.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl atan2f
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #40] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #8] // 8-byte Reload
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #64] // 8-byte Reload
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    bl atan2f
-; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    str q0, [sp, #64] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldp d1, d0, [sp, #104] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    bl atan2f
-; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #152] // 8-byte Reload
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #232] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #48] // 8-byte Reload
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl atan2f
-; CHECK-BF16-GI-NEXT:    ldr q1, [sp, #128] // 16-byte Reload
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldp d9, d8, [sp, #208] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldr x30, [sp, #224] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #16] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #32] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-BF16-GI-NEXT:    bl atan2f
+; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #24] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #216] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-BF16-GI-NEXT:    bl atan2f
+; CHECK-BF16-GI-NEXT:    ldp q2, q1, [sp, #112] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
+; CHECK-BF16-GI-NEXT:    ldp d9, d8, [sp, #192] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldr x30, [sp, #208] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldp d11, d10, [sp, #176] // 16-byte Folded Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Reload
-; CHECK-BF16-GI-NEXT:    ldp d11, d10, [sp, #192] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #176] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldp d15, d14, [sp, #160] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    mov v1.h[3], v3.h[0]
-; CHECK-BF16-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Reload
+; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp, #80] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #160] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldp d15, d14, [sp, #144] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-BF16-GI-NEXT:    mov v1.h[3], v2.h[0]
+; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[5], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #112] // 16-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[6], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    add sp, sp, #240
+; CHECK-BF16-GI-NEXT:    add sp, sp, #224
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <8 x bfloat> @llvm.atan2.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
   ret <8 x bfloat> %r
@@ -10655,36 +10653,36 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ;
 ; CHECK-BF16-GI-LABEL: test_pow:
 ; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    sub sp, sp, #240
+; CHECK-BF16-GI-NEXT:    sub sp, sp, #224
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[5]
-; CHECK-BF16-GI-NEXT:    stp d15, d14, [sp, #160] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d15, d14, [sp, #144] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h15, v0.h[1]
-; CHECK-BF16-GI-NEXT:    stp d13, d12, [sp, #176] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d13, d12, [sp, #160] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h14, v0.h[4]
 ; CHECK-BF16-GI-NEXT:    mov h12, v1.h[3]
-; CHECK-BF16-GI-NEXT:    stp d11, d10, [sp, #192] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d11, d10, [sp, #176] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h10, v1.h[1]
 ; CHECK-BF16-GI-NEXT:    mov h11, v1.h[2]
-; CHECK-BF16-GI-NEXT:    stp d9, d8, [sp, #208] // 16-byte Folded Spill
+; CHECK-BF16-GI-NEXT:    stp d9, d8, [sp, #192] // 16-byte Folded Spill
 ; CHECK-BF16-GI-NEXT:    mov h8, v0.h[2]
 ; CHECK-BF16-GI-NEXT:    mov h9, v0.h[3]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #64] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #48] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[6]
 ; CHECK-BF16-GI-NEXT:    mov h13, v1.h[4]
-; CHECK-BF16-GI-NEXT:    str x30, [sp, #224] // 8-byte Spill
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #112] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str x30, [sp, #208] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #32] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v0.h[7]
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #232] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #216] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[5]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #40] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #8] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[6]
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #104] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #16] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    mov h2, v1.h[7]
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str d2, [sp, #152] // 8-byte Spill
+; CHECK-BF16-GI-NEXT:    str d2, [sp, #24] // 8-byte Spill
 ; CHECK-BF16-GI-NEXT:    bl powf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v10.4h, #16
@@ -10696,71 +10694,70 @@ define <8 x bfloat> @test_pow(<8 x bfloat> %a, <8 x bfloat> %b) #0 {
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v11.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v8.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl powf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v12.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #96] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v9.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl powf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v13.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #80] // 16-byte Spill
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v14.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl powf
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #40] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #8] // 8-byte Reload
 ; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #64] // 8-byte Reload
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    bl powf
-; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
 ; CHECK-BF16-GI-NEXT:    str q0, [sp, #64] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldp d1, d0, [sp, #104] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
-; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    bl powf
-; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #152] // 8-byte Reload
-; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
-; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
-; CHECK-BF16-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
-; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #232] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #48] // 8-byte Reload
 ; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
 ; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-BF16-GI-NEXT:    bl powf
-; CHECK-BF16-GI-NEXT:    ldr q1, [sp, #128] // 16-byte Reload
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
 ; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
-; CHECK-BF16-GI-NEXT:    ldp d9, d8, [sp, #208] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldr x30, [sp, #224] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #16] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #32] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-BF16-GI-NEXT:    bl powf
+; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
+; CHECK-BF16-GI-NEXT:    ldr d1, [sp, #24] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v1.4s, v1.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s1 killed $s1 killed $q1
+; CHECK-BF16-GI-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; CHECK-BF16-GI-NEXT:    ldr d0, [sp, #216] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    shll v0.4s, v0.4h, #16
+; CHECK-BF16-GI-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-BF16-GI-NEXT:    bl powf
+; CHECK-BF16-GI-NEXT:    ldp q2, q1, [sp, #112] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    bfcvt h0, s0
+; CHECK-BF16-GI-NEXT:    ldp d9, d8, [sp, #192] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldr x30, [sp, #208] // 8-byte Reload
+; CHECK-BF16-GI-NEXT:    ldp d11, d10, [sp, #176] // 16-byte Folded Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Reload
-; CHECK-BF16-GI-NEXT:    ldp d11, d10, [sp, #192] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #176] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    ldp d15, d14, [sp, #160] // 16-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp] // 32-byte Folded Reload
-; CHECK-BF16-GI-NEXT:    mov v1.h[3], v3.h[0]
-; CHECK-BF16-GI-NEXT:    mov v1.h[4], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Reload
+; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp, #80] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #160] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    ldp d15, d14, [sp, #144] // 16-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    mov v1.h[2], v3.h[0]
+; CHECK-BF16-GI-NEXT:    mov v1.h[3], v2.h[0]
+; CHECK-BF16-GI-NEXT:    ldp q2, q3, [sp, #48] // 32-byte Folded Reload
+; CHECK-BF16-GI-NEXT:    mov v1.h[4], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[5], v2.h[0]
-; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #112] // 16-byte Reload
+; CHECK-BF16-GI-NEXT:    ldr q2, [sp, #32] // 16-byte Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[6], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[7], v0.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    add sp, sp, #240
+; CHECK-BF16-GI-NEXT:    add sp, sp, #224
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <8 x bfloat> @llvm.pow.v8bf16(<8 x bfloat> %a, <8 x bfloat> %b)
   ret <8 x bfloat> %r

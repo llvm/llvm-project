@@ -3019,7 +3019,7 @@ define void @load_i32_stride5_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
 ; AVX-NEXT:    vinsertf128 $1, 288(%rdi), %ymm0, %ymm1
 ; AVX-NEXT:    vmovaps 256(%rdi), %xmm2
-; AVX-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
 ; AVX-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm13
 ; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm13[0,1,2,3,4,5],ymm9[6,7]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm8[4],ymm2[5,6,7]
@@ -3248,7 +3248,7 @@ define void @load_i32_stride5_vf32(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vshufps {{.*#+}} ymm15 = ymm6[2,0],ymm12[1,0],ymm6[6,4],ymm12[5,4]
 ; AVX-NEXT:    vshufps {{.*#+}} ymm15 = ymm15[0,1,2,0,4,5,6,4]
 ; AVX-NEXT:    vblendps {{.*#+}} ymm15 = ymm0[0,1,2,3,4,5],ymm15[6,7]
-; AVX-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm8, %ymm0 # 16-byte Folded Reload
+; AVX-NEXT:    vinsertf128 $1, (%rsp), %ymm8, %ymm0 # 16-byte Folded Reload
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4],ymm4[5],ymm0[6,7]
 ; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm4 # 32-byte Reload
 ; AVX-NEXT:    vblendps $48, {{[-0-9]+}}(%r{{[sb]}}p), %ymm4, %ymm8 # 32-byte Folded Reload
@@ -5980,7 +5980,7 @@ define void @load_i32_stride5_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ;
 ; AVX-LABEL: load_i32_stride5_vf64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    subq $2488, %rsp # imm = 0x9B8
+; AVX-NEXT:    subq $2504, %rsp # imm = 0x9C8
 ; AVX-NEXT:    vmovaps 832(%rdi), %ymm3
 ; AVX-NEXT:    vmovups %ymm3, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX-NEXT:    vmovaps 544(%rdi), %ymm8
@@ -6697,7 +6697,7 @@ define void @load_i32_stride5_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX-NEXT:    vmovaps %ymm1, 64(%r9)
 ; AVX-NEXT:    vmovaps %ymm4, 32(%r9)
 ; AVX-NEXT:    vmovaps %ymm0, (%r9)
-; AVX-NEXT:    addq $2488, %rsp # imm = 0x9B8
+; AVX-NEXT:    addq $2504, %rsp # imm = 0x9C8
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;

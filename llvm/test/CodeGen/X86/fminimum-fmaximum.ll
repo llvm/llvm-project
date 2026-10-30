@@ -2099,7 +2099,7 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ;
 ; X86-LABEL: test_fmaximum_v4f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    subl $164, %esp
+; X86-NEXT:    subl $160, %esp
 ; X86-NEXT:    vmovdqa %xmm0, %xmm2
 ; X86-NEXT:    vmovdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-NEXT:    vpsrlq $48, %xmm0, %xmm0
@@ -2202,7 +2202,7 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; X86-NEXT:    vpunpcklwd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload
 ; X86-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1],xmm1[2],mem[2],xmm1[3],mem[3]
 ; X86-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm0[0],zero,zero
-; X86-NEXT:    addl $164, %esp
+; X86-NEXT:    addl $160, %esp
 ; X86-NEXT:    retl
   %r = call <4 x half> @llvm.maximum.v4f16(<4 x half> %x, <4 x half> %y)
   ret <4 x half> %r

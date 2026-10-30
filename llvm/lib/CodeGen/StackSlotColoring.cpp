@@ -295,8 +295,14 @@ void StackSlotColoring::InitializeSlots() {
   }
   LLVM_DEBUG(dbgs() << '\n');
 
-  // Sort them by weight.
-  llvm::stable_sort(SSIntervals, IntervalSorter());
+  // Sort them by weight. Among equally weighted slots, color the larger ones
+  // first so that smaller ones can share their colors without growing them.
+  llvm::stable_sort(SSIntervals, [this](LiveInterval *LHS, LiveInterval *RHS) {
+    if (LHS->weight() != RHS->weight())
+      return LHS->weight() > RHS->weight();
+    return OrigSizes[LHS->reg().stackSlotIndex()] >
+           OrigSizes[RHS->reg().stackSlotIndex()];
+  });
 
   NextColors.resize(AllColors.size());
 
