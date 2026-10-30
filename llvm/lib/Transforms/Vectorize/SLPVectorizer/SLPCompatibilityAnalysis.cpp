@@ -11,14 +11,18 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -613,7 +617,7 @@ bool InstructionsState::isCopyableElement(Value *V) const {
                 GEP->getSourceElementType() !=
                     cast<GetElementPtrInst>(MainOp)->getSourceElementType()))
       return true;
-  if (I->getParent() != MainOp->getParent() &&
+  if (!IsRegion && I->getParent() != MainOp->getParent() &&
       (!isVectorLikeInstWithConstOps(I) ||
        !isVectorLikeInstWithConstOps(MainOp)))
     return true;
@@ -709,8 +713,8 @@ bool InstructionsState::isNonSchedulable(Value *V) const {
     return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
            doesNotNeedToBeScheduled(V);
   // MainOp for copyables always schedulable to correctly identify
-  // non-schedulable copyables.
-  if (getMainOp() == V)
+  // non-schedulable copyables. The region nodes are not scheduled.
+  if (!IsRegion && getMainOp() == V)
     return false;
   if (isCopyableElement(V)) {
     auto IsNonSchedulableCopyableElement = [this](Value *V) {
@@ -1025,6 +1029,75 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                 }) &&
          "Invalid InstructionsState.");
   return S;
+}
+
+bool areRegionScalars(ArrayRef<Value *> VL, const DominatorTree &DT,
+                      const LoopInfo &LI) {
+  auto Insts = make_isa_range<Instruction>(VL);
+  if (Insts.empty() || all_of(VL, isVectorLikeInstWithConstOps))
+    return false;
+  const Loop *L = LI.getLoopFor((*Insts.begin())->getParent());
+  SmallPtrSet<const BasicBlock *, 4> Blocks;
+  for (Instruction *I : Insts) {
+    const BasicBlock *BB = I->getParent();
+    if (Blocks.insert(BB).second &&
+        (!DT.isReachableFromEntry(BB) || LI.getLoopFor(BB) != L))
+      return false;
+  }
+  return Blocks.size() > 1;
+}
+
+BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
+                               const DominatorTree &DT, const LoopInfo &LI) {
+  if (!S || S.isAltShuffle())
+    return nullptr;
+  // The non-schedulable instructions are safe to speculate, they can be moved
+  // to any point dominated by their operands and dominating their users. The
+  // copyable elements are kept as is, only the values and the PHIs of the
+  // entry block are allowed.
+  auto Insts = make_isa_range<Instruction>(VL);
+  Instruction *InsertPt = nullptr;
+  SmallPtrSet<const BasicBlock *, 4> Blocks;
+  for (Instruction *I : Insts) {
+    if (S.isCopyableElement(I)) {
+      if (!isa<PHINode>(I))
+        return nullptr;
+      continue;
+    }
+    if (!doesNotNeedToBeScheduled(I))
+      return nullptr;
+    // The common dominator already dominates the visited blocks, only the
+    // instructions of its own block may precede it.
+    if (Blocks.insert(I->getParent()).second ||
+        I->getParent() == InsertPt->getParent())
+      InsertPt = InsertPt ? DT.findNearestCommonDominator(InsertPt, I) : I;
+  }
+  // The vector code is emitted before the first scalar in the entry block, so
+  // the entry must have such a scalar and the operands must be defined outside
+  // of this block (or be its PHIs), the instructions of the block can be
+  // reordered by the scheduler. The entry is in the loop of the scalars.
+  BasicBlock *Entry = InsertPt->getParent();
+  if (InsertPt->isTerminator() ||
+      LI.getLoopFor(Entry) != LI.getLoopFor(S.getMainOp()->getParent()))
+    return nullptr;
+  Instruction *FirstNonPHI = &*Entry->getFirstNonPHIIt();
+  SmallDenseMap<const BasicBlock *, bool, 4> DominatingBlocks;
+  if (all_of(Insts, [&](Instruction *I) {
+        if (S.isCopyableElement(I))
+          return I->getParent() == Entry;
+        return all_of(I->operands(), [&](Value *Op) {
+          auto *OpI = dyn_cast<Instruction>(Op);
+          // The terminators (invokes) dominate only their normal successors.
+          if (!OpI || OpI->getParent() == Entry || OpI->isTerminator())
+            return !OpI || DT.dominates(OpI, FirstNonPHI);
+          auto [It, Inserted] = DominatingBlocks.try_emplace(OpI->getParent());
+          if (Inserted)
+            It->second = DT.dominates(OpI->getParent(), Entry);
+          return It->second;
+        });
+      }))
+    return Entry;
+  return nullptr;
 }
 
 std::pair<Instruction *, SmallVector<Value *>>

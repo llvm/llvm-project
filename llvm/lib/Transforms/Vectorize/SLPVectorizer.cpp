@@ -2839,6 +2839,11 @@ private:
     /// other entry kinds.
     SmallVector<unsigned, 1> StructEVIndices;
 
+    /// The entry block of the region, if the scalars are in different blocks
+    /// of this region. The vector code is emitted before the first scalar in
+    /// this block.
+    BasicBlock *RegionEntry = nullptr;
+
   private:
     /// The operands of each instruction in each lane Operands[op_index][lane].
     /// Note: This helps avoid the replication of the code that performs the
@@ -3190,11 +3195,13 @@ private:
                           const EdgeInfo &UserTreeIdx,
                           ArrayRef<int> ReuseShuffleIndices = {},
                           ArrayRef<unsigned> ReorderIndices = {},
-                          unsigned InterleaveFactor = 0) {
+                          unsigned InterleaveFactor = 0,
+                          BasicBlock *RegionEntry = nullptr) {
     TreeEntry::EntryState EntryState =
         Bundle ? TreeEntry::Vectorize : TreeEntry::NeedToGather;
-    TreeEntry *E = newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
-                                ReuseShuffleIndices, ReorderIndices);
+    TreeEntry *E =
+        newTreeEntry(VL, EntryState, Bundle, S, UserTreeIdx,
+                     ReuseShuffleIndices, ReorderIndices, RegionEntry);
     if (E && InterleaveFactor > 0)
       E->setInterleave(InterleaveFactor);
     return E;
@@ -3205,7 +3212,8 @@ private:
                           ScheduleBundle &Bundle, const InstructionsState &S,
                           const EdgeInfo &UserTreeIdx,
                           ArrayRef<int> ReuseShuffleIndices = {},
-                          ArrayRef<unsigned> ReorderIndices = {}) {
+                          ArrayRef<unsigned> ReorderIndices = {},
+                          BasicBlock *RegionEntry = nullptr) {
     assert(((!Bundle && (EntryState == TreeEntry::NeedToGather ||
                          EntryState == TreeEntry::SplitVectorize)) ||
             (Bundle && EntryState != TreeEntry::NeedToGather &&
@@ -3221,6 +3229,7 @@ private:
     TreeEntry *Last = VectorizableTree.back().get();
     Last->Idx = VectorizableTree.size() - 1;
     Last->State = EntryState;
+    Last->RegionEntry = RegionEntry;
     if (UserTreeIdx.UserTE)
       OperandsToTreeEntry.try_emplace(
           std::make_pair(UserTreeIdx.UserTE, UserTreeIdx.EdgeIdx), Last);
@@ -3379,13 +3388,15 @@ private:
     bool IsLegal;
     bool TryToFindDuplicates;
     bool TrySplitVectorize;
+    BasicBlock *RegionEntry;
 
   public:
     ScalarsVectorizationLegality(InstructionsState S, bool IsLegal,
                                  bool TryToFindDuplicates = true,
-                                 bool TrySplitVectorize = false)
+                                 bool TrySplitVectorize = false,
+                                 BasicBlock *RegionEntry = nullptr)
         : S(S), IsLegal(IsLegal), TryToFindDuplicates(TryToFindDuplicates),
-          TrySplitVectorize(TrySplitVectorize) {
+          TrySplitVectorize(TrySplitVectorize), RegionEntry(RegionEntry) {
       assert((!IsLegal || (S.valid() && TryToFindDuplicates)) &&
              "Inconsistent state");
     }
@@ -3393,6 +3404,7 @@ private:
     bool isLegal() const { return IsLegal; }
     bool tryToFindDuplicates() const { return TryToFindDuplicates; }
     bool trySplitVectorize() const { return TrySplitVectorize; }
+    BasicBlock *getRegionEntry() const { return RegionEntry; }
   };
 
   /// Checks if the specified list of the instructions/values can be vectorized
@@ -10535,6 +10547,9 @@ class InstructionsCompatibilityAnalysis {
   /// Whether every copyable in the current value list is an absorbable
   /// single-use fmul/fadd. Computed once per buildInstructionsState call.
   bool AbsorbCopyableFMulOrFAdds = false;
+  /// Whether the current value list is the scalars of a region, the matching
+  /// instructions may be in different blocks.
+  bool IsRegion = false;
 
   /// Checks if the opcode is supported as the main opcode for copyable
   /// elements.
@@ -10601,7 +10616,7 @@ class InstructionsCompatibilityAnalysis {
         Operands.insert(I->op_begin(), I->op_end());
         continue;
       }
-      if (Parent == I->getParent()) {
+      if (IsRegion || Parent == I->getParent()) {
         Candidates.try_emplace(I->getOpcode()).first->second.push_back(I);
         Operands.insert(I->op_begin(), I->op_end());
         continue;
@@ -11305,10 +11320,13 @@ public:
   InstructionsState buildInstructionsState(ArrayRef<Value *> VL,
                                            const BoUpSLP &R,
                                            bool WithProfitabilityCheck = false,
-                                           bool SkipSameCodeCheck = false) {
-    InstructionsState S = (SkipSameCodeCheck || !allSameBlock(VL))
-                              ? InstructionsState::invalid()
-                              : getSameOpcode(VL, TLI);
+                                           bool SkipSameCodeCheck = false,
+                                           bool IsRegionScalars = false) {
+    IsRegion = IsRegionScalars;
+    InstructionsState S =
+        (SkipSameCodeCheck || (!IsRegion && !allSameBlock(VL)))
+            ? InstructionsState::invalid()
+            : getSameOpcode(VL, TLI);
     // Check if series of selects + zext i1 %x to in can be combined into
     // selects + select %x, i32 1, i32 0.
     Instruction *SelectOp = nullptr;
@@ -11364,20 +11382,22 @@ public:
     if (!MainOp)
       return S;
     InstructionsState OrigS = S;
-    S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
-    // Cast nodes support only matching lanes from the main op block and
-    // copyable (round-trippable constant) lanes.
+    S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true, IsRegion);
+    // Cast nodes support only matching lanes from the main op block (any
+    // block of the region) and copyable (round-trippable constant) lanes.
     if (isa<CastInst>(MainOp) && any_of(VL, [&](Value *V) {
           auto *I = dyn_cast<Instruction>(V);
           return !isa<PoisonValue>(V) &&
                  !(I && I->getOpcode() == MainOpcode &&
-                   I->getParent() == MainOp->getParent()) &&
+                   (IsRegion || I->getParent() == MainOp->getParent())) &&
                  !S.isCopyableElement(V);
         }))
       return OrigS;
     if (OrigS && !isCopyablePreferable(VL, R, OrigS, S))
       return OrigS;
-    if (!WithProfitabilityCheck)
+    // The operands heuristics below expect the matching instructions in the
+    // same block, the region nodes rely on the tree cost.
+    if (!WithProfitabilityCheck || IsRegion)
       return S;
     // ExtractElement copyable nodes reuse the source vector and insert the
     // copyable lanes; the binary-operator operand heuristics below do not
@@ -11876,6 +11896,19 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
   InstructionsState S = Analysis.buildInstructionsState(
       VL, *this, /*WithProfitabilityCheck=*/true);
+  // The scalars from different blocks of the region are vectorized at the
+  // region entry rather than as the copyable elements.
+  BasicBlock *RegionEntry = nullptr;
+  if (Opts.slp_sese_region_vectorization &&
+      (!S || S.areInstructionsWithCopyableElements()) &&
+      areRegionScalars(VL, *DT, *LI)) {
+    InstructionsState RegionS = Analysis.buildInstructionsState(
+        VL, *this, /*WithProfitabilityCheck=*/true,
+        /*SkipSameCodeCheck=*/false, /*IsRegionScalars=*/true);
+    RegionEntry = getSESERegionEntry(VL, RegionS, *DT, *LI);
+    if (RegionEntry)
+      S = RegionS;
+  }
 
   bool AreScatterAllGEPSameBlock = false;
   if (!S) {
@@ -12093,7 +12126,9 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
     }
   }
 
-  return ScalarsVectorizationLegality(S, /*IsLegal=*/true);
+  return ScalarsVectorizationLegality(S, /*IsLegal=*/true,
+                                      /*TryToFindDuplicates=*/true,
+                                      /*TrySplitVectorize=*/false, RegionEntry);
 }
 
 /// Peel associative single-use binary chains into operand columns. Peeled
@@ -12408,8 +12443,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
     return;
   }
+  // The split nodes are emitted after the last scalar, which does not dominate
+  // the users of the scalars from the other blocks of the region.
+  BasicBlock *RegionEntry = Legality.getRegionEntry();
 
-  if (SplitStoredValues && S && UserTreeIdx.UserTE &&
+  if (SplitStoredValues && S && !RegionEntry && UserTreeIdx.UserTE &&
       UserTreeIdx.UserTE->Idx == 0 && TrySplitNode(S, /*SplitInHalves=*/true))
     return;
 
@@ -12420,7 +12458,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   // Cmp nodes with interchangeable lanes (e.g. x == 0 mixed with x <u C)
   // try the split by the original predicates, like the alternate nodes. The
   // trunc X to i1 lanes have no original predicate.
-  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle() &&
+  if (S.getOpcode() == Instruction::ICmp && !S.isAltShuffle() && !RegionEntry &&
       none_of(VL, IsaPred<TruncInst>)) {
     auto SameOrSwapped = [](const ICmpInst *CI, CmpInst::Predicate P) {
       return CI->getPredicate() == P ||
@@ -12593,7 +12631,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     if (S.isAltShuffle() && ReuseShuffleIndices.empty() && TrySplitNode(S))
       return;
     // Last chance to try to vectorize copyable node.
-    if (S.areInstructionsWithCopyableElements() &&
+    if (S.areInstructionsWithCopyableElements() && !RegionEntry &&
         ReuseShuffleIndices.empty()) {
       InstructionsState AltS = getSameOpcode(VL, *TLI);
       if (AltS && AltS.isAltShuffle() && TrySplitNode(AltS))
@@ -12918,7 +12956,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
                                PrevMinBW));
       }
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, /*ReorderIndices=*/{},
+                                   /*InterleaveFactor=*/0, RegionEntry);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CastInst).\n";
                  TE->dump());
 
@@ -12946,7 +12985,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       // Check that all of the compares have the same predicate.
       CmpInst::Predicate P0 = cast<CmpInst>(VL0)->getPredicate();
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, /*ReorderIndices=*/{},
+                                   /*InterleaveFactor=*/0, RegionEntry);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CmpInst).\n";
                  TE->dump());
       // The ands of the bit tests are peeled into the operands of the node.
@@ -13018,7 +13058,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     case Instruction::Xor:
     case Instruction::Freeze: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, /*ReorderIndices=*/{},
+                                   /*InterleaveFactor=*/0, RegionEntry);
       LLVM_DEBUG(
           dbgs() << "SLP: added a new TreeEntry "
                     "(SelectInst/UnaryOperator/BinaryOperator/FreezeInst).\n";
@@ -13081,7 +13122,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     }
     case Instruction::GetElementPtr: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, /*ReorderIndices=*/{},
+                                   /*InterleaveFactor=*/0, RegionEntry);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (GetElementPtrInst).\n";
                  TE->dump());
       TE->setOperands(Operands);
@@ -13135,7 +13177,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, /*ReorderIndices=*/{},
+                                   /*InterleaveFactor=*/0, RegionEntry);
       LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (CallInst).\n";
                  TE->dump());
       if (isCommutative(VL0)) {
@@ -13156,7 +13199,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     }
     case Instruction::ShuffleVector: {
       TreeEntry *TE = newTreeEntry(VL, Bundle /*vectorized*/, S, UserTreeIdx,
-                                   ReuseShuffleIndices);
+                                   ReuseShuffleIndices, /*ReorderIndices=*/{},
+                                   /*InterleaveFactor=*/0, RegionEntry);
       if (S.isAltShuffle()) {
         LLVM_DEBUG(dbgs() << "SLP: added a new TreeEntry (isAltShuffle).\n";
                    TE->dump());
@@ -16851,7 +16895,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           E->State == TreeEntry::BlendedLoadVectorize) &&
          "Unhandled state");
   assert(E->getOpcode() &&
-         ((allSameType(VL) && allSameBlock(VL)) ||
+         ((allSameType(VL) && (E->RegionEntry || allSameBlock(VL))) ||
           (E->getOpcode() == Instruction::GetElementPtr &&
            E->getMainOp()->getType()->isPointerTy()) ||
           E->hasCopyableElements()) &&
@@ -22350,6 +22394,16 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
   if (It != EntryToLastInstruction.end())
     return *cast<Instruction>(It->second);
   Instruction *Res = nullptr;
+  if (E->RegionEntry) {
+    for (Instruction *I : make_isa_range<Instruction>(E->Scalars))
+      if (I->getParent() == E->RegionEntry && !E->isCopyableElement(I) &&
+          (!Res || I->comesBefore(Res)))
+        Res = I;
+    assert(Res && E->doesNotNeedToSchedule() &&
+           "Expected a non-scheduled node with a scalar in the region entry.");
+    EntryToLastInstruction.try_emplace(E, Res);
+    return *Res;
+  }
   // Get the basic block this bundle is in. All instructions in the bundle
   // should be in this block (except for extractelement-like instructions with
   // constant indices or gathered loads or copyables).
@@ -22620,7 +22674,8 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
         LastInstructionToPos.try_emplace(LastInst, Res);
     }
   }
-  Builder.SetCurrentDebugLocation(Front->getDebugLoc());
+  Builder.SetCurrentDebugLocation(
+      (E->RegionEntry ? LastInst : Front)->getDebugLoc());
 }
 
 Value *BoUpSLP::gather(
@@ -37424,7 +37479,14 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       if (S)
         return true;
       if (!SameParent)
-        return false;
+        return Opts->slp_sese_region_vectorization &&
+               areRegionScalars(NewVL, *DT, *LI) &&
+               getSESERegionEntry(NewVL,
+                                  Analysis.buildInstructionsState(
+                                      NewVL, R, /*WithProfitabilityCheck=*/true,
+                                      /*SkipSameCodeCheck=*/false,
+                                      /*IsRegionScalars=*/true),
+                                  *DT, *LI);
     }
     return V1->getValueOperand()->getValueID() ==
            V2->getValueOperand()->getValueID();

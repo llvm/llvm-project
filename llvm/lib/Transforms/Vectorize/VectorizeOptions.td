@@ -295,6 +295,8 @@ defm : ValueField<"slp-runtime-alias-checks-max-scalar-cost-percent", "unsigned"
 // range. This limit is way higher than needed by real-world functions.
 defm : ValueField<"slp-schedule-budget", "int", "100000",
   "Limit the size of the SLP scheduling region per block">;
+defm : BoolField<"slp-sese-region-vectorization", "true",
+  "Vectorize non-schedulable instructions from different blocks of a single-entry single-exit region at the region entry">;
 defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;
 defm : OptionalValueField<"slp-threshold", "int",
