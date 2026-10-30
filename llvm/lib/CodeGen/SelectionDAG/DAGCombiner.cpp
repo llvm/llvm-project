@@ -21001,11 +21001,6 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
     if ((LegalTypes || OpVT.isVector()) && !TLI.isTypeLegal(NarrowVT))
       continue;
 
-    // Avoid undoing a target combine that widened the source operand.
-    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
-        NarrowVT == N0.getOperand(0).getValueType())
-      continue;
-
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);
     return DAG.getNode(ISD::UINT_TO_FP, DL, VT, Trunc);
   }
