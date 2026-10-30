@@ -383,7 +383,6 @@ bool isMaskedLoadCompress(
   // shuffle cost estimation in that case.
   if (VectorGEPCost + LoadCost >= GatherCost)
     return false;
-
   // For REVEC the scalars are vectors, and the emitted shuffle uses the
   // compress mask expanded to the individual elements. Cost that mask.
   SmallVector<int> CostMask(Info.CompressMask.begin(), Info.CompressMask.end());
