@@ -75,7 +75,7 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
-  // TODO(boomanaiden154): Add MipsDelaySlotFillerPass
+  addMachineFunctionPass(MipsDelaySlotFillerPass(), PMW);
 
   // This pass expands branches and takes care about the forbidden slot hazards.
   // Expanding branches may potentially create forbidden slot hazards for

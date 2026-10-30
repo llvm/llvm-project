@@ -60,7 +60,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   PassRegistry *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeMipsAsmPrinterPass(*PR);
-  initializeMipsDelaySlotFillerPass(*PR);
+  initializeMipsDelaySlotFillerLegacyPass(*PR);
   initializeMipsBranchExpansionPass(*PR);
   initializeMipsMicroSizeReduceLegacyPass(*PR);
   initializeMipsPreLegalizerCombinerPass(*PR);
@@ -261,7 +261,7 @@ void MipsPassConfig::addPreEmitPass() {
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.
-  addPass(createMipsDelaySlotFillerPass());
+  addPass(createMipsDelaySlotFillerLegacyPass());
 
   // This pass expands branches and takes care about the forbidden slot hazards.
   // Expanding branches may potentially create forbidden slot hazards for
