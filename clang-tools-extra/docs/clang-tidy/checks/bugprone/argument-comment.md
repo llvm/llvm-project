@@ -74,8 +74,8 @@ foo(/*Dims=*/{});
 
 ```{option} CommentBoolLiterals
 When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the boolean literal argument.
-Default is `false`.
+`/*ParameterName=*/` right before the boolean literal argument and the macros
+in {option}`BoolLiteralMacros`. Default is `false`.
 ```
 
 Before:
@@ -183,8 +183,8 @@ open_file(Path, 1);
 
 ```{option} CommentNullPtrs
 When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the nullptr literal argument.
-Default is `false`.
+`/*ParameterName=*/` right before the nullptr literal argument and the macros
+in {option}`NullPtrMacros`. Default is `false`.
 ```
 
 Before:
@@ -309,4 +309,20 @@ void foo(double Distance);
 double operator"" _km(long double);
 
 foo(/*Distance=*/402.0_km);
+```
+
+```{option} NullPtrMacros
+A semicolon-separated list of macros that {option}`CommentNullPtrs` treats like
+`nullptr`. An argument matches when it is one of these macros, with or without
+a unary operator in front of it. A macro that expands to one of these macros,
+such as `#define MY_NULL NULL`, doesn't match. Default is `NULL`.
+```
+
+```{option} BoolLiteralMacros
+A semicolon-separated list of macros that {option}`CommentBoolLiterals` treats
+like boolean literals. An argument matches when it is one of these macros, with
+or without a unary operator in front of it, such as `!true`. A macro that
+expands to one of these macros, such as `#define MY_TRUE true`, doesn't match.
+Default is `true;false`, which covers `<stdbool.h>` in C before C23 and in GNU
+C++98.
 ```
