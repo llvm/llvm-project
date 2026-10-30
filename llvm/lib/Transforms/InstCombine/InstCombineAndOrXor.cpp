@@ -1302,28 +1302,47 @@ foldAndOrOfICmpsWithConstEq(CmpPredicate PredL, Value *LHS0, Value *LHS1,
   // The other compare must include a common operand (X). Canonicalize the
   // common operand as operand 1 (Pred1 is swapped if the common operand was
   // operand 0).
-  Value *Y;
+  Value *NewRHS0;
+  Value *NewRHS1;
 
   if (LHS0 == RHS0) {
-    Y = RHS1;
+    NewRHS0 = RHS1;
+    NewRHS1 = LHS1;
     PredR = CmpPredicate::getSwapped(PredR);
-  } else if (LHS0 == RHS1)
-    Y = RHS0;
-  else
+  } else if (LHS0 == RHS1) {
+    NewRHS0 = RHS0;
+    NewRHS1 = LHS1;
+  } else {
+    // Try to simplify RHS0 and RHS1, under the assumption that LHS0 can be
+    // replaced with LHS1. Disable undef-based folds because the resulting
+    // operands need not be constants.
+    const SimplifyQuery SQ = Q.getWithoutUndef();
+    NewRHS0 = simplifyWithOpReplaced(RHS0, LHS0, LHS1, SQ,
+                                     /*AllowRefinement=*/true);
+    NewRHS1 = simplifyWithOpReplaced(RHS1, LHS0, LHS1, SQ,
+                                     /*AllowRefinement=*/true);
+
+    if (!NewRHS0 || !isGuaranteedNotToBePoison(NewRHS0))
+      NewRHS0 = RHS0;
+    if (!NewRHS1 || !isGuaranteedNotToBePoison(NewRHS1))
+      NewRHS1 = RHS1;
+
+    if (NewRHS0 == RHS0 && NewRHS1 == RHS1)
     return nullptr;
+  }
 
   // Replace variable with constant value equivalence to remove a variable use:
   // (X == C) && (Y Pred1 X) --> (X == C) && (Y Pred1 C)
   // (X != C) || (Y Pred1 X) --> (X != C) || (Y Pred1 C)
   // Can think of the 'or' substitution with the 'and' bool equivalent:
   // A || B --> A || (!A && B)
-  Value *SubstituteCmp = simplifyICmpInst(PredR, Y, LHS1, Q);
+  Value *SubstituteCmp = simplifyICmpInst(PredR, NewRHS0, NewRHS1, Q);
   if (!SubstituteCmp) {
     // If we need to create a new instruction, require that the old compare can
     // be removed.
     if (!RHSOneUse)
       return nullptr;
-    SubstituteCmp = Builder.CreateICmp(PredR, Y, LHS1);
+    SubstituteCmp = Builder.CreateICmp(PredR, NewRHS0, NewRHS1);
   }
   if (IsLogical) {
     Instruction *MDFrom = isa<SelectInst>(I) ? &I : nullptr;
@@ -3498,7 +3517,7 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   // on the LHS, and as such poison from both will propagate.
   // Can not handle RHS = trunc nuw as it is not same as icmp ne 0 for all
   // values
-  if (isa<ICmpInst>(RHS))
+  if (isa<ICmpInst>(RHS) && (!IsLogical || RHS0 == LHS0 || RHS0 == LHS1))
     if (Value *V = foldAndOrOfICmpsWithConstEq(
             PredR, RHS0, RHS1, RHS, PredL, LHS0, LHS1, LHSOneUse, IsAnd,
             /*IsLogical=*/false, Builder, Q, I)) {
