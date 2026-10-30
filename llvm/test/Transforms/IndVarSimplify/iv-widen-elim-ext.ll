@@ -206,7 +206,6 @@ for.end:                                          ; preds = %for.cond.for.end_cr
 
 declare i32 @dummy(ptr, ptr)
 
-; TODO: the zext can be eliminated.
 ; %i.02 starts at 0 and increments with nsw.
 ; There's the guard M >s 0, so %add3 = %i.02 + %M (nsw)
 ; is non-negative on every iteration and so
@@ -228,9 +227,7 @@ define i32 @foo3(i32 %M) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[INDVARS_IV]], [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[TMP3]] to i32
-; CHECK-NEXT:    [[IDXPROM4:%.*]] = zext i32 [[TMP4]] to i64
-; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 [[IDXPROM4]]
+; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x i32], ptr @a, i64 0, i64 [[TMP3]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
@@ -593,7 +590,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 declare void @use(i64)
 declare void @llvm.assume(i1)
 
-; TODO: %iv - 32 can be computed in i64.
+; TODO: remove trunc and zext of %iv - 32. It is non-negative, so the zext
+; equals the wide add.
 ; %start >=s 32, %iv steps by one with nsw, so %iv - 32 >=s 0 on every iteration.
 define void @offset_sge_guard(i32 %start, i32 %n) {
 ; CHECK-LABEL: @offset_sge_guard(
@@ -605,8 +603,8 @@ define void @offset_sge_guard(i32 %start, i32 %n) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[INDVARS_IV]], -32
+; CHECK-NEXT:    [[IDX:%.*]] = trunc nsw i64 [[TMP1]] to i32
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[IDX_EXT]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -633,7 +631,10 @@ exit:
   ret void
 }
 
-; TODO: %iv - 32 can be computed in i64.
+; TODO: remove trunc and zext of %iv - 32. It is non-negative, so the zext
+; equals the wide add.
+; TODO: The exit is rewritten with smax(%start, 9999), and SCEV's constant
+; max loop counts may worsen because of this.
 ; %start >=s 32, %iv steps by one with nsw, so %iv - 32 >=s 0 on every iteration.
 define void @offset_sge_guard_const_exit(i32 %start) {
 ; CHECK-LABEL: @offset_sge_guard_const_exit(
@@ -642,16 +643,18 @@ define void @offset_sge_guard_const_exit(i32 %start) {
 ; CHECK-NEXT:    br i1 [[C]], label [[LOOP_PREHEADER:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[START]] to i64
+; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[START]], i32 9999)
+; CHECK-NEXT:    [[TMP1:%.*]] = add nuw i32 [[SMAX]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
+; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[INDVARS_IV]], -32
+; CHECK-NEXT:    [[IDX:%.*]] = trunc nsw i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
 ; CHECK-NEXT:    call void @use(i64 [[IDX_EXT]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[DONE:%.*]] = icmp sgt i32 [[TMP2]], 9998
+; CHECK-NEXT:    [[LFTR_WIDEIV:%.*]] = trunc i64 [[INDVARS_IV_NEXT]] to i32
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[LFTR_WIDEIV]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -673,7 +676,6 @@ exit:
   ret void
 }
 
-; TODO: %iv - 32 can be computed in i64.
 ; %start <u %len and %len >=s 0, so %start >=s 0 and so %iv >=s 0.
 ; %iv - 32 may be negative, but its zext nneg would be poison in such case.
 define void @offset_ult_guard_nonneg_len(i32 %start, i32 %n, ptr %p) {
@@ -687,9 +689,7 @@ define void @offset_ult_guard_nonneg_len(i32 %start, i32 %n, ptr %p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext nneg i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    call void @use(i64 [[IDX_EXT]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw i64 [[INDVARS_IV_NEXT]] to i32
@@ -718,7 +718,6 @@ exit:
 
 ; %start <u %len and %start - 32 <u %len, with %len >=s 0, so
 ; %start >=s 32 and so %iv - 32 >=s 0 on every iteration.
-; TODO: %iv - 32 can be computed in i64.
 define void @offset_ult_guards(ptr %a, i32 %start, i32 %n, ptr %len.p) {
 ; CHECK-LABEL: @offset_ult_guards(
 ; CHECK-NEXT:  entry:
@@ -733,9 +732,7 @@ define void @offset_ult_guards(ptr %a, i32 %start, i32 %n, ptr %len.p) {
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc nuw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IDX:%.*]] = add nsw i32 [[TMP1]], -32
-; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[IDX]] to i64
+; CHECK-NEXT:    [[IDX_EXT:%.*]] = add nsw i64 [[INDVARS_IV]], -32
 ; CHECK-NEXT:    [[SRC:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 [[IDX_EXT]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[DST:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDVARS_IV]]
@@ -772,7 +769,6 @@ exit:
   ret void
 }
 
-; TODO: zext(%iv) can be replaced with the wide IV.
 ; %start <u %len and %len >=s 0, so %start >=s 0, and %iv >=s 0 on every
 ; iteration. So zext(%iv) equals sext(%iv), i.e. the wide IV.
 define void @ext_ult_guard_nonneg_len(i32 %start, i32 %n, ptr %p) {
@@ -788,9 +784,7 @@ define void @ext_ult_guard_nonneg_len(i32 %start, i32 %n, ptr %p) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    call void @use(i64 [[INDVARS_IV]])
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IV_ZEXT:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    call void @use(i64 [[IV_ZEXT]])
+; CHECK-NEXT:    call void @use(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp sge i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
@@ -925,7 +919,6 @@ exit:
   ret void
 }
 
-; TODO: zext(%iv) can be replaced with the wide IV.
 ; %start >=s 0, %iv increments with nsw, so %iv >=s 0 on
 ; every iteration.
 define void @ext_assume(i32 %start, i32 %n) {
@@ -939,9 +932,7 @@ define void @ext_assume(i32 %start, i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[TMP0]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @use(i64 [[INDVARS_IV]])
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[INDVARS_IV]] to i32
-; CHECK-NEXT:    [[IV_ZEXT:%.*]] = zext i32 [[TMP2]] to i64
-; CHECK-NEXT:    call void @use(i64 [[IV_ZEXT]])
+; CHECK-NEXT:    call void @use(i64 [[INDVARS_IV]])
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp sge i64 [[INDVARS_IV_NEXT]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
