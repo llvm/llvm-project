@@ -130,6 +130,15 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     return true;
   }
 
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    // A wider scalar is implicitly truncated, and the truncation can be zero.
+    Register Src = MI.getOperand(1).getReg();
+    if (MRI.getType(Src).getScalarSizeInBits() !=
+        MRI.getType(R).getScalarSizeInBits())
+      break;
+    return isKnownNeverZero(Src, ScalarDemandedElts, Depth + 1);
+  }
+
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
     GExtractVectorElement &Extract = cast<GExtractVectorElement>(MI);
     Register InVec = Extract.getVectorReg();
@@ -1359,7 +1368,10 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     return;
   }
 
-  if (auto Cst = GFConstant::getConstant(R, MRI)) {
+  // GFConstant does not expose the value of a splat, so splats of constants
+  // are handled by the G_SPLAT_VECTOR case below.
+  if (auto Cst = GFConstant::getConstant(R, MRI);
+      Cst && Opcode != TargetOpcode::G_SPLAT_VECTOR) {
     switch (Cst->getKind()) {
     case GFConstant::GFConstantKind::Scalar: {
       Known = KnownFPClass(Cst->getScalarValue());
@@ -2247,6 +2259,15 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       }
     }
 
+    break;
+  }
+  case TargetOpcode::G_SPLAT_VECTOR: {
+    // The class only carries over when the scalar has the element type. A
+    // wider scalar is implicitly truncated, and a scalar of the same width can
+    // have a different format, such as half and bfloat.
+    Register Src = MI.getOperand(1).getReg();
+    if (MRI.getType(Src) == DstTy.getElementType())
+      computeKnownFPClass(Src, Known, InterestedClasses, Depth + 1);
     break;
   }
   case TargetOpcode::G_EXTRACT_VECTOR_ELT: {
