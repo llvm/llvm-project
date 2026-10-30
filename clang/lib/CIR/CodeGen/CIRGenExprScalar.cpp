@@ -191,8 +191,7 @@ public:
   }
 
   mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: unary coawait");
-    return {};
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value emitLoadOfLValue(LValue lv, SourceLocation loc) {
