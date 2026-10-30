@@ -17,5 +17,6 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.CPP.simd
     libc.src.__support.mathvec.common_constants
+    libc.src.mathvec.abi_prefix
 
 )
