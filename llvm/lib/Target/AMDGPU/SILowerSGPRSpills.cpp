@@ -463,6 +463,14 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
   if (!MFI.hasStackObjects() && !HasCSRs) {
+    // No SGPR spills to virtual VGPR lanes and hence there won't be any WWM
+    // spills/copies. Reset the SGPR reserved for EXEC copy, unless something
+    // else (e.g. inline asm) refers to it: its liveness was not tracked while
+    // it was reserved, so it cannot safely be treated as free.
+    Register ExecCopyReg = FuncInfo->getSGPRForEXECCopy();
+    if (ExecCopyReg &&
+        !MRI.isPhysRegUsed(ExecCopyReg, /*SkipRegMaskTest=*/true))
+      FuncInfo->setSGPRForEXECCopy(Register());
     SaveBlocks.clear();
     RestoreBlocks.clear();
     return false;
