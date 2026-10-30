@@ -2478,19 +2478,16 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   if (equalityOnly) {
     // We need to check the uses of the condition register in order to reject
     // non-equality comparisons.
-    for (MachineRegisterInfo::use_instr_iterator
-         I = MRI->use_instr_begin(CRReg), IE = MRI->use_instr_end();
-         I != IE; ++I) {
-      MachineInstr *UseMI = &*I;
-      if (UseMI->getOpcode() == PPC::BCC) {
-        PPC::Predicate Pred = (PPC::Predicate)UseMI->getOperand(0).getImm();
+    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(CRReg)) {
+      if (UseMI.getOpcode() == PPC::BCC) {
+        PPC::Predicate Pred = (PPC::Predicate)UseMI.getOperand(0).getImm();
         unsigned PredCond = PPC::getPredicateCondition(Pred);
         // We ignore hint bits when checking for non-equality comparisons.
         if (PredCond != PPC::PRED_EQ && PredCond != PPC::PRED_NE)
           return false;
-      } else if (UseMI->getOpcode() == PPC::ISEL ||
-                 UseMI->getOpcode() == PPC::ISEL8) {
-        unsigned SubIdx = UseMI->getOperand(3).getSubReg();
+      } else if (UseMI.getOpcode() == PPC::ISEL ||
+                 UseMI.getOpcode() == PPC::ISEL8) {
+        unsigned SubIdx = UseMI.getOperand(3).getSubReg();
         if (SubIdx != PPC::sub_eq)
           return false;
       } else
@@ -2504,10 +2501,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   for (MachineBasicBlock::iterator EL = CmpInstr.getParent()->end(); I != EL;
        ++I) {
     bool FoundUse = false;
-    for (MachineRegisterInfo::use_instr_iterator
-         J = MRI->use_instr_begin(CRReg), JE = MRI->use_instr_end();
-         J != JE; ++J)
-      if (&*J == &*I) {
+    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(CRReg))
+      if (&UseMI == &*I) {
         FoundUse = true;
         break;
       }
@@ -2541,10 +2536,10 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
     // Since we optimize comparison based on a specific branch condition,
     // we don't optimize if condition code is used by more than once.
-    if (equalityOnly || !MRI->hasOneUse(CRReg))
+    if (equalityOnly || !MRI->hasOneNonDBGUse(CRReg))
       return false;
 
-    MachineInstr *UseMI = &*MRI->use_instr_begin(CRReg);
+    MachineInstr *UseMI = &*MRI->use_instr_nodbg_begin(CRReg);
     if (UseMI->getOpcode() != PPC::BCC)
       return false;
 
@@ -2686,22 +2681,19 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   }
 
   if (ShouldSwap)
-    for (MachineRegisterInfo::use_instr_iterator
-         I = MRI->use_instr_begin(CRReg), IE = MRI->use_instr_end();
-         I != IE; ++I) {
-      MachineInstr *UseMI = &*I;
-      if (UseMI->getOpcode() == PPC::BCC) {
-        PPC::Predicate Pred = (PPC::Predicate) UseMI->getOperand(0).getImm();
+    for (MachineInstr &UseMI : MRI->use_nodbg_instructions(CRReg)) {
+      if (UseMI.getOpcode() == PPC::BCC) {
+        PPC::Predicate Pred = (PPC::Predicate)UseMI.getOperand(0).getImm();
         unsigned PredCond = PPC::getPredicateCondition(Pred);
         assert((!equalityOnly ||
                 PredCond == PPC::PRED_EQ || PredCond == PPC::PRED_NE) &&
                "Invalid predicate for equality-only optimization");
         (void)PredCond; // To suppress warning in release build.
-        PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
-                                PPC::getSwappedPredicate(Pred)));
-      } else if (UseMI->getOpcode() == PPC::ISEL ||
-                 UseMI->getOpcode() == PPC::ISEL8) {
-        unsigned NewSubReg = UseMI->getOperand(3).getSubReg();
+        PredsToUpdate.push_back(std::make_pair(&(UseMI.getOperand(0)),
+                                               PPC::getSwappedPredicate(Pred)));
+      } else if (UseMI.getOpcode() == PPC::ISEL ||
+                 UseMI.getOpcode() == PPC::ISEL8) {
+        unsigned NewSubReg = UseMI.getOperand(3).getSubReg();
         assert((!equalityOnly || NewSubReg == PPC::sub_eq) &&
                "Invalid CR bit for equality-only optimization");
 
@@ -2710,8 +2702,8 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         else if (NewSubReg == PPC::sub_gt)
           NewSubReg = PPC::sub_lt;
 
-        SubRegsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(3)),
-                                                 NewSubReg));
+        SubRegsToUpdate.push_back(
+            std::make_pair(&(UseMI.getOperand(3)), NewSubReg));
       } else // We need to abort on a user we don't understand.
         return false;
     }
@@ -2719,6 +2711,9 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
          "Non-zero immediate support and ShouldSwap"
          "may conflict in updating predicate");
 
+  // The replacement does not preserve every bit of the original CR value, so
+  // the CR is no longer a valid location for a debug value.
+  MRI->markUsesInDebugValueAsUndef(CRReg);
   // Create a new virtual register to hold the value of the CR set by the
   // record-form instruction. If the instruction was not previously in
   // record form, then set the kill flag on the CR.
