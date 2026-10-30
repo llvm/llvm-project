@@ -27,7 +27,7 @@
 # CHECK-NEXT:  bl {{.*}} ; symbol stub for: _foo
 # CHECK-LABEL: Contents of (__TEXT,__auth_stubs) section
 # CHECK-NEXT:  adrp x17, {{.*}} ; 0x[[#GOT]]
-# CHECK-NEXT:  add x17, x17, #[[#%u,FOO:]] ; literal pool symbol address: _foo
+# CHECK-NEXT:  add x17, x17, #{{[0-9]+}} ; literal pool symbol address: _foo
 # CHECK-NEXT:  ldr x16, [x17]
 # CHECK-NEXT:  braa x16, x17
 # CHECK-LABEL: Contents of (__TEXT,__objc_stubs) section
@@ -35,7 +35,7 @@
 # CHECK-NEXT:  adrp x1
 # CHECK-NEXT:  ldr x1, [x1
 # CHECK-NEXT:  adrp x17, {{.*}} ; 0x[[#GOT]]
-# CHECK-NEXT:  add x17, x17, #[[#%u,MSGSEND:]]
+# CHECK-NEXT:  add x17, x17, #{{[0-9]+}} ; literal pool symbol address: _objc_msgSend
 # CHECK-NEXT:  ldr x16, [x17]
 # CHECK-NEXT:  braa x16, x17
 # CHECK-NEXT:  brk #0x1
