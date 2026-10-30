@@ -103,6 +103,7 @@ add_unittest_framework_library(
     libc.src.__support.big_int
     libc.src.__support.c_string
     libc.src.__support.CPP.functional
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits

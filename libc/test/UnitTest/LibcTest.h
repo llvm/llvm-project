@@ -24,6 +24,7 @@
 // This file can only include headers from src/__support/ or test/UnitTest. No
 // other headers should be included.
 
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/functional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"

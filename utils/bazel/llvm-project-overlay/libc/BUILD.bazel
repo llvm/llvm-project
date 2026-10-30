@@ -1785,9 +1785,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_cpp_nullptr_t",
+    hdrs = ["src/__support/CPP/cstddef/nullptr_t.h"],
+    deps = [
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_cpp_cstddef",
     hdrs = ["src/__support/CPP/cstddef.h"],
     deps = [
+        ":__support_cpp_nullptr_t",
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
@@ -1965,6 +1974,7 @@ libc_support_library(
         "src/__support/CPP/utility/forward.h",
     ],
     deps = [
+        ":__support_cpp_nullptr_t",
         ":__support_macros_attributes",
         ":__support_macros_config",
         ":__support_macros_properties_compiler",
