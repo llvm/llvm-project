@@ -13,9 +13,9 @@
 #ifdef ELF_MACHINE
 // ELF_MACHINE(EM_name, number, arch name, GNU name)
 // At the time of writing, the list of registered machine architectures is
-// at https://groups.google.com/g/generic-abi/c/0kORSDcyhTE/m/ZRf_PvcHAAAJ
-// Please refer to https://groups.google.com/g/generic-abi for any further
-// updates.
+// at https://gabi.xinuos.com/elf/a-emachine.html and in the v4.3 development
+// branch at https://github.com/xinuos/gabi.
+// Also refer to https://groups.google.com/g/generic-abi for further updates.
 ELF_MACHINE(EM_NONE,            0, "None", "None") // No machine
 ELF_MACHINE(EM_M32,             1, "m32", "WE32100") // AT&T WE 32100
 ELF_MACHINE(EM_SPARC,           2, "sparc", "Sparc")
