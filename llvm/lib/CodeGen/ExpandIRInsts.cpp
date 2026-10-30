@@ -901,13 +901,21 @@ static void expandIToFP(Instruction *IToFP) {
   // fp80 conversion is implemented by conversion tp fp128 first following
   // a fptrunc to fp80.
   FPMantissaWidth = FPMantissaWidth == 63 ? 112 : FPMantissaWidth;
-  // FIXME: As there is no related builtins added in compliler-rt,
-  // here currently utilized the fp32 <-> fp16 lib calls to implement.
+  // FIXME: Use a compiler-rt integer-to-half conversion builtin when one is
+  // available. For now, convert half through float.
   FPMantissaWidth = FPMantissaWidth == 10 ? 23 : FPMantissaWidth;
-  FPMantissaWidth = FPMantissaWidth == 7 ? 23 : FPMantissaWidth;
-  unsigned FloatWidth = PowerOf2Ceil(FPMantissaWidth);
+  // The result's bit pattern is assembled in at least 32 bits so that the
+  // exponent and sign arithmetic cannot overflow; bfloat is truncated to 16
+  // bits at the end.
+  unsigned ResultWidth = IToFP->getType()->getPrimitiveSizeInBits();
+  unsigned FloatWidth = std::max(32u, ResultWidth);
+  if (IToFP->getType()->isX86_FP80Ty())
+    FloatWidth = 128;
+  // bfloat is rounded at its own precision and assembled directly; the other
+  // formats (including half) are rounded at FloatWidth.
+  unsigned PatternWidth =
+      IToFP->getType()->isBFloatTy() ? ResultWidth : FloatWidth;
   bool IsSigned = IToFP->getOpcode() == Instruction::SIToFP;
-  bool RoundToOdd = IToFP->getType()->isBFloatTy();
 
   // We're going to introduce branches on the value, so freeze it.
   if (!isGuaranteedNotToBeUndefOrPoison(IntVal))
@@ -941,9 +949,7 @@ static void expandIToFP(Instruction *IToFP) {
   BasicBlock *SwEpilog =
       BasicBlock::Create(Builder.getContext(), "itofp-sw-epilog", F, End);
   BasicBlock *IfThen20 =
-      RoundToOdd ? nullptr
-                 : BasicBlock::Create(Builder.getContext(),
-                                      "itofp-if-then20", F, End);
+      BasicBlock::Create(Builder.getContext(), "itofp-if-then20", F, End);
   BasicBlock *IfElse =
       BasicBlock::Create(Builder.getContext(), "itofp-if-else", F, End);
   BasicBlock *IfEnd26 =
@@ -1042,30 +1048,19 @@ static void expandIToFP(Instruction *IToFP) {
   AAddr0->addIncoming(Or, SwDefault);
   AAddr0->addIncoming(IsSigned ? Sub : IntVal, IfThen4);
   AAddr0->addIncoming(Shl, SwBB);
-  Value *Inc = nullptr;
+  Value *A0 = Builder.CreateTrunc(AAddr0, Builder.getInt32Ty());
+  Value *A1 = Builder.CreateLShr(A0, Builder.getInt32(2));
+  Value *A2 = Builder.CreateAnd(A1, Builder.getInt32(1));
+  Value *Conv16 = Builder.CreateZExt(A2, IntTy);
+  Value *Or17 = Builder.CreateOr(AAddr0, Conv16);
+  Value *Inc = Builder.CreateAdd(Or17, Builder.getIntN(BitWidth, 1));
   Value *Shr18 = nullptr;
-  if (!RoundToOdd) {
-    Value *A0 = Builder.CreateTrunc(AAddr0, Builder.getInt32Ty());
-    Value *A1 = Builder.CreateLShr(A0, Builder.getInt32(2));
-    Value *A2 = Builder.CreateAnd(A1, Builder.getInt32(1));
-    Value *Conv16 = Builder.CreateZExt(A2, IntTy);
-    Value *Or17 = Builder.CreateOr(AAddr0, Conv16);
-    Inc = Builder.CreateAdd(Or17, Builder.getIntN(BitWidth, 1));
-    if (IsSigned)
-      Shr18 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 2));
-    else
-      Shr18 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 2));
-  } else {
-    // Keep a non-zero discarded portion sticky and force the retained
-    // significand's least-significant bit to one. The subsequent conversion
-    // from float to bfloat then rounds only once.
-    Value *LowBits = Builder.CreateAnd(
-        Builder.CreateTrunc(AAddr0, Builder.getInt32Ty()), Builder.getInt32(3));
-    Value *Sticky = Builder.CreateZExt(
-        Builder.CreateICmpNE(LowBits, Builder.getInt32(0)), IntTy);
-    Shr18 = Builder.CreateLShr(AAddr0, Builder.getIntN(BitWidth, 2));
-    Shr18 = Builder.CreateOr(Shr18, Sticky);
-  }
+  if (IsSigned)
+    Shr18 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 2));
+  else
+    Shr18 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 2));
+  Value *A3 = Builder.CreateAnd(Inc, Temp1, "a3");
+  Value *PosOrNeg = Builder.CreateICmpEQ(A3, Builder.getIntN(BitWidth, 0));
   Value *ExtractT60 = Builder.CreateTrunc(Shr18, Builder.getIntNTy(FloatWidth));
   Value *Extract63 = Builder.CreateLShr(Shr18, Builder.getIntN(BitWidth, 32));
   Value *ExtractT64 = nullptr;
@@ -1075,38 +1070,28 @@ static void expandIToFP(Instruction *IToFP) {
     ExtractT64 = Builder.CreateTrunc(Extract63, Builder.getInt32Ty());
   // Rounding usually keeps the exponent within its current magnitude and
   // overflow is rare. The False path is unlikely to be taken.
-  if (RoundToOdd) {
-    Builder.CreateBr(IfEnd26);
-  } else {
-    Value *A3 = Builder.CreateAnd(Inc, Temp1, "a3");
-    Value *PosOrNeg = Builder.CreateICmpEQ(A3, Builder.getIntN(BitWidth, 0));
-    Value *CondBrSwEpilog =
-        Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
-    applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
-      Inst->setMetadata(
-          LLVMContext::MD_prof,
-          MDBuilder(Inst->getContext()).createLikelyBranchWeights());
-    });
-  }
+  Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
+  applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+  });
 
-  Value *ExtractT = nullptr;
+  // if.then20
+  Builder.SetInsertPoint(IfThen20);
+  Value *Shr21 = nullptr;
+  if (IsSigned)
+    Shr21 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 3));
+  else
+    Shr21 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 3));
+  Value *ExtractT = Builder.CreateTrunc(Shr21, Builder.getIntNTy(FloatWidth));
+  Value *Extract = Builder.CreateLShr(Shr21, Builder.getIntN(BitWidth, 32));
   Value *ExtractT62 = nullptr;
-  if (!RoundToOdd) {
-    // if.then20
-    Builder.SetInsertPoint(IfThen20);
-    Value *Shr21 = nullptr;
-    if (IsSigned)
-      Shr21 = Builder.CreateAShr(Inc, Builder.getIntN(BitWidth, 3));
-    else
-      Shr21 = Builder.CreateLShr(Inc, Builder.getIntN(BitWidth, 3));
-    ExtractT = Builder.CreateTrunc(Shr21, Builder.getIntNTy(FloatWidth));
-    Value *Extract = Builder.CreateLShr(Shr21, Builder.getIntN(BitWidth, 32));
-    if (FloatWidth > 80)
-      ExtractT62 = Builder.CreateTrunc(Sub1, Builder.getInt64Ty());
-    else
-      ExtractT62 = Builder.CreateTrunc(Extract, Builder.getInt32Ty());
-    Builder.CreateBr(IfEnd26);
-  }
+  if (FloatWidth > 80)
+    ExtractT62 = Builder.CreateTrunc(Sub1, Builder.getInt64Ty());
+  else
+    ExtractT62 = Builder.CreateTrunc(Extract, Builder.getInt32Ty());
+  Builder.CreateBr(IfEnd26);
 
   // if.else:
   Builder.SetInsertPoint(IfElse);
@@ -1128,26 +1113,22 @@ static void expandIToFP(Instruction *IToFP) {
 
   // if.end26:
   Builder.SetInsertPoint(IfEnd26);
-  PHINode *AAddr1Off0 =
-      Builder.CreatePHI(Builder.getIntNTy(FloatWidth), RoundToOdd ? 2 : 3);
-  if (!RoundToOdd)
-    AAddr1Off0->addIncoming(ExtractT, IfThen20);
+  PHINode *AAddr1Off0 = Builder.CreatePHI(Builder.getIntNTy(FloatWidth), 3);
+  AAddr1Off0->addIncoming(ExtractT, IfThen20);
   AAddr1Off0->addIncoming(ExtractT60, SwEpilog);
   AAddr1Off0->addIncoming(ExtractT61, IfElse);
   PHINode *AAddr1Off32 = nullptr;
   if (FloatWidth > 32) {
-    AAddr1Off32 = Builder.CreatePHI(
-        Builder.getIntNTy(FloatWidth > 80 ? 64 : 32), RoundToOdd ? 2 : 3);
-    if (!RoundToOdd)
-      AAddr1Off32->addIncoming(ExtractT62, IfThen20);
+    AAddr1Off32 =
+        Builder.CreatePHI(Builder.getIntNTy(FloatWidth > 80 ? 64 : 32), 3);
+    AAddr1Off32->addIncoming(ExtractT62, IfThen20);
     AAddr1Off32->addIncoming(ExtractT64, SwEpilog);
     AAddr1Off32->addIncoming(ExtractT66, IfElse);
   }
   PHINode *E0 = nullptr;
   if (FloatWidth <= 80) {
-    E0 = Builder.CreatePHI(Builder.getIntNTy(BitWidthNew), RoundToOdd ? 2 : 3);
-    if (!RoundToOdd)
-      E0->addIncoming(Sub1, IfThen20);
+    E0 = Builder.CreatePHI(Builder.getIntNTy(BitWidthNew), 3);
+    E0->addIncoming(Sub1, IfThen20);
     E0->addIncoming(Sub2, SwEpilog);
     E0->addIncoming(Sub2, IfElse);
   }
@@ -1158,10 +1139,16 @@ static void expandIToFP(Instruction *IToFP) {
     And29 = Builder.CreateAnd(Shr, Temp2, "and29");
   } else {
     Value *Conv28 = Builder.CreateTrunc(Shr, Builder.getInt32Ty());
-    And29 = Builder.CreateAnd(
-        Conv28, ConstantInt::get(Builder.getContext(), APInt::getSignMask(32)));
+    // The sign is bit PatternWidth - 1 for bfloat, and bit 31 of the low word
+    // for the wider formats, which are assembled from 32-bit halves below.
+    unsigned SignBit = std::min(PatternWidth, 32u) - 1;
+    And29 =
+        Builder.CreateAnd(Conv28, ConstantInt::get(Builder.getContext(),
+                                                   APInt(32, 1u << SignBit)));
   }
   unsigned TempMod = FPMantissaWidth % 32;
+  // Number of exponent bits in the format the result is rounded to.
+  unsigned ExponentWidth = PatternWidth - FPMantissaWidth - 1;
   Value *And34 = nullptr;
   Value *Shl30 = nullptr;
   if (FloatWidth > 80) {
@@ -1172,8 +1159,8 @@ static void expandIToFP(Instruction *IToFP) {
     And34 = Builder.CreateZExt(Shl30, Builder.getInt128Ty());
   } else {
     Value *Add = Builder.CreateShl(E0, Builder.getInt32(TempMod));
-    Shl30 = Builder.CreateAdd(
-        Add, Builder.getInt32(((1 << (30 - TempMod)) - 1) << TempMod));
+    unsigned Bias = (1u << (ExponentWidth - 1)) - 1;
+    Shl30 = Builder.CreateAdd(Add, Builder.getInt32(Bias << TempMod));
     And34 = Builder.CreateAnd(FloatWidth > 32 ? AAddr1Off32 : AAddr1Off0,
                               Builder.getInt32((1 << TempMod) - 1));
   }
@@ -1203,9 +1190,14 @@ static void expandIToFP(Instruction *IToFP) {
     Value *A40 =
         Builder.CreateBitCast(Or35, Type::getFP128Ty(Builder.getContext()));
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
-  } else if (IToFP->getType()->isHalfTy() || IToFP->getType()->isBFloatTy()) {
-    // Deal with "half" situation. This is a workaround since we don't have
-    // floattihf.c currently as referring.
+  } else if (IToFP->getType()->isBFloatTy()) {
+    // bfloat was assembled directly above; the extra bits are only used by the
+    // exponent arithmetic.
+    Value *Bits = Builder.CreateTrunc(Or35, Builder.getIntNTy(ResultWidth));
+    A4 = Builder.CreateBitCast(Bits, IToFP->getType());
+  } else if (IToFP->getType()->isHalfTy()) {
+    // Convert half through float until compiler-rt provides an
+    // integer-to-half conversion builtin.
     Value *A40 =
         Builder.CreateBitCast(Or35, Type::getFloatTy(Builder.getContext()));
     A4 = Builder.CreateFPTrunc(A40, IToFP->getType());
@@ -1220,7 +1212,6 @@ static void expandIToFP(Instruction *IToFP) {
   // (Values that round *up* into inf, e.g. 2^n - 1, keep Sub2 = BitWidth - 1;
   // these are handled by the conversion's own rounding, not by this
   // saturation.)
-  unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   uint64_t MinInfExp = 1ULL << (ExponentWidth - 1);
   if (BitWidth - 1 >= MinInfExp) {
     Value *MinInfExpVal = Builder.getIntN(BitWidthNew, MinInfExp);
