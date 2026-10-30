@@ -1961,10 +1961,9 @@ let mayLoad=1, hasSideEffects=0 in {
   def LD_i16 : LD<B16>;
   def LD_i32 : LD<B32>;
   def LD_i64 : LD<B64>;
+  let Predicates=[hasLdStB128] in
+    def LD_i128 : LD<B128>;
 }
-
-let mayLoad=1, hasSideEffects=0, Predicates=[hasLdStB128] in
-  def LD_i128 : LD<B128>;
 
 class ST<DAGOperand O>
     : NVPTXInst<
@@ -1981,10 +1980,9 @@ let mayStore=1, hasSideEffects=0 in {
   def ST_i16 : ST<B16Op>;
   def ST_i32 : ST<B32Op>;
   def ST_i64 : ST<B64Op>;
+  let Predicates=[hasLdStB128] in
+    def ST_i128 : ST<B128>;
 }
-
-let mayStore=1, hasSideEffects=0, Predicates=[hasLdStB128] in
-  def ST_i128 : ST<B128>;
 
 // The following is used only in and after vector elementizations.  Vector
 // elementization happens at the machine instruction level, so the following
