@@ -7082,6 +7082,22 @@ bool CodeGenPrepare::optimizeExt(Instruction *&Inst) {
     return true;
 
   TPT.rollback(LastKnownGood);
+
+  // Move a scalar zext fed by a bitcast from an i1 vector into the same block
+  // as the bitcast so SelectionDAG can fold the zero-extension with the
+  // bitmask extraction (e.g. X86 pmovmskb/kmov).
+  if (isa<ZExtInst>(Inst) && Inst->getType()->isIntegerTy()) {
+    if (auto *BCI = dyn_cast<BitCastInst>(Inst->getOperand(0))) {
+      if (BCI->getParent() != Inst->getParent() &&
+          BCI->getSrcTy()->isVectorTy() &&
+          BCI->getSrcTy()->getScalarSizeInBits() == 1) {
+        Inst->moveAfter(BCI);
+        ++NumExtsMoved;
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 

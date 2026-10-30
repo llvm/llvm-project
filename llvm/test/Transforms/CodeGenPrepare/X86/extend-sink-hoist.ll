@@ -60,3 +60,31 @@ block3:
   %res = phi i128 [ %v2, %block1 ], [ %v4, %block2 ]
   ret i128 %res
 }
+
+; The zext should be hoisted into block1 so the instruction selector can fold it
+; with the bitcast from an i1 vector (e.g. pmovmskb/kmov).
+define i32 @hoist_zext_bitcast_v16i8(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: @hoist_zext_bitcast_v16i8(
+; CHECK-NEXT:  block1:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <16 x i8> %a, %b
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast <16 x i1> [[CMP]] to i16
+; CHECK-NEXT:    [[MASK:%.*]] = zext i16 [[BITS]] to i32
+; CHECK-NEXT:    [[EMPTY:%.*]] = icmp eq i16 [[BITS]], 0
+; CHECK-NEXT:    br i1 [[EMPTY]], label %block3, label %block2
+; CHECK:       block2:
+; CHECK-NEXT:    [[TZ:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[MASK]], i1 true)
+; CHECK-NEXT:    ret i32 [[TZ]]
+block1:
+  %cmp = icmp eq <16 x i8> %a, %b
+  %bits = bitcast <16 x i1> %cmp to i16
+  %empty = icmp eq i16 %bits, 0
+  br i1 %empty, label %block3, label %block2
+
+block2:
+  %mask = zext i16 %bits to i32
+  %tz = tail call i32 @llvm.cttz.i32(i32 %mask, i1 true)
+  ret i32 %tz
+
+block3:
+  ret i32 -1
+}
