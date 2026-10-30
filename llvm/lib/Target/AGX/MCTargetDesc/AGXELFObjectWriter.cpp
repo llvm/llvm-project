@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/AGXFixupKinds.h"
 #include "MCTargetDesc/AGXMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
@@ -36,6 +37,10 @@ public:
 protected:
   unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
                         bool IsPCRel) const override {
+    // R_AGX_CALL32 (3): a call's 32-bit offset, from the start of the call
+    // instruction (two bytes before the field) to the function: S + A - P + 2
+    if (IsPCRel && Fixup.getKind() == AGX::fixup_agx_branch32)
+      return 3;
     if (!IsPCRel && !Target.getSubSym()) {
       switch (Fixup.getKind()) {
       case FK_Data_8:
