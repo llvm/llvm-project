@@ -40,6 +40,10 @@ public:
                               ,
                               float128
 #endif
+#if defined(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
+                              ,
+                              __bf16
+#endif
                               ,
                               bfloat16
 

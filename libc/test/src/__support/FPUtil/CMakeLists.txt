@@ -1,5 +1,19 @@
 add_libc_testsuite(libc-fputil-tests PARENT libc-support-tests)
 
+if(LIBC_TYPES_HAS_BUILTIN_BFLOAT16)
+  add_fp_unittest(
+    builtin_bfloat16_test
+    SUITE
+      libc-fputil-tests
+    SRCS
+      builtin_bfloat16_test.cpp
+    DEPENDS
+      libc.src.__support.FPUtil.bfloat16
+      libc.src.__support.FPUtil.fp_bits
+      libc.src.__support.macros.properties.types
+  )
+endif()
+
 add_fp_unittest(
   dyadic_float_test
   NEED_MPFR

@@ -7,12 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fabsbf16.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/fabsbf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::BFloat16;
+
 LLVM_LIBC_FUNCTION(bfloat16, fabsbf16, (bfloat16 x)) {
-  return math::fabsbf16(x);
+  return cpp::bit_cast<bfloat16>(math::fabsbf16(cpp::bit_cast<BFloat16>(x)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
