@@ -59,6 +59,7 @@ private:
   const unsigned CommentStringLiterals : 1;
   const unsigned CommentTypedInitLists : 1;
   const unsigned CommentUserDefinedLiterals : 1;
+  const unsigned CommentZeroIntegerLiterals : 1;
   const std::vector<StringRef> NullPtrMacros;
   const std::vector<StringRef> BoolLiteralMacros;
   llvm::Regex IdentRE;

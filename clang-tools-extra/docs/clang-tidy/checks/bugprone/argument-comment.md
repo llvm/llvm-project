@@ -281,6 +281,31 @@ double operator"" _km(long double);
 foo(/*Distance=*/402.0_km);
 ```
 
+```{option} CommentZeroIntegerLiterals
+When `true`, the check will add argument comments in the format
+`/*ParameterName=*/` right before integer literal arguments with the value
+zero, which often stands for "none" or "default". This option has no effect
+when {option}`CommentIntegerLiterals` is `true`. Default is `false`.
+```
+
+Before:
+
+```c
+int open_file(const char *Path, int Flags);
+
+open_file(Path, 0);
+open_file(Path, 1);
+```
+
+After:
+
+```c
+int open_file(const char *Path, int Flags);
+
+open_file(Path, /*Flags=*/0);
+open_file(Path, 1);
+```
+
 ```{option} NullPtrMacros
 A semicolon-separated list of macros that {option}`CommentNullPtrs` treats like
 `nullptr`. The check only matches an argument that is exactly one of these

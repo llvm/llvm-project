@@ -192,7 +192,9 @@ infrastructure are described first, followed by tool-specific sections.
   macros, in C and C++. The {option}`NullPtrMacros` and
   {option}`BoolLiteralMacros` options configure the macro names. The check also
   compares comments before an argument that follows a multi-token macro, such
-  as `NULL`, with the parameter name.
+  as `NULL`, with the parameter name. Added the
+  {option}`CommentZeroIntegerLiterals` option to only add missing comments to
+  integer literals with the value zero.
 
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring

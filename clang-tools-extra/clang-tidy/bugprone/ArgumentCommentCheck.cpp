@@ -51,6 +51,8 @@ ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
       CommentTypedInitLists(Options.get("CommentTypedInitLists", false)),
       CommentUserDefinedLiterals(
           Options.get("CommentUserDefinedLiterals", false)),
+      CommentZeroIntegerLiterals(
+          Options.get("CommentZeroIntegerLiterals", false)),
       NullPtrMacros(utils::options::parseStringList(
           Options.get("NullPtrMacros", "NULL"))),
       BoolLiteralMacros(utils::options::parseStringList(
@@ -72,6 +74,7 @@ void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
   Options.store(Opts, "CommentTypedInitLists", CommentTypedInitLists);
   Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
+  Options.store(Opts, "CommentZeroIntegerLiterals", CommentZeroIntegerLiterals);
   Options.store(Opts, "NullPtrMacros",
                 utils::options::serializeStringList(NullPtrMacros));
   Options.store(Opts, "BoolLiteralMacros",
@@ -303,6 +306,11 @@ ArgumentCommentCheck::shouldAddComment(const Expr *Arg,
   // Strip implicit wrappers so brace-init arguments bound to references still
   // look like list-initialization at this point.
   Arg = Arg->IgnoreImplicit();
+  // Check for zero before stripping the unary operator, because `~0` and `!0`
+  // are not zero.
+  const auto *ZeroLiteral = dyn_cast<IntegerLiteral>(Arg);
+  if (ZeroLiteral && !ZeroLiteral->getValue().isZero())
+    ZeroLiteral = nullptr;
   if (const auto *UO = dyn_cast<UnaryOperator>(Arg))
     Arg = UO->getSubExpr()->IgnoreImplicit();
 
@@ -332,6 +340,7 @@ ArgumentCommentCheck::shouldAddComment(const Expr *Arg,
 
   if ((CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
       (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
+      (CommentZeroIntegerLiterals && ZeroLiteral) ||
       (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
       (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
       (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
