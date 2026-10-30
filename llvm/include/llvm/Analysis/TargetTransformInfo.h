@@ -1247,6 +1247,11 @@ public:
   /// Enable matching of interleaved access groups.
   LLVM_ABI bool enableInterleavedAccessVectorization() const;
 
+  /// Should the target use the vector interleave intrinsics for fixed length
+  /// vector.
+  LLVM_ABI bool supportsUsesOfInterleaveIntrinsicForFixedLengthVector(
+      unsigned InterleaveFactor) const;
+
   /// Enable matching of interleaved access groups that contain predicated
   /// accesses or gaps and therefore vectorized using masked
   /// vector loads/stores.

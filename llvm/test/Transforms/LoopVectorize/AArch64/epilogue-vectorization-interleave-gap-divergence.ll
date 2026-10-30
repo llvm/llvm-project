@@ -25,11 +25,13 @@ define i32 @interleave_gap_divergent_epilogue_decision(ptr %p, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <64 x i8>, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <64 x i8> [[WIDE_VEC]], <64 x i8> poison, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.vector.deinterleave4.v64i8(<64 x i8> [[WIDE_VEC]])
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[STRIDED_VEC1]], 0
+; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[STRIDED_VEC1]], 1
 ; CHECK-NEXT:    [[WIDE_VEC4:%.*]] = load <64 x i8>, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = shufflevector <64 x i8> [[WIDE_VEC4]], <64 x i8> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28, i32 32, i32 36, i32 40, i32 44, i32 48, i32 52, i32 56, i32 60>
-; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = shufflevector <64 x i8> [[WIDE_VEC4]], <64 x i8> poison, <16 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29, i32 33, i32 37, i32 41, i32 45, i32 49, i32 53, i32 57, i32 61>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.vector.deinterleave4.v64i8(<64 x i8> [[WIDE_VEC4]])
+; CHECK-NEXT:    [[STRIDED_VEC5:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[STRIDED_VEC4]], 0
+; CHECK-NEXT:    [[STRIDED_VEC6:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[STRIDED_VEC4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <16 x i8> [[STRIDED_VEC]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext <16 x i8> [[STRIDED_VEC5]] to <16 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = zext <16 x i8> [[STRIDED_VEC3]] to <16 x i32>
@@ -99,11 +101,11 @@ define i32 @interleave_gap_divergent_epilogue_decision(ptr %p, i64 %n) {
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK:       [[VEC_EPILOG_SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC7]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX11:%.*]] = phi i32 [ [[TMP52]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX9:%.*]] = phi i32 [ [[TMP52]], %[[VEC_EPILOG_MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[ITER_CHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX11]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX9]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[C0:%.*]] = zext i8 [[L0]] to i32

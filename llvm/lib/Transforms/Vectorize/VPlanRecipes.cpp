@@ -4729,7 +4729,7 @@ static Value *createBitOrPointerCast(IRBuilderBase &Builder, Value *V,
 /// Return a vector containing interleaved elements from multiple
 /// smaller input vectors.
 static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
-                                const Twine &Name) {
+                                bool UseIntrinsic, const Twine &Name) {
   unsigned Factor = Vals.size();
   assert(Factor > 1 && "Tried to interleave invalid number of vectors");
 
@@ -4739,10 +4739,8 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
     assert(Val->getType() == VecTy && "Tried to interleave mismatched types");
 #endif
 
-  // Scalable vectors cannot use arbitrary shufflevectors (only splats), so
-  // must use intrinsics to interleave.
-  if (VecTy->isScalableTy()) {
-    assert(Factor <= 8 && "Unsupported interleave factor for scalable vectors");
+  if (UseIntrinsic) {
+    assert(Factor <= 8 && "Unsupported interleave factor");
     return Builder.CreateVectorInterleave(Vals, Name);
   }
 
@@ -4766,9 +4764,11 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //   }
 // To:
 //   %wide.vec = load <12 x i32>                       ; Read 4 tuples of R,G,B
-//   %R.vec = shuffle %wide.vec, poison, <0, 3, 6, 9>   ; R elements
-//   %G.vec = shuffle %wide.vec, poison, <1, 4, 7, 10>  ; G elements
-//   %B.vec = shuffle %wide.vec, poison, <2, 5, 8, 11>  ; B elements
+//   %strided.vec = call { <4 x i32>, <4 x i32>, <4 x i32> }
+//        @llvm.vector.deinterleave3.v12i32(<12 x i32> %wide.vec)
+//   %R.vec = extractvalue %strided.vec, 0              ; R elements
+//   %G.vec = extractvalue %strided.vec, 1              ; G elements
+//   %B.vec = extractvalue %strided.vec, 2              ; B elements
 //
 // Or translate following interleaved store group (factor = 3):
 //   for (i = 0; i < N; i+=3) {
@@ -4778,10 +4778,10 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
 //     Pic[i+2] = B;           // Member of index 2
 //   }
 // To:
-//   %R_G.vec = shuffle %R.vec, %G.vec, <0, 1, 2, ..., 7>
-//   %B_U.vec = shuffle %B.vec, poison, <0, 1, 2, 3, u, u, u, u>
-//   %interleaved.vec = shuffle %R_G.vec, %B_U.vec,
-//        <0, 4, 8, 1, 5, 9, 2, 6, 10, 3, 7, 11>    ; Interleave R,G,B elements
+//   %interleaved.vec = call <12 x i32>
+//        @llvm.vector.interleave3.v12i32(
+//          <4 x i32> %R.vec, <4 x i32> %G.vec, <4 x i32> %B.vec)
+//                                                            ; Interleave R,G,B
 //   store <12 x i32> %interleaved.vec              ; Write 4 tuples of R,G,B
 void VPInterleaveRecipe::execute(VPTransformState &State) {
   assert((!needsMaskForGaps() || !State.VF.isScalable()) &&
@@ -4806,7 +4806,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
              "Unsupported deinterleave factor for scalable vectors");
       auto *ResBlockInMask = State.get(BlockInMask);
       SmallVector<Value *> Ops(InterleaveFactor, ResBlockInMask);
-      return interleaveVectors(State.Builder, Ops, "interleaved.mask");
+      return interleaveVectors(State.Builder, Ops, /*UseIntrinsic=*/true,
+                               "interleaved.mask");
     }
 
     if (!BlockInMask)
@@ -4847,21 +4848,22 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
     Group->addMetadata(NewLoad);
 
     ArrayRef<VPRecipeValue *> VPDefs = definedValues();
-    if (VecTy->isScalableTy()) {
-      // Scalable vectors cannot use arbitrary shufflevectors (only splats),
-      // so must use intrinsics to deinterleave.
-      assert(InterleaveFactor <= 8 &&
-             "Unsupported deinterleave factor for scalable vectors");
+    bool UseIntrinsic =
+        State.VF.isScalable() ||
+        State.TTI->supportsUsesOfInterleaveIntrinsicForFixedLengthVector(
+            InterleaveFactor);
+    if (UseIntrinsic) {
+      assert(InterleaveFactor <= 8 && "Unsupported deinterleave factor");
       NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
           Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
           NewLoad->getType(), NewLoad,
           /*FMFSource=*/nullptr, "strided.vec");
     }
 
-    auto CreateStridedVector = [&InterleaveFactor, &State,
-                                &NewLoad](unsigned Index) -> Value * {
+    auto CreateStridedVector = [&InterleaveFactor, &State, &NewLoad,
+                                UseIntrinsic](unsigned Index) -> Value * {
       assert(Index < InterleaveFactor && "Illegal group index");
-      if (State.VF.isScalable())
+      if (UseIntrinsic)
         return State.Builder.CreateExtractValue(NewLoad, Index);
 
       // For fixed length VF, use shuffle to extract the sub-vectors from the
@@ -4936,7 +4938,12 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   }
 
   // Interleave all the smaller vectors into one wider vector.
-  Value *IVec = interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
+  bool UseIntrinsic =
+      State.VF.isScalable() ||
+      State.TTI->supportsUsesOfInterleaveIntrinsicForFixedLengthVector(
+          InterleaveFactor);
+  Value *IVec = interleaveVectors(State.Builder, StoredVecs, UseIntrinsic,
+                                  "interleaved.vec");
   Instruction *NewStoreInstr;
   if (BlockInMask || MaskForGaps) {
     Value *GroupMask = CreateGroupMask(MaskForGaps);
@@ -5008,7 +5015,8 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   Value *GroupMask = nullptr;
   if (VPValue *BlockInMask = getMask()) {
     SmallVector<Value *> Ops(InterleaveFactor, State.get(BlockInMask));
-    GroupMask = interleaveVectors(State.Builder, Ops, "interleaved.mask");
+    GroupMask = interleaveVectors(State.Builder, Ops, /*UseIntrinsic=*/true,
+                                  "interleaved.mask");
   } else {
     GroupMask =
         State.Builder.CreateVectorSplat(WideVF, State.Builder.getTrue());
@@ -5079,7 +5087,8 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   }
 
   // Interleave all the smaller vectors into one wider vector.
-  Value *IVec = interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
+  Value *IVec = interleaveVectors(State.Builder, StoredVecs,
+                                  /*UseIntrinsic=*/true, "interleaved.vec");
   CallInst *NewStore = State.Builder.CreateIntrinsicWithoutFolding(
       Type::getVoidTy(Ctx), Intrinsic::vp_store,
       {IVec, ResAddr, GroupMask, InterleaveEVL});

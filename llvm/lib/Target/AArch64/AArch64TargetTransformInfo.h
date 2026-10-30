@@ -120,6 +120,11 @@ public:
 
   bool enableInterleavedAccessVectorization() const override { return true; }
 
+  bool supportsUsesOfInterleaveIntrinsicForFixedLengthVector(
+      unsigned InterleaveFactor) const override {
+    return InterleaveFactor <= 8;
+  }
+
   bool enableMaskedInterleavedAccessVectorization() const override {
     return ST->hasSVE();
   }

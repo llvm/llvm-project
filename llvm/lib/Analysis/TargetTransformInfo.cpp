@@ -741,6 +741,12 @@ bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
   return TTIImpl->enableInterleavedAccessVectorization();
 }
 
+bool TargetTransformInfo::supportsUsesOfInterleaveIntrinsicForFixedLengthVector(
+    unsigned InterleaveFactor) const {
+  return TTIImpl->supportsUsesOfInterleaveIntrinsicForFixedLengthVector(
+      InterleaveFactor);
+}
+
 bool TargetTransformInfo::enableMaskedInterleavedAccessVectorization() const {
   return TTIImpl->enableMaskedInterleavedAccessVectorization();
 }
