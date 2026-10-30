@@ -975,6 +975,12 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
     break;
   }
   case ISD::SHL: {
+    // All demanded bits may be shifted-in zeros.
+    auto *SA = isConstOrConstSplat(Op.getOperand(1), DemandedElts);
+    if (SA && SA->getAPIntValue().ult(BitWidth) &&
+        DemandedBits.lshr(SA->getZExtValue()).isZero())
+      return DAG.getConstant(0, SDLoc(Op), VT);
+
     // If we are only demanding sign bits then we can use the shift source
     // directly.
     if (std::optional<unsigned> MaxSA =
@@ -1288,6 +1294,33 @@ static SDValue combineShiftToAVG(SDValue Op,
       DAG.getNode(AVGOpc, DL, NVT, DAG.getExtOrTrunc(IsSigned, ExtOpA, DL, NVT),
                   DAG.getExtOrTrunc(IsSigned, ExtOpB, DL, NVT));
   return DAG.getExtOrTrunc(IsSigned, ResultAVG, DL, VT);
+}
+
+// Simplify an operand for a left/funnel shift, possibly through a one-use OR,
+// leaving other users unchanged. These callers can fold the rebuilt shift.
+static SDValue SimplifyShiftOperand(const TargetLowering &TLI, SDValue Src,
+                                    const APInt &SrcDemandedBits,
+                                    const APInt &DemandedElts,
+                                    SelectionDAG &DAG, unsigned Depth) {
+  if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(
+          Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
+    return V;
+
+  // SimplifyMultipleUseDemandedBits must not create new shifts. Rebuild here,
+  // keeping sign-bit-only uses intact for downstream sign-extension folds.
+  if (Src.getOpcode() != ISD::SHL || SrcDemandedBits.isSignMask() ||
+      Depth + 1 >= SelectionDAG::MaxRecursionDepth)
+    return SDValue();
+  auto *SA = isConstOrConstSplat(Src.getOperand(1), DemandedElts);
+  if (SA && SA->getAPIntValue().ult(SrcDemandedBits.getBitWidth())) {
+    APInt InDemandedBits = SrcDemandedBits.lshr(SA->getZExtValue());
+    if (SDValue V = TLI.SimplifyMultipleUseDemandedBits(
+            Src.getOperand(0), InDemandedBits, DemandedElts, DAG, Depth + 2))
+      // The undemanded bits may have changed, invalidating nsw/nuw.
+      return DAG.getNode(ISD::SHL, SDLoc(Src), Src.getValueType(), V,
+                         Src.getOperand(1));
+  }
+  return SDValue();
 }
 
 /// Look at Op. At this point, we know that only the OriginalDemandedBits of the
@@ -1784,10 +1817,26 @@ bool TargetLowering::SimplifyDemandedBits(
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
     if (!DemandedBits.isAllOnes() || !DemandedElts.isAllOnes()) {
-      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
-          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
-      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
-          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      auto SimplifyOperand = [&](SDValue Src) {
+        // A new SHL can combine with the OR's sole SHL user. Otherwise leave
+        // shared shifts intact to avoid duplicating work or live ranges.
+        if (Op.hasOneUse() && Op->user_begin()->getOpcode() == ISD::SHL &&
+            Src.getOpcode() == ISD::SHL) {
+          auto *OuterSA = isConstOrConstSplat(Op->user_begin()->getOperand(1),
+                                              DemandedElts);
+          auto *InnerSA = isConstOrConstSplat(Src.getOperand(1), DemandedElts);
+          if (OuterSA && InnerSA &&
+              OuterSA->getValueType(0) == InnerSA->getValueType(0) &&
+              OuterSA->getAPIntValue().ult(BitWidth) &&
+              InnerSA->getAPIntValue().ult(BitWidth - OuterSA->getZExtValue()))
+            return SimplifyShiftOperand(*this, Src, DemandedBits, DemandedElts,
+                                        TLO.DAG, Depth);
+        }
+        return SimplifyMultipleUseDemandedBits(Src, DemandedBits, DemandedElts,
+                                               TLO.DAG, Depth + 1);
+      };
+      SDValue DemandedOp0 = SimplifyOperand(Op0);
+      SDValue DemandedOp1 = SimplifyOperand(Op1);
       if (DemandedOp0 || DemandedOp1) {
         Op0 = DemandedOp0 ? DemandedOp0 : Op0;
         Op1 = DemandedOp1 ? DemandedOp1 : Op1;
@@ -2086,8 +2135,8 @@ bool TargetLowering::SimplifyDemandedBits(
 
       // Attempt to avoid multi-use ops if we don't need anything from them.
       if (!InDemandedMask.isAllOnes() || !DemandedElts.isAllOnes()) {
-        SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
-            Op0, InDemandedMask, DemandedElts, TLO.DAG, Depth + 1);
+        SDValue DemandedOp0 = SimplifyShiftOperand(
+            *this, Op0, InDemandedMask, DemandedElts, TLO.DAG, Depth);
         if (DemandedOp0) {
           SDValue NewOp = TLO.DAG.getNode(ISD::SHL, dl, VT, DemandedOp0, Op1);
           return TLO.CombineTo(Op, NewOp);
@@ -2211,6 +2260,30 @@ bool TargetLowering::SimplifyDemandedBits(
             SDValue NewSA = TLO.DAG.getConstant(Diff, dl, ShiftVT);
             return TLO.CombineTo(
                 Op, TLO.DAG.getNode(Opc, dl, VT, Op0.getOperand(0), NewSA));
+          }
+        }
+
+        // Look through a shared SHL's source only if both left shifts cancel
+        // this right shift completely. Reusing the source avoids creating a
+        // separate masked value and extending its live range.
+        APInt ShiftDemanded = DemandedBits.shl(ShAmt);
+        if (!ShiftDemanded.isSignMask()) {
+          auto *InnerSA = isConstOrConstSplat(Op0.getOperand(1), DemandedElts);
+          if (InnerSA && InnerSA->getAPIntValue().ule(ShAmt)) {
+            unsigned C1 = InnerSA->getZExtValue();
+            if (SDValue V = SimplifyMultipleUseDemandedBits(
+                    Op0.getOperand(0), ShiftDemanded.lshr(C1), DemandedElts,
+                    TLO.DAG, Depth + 2)) {
+              if (V.getOpcode() == ISD::SHL) {
+                auto *SA = isConstOrConstSplat(V.getOperand(1), DemandedElts);
+                APInt HighBits =
+                    DemandedBits & APInt::getHighBitsSet(BitWidth, ShAmt);
+                if (SA && SA->getAPIntValue() == ShAmt - C1 &&
+                    TLO.DAG.MaskedValueIsZero(V.getOperand(0), HighBits,
+                                              DemandedElts, Depth + 3))
+                  return TLO.CombineTo(Op, V.getOperand(0));
+              }
+            }
           }
         }
       }
@@ -2450,10 +2523,10 @@ bool TargetLowering::SimplifyDemandedBits(
       // Attempt to avoid multi-use ops if we don't need anything from them.
       if (!Demanded0.isAllOnes() || !Demanded1.isAllOnes() ||
           !DemandedElts.isAllOnes()) {
-        SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
-            Op0, Demanded0, DemandedElts, TLO.DAG, Depth + 1);
-        SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
-            Op1, Demanded1, DemandedElts, TLO.DAG, Depth + 1);
+        SDValue DemandedOp0 = SimplifyShiftOperand(
+            *this, Op0, Demanded0, DemandedElts, TLO.DAG, Depth);
+        SDValue DemandedOp1 = SimplifyShiftOperand(
+            *this, Op1, Demanded1, DemandedElts, TLO.DAG, Depth);
         if (DemandedOp0 || DemandedOp1) {
           DemandedOp0 = DemandedOp0 ? DemandedOp0 : Op0;
           DemandedOp1 = DemandedOp1 ? DemandedOp1 : Op1;
