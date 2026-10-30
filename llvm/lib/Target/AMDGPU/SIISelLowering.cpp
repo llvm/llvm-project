@@ -18350,6 +18350,48 @@ SDValue SITargetLowering::performSubCombine(SDNode *N,
   return SDValue();
 }
 
+// Return true if every element of \p Op is an fabs, which would be a free
+// source modifier if \p Op were consumed by scalar instructions.
+static bool isBuiltFromFAbs(SDValue Op) {
+  // neg is a source modifier as well, so look through it.
+  if (Op.getOpcode() == ISD::FNEG)
+    Op = Op.getOperand(0);
+
+  if (!Op.hasOneUse())
+    return false;
+
+  if (Op.getOpcode() == ISD::FABS)
+    return true;
+
+  if (Op.getOpcode() != ISD::BUILD_VECTOR)
+    return false;
+
+  return all_of(Op->op_values(), [](SDValue Elt) {
+    if (Elt.getOpcode() == ISD::FNEG)
+      Elt = Elt.getOperand(0);
+    return Elt.getOpcode() == ISD::FABS;
+  });
+}
+
+// Packed math has no abs source modifier, so an fabs feeding one costs a real
+// and per element. Scalarizing lets the abs fold back into a source modifier.
+SDValue
+SITargetLowering::splitPackedMathWithFAbsSource(SDNode *N,
+                                                DAGCombinerInfo &DCI) const {
+  EVT VT = N->getValueType(0);
+  // Only natively packed 32/64-bit FP types: a packed f16 fabs is a single and,
+  // and integer min/max shares this combine entry.
+  if (!VT.isVector() || !VT.isFloatingPoint() ||
+      VT.getScalarSizeInBits() < 32 || !isFAbsFree(VT.getScalarType()) ||
+      !isOperationLegal(N->getOpcode(), VT))
+    return SDValue();
+
+  if (none_of(N->op_values(), isBuiltFromFAbs))
+    return SDValue();
+
+  return DCI.DAG.UnrollVectorOp(N);
+}
+
 SDValue SITargetLowering::performFAddCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   if (DCI.getDAGCombineLevel() < AfterLegalizeDAG)
@@ -19428,12 +19470,16 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SUB:
     return performSubCombine(N, DCI);
   case ISD::FADD:
+    if (SDValue Res = splitPackedMathWithFAbsSource(N, DCI))
+      return Res;
     return performFAddCombine(N, DCI);
   case ISD::FSUB:
     return performFSubCombine(N, DCI);
   case ISD::FDIV:
     return performFDivCombine(N, DCI);
   case ISD::FMUL:
+    if (SDValue Res = splitPackedMathWithFAbsSource(N, DCI))
+      return Res;
     return performFMulCombine(N, DCI);
   case ISD::SETCC:
     return performSetCCCombine(N, DCI);
@@ -19457,8 +19503,12 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::UMIN:
   case AMDGPUISD::FMIN_LEGACY:
   case AMDGPUISD::FMAX_LEGACY:
+    if (SDValue Res = splitPackedMathWithFAbsSource(N, DCI))
+      return Res;
     return performMinMaxCombine(N, DCI);
   case ISD::FMA:
+    if (SDValue Res = splitPackedMathWithFAbsSource(N, DCI))
+      return Res;
     return performFMACombine(N, DCI);
   case ISD::AND:
     return performAndCombine(N, DCI);
