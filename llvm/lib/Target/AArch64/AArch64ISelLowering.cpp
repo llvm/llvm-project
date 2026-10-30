@@ -31745,6 +31745,98 @@ static SDValue performLegalizedVectorDeinterleaveCombine(
   return DCI.CombineTo(N, ResOps, false);
 }
 
+/// Create a Structured Load for Deinterleave Intrinsics
+static SDValue createDeinterleaveStructuedLoad(
+    TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG, SDValue WideVec,
+    unsigned NumParts, bool IsScalable, EVT SubVecTy, SDLoc DL,
+    MemSDNode *MemNode, SDValue Chain, SDValue BasePtr, SDValue Pred) {
+  Intrinsic::ID IID;
+  switch (NumParts) {
+  case 2:
+    IID = IsScalable ? Intrinsic::aarch64_sve_ld2_sret
+                     : Intrinsic::aarch64_neon_ld2;
+    break;
+  case 3:
+    IID = IsScalable ? Intrinsic::aarch64_sve_ld3_sret
+                     : Intrinsic::aarch64_neon_ld3;
+    break;
+  case 4:
+    IID = IsScalable ? Intrinsic::aarch64_sve_ld4_sret
+                     : Intrinsic::aarch64_neon_ld4;
+    break;
+  default:
+    return SDValue();
+  }
+
+  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  ResVTs.push_back(MVT::Other);
+  SDVTList ResVTList = DAG.getVTList(ResVTs);
+  SDValue Res;
+  if (IsScalable) {
+    SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
+                          BasePtr};
+    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
+                                  NewLdOps, MemNode->getMemoryVT(),
+                                  MemNode->getMemOperand());
+  } else {
+    SDValue NewLdOps[] = {Chain, DAG.getTargetConstant(IID, DL, MVT::i64),
+                          BasePtr};
+    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
+                                  NewLdOps, MemNode->getMemoryVT(),
+                                  MemNode->getMemOperand());
+  }
+  assert(Res && "Expected Result");
+  return Res;
+}
+
+/// For deinterleave operations with Factors greater than the largest structured
+/// load on AArch64, split them using Deinterleave of Factor/2 and Uzp
+/// Instructions
+static SDValue splitVectorDeinterleave(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       SelectionDAG &DAG, SDValue WideVec,
+                                       bool IsScalable, EVT SubVecTy, SDLoc DL,
+                                       MemSDNode *MemNode, SDValue Chain,
+                                       SDValue BasePtr, SDValue Pred) {
+  unsigned NumParts = N->getNumOperands();
+
+  if (NumParts > 4 && NumParts % 2 == 0) {
+    EVT VT = N->getValueType(0);
+    SmallVector<SDValue, 8> Ops(N->ops());
+    SmallVector<EVT> HalfVTs(NumParts / 2, VT);
+    SDValue L = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, HalfVTs,
+                            ArrayRef(Ops).take_front(NumParts / 2));
+    SDValue R = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL, HalfVTs,
+                            ArrayRef(Ops).take_back(NumParts / 2));
+    SDValue LdLow =
+        splitVectorDeinterleave(L.getNode(), DCI, DAG, L, IsScalable, SubVecTy,
+                                DL, MemNode, Chain, BasePtr, Pred);
+    SDValue LdHigh = splitVectorDeinterleave(
+        R.getNode(), DCI, DAG, R, IsScalable, SubVecTy, DL, MemNode, Chain,
+        DAG.getObjectPtrOffset(DL, BasePtr,
+                               (NumParts / 2) * SubVecTy.getStoreSize()),
+        Pred);
+    if (!LdLow || !LdHigh)
+      return SDValue();
+
+    SmallVector<SDValue> DeinterleaveResult(NumParts);
+    for (unsigned I = 0; I < NumParts / 2; I++) {
+      DeinterleaveResult[I] =
+          DAG.getNode(AArch64ISD::UZP1, DL, SubVecTy, LdLow.getValue(I),
+                      LdHigh.getValue(I));
+      DeinterleaveResult[I + (NumParts / 2)] =
+          DAG.getNode(AArch64ISD::UZP2, DL, SubVecTy, LdLow.getValue(I),
+                      LdHigh.getValue(I));
+    }
+
+    // Replace uses of the original chain result with the new chain result.
+    return DCI.CombineTo(N, DeinterleaveResult, false);
+  }
+  return createDeinterleaveStructuedLoad(DCI, DAG, WideVec, NumParts,
+                                         IsScalable, SubVecTy, DL, MemNode,
+                                         Chain, BasePtr, Pred);
+}
+
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
   if (SDValue Res = performLegalizedVectorDeinterleaveCombine(N, DCI, DAG))
@@ -31754,7 +31846,7 @@ static SDValue performVectorDeinterleaveCombine(
     return SDValue();
 
   unsigned NumParts = N->getNumOperands();
-  if (NumParts != 2 && NumParts != 3 && NumParts != 4)
+  if (NumParts < 2)
     return SDValue();
 
   EVT SubVecTy = N->getValueType(0);
@@ -31794,14 +31886,9 @@ static SDValue performVectorDeinterleaveCombine(
   if (isDeinterleave4ForWideningUToFP(N))
     return SDValue();
 
-  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
-  ResVTs.push_back(MVT::Other);
-  SDVTList ResVTList = DAG.getVTList(ResVTs);
-
-  SDValue Res;
+  SDValue Chain, BasePtr, Pred;
   MemSDNode *MemNode = dyn_cast<MemSDNode>(WideVec);
   if (IsScalable) {
-    SDValue Chain, BasePtr, Pred;
     if (auto *MaskedLoad = dyn_cast<MaskedLoadSDNode>(WideVec)) {
       // Bail out if the masked load has an unexpected number of uses, since we
       // want to avoid a situation where we have both deinterleaving loads and
@@ -31833,24 +31920,6 @@ static SDValue performVectorDeinterleaveCombine(
       Chain = Load->getChain();
       BasePtr = Load->getBasePtr();
     }
-
-    Intrinsic::ID IID;
-    switch (NumParts) {
-    case 2:
-      IID = Intrinsic::aarch64_sve_ld2_sret;
-      break;
-    case 3:
-      IID = Intrinsic::aarch64_sve_ld3_sret;
-      break;
-    case 4:
-      IID = Intrinsic::aarch64_sve_ld4_sret;
-      break;
-    }
-    SDValue NewLdOps[] = {Chain, DAG.getConstant(IID, DL, MVT::i32), Pred,
-                          BasePtr};
-    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
-                                  NewLdOps, MemNode->getMemoryVT(),
-                                  MemNode->getMemOperand());
   } else {
     if (!Subtarget.isNeonAvailable())
       return SDValue();
@@ -31859,18 +31928,21 @@ static SDValue performVectorDeinterleaveCombine(
         !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
       return SDValue();
 
-    static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
-                                                  Intrinsic::aarch64_neon_ld3,
-                                                  Intrinsic::aarch64_neon_ld4};
-    SDValue NewLdOps[] = {
-        Load->getChain(),
-        DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
-        Load->getBasePtr()};
-    // We can now generate a structured load!
-    Res = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN, DL, ResVTList,
-                                  NewLdOps, MemNode->getMemoryVT(),
-                                  MemNode->getMemOperand());
+    Chain = Load->getChain();
+    BasePtr = Load->getBasePtr();
   }
+  assert(Chain && "Expected Chain");
+  assert(BasePtr && "Expected BasePtr");
+
+  // For Factors greater than the largest supported structred load, split the
+  // deinterleave to avoid using gather loads.
+  if (NumParts > 4)
+    return splitVectorDeinterleave(N, DCI, DAG, WideVec, IsScalable, SubVecTy,
+                                   DL, MemNode, Chain, BasePtr, Pred);
+
+  SDValue Res = createDeinterleaveStructuedLoad(DCI, DAG, WideVec, NumParts,
+                                                IsScalable, SubVecTy, DL,
+                                                MemNode, Chain, BasePtr, Pred);
   SmallVector<SDValue, 4> ResOps(NumParts);
   for (unsigned Idx = 0; Idx < NumParts; ++Idx)
     ResOps[Idx] = Res.getValue(Idx);
