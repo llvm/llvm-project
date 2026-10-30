@@ -5930,21 +5930,16 @@ bool CombinerHelper::matchUDivByShiftedPow2(MachineInstr &MI,
   return true;
 }
 
-bool CombinerHelper::matchSignedDivRemToUnsigned(MachineInstr &MI) const {
-  assert((MI.getOpcode() == TargetOpcode::G_SDIV ||
-          MI.getOpcode() == TargetOpcode::G_SREM) &&
-         "Expected SDIV or SREM");
+bool CombinerHelper::matchSignedDivRemToUnsigned(
+    MachineInstr &MI, unsigned UnsignedOpcode) const {
   Register Dst = MI.getOperand(0).getReg();
   Register LHS = MI.getOperand(1).getReg();
   Register RHS = MI.getOperand(2).getReg();
   if (!VT || !VT->signBitIsZero(LHS) || !VT->signBitIsZero(RHS))
     return false;
 
-  unsigned Opcode = MI.getOpcode() == TargetOpcode::G_SDIV
-                        ? TargetOpcode::G_UDIV
-                        : TargetOpcode::G_UREM;
   LLT Ty = MRI.getType(Dst);
-  return isLegalOrBeforeLegalizer({Opcode, {Ty}});
+  return isLegalOrBeforeLegalizer({UnsignedOpcode, {Ty}});
 }
 
 void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
