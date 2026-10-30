@@ -101,6 +101,9 @@ public:
 class RuntimeLibcallImpl {
   const Record *TheDef;
   const RuntimeLibcall *Provides = nullptr;
+  const RuntimeLibcall *ProvidesF80 = nullptr;
+  const RuntimeLibcall *ProvidesF128 = nullptr;
+  const RuntimeLibcall *ProvidesPPCF128 = nullptr;
   const size_t EnumVal;
 
 public:
@@ -109,8 +112,15 @@ public:
       const DenseMap<const Record *, const RuntimeLibcall *> &ProvideMap,
       size_t EnumVal)
       : TheDef(Def), EnumVal(EnumVal) {
-    if (const Record *ProvidesDef = Def->getValueAsDef("Provides"))
+    if (const Record *ProvidesDef = Def->getValueAsOptionalDef("Provides"))
       Provides = ProvideMap.lookup(ProvidesDef);
+
+    if (Def->isSubClassOf("LongDoubleLibcallImpl")) {
+      ProvidesF80 = ProvideMap.lookup(Def->getValueAsDef("ProvidesF80"));
+      ProvidesF128 = ProvideMap.lookup(Def->getValueAsDef("ProvidesF128"));
+      ProvidesPPCF128 =
+          ProvideMap.lookup(Def->getValueAsDef("ProvidesPPCF128"));
+    }
   }
 
   ~RuntimeLibcallImpl() = default;
@@ -122,6 +132,12 @@ public:
   size_t getEnumVal() const { return EnumVal; }
 
   const RuntimeLibcall *getProvides() const { return Provides; }
+
+  bool isLongDouble() const { return ProvidesF80 != nullptr; }
+
+  const RuntimeLibcall *getProvidesF80() const { return ProvidesF80; }
+  const RuntimeLibcall *getProvidesF128() const { return ProvidesF128; }
+  const RuntimeLibcall *getProvidesPPCF128() const { return ProvidesPPCF128; }
 
   StringRef getLibcallFuncName() const {
     return TheDef->getValueAsString("LibCallFuncName");
