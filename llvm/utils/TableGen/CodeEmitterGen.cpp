@@ -349,13 +349,13 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
   size_t OrigBitOffsetCaseSize = BitOffsetCase.size();
   BitOffsetCase += "      switch (OpNum) {\n";
   size_t BitOffsetCaseSizeBeforeLoop = BitOffsetCase.size();
-  for (const RecordVal &RV : EncodingDef->getValues()) {
+  for (const RecordVal *RV : EncodingDef->getAllValues()) {
     // Ignore fixed fields in the record, we're looking for values like:
     //    bits<5> RST = { ?, ?, ?, ?, ? };
-    if (RV.isNonconcreteOK() || RV.getValue()->isComplete())
+    if (RV->isNonconcreteOK() || RV->getValue()->isComplete())
       continue;
 
-    Success &= addCodeToMergeInOperand(R, InstBits, RV.getName().str(), Case,
+    Success &= addCodeToMergeInOperand(R, InstBits, RV->getName().str(), Case,
                                        BitOffsetCase);
   }
   // Avoid empty switches.

@@ -668,8 +668,8 @@ void Operator::populateOpStructure() {
   }
 
   // Handle derived attributes.
-  for (const auto &val : def.getValues()) {
-    if (auto *record = dyn_cast<llvm::RecordRecTy>(val.getType())) {
+  for (const llvm::RecordVal *val : def.getAllValues()) {
+    if (auto *record = dyn_cast<llvm::RecordRecTy>(val->getType())) {
       if (!record->isSubClassOf(attrClass))
         continue;
       if (!record->isSubClassOf(derivedAttrClass))
@@ -681,8 +681,8 @@ void Operator::populateOpStructure() {
             def.getLoc(),
             "unsupported attribute modelling, only single class expected");
       }
-      attributes.push_back({cast<StringInit>(val.getNameInit())->getValue(),
-                            Attribute(cast<DefInit>(val.getValue()))});
+      attributes.push_back({cast<StringInit>(val->getNameInit())->getValue(),
+                            Attribute(cast<DefInit>(val->getValue()))});
     }
   }
 
