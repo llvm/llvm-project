@@ -451,8 +451,7 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
               "debug map object file \"%s\" containing debug info does not "
               "exist, debug info will not be loaded",
               comp_unit_info->oso_path.GetCString());
-          obj_file->GetModule()->ReportError(
-              "{0}", comp_unit_info->oso_load_error.AsCString());
+          ReportMissingOSOs(*comp_unit_info);
           return nullptr;
         }
       }
@@ -495,6 +494,41 @@ Module *SymbolFileDWARFDebugMap::GetModuleByCompUnitInfo(
   if (comp_unit_info->oso_sp)
     return comp_unit_info->oso_sp->module_sp.get();
   return nullptr;
+}
+
+static bool OSOExists(llvm::StringRef oso_path) {
+  FileSpec oso_file(oso_path);
+  llvm::StringRef oso_object;
+  return FileSystem::Instance().Exists(oso_file) ||
+         ObjectFile::SplitArchivePathWithObject(oso_path, oso_file, oso_object,
+                                                /*must_exist=*/true);
+}
+
+void SymbolFileDWARFDebugMap::ReportMissingOSOs(
+    const CompileUnitInfo &missing_info) {
+  // Users have no control over shared cache images, so the error is not
+  // actionable.
+  if (m_objfile_sp->IsSharedCacheBinary())
+    return;
+
+  if (m_reported_missing_osos)
+    return;
+  m_reported_missing_osos = true;
+
+  size_t num_missing =
+      llvm::count_if(m_compile_unit_infos, [](const CompileUnitInfo &info) {
+        return !OSOExists(info.oso_path.GetStringRef());
+      });
+  ModuleSP module_sp = m_objfile_sp->GetModule();
+  if (num_missing <= 1) {
+    module_sp->ReportError("{0}", missing_info.oso_load_error.AsCString());
+    return;
+  }
+  module_sp->ReportError(
+      "{0} of {1} debug map object files do not exist: debug info cannot be "
+      "loaded for them. Run \"image dump separate-debug-info --errors-only\" "
+      "to list them",
+      num_missing, m_compile_unit_infos.size());
 }
 
 bool SymbolFileDWARFDebugMap::GetFileSpecForSO(uint32_t oso_idx,
