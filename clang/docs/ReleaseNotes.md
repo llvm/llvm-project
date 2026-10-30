@@ -889,6 +889,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   type. (#GH204756)
 
 #### Bug Fixes to C++ Support
+- Fixed exponential compile time during argument-dependent lookup for nested
+  class template specializations with repeated template arguments. (#GH235704)
+
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being

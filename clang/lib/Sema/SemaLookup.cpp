@@ -2906,18 +2906,14 @@ namespace {
       return ClassesTransitive.insert(RD);
     }
 
-    bool visitTemplateArguments(CXXRecordDecl *RD) {
-      return ClassesWithVisitedTemplateArguments.insert(RD);
-    }
-
     Sema &S;
     Sema::AssociatedNamespaceSet &Namespaces;
     Sema::AssociatedClassSet &Classes;
     SourceLocation InstantiationLoc;
+    Sema::AssociatedClassSet ClassesWithVisitedTemplateArguments;
 
   private:
     Sema::AssociatedClassSet ClassesTransitive;
-    Sema::AssociatedClassSet ClassesWithVisitedTemplateArguments;
   };
 } // end anonymous namespace
 
@@ -3094,7 +3090,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
     // Add the associated namespace for this class.
     CollectEnclosingNamespace(Result.Namespaces, Ctx);
 
-    if (Result.visitTemplateArguments(Class)) {
+    if (Result.ClassesWithVisitedTemplateArguments.insert(Class)) {
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
       for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
         addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
