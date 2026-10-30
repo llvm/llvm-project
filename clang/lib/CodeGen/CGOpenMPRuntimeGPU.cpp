@@ -721,8 +721,6 @@ checkAndGetNoLoopDirective(ASTContext &Ctx, const OMPExecutableDirective &D) {
   // Do not filter out 'ordered' since Sema rejects it on these directives.
   if (LD.getLoopsNumber() != 1 || LD.hasClausesOfKind<OMPNumTeamsClause>() ||
       LD.hasClausesOfKind<OMPReductionClause>() ||
-      LD.hasClausesOfKind<OMPLastprivateClause>() ||
-      LD.hasClausesOfKind<OMPLinearClause>() ||
       LD.getSingleClause<OMPScheduleClause>() ||
       LD.getSingleClause<OMPDistScheduleClause>())
     return nullptr;
