@@ -225,6 +225,7 @@ void setSPARCV9TargetInfo(Ctx &);
 void setSystemZTargetInfo(Ctx &);
 void setX86TargetInfo(Ctx &);
 void setX86_64TargetInfo(Ctx &);
+void setXtensaTargetInfo(Ctx &);
 
 struct ErrorPlace {
   InputSectionBase *isec;
@@ -290,8 +291,9 @@ template <class ELFT> bool isMipsPIC(const Defined *sym);
 
 const ELFSyncStream &operator<<(const ELFSyncStream &, RelType);
 
-void reportRangeError(Ctx &, uint8_t *loc, const Relocation &rel,
-                      const Twine &v, int64_t min, uint64_t max);
+template <typename minT, typename maxT>
+void reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
+                      const Twine &v, minT min, maxT max);
 void reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                       const Symbol &sym, const Twine &msg);
 
@@ -307,7 +309,7 @@ inline void checkInt(Ctx &ctx, uint8_t *loc, int64_t v, int n,
 inline void checkUInt(Ctx &ctx, uint8_t *loc, uint64_t v, int n,
                       const Relocation &rel) {
   if ((v >> n) != 0)
-    reportRangeError(ctx, loc, rel, Twine(v), 0, llvm::maxUIntN(n));
+    reportRangeError(ctx, loc, rel, Twine(v), (int64_t)0, llvm::maxUIntN(n));
 }
 
 // Make sure that V can be represented as an N bit signed or unsigned integer.

@@ -72,8 +72,9 @@ void elf::printLocation(ELFSyncStream &s, InputSectionBase &sec,
   s << sec.getObjMsg(off);
 }
 
+template <typename minT, typename maxT>
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
-                           const Twine &v, int64_t min, uint64_t max) {
+                           const Twine &v, minT min, maxT max) {
   ErrorPlace errPlace = getErrorPlace(ctx, loc);
   auto diag = Err(ctx);
   diag << errPlace.loc << "relocation " << rel.type
@@ -102,6 +103,16 @@ void elf::reportRangeError(Ctx &ctx, uint8_t *loc, const Relocation &rel,
     diag << "; consider recompiling with -fdebug-types-section to reduce size "
             "of debug sections";
 }
+
+template void elf::reportRangeError<int64_t, int64_t>(Ctx &ctx, uint8_t *loc,
+                                                      const Relocation &rel,
+                                                      const Twine &v,
+                                                      int64_t min, int64_t max);
+template void elf::reportRangeError<int64_t, uint64_t>(Ctx &ctx, uint8_t *loc,
+                                                       const Relocation &rel,
+                                                       const Twine &v,
+                                                       int64_t min,
+                                                       uint64_t max);
 
 void elf::reportRangeError(Ctx &ctx, uint8_t *loc, int64_t v, int n,
                            const Symbol &sym, const Twine &msg) {

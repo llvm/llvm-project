@@ -1,0 +1,60 @@
+# REQUIRES: xtensa
+# RUN: yaml2obj --docnum=1 %s -o %t.unknown.o
+# RUN: not ld.lld %t.unknown.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+
+## First byte 0x76 matches the loop/bf/bt prefix, but the second byte is none of
+## those opcodes. The relocation is rejected as an unknown opcode.
+# RUN: yaml2obj --docnum=2 %s -o %t.opcode.o
+# RUN: not ld.lld %t.opcode.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OPCODE
+
+# UNKNOWN: error: {{.*}}:(.text+0x0): unknown relocation (6) against symbol _start
+# OPCODE: error: {{.*}}:(.text+0x0): unknown opcode for relocation: v
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_XTENSA
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '000000'
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Link:    .symtab
+    Info:    .text
+    Relocations:
+      - Offset: 0
+        Symbol: _start
+        Type:   R_XTENSA_PLT
+Symbols:
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_XTENSA
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: '762000'
+  - Name:    .rela.text
+    Type:    SHT_RELA
+    Link:    .symtab
+    Info:    .text
+    Relocations:
+      - Offset: 0
+        Symbol: _start
+        Type:   R_XTENSA_SLOT0_OP
+Symbols:
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
