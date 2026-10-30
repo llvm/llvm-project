@@ -49,3 +49,53 @@ exit:
   %useOfFirstGEP = load i8, ptr %initalGEP, align 1
   ret ptr %unmergedGEP1
 }
+
+; A positive new index can still wrap the byte offset once it is scaled by the
+; element size: %initalGEP is at 2^64 - 12 and adding 7 * 3 bytes wraps, so
+; nuw must be dropped even though NewIdx is positive.
+define ptr @testWrappingByteOffsetNUW(ptr %memory, ptr %blockaddress) {
+; CHECK-LABEL: define ptr @testWrappingByteOffsetNUW(
+; CHECK-SAME: ptr [[MEMORY:%.*]], ptr [[BLOCKADDRESS:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[POINTER:%.*]] = load ptr, ptr [[MEMORY]], align 8
+; CHECK-NEXT:    [[INITALGEP:%.*]] = getelementptr nuw [3 x i8], ptr [[POINTER]], i64 -4
+; CHECK-NEXT:    indirectbr ptr [[BLOCKADDRESS]], [label %[[EXIT:.*]]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[UNMERGEDGEP:%.*]] = getelementptr [3 x i8], ptr [[INITALGEP]], i64 7
+; CHECK-NEXT:    [[USEOFFIRSTGEP:%.*]] = load i8, ptr [[INITALGEP]], align 1
+; CHECK-NEXT:    ret ptr [[UNMERGEDGEP]]
+;
+entry:
+  %pointer = load ptr, ptr %memory, align 8
+  %initalGEP = getelementptr nuw [3 x i8], ptr %pointer, i64 -4
+  indirectbr ptr %blockaddress, [label %exit]
+
+exit:
+  %unmergedGEP = getelementptr nuw [3 x i8], ptr %pointer, i64 3
+  %useOfFirstGEP = load i8, ptr %initalGEP, align 1
+  ret ptr %unmergedGEP
+}
+
+; The byte offsets 3 and 3 add without wrapping, so nuw stays valid.
+define ptr @testNonWrappingByteOffsetNUW(ptr %memory, ptr %blockaddress) {
+; CHECK-LABEL: define ptr @testNonWrappingByteOffsetNUW(
+; CHECK-SAME: ptr [[MEMORY:%.*]], ptr [[BLOCKADDRESS:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[POINTER:%.*]] = load ptr, ptr [[MEMORY]], align 8
+; CHECK-NEXT:    [[INITALGEP:%.*]] = getelementptr nuw [3 x i8], ptr [[POINTER]], i64 1
+; CHECK-NEXT:    indirectbr ptr [[BLOCKADDRESS]], [label %[[EXIT:.*]]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[UNMERGEDGEP:%.*]] = getelementptr nuw [3 x i8], ptr [[INITALGEP]], i64 1
+; CHECK-NEXT:    [[USEOFFIRSTGEP:%.*]] = load i8, ptr [[INITALGEP]], align 1
+; CHECK-NEXT:    ret ptr [[UNMERGEDGEP]]
+;
+entry:
+  %pointer = load ptr, ptr %memory, align 8
+  %initalGEP = getelementptr nuw [3 x i8], ptr %pointer, i64 1
+  indirectbr ptr %blockaddress, [label %exit]
+
+exit:
+  %unmergedGEP = getelementptr nuw [3 x i8], ptr %pointer, i64 2
+  %useOfFirstGEP = load i8, ptr %initalGEP, align 1
+  ret ptr %unmergedGEP
+}
