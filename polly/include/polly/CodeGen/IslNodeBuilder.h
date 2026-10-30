@@ -101,6 +101,10 @@ public:
   /// Preload all memory loads that are invariant.
   bool preloadInvariantLoads();
 
+  /// Check if the AST node or any of its subnodes/expressions exceed the
+  /// maximum legal integer bitwidth.
+  bool hasExceedingBitWidth(__isl_keep isl_ast_node *Node) const;
+
   /// Finalize code generation.
   ///
   /// @see BlockGenerator::finalizeSCoP(Scop &S)

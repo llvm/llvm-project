@@ -1051,6 +1051,82 @@ void IslNodeBuilder::generateBeginScopTrace() {
   RuntimeDebugBuilder::createCPUPrinter(Builder, ArrayRef<Value *>(Values));
 }
 
+bool IslNodeBuilder::hasExceedingBitWidth(__isl_keep isl_ast_node *Node) const {
+  if (!Node)
+    return false;
+
+  switch (isl_ast_node_get_type(Node)) {
+  case isl_ast_node_error:
+    return true;
+  case isl_ast_node_for: {
+    isl_ast_expr *Init = isl_ast_node_for_get_init(Node);
+    isl_ast_expr *Cond = isl_ast_node_for_get_cond(Node);
+    isl_ast_expr *Inc = isl_ast_node_for_get_inc(Node);
+    isl_ast_expr *Iter = isl_ast_node_for_get_iterator(Node);
+    isl_ast_node *Body = isl_ast_node_for_get_body(Node);
+
+    bool Exceeds = ExprBuilder.hasExceedingBitWidth(Init) ||
+                   ExprBuilder.hasExceedingBitWidth(Cond) ||
+                   ExprBuilder.hasExceedingBitWidth(Inc) ||
+                   ExprBuilder.hasExceedingBitWidth(Iter) ||
+                   hasExceedingBitWidth(Body);
+
+    isl_ast_expr_free(Init);
+    isl_ast_expr_free(Cond);
+    isl_ast_expr_free(Inc);
+    isl_ast_expr_free(Iter);
+    isl_ast_node_free(Body);
+    return Exceeds;
+  }
+  case isl_ast_node_if: {
+    isl_ast_expr *Cond = isl_ast_node_if_get_cond(Node);
+    isl_ast_node *Then = isl_ast_node_if_get_then_node(Node);
+    isl_ast_node *Else = isl_ast_node_if_has_else_node(Node)
+                             ? isl_ast_node_if_get_else_node(Node)
+                             : nullptr;
+
+    bool Exceeds = ExprBuilder.hasExceedingBitWidth(Cond) ||
+                   hasExceedingBitWidth(Then) ||
+                   (Else && hasExceedingBitWidth(Else));
+
+    isl_ast_expr_free(Cond);
+    isl_ast_node_free(Then);
+    if (Else)
+      isl_ast_node_free(Else);
+    return Exceeds;
+  }
+  case isl_ast_node_block: {
+    isl_ast_node_list *List = isl_ast_node_block_get_children(Node);
+    int N = isl_ast_node_list_n_ast_node(List);
+    bool Exceeds = false;
+    for (int i = 0; i < N; ++i) {
+      isl_ast_node *Child = isl_ast_node_list_get_ast_node(List, i);
+      if (hasExceedingBitWidth(Child))
+        Exceeds = true;
+      isl_ast_node_free(Child);
+      if (Exceeds)
+        break;
+    }
+    isl_ast_node_list_free(List);
+    return Exceeds;
+  }
+  case isl_ast_node_mark: {
+    isl_ast_node *Child = isl_ast_node_mark_get_node(Node);
+    bool Exceeds = hasExceedingBitWidth(Child);
+    isl_ast_node_free(Child);
+    return Exceeds;
+  }
+  case isl_ast_node_user: {
+    isl_ast_expr *Expr = isl_ast_node_user_get_expr(Node);
+    bool Exceeds = ExprBuilder.hasExceedingBitWidth(Expr);
+    isl_ast_expr_free(Expr);
+    return Exceeds;
+  }
+  }
+
+  return false;
+}
+
 void IslNodeBuilder::create(__isl_take isl_ast_node *Node) {
   switch (isl_ast_node_get_type(Node)) {
   case isl_ast_node_error:
@@ -1522,7 +1598,8 @@ Value *IslNodeBuilder::createRTC(isl_ast_expr *Condition) {
   // bits. These are -- in case wrapping intrinsics are used -- translated to
   // runtime library calls that are not available on all systems (e.g., Android)
   // and consequently will result in linker errors.
-  if (ExprBuilder.hasLargeInts(isl::manage_copy(Condition))) {
+  if (ExprBuilder.hasLargeInts(isl::manage_copy(Condition)) ||
+      ExprBuilder.hasExceedingBitWidth(Condition)) {
     isl_ast_expr_free(Condition);
     return Builder.getFalse();
   }

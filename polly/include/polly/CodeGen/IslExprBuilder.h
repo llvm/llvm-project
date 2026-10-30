@@ -13,6 +13,7 @@
 
 #include "polly/CodeGen/IRBuilder.h"
 #include "polly/Support/ScopHelper.h"
+#include "llvm/IR/ConstantRange.h"
 #include "isl/isl-noexceptions.h"
 
 namespace llvm {
@@ -190,7 +191,20 @@ public:
   /// @return True if the ast expression is larger than 64 bit.
   bool hasLargeInts(isl::ast_expr Expr);
 
+  /// Check if an ID represents a parameter of the SCoP.
+  bool isParameter(__isl_keep isl_id *Id) const;
+
+  /// Check if an expression or any of its subexpressions exceeds 64-bit
+  /// integer bitwidth (e.g. from large constants or coefficient
+  /// multiplication).
+  bool hasExceedingBitWidth(__isl_keep isl_ast_expr *Expr) const;
+
+  /// Check if code generation has encountered an expression exceeding 64-bit
+  /// bitwidth.
+  bool hasExceededBitWidth() const { return HasExceedingBitWidth; }
+
 private:
+  bool HasExceedingBitWidth = false;
   Scop &S;
 
   /// Flag that will be set if an overflow occurred at runtime.

@@ -109,6 +109,125 @@ bool IslExprBuilder::hasLargeInts(isl::ast_expr Expr) {
   return false;
 }
 
+bool IslExprBuilder::isParameter(__isl_keep isl_id *Id) const {
+  isl::set Context = S.getContext();
+  return isl_set_find_dim_by_id(Context.get(), isl_dim_param, Id) >= 0;
+}
+
+bool IslExprBuilder::hasExceedingBitWidth(__isl_keep isl_ast_expr *Expr) const {
+  if (!Expr)
+    return false;
+
+  enum isl_ast_expr_type Type = isl_ast_expr_get_type(Expr);
+
+  if (Type == isl_ast_expr_int) {
+    isl_val *Val = isl_ast_expr_get_val(Expr);
+    APInt APVal = APIntFromVal(Val);
+    return !APVal.isSignedIntN(64);
+  }
+
+  if (Type == isl_ast_expr_op) {
+    isl_ast_op_type OpType = isl_ast_expr_get_op_type(Expr);
+    int NumArgs = isl_ast_expr_get_op_n_arg(Expr);
+
+    if (OpType == isl_ast_op_mul && NumArgs == 2) {
+      isl_ast_expr *Arg0 = isl_ast_expr_get_op_arg(Expr, 0);
+      isl_ast_expr *Arg1 = isl_ast_expr_get_op_arg(Expr, 1);
+
+      auto CheckMulOverflow = [&](isl_ast_expr *A, isl_ast_expr *B) {
+        if (isl_ast_expr_get_type(A) == isl_ast_expr_int &&
+            isl_ast_expr_get_type(B) == isl_ast_expr_id) {
+          isl::id Id = isl::manage(isl_ast_expr_get_id(B));
+          if (isParameter(Id.get())) {
+            isl_val *Val = isl_ast_expr_get_val(A);
+            APInt APVal = APIntFromVal(Val);
+            if (APVal.isNegative())
+              APVal = -APVal;
+
+            if (APVal.ugt(1)) {
+              const SCEV *ParamSCEV = static_cast<const SCEV *>(Id.get_user());
+              ConstantRange Range128 = ConstantRange::getFull(128);
+              if (ParamSCEV && SE.isSCEVable(ParamSCEV->getType()))
+                Range128 = SE.getSignedRange(ParamSCEV).signExtend(128);
+
+              isl::set Context =
+                  S.getContext().intersect(S.getAssumedContext());
+              int Pos = isl_set_find_dim_by_id(Context.get(), isl_dim_param,
+                                               Id.get());
+
+              if (Pos >= 0) {
+                unsigned NumParams = isl_set_dim(Context.get(), isl_dim_param);
+                isl::set SetContext = isl::manage(
+                    isl_set_move_dims(Context.copy(), isl_dim_set, 0,
+                                      isl_dim_param, 0, NumParams));
+                isl::val MinVal = SetContext.dim_min_val(Pos);
+                isl::val MaxVal = SetContext.dim_max_val(Pos);
+
+                if (MinVal.is_int()) {
+                  APInt MinAP = APIntFromVal(MinVal.release()).sextOrTrunc(128);
+                  Range128 =
+                      Range128.intersectWith(ConstantRange::makeExactICmpRegion(
+                          CmpInst::ICMP_SGE, MinAP));
+                }
+                if (MaxVal.is_int()) {
+                  APInt MaxAP = APIntFromVal(MaxVal.release()).sextOrTrunc(128);
+                  Range128 =
+                      Range128.intersectWith(ConstantRange::makeExactICmpRegion(
+                          CmpInst::ICMP_SLE, MaxAP));
+                }
+              }
+
+              if (Range128.isEmptySet())
+                return false;
+
+              ConstantRange Prod =
+                  Range128.multiply(ConstantRange(APVal.sextOrTrunc(128)));
+              if (!Prod.getSignedMin().isSignedIntN(64) ||
+                  !Prod.getSignedMax().isSignedIntN(64))
+                return true;
+              return false;
+            }
+          }
+        }
+        return false;
+      };
+
+      if (isl_ast_expr_get_type(Arg0) == isl_ast_expr_int &&
+          isl_ast_expr_get_type(Arg1) == isl_ast_expr_int) {
+        isl_val *Val0 = isl_ast_expr_get_val(Arg0);
+        isl_val *Val1 = isl_ast_expr_get_val(Arg1);
+        APInt AP0 = APIntFromVal(Val0);
+        APInt AP1 = APIntFromVal(Val1);
+        bool Overflow = false;
+        APInt Prod =
+            AP0.sextOrTrunc(128).smul_ov(AP1.sextOrTrunc(128), Overflow);
+        if (Overflow || !Prod.isSignedIntN(64)) {
+          isl_ast_expr_free(Arg0);
+          isl_ast_expr_free(Arg1);
+          return true;
+        }
+      }
+
+      bool Overflows =
+          CheckMulOverflow(Arg0, Arg1) || CheckMulOverflow(Arg1, Arg0);
+      isl_ast_expr_free(Arg0);
+      isl_ast_expr_free(Arg1);
+      if (Overflows)
+        return true;
+    }
+
+    for (int i = 0; i < NumArgs; ++i) {
+      isl_ast_expr *Arg = isl_ast_expr_get_op_arg(Expr, i);
+      bool Exceeds = hasExceedingBitWidth(Arg);
+      isl_ast_expr_free(Arg);
+      if (Exceeds)
+        return true;
+    }
+  }
+
+  return false;
+}
+
 Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
                                    Value *RHS, const Twine &Name) {
   // Handle the plain operation (without overflow tracking) first.
@@ -745,10 +864,6 @@ Value *IslExprBuilder::createId(__isl_take isl_ast_expr *Expr) {
 }
 
 IntegerType *IslExprBuilder::getType(__isl_keep isl_ast_expr *Expr) {
-  // XXX: We assume i64 is large enough. This is often true, but in general
-  //      incorrect. Also, on 32bit architectures, it would be beneficial to
-  //      use a smaller type. We can and should directly derive this information
-  //      during code generation.
   return IntegerType::get(Builder.getContext(), 64);
 }
 
@@ -764,7 +879,7 @@ Value *IslExprBuilder::createInt(__isl_take isl_ast_expr *Expr) {
   APValue = APIntFromVal(Val);
 
   auto BitWidth = APValue.getBitWidth();
-  if (BitWidth <= 64)
+  if (BitWidth <= 64 && APValue.isSignedIntN(64))
     T = getType(Expr);
   else
     T = Builder.getIntNTy(BitWidth);
@@ -777,6 +892,9 @@ Value *IslExprBuilder::createInt(__isl_take isl_ast_expr *Expr) {
 }
 
 Value *IslExprBuilder::create(__isl_take isl_ast_expr *Expr) {
+  if (hasExceedingBitWidth(Expr))
+    HasExceedingBitWidth = true;
+
   switch (isl_ast_expr_get_type(Expr)) {
   case isl_ast_expr_error:
     llvm_unreachable("Code generation error");
