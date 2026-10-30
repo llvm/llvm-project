@@ -99,17 +99,19 @@ static char getTypeID(Type *Ty) {
   }
 }
 
-// Return the name to look up F's implementation by in the host process. A
-// leading '\1' tells the code generator to use the rest of the name verbatim
-// as the symbol name, which then includes the target's global prefix (e.g.
-// '_' on Darwin). Neither dlsym() nor the "lle_X_" table expects the escape or
-// that prefix, so drop both.
+// Return the C name to look up F's implementation by in the host process, or
+// F's name if it has none. A leading '\1' suppresses mangling, so the rest is
+// the symbol name, but dlsym() and the "lle_X_" table take C names. On a
+// target with a global prefix (e.g. '_' on Darwin), those are symbol names
+// without it, and a symbol that lacks the prefix has no C name. ORC's
+// DynamicLibrarySearchGenerator skips such symbols too.
 static StringRef getExternalName(const Function *F) {
   StringRef Name = F->getName();
   if (!Name.consume_front("\1"))
     return Name;
-  if (char Prefix = F->getDataLayout().getGlobalPrefix())
-    Name.consume_front(Prefix);
+  char Prefix = F->getDataLayout().getGlobalPrefix();
+  if (Prefix && !Name.consume_front(Prefix))
+    return F->getName();
   return Name;
 }
 
