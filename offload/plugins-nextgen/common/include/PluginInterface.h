@@ -128,6 +128,10 @@ struct AsyncInfoWrapperTy {
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
 
+  /// Indicate whether the operation is synchronous, i.e., the caller did not
+  /// provide a __tgt_async_info.
+  bool isSynchronous() const { return AsyncInfoPtr == &LocalAsyncInfo; }
+
   /// Get the queue.
   template <typename Ty> Ty getQueueAs() {
     static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
