@@ -36,6 +36,19 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
       /*defaultImplementation=*/[{
         return $_op->getResult(0);
       }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if the view may start at a different address than its
+        source.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"mayHaveNonZeroOffset",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return true;
+      }]
     >
   ];
 }
