@@ -153,6 +153,14 @@ void BasicBlock::verify() const {
     I.verify();
   }
 }
+
+hash_code BasicBlock::hash() const {
+  auto Hash = Value::hashHelper();
+  for (auto &I : *this)
+    Hash = hash_combine(Hash, I.hash());
+  return Hash;
+}
+
 #endif // NDEBUG
 
 } // namespace llvm::sandboxir

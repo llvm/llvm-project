@@ -207,9 +207,18 @@ protected:
   Value(const Value &) = delete;
   Value &operator=(const Value &) = delete;
 
+#ifndef NDEBUG
+  /// Helper hash for calculating the hash in the subclasses.
+  hash_code hashHelper() const { return hash_combine(SubclassID, &Ctx, Val); }
+#endif
+
 public:
   virtual ~Value() = default;
   ClassID getSubclassID() const { return SubclassID; }
+
+#ifndef NDEBUG
+  virtual hash_code hash() const = 0;
+#endif
 
   using use_iterator = UserUseIterator;
   using const_use_iterator = UserUseIterator;
@@ -339,6 +348,7 @@ public:
     assert((isa<llvm::MetadataAsValue>(Val) || isa<llvm::InlineAsm>(Val)) &&
            "Expected Metadata or InlineAssembly!");
   }
+  hash_code hash() const final { return Value::hashHelper(); }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
     dumpCommonSuffix(OS);

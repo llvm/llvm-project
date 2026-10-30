@@ -89,6 +89,13 @@ protected:
   }
 
 #ifndef NDEBUG
+  hash_code hashHelper() const {
+    auto Hash = Value::hashHelper();
+    for (Value *Op : operands())
+      Hash = hash_combine(Hash, Op);
+    return Hash;
+  }
+
   void verifyUserOfLLVMUse(const llvm::Use &Use) const;
 #endif // NDEBUG
 

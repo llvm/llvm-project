@@ -104,6 +104,7 @@ public:
 
 #ifndef NDEBUG
   void verify() const final;
+  hash_code hash() const final;
   LLVM_ABI void dumpOS(raw_ostream &OS) const final;
 #endif
 };

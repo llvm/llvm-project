@@ -6599,3 +6599,25 @@ define void @foo() {
   auto *AsmOp0 = Asm->getOperand(0);
   EXPECT_TRUE(isa<sandboxir::OpaqueValue>(AsmOp0));
 }
+
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+TEST_F(SandboxIRTest, Hash) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  ret void
+}
+)IR");
+  Function &LLVMFn = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &Fn = *Ctx.createFunction(&LLVMFn);
+  auto *Arg = Fn.getArg(0);
+  auto &BB = *Fn.begin();
+
+  auto FnHashBefore = Fn.hash();
+  auto BBHashBefore = BB.hash();
+  auto *NewI = sandboxir::BinaryOperator::create(
+      sandboxir::Instruction::Opcode::Add, Arg, Arg, BB.end(), Ctx, "Folded");
+  EXPECT_NE(Fn.hash(), FnHashBefore);
+  EXPECT_NE(BB.hash(), BBHashBefore);
+}
+#endif

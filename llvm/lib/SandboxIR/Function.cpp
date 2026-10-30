@@ -41,6 +41,13 @@ void Function::dumpNameAndArgs(raw_ostream &OS) const {
   OS << ")";
 }
 
+hash_code Function::hash() const {
+  hash_code Hash(0);
+  for (auto &BB : *this)
+    Hash = hash_combine(Hash, BB.hash());
+  return Hash;
+}
+
 void Function::dumpOS(raw_ostream &OS) const {
   dumpNameAndArgs(OS);
   OS << " {\n";
