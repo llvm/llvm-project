@@ -12,7 +12,7 @@ define i32 @PR236021() {
 ; X86-NEXT:    cmpl x, %ecx
 ; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sbbl x+4, %ecx
-; X86-NEXT:    movl $1, %ecx
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sbbl x+8, %ecx
 ; X86-NEXT:    sbbl x+12, %eax
 ; X86-NEXT:    setge %al
@@ -22,9 +22,9 @@ define i32 @PR236021() {
 ; X64-LABEL: PR236021:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq x@GOTPCREL(%rip), %rax
-; X64-NEXT:    movl $63, %ecx
-; X64-NEXT:    cmpq (%rax), %rcx
-; X64-NEXT:    movl $1, %ecx
+; X64-NEXT:    xorl %ecx, %ecx
+; X64-NEXT:    movl $63, %edx
+; X64-NEXT:    cmpq (%rax), %rdx
 ; X64-NEXT:    sbbq 8(%rax), %rcx
 ; X64-NEXT:    setl %al
 ; X64-NEXT:    notb %al
