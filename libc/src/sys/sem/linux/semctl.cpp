@@ -13,11 +13,11 @@
 #include "hdr/sys_sem_macros.h"
 #include "hdr/types/struct_semid_ds.h"
 #include "hdr/types/struct_seminfo.h"
-#include "src/__support/OSUtil/syscall.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/semctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include <stdarg.h>
-#include <sys/syscall.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -89,13 +89,12 @@ LLVM_LIBC_FUNCTION(int, semctl, (int semid, int semnum, int cmd, ...)) {
     return -1;
   }
 
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_semctl, semid, semnum, cmd,
-                                              cmd_arg);
-  if (ret < 0) {
-    libc_errno = -ret;
+  auto result = linux_syscalls::semctl(semid, semnum, cmd, cmd_arg);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

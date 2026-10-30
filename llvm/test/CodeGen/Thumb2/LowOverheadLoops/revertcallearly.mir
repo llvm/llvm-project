@@ -77,7 +77,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[t2LDRi12_]], 1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK-NEXT:   [[tMOVr:%[0-9]+]]:gprlr = tMOVr killed [[t2ADDri]], 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   [[tMOVr:%[0-9]+]]:gprlr = tMOVr [[t2ADDri]], 14 /* CC::al */, $noreg
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY [[tMOVr]]
   ; CHECK-NEXT:   [[t2MOVi32imm1:%[0-9]+]]:rgpr = t2MOVi32imm @c
   ; CHECK-NEXT:   [[t2MOVi:%[0-9]+]]:rgpr = t2MOVi 24, 14 /* CC::al */, $noreg, $noreg
@@ -101,7 +101,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[t2MOVi1:%[0-9]+]]:rgpr = t2MOVi -1, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK-NEXT:   t2STRi12 killed [[t2MOVi1]], [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
+  ; CHECK-NEXT:   t2STRi12 [[t2MOVi1]], [[t2MOVi32imm]], 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.for.end9:
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr = IMPLICIT_DEF
@@ -120,7 +120,7 @@ body:             |
     successors: %bb.2(0x80000000)
 
     %5:rgpr = t2ADDri %0, 1, 14 /* CC::al */, $noreg, $noreg
-    %6:gprlr = t2DoLoopStart killed %5
+    %6:gprlr = t2DoLoopStart %5
     %1:gpr = COPY %6
     %7:rgpr = t2MOVi32imm @c
     %8:rgpr = t2MOVi 24, 14 /* CC::al */, $noreg, $noreg
@@ -143,7 +143,7 @@ body:             |
     successors: %bb.4(0x80000000)
 
     %12:rgpr = t2MOVi -1, 14 /* CC::al */, $noreg, $noreg
-    t2STRi12 killed %12, %4, 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
+    t2STRi12 %12, %4, 0, 14 /* CC::al */, $noreg :: (store (s32) into @d)
 
   bb.4.for.end9:
     %13:gpr = IMPLICIT_DEF

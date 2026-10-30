@@ -1404,7 +1404,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .clampScalar(0, F32, F32)
       .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
+  getActionDefinitionsBuilder(G_FPOWI)
+      .clampScalar(0, F32, F32)
+      .scalarize(0)
+      .lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
@@ -6024,7 +6027,6 @@ bool AMDGPULegalizerInfo::legalizeFDIVFastIntrin(MachineInstr &MI,
   LLT S1 = LLT::scalar(1);
 
   auto Abs = B.buildFAbs(F32, RHS, Flags);
-  const APFloat C0Val(1.0f);
 
   auto C0 = B.buildFConstant(F32, 0x1p+96f);
   auto C1 = B.buildFConstant(F32, 0x1p-32f);

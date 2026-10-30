@@ -755,13 +755,14 @@ ArgInfo X86_64TargetInfo::classifyReturnType(const Type *RetTy) const {
     // available register of the sequence %rax, %rdx is used.
   case Integer:
     ResType = getIntegerTypeAtOffset(RetTy, 0, RetTy, 0);
-    // If we have a sign or zero extended integer, make sure to return Extend
-    // so that the parameter gets the right LLVM IR attributes.
-    if (Hi == NoClass && ResType->isInteger()) {
-      if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy))
-        return shouldExtendReturnType(IntTy) ? ArgInfo::getExtend(RetTy)
-                                             : ArgInfo::getDirect(RetTy);
-    }
+
+    // Always returns integral types as plain integers, without padding to a
+    // larger type or splitting into a struct. For some targets, small integers
+    // are additionally sign/zero extended.
+    if (const IntegerType *IntTy = dyn_cast<IntegerType>(RetTy))
+      return shouldExtendReturnType(IntTy) ? ArgInfo::getExtend(RetTy)
+                                           : ArgInfo::getDirect(RetTy);
+
     if (ResType->isInteger() && ResType->getSizeInBits() == 128) {
       assert(Hi == Integer);
       return ArgInfo::getDirect(ResType);

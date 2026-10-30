@@ -40,6 +40,27 @@ add_integration_test(
 )
 
 add_integration_test(
+  wait_status_test
+  SUITE
+    libc-unistd-integration-tests
+  SRCS
+    wait_status_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.ssize_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.signal.kill
+    libc.src.signal.raise
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.close
+    libc.src.unistd.fork
+    libc.src.unistd.pipe
+    libc.src.unistd.read
+)
+
+add_integration_test(
   lockf_test
   SUITE
     libc-unistd-integration-tests

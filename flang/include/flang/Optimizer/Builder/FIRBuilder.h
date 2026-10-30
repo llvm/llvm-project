@@ -692,8 +692,10 @@ public:
     return fpMaxminBehavior;
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
+#endif
 
   /// FirOpBuilder hook for creating new operation.
   void notifyOperationInserted(mlir::Operation *op,

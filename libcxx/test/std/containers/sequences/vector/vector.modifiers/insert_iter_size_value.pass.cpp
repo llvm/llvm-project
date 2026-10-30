@@ -10,6 +10,8 @@
 
 // iterator insert(const_iterator position, size_type n, const value_type& x);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <vector>
 #include <cassert>
 #include <cstddef>
@@ -18,6 +20,8 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 #include "asan_testing.h"
+#include "../common.h"
+#include "count_new.h"
 
 TEST_CONSTEXPR_CXX20 bool tests() {
   {
@@ -119,6 +123,38 @@ int main(int, char**) {
   tests();
 #if TEST_STD_VER > 17
   static_assert(tests());
+#endif
+
+  // Verify that insert(pos, n, x) destroys partially-constructed elements
+  // when a later element's copy constructor throws.
+#if !defined(TEST_HAS_NO_EXCEPTIONS)
+  {
+    // Without reallocation (note the reserve call)
+    int throw_after = 4; // x consumes 1, then 3 successful copies, 4th throws
+    std::vector<throwing_t> v;
+    v.reserve(10);
+    try {
+      throwing_t x(throw_after);
+      v.insert(v.begin(), 5, x);
+      assert(false);
+    } catch (int) {
+      LIBCPP_ASSERT(v.size() == 0);
+    }
+  }
+  check_new_delete_called();
+  {
+    // With reallocation
+    int throw_after = 4; // x consumes 1, then 3 successful copies, 4th throws
+    std::vector<throwing_t> v;
+    try {
+      throwing_t x(throw_after);
+      v.insert(v.begin(), 5, x);
+      assert(false);
+    } catch (int) {
+      LIBCPP_ASSERT(v.size() == 0);
+    }
+  }
+  check_new_delete_called();
 #endif
   return 0;
 }

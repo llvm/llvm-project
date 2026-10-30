@@ -968,18 +968,28 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Ctx.fromBytes(Bytes, RetTy);
   }
 
-  /// Implements llvm.masked.load, llvm.masked.expandload and
-  /// llvm.masked.store. For loads, \p Data holds the pass-through values and
-  /// is updated with the loaded lanes; for stores, it holds the values to
-  /// store.
+  /// How masked memory intrinsics compute the address of each lane.
+  enum class MaskedAddrMode {
+    /// \p Ptr is the base pointer and lane I accesses element I after it.
+    Consecutive,
+    /// \p Ptr holds a separate pointer for each lane.
+    PerLane,
+  };
+
+  /// Implements llvm.masked.load, llvm.masked.expandload, llvm.masked.store
+  /// and llvm.masked.gather. For loads, \p Data holds the pass-through values
+  /// and is updated with the loaded lanes; for stores, it holds the values to
+  /// store. Lane addresses are computed according to \p Mode.
   AnyValue callMaskedLoadStoreIntrinsic(CallBase &CB, const AnyValue &Ptr,
-                                        const AnyValue &Mask, AnyValue Data) {
+                                        const AnyValue &Mask, AnyValue Data,
+                                        MaskedAddrMode Mode) {
     const bool IsStore = CB.getIntrinsicID() == Intrinsic::masked_store;
     StringRef IntrinsicName = Intrinsic::getBaseName(CB.getIntrinsicID());
     Type *ElemTy = (IsStore ? CB.getArgOperand(0)->getType() : CB.getType())
                        ->getScalarType();
     // TODO: Support element types that are not a whole number of bytes.
-    if (!DL.typeSizeEqualsStoreSize(ElemTy)) {
+    if (Mode != MaskedAddrMode::PerLane &&
+        !DL.typeSizeEqualsStoreSize(ElemTy)) {
       reportError() << IntrinsicName << " with element type " << *ElemTy
                     << " is not supported.";
       return AnyValue();
@@ -988,13 +998,16 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     const uint64_t AccessSize = Ctx.getEffectiveTypeStoreSize(ElemTy);
     const unsigned IndexBW =
         DL.getIndexTypeSizeInBits(CB.getArgOperand(IsStore ? 1 : 0)->getType());
-    AnyValue LanePtr = Ptr;
+    AnyValue LanePtr;
+    if (Mode != MaskedAddrMode::PerLane)
+      LanePtr = Ptr;
     GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
 
     bool IsExpandLoad = CB.getIntrinsicID() == Intrinsic::masked_expandload;
 
     for (auto [I, Lane] : enumerate(Data.asAggregate())) {
-      AnyValue AccumulatedOffset = AnyValue::poison();
+      if (Mode == MaskedAddrMode::PerLane)
+        LanePtr = Ptr.asAggregate()[I];
       BooleanKind MaskLane = getMaskLane(Mask, I);
 
       if (MaskLane == BooleanKind::Poison) {
@@ -1014,10 +1027,12 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
         Flags = GEPNoWrapFlags::inBounds();
       }
 
-      if (!IsExpandLoad || MaskLane == BooleanKind::True)
-        LanePtr = Ctx.computeScaledPtrAdd(LanePtr, APInt(IndexBW, 1),
-                                          APInt(IndexBW, AccessSize), Flags,
-                                          AccumulatedOffset);
+      if (Mode == MaskedAddrMode::Consecutive &&
+          (!IsExpandLoad || MaskLane == BooleanKind::True)) {
+        AnyValue AccumulatedOffset = AnyValue::poison();
+        LanePtr = Ctx.computePtrAdd(LanePtr, APInt(IndexBW, AccessSize), Flags,
+                                    AccumulatedOffset);
+      }
     }
 
     return IsStore ? AnyValue() : Data;
@@ -1663,6 +1678,25 @@ public:
       Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
       return std::move(Res);
     }
+    case Intrinsic::mask_beforefirst: {
+      const auto &Mask = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Mask.size());
+      bool SeenActive = false;
+      for (const AnyValue &Lane : Mask) {
+        switch (Lane.asBoolean()) {
+        case BooleanKind::True:
+          SeenActive = true;
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+        Res.push_back(AnyValue::boolean(!SeenActive));
+      }
+      return std::move(Res);
+    }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:
@@ -1896,9 +1930,14 @@ public:
       return callSpeculativeLoadIntrinsic(CB, Args[0], Args[2]);
     case Intrinsic::masked_load:
     case Intrinsic::masked_expandload:
-      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2]);
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::Consecutive);
     case Intrinsic::masked_store:
-      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0]);
+      return callMaskedLoadStoreIntrinsic(CB, Args[1], Args[2], Args[0],
+                                          MaskedAddrMode::Consecutive);
+    case Intrinsic::masked_gather:
+      return callMaskedLoadStoreIntrinsic(CB, Args[0], Args[1], Args[2],
+                                          MaskedAddrMode::PerLane);
     case Intrinsic::experimental_noalias_scope_decl:
       // FIXME: Not implemented yet. Currently it acts as a noop.
       return AnyValue();

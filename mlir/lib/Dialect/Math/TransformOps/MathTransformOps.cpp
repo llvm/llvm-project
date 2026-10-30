@@ -13,7 +13,6 @@
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/X86/X86Dialect.h"
 
 using namespace mlir;
 
@@ -28,11 +27,8 @@ void transform::ApplyF32ExpansionPatternsOp::populatePatterns(
 
 void transform::ApplyPolynomialApproximationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  bool enableAvx2 = getEnableAvx2();
-  populateMathPolynomialApproximationPatterns(patterns, [&](StringRef name) {
-    // `rsqrt` requires AVX2 so always gate it.
-    return enableAvx2 || name != math::RsqrtOp::getOperationName();
-  });
+  populateMathPolynomialApproximationPatterns(patterns,
+                                              [](StringRef) { return true; });
 }
 
 //===----------------------------------------------------------------------===//
@@ -50,7 +46,6 @@ public:
     declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<math::MathDialect>();
     declareGeneratedDialect<vector::VectorDialect>();
-    declareGeneratedDialect<x86::X86Dialect>();
     registerTransformOps<
 #define GET_OP_LIST
 #include "mlir/Dialect/Math/TransformOps/MathTransformOps.cpp.inc"
