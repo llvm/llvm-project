@@ -21,6 +21,7 @@
 #include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -845,6 +846,33 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
   int64_t offset;
   return succeeded(type.getStridesAndOffset(strides, offset)) &&
          llvm::none_of(strides, ShapedType::isDynamic);
+}
+
+// TODO: this recognizes a fixed list of producers. A general uniformity query
+// on the vector dialect would cover more forms and would not need updating
+// every time a new producer shows up here.
+bool xegpu::isUniformMask(Value mask) {
+  if (!isa<VectorType>(mask.getType()))
+    return true;
+  DenseElementsAttr splat;
+  if (matchPattern(mask, m_Constant(&splat)) && splat.isSplat())
+    return true;
+  if (auto constantMask = mask.getDefiningOp<vector::ConstantMaskOp>()) {
+    // All-ones and all-zeros are uniform. A zero dim size is only legal when
+    // every dim is zero, so those are the only two uniform cases.
+    return constantMask.isAllOnesMask() ||
+           llvm::all_of(constantMask.getMaskDimSizes(),
+                        [](int64_t size) { return size == 0; });
+  }
+  if (auto broadcast = mask.getDefiningOp<vector::BroadcastOp>())
+    return !isa<VectorType>(broadcast.getSource().getType());
+  if (auto fromElements = mask.getDefiningOp<vector::FromElementsOp>())
+    return llvm::all_equal(fromElements.getElements());
+  // Flattening a rank > 1 operand to rank 1 inserts a shape cast. It keeps the
+  // same elements, so it keeps uniformity.
+  if (auto shapeCast = mask.getDefiningOp<vector::ShapeCastOp>())
+    return isUniformMask(shapeCast.getSource());
+  return false;
 }
 
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.

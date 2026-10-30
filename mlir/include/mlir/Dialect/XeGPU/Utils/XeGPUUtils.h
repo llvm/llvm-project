@@ -242,6 +242,13 @@ bool requireTranspose(const DistributeLayoutAttr layout,
 /// Returns true if `type` has a static shape and static strides.
 bool hasStaticShapeAndStrides(MemRefType type);
 
+/// Returns true when every element of `mask` carries the same bit, so gating a
+/// whole contiguous block on element 0 is equivalent. A scalar mask, a splat
+/// constant, an all-ones or all-zeros `vector.constant_mask`, a broadcast of a
+/// scalar, a `vector.from_elements` of one repeated value, and a shape cast of
+/// any of these qualify.
+bool isUniformMask(Value mask);
+
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
                            SmallVector<int64_t> &expandedUnitDims);

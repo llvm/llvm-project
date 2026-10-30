@@ -548,7 +548,7 @@ gpu.module @test {
 // CHECK: %[[MASK:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
 // CHECK: %[[OFFSET:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<16xindex>
 // CHECK: %[[VAL:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<1.000000e+00> : vector<16xf32>
-// CHECK: xegpu.store %[[VAL]], %[[ARG0]][%[[OFFSET]]], %[[MASK]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
+// CHECK: xegpu.store %[[VAL]], %[[ARG0]][%[[OFFSET]]], %[[MASK]] <{contiguity = 16 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : vector<16xf32>, memref<256xf32>, vector<16xindex>, vector<16xi1>
 func.func @store_with_offset(%arg0: memref<256xf32>){
   %c32 = arith.constant 32 : index
   %mask = arith.constant dense<true> : vector<16xi1>
@@ -707,7 +707,7 @@ gpu.module @test{
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_non_unit_dims(
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<128xf16>, vector<128xindex>, vector<128xi1> -> vector<128xf16>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP:.*]]], %[[CST:.*]] <{contiguity = 128 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<128xf16>, vector<128xindex>, vector<128xi1> -> vector<128xf16>
 // CHECK: %[[CAST:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>} : vector<128xf16> to vector<1x8x16xf16>
 // CHECK: %[[CST_0:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>, dims = [0]>} dense<0.000000e+00> : vector<8x16xf16>
 // CHECK: %[[CST_1:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>} dense<0.000000e+00> : vector<16xf16>
@@ -786,7 +786,7 @@ gpu.module @test {
 // CHECK-LABEL: func.func @vector_reduction_scalar(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<16xi1>
 // CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<16xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{contiguity = 16 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<1024xf16>, vector<16xindex>, vector<16xi1> -> vector<16xf16>
 // CHECK: %[[RED:.*]] = vector.reduction <add>, %[[LOAD]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16], lane_data = [1]>, dims = [0]>} : vector<16xf16> into f16
 // CHECK: %[[MASK:.*]] = arith.constant true
 // CHECK: %[[OFF:.*]] = arith.constant 1 : index
@@ -808,7 +808,7 @@ gpu.module @test {
 // CHECK-LABEL: func.func @vector_2d_reduction_with_fractional_subgroup_size_1x1x4(
 // CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [4], lane_data = [1]>} dense<true> : vector<4xi1>
 // CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [4], lane_data = [1]>} : vector<4xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [4], lane_data = [1]>}> : memref<1024xf16>, vector<4xindex>, vector<4xi1> -> vector<4xf16>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{contiguity = 4 : i64, layout = #xegpu.layout<lane_layout = [4], lane_data = [1]>}> : memref<1024xf16>, vector<4xindex>, vector<4xi1> -> vector<4xf16>
 // CHECK: %[[SC:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 4], lane_data = [1, 1, 1]>} : vector<4xf16> to vector<1x1x4xf16>
 // CHECK: %[[ACC:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 4], lane_data = [1, 1, 1]>, dims = [1, 2]>} dense<0.000000e+00> : vector<1xf16>
 // CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[SC]], %[[ACC]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 4], lane_data = [1, 1, 1]>, dims = [1, 2]>} [1, 2] : vector<1x1x4xf16> to vector<1xf16>
@@ -832,9 +832,10 @@ func.func @vector_2d_reduction_with_fractional_subgroup_size_1x1x4(%arg0: memref
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @reduce_innermost_lanes_on_leading(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<64xi1>
-// CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<64xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<64xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
+// The step offsets are contiguous, so the load takes its consumer's lane_data.
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [4]>} dense<true> : vector<64xi1>
+// CHECK: %[[IDX:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [4]>} : vector<64xindex>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[IDX]]], %[[CST]] <{contiguity = 64 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [4]>}> : memref<64xf16>, vector<64xindex>, vector<64xi1> -> vector<64xf16>
 // CHECK: %[[SC:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [16, 1, 1], lane_data = [1, 1, 4]>} : vector<64xf16> to vector<16x1x4xf16>
 // CHECK: %[[ACC:.*]] = arith.constant {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1, 1], lane_data = [1, 1, 4]>, dims = [2]>} dense<0.000000e+00> : vector<16x1xf16>
 // CHECK: %[[RED:.*]] = vector.multi_reduction <add>, %[[SC]], %[[ACC]] {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [16, 1, 1], lane_data = [1, 1, 4]>, dims = [2]>} [2] : vector<16x1x4xf16> to vector<16x1xf16>
@@ -888,13 +889,14 @@ func.func @vector_reduction_broadcast_transpose(%arg0: memref<1024x64xf32>, %arg
 // -----
 gpu.module @test {
 // CHECK-LABEL: func.func @vector_shape_cast_expand_and_merge(
-// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} dense<true> : vector<256xi1>
-// CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : vector<256xindex>
-// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>}> : memref<256xf16>, vector<256xindex>, vector<256xi1> -> vector<256xf16>
+// The step offsets are contiguous, so the load takes its consumer's lane_data.
+// CHECK: %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} dense<true> : vector<256xi1>
+// CHECK: %[[STEP:.*]] = vector.step {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} : vector<256xindex>
+// CHECK: %[[LOAD:.*]] = xegpu.load %arg0[%[[STEP]]], %[[CST]] <{contiguity = 256 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : memref<256xf16>, vector<256xindex>, vector<256xi1> -> vector<256xf16>
 // CHECK: %[[CAST_0:.*]] = vector.shape_cast %[[LOAD]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 2]>} : vector<256xf16> to vector<2x4x32xf16>
 // CHECK: %[[CAST_1:.*]] = vector.shape_cast %[[CAST_0]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>} : vector<2x4x32xf16> to vector<1x256xf16>
 // CHECK: %[[CAST_2:.*]] = vector.shape_cast %[[CAST_1]] {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [2]>} : vector<1x256xf16> to vector<256xf16>
-// CHECK: xegpu.store %[[CAST_2]], %arg1[%[[STEP]]], %[[CST]] <{layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
+// CHECK: xegpu.store %[[CAST_2]], %arg1[%[[STEP]]], %[[CST]] <{contiguity = 256 : i64, layout = #xegpu.layout<lane_layout = [16], lane_data = [2]>}> : vector<256xf16>, memref<256xf16>, vector<256xindex>, vector<256xi1>
 func.func @vector_shape_cast_expand_and_merge(%arg0: memref<256xf16>, %arg1: memref<256xf16>) {
     %cst = arith.constant dense<true> : vector<256xi1>
     %0 = vector.step : vector<256xindex>
@@ -973,7 +975,7 @@ func.func @vector_broadcast_scalar_to_vector(%arg0: !xegpu.tensor_desc<16x16xf16
 gpu.module @test {
 // CHECK-LABEL: func.func @store_matrix(
 // CHECK:         %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>} dense<0.000000e+00> : vector<16x16xf16>
-// CHECK-NEXT:     xegpu.store_matrix %[[CST]], %arg0[8, 8] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
+// CHECK-NEXT:     xegpu.store_matrix %[[CST]], %arg0[8, 8] <{contiguity = 16 : i64, layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}>
 func.func @store_matrix(%arg0: !xegpu.mem_desc<16x64xf16>) {
   %cst = arith.constant dense<0.0000> : vector<16x16xf16>
   xegpu.store_matrix %cst, %arg0[8, 8]: vector<16x16xf16>, !xegpu.mem_desc<16x64xf16>
@@ -1212,7 +1214,7 @@ gpu.module @test {
 // CHECK-DAG: %[[BCAST:.*]] = vector.broadcast %[[CST0]] {layout_result_0 = #xegpu.layout<lane_layout = [1, 8, 4], lane_data = [1, 2, 1], order = [1, 0, 2]>} : vector<1x4xf8E8M0FNU> to vector<1x16x4xf8E8M0FNU>
 // CHECK-DAG: %[[SCAST:.*]] = vector.shape_cast %[[BCAST]] {layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>} : vector<1x16x4xf8E8M0FNU> to vector<16x4xf8E8M0FNU>
 // CHECK-DAG: %[[EXT:.*]] = arith.scaling_extf %[[CST]], %[[SCAST]] {layout_result_0 = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>} : vector<16x4xf4E2M1FN>, vector<16x4xf8E8M0FNU> to vector<16x4xbf16>
-// CHECK: xegpu.store_matrix %[[EXT]], %{{.*}}[0, 0] <{layout = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>}> : vector<16x4xbf16>, !xegpu.mem_desc<16x4xbf16>
+// CHECK: xegpu.store_matrix %[[EXT]], %{{.*}}[0, 0] <{contiguity = 4 : i64, layout = #xegpu.layout<lane_layout = [8, 4], lane_data = [2, 1], order = [0, 1]>}> : vector<16x4xbf16>, !xegpu.mem_desc<16x4xbf16>
 func.func @broadcast_slice_expanded_dim(%dst: !xegpu.mem_desc<16x4xbf16>) {
   %data = arith.constant dense<0.5> : vector<16x4xf4E2M1FN>
   %loaded = arith.constant dense<1.> : vector<1x4xf8E8M0FNU>

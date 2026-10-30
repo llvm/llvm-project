@@ -17,6 +17,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
+#include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
@@ -1250,8 +1251,12 @@ void LayoutInfoPropagation::visitLoadGatherOp(
     return;
   VectorType resVecTy = load.getValueType();
   // `contiguity` says how many neighbouring elements one lane may take in a
-  // single access. Absent, only one element per lane is safe.
-  int contigChunkSize = load.getContiguity().value_or(1);
+  // single access. Absent, only one element per lane is safe. The lowering
+  // gates a lane's whole access on one mask bit, so a mask that is not uniform
+  // also limits the access to one element.
+  int contigChunkSize = xegpu::isUniformMask(load.getMask())
+                            ? load.getContiguity().value_or(1)
+                            : 1;
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
   if (!resLayoutInfo.isAssigned())
@@ -1315,8 +1320,12 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     return;
   VectorType srcVecTy = storeScatter.getValueType();
   // `contiguity` says how many neighbouring elements one lane may write in a
-  // single access. Absent, only one element per lane is safe.
-  int contigChunkSize = storeScatter.getContiguity().value_or(1);
+  // single access. Absent, only one element per lane is safe. The lowering
+  // gates a lane's whole access on one mask bit, so a mask that is not uniform
+  // also limits the access to one element.
+  int contigChunkSize = xegpu::isUniformMask(storeScatter.getMask())
+                            ? storeScatter.getContiguity().value_or(1)
+                            : 1;
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
     requiredAnchorLayoutAttr = anchorLayoutAttr;
@@ -1393,10 +1402,11 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
         xegpu::uArch::getUArch(getChipStr(loadMatrixOp).value_or(""));
     if (!uArch)
       return;
-    int chunkSize =
-        1; // placeHolder for future use when LoadMatrix supports coalescing
+    // `contiguity` says how many neighbouring elements one lane may take in a
+    // single access. Absent, only one element per lane is safe.
+    int contigChunkSize = loadMatrixOp.getContiguity().value_or(1);
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
-        layoutKind, resVecTy, chunkSize, consumerLayoutAttr, uArch);
+        layoutKind, resVecTy, contigChunkSize, consumerLayoutAttr, uArch);
     loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 }
@@ -1433,14 +1443,15 @@ void LayoutInfoPropagation::visitStoreMatrixOp(
       storeMatrix.setLayoutAttr(requiredAnchorLayoutAttr);
     }
   } else {
-    int chunkSize =
-        1; // placeHolder for future use when StoreMatrix supports coalescing
+    // `contiguity` says how many neighbouring elements one lane may write in a
+    // single access. Absent, only one element per lane is safe.
+    int contigChunkSize = storeMatrix.getContiguity().value_or(1);
     auto numSgOrErr =
         getNumSgOrFail(storeMatrix, uArch->getSubgroupSize(), nullptr);
     if (failed(numSgOrErr))
       return;
     requiredAnchorLayoutAttr = xegpu::setupStoreMatrixAnchorLayout(
-        layoutKind, srcVecTy, chunkSize, numSgOrErr.value_or(0), uArch);
+        layoutKind, srcVecTy, contigChunkSize, numSgOrErr.value_or(0), uArch);
     if (!requiredAnchorLayoutAttr) {
       markFailure(storeMatrix,
                   "Failed to determine required layout for store matrix.");
@@ -2017,6 +2028,11 @@ struct XeGPUPropagateLayoutPass final
 LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
                                       LayoutKind layoutKind,
                                       unsigned indexBitWidth, bool printOnly) {
+  // The memory op visitors turn `contiguity` into `lane_data`, so stamp it
+  // first. Only the inst_data and lane levels pick `lane_data`; the subgroup
+  // level does not need it.
+  if (layoutKind != LayoutKind::Subgroup)
+    runContiguityAnalysis(target);
   RunLayoutInfoPropagation analysis(target, layoutKind, indexBitWidth);
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
