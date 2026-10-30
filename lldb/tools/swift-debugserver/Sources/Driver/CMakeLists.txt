@@ -1,7 +1,6 @@
 add_lldb_tool(swift-debugserver ADD_TO_FRAMEWORK
   ArgumentParseError.swift
   DebugServer.swift
-  Subcommand.swift
   Version.swift
 )
 

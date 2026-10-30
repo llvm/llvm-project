@@ -1,4 +1,4 @@
-struct Version: Subcommand {
+struct Version {
   static let helpText = """
     Usage:
       swift-debugserver version
