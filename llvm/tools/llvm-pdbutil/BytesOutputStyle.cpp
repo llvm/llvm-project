@@ -86,6 +86,9 @@ BytesOutputStyle::BytesOutputStyle(PDBFile &File)
     : File(File), P(2, false, outs(), opts::Filters) {}
 
 Error BytesOutputStyle::dump() {
+  if (File.isMSFZ() && (opts::bytes::DumpBlockRange || opts::bytes::Fpm))
+    return make_error<RawError>(raw_error_code::feature_unsupported,
+                                "MSFZ files do not expose physical MSF blocks");
 
   if (opts::bytes::DumpBlockRange) {
     auto &R = *opts::bytes::DumpBlockRange;
@@ -340,8 +343,13 @@ static void iterateOneModule(PDBFile &File, LinePrinter &P,
   if (ModiStream == kInvalidStreamIndex)
     return;
 
-  auto ModStreamData = File.createIndexedStream(ModiStream);
-  ModuleDebugStreamRef ModStream(Modi, std::move(ModStreamData));
+  auto ModStreamData = File.safelyCreateStream(ModiStream);
+  if (!ModStreamData) {
+    P.formatLine("Could not load module stream: {0}",
+                 toString(ModStreamData.takeError()));
+    return;
+  }
+  ModuleDebugStreamRef ModStream(Modi, std::move(*ModStreamData));
   if (auto EC = ModStream.reload()) {
     P.formatLine("Could not parse debug information.");
     return;
@@ -428,7 +436,7 @@ void BytesOutputStyle::dumpModuleC13() {
 }
 
 void BytesOutputStyle::dumpByteRanges(uint32_t Min, uint32_t Max) {
-  printHeader(P, "MSF Bytes");
+  printHeader(P, "File Bytes");
 
   AutoIndent Indent(P);
 

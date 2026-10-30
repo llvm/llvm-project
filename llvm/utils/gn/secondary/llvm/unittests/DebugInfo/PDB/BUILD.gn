@@ -1,4 +1,5 @@
 import("//third-party/unittest/unittest.gni")
+import("//llvm/utils/gn/build/libs/zstd/enable.gni")
 
 unittest("DebugInfoPDBTests") {
   deps = [
@@ -17,6 +18,9 @@ unittest("DebugInfoPDBTests") {
     "StringTableBuilderTest.cpp",
     "TpiStreamTest.cpp",
   ]
+  if (llvm_enable_zstd) {
+    sources += [ "MSFZReaderTest.cpp" ]
+  }
 
   # DebugInfoPDBTests uses llvm::getInputFileDirectory(), which expects
   # a file called llvm.srcdir.txt next to the test executable that contains

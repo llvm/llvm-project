@@ -63,6 +63,9 @@ constexpr int BestSizeCompression = 12;
 
 LLVM_ABI bool isAvailable();
 
+LLVM_ABI int getMinCompressionLevel();
+LLVM_ABI int getMaxCompressionLevel();
+
 LLVM_ABI void compress(ArrayRef<uint8_t> Input,
                        SmallVectorImpl<uint8_t> &CompressedBuffer,
                        int Level = DefaultCompression, bool EnableLdm = false);

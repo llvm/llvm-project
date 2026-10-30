@@ -7,11 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/PDB/Native/PDBFileBuilder.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/GUID.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
 #include "llvm/DebugInfo/MSF/MSFCommon.h"
+#if LLVM_ENABLE_ZSTD
+#include "llvm/DebugInfo/MSF/MSFZ.h"
+#endif
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Native/GSIStreamBuilder.h"
@@ -23,6 +28,7 @@
 #include "llvm/DebugInfo/PDB/Native/TpiStreamBuilder.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/CRC.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 
@@ -244,8 +250,8 @@ Expected<uint32_t> PDBFileBuilder::getNamedStreamIndex(StringRef Name) const {
   return SN;
 }
 
-void PDBFileBuilder::commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
-                                          const msf::MSFLayout &Layout) {
+Error PDBFileBuilder::commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
+                                           const msf::MSFLayout &Layout) {
   assert(!InjectedSourceTable.empty());
 
   uint32_t SN = cantFail(getNamedStreamIndex("/src/headerblock"));
@@ -258,19 +264,23 @@ void PDBFileBuilder::commitSrcHeaderBlock(WritableBinaryStream &MsfBuffer,
   Header.Version = static_cast<uint32_t>(PdbRaw_SrcHeaderBlockVer::SrcVerOne);
   Header.Size = Writer.bytesRemaining();
 
-  cantFail(Writer.writeObject(Header));
-  cantFail(InjectedSourceTable.commit(Writer));
+  if (Error E = Writer.writeObject(Header))
+    return E;
+  if (Error E = InjectedSourceTable.commit(Writer))
+    return E;
 
   assert(Writer.bytesRemaining() == 0);
+  return Error::success();
 }
 
-void PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
-                                           const msf::MSFLayout &Layout) {
+Error PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
+                                            const msf::MSFLayout &Layout) {
   if (InjectedSourceTable.empty())
-    return;
+    return Error::success();
 
   llvm::TimeTraceScope timeScope("Commit injected sources");
-  commitSrcHeaderBlock(MsfBuffer, Layout);
+  if (Error E = commitSrcHeaderBlock(MsfBuffer, Layout))
+    return E;
 
   for (const auto &IS : InjectedSources) {
     uint32_t SN = cantFail(getNamedStreamIndex(IS.StreamName));
@@ -279,22 +289,75 @@ void PDBFileBuilder::commitInjectedSources(WritableBinaryStream &MsfBuffer,
         Layout, MsfBuffer, SN, Allocator);
     BinaryStreamWriter SourceWriter(*SourceStream);
     assert(SourceWriter.bytesRemaining() == IS.Content->getBufferSize());
-    cantFail(SourceWriter.writeBytes(
-        arrayRefFromStringRef(IS.Content->getBuffer())));
+    if (Error E = SourceWriter.writeBytes(
+            arrayRefFromStringRef(IS.Content->getBuffer())))
+      return E;
   }
+  return Error::success();
 }
 
 Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
+  return commitImpl(Filename, Guid, ContainerType::MSF,
+                    /*CompressionLevel=*/0);
+}
+
+#if LLVM_ENABLE_ZSTD
+Error PDBFileBuilder::commitMSFZ(StringRef Filename, codeview::GUID *Guid) {
+  return commitMSFZ(Filename, Guid, compression::zstd::BestSpeedCompression);
+}
+
+Error PDBFileBuilder::commitMSFZ(StringRef Filename, codeview::GUID *Guid,
+                                 int CompressionLevel, uint32_t ChunkSize) {
+  return commitImpl(Filename, Guid, ContainerType::MSFZ, CompressionLevel,
+                    ChunkSize);
+}
+#endif
+
+Error PDBFileBuilder::commitImpl(StringRef Filename, codeview::GUID *Guid,
+                                 ContainerType Container,
+                                 int CompressionLevel, uint32_t ChunkSize) {
   assert(!Filename.empty());
   if (auto EC = finalizeMsfLayout())
     return EC;
 
   MSFLayout Layout;
-  Expected<FileBufferByteStream> ExpectedMsfBuffer =
-      Msf->commit(Filename, Layout);
-  if (!ExpectedMsfBuffer)
-    return ExpectedMsfBuffer.takeError();
-  FileBufferByteStream Buffer = std::move(*ExpectedMsfBuffer);
+  std::optional<FileBufferByteStream> FileBuffer;
+#if LLVM_ENABLE_ZSTD
+  std::unique_ptr<MSFZWriter> MSFZBuffer;
+#endif
+  WritableBinaryStream *Buffer = nullptr;
+  MutableArrayRef<uint8_t> BufferData;
+
+  if (Container == ContainerType::MSF) {
+    Expected<FileBufferByteStream> ExpectedMsfBuffer =
+        Msf->commit(Filename, Layout);
+    if (!ExpectedMsfBuffer)
+      return ExpectedMsfBuffer.takeError();
+    FileBuffer.emplace(std::move(*ExpectedMsfBuffer));
+    Buffer = &*FileBuffer;
+    BufferData = MutableArrayRef(FileBuffer->getBufferStart(),
+                                 FileBuffer->getBufferEnd());
+  }
+#if LLVM_ENABLE_ZSTD
+  else {
+    Expected<MSFLayout> ExpectedLayout = Msf->generateLayout();
+    if (!ExpectedLayout)
+      return ExpectedLayout.takeError();
+    Layout = std::move(*ExpectedLayout);
+
+    Expected<std::unique_ptr<MSFZWriter>> ExpectedMSFZBuffer =
+        MSFZWriter::create(Filename, Layout, CompressionLevel, ChunkSize);
+    if (!ExpectedMSFZBuffer)
+      return ExpectedMSFZBuffer.takeError();
+    MSFZBuffer = std::move(*ExpectedMSFZBuffer);
+    Buffer = MSFZBuffer.get();
+    if (Info) {
+      if (Error E = MSFZBuffer->setInitialUncompressedStream(
+              StreamPDB, sizeof(InfoStreamHeader)))
+        return E;
+    }
+  }
+#endif
 
   if (Strings) {
     auto ExpectedSN = getNamedStreamIndex("/names");
@@ -302,54 +365,79 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
       return ExpectedSN.takeError();
 
     auto NS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, *ExpectedSN, Allocator);
+        Layout, *Buffer, *ExpectedSN, Allocator);
     BinaryStreamWriter NSWriter(*NS);
     if (auto EC = Strings->commit(NSWriter))
       return EC;
   }
   {
     llvm::TimeTraceScope timeScope("Named stream data");
-    for (const auto &NSE : NamedStreamData) {
-      if (NSE.second.empty())
-        continue;
-
+    auto CommitNamedStream = [&](uint32_t StreamIndex, StringRef Data) {
       auto NS = WritableMappedBlockStream::createIndexedStream(
-          Layout, Buffer, NSE.first, Allocator);
+          Layout, *Buffer, StreamIndex, Allocator);
       BinaryStreamWriter NSW(*NS);
-      if (auto EC = NSW.writeBytes(arrayRefFromStringRef(NSE.second)))
-        return EC;
+      return NSW.writeBytes(arrayRefFromStringRef(Data));
+    };
+#if LLVM_ENABLE_ZSTD
+    if (Container == ContainerType::MSFZ) {
+      SmallVector<uint32_t, 0> StreamIndices;
+      for (const auto &NSE : NamedStreamData)
+        if (!NSE.second.empty())
+          StreamIndices.push_back(NSE.first);
+      llvm::sort(StreamIndices);
+      for (uint32_t StreamIndex : StreamIndices) {
+        if (Error E =
+                CommitNamedStream(StreamIndex, NamedStreamData[StreamIndex]))
+          return E;
+      }
+    } else
+#endif
+    {
+      for (const auto &NSE : NamedStreamData) {
+        if (NSE.second.empty())
+          continue;
+        if (Error E = CommitNamedStream(NSE.first, NSE.second))
+          return E;
+      }
     }
   }
 
   if (Info) {
-    if (auto EC = Info->commit(Layout, Buffer))
+    if (auto EC = Info->commit(Layout, *Buffer))
       return EC;
   }
 
   if (Dbi) {
-    if (auto EC = Dbi->commit(Layout, Buffer))
+#if LLVM_ENABLE_ZSTD
+    Error EC = Container == ContainerType::MSFZ
+                   ? Dbi->commitMSFZ(Layout, *Buffer)
+                   : Dbi->commit(Layout, *Buffer);
+#else
+    Error EC = Dbi->commit(Layout, *Buffer);
+#endif
+    if (EC)
       return EC;
   }
 
   if (Tpi) {
-    if (auto EC = Tpi->commit(Layout, Buffer))
+    if (auto EC = Tpi->commit(Layout, *Buffer))
       return EC;
   }
 
   if (Ipi) {
-    if (auto EC = Ipi->commit(Layout, Buffer))
+    if (auto EC = Ipi->commit(Layout, *Buffer))
       return EC;
   }
 
   if (Gsi) {
-    if (auto EC = Gsi->commit(Layout, Buffer))
+    if (auto EC = Gsi->commit(Layout, *Buffer))
       return EC;
   }
 
   if (Dxc) {
     llvm::TimeTraceScope timeScope("DXContainer stream");
     auto DxcS = WritableMappedBlockStream::createIndexedStream(
-        Layout, Buffer, StreamDXContainer, Allocator);
+        Layout, *Buffer, StreamDXContainer, Allocator);
     BinaryStreamWriter Writer(*DxcS);
     llvm::ArrayRef<uint8_t> DataRef(reinterpret_cast<uint8_t *>(Dxc->data()),
                                     Dxc->size());
@@ -357,23 +445,88 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
       return EC;
   }
 
+  if (Error E = commitInjectedSources(*Buffer, Layout))
+    return E;
+
+  // Set the build id at the very end, after every other byte of the PDB
+  // has been written.
+#if LLVM_ENABLE_ZSTD
+  if (Container == ContainerType::MSFZ) {
+    auto PatchInfo = [&](size_t Offset, ArrayRef<uint8_t> Data) {
+      assert(Offset < sizeof(InfoStreamHeader));
+      return MSFZBuffer->patchStream(StreamPDB, static_cast<uint32_t>(Offset),
+                                     Data);
+    };
+    if (Info->hashPDBContentsToGUID()) {
+      llvm::TimeTraceScope timeScope("Compute build ID");
+
+      Expected<uint64_t> DigestOrErr = MSFZBuffer->getCanonicalDigest();
+      if (!DigestOrErr)
+        return DigestOrErr.takeError();
+      uint64_t Digest = *DigestOrErr;
+      support::ulittle32_t Age;
+      Age = 1;
+      GUID MSFZGuid = {};
+      memcpy(MSFZGuid.Guid, &Digest, 8);
+      // The canonical digest is 64 bits, so preserve the normal fixed suffix.
+      memcpy(MSFZGuid.Guid + 8, "LLD PDB.", 8);
+      support::ulittle32_t Signature;
+      Signature = static_cast<uint32_t>(Digest);
+
+      if (Error E = PatchInfo(
+              offsetof(InfoStreamHeader, Age),
+              arrayRefFromStringRef(StringRef(
+                  reinterpret_cast<const char *>(&Age), sizeof(Age)))))
+        return E;
+      if (Error E = PatchInfo(offsetof(InfoStreamHeader, Guid),
+                              ArrayRef(MSFZGuid.Guid)))
+        return E;
+      if (Error E = PatchInfo(offsetof(InfoStreamHeader, Signature),
+                              arrayRefFromStringRef(StringRef(
+                                  reinterpret_cast<const char *>(&Signature),
+                                  sizeof(Signature)))))
+        return E;
+
+      // Return GUID to caller.
+      memcpy(Guid, MSFZGuid.Guid, sizeof(MSFZGuid.Guid));
+    } else {
+      support::ulittle32_t Age;
+      Age = Info->getAge();
+      GUID MSFZGuid = Info->getGuid();
+      std::optional<uint32_t> Sig = Info->getSignature();
+      support::ulittle32_t Signature;
+      Signature = Sig ? *Sig : time(nullptr);
+
+      if (Error E = PatchInfo(
+              offsetof(InfoStreamHeader, Age),
+              arrayRefFromStringRef(StringRef(
+                  reinterpret_cast<const char *>(&Age), sizeof(Age)))))
+        return E;
+      if (Error E = PatchInfo(offsetof(InfoStreamHeader, Guid),
+                              ArrayRef(MSFZGuid.Guid)))
+        return E;
+      if (Error E = PatchInfo(offsetof(InfoStreamHeader, Signature),
+                              arrayRefFromStringRef(StringRef(
+                                  reinterpret_cast<const char *>(&Signature),
+                                  sizeof(Signature)))))
+        return E;
+    }
+    return MSFZBuffer->finalize();
+  }
+#endif
+
   auto InfoStreamBlocks = Layout.StreamMap[StreamPDB];
   assert(!InfoStreamBlocks.empty());
   uint64_t InfoStreamFileOffset =
       blockToOffset(InfoStreamBlocks.front(), Layout.SB->BlockSize);
   InfoStreamHeader *H = reinterpret_cast<InfoStreamHeader *>(
-      Buffer.getBufferStart() + InfoStreamFileOffset);
+      BufferData.data() + InfoStreamFileOffset);
 
-  commitInjectedSources(Buffer, Layout);
-
-  // Set the build id at the very end, after every other byte of the PDB
-  // has been written.
   if (Info->hashPDBContentsToGUID()) {
     llvm::TimeTraceScope timeScope("Compute build ID");
 
     // Compute a hash of all sections of the output file.
-    uint64_t Digest =
-        xxh3_64bits({Buffer.getBufferStart(), Buffer.getBufferEnd()});
+    uint64_t Digest = xxh3_64bits(BufferData);
 
     H->Age = 1;
 
@@ -393,5 +546,5 @@ Error PDBFileBuilder::commit(StringRef Filename, codeview::GUID *Guid) {
     H->Signature = Sig ? *Sig : time(nullptr);
   }
 
-  return Buffer.commit();
+  return FileBuffer->commit();
 }

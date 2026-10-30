@@ -657,6 +657,8 @@ static cl::list<std::string> InputFilenames(cl::Positional,
 }
 
 namespace yaml2pdb {
+cl::opt<bool> MSFZ("msfz", cl::desc("Write an MSFZ container (requires zstd)"),
+                   cl::sub(YamlToPdbSubcommand));
 cl::opt<std::string>
     YamlPdbOutputFile("pdb", cl::desc("the name of the PDB file to write"),
                       cl::sub(YamlToPdbSubcommand));
@@ -802,6 +804,10 @@ cl::opt<bool> DXContainer("dxcontainer",
 static ExitOnError ExitOnErr;
 
 static void yamlToPdb(StringRef Path, unsigned DocNum) {
+#if !LLVM_ENABLE_ZSTD
+  if (opts::yaml2pdb::MSFZ)
+    ExitOnErr(createStringError("MSFZ output requires LLVM_ENABLE_ZSTD"));
+#endif
   BumpPtrAllocator Allocator;
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
       MemoryBuffer::getFileOrSTDIN(Path, /*IsText=*/false,
@@ -836,6 +842,15 @@ static void yamlToPdb(StringRef Path, unsigned DocNum) {
         createStringErrorV("failed to parse YAML input: {0}", EC.message()));
 
   PDBFileBuilder Builder(Allocator);
+  auto Commit = [&]() {
+    codeview::GUID IgnoredOutGuid;
+#if LLVM_ENABLE_ZSTD
+    if (opts::yaml2pdb::MSFZ)
+      return Builder.commitMSFZ(opts::yaml2pdb::YamlPdbOutputFile,
+                                &IgnoredOutGuid);
+#endif
+    return Builder.commit(opts::yaml2pdb::YamlPdbOutputFile, &IgnoredOutGuid);
+  };
 
   uint32_t BlockSize = 4096;
   if (YamlObj.Headers)
@@ -878,9 +893,7 @@ static void yamlToPdb(StringRef Path, unsigned DocNum) {
     if (!ErrorMsg.empty())
       ExitOnErr(createStringError(ErrorMsg));
 
-    codeview::GUID IgnoredOutGuid;
-    ExitOnErr(
-        Builder.commit(opts::yaml2pdb::YamlPdbOutputFile, &IgnoredOutGuid));
+    ExitOnErr(Commit());
     // Leave all other streams empty if there is a DXContainer.
     return;
   }
@@ -1008,8 +1021,7 @@ static void yamlToPdb(StringRef Path, unsigned DocNum) {
 
   Builder.getStringTableBuilder().setStrings(*Strings.strings());
 
-  codeview::GUID IgnoredOutGuid;
-  ExitOnErr(Builder.commit(opts::yaml2pdb::YamlPdbOutputFile, &IgnoredOutGuid));
+  ExitOnErr(Commit());
 }
 
 static PDBFile &loadPDB(StringRef Path, std::unique_ptr<IPDBSession> &Session) {
@@ -1518,7 +1530,7 @@ static void exportStream() {
   std::unique_ptr<IPDBSession> Session;
   PDBFile &File = loadPDB(opts::exportstream::InputFilename.front(), Session);
 
-  std::unique_ptr<MappedBlockStream> SourceStream;
+  std::unique_ptr<BinaryStream> SourceStream;
   uint32_t Index = 0;
   bool Success = false;
   std::string OutFileName = opts::exportstream::OutputFile;
@@ -1565,7 +1577,7 @@ static void exportStream() {
     }
   }
 
-  SourceStream = File.createIndexedStream(Index);
+  SourceStream = ExitOnErr(File.safelyCreateStream(Index));
   auto OutFile = ExitOnErr(
       FileOutputBuffer::create(OutFileName, SourceStream->getLength()));
   FileBufferByteStream DestStream(std::move(OutFile), llvm::endianness::little);

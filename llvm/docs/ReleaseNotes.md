@@ -466,6 +466,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Debug Info
 
+* LLVM can read PDB files stored in the MSFZ compressed container format when
+  built with Zstandard support. DEFLATE-compressed MSFZ data is not supported.
+
 ### Changes to the LLVM tools
 
 * `opt` and `llc` accept `-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the new `PassPluginLibraryInfo::ParseArguments` callback of the pass plugin named `<plugin>`.

@@ -36,6 +36,7 @@
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
@@ -1872,6 +1873,44 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       config->pdbPath = arg->getValue();
     if (auto *arg = args.getLastArg(OPT_pdbaltpath))
       config->pdbAltPath = arg->getValue();
+#if LLVM_ENABLE_ZSTD
+    if (auto *arg = args.getLastArg(OPT_pdbmsfz)) {
+      int level;
+      StringRef value = arg->getValue();
+      if (value.getAsInteger(10, level)) {
+        Err(ctx) << arg->getSpelling()
+                 << " compression level expected, but got " << value;
+      } else {
+        int minLevel = compression::zstd::getMinCompressionLevel();
+        int maxLevel = compression::zstd::getMaxCompressionLevel();
+        if (level < minLevel || level > maxLevel)
+          Err(ctx) << arg->getSpelling()
+                   << " compression level must be between " << minLevel
+                   << " and " << maxLevel << ", but got " << level;
+        else
+          config->pdbMSFZCompressionLevel = level;
+      }
+    }
+    if (auto *arg = args.getLastArg(OPT_pdbmsfzchunksize)) {
+      uint32_t size;
+      StringRef value = arg->getValue();
+      if (!config->pdbMSFZCompressionLevel)
+        Err(ctx) << "/pdbmsfzchunksize requires /pdbmsfz";
+      else if (value.getAsInteger(10, size) || size < 4096 ||
+               size > (1U << 30))
+        Err(ctx) << arg->getSpelling()
+                 << " chunk size must be between 4096 and 1073741824 bytes, "
+                    "but got "
+                 << value;
+      else
+        config->pdbMSFZChunkSize = size;
+    }
+#else
+    if (args.hasArg(OPT_pdbmsfz))
+      Err(ctx) << "/pdbmsfz requires lld to be built with zstd support";
+    if (args.hasArg(OPT_pdbmsfzchunksize))
+      Err(ctx) << "/pdbmsfzchunksize requires lld to be built with zstd support";
+#endif
     if (auto *arg = args.getLastArg(OPT_pdbpagesize))
       parsePDBPageSize(arg->getValue());
     if (args.hasArg(OPT_natvis))

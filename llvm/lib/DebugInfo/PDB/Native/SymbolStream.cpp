@@ -15,8 +15,11 @@ using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
-SymbolStream::SymbolStream(std::unique_ptr<MappedBlockStream> Stream)
+SymbolStream::SymbolStream(std::unique_ptr<BinaryStream> Stream)
     : Stream(std::move(Stream)) {}
+
+SymbolStream::SymbolStream(std::unique_ptr<MappedBlockStream> Stream)
+    : SymbolStream(std::unique_ptr<BinaryStream>(std::move(Stream))) {}
 
 SymbolStream::~SymbolStream() = default;
 

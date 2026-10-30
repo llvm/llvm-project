@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
 #include "llvm/DebugInfo/MSF/MSFBuilder.h"
@@ -17,6 +18,9 @@
 #include "llvm/DebugInfo/PDB/Native/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
 #include "llvm/Support/BinaryStreamWriter.h"
+#include "llvm/Support/Endian.h"
+#include <algorithm>
+#include <limits>
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -39,6 +43,124 @@ static uint32_t calculateDiSymbolStreamSize(uint32_t SymbolByteSize,
   Size += 0;                          // GlobalRefs substream bytes
   return Size;
 }
+
+namespace {
+
+/// Forwards a module's symbol bytes while replacing string-table references
+/// before their physical MSF blocks are emitted.  This avoids the backward
+/// seeks used by normal MSF output, which an append-only MSFZ writer cannot
+/// support.
+class StringTableFixupStream : public WritableBinaryStream {
+public:
+  StringTableFixupStream(WritableBinaryStreamRef Stream,
+                         ArrayRef<StringTableFixup> Fixups,
+                         uint32_t SymbolStreamSize)
+      : Stream(Stream), Fixups(Fixups.begin(), Fixups.end()),
+        SymbolStreamSize(SymbolStreamSize) {
+    llvm::sort(this->Fixups,
+               [](const StringTableFixup &L, const StringTableFixup &R) {
+                 return L.SymOffsetOfReference < R.SymOffsetOfReference;
+               });
+  }
+
+  Error validate() const {
+    uint64_t PreviousEnd = 0;
+    for (const StringTableFixup &Fixup : Fixups) {
+      uint64_t Offset = Fixup.SymOffsetOfReference;
+      if (Offset < sizeof(uint32_t) ||
+          Offset > SymbolStreamSize - sizeof(uint32_t) || Offset < PreviousEnd)
+        return make_error<RawError>(raw_error_code::invalid_format,
+                                    "Invalid string table fixup");
+      PreviousEnd = Offset + sizeof(uint32_t);
+    }
+    return Error::success();
+  }
+
+  llvm::endianness getEndian() const override { return Stream.getEndian(); }
+
+  Error readBytes(uint64_t Offset, uint64_t Size,
+                  ArrayRef<uint8_t> &Buffer) override {
+    return BinaryStreamRef(Stream).readBytes(Offset, Size, Buffer);
+  }
+
+  Error readLongestContiguousChunk(uint64_t Offset,
+                                   ArrayRef<uint8_t> &Buffer) override {
+    return BinaryStreamRef(Stream).readLongestContiguousChunk(Offset, Buffer);
+  }
+
+  uint64_t getLength() override { return Stream.getLength(); }
+
+  Error writeBytes(uint64_t Offset, ArrayRef<uint8_t> Data) override {
+    if (Offset != InputOffset)
+      return make_error<RawError>(raw_error_code::invalid_format,
+                                  "Non-forward symbol stream write");
+    if (Data.size() > SymbolStreamSize - InputOffset)
+      return make_error<RawError>(raw_error_code::stream_too_long);
+
+    while (!Data.empty()) {
+      if (InputOffset < SkippedInputEnd) {
+        uint32_t Bytes = std::min(static_cast<uint32_t>(Data.size()),
+                                  SkippedInputEnd - InputOffset);
+        InputOffset += Bytes;
+        Data = Data.drop_front(Bytes);
+        continue;
+      }
+
+      if (NextFixup != Fixups.size() &&
+          Fixups[NextFixup].SymOffsetOfReference < InputOffset)
+        return make_error<RawError>(raw_error_code::invalid_format,
+                                    "Overlapping string table fixup");
+      if (NextFixup != Fixups.size() &&
+          Fixups[NextFixup].SymOffsetOfReference == InputOffset) {
+        support::ulittle32_t Value;
+        Value = Fixups[NextFixup].StrTabOffset;
+        if (Error E = Stream.writeBytes(ForwardedOffset,
+                                        bytesOf(&Value, sizeof(Value))))
+          return E;
+        ForwardedOffset += sizeof(Value);
+        SkippedInputEnd = InputOffset + sizeof(Value);
+        ++NextFixup;
+        continue;
+      }
+
+      uint32_t Bytes = static_cast<uint32_t>(Data.size());
+      if (NextFixup != Fixups.size())
+        Bytes = std::min(Bytes,
+                         Fixups[NextFixup].SymOffsetOfReference - InputOffset);
+      if (Error E = Stream.writeBytes(ForwardedOffset, Data.take_front(Bytes)))
+        return E;
+      InputOffset += Bytes;
+      ForwardedOffset += Bytes;
+      Data = Data.drop_front(Bytes);
+    }
+    return Error::success();
+  }
+
+  Error commit() override { return Stream.commit(); }
+
+  Error finish() const {
+    if (InputOffset != SymbolStreamSize || SkippedInputEnd > InputOffset ||
+        NextFixup != Fixups.size() || ForwardedOffset != SymbolStreamSize)
+      return make_error<RawError>(raw_error_code::invalid_format,
+                                  "Incomplete string table fixups");
+    return Error::success();
+  }
+
+private:
+  static ArrayRef<uint8_t> bytesOf(const void *Data, size_t Size) {
+    return {reinterpret_cast<const uint8_t *>(Data), Size};
+  }
+
+  WritableBinaryStreamRef Stream;
+  std::vector<StringTableFixup> Fixups;
+  uint32_t SymbolStreamSize;
+  uint32_t InputOffset = 0;
+  uint32_t ForwardedOffset = 0;
+  uint32_t SkippedInputEnd = 0;
+  size_t NextFixup = 0;
+};
+
+} // namespace
 
 DbiModuleDescriptorBuilder::DbiModuleDescriptorBuilder(StringRef ModuleName,
                                                        uint32_t ModIndex,
@@ -163,48 +285,85 @@ Error DbiModuleDescriptorBuilder::commit(BinaryStreamWriter &ModiWriter) {
 
 Error DbiModuleDescriptorBuilder::commitSymbolStream(
     const msf::MSFLayout &MsfLayout, WritableBinaryStreamRef MsfBuffer) {
+  return commitSymbolStream(MsfLayout, MsfBuffer, /*ForwardOnly=*/false);
+}
+
+Error DbiModuleDescriptorBuilder::commitSymbolStream(
+    const msf::MSFLayout &MsfLayout, WritableBinaryStreamRef MsfBuffer,
+    bool ForwardOnly) {
   if (Layout.ModDiStream == kInvalidStreamIndex)
     return Error::success();
 
   auto NS = WritableMappedBlockStream::createIndexedStream(
       MsfLayout, MsfBuffer, Layout.ModDiStream, MSF.getAllocator());
-  WritableBinaryStreamRef Ref(*NS);
-  BinaryStreamWriter SymbolWriter(Ref);
-  // Write the symbols.
-  if (auto EC = SymbolWriter.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC))
-    return EC;
-  for (const SymbolListWrapper &Sym : Symbols) {
-    if (Sym.NeedsToBeMerged) {
-      assert(MergeSymsCallback);
-      if (auto EC = MergeSymsCallback(MergeSymsCtx, Sym.SymPtr, SymbolWriter))
-        return EC;
-    } else {
-      if (auto EC = SymbolWriter.writeBytes(Sym.asArray()))
-        return EC;
+  return commitSymbolStream(WritableBinaryStreamRef(*NS), ForwardOnly);
+}
+
+Error DbiModuleDescriptorBuilder::commitSymbolStream(
+    WritableBinaryStreamRef Stream, bool ForwardOnly) {
+  auto WriteSymbols = [&](BinaryStreamWriter &Writer) -> Error {
+    if (auto EC = Writer.writeInteger<uint32_t>(COFF::DEBUG_SECTION_MAGIC))
+      return EC;
+    for (const SymbolListWrapper &Sym : Symbols) {
+      if (Sym.NeedsToBeMerged) {
+        assert(MergeSymsCallback);
+        if (auto EC = MergeSymsCallback(MergeSymsCtx, Sym.SymPtr, Writer))
+          return EC;
+      } else {
+        if (auto EC = Writer.writeBytes(Sym.asArray()))
+          return EC;
+      }
     }
-  }
+    return Error::success();
+  };
 
-  // Apply the string table fixups.
-  auto SavedOffset = SymbolWriter.getOffset();
-  for (const StringTableFixup &Fixup : StringTableFixups) {
-    SymbolWriter.setOffset(Fixup.SymOffsetOfReference);
-    if (auto E = SymbolWriter.writeInteger<uint32_t>(Fixup.StrTabOffset))
+  uint32_t SymbolEnd = 0;
+  if (ForwardOnly) {
+    if (SymbolByteSize >
+        std::numeric_limits<uint32_t>::max() - sizeof(uint32_t))
+      return make_error<RawError>(raw_error_code::stream_too_long);
+    uint32_t SymbolStreamSize = sizeof(uint32_t) + SymbolByteSize;
+    StringTableFixupStream FixupStream(Stream, StringTableFixups,
+                                       SymbolStreamSize);
+    if (Error E = FixupStream.validate())
       return E;
-  }
-  SymbolWriter.setOffset(SavedOffset);
+    BinaryStreamWriter SymbolWriter(FixupStream);
+    if (Error E = WriteSymbols(SymbolWriter))
+      return E;
+    if (Error E = FixupStream.finish())
+      return E;
+    SymbolEnd = SymbolWriter.getOffset();
+  } else {
+    BinaryStreamWriter SymbolWriter(Stream);
+    if (Error E = WriteSymbols(SymbolWriter))
+      return E;
 
-  assert(SymbolWriter.getOffset() % alignOf(CodeViewContainer::Pdb) == 0 &&
+    auto SavedOffset = SymbolWriter.getOffset();
+    for (const StringTableFixup &Fixup : StringTableFixups) {
+      SymbolWriter.setOffset(Fixup.SymOffsetOfReference);
+      if (Error E = SymbolWriter.writeInteger<uint32_t>(Fixup.StrTabOffset))
+        return E;
+    }
+    SymbolWriter.setOffset(SavedOffset);
+    SymbolEnd = SymbolWriter.getOffset();
+  }
+
+  assert(SymbolEnd % alignOf(CodeViewContainer::Pdb) == 0 &&
          "Invalid debug section alignment!");
+  // String-table fixups only apply to symbols; later substreams can write
+  // directly at the completed symbol offset.
+  BinaryStreamWriter RemainingWriter(Stream);
+  RemainingWriter.setOffset(SymbolEnd);
   // TODO: Write C11 Line data
   for (const auto &Builder : C13Builders) {
-    if (auto EC = Builder.commit(SymbolWriter, CodeViewContainer::Pdb))
+    if (auto EC = Builder.commit(RemainingWriter, CodeViewContainer::Pdb))
       return EC;
   }
 
   // TODO: Figure out what GlobalRefs substream actually is and populate it.
-  if (auto EC = SymbolWriter.writeInteger<uint32_t>(0))
+  if (auto EC = RemainingWriter.writeInteger<uint32_t>(0))
     return EC;
-  if (SymbolWriter.bytesRemaining() > 0)
+  if (RemainingWriter.bytesRemaining() > 0)
     return make_error<RawError>(raw_error_code::stream_too_long);
 
   return Error::success();

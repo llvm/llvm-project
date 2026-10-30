@@ -13,8 +13,10 @@
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/Support/Error.h"
+#include <memory>
 
 namespace llvm {
+class BinaryStream;
 namespace msf {
 class MappedBlockStream;
 }
@@ -22,6 +24,7 @@ namespace pdb {
 
 class SymbolStream {
 public:
+  LLVM_ABI SymbolStream(std::unique_ptr<BinaryStream> Stream);
   LLVM_ABI SymbolStream(std::unique_ptr<msf::MappedBlockStream> Stream);
   LLVM_ABI ~SymbolStream();
   LLVM_ABI Error reload();
@@ -39,9 +42,9 @@ public:
 
 private:
   codeview::CVSymbolArray SymbolRecords;
-  std::unique_ptr<msf::MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
 };
 } // namespace pdb
-}
+} // namespace llvm
 
 #endif

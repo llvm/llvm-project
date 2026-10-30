@@ -153,10 +153,10 @@ uint32_t DbiStreamBuilder::calculateSectionMapStreamSize() const {
 
 uint32_t DbiStreamBuilder::calculateNamesOffset() const {
   uint32_t Offset = 0;
-  Offset += sizeof(ulittle16_t);                         // NumModules
-  Offset += sizeof(ulittle16_t);                         // NumSourceFiles
-  Offset += ModiList.size() * sizeof(ulittle16_t);       // ModIndices
-  Offset += ModiList.size() * sizeof(ulittle16_t);       // ModFileCounts
+  Offset += sizeof(ulittle16_t);                   // NumModules
+  Offset += sizeof(ulittle16_t);                   // NumSourceFiles
+  Offset += ModiList.size() * sizeof(ulittle16_t); // ModIndices
+  Offset += ModiList.size() * sizeof(ulittle16_t); // ModFileCounts
   uint32_t NumFileInfos = 0;
   for (const auto &M : ModiList)
     NumFileInfos += M->source_files().size();
@@ -382,6 +382,97 @@ void DbiStreamBuilder::createSectionMap(
 
 Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
                                WritableBinaryStreamRef MsfBuffer) {
+  return commitImpl(Layout, MsfBuffer, ModuleCommitStrategy::Parallel);
+}
+
+#if LLVM_ENABLE_ZSTD
+Error DbiStreamBuilder::commitMSFZ(const msf::MSFLayout &Layout,
+                                   WritableBinaryStreamRef MsfBuffer) {
+  if (parallel::strategy.compute_thread_count() <= 1)
+    return commitImpl(Layout, MsfBuffer, ModuleCommitStrategy::Sequential);
+  return commitImpl(Layout, MsfBuffer, ModuleCommitStrategy::Staged);
+}
+
+Error DbiStreamBuilder::commitMSFZModuleStreams(
+    const msf::MSFLayout &Layout, WritableBinaryStreamRef MsfBuffer) {
+  // Workers only populate private buffers. Forwarding each completed wave here
+  // keeps the append-only MSFZ writer single-threaded and stream-ordered.
+  constexpr uint64_t ModuleBufferBudget = 64 * 1024 * 1024;
+
+  struct ModuleBuffer {
+    DbiModuleDescriptorBuilder *Module;
+    uint32_t Size;
+    SmallVector<uint8_t, 0> Bytes;
+  };
+
+  std::vector<ModuleBuffer> Wave;
+  uint64_t WaveBytes = 0;
+  auto CommitWave = [&]() -> Error {
+    if (Wave.empty())
+      return Error::success();
+
+    {
+      llvm::TimeTraceScope timeScope("Parallel DBI module production");
+      if (Error E = parallelForEachError(Wave, [](ModuleBuffer &Buffer) {
+            Buffer.Bytes.resize_for_overwrite(Buffer.Size);
+            MutableBinaryByteStream Stream(Buffer.Bytes,
+                                           llvm::endianness::little);
+            return Buffer.Module->commitSymbolStream(
+                WritableBinaryStreamRef(Stream), /*ForwardOnly=*/false);
+          }))
+        return E;
+    }
+
+    {
+      llvm::TimeTraceScope timeScope("Ordered DBI module forwarding");
+      for (ModuleBuffer &Buffer : Wave) {
+        auto Stream = WritableMappedBlockStream::createIndexedStream(
+            Layout, MsfBuffer, Buffer.Module->getStreamIndex(), Allocator);
+        BinaryStreamWriter Writer(*Stream);
+        if (Error E = Writer.writeBytes(Buffer.Bytes))
+          return E;
+        if (Writer.bytesRemaining() != 0)
+          return make_error<RawError>(raw_error_code::invalid_format,
+                                      "Incomplete module stream forwarding");
+      }
+    }
+
+    Wave.clear();
+    WaveBytes = 0;
+    return Error::success();
+  };
+
+  for (const std::unique_ptr<DbiModuleDescriptorBuilder> &Module : ModiList) {
+    uint16_t StreamIndex = Module->getStreamIndex();
+    if (StreamIndex == kInvalidStreamIndex)
+      continue;
+
+    uint64_t StreamSize = Layout.StreamSizes[StreamIndex];
+    if (StreamSize > ModuleBufferBudget) {
+      if (Error E = CommitWave())
+        return E;
+      if (Error E = Module->commitSymbolStream(Layout, MsfBuffer,
+                                               /*ForwardOnly=*/true))
+        return E;
+      continue;
+    }
+
+    if (StreamSize > ModuleBufferBudget - WaveBytes) {
+      if (Error E = CommitWave())
+        return E;
+    }
+
+    Wave.push_back({Module.get(), static_cast<uint32_t>(StreamSize), {}});
+    WaveBytes += StreamSize;
+  }
+
+  return CommitWave();
+}
+#endif
+
+Error DbiStreamBuilder::commitImpl(const msf::MSFLayout &Layout,
+                                   WritableBinaryStreamRef MsfBuffer,
+                                   ModuleCommitStrategy Strategy) {
   llvm::TimeTraceScope timeScope("Commit DBI stream");
   if (auto EC = finalize())
     return EC;
@@ -398,12 +489,29 @@ Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
       return EC;
   }
 
-  // Commit symbol streams. This is a lot of data, so do it in parallel.
-  if (auto EC = parallelForEachError(
-          ModiList, [&](std::unique_ptr<DbiModuleDescriptorBuilder> &M) {
-            return M->commitSymbolStream(Layout, MsfBuffer);
-          }))
-    return EC;
+  // Commit symbol streams. Classic MSF supports independent writes. MSFZ
+  // stages parallel output before forwarding it through its ordered writer.
+  switch (Strategy) {
+#if LLVM_ENABLE_ZSTD
+  case ModuleCommitStrategy::Staged:
+    if (Error E = commitMSFZModuleStreams(Layout, MsfBuffer))
+      return E;
+    break;
+#endif
+  case ModuleCommitStrategy::Parallel:
+    if (auto EC = parallelForEachError(
+            ModiList, [&](std::unique_ptr<DbiModuleDescriptorBuilder> &M) {
+              return M->commitSymbolStream(Layout, MsfBuffer);
+            }))
+      return EC;
+    break;
+  case ModuleCommitStrategy::Sequential:
+    for (const std::unique_ptr<DbiModuleDescriptorBuilder> &M : ModiList)
+      if (auto EC = M->commitSymbolStream(Layout, MsfBuffer,
+                                          /*ForwardOnly=*/true))
+        return EC;
+    break;
+  }
 
   if (!SectionContribs.empty()) {
     if (auto EC = Writer.writeEnum(DbiSecContribVer60))

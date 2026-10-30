@@ -9,11 +9,15 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INJECTEDSOURCESTREAM_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INJECTEDSOURCESTREAM_H
 
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
+#include "llvm/Support/BinaryStream.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 
 namespace llvm {
+namespace msf {
+class MappedBlockStream;
+}
 namespace pdb {
 struct SrcHeaderBlockEntry;
 struct SrcHeaderBlockHeader;
@@ -21,6 +25,7 @@ class PDBStringTable;
 
 class InjectedSourceStream {
 public:
+  LLVM_ABI InjectedSourceStream(std::unique_ptr<BinaryStream> Stream);
   LLVM_ABI InjectedSourceStream(std::unique_ptr<msf::MappedBlockStream> Stream);
   LLVM_ABI Error reload(const PDBStringTable &Strings);
 
@@ -31,12 +36,12 @@ public:
   uint32_t size() const { return InjectedSourceTable.size(); }
 
 private:
-  std::unique_ptr<msf::MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
 
   const SrcHeaderBlockHeader* Header;
   HashTable<SrcHeaderBlockEntry> InjectedSourceTable;
 };
-}
+} // namespace pdb
 } // namespace llvm
 
 #endif

@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
@@ -467,10 +466,11 @@ NativeSession::getModuleDebugStream(uint32_t Index) const {
   if (ModiStream == kInvalidStreamIndex)
     return make_error<RawError>("Module stream not present");
 
-  std::unique_ptr<msf::MappedBlockStream> ModStreamData =
-      Pdb->createIndexedStream(ModiStream);
+  auto ModStreamData = Pdb->safelyCreateStream(ModiStream);
+  if (!ModStreamData)
+    return ModStreamData.takeError();
 
-  ModuleDebugStreamRef ModS(Modi, std::move(ModStreamData));
+  ModuleDebugStreamRef ModS(Modi, std::move(*ModStreamData));
   if (auto EC = ModS.reload())
     return std::move(EC);
 

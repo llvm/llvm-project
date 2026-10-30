@@ -1,0 +1,5 @@
+# RUN: yaml2obj %p/Inputs/empty.yaml -o %t.obj
+# RUN: lld-link /entry:main %t.obj /out:%t.exe /debug /pdb:%t.pdb /pdbcompress
+# RUN: FileCheck %s < %t.pdb
+#
+# CHECK: Microsoft C/C++ MSF 7.00

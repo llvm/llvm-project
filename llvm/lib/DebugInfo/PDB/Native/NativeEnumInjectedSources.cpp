@@ -77,7 +77,7 @@ public:
     // Find stream with that name and read its data.
     // FIXME: Consider validating (or even loading) all this in
     // InjectedSourceStream so that no error can happen here.
-    auto ExpectedFileStream = File.safelyCreateNamedStream(StreamName);
+    auto ExpectedFileStream = File.safelyCreateLogicalNamedStream(StreamName);
     if (!ExpectedFileStream) {
       consumeError(ExpectedFileStream.takeError());
       return "(failed to open data stream)";

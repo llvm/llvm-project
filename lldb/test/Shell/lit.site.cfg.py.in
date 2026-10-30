@@ -23,6 +23,7 @@ config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.python_root_dir = "@Python3_ROOT_DIR@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
+config.have_zstd = @LLVM_ENABLE_ZSTD@
 config.objc_gnustep_dir = "@LLDB_TEST_OBJC_GNUSTEP_DIR@"
 config.have_lzma = @LLVM_ENABLE_LZMA@
 config.host_triple = "@LLVM_HOST_TRIPLE@"
