@@ -100,13 +100,13 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprc = COPY [[SRAWI8_]].sub_32
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[COPY1]], %subreg.sub_32
-    ; CHECK-NEXT: [[XORI8_:%[0-9]+]]:g8rc = XORI8 killed [[INSERT_SUBREG]], 32767
+    ; CHECK-NEXT: [[XORI8_:%[0-9]+]]:g8rc = XORI8 [[INSERT_SUBREG]], 32767
     ; CHECK-NEXT: $x3 = COPY [[XORI8_]]
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %0:g8rc = COPY $x3
     %2:gprc = SRAWI %0.sub_32, 31, implicit-def dead $carry
-    %3:g8rc = EXTSW_32_64 killed %2
-    %4:g8rc = XORI8 killed %3, 32767
+    %3:g8rc = EXTSW_32_64 %2
+    %4:g8rc = XORI8 %3, 32767
     $x3 = COPY %4
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 

@@ -7,7 +7,8 @@ define void @test(ptr %p, ptr %r, <4 x i1> %c, i16 %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[P]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <4 x i32> <i32 poison, i32 3, i32 poison, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[X]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = freeze i16 [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> poison, <4 x i32> <i32 0, i32 poison, i32 0, i32 poison>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP1]], <4 x i16> [[TMP4]], <4 x i32> <i32 4, i32 1, i32 6, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = select <4 x i1> [[C]], <4 x i16> [[TMP5]], <4 x i16> [[TMP0]]

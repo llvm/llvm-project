@@ -144,6 +144,10 @@ public:
 
   unsigned VGPRCriticalLimit = 0;
 
+  // Occupancy budget for the combined VGPR/AGPR allocation on unified targets.
+  // Unlike the per-bank limit, this is not clamped to allocatable VGPRs.
+  unsigned UnifiedVGPRCriticalLimit = 0;
+
   unsigned AGPRCriticalLimit = 0;
 
   unsigned SGPRLimitBias = 0;
@@ -828,6 +832,7 @@ private:
   unsigned SavedVGPRThresholdPercent = 0;
   unsigned SavedVGPRExcessLimit = 0;
   unsigned SavedVGPRCriticalLimit = 0;
+  unsigned SavedUnifiedVGPRCriticalLimit = 0;
 };
 
 class GCNPostScheduleDAGMILive final : public ScheduleDAGMI {
