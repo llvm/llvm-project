@@ -1829,7 +1829,7 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
   if (!StateNotNull && StateNull) {
     if (ExplodedNode *N = C.generateErrorNode(StateNull)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
-          BT_FileNull, "Stream pointer might be NULL.", N);
+          BT_FileNull, "Stream pointer might be NULL", N);
       if (StreamE)
         bugreporter::trackExpressionValue(N, StreamE, *R);
       C.emitReport(std::move(R));
@@ -1914,8 +1914,8 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
       C.emitReport(std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterOpenFailed,
           "Stream might be invalid after "
-          "(re-)opening it has failed. "
-          "Can cause undefined behaviour.",
+          "(re-)opening it has failed; "
+          "can cause undefined behaviour",
           N));
       return nullptr;
     }
@@ -1928,8 +1928,8 @@ ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
     SVal StreamVal, CheckerContext &C, ProgramStateRef State) const {
   static const char *BugMessage =
       "File position of the stream might be 'indeterminate' "
-      "after a failed operation. "
-      "Can cause undefined behavior.";
+      "after a failed operation; "
+      "can cause undefined behavior";
 
   SymbolRef Sym = StreamVal.getAsSymbol();
   if (!Sym)
@@ -1989,7 +1989,7 @@ StreamChecker::ensureFseekWhenceCorrect(SVal WhenceVal, CheckerContext &C,
     C.emitReport(std::make_unique<PathSensitiveBugReport>(
         BT_IllegalWhence,
         "The whence argument to fseek() should be "
-        "SEEK_SET, SEEK_END, or SEEK_CUR.",
+        "SEEK_SET, SEEK_END, or SEEK_CUR",
         N));
     return nullptr;
   }
@@ -2002,8 +2002,8 @@ void StreamChecker::reportFEofWarning(SymbolRef StreamSym, CheckerContext &C,
   if (ExplodedNode *N = C.generateNonFatalErrorNode(State)) {
     auto R = std::make_unique<PathSensitiveBugReport>(
         BT_StreamEof,
-        "Read function called when stream is in EOF state. "
-        "Function has no effect.",
+        "Read function called when stream is in EOF state; "
+        "function has no effect",
         N);
     R->markInteresting(StreamSym);
     C.emitReport(std::move(R));
@@ -2042,7 +2042,7 @@ StreamChecker::reportLeaks(const SmallVector<SymbolRef, 2> &LeakedSyms,
     std::unique_ptr<PathSensitiveBugReport> R =
         std::make_unique<PathSensitiveBugReport>(
             BT_ResourceLeak,
-            "Opened stream never closed. Potential resource leak.", Err,
+            "Opened stream never closed; potential resource leak", Err,
             LocUsedForUniqueing, StreamOpenNode->getStackFrame()->getDecl());
     R->markInteresting(LeakSym);
     R->addVisitor<NoStreamStateChangeVisitor>(LeakSym, this);

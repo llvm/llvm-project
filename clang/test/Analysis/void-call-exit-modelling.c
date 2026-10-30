@@ -8,7 +8,7 @@ void inf_loop_break_callee() {
   while (1) { // expected-note{{Loop condition is true}}
     (void)data;
     break; // No note that we jump to the line above from this break
-  } // expected-note@-1{{Execution jumps to the end of the function}}
+  } // expected-note@-1{{execution jumps to the end of the function}}
 } // expected-warning{{Potential leak of memory pointed to by 'data'}}
 // expected-note@-1  {{Potential leak of memory pointed to by 'data'}}
 
@@ -21,6 +21,6 @@ void inf_loop_break_top() {
   while (1) { // expected-note{{Loop condition is true}}
     (void)data;
     break; // No note that we jump to the line above from this break
-  } // expected-note@-1{{Execution jumps to the end of the function}}
+  } // expected-note@-1{{execution jumps to the end of the function}}
 } // expected-warning{{Potential leak of memory pointed to by 'data'}}
 // expected-note@-1  {{Potential leak of memory pointed to by 'data'}}

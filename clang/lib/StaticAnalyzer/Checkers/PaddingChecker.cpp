@@ -327,12 +327,12 @@ public:
     }
 
     Os << " (" << BaselinePad.getQuantity() << " padding bytes, where "
-       << OptimalPad.getQuantity() << " is optimal). "
-       << "Optimal fields order: ";
+       << OptimalPad.getQuantity() << " is optimal), "
+       << "optimal fields order: ";
     for (const auto *FD : OptimalFieldsOrder)
       Os << FD->getName() << ", ";
     Os << "consider reordering the fields or adding explicit padding "
-          "members.";
+          "members";
 
     PathDiagnosticLocation CELoc =
         PathDiagnosticLocation::create(RD, BR->getSourceManager());

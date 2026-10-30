@@ -866,7 +866,7 @@ private:
     if (ValuesPrinted)
       MsgOs << " but ";
     else
-      MsgOs << "is out of the accepted range; It ";
+      MsgOs << "is out of the accepted range; it ";
     VC->describe(ValueConstraint::Violation, Call, C.getState(), Summary,
                  MsgOs);
     Msg[0] = toupper(Msg[0]);
@@ -1243,7 +1243,7 @@ ProgramStateRef StdLibraryFunctionsChecker::BufferSizeConstraint::apply(
       return SVal(SvalBuilder.makeIntVal(*ConcreteSize));
     }
     assert(SizeArgN && "The constraint must be either a concrete value or "
-                       "encoded in an argument.");
+                       "encoded in an argument");
     // The size argument.
     SVal SizeV = getArgSVal(Call, *SizeArgN);
     // Multiply with another argument if given.

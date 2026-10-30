@@ -18,11 +18,11 @@ void builtin_function_call_crash_fixes(char *c) {
   __builtin_fprintf(fp, "%s", c);
 
 #if __STDC_VERSION__ > 199901
-  // expected-warning@-7{{Call to function 'strncpy' is insecure as it does not provide security checks introduced in the C11 standard.}}
-  // expected-warning@-7{{Call to function 'memset' is insecure as it does not provide security checks introduced in the C11 standard.}}
-  // expected-warning@-7{{Call to function 'memcpy' is insecure as it does not provide security checks introduced in the C11 standard.}}
-  // expected-warning@-7{{Call to function 'sprintf' is insecure as it does not provide bounding of the memory buffer or security checks introduced in the C11 standard.}}
-  // expected-warning@-7{{Call to function 'fprintf' is insecure as it does not provide bounding of the memory buffer or security checks introduced in the C11 standard.}}
+  // expected-warning@-7{{Call to function 'strncpy' is insecure as it does not provide security checks introduced in the C11 standard;}}
+  // expected-warning@-7{{Call to function 'memset' is insecure as it does not provide security checks introduced in the C11 standard;}}
+  // expected-warning@-7{{Call to function 'memcpy' is insecure as it does not provide security checks introduced in the C11 standard;}}
+  // expected-warning@-7{{Call to function 'sprintf' is insecure as it does not provide bounding of the memory buffer or security checks introduced in the C11 standard;}}
+  // expected-warning@-7{{Call to function 'fprintf' is insecure as it does not provide bounding of the memory buffer or security checks introduced in the C11 standard;}}
 #else
   // expected-no-diagnostics
 #endif

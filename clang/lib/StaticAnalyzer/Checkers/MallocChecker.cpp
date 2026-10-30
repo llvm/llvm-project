@@ -2058,7 +2058,7 @@ void MallocChecker::checkTaintedness(CheckerContext &C, const CallEvent &Call,
     Callee = Call.getCalleeIdentifier()->getName().str();
   reportTaintBug(
       Callee + " is called with a tainted (potentially attacker controlled) "
-               "value. Make sure the value is bound checked.",
+               "value; make sure the value is bound checked",
       State, C, TaintedSyms, Family);
 }
 

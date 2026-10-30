@@ -292,7 +292,7 @@ bad3(void)
 {
 	pthread_mutex_lock(&mtx1);	// no-warning
 	pthread_mutex_lock(&mtx2);	// no-warning
-	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 	pthread_mutex_unlock(&mtx2);	// no-warning
 }
 
@@ -302,7 +302,7 @@ bad4(void)
 	if (pthread_mutex_trylock(&mtx1)) // no-warning
 		return;
 	pthread_mutex_lock(&mtx2);	// no-warning
-	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	pthread_mutex_unlock(&mtx1);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 }
 
 void
@@ -326,7 +326,7 @@ bad7(void)
 {
 	lck_mtx_lock(&lck1);	// no-warning
 	lck_mtx_lock(&lck2);	// no-warning
-	lck_mtx_unlock(&lck1);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	lck_mtx_unlock(&lck1);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 	lck_mtx_unlock(&lck2);	// no-warning
 }
 
@@ -336,7 +336,7 @@ bad8(void)
 	if (lck_mtx_try_lock(&lck1) == 0) // no-warning
 		return;
 	lck_mtx_lock(&lck2);		// no-warning
-	lck_mtx_unlock(&lck1);		// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	lck_mtx_unlock(&lck1);		// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 }
 
 void
@@ -555,7 +555,7 @@ void ok_non_lifo_unlock_three(void) {
 	pthread_mutex_lock(&mtx1);	// no-warning
 	pthread_mutex_lock(&mtx2);	// no-warning
 	pthread_mutex_lock(&mtx3);	// no-warning
-	pthread_mutex_unlock(&mtx2);	// lor-warning{{This was not the most recently acquired lock. Possible lock order reversal}}
+	pthread_mutex_unlock(&mtx2);	// lor-warning{{This was not the most recently acquired lock; possible lock order reversal}}
 	pthread_mutex_unlock(&mtx3);	// no-warning
 	pthread_mutex_unlock(&mtx1);	// no-warning
 }

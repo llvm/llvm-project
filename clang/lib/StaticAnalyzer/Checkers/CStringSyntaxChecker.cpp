@@ -226,13 +226,13 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
 
       SmallString<256> S;
       llvm::raw_svector_ostream os(S);
-      os << "Potential buffer overflow. ";
+      os << "Potential buffer overflow; ";
       if (!DstName.empty()) {
-        os << "Replace with 'sizeof(" << DstName << ") "
+        os << "replace with 'sizeof(" << DstName << ") "
               "- strlen(" << DstName <<") - 1'";
         os << " or u";
       } else
-        os << "U";
+        os << "u";
       os << "se a safer 'strlcat' API";
 
       BR.EmitBasicReport(FD, Checker, "Anti-pattern in the argument",
@@ -251,8 +251,9 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
 
       SmallString<256> S;
       llvm::raw_svector_ostream os(S);
-      os << "The third argument allows to potentially copy more bytes than it should. ";
-      os << "Replace with the value ";
+      os << "The third argument allows to potentially copy more bytes than it "
+            "should; ";
+      os << "replace with the value ";
       if (!DstName.empty())
           os << "sizeof(" << DstName << ")";
       else
