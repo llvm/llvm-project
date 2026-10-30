@@ -561,7 +561,10 @@ public:
 ///    target-independent logic, or if not, has no non-constant and
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
-///    extended by the rematerialization.
+///    extended by the rematerialization. When reducing spilling under
+///    -amdgpu-remat-extend-deps, rematerializable dependencies holding a single
+///    value that still reaches the rematerialization points are exempt; their
+///    live range is extended instead.
 /// 4. The register has at least one user outside its defining region. If
 ///    rematerialized, one copy is made per using region and the original
 ///    register stays if the defining region has users.
@@ -577,6 +580,9 @@ private:
   struct ScoredRemat {
     /// The register index handle in the rematerializer.
     RegisterIdx RegIdx;
+    /// Rematerializable dependencies whose live range has to be extended to
+    /// reach the rematerialization points.
+    SmallVector<RegisterIdx, 2> ExtendedDeps;
     /// Regions in which the register is live-in/live-out/live anywhere.
     BitVector LiveIn, LiveOut, Live;
     /// Subset of \ref Live regions in which the rematerialization is not
@@ -749,9 +755,13 @@ private:
   /// Determines whether users of rematerialization candidate \p CandIdx are
   /// compatible with the stage's rematerialization constraints/limitations.
   /// Registers in \p MarkedRegs have already been deemed rematerializable by
-  /// the stage.
-  bool candidateHasValidUsers(RegisterIdx CandIdx,
-                              const SmallSet<Register, 4> &MarkedRegs) const;
+  /// the stage. When \p ExtendedDeps is non-null, a rematerializable dependency
+  /// which is not live at a rematerialization point but whose value still
+  /// reaches it does not invalidate the candidate; it is instead added to \p
+  /// ExtendedDeps.
+  bool candidateHasValidUsers(
+      RegisterIdx CandIdx, const SmallSet<Register, 4> &MarkedRegs,
+      SmallVectorImpl<RegisterIdx> *ExtendedDeps = nullptr) const;
 
   /// In all regions set in \p Regions, saves pressure \p RPSave and clear it as
   /// a target if its RP target has been reached.
@@ -771,6 +781,10 @@ private:
   /// \p LiveIn and the live-outs of regions set in \p LiveOut.
   void addToLiveMaps(Register Reg, LaneBitmask Mask, const BitVector &LiveIn,
                      const BitVector &LiveOut);
+
+  /// Sets the live-in and live-out lanes of register \p Reg in regions set in
+  /// \p Regions from its current live interval.
+  void refreshLiveMaps(Register Reg, const BitVector &Regions);
 
   /// If remat alone did not increase occupancy to the target one, rollbacks all
   /// rematerializations and resets live-ins/RP in all regions impacted by the
