@@ -83,12 +83,48 @@ static IntegerAttr xorIntegerAttrs(PatternRewriter &builder, Value res,
   return applyToIntegerAttrs(builder, res, lhs, rhs, std::bit_xor<APInt>());
 }
 
-// Merge overflow flags from 2 ops, selecting the most conservative combination.
+// Intersect overflow flags. Callers must ensure the common flags remain valid
+// after rewriting.
 static IntegerOverflowFlagsAttr
 mergeOverflowFlags(IntegerOverflowFlagsAttr val1,
                    IntegerOverflowFlagsAttr val2) {
   return IntegerOverflowFlagsAttr::get(val1.getContext(),
                                        val1.getValue() & val2.getValue());
+}
+
+using OverflowCheckedBinaryOp = APInt (APInt::*)(const APInt &, bool &) const;
+
+// For fixed-width integers, if combining the constants does not overflow, the
+// reassociated expression has the same mathematical result as the original
+// expression. Common source flags then rule out overflow in the new operation.
+static IntegerOverflowFlagsAttr mergeOverflowFlagsForReassociation(
+    IntegerOverflowFlagsAttr val1, IntegerOverflowFlagsAttr val2, Attribute lhs,
+    Attribute rhs, OverflowCheckedBinaryOp signedOp,
+    OverflowCheckedBinaryOp unsignedOp) {
+  IntegerOverflowFlags flags = val1.getValue() & val2.getValue();
+  if (flags == IntegerOverflowFlags::none)
+    return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
+
+  auto lhsAttr = llvm::cast<IntegerAttr>(lhs);
+  auto rhsAttr = llvm::cast<IntegerAttr>(rhs);
+  // TODO: Handle index separately; its storage width is not its target width.
+  if (isa<IndexType>(lhsAttr.getType()))
+    return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
+
+  const APInt &lhsValue = lhsAttr.getValue();
+  const APInt &rhsValue = rhsAttr.getValue();
+  bool overflow;
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nsw)) {
+    (void)(lhsValue.*signedOp)(rhsValue, overflow);
+    if (overflow)
+      flags = bitEnumClear(flags, IntegerOverflowFlags::nsw);
+  }
+  if (bitEnumContainsAny(flags, IntegerOverflowFlags::nuw)) {
+    (void)(lhsValue.*unsignedOp)(rhsValue, overflow);
+    if (overflow)
+      flags = bitEnumClear(flags, IntegerOverflowFlags::nuw);
+  }
+  return IntegerOverflowFlagsAttr::get(val1.getContext(), flags);
 }
 
 /// Invert an integer comparison predicate.
@@ -461,7 +497,7 @@ void arith::AddIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::AddUIExtendedOp::getShapeForUnroll() {
+arith::AddUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -525,7 +561,7 @@ void arith::AddUIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::SubUIExtendedOp::getShapeForUnroll() {
+arith::SubUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -697,7 +733,7 @@ void arith::MulIOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulSIExtendedOp::getShapeForUnroll() {
+arith::MulSIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -741,7 +777,7 @@ void arith::MulSIExtendedOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 std::optional<SmallVector<int64_t, 4>>
-arith::MulUIExtendedOp::getShapeForUnroll() {
+arith::MulUIExtendedOp::getIterationShapeToUnroll() {
   if (auto vt = dyn_cast<VectorType>(getType(0)))
     return llvm::to_vector<4>(vt.getShape());
   return std::nullopt;
@@ -1049,6 +1085,17 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
       });
 
   return overflowOrDiv ? Attribute() : result;
+}
+
+Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
+  // Division by zero is UB.
+  // Signed division overflow (INT_MIN / -1) is also UB.
+  Value divisor = getRhs();
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2041,9 +2088,11 @@ OpFoldResult arith::TruncIOp::fold(FoldAdaptor adaptor) {
       return src;
   }
 
-  // trunci(trunci(a)) -> trunci(a))
-  if (matchPattern(getOperand(), m_Op<arith::TruncIOp>())) {
-    setOperand(getOperand().getDefiningOp()->getOperand(0));
+  // trunci(trunci(a)) -> trunci(a)
+  if (auto truncOp = getOperand().getDefiningOp<arith::TruncIOp>()) {
+    // Preserve a flag only if both truncations are lossless in that signedness.
+    setOverflowFlags(getOverflowFlags() & truncOp.getOverflowFlags());
+    setOperand(truncOp.getIn());
     return getResult();
   }
 
@@ -2802,6 +2851,34 @@ public:
     // Number of bits representing values, as opposed to the sign
     auto valueBits = isUnsigned ? intWidth : (intWidth - 1);
 
+    const llvm::fltSemantics &semantics = floatTy.getFloatSemantics();
+
+    // Conservatively require an exact representation of integer zero. For
+    // example, f8E8M0FNU converts zero to its smallest positive value.
+    if (!APFloat::semanticsHasZero(semantics))
+      return failure();
+
+    // Signed inputs may be negative, which e.g. f8E5M3FNU cannot represent.
+    // Do not try to convert the signed minimum below for such formats.
+    if (!isUnsigned && !APFloat::semanticsHasSignedRepr(semantics))
+      return failure();
+
+    if (!APFloat::semanticsHasInf(semantics)) {
+      // Overflow can produce NaN or saturate to a finite value:
+      // - sitofp(1000 : i32) to f8E4M3FN is NaN, so cmpf ogt against 0.0
+      //   is false, whereas cmpi sgt against integer zero would be true.
+      // - uitofp(8 : i4) to f6E2M3FN saturates to 7.5. Equality against 7.5
+      //   is true, but the fractional-constant logic below would fold it to
+      //   false. Its four bits of precision do not prevent overflow.
+      //
+      // Conservatively require the enclosing 2^valueBits (and its negative
+      // for signed inputs) to be representable, so rounding stays within
+      // finite bounds. Equality at the exponent bound is safe.
+      if (APFloat::semanticsMaxExponent(semantics) <
+          static_cast<int>(valueBits))
+        return failure();
+    }
+
     // Following test does NOT adjust intWidth downwards for signed inputs,
     // because the most negative value still requires all the mantissa bits
     // to distinguish it from one less than that value.
@@ -2810,8 +2887,9 @@ public:
       int exponent = ilogb(rhs);
       if (exponent == APFloat::IEK_Inf) {
         int maxExponent = ilogb(APFloat::getLargest(rhs.getSemantics()));
-        if (maxExponent < (int)valueBits) {
-          // Conversion could create infinity.
+        if (maxExponent < static_cast<int>(valueBits)) {
+          // Conversion could create infinity. For example, sitofp(65536 : i32)
+          // to f16 is +inf, so equality against +inf can be true.
           return failure();
         }
       } else {
@@ -2827,11 +2905,13 @@ public:
     // Convert to equivalent cmpi predicate
     CmpIPredicate pred;
     switch (op.getPredicate()) {
+    case CmpFPredicate::AlwaysTrue:
     case CmpFPredicate::ORD:
       // Int to fp conversion doesn't create a nan (ord checks neither is a nan)
       rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/true,
                                                  /*width=*/1);
       return success();
+    case CmpFPredicate::AlwaysFalse:
     case CmpFPredicate::UNO:
       // Int to fp conversion doesn't create a nan (uno checks either is a nan)
       rewriter.replaceOpWithNewOp<ConstantIntOp>(op, /*value=*/false,
@@ -3316,7 +3396,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::maxnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/true);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/true)
+                           : APFloat::getNaN(semantic, /*Negative=*/true);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::addf:
@@ -3345,7 +3427,9 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::minnumf: {
     const llvm::fltSemantics &semantic =
         llvm::cast<FloatType>(resultType).getFloatSemantics();
-    APFloat identity = APFloat::getNaN(semantic, /*Negative=*/false);
+    APFloat identity = useOnlyFiniteValue
+                           ? APFloat::getLargest(semantic, /*Negative=*/false)
+                           : APFloat::getNaN(semantic, /*Negative=*/false);
     return builder.getFloatAttr(resultType, identity);
   }
   case AtomicRMWKind::mins:
@@ -3400,6 +3484,16 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
     arith::FastMathFlagsAttr fmfAttr = fmfOpInterface.getFastMathFlagsAttr();
     useOnlyFiniteValue =
         bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::ninf);
+    if (*maybeKind == AtomicRMWKind::maxnumf ||
+        *maybeKind == AtomicRMWKind::minnumf) {
+      if (bitEnumContainsAny(fmfAttr.getValue(), arith::FastMathFlags::nnan)) {
+        *maybeKind = *maybeKind == AtomicRMWKind::maxnumf
+                         ? AtomicRMWKind::maximumf
+                         : AtomicRMWKind::minimumf;
+      } else {
+        useOnlyFiniteValue = false;
+      }
+    }
   }
 
   // Builder only used as helper for attribute creation.

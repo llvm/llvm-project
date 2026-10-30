@@ -1505,6 +1505,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Clone = llvm::Function::Create(Fn->getFunctionType(),
                                      llvm::GlobalValue::InternalLinkage,
                                      Fn->getAddressSpace(), FDInlineName, M);
+      Clone->setCallingConv(Fn->getCallingConv());
+      Clone->setAttributes(Fn->getAttributes());
       Clone->addFnAttr(llvm::Attribute::AlwaysInline);
     }
     Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);

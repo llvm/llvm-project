@@ -666,9 +666,8 @@ define amdgpu_kernel void @test_pow_half(ptr addrspace(1) nocapture %a) {
 ; GCN-POSTLINK-NEXT:    [[DOTNOT1:%.*]] = or i1 [[TMP14]], [[TMP7]]
 ; GCN-POSTLINK-NEXT:    [[TMP15:%.*]] = select fast i1 [[DOTNOT1]], float [[TMP13]], float +qnan
 ; GCN-POSTLINK-NEXT:    [[TMP16:%.*]] = fcmp fast oeq float [[TMP]], 0.000000e+00
-; GCN-POSTLINK-NEXT:    [[TMP17:%.*]] = select fast i1 [[TMP16]], float 0.000000e+00, float +inf
-; GCN-POSTLINK-NEXT:    [[TMP18:%.*]] = select fast i1 [[TMP11]], float [[TMP]], float 0.000000e+00
-; GCN-POSTLINK-NEXT:    [[TMP19:%.*]] = tail call fast float @llvm.copysign.f32(float [[TMP17]], float [[TMP18]])
+; GCN-POSTLINK-NEXT:    [[TMP17:%.*]] = tail call fast float @llvm.copysign.f32(float 0.000000e+00, float [[TMP]])
+; GCN-POSTLINK-NEXT:    [[TMP19:%.*]] = select i1 [[TMP11]], float [[TMP17]], float 0.000000e+00
 ; GCN-POSTLINK-NEXT:    [[TMP20:%.*]] = select fast i1 [[TMP16]], float [[TMP19]], float [[TMP15]]
 ; GCN-POSTLINK-NEXT:    store float [[TMP20]], ptr addrspace(1) [[A]], align 4
 ; GCN-POSTLINK-NEXT:    ret void
@@ -1266,9 +1265,10 @@ define amdgpu_kernel void @test_rootn_3(ptr addrspace(1) nocapture %a) {
 ; GCN-POSTLINK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.log2.f32(float [[TMP0]])
 ; GCN-POSTLINK-NEXT:    [[TMP2:%.*]] = fmul fast float [[TMP1]], f0x3EAAAAAB
 ; GCN-POSTLINK-NEXT:    [[TMP3:%.*]] = tail call fast float @llvm.exp2.f32(float [[TMP2]])
+; GCN-POSTLINK-NEXT:    [[TMP4:%.*]] = tail call fast float @llvm.copysign.f32(float [[TMP3]], float [[TMP]])
 ; GCN-POSTLINK-NEXT:    [[TMP5:%.*]] = fcmp fast oeq float [[TMP]], 0.000000e+00
-; GCN-POSTLINK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], float 0.000000e+00, float [[TMP3]]
-; GCN-POSTLINK-NEXT:    [[TMP7:%.*]] = tail call fast float @llvm.copysign.f32(float [[TMP6]], float [[TMP]])
+; GCN-POSTLINK-NEXT:    [[TMP6:%.*]] = tail call fast float @llvm.copysign.f32(float 0.000000e+00, float [[TMP]])
+; GCN-POSTLINK-NEXT:    [[TMP7:%.*]] = select fast i1 [[TMP5]], float [[TMP6]], float [[TMP4]]
 ; GCN-POSTLINK-NEXT:    store float [[TMP7]], ptr addrspace(1) [[A]], align 4
 ; GCN-POSTLINK-NEXT:    ret void
 ;

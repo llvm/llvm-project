@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_utsname_unittests)
+add_libc_testsuite(libc-sys-utsname-tests)
 
 add_libc_test(
   uname_test
   SUITE
-    libc_sys_utsname_unittests
+    libc-sys-utsname-tests
   SRCS
     uname_test.cpp
   DEPENDS

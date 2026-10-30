@@ -4,7 +4,7 @@
 %struct.S = type { [4 x i32] }
 
 ; Check the second, third, and fourth basic blocks are folded into
-; the first basic block since each has one bonus intruction, which
+; the first basic block since each has one bonus instruction, which
 ; does not exceed the default bouns instruction threshold of 1.
 
 define i1 @test1(i32 %0, i32 %1, i32 %2, i32 %3) {

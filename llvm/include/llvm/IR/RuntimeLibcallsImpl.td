@@ -33,10 +33,6 @@ class RuntimeLibcallAvailability<dag cond = (?)> {
   dag CondDag = cond;
 }
 
-// Predicate for whether a libcall should be used for the current
-// function/subtarget.
-class LibcallLoweringPredicate<code cond> { code Cond = cond; }
-
 def AlwaysAvailable : RuntimeLibcallAvailability;
 
 class LibcallCallingConv<code CC = [{}]> {
@@ -55,6 +51,7 @@ def AVR_BUILTIN : LibcallCallingConv<[{CallingConv::AVR_BUILTIN}]>;
 def SMEABI_PreserveMost_From_X0 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0}]>;
 def SMEABI_PreserveMost_From_X1 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1}]>;
 def SMEABI_PreserveMost_From_X2 : LibcallCallingConv<[{CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2}]>;
+def AARCH64_VECTORCALL : LibcallCallingConv<[{CallingConv::AArch64_VectorCall}]>;
 
 
 // Return type or argument type of library calls.
@@ -66,6 +63,7 @@ class FuncArgType {
 def NoneType : FuncArgType; // dummy
 def Void : FuncArgType;
 def Bool : FuncArgType;     // 8 bits on all targets
+def Int8 : FuncArgType;
 def Int16 : FuncArgType;
 def Int32 : FuncArgType;
 def Int : FuncArgType;
@@ -73,6 +71,7 @@ def IntPlus : FuncArgType;  // Int or bigger.
 def Long : FuncArgType;     // Either 32 or 64 bits.
 def IntX : FuncArgType;     // Any integer type.
 def Int64 : FuncArgType;
+def Int128 : FuncArgType;
 def LLong : FuncArgType;    // 64 bits on all targets.
 def UInt16 : FuncArgType;
 def UInt32 : FuncArgType;
@@ -157,6 +156,20 @@ multiclass VectorMathLibcall<string suffix, FuncArgType RetType = NoneType,
 class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   RuntimeLibcall Provides = P;
   string LibCallFuncName = Name;
+  FuncArgType ReturnType = P.ReturnType;
+  list<FuncArgType> ArgumentTypes = P.ArgumentTypes;
+}
+
+// Implementation of a long double function, which provides the libcall
+// matching the module's long double format.
+class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
+    : RuntimeLibcallImpl<!cast<RuntimeLibcall>(libcall_basename#"_F128"),
+                         Name> {
+  let Provides = ?;
+  RuntimeLibcall ProvidesF80 = !cast<RuntimeLibcall>(libcall_basename#"_F80");
+  RuntimeLibcall ProvidesF128 = !cast<RuntimeLibcall>(libcall_basename#"_F128");
+  RuntimeLibcall ProvidesPPCF128 =
+      !cast<RuntimeLibcall>(libcall_basename#"_PPCF128");
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used
@@ -211,20 +224,21 @@ class LibcallLibrary<string name, dag impls,
   bit Isolated = false;
 }
 
-// Reference a shared LibcallLibrary from a SystemRuntimeLibrary, dropping the
-// impls in `exclude`, so a target can pull a provider (e.g. compiler-rt) but
-// keep its own versions of a few entries. A bare LibcallLibrary member is
-// equivalent to LibraryRef<Lib>.
-class LibraryRef<LibcallLibrary lib, list<RuntimeLibcallImpl> exclude = []> {
-  LibcallLibrary Library = lib;
+// Drop the impls in `exclude` from the library named `name` on triples matching
+// `pred`, so a target can use a provider (e.g. compiler-rt) but keep its own
+// versions of a few entries.
+class LibraryExclusion<string name, RuntimeLibcallAvailability pred,
+                       list<RuntimeLibcallImpl> exclude> {
+  string LibraryName = name;
+  RuntimeLibcallAvailability Pred = pred;
   list<RuntimeLibcallImpl> Exclude = exclude;
 }
 
-/// Define a complete top level set of runtime libcalls for a target. Every
-/// member of funcList must be a LibcallLibrary or LibraryRef.
-class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred, dag funcList> {
+/// Define the default runtime libraries for a target, by LibraryName.
+class SystemRuntimeLibrary<RuntimeLibcallAvailability Pred,
+                           list<string> libraries> {
   /// Set the default calling convention assumed for library members.
   LibcallCallingConv DefaultLibcallCallingConv = DefaultCC;
   RuntimeLibcallAvailability TriplePred = Pred;
-  LibcallImpls MemberList = LibcallImpls<funcList>;
+  list<string> DefaultLibraries = libraries;
 }

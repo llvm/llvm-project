@@ -8,6 +8,7 @@
 
 #include "llvm/CodeGen/MachineCycleAnalysis.h"
 #include "llvm/ADT/GenericCycleImpl.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAContext.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -47,6 +48,11 @@ void MachineCycleInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   CI.print(OS);
 }
 
+void MachineCycleInfoWrapperPass::verifyAnalysis() const {
+  if (VerifyCycleInfo)
+    CI.verify();
+}
+
 void MachineCycleInfoWrapperPass::releaseMemory() {
   CI.clear();
   F = nullptr;
@@ -62,7 +68,7 @@ MachineCycleAnalysis::run(MachineFunction &MF,
   return MCI;
 }
 
-bool MachineCycleAnalysis::invalidate(
+bool MachineCycleInfo::invalidate(
     MachineFunction &, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &) {
   // Check whether the analysis, all analyses on functions, or the function's
@@ -113,6 +119,13 @@ MachineCycleInfoPrinterPass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   auto &MCI = MFAM.getResult<MachineCycleAnalysis>(MF);
   MCI.print(OS);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+MachineCycleInfoVerifierPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MFAM.getResult<MachineCycleAnalysis>(MF).verify();
   return PreservedAnalyses::all();
 }
 

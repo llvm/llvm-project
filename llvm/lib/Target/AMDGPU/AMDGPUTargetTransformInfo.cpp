@@ -115,10 +115,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
     Loop *L, ScalarEvolution &SE, TTI::UnrollingPreferences &UP,
     OptimizationRemarkEmitter *ORE) const {
   const Function &F = *L->getHeader()->getParent();
-  UP.Threshold =
-      F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300);
-  UP.PartialThreshold =
-      F.getFnAttributeAsParsedInteger("amdgpu-partial-unroll-threshold", 150);
+  UP.Threshold = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300));
+  UP.PartialThreshold = static_cast<unsigned>(
+      F.getFnAttributeAsParsedInteger("amdgpu-partial-unroll-threshold", 150));
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
@@ -149,7 +149,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         // We will also use the supplied value for PartialThreshold for now.
         // We may introduce additional metadata if it becomes necessary in the
         // future.
-        UP.Threshold = MetaThresholdValue->getSExtValue();
+        UP.Threshold =
+            static_cast<unsigned>(MetaThresholdValue->getSExtValue());
         UP.PartialThreshold = UP.Threshold;
         ThresholdPrivate = std::min(ThresholdPrivate, UP.Threshold);
         ThresholdLocal = std::min(ThresholdLocal, UP.Threshold);
@@ -508,8 +509,8 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     if (!Ordering || !Volatile)
       return false; // Invalid.
 
-    unsigned OrderingVal = Ordering->getZExtValue();
-    if (OrderingVal > static_cast<unsigned>(AtomicOrdering::SequentiallyConsistent))
+    uint64_t OrderingVal = Ordering->getZExtValue();
+    if (!isValidAtomicOrdering(OrderingVal))
       return false;
 
     Info.PtrVal = Inst->getArgOperand(0);
@@ -1325,8 +1326,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
-    unsigned EltSize
-      = DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
+    TypeSize EltSize =
+        DL.getTypeSizeInBits(cast<VectorType>(ValTy)->getElementType());
     // Dynamic indexing isn't free and is best avoided.
     if (Index == ~0u)
       return 2;
@@ -1351,6 +1352,21 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(
       return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
                                        VIC);
     }
+
+    // Packed f32 pair formation for v_pk_*_f32. A constant-index insert writes
+    // one subregister, so a lane holding a computed value costs at most one
+    // v_mov_b32 at any width. A loaded lane lands in place, and arguments and
+    // constants are already in a register, so both are free. SLP prices a
+    // buildvector root with the insertelements themselves as Op1, and those
+    // lanes need no packing either. Only throughput sees the move; size-based
+    // users such as the inliner and the unroller keep inserts free.
+    auto *VecTy = dyn_cast<FixedVectorType>(ValTy);
+    const auto *InsertedInst = dyn_cast_or_null<Instruction>(Op1);
+    if (Opcode == Instruction::InsertElement && EltSize == 32 &&
+        CostKind == TTI::TCK_RecipThroughput && ST->hasAnyPackedFP32Ops() &&
+        InsertedInst && VecTy && VecTy->getElementType()->isFloatTy() &&
+        !isa<LoadInst, InsertElementInst>(InsertedInst))
+      return getFullRateInstrCost();
 
     // Extracts are just reads of a subregister, so are free. Inserts are
     // considered free because we don't want to have any cost for scalarizing
@@ -1647,7 +1663,40 @@ InstructionCost GCNTTIImpl::getShuffleCost(
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
 
-  unsigned ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
+  TypeSize ScalarSize = DL.getTypeSizeInBits(SrcTy->getElementType());
+
+  // A v_pk_*_f32 operand is an aligned register pair. A lane already in its
+  // half of a source pair is read in place, and a splat of the low half is an
+  // op_sel_hi. Every other lane costs a v_mov_b32 to move it into place.
+  if (ScalarSize == 32 && CostKind == TTI::TCK_RecipThroughput &&
+      ST->hasAnyPackedFP32Ops() && SrcTy->getElementType()->isFloatTy() &&
+      !Mask.empty()) {
+    const int NumSrcElts = cast<FixedVectorType>(SrcTy)->getNumElements();
+    // Source pairs of the second operand are numbered after the first.
+    auto GetPair = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx / 2 : NumSrcElts + (Idx - NumSrcElts) / 2;
+    };
+    auto GetHalf = [&](int Idx) {
+      return Idx < NumSrcElts ? Idx % 2 : (Idx - NumSrcElts) % 2;
+    };
+    unsigned Cost = 0;
+    for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += 2) {
+      const int Lo = Mask[DstIdx];
+      const int Hi =
+          DstIdx + 1 < Mask.size() ? Mask[DstIdx + 1] : PoisonMaskElem;
+      const bool LoInPlace = Lo != PoisonMaskElem && GetHalf(Lo) == 0;
+      const bool HiInPlace = Hi != PoisonMaskElem && GetHalf(Hi) == 1;
+      if (Lo != PoisonMaskElem && Lo == Hi && LoInPlace)
+        continue;
+      if (LoInPlace && HiInPlace)
+        Cost += GetPair(Lo) != GetPair(Hi);
+      else
+        Cost += (Lo != PoisonMaskElem && !LoInPlace) +
+                (Hi != PoisonMaskElem && !HiInPlace);
+    }
+    return Cost;
+  }
+
   if (ST->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       (ScalarSize == 16 || ScalarSize == 8)) {
     // Larger vector widths may require additional instructions, but are
@@ -1669,7 +1718,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
         return 0;
     }
 
-    unsigned EltsPerReg = 32 / ScalarSize;
+    unsigned EltsPerReg = 32 / static_cast<unsigned>(ScalarSize);
     switch (Kind) {
     case TTI::SK_Broadcast:
       // A single v_perm_b32 can be re-used for all destination registers.
@@ -1694,7 +1743,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
       unsigned EndIndex = Index + NumInsertElts;
       unsigned BeginSubIdx = Index % EltsPerReg;
       unsigned EndSubIdx = EndIndex % EltsPerReg;
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
 
       if (BeginSubIdx != 0) {
         // Need to shift the inserted vector into place. The cost is the number
@@ -1741,7 +1790,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(
       //
       // For each destination register, derive the cost of obtaining it based
       // on the number of source registers that feed into it.
-      unsigned Cost = 0;
+      InstructionCost Cost = 0;
       for (unsigned DstIdx = 0; DstIdx < Mask.size(); DstIdx += EltsPerReg) {
         SmallVector<int, 4> Regs;
         bool Aligned = true;
@@ -1823,7 +1872,7 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
 
     if (auto *Shuffle = dyn_cast<ShuffleVectorInst>(Op.get())) {
 
-      unsigned EltSize = DL.getTypeSizeInBits(
+      TypeSize EltSize = DL.getTypeSizeInBits(
           cast<VectorType>(Shuffle->getType())->getElementType());
 
       // For i32 (or greater) shufflevectors, these will be lowered into a
@@ -1937,20 +1986,22 @@ static unsigned adjustInliningThresholdUsingCallee(const CallBase *CB,
 
   // The penalty cost is computed relative to the cost of instructions and does
   // not model any storage costs.
-  adjustThreshold += std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) *
-                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
-  adjustThreshold += std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) *
-                     ArgStackCost.getValue() * InlineConstants::getInstrCost();
+  adjustThreshold += static_cast<unsigned>(
+      std::max(0, SGPRsInUse - NrOfSGPRUntilSpill) * ArgStackCost.getValue() *
+      InlineConstants::getInstrCost());
+  adjustThreshold += static_cast<unsigned>(
+      std::max(0, VGPRsInUse - NrOfVGPRUntilSpill) * ArgStackCost.getValue() *
+      InlineConstants::getInstrCost());
   return adjustThreshold;
 }
 
-static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
+static TypeSize getCallArgsTotalAllocaSize(const CallBase *CB,
                                            const DataLayout &DL) {
   // If we have a pointer to a private array passed into a function
   // it will not be optimized out, leaving scratch usage.
   // This function calculates the total size in bytes of the memory that would
   // end in scratch if the call was not inlined.
-  unsigned AllocaSize = 0;
+  TypeSize AllocaSize = TypeSize::getFixed(0);
   SmallPtrSet<const AllocaInst *, 8> AIVisited;
   for (Value *PtrArg : CB->args()) {
     PointerType *Ty = dyn_cast<PointerType>(PtrArg->getType());
@@ -1967,7 +2018,7 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
       continue;
 
     if (auto Size = AI->getAllocationSize(DL))
-      AllocaSize += Size->getFixedValue();
+      AllocaSize += *Size;
   }
   return AllocaSize;
 }
@@ -1982,8 +2033,8 @@ unsigned GCNTTIImpl::adjustInliningThreshold(const CallBase *CB) const {
 
   // Private object passed as arguments may end up in scratch usage if the call
   // is not inlined. Increase the inline threshold to promote inlining.
-  unsigned AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
-  if (AllocaSize > 0)
+  TypeSize AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
+  if (AllocaSize.getFixedValue() > 0)
     Threshold += ArgAllocaCost;
   return Threshold;
 }
@@ -1993,7 +2044,7 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
 
   // Below the cutoff, assume that the private memory objects would be
   // optimized
-  auto AllocaSize = getCallArgsTotalAllocaSize(CB, DL);
+  auto AllocaSize = getCallArgsTotalAllocaSize(CB, DL).getFixedValue();
   if (AllocaSize <= ArgAllocaCutoff)
     return 0;
 
@@ -2026,8 +2077,8 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
     return 0;
 
   // Attribute the bonus proportionally to the alloca size
-  unsigned AllocaThresholdBonus =
-      (Threshold * ArgAllocaSize->getFixedValue()) / AllocaSize;
+  unsigned AllocaThresholdBonus = static_cast<unsigned>(
+      (Threshold * ArgAllocaSize->getFixedValue()) / AllocaSize);
 
   return AllocaThresholdBonus;
 }

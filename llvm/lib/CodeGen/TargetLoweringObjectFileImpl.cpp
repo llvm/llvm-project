@@ -133,10 +133,11 @@ void TargetLoweringObjectFileELF::initialize(MCContext &Ctx,
   case Triple::armeb:
   case Triple::thumb:
   case Triple::thumbeb:
-    if (Ctx.getAsmInfo().getExceptionHandlingType() == ExceptionHandling::ARM)
+    if (M.getExceptionModel() == ExceptionHandling::ARM)
       break;
     // Fallthrough if not using EHABI
     [[fallthrough]];
+  case Triple::m68k:
   case Triple::ppc:
   case Triple::ppcle:
   case Triple::x86:
@@ -570,6 +571,14 @@ static unsigned getELFSectionFlags(SectionKind K, const Triple &T) {
     Flags |= ELF::SHF_STRINGS;
 
   return Flags;
+}
+
+MCSection *
+TargetLoweringObjectFileELF::getNamedSection(StringRef Name,
+                                             SectionKind Kind) const {
+  unsigned Type = getELFSectionType(Name, Kind);
+  unsigned Flags = getELFSectionFlags(Kind, getContext().getTargetTriple());
+  return getContext().getELFSection(Name, Type, Flags);
 }
 
 static const Comdat *getELFComdat(const GlobalValue *GV) {
@@ -1388,6 +1397,13 @@ void TargetLoweringObjectFileMachO::emitModuleMetadata(MCStreamer &Streamer,
   Streamer.addBlankLine();
 }
 
+MCSection *
+TargetLoweringObjectFileMachO::getNamedSection(StringRef Name,
+                                               SectionKind Kind) const {
+  auto [Segment, SecName] = Name.split(',');
+  return getContext().getMachOSection(Segment, SecName, 0, Kind);
+}
+
 void TargetLoweringObjectFileMachO::emitLinkerDirectives(
     MCStreamer &Streamer, const Module &M) const {
   if (auto *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -1982,6 +1998,12 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
   });
 }
 
+MCSection *
+TargetLoweringObjectFileCOFF::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  return getContext().getCOFFSection(Name, getCOFFSectionFlags(Kind, *TM));
+}
+
 void TargetLoweringObjectFileCOFF::emitLinkerDirectives(MCStreamer &Streamer,
                                                         const Module &M) const {
   if (NamedMDNode *LinkerOptions = M.getNamedMetadata("llvm.linker.options")) {
@@ -2311,6 +2333,14 @@ void TargetLoweringObjectFileWasm::initialize(MCContext &Ctx,
   for (GlobalValue *GV : Vec)
     if (auto *GO = dyn_cast<GlobalObject>(GV))
       Used.insert(GO);
+}
+
+MCSection *
+TargetLoweringObjectFileWasm::getNamedSection(StringRef Name,
+                                              SectionKind Kind) const {
+  if (Kind.isMetadata())
+    return getContext().getWasmSection(".custom_section." + Name, Kind);
+  return getContext().getWasmSection(Name, Kind);
 }
 
 MCSection *TargetLoweringObjectFileWasm::getExplicitSectionGlobal(

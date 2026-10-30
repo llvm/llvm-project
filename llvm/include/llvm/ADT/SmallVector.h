@@ -1174,6 +1174,13 @@ struct SmallVectorStorage {
 /// well-defined.
 template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
 
+/// A tag for constructors that leave new elements default-initialized, like
+/// resize_for_overwrite.
+struct for_overwrite_t {
+  explicit for_overwrite_t() = default;
+};
+inline constexpr for_overwrite_t for_overwrite{};
+
 /// Forward declaration of SmallVector so that
 /// calculateSmallVectorDefaultInlinedElements can reference
 /// `sizeof(SmallVector<T, 0>)`.
@@ -1266,6 +1273,12 @@ public:
 
   SmallVector(size_t SizeArg, const T &Value) : SmallVectorImpl<T>(N) {
     this->assign(SizeArg, Value);
+  }
+
+  template <typename Tag,
+            typename = std::enable_if_t<std::is_same_v<Tag, for_overwrite_t>>>
+  SmallVector(size_t SizeArg, Tag) : SmallVectorImpl<T>(N) {
+    this->resize_for_overwrite(SizeArg);
   }
 
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>

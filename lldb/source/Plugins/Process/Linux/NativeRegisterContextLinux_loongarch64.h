@@ -13,7 +13,7 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_loongarch.h"
-#include "Plugins/Process/Utility/RegisterInfo_loongarch64.h"
+#include "Register/Common/RegisterInfo_loongarch64.h"
 
 #include <asm/ptrace.h>
 

@@ -444,8 +444,7 @@ public:
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
         rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 8 ||
-        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
-        !rhsType.getScalableDims()[0])
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0)
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
     // Check the output is a vector of i32 elements.
@@ -516,8 +515,7 @@ public:
     //  * M and N even and at least 2
     if (lhsType.isScalable() || !rhsType.getScalableDims()[0] ||
         rhsType.getScalableDims()[1] || lhsType.getDimSize(1) != k || k != 4 ||
-        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0 ||
-        !rhsType.getScalableDims()[0])
+        m < 2 || m % 2 != 0 || n < 2 || n % 2 != 0)
       return rewriter.notifyMatchFailure(op, "non-matching operand shape");
 
     // Check the output is a vector of Float32 elements.

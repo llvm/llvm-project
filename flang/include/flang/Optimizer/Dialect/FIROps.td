@@ -205,6 +205,11 @@ def fir_AllocaOp : fir_Op<"alloca", [
 
     The pinned attribute is used to flag fir.alloca operation in a specific
     region and avoid them being hoisted in an alloca hoisting pass.
+
+    The optional alignment attribute requests a minimum byte alignment for
+    the allocation, as `fir.allocmem` and `fir.global` do. It must be a
+    positive power of two. Code generation never lowers the alignment below
+    the ABI alignment of the allocated type.
   }];
 
   let arguments = (ins
@@ -213,7 +218,8 @@ def fir_AllocaOp : fir_Op<"alloca", [
     OptionalAttr<StrAttr>:$bindc_name,
     UnitAttr:$pinned,
     Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
+    Variadic<AnyIntegerType>:$shape,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let results =

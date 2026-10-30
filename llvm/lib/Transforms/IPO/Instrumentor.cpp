@@ -331,6 +331,8 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
 bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
+  if (Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
   bool RegexMatches = true;
   if (ParsedFunctionRegex.isValid())
     RegexMatches = ParsedFunctionRegex.match(Fn.getName());

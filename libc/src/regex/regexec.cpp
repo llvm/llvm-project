@@ -31,11 +31,12 @@ LLVM_LIBC_FUNCTION(int, regexec,
   LIBC_CRASH_ON_NULLPTR(preg);
   LIBC_CRASH_ON_NULLPTR(string);
 
-  // TODO: Submatch extraction (nmatch/pmatch) and execution flags (eflags)
-  // will be wired in subsequent patches.
+  // TODO: Submatch extraction (nmatch/pmatch) and REG_STARTEND will be wired
+  // in subsequent patches.
   (void)nmatch;
   (void)pmatch;
-  (void)eflags;
+  if ((eflags & ~(REG_NOTBOL | REG_NOTEOL)) != 0)
+    return REG_BADPAT;
 
   // Guard against a null internal pointer (e.g. called after regfree).
   auto *internal = static_cast<regex::RegexInternal *>(preg->__internal);
@@ -46,8 +47,7 @@ LLVM_LIBC_FUNCTION(int, regexec,
   // const regex_t*. Serialise access to internal->pool during lazy derivative
   // evaluation.
   cpp::lock_guard guard(internal->lock);
-  switch (
-      regex::match(internal->pool, internal->root, cpp::string_view(string))) {
+  switch (regex::match(*internal, cpp::string_view(string), eflags)) {
   case regex::MatchResult::Match:
     return 0;
   case regex::MatchResult::NoMatch:

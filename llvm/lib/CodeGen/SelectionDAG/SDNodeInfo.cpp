@@ -277,8 +277,17 @@ void SDNodeInfo::verifyNode(const SelectionDAG &DAG, const SDNode *N) const {
         reportNodeError(DAG, N, SS.str());
       }
       break;
-    case SDTCisSameAs:
+    case SDTCisSameAs: {
+      SDNodeValue OtherVal = GetConstraintValue(C.ConstrainingValIdx);
+      EVT OtherVT = OtherVal.getValueType();
+
+      if (VT != OtherVT) {
+        SS << Val << " must have the same type as " << OtherVal << " ("
+           << OtherVT << "), but has type " << VT;
+        reportNodeError(DAG, N, SS.str());
+      }
       break;
+    }
     case SDTCisVTSmallerThanOp: {
       const auto *VTNode = dyn_cast<VTSDNode>(Val.getValue().getNode());
       if (!VTNode) {

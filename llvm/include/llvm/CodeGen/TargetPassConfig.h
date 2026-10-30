@@ -400,6 +400,10 @@ protected:
   /// immediately before register allocation.
   virtual void addPreRegAlloc() { }
 
+  /// Return true if the MachinePipeliner should run before addPreRegAlloc by
+  /// default. -enable-pipeliner overrides this.
+  virtual bool isMachinePipelinerEnabled() const { return false; }
+
   /// createTargetRegisterAllocator - Create the register allocator pass for
   /// this target at the current optimization level.
   virtual FunctionPass *createTargetRegisterAllocator(bool Optimized);
@@ -428,10 +432,6 @@ protected:
   virtual bool addPreRewrite() {
     return false;
   }
-
-  /// addPostFastRegAllocRewrite - Add passes to the optimized register
-  /// allocation pipeline after fast register allocation is complete.
-  virtual bool addPostFastRegAllocRewrite() { return false; }
 
   /// Add passes to be run immediately after virtual registers are rewritten
   /// to physical registers.
