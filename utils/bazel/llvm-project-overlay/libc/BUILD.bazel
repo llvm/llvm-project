@@ -17338,6 +17338,8 @@ libc_function(
         ":__support_common",
         ":__support_macros_config",
         ":__support_macros_null_check",
+        ":string_memory_utils",
+        ":string_utils",
     ],
 )
 

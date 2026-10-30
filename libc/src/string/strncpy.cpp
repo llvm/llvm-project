@@ -11,6 +11,9 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/string/memory_utils/inline_bzero.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/string_utils.h"
 #include <stddef.h> // For size_t.
 
 namespace LIBC_NAMESPACE_DECL {
@@ -22,13 +25,12 @@ LLVM_LIBC_FUNCTION(char *, strncpy,
     LIBC_CRASH_ON_NULLPTR(dest);
     LIBC_CRASH_ON_NULLPTR(src);
   }
-  size_t i = 0;
+  size_t i = internal::strnlen(src, n);
   // Copy up until \0 is found.
-  for (; i < n && src[i] != '\0'; ++i)
-    dest[i] = src[i];
+  inline_memcpy(dest, src, i);
   // When n>strlen(src), n-strlen(src) \0 are appended.
-  for (; i < n; ++i)
-    dest[i] = '\0';
+  if (n > i)
+    inline_bzero(dest + i, n - i);
   return dest;
 }
 

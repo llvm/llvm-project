@@ -286,6 +286,10 @@ add_entrypoint_object(
     strncpy.cpp
   HDRS
     strncpy.h
+  DEPENDS
+    .memory_utils.inline_bzero
+    .memory_utils.inline_memcpy
+    .string_utils
 )
 
 add_entrypoint_object(
