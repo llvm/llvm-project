@@ -234,7 +234,7 @@ public:
       RegDomain OpDomain = getDomain(MRI->getRegClass(MO.getReg()),
                                      MRI->getTargetRegisterInfo());
       // Converting a cross domain COPY to a same domain COPY should eliminate
-      // an insturction
+      // an instruction.
       if (OpDomain == DstDomain)
         return -1;
     }

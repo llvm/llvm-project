@@ -473,7 +473,7 @@ bool AliasAnalysis::Source::isDeclaredAllocatable() const {
     return var && var.isAllocatable();
   };
 
-  auto value = origin.u.dyn_cast<mlir::Value>();
+  auto value = llvm::dyn_cast<mlir::Value>(origin.u);
   return (value && isAllocatable(value.getDefiningOp())) ||
          isAllocatable(origin.instantiationPoint);
 }
@@ -491,7 +491,7 @@ bool AliasAnalysis::Source::isCrayPointerOrPointee() const {
 }
 
 bool AliasAnalysis::Source::isDummyArgument() const {
-  if (auto v = origin.u.dyn_cast<mlir::Value>()) {
+  if (auto v = llvm::dyn_cast<mlir::Value>(origin.u)) {
     return fir::isDummyArgument(v);
   }
   return false;
@@ -1285,6 +1285,7 @@ AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
 
 AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
     : symTabMap(std::move(other.symTabMap)),
+      symbolLookupsDisabled(other.symbolLookupsDisabled),
       domInfoCache(std::move(other.domInfoCache)),
       sortedScopeCache(std::move(other.sortedScopeCache)),
       multiScopeCache(std::move(other.multiScopeCache)),
@@ -2282,6 +2283,8 @@ AliasAnalysis::getSourceImpl(mlir::Value v, bool getLastInstantiationPoint,
 const mlir::SymbolTable *
 fir::AliasAnalysis::getNearestSymbolTable(mlir::Operation *from) {
   assert(from);
+  if (symbolLookupsDisabled)
+    return nullptr;
   Operation *symTabOp = mlir::SymbolTable::getNearestSymbolTable(from);
   if (!symTabOp)
     return nullptr;

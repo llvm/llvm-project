@@ -42,11 +42,11 @@
 // RUN:   -fembed-offload-object=%t.out -emit-llvm /dev/null -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NYI
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -x c -fopenmp \
-// RUN:   -fopenmp-targets=amdgcn-amd-amdhsa -fclangir \
+// RUN:   -fopenmp-targets=amdgpu-amd-amdhsa -fclangir \
 // RUN:   -fembed-offload-object=%t.out -emit-llvm /dev/null -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NYI
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -x c++ -fsycl-is-host \
-// RUN:   -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -fclangir \
+// RUN:   -fopenmp -fopenmp-targets=amdgpu-amd-amdhsa -fclangir \
 // RUN:   -fembed-offload-object=%t.out -emit-llvm /dev/null -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NYI
 

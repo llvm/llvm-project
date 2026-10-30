@@ -546,7 +546,7 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
                                   std::optional<NonLoc> Extent,
                                   bool IsTaintBug /*=false*/) const {
 
-  ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
+  ExplodedNode *ErrorNode = C.addSink(ErrorState);
   if (!ErrorNode)
     return;
 

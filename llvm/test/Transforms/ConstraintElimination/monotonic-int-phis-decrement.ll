@@ -391,7 +391,7 @@ define void @add_rec_decreasing_no_wrap_flags_signed_precond(i8 %start, i8 %b) {
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[U:%.*]] = icmp ule i8 [[K_0]], [[START]]
 ; CHECK-NEXT:    call void @use(i1 [[U]])
-; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
+; CHECK-NEXT:    [[K_DEC]] = add nsw i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -431,7 +431,7 @@ define void @add_rec_decreasing_sub_step_signed_precond(i8 %start, i8 %b) {
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[K_DEC]] = sub i8 [[K_0]], 1
+; CHECK-NEXT:    [[K_DEC]] = sub nsw i8 [[K_0]], 1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
