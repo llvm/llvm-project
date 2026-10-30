@@ -1,5 +1,6 @@
 #!/bin/sh
 echo "sm_70"
 echo "gfx906"
+echo "gfx90a:sramecc+:xnack-"
 echo "xe-pvc"
 exit 0
