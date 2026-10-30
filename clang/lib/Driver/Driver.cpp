@@ -974,9 +974,15 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
       return GPUArchs;
     }
 
-    for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
-      if (!Arch.empty())
-        GPUArchs.push_back(Arch.str());
+    // SYCL only supports Intel devices, so skip NVIDIA and AMD GPUs.
+    for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n")) {
+      OffloadArch ID = StringToOffloadArch(Arch);
+      if (Arch.empty() ||
+          (Kind == Action::OFK_SYCL &&
+           (ID.isNVPTX() || ID.isAMDGPU() || ID.isAMDGCNSPIRV())))
+        continue;
+      GPUArchs.push_back(Arch.str());
+    }
   } else {
     C.getDriver().Diag(diag::err_drv_command_failure) << "offload-arch";
   }

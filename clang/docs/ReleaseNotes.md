@@ -1534,7 +1534,8 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 - `-fsycl --offload-arch=<arch>` now selects the SPIR-V target without
   `--offload-targets` when `<arch>` is an Intel GPU (e.g. `xe-pvc`), an IGCA
-  target (e.g. `igca_20ca`) or `generic`.
+  target (e.g. `igca_20ca`) or `generic`. `--offload-arch=native` skips NVIDIA
+  and AMD GPUs, which SYCL does not support.
 
 ### Clang IR Improvements
 
