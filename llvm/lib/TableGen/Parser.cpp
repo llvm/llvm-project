@@ -14,7 +14,8 @@
 
 using namespace llvm;
 
-bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
+bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records,
+                             bool TrackReferenceLocs) {
   // Initialize the global TableGen source manager by temporarily taking control
   // of the input buffer in `SrcMgr`. This is kind of a hack, but allows for
   // preserving TableGen's current awkward diagnostic behavior. If we can remove
@@ -31,8 +32,7 @@ bool llvm::TableGenParseFile(SourceMgr &InputSrcMgr, RecordKeeper &Records) {
   Records.saveInputFilename(MainFileBuffer->getBufferIdentifier().str());
 
   TGParser Parser(SrcMgr, /*Macros=*/{}, Records,
-                  /*NoWarnOnUnusedTemplateArgs=*/false,
-                  /*TrackReferenceLocs=*/true);
+                  /*NoWarnOnUnusedTemplateArgs=*/false, TrackReferenceLocs);
   bool ParseResult = Parser.ParseFile();
 
   // After parsing, reclaim the source manager buffers from TableGen's global

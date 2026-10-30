@@ -853,7 +853,8 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
 
   // Parse the tablegen file.
   llvm::RecordKeeper tdRecords;
-  if (llvm::TableGenParseFile(tdSrcMgr, tdRecords))
+  if (llvm::TableGenParseFile(tdSrcMgr, tdRecords,
+                              /*TrackReferenceLocs=*/false))
     return failure();
 
   // Process the parsed records.

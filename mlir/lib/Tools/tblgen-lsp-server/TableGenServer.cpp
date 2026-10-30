@@ -466,7 +466,8 @@ void TableGenTextFile::initialize(
           ctx->diagnostics.push_back(*lspDiag);
       },
       &handlerContext);
-  bool failedToParse = llvm::TableGenParseFile(sourceMgr, *recordKeeper);
+  bool failedToParse = llvm::TableGenParseFile(sourceMgr, *recordKeeper,
+                                               /*TrackReferenceLocs=*/true);
 
   // Process all of the include files.
   lsp::gatherIncludeFiles(sourceMgr, parsedIncludes);
