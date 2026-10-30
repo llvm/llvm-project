@@ -5561,10 +5561,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       DenormalMode Mode =
           F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
-      // Note that NSZ only permits flipping the sign of a zero input operand,
-      // and does not make a -0.0 poison. So the NSZ flag cannot be used to
-      // refine the result class here.
-      Known = KnownFPClass::sqrt(KnownSrc, Mode);
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::sqrt(KnownSrc, Mode, HasNSZ);
 
       break;
     }

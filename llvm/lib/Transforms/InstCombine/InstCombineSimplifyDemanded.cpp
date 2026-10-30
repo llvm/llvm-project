@@ -3294,10 +3294,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           KnownSrc.isKnownNeverLogicalZero(Mode))
         return ConstantFP::getQNaN(VTy);
 
-      Known = KnownFPClass::sqrt(KnownSrc, Mode);
+      Known = KnownFPClass::sqrt(KnownSrc, Mode, FMF.noSignedZeros());
       Known.knownNot(~DemandedMask);
 
-      if (Known.getKnownFPClasses() == fcZero) {
+      // This copysign fold is only valid if the input does not change sign,
+      // which fails if input denormal flushing can change the sign. This is the
+      // case with negative-subnormals flushing to positive-zero under DAPZ.
+      if (Known.getKnownFPClasses() == fcZero &&
+          (!Mode.inputsMayBePositiveZero() ||
+           KnownSrc.isKnownNever(fcNegSubnormal))) {
         if (FMF.noSignedZeros())
           return ConstantFP::getZero(VTy);
         IRBuilderBase::InsertPointGuard Guard(Builder);
