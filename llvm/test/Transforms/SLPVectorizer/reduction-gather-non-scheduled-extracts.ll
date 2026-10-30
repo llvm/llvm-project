@@ -8,28 +8,25 @@ define void @tes() {
 ; X86-NEXT:    [[TMP0:%.*]] = fcmp ole <2 x double> zeroinitializer, zeroinitializer
 ; X86-NEXT:    br label [[TMP1:%.*]]
 ; X86:       1:
-; X86-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP0]], <4 x i32> <i32 0, i32 0, i32 0, i32 2>
-; X86-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP2]])
-; X86-NEXT:    [[OP_RDX1:%.*]] = select i1 [[TMP3]], i1 false, i1 false
+; X86-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP0]], <5 x i32> <i32 0, i32 0, i32 0, i32 2, i32 poison>
+; X86-NEXT:    [[TMP3:%.*]] = shufflevector <5 x i1> [[TMP2]], <5 x i1> <i1 poison, i1 poison, i1 poison, i1 poison, i1 false>, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 9>
+; X86-NEXT:    [[TMP6:%.*]] = freeze <5 x i1> [[TMP3]]
+; X86-NEXT:    [[OP_RDX1:%.*]] = call i1 @llvm.vector.reduce.and.v5i1(<5 x i1> [[TMP6]])
 ; X86-NEXT:    br i1 [[OP_RDX1]], label [[TMP4:%.*]], label [[TMP5:%.*]]
-; X86:       4:
+; X86:       6:
 ; X86-NEXT:    ret void
-; X86:       5:
+; X86:       7:
 ; X86-NEXT:    ret void
 ;
 ; AARCH64-LABEL: define void @tes() {
 ; AARCH64-NEXT:  entry:
-; AARCH64-NEXT:    [[TMP0:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
-; AARCH64-NEXT:    [[TMP1:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
 ; AARCH64-NEXT:    [[TMP2:%.*]] = fcmp ole <2 x double> zeroinitializer, zeroinitializer
-; AARCH64-NEXT:    [[TMP3:%.*]] = extractelement <2 x i1> [[TMP2]], i64 0
-; AARCH64-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> zeroinitializer, i64 0
 ; AARCH64-NEXT:    br label [[TMP5:%.*]]
-; AARCH64:       5:
-; AARCH64-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP0]], i1 [[TMP1]], i1 false
-; AARCH64-NEXT:    [[TMP9:%.*]] = select i1 [[OP_RDX]], i1 [[TMP4]], i1 false
-; AARCH64-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i1 [[TMP3]], i1 false
-; AARCH64-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], i1 false, i1 false
+; AARCH64:       1:
+; AARCH64-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i1> zeroinitializer, <2 x i1> [[TMP2]], <5 x i32> <i32 0, i32 0, i32 0, i32 2, i32 poison>
+; AARCH64-NEXT:    [[TMP3:%.*]] = shufflevector <5 x i1> [[TMP6]], <5 x i1> <i1 poison, i1 poison, i1 poison, i1 poison, i1 false>, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 9>
+; AARCH64-NEXT:    [[TMP4:%.*]] = freeze <5 x i1> [[TMP3]]
+; AARCH64-NEXT:    [[TMP11:%.*]] = call i1 @llvm.vector.reduce.and.v5i1(<5 x i1> [[TMP4]])
 ; AARCH64-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP13:%.*]]
 ; AARCH64:       6:
 ; AARCH64-NEXT:    ret void

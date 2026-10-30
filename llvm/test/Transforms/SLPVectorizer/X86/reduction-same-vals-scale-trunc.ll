@@ -5,15 +5,8 @@ define i1 @add_i1_even_repeats(ptr %p) {
 ; CHECK-LABEL: define i1 @add_i1_even_repeats(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[L:%.*]] = load <12 x i1>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <12 x i1> [[L]], <12 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <12 x i1> [[L]], <12 x i1> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <8 x i1> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i1> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i1> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[RDX_OP]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP6]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> [[TMP7]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.add.v12i1(<12 x i1> [[L]])
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i1 [[TMP1]], false
 ; CHECK-NEXT:    ret i1 [[TMP8]]
 ;
   %l = load <12 x i1>, ptr %p, align 1
@@ -59,15 +52,8 @@ define i1 @add_i1_odd_repeats(ptr %p) {
 ; CHECK-LABEL: define i1 @add_i1_odd_repeats(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[L:%.*]] = load <12 x i1>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <12 x i1> [[L]], <12 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <12 x i1> [[L]], <12 x i1> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <8 x i1> [[TMP1]], splat (i1 true)
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i1> [[TMP2]], splat (i1 true)
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i1> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i1> [[RDX_OP]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP6]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.add.v8i1(<8 x i1> [[TMP7]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.add.v12i1(<12 x i1> [[L]])
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[TMP8]]
 ;
   %l = load <12 x i1>, ptr %p, align 1
@@ -125,15 +111,8 @@ define i2 @add_i2_repeats(ptr %p) {
 ; CHECK-LABEL: define i2 @add_i2_repeats(
 ; CHECK-SAME: ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[L:%.*]] = load <12 x i2>, ptr [[P]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <12 x i2> [[L]], <12 x i2> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <12 x i2> [[L]], <12 x i2> poison, <4 x i32> <i32 8, i32 9, i32 10, i32 11>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul <8 x i2> [[TMP1]], splat (i2 -2)
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i2> [[TMP2]], splat (i2 -2)
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i2> [[TMP3]], <8 x i2> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i2> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i2> [[RDX_OP]], <4 x i2> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x i2> [[TMP3]], <8 x i2> [[TMP6]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i2 @llvm.vector.reduce.add.v8i2(<8 x i2> [[TMP7]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i2 @llvm.vector.reduce.add.v12i2(<12 x i2> [[L]])
+; CHECK-NEXT:    [[TMP8:%.*]] = mul i2 [[TMP1]], -2
 ; CHECK-NEXT:    ret i2 [[TMP8]]
 ;
   %l = load <12 x i2>, ptr %p, align 1

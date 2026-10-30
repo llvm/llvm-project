@@ -7043,6 +7043,14 @@ bool BoUpSLP::isProfitableToReorder() const {
   constexpr unsigned TinyTree = 10;
   constexpr unsigned PhiOpsLimit = 12;
   constexpr unsigned GatherLoadsLimit = 2;
+  // Do not reorder splat stores: every lane holds the same value, so a reorder
+  // cannot improve anything and only perturbs the chosen vector factor.
+  if (VectorizableTree.size() == 2 &&
+      VectorizableTree.front()->State == TreeEntry::Vectorize &&
+      VectorizableTree.front()->getOpcode() == Instruction::Store &&
+      VectorizableTree.back()->Scalars.front() ==
+          VectorizableTree.back()->Scalars.back())
+    return false;
   if (VectorizableTree.size() <= TinyTree)
     return true;
   if (getRootNode().hasState() && !getRootNode().isGather() &&
@@ -8598,8 +8606,16 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
     SmallVector<std::pair<ArrayRef<Value *>, LoadsState>> Results;
     unsigned StartIdx = 0;
     SmallVector<int> CandidateVFs;
-    if (isAllowedNonPowerOf2VF(MaxVF, Opts.slp_vectorize_non_power_of_2))
-      CandidateVFs.push_back(MaxVF);
+    if (isAllowedNonPowerOf2VF(
+            MaxVF, Opts.slp_vectorize_non_power_of_2,
+            Opts.slp_revec && isa<FixedVectorType>(Loads.front()->getType()))) {
+      // Skip a width whose predecessor already fills whole registers: the
+      // power-of-2 candidate below covers it without the extra lane.
+      const unsigned FullVectorNumElements = getFullVectorNumberOfElements(
+          *TTI, Loads.front()->getType(), MaxVF - 1, Opts.slp_revec);
+      if (MaxVF >= SmallestNonPowerOf2 && FullVectorNumElements != MaxVF - 1)
+        CandidateVFs.push_back(MaxVF);
+    }
     for (int NumElts = getFloorFullVectorNumberOfElements(
              *TTI, Loads.front()->getType(), MaxVF, Opts.slp_revec);
          NumElts > 1;
@@ -30070,7 +30086,7 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
       VF < 2 || VF < MinVF) {
     // Check if vectorizing with a non-power-of-2 VF should be considered; see
     // isAllowedNonPowerOf2VF for supported widths.
-    if (!Opts->slp_vectorize_non_power_of_2 || (VF < MinVF && VF + 1 != MinVF))
+    if (!Opts->slp_vectorize_non_power_of_2 || VF < MinVF)
       return false;
   }
 
@@ -30089,8 +30105,9 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
     bool IsAllowedSize =
         hasFullVectorsOrPowerOf2(*TTI, ValOps.front()->getType(), ValOps.size(),
                                  Opts->slp_revec) ||
-        isAllowedNonPowerOf2VF(ValOps.size(),
-                               Opts->slp_vectorize_non_power_of_2);
+        isAllowedNonPowerOf2VF(
+            ValOps.size(), Opts->slp_vectorize_non_power_of_2,
+            Opts->slp_revec && isa<FixedVectorType>(ValOps.front()->getType()));
     if ((!IsAllowedSize && S && S.getOpcode() != Instruction::Load &&
          (!S.getMainOp()->isSafeToRemove() ||
           any_of(ValOps.getArrayRef(),
@@ -30242,7 +30259,8 @@ public:
   bool initializeContext(
       BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
       DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-          &Visited);
+          &Visited,
+      bool SingleContext);
   /// Get the current VF
   std::optional<unsigned> getCurrentVF() const;
   /// Return the maximum VF for the context
@@ -30395,8 +30413,8 @@ void StoreChainContext::markRangeVectorized(unsigned StartIdx, unsigned Length,
 
 bool StoreChainContext::initializeContext(
     BoUpSLP &R, const DataLayout &DL, const TargetTransformInfo &TTI,
-    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>>
-        &Visited) {
+    DenseSet<std::tuple<Value *, Value *, Value *, Value *, unsigned>> &Visited,
+    bool SingleContext) {
   if (!Visited
            .insert({Operands.front(),
                     cast<StoreInst>(Operands.front())->getValueOperand(),
@@ -30445,8 +30463,24 @@ bool StoreChainContext::initializeContext(
   // First try a supported non-power-of-2 VF (see isAllowedNonPowerOf2VF).
   unsigned NonPowerOf2VF = 0;
   unsigned CandVF = std::clamp<unsigned>(Operands.size(), MinVF, MaxVF);
-  if (isAllowedNonPowerOf2VF(CandVF, Opts.slp_vectorize_non_power_of_2)) {
+  if (isAllowedNonPowerOf2VF(CandVF, Opts.slp_vectorize_non_power_of_2,
+                             Opts.slp_revec && isa<FixedVectorType>(StoreTy))) {
     NonPowerOf2VF = CandVF;
+    // Skip potentially non-profitable small non-power-of-2 trees.
+    if (!slpvectorizer::isValidElementType(StoreTy, Opts.slp_revec)) {
+      NonPowerOf2VF = 0;
+    } else {
+      Type *VecTy = slpvectorizer::getWidenedType(StoreTy, NonPowerOf2VF);
+      if (!SingleContext && CandVF == SmallestNonPowerOf2 &&
+          TTI.getMemoryOpCost(Instruction::Store, VecTy, Store->getAlign(),
+                              Store->getPointerAddressSpace(),
+                              TargetTransformInfo::TCK_RecipThroughput) >=
+              CandVF * TTI.getMemoryOpCost(
+                           Instruction::Store, StoreTy, Store->getAlign(),
+                           Store->getPointerAddressSpace(),
+                           TargetTransformInfo::TCK_RecipThroughput))
+        NonPowerOf2VF = 0;
+    }
     assert(NonPowerOf2VF != MaxVF &&
            "Non-power-of-2 VF should not be equal to MaxVF");
   }
@@ -30461,8 +30495,11 @@ bool StoreChainContext::initializeContext(
     return false;
   }
 
-  for (unsigned VF = std::max(MaxVF, NonPowerOf2VF); VF >= MinVF;
-       VF = divideCeil(VF, 2))
+  // Try the non-power-of-2 VF first, then the power-of-2 widths. Folding it
+  // into the loop bound would also halve from it, which skips MaxVF.
+  if (NonPowerOf2VF > 0)
+    CandidateVFs.push(NonPowerOf2VF);
+  for (unsigned VF = MaxVF; VF >= MinVF; VF = divideCeil(VF, 2))
     CandidateVFs.push(VF);
 
   End = Operands.size();
@@ -30899,7 +30936,8 @@ bool SLPVectorizerPass::vectorizeStores(
   auto ActuallyVectorizeContexts = [&]() {
     unsigned GlobalMaxVF = 0;
     for (auto &CtxPtr : AllContexts)
-      if (CtxPtr->initializeContext(R, *DL, *TTI, Visited))
+      if (CtxPtr->initializeContext(R, *DL, *TTI, Visited,
+                                    AllContexts.size() == 1))
         GlobalMaxVF = std::max(GlobalMaxVF, CtxPtr->getMaxVF());
       else
         CtxPtr.reset();
@@ -33003,14 +33041,13 @@ public:
     // If there are a sufficient number of reduction values, reduce
     // to a nearby power-of-2. We can safely generate oversized
     // vectors and rely on the backend to split them to legal sizes.
-    if (unsigned NumReducedVals =
-            accumulate(ReducedVals, 0,
-                       [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
-                         if (!isGoodForReduction(Vals))
-                           return Num;
-                         return Num + Vals.size();
-                       });
-        NumReducedVals < ReductionLimit &&
+    unsigned NumReducedVals = accumulate(
+        ReducedVals, 0, [](unsigned Num, ArrayRef<Value *> Vals) -> unsigned {
+          if (!isGoodForReduction(Vals))
+            return Num;
+          return Num + Vals.size();
+        });
+    if (NumReducedVals < ReductionLimit &&
         all_of(
             ReducedVals,
             [](ArrayRef<Value *> RedV) {
@@ -33029,6 +33066,19 @@ public:
       }
       return nullptr;
     }
+    // Skip 3-element reductions with zext(load) patterns, as they are unlikely
+    // to be vectorized and may cause compile time regressions.
+    if (Opts.slp_vectorize_non_power_of_2 &&
+        NumReducedVals == SmallestNonPowerOf2 &&
+        any_of(ReducedVals, [TTI = TTI](ArrayRef<Value *> Vals) {
+          return Vals.size() > 2 && all_of(Vals, [TTI = TTI](Value *V) {
+                   Value *L;
+                   return match(V, m_ZExt(m_Load(m_Value(L)))) &&
+                          TTI->getInstructionCost(
+                              cast<User>(V), TTI::TCK_RecipThroughput) == 0;
+                 });
+        }))
+      return nullptr;
 
     IRBuilder<TargetFolder> Builder(
         cast<Instruction>(ReductionRoot)->getIterator(), TargetFolder(DL));
@@ -33176,6 +33226,8 @@ public:
     // Try merge consecutive reduced values into a single vectorizable group and
     // check, if they can be vectorized as copyables.
     const bool TwoGroupsOnly = ReducedVals.size() == 2;
+    const bool LastOfTwoGroupsIsSingle =
+        TwoGroupsOnly && ReducedVals.back().size() == 1;
     const bool TwoGroupsOfSameSmallSize =
         TwoGroupsOnly &&
         ReducedVals.front().size() == ReducedVals.back().size() &&
@@ -33524,9 +33576,48 @@ public:
           ReduxWidth = bit_floor(ReduxWidth);
         return ReduxWidth;
       };
-      if (!isAllowedNonPowerOf2VF(ReduxWidth,
-                                  Opts.slp_vectorize_non_power_of_2))
-        ReduxWidth = GetVectorFactor(ReduxWidth);
+      const unsigned FullRegReduxWidth = GetVectorFactor(ReduxWidth);
+      bool AllowNoPowerOf2 = false;
+      if (isAllowedNonPowerOf2VF(
+              ReduxWidth, Opts.slp_vectorize_non_power_of_2,
+              Opts.slp_revec &&
+                  isa<FixedVectorType>(Candidates.front()->getType()))) {
+        // For a 5-wide reduction merged from two groups (4 elements plus a
+        // single trailing value) via copyable analysis, refuse the
+        // non-power-of-2 width when the lone trailing value does not fit the
+        // main-op operand pattern. Such a mismatch makes a 5-wide vector
+        // wasteful compared to a 4-wide + scalar tail.
+        auto LoneValueMismatchesMainOpOperands = [&]() {
+          Value *LastVal = ReducedVals.back().back();
+          if (!isa<Instruction>(LastVal))
+            return any_of(S.getMainOp()->operand_values(),
+                          IsaPred<Instruction>);
+          unsigned LastOpcode = cast<Instruction>(LastVal)->getOpcode();
+          return none_of(S.getMainOp()->operand_values(), [&](Value *Op) {
+            auto *I = dyn_cast<Instruction>(Op);
+            return I && I->getOpcode() == LastOpcode;
+          });
+        };
+        if (ReduxWidth == ReductionLimit) {
+          AllowNoPowerOf2 = true;
+        } else if (ReduxWidth == SmallProfitableNonPowerOf2 && TwoGroupsOnly &&
+                   LastOfTwoGroupsIsSingle && S &&
+                   S.areInstructionsWithCopyableElements() &&
+                   LoneValueMismatchesMainOpOperands()) {
+          AllowNoPowerOf2 = false;
+        } else if (S && !S.isAltShuffle()) {
+          AllowNoPowerOf2 = true;
+        } else {
+          // The lanes past the full-register width have no common opcode, so
+          // they would be gathered anyway; the wider vector is no worse.
+          InstructionsState OpS =
+              getSameOpcode(ArrayRef(Candidates).slice(FullRegReduxWidth), TLI);
+          if (!OpS || OpS.isAltShuffle())
+            AllowNoPowerOf2 = true;
+        }
+      }
+      if (!AllowNoPowerOf2)
+        ReduxWidth = FullRegReduxWidth;
       ReduxWidth = std::min(ReduxWidth, MaxElts);
 
       unsigned Start = 0;
@@ -34331,7 +34422,7 @@ public:
     // try front-anchored [0, W) then back-anchored [N-W, N).
     unsigned N = Candidates.size();
     ReduxWidth = N;
-    if (!Opts.slp_vectorize_non_power_of_2 || !has_single_bit(ReduxWidth + 1))
+    if (!isAllowedNonPowerOf2VF(ReduxWidth, Opts.slp_vectorize_non_power_of_2))
       ReduxWidth = GetVectorFactor(ReduxWidth);
     ReduxWidth = std::min(ReduxWidth, MaxElts);
 
@@ -35692,8 +35783,13 @@ bool SLPVectorizerPass::tryToVectorize(
   // Vectorize in current basic block only.
   auto *Op0 = dyn_cast<Instruction>(I->getOperand(0));
   auto *Op1 = dyn_cast<Instruction>(I->getOperand(1));
+  // A shared operand, or a load/extractvalue operand, gives a 2-wide tree that
+  // the cost model rejects unless the threshold has been lowered explicitly.
   if (!Op0 || !Op1 || Op0->getParent() != P || Op1->getParent() != P ||
-      R.isDeleted(Op0) || R.isDeleted(Op1))
+      R.isDeleted(Op0) || R.isDeleted(Op1) ||
+      ((Op0 == Op1 || isa<LoadInst, ExtractValueInst>(Op0) ||
+        isa<LoadInst, ExtractValueInst>(Op1)) &&
+       Opts->slp_threshold >= 0))
     return false;
 
   // First collect all possible candidates

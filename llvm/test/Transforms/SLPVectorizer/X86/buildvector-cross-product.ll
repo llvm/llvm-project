@@ -5,23 +5,14 @@ define <4 x float> @cross4f(<4 x float> %x, <4 x float> %y) {
 ; CHECK-LABEL: define <4 x float> @cross4f(
 ; CHECK-SAME: <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x float> [[X]], i64 1
-; CHECK-NEXT:    [[Y2:%.*]] = extractelement <4 x float> [[Y]], i64 2
-; CHECK-NEXT:    [[X2:%.*]] = extractelement <4 x float> [[X]], i64 2
-; CHECK-NEXT:    [[Y1:%.*]] = extractelement <4 x float> [[Y]], i64 1
-; CHECK-NEXT:    [[NY1:%.*]] = fneg float [[Y1]]
-; CHECK-NEXT:    [[M0:%.*]] = fmul float [[X2]], [[NY1]]
-; CHECK-NEXT:    [[R0:%.*]] = call float @llvm.fmuladd.f32(float [[X1]], float [[Y2]], float [[M0]])
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float undef>, float [[R0]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> poison, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP5]], <2 x float> [[TMP3]])
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[V21:%.*]] = shufflevector <4 x float> [[V0]], <4 x float> [[TMP7]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x float> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <3 x float> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[X]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <3 x float> @llvm.fmuladd.v3f32(<3 x float> [[TMP4]], <3 x float> [[TMP5]], <3 x float> [[TMP3]])
+; CHECK-NEXT:    [[V21:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 3>
 ; CHECK-NEXT:    ret <4 x float> [[V21]]
 ;
 entry:
@@ -50,22 +41,14 @@ define <4 x double> @cross4d(<4 x double> %x, <4 x double> %y) {
 ; CHECK-LABEL: define <4 x double> @cross4d(
 ; CHECK-SAME: <4 x double> [[X:%.*]], <4 x double> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <4 x double> [[X]], i64 1
-; CHECK-NEXT:    [[Y1:%.*]] = extractelement <4 x double> [[Y]], i64 1
-; CHECK-NEXT:    [[Y0:%.*]] = extractelement <4 x double> [[Y]], i64 0
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <4 x double> [[X]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[Y]], <4 x double> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x double> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[X]], <4 x double> poison, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[X]], <4 x double> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[Y]], <4 x double> poison, <2 x i32> <i32 2, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.fmuladd.v2f64(<2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x double> [[TMP3]])
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 poison, i32 2>
-; CHECK-NEXT:    [[NY0:%.*]] = fneg double [[Y0]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul double [[X1]], [[NY0]]
-; CHECK-NEXT:    [[R2:%.*]] = call double @llvm.fmuladd.f64(double [[X0]], double [[Y1]], double [[M2]])
-; CHECK-NEXT:    [[V2:%.*]] = insertelement <4 x double> [[TMP7]], double [[R2]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[Y]], <4 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[X]], <4 x double> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <3 x double> [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x double> [[X]], <4 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[Y]], <4 x double> poison, <3 x i32> <i32 1, i32 2, i32 0>
+; CHECK-NEXT:    [[TMP6:%.*]] = call <3 x double> @llvm.fmuladd.v3f64(<3 x double> [[TMP4]], <3 x double> [[TMP5]], <3 x double> [[TMP3]])
+; CHECK-NEXT:    [[V2:%.*]] = shufflevector <3 x double> [[TMP6]], <3 x double> undef, <4 x i32> <i32 1, i32 2, i32 0, i32 3>
 ; CHECK-NEXT:    ret <4 x double> [[V2]]
 ;
 entry:

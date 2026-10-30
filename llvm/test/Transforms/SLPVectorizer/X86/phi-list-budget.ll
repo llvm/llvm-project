@@ -10,23 +10,27 @@ define void @test(ptr %a, ptr %b, ptr %q0, ptr %q1, ptr %q2, ptr %r0, ptr %r1, p
 ; VEC:       [[PRE1]]:
 ; VEC-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
 ; VEC-NEXT:    [[A1P:%.*]] = getelementptr inbounds double, ptr [[A]], i64 1
-; VEC-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A1P]], align 8
+; VEC-NEXT:    [[A1:%.*]] = load double, ptr [[A1P]], align 8
+; VEC-NEXT:    [[A2P:%.*]] = getelementptr inbounds double, ptr [[A]], i64 2
+; VEC-NEXT:    [[A2:%.*]] = load double, ptr [[A2P]], align 8
 ; VEC-NEXT:    br label %[[JOIN:.*]]
 ; VEC:       [[PRE2]]:
 ; VEC-NEXT:    [[B4P:%.*]] = getelementptr inbounds double, ptr [[B]], i64 4
 ; VEC-NEXT:    [[B4:%.*]] = load double, ptr [[B4P]], align 8
 ; VEC-NEXT:    [[A5P:%.*]] = getelementptr inbounds double, ptr [[A]], i64 5
-; VEC-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[A5P]], align 8
+; VEC-NEXT:    [[A5:%.*]] = load double, ptr [[A5P]], align 8
+; VEC-NEXT:    [[A6P:%.*]] = getelementptr inbounds double, ptr [[A]], i64 6
+; VEC-NEXT:    [[A6:%.*]] = load double, ptr [[A6P]], align 8
 ; VEC-NEXT:    [[F0:%.*]] = fadd double [[B4]], 1.000000e+00
-; VEC-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], splat (double 1.000000e+00)
+; VEC-NEXT:    [[F1:%.*]] = fadd double [[A5]], 1.000000e+00
+; VEC-NEXT:    [[F2:%.*]] = fadd double [[A6]], 1.000000e+00
 ; VEC-NEXT:    br label %[[JOIN]]
 ; VEC:       [[JOIN]]:
 ; VEC-NEXT:    [[P0:%.*]] = phi double [ [[B0]], %[[PRE1]] ], [ [[F0]], %[[PRE2]] ]
-; VEC-NEXT:    [[TMP3:%.*]] = phi <2 x double> [ [[TMP0]], %[[PRE1]] ], [ [[TMP2]], %[[PRE2]] ]
+; VEC-NEXT:    [[TMP4:%.*]] = phi double [ [[A1]], %[[PRE1]] ], [ [[F1]], %[[PRE2]] ]
+; VEC-NEXT:    [[TMP5:%.*]] = phi double [ [[A2]], %[[PRE1]] ], [ [[F2]], %[[PRE2]] ]
 ; VEC-NEXT:    store double [[P0]], ptr [[Q0]], align 8
-; VEC-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; VEC-NEXT:    store double [[TMP4]], ptr [[Q1]], align 8
-; VEC-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; VEC-NEXT:    store double [[TMP5]], ptr [[Q2]], align 8
 ; VEC-NEXT:    store double [[P0]], ptr [[R0]], align 8
 ; VEC-NEXT:    store double [[TMP4]], ptr [[R1]], align 8

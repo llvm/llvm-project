@@ -4,16 +4,7 @@
 define i8 @test() {
 ; CHECK-LABEL: define i8 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 0 to i8
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i8 [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i8 [[OP_RDX1]], [[TMP0]]
-; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i8 [[OP_RDX2]], [[TMP1]]
-; CHECK-NEXT:    [[OP_RDX5:%.*]] = or i8 [[OP_RDX3]], [[TMP3]]
-; CHECK-NEXT:    [[OP_RDX4:%.*]] = or i8 [[OP_RDX5]], 0
-; CHECK-NEXT:    ret i8 [[OP_RDX4]]
+; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %0 = trunc i32 0 to i8

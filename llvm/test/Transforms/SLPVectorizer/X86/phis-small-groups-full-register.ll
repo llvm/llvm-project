@@ -6,7 +6,6 @@ define void @test(ptr %p, ptr %k, i1 %c, i1 %h, ptr %o0, ptr %o1, ptr %o2, ptr %
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[K:%.*]], i1 [[C:%.*]], i1 [[H:%.*]], ptr [[O0:%.*]], ptr [[O1:%.*]], ptr [[O2:%.*]], ptr [[O3:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr i8, ptr [[P]], i64 6
 ; CHECK-NEXT:    br i1 [[H]], label %[[INIT:.*]], label %[[LOAD0:.*]]
 ; CHECK:       [[LOAD0]]:
 ; CHECK-NEXT:    [[L4:%.*]] = load i16, ptr [[P4]], align 2
@@ -14,37 +13,34 @@ define void @test(ptr %p, ptr %k, i1 %c, i1 %h, ptr %o0, ptr %o1, ptr %o2, ptr %
 ; CHECK-NEXT:    br label %[[INIT]]
 ; CHECK:       [[INIT]]:
 ; CHECK-NEXT:    [[I0:%.*]] = phi double [ [[I0L]], %[[LOAD0]] ], [ 0.000000e+00, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp <2 x i16> [[TMP0]] to <2 x double>
-; CHECK-NEXT:    [[L6:%.*]] = load i16, ptr [[P6]], align 2
-; CHECK-NEXT:    [[I3:%.*]] = uitofp i16 [[L6]] to double
+; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i16> poison)
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <3 x i32> <i32 0, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp <3 x i16> [[TMP1]] to <3 x double>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[A0:%.*]] = phi double [ [[I0]], %[[INIT]] ], [ [[TMP11:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[A3:%.*]] = phi double [ [[I3]], %[[INIT]] ], [ [[TMP14:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[A3:%.*]] = phi double [ [[I0]], %[[INIT]] ], [ [[TMP14:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[A4:%.*]] = phi double [ 0.000000e+00, %[[INIT]] ], [ [[F4:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x double> [ [[TMP1]], %[[INIT]] ], [ [[TMP7:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <3 x double> [ [[TMP2]], %[[INIT]] ], [ [[TMP9:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[KV:%.*]] = load double, ptr [[K]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = uitofp <2 x i16> [[TMP3]] to <2 x double>
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[KV]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7]] = call <2 x double> @llvm.fma.v2f64(<2 x double> [[TMP4]], <2 x double> [[TMP6]], <2 x double> [[TMP2]])
-; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x i16>, ptr [[P4]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = uitofp <2 x i16> [[TMP8]] to <2 x double>
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11]] = call double @llvm.fma.f64(double [[TMP10]], double [[KV]], double [[A0]])
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
+; CHECK-NEXT:    [[V0:%.*]] = load i16, ptr [[P4]], align 2
+; CHECK-NEXT:    [[TMP15:%.*]] = uitofp i16 [[V0]] to double
 ; CHECK-NEXT:    [[TMP14]] = call double @llvm.fma.f64(double [[TMP15]], double [[KV]], double [[A3]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[P]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i16> poison)
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <3 x i32> <i32 0, i32 1, i32 3>
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp <3 x i16> [[TMP5]] to <3 x double>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <3 x double> poison, double [[KV]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <3 x double> [[TMP7]], <3 x double> poison, <3 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9]] = call <3 x double> @llvm.fma.v3f64(<3 x double> [[TMP6]], <3 x double> [[TMP8]], <3 x double> [[TMP3]])
 ; CHECK-NEXT:    [[F4]] = fadd double [[A4]], 1.000000e+00
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store double [[TMP11]], ptr [[O0]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
+; CHECK-NEXT:    store double [[TMP14]], ptr [[O0]], align 8
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <3 x double> [[TMP9]], i64 1
 ; CHECK-NEXT:    store double [[TMP12]], ptr [[O1]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <3 x double> [[TMP9]], i64 0
 ; CHECK-NEXT:    store double [[TMP13]], ptr [[O2]], align 8
-; CHECK-NEXT:    store double [[TMP14]], ptr [[O3]], align 8
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <3 x double> [[TMP9]], i64 2
+; CHECK-NEXT:    store double [[TMP16]], ptr [[O3]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:

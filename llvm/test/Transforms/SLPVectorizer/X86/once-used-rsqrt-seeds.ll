@@ -67,27 +67,21 @@ define void @no_arcp(ptr %x, ptr %f, i64 %j) {
 ; CHECK-LABEL: define void @no_arcp(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[F:%.*]], i64 [[J:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[I1:%.*]] = add nsw i64 [[J]], 1
-; CHECK-NEXT:    [[I2:%.*]] = add nsw i64 [[J]], 2
 ; CHECK-NEXT:    [[PX0:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[J]]
 ; CHECK-NEXT:    [[PX1:%.*]] = getelementptr inbounds float, ptr [[X]], i64 [[I1]]
 ; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[PX0]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[PX1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast <2 x float> @llvm.sqrt.v2f32(<2 x float> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i64 1
-; CHECK-NEXT:    [[R2:%.*]] = fdiv nnan float 1.000000e+00, [[TMP3]]
 ; CHECK-NEXT:    [[PF0:%.*]] = getelementptr inbounds float, ptr [[F]], i64 [[J]]
-; CHECK-NEXT:    [[PF2:%.*]] = getelementptr inbounds float, ptr [[F]], i64 [[I2]]
-; CHECK-NEXT:    [[F2:%.*]] = load float, ptr [[PF2]], align 4
-; CHECK-NEXT:    [[NF2:%.*]] = fadd fast float [[F2]], [[R2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i64 0
-; CHECK-NEXT:    [[R1:%.*]] = fdiv nnan float 1.000000e+00, [[TMP4]]
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[X0]], f0x3DFBE770
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x float>, ptr [[PF0]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[MUL]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[R1]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = fadd fast <2 x float> [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr [[PF0]], align 4
-; CHECK-NEXT:    store float [[NF2]], ptr [[PF2]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x float> poison, float [[X0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <3 x i32> <i32 0, i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP3]], <3 x float> [[TMP4]], <3 x i32> <i32 0, i32 3, i32 4>
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <3 x float> <float f0x3DFBE770, float 1.000000e+00, float 1.000000e+00>, [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fdiv nnan <3 x float> <float f0x3DFBE770, float 1.000000e+00, float 1.000000e+00>, [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <3 x float> [[TMP6]], <3 x float> [[TMP7]], <3 x i32> <i32 0, i32 4, i32 5>
+; CHECK-NEXT:    [[TMP9:%.*]] = load <3 x float>, ptr [[PF0]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd fast <3 x float> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    store <3 x float> [[TMP10]], ptr [[PF0]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %i1 = add nsw i64 %j, 1

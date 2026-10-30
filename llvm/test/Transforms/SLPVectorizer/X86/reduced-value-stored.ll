@@ -29,20 +29,14 @@ define i16 @test(i32 %call5, i32 %add36) {
 ; AVX-LABEL: define i16 @test(
 ; AVX-SAME: i32 [[CALL5:%.*]], i32 [[ADD36:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX-NEXT:  [[ENTRY:.*:]]
-; AVX-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL5]], i64 2
-; AVX-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> [[TMP0]], i32 [[ADD36]], i64 7
-; AVX-NEXT:    [[TMP2:%.*]] = insertelement <8 x i32> <i32 0, i32 0, i32 1, i32 poison, i32 0, i32 0, i32 0, i32 0>, i32 [[CALL5]], i64 3
-; AVX-NEXT:    [[TMP3:%.*]] = icmp ne <8 x i32> [[TMP1]], [[TMP2]]
-; AVX-NEXT:    [[TMP4:%.*]] = icmp eq <8 x i32> [[TMP1]], [[TMP2]]
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP4]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 4, i32 13, i32 14, i32 7>
-; AVX-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[TMP5]], <8 x i1> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 7>
-; AVX-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i16> zeroinitializer, <4 x i16> zeroinitializer
-; AVX-NEXT:    [[TMP8:%.*]] = zext <8 x i1> [[TMP5]] to <8 x i16>
-; AVX-NEXT:    [[TMP9:%.*]] = shufflevector <8 x i16> [[TMP8]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; AVX-NEXT:    [[RDX_OP:%.*]] = add <4 x i16> [[TMP9]], [[TMP7]]
-; AVX-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i16> [[RDX_OP]], <4 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i16> [[TMP8]], <8 x i16> [[TMP10]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; AVX-NEXT:    [[TMP12:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP11]])
+; AVX-NEXT:    [[TMP0:%.*]] = insertelement <9 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 0, i32 poison, i32 poison, i32 poison>, i32 [[CALL5]], i64 1
+; AVX-NEXT:    [[TMP1:%.*]] = insertelement <9 x i32> [[TMP0]], i32 [[ADD36]], i64 3
+; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <9 x i32> [[TMP1]], <9 x i32> poison, <9 x i32> <i32 0, i32 1, i32 1, i32 2, i32 3, i32 4, i32 1, i32 5, i32 3>
+; AVX-NEXT:    [[TMP3:%.*]] = icmp ne <9 x i32> <i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 1, i32 0, i32 0>, [[TMP2]]
+; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <9 x i1> [[TMP3]], <9 x i1> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 poison, i32 poison, i32 poison>
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <12 x i1> [[TMP4]], <12 x i1> <i1 true, i1 true, i1 true, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison, i1 poison>, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 12, i32 13, i32 14>
+; AVX-NEXT:    [[TMP6:%.*]] = select <12 x i1> [[TMP5]], <12 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 0, i16 0, i16 0, i16 0, i16 1, i16 1, i16 1>, <12 x i16> zeroinitializer
+; AVX-NEXT:    [[TMP12:%.*]] = call i16 @llvm.vector.reduce.add.v12i16(<12 x i16> [[TMP6]])
 ; AVX-NEXT:    ret i16 [[TMP12]]
 ;
 entry:

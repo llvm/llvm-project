@@ -43,41 +43,41 @@ declare void @llvm.assume(i1) nounwind
 
 ; This entire tree is ephemeral, don't vectorize any of it.
 define void @simple_select_eph(<4 x float> %a, <4 x float> %b, <4 x i32> %c) {
-; CHECK-LABEL: @simple_select_eph(
-; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
-; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
-; CHECK-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
-; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
-; CHECK-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; CHECK-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; CHECK-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
-; CHECK-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
-; CHECK-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; CHECK-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
-; CHECK-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
-; CHECK-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[C2]], 0
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C3]], 0
-; CHECK-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
-; CHECK-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
-; CHECK-NEXT:    [[S2:%.*]] = select i1 [[CMP2]], float [[A2]], float [[B2]]
-; CHECK-NEXT:    [[S3:%.*]] = select i1 [[CMP3]], float [[A3]], float [[B3]]
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x float> poison, float [[S0]], i32 0
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[S1]], i32 1
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[S2]], i32 2
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[S3]], i32 3
-; CHECK-NEXT:    [[Q0:%.*]] = extractelement <4 x float> [[RD]], i32 0
-; CHECK-NEXT:    [[Q1:%.*]] = extractelement <4 x float> [[RD]], i32 1
-; CHECK-NEXT:    [[Q2:%.*]] = extractelement <4 x float> [[RD]], i32 2
-; CHECK-NEXT:    [[Q3:%.*]] = extractelement <4 x float> [[RD]], i32 3
-; CHECK-NEXT:    [[Q4:%.*]] = fadd float [[Q0]], [[Q1]]
-; CHECK-NEXT:    [[Q5:%.*]] = fadd float [[Q2]], [[Q3]]
-; CHECK-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
-; CHECK-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[QI]])
-; CHECK-NEXT:    ret void
+; COST-LABEL: @simple_select_eph(
+; COST-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
+; COST-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
+; COST-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i32 2
+; COST-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C]], i32 3
+; COST-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
+; COST-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
+; COST-NEXT:    [[A2:%.*]] = extractelement <4 x float> [[A]], i32 2
+; COST-NEXT:    [[A3:%.*]] = extractelement <4 x float> [[A]], i32 3
+; COST-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
+; COST-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
+; COST-NEXT:    [[B2:%.*]] = extractelement <4 x float> [[B]], i32 2
+; COST-NEXT:    [[B3:%.*]] = extractelement <4 x float> [[B]], i32 3
+; COST-NEXT:    [[CMP0:%.*]] = icmp ne i32 [[C0]], 0
+; COST-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[C1]], 0
+; COST-NEXT:    [[CMP2:%.*]] = icmp ne i32 [[C2]], 0
+; COST-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[C3]], 0
+; COST-NEXT:    [[S0:%.*]] = select i1 [[CMP0]], float [[A0]], float [[B0]]
+; COST-NEXT:    [[S1:%.*]] = select i1 [[CMP1]], float [[A1]], float [[B1]]
+; COST-NEXT:    [[S2:%.*]] = select i1 [[CMP2]], float [[A2]], float [[B2]]
+; COST-NEXT:    [[S3:%.*]] = select i1 [[CMP3]], float [[A3]], float [[B3]]
+; COST-NEXT:    [[RA:%.*]] = insertelement <4 x float> poison, float [[S0]], i32 0
+; COST-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[S1]], i32 1
+; COST-NEXT:    [[RC:%.*]] = insertelement <4 x float> [[RB]], float [[S2]], i32 2
+; COST-NEXT:    [[RD:%.*]] = insertelement <4 x float> [[RC]], float [[S3]], i32 3
+; COST-NEXT:    [[Q0:%.*]] = extractelement <4 x float> [[RD]], i32 0
+; COST-NEXT:    [[Q1:%.*]] = extractelement <4 x float> [[RD]], i32 1
+; COST-NEXT:    [[Q2:%.*]] = extractelement <4 x float> [[RD]], i32 2
+; COST-NEXT:    [[Q3:%.*]] = extractelement <4 x float> [[RD]], i32 3
+; COST-NEXT:    [[Q4:%.*]] = fadd float [[Q0]], [[Q1]]
+; COST-NEXT:    [[Q5:%.*]] = fadd float [[Q2]], [[Q3]]
+; COST-NEXT:    [[Q6:%.*]] = fadd float [[Q4]], [[Q5]]
+; COST-NEXT:    [[QI:%.*]] = fcmp olt float [[Q6]], [[Q5]]
+; COST-NEXT:    call void @llvm.assume(i1 [[QI]])
+; COST-NEXT:    ret void
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -238,16 +238,16 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; Make sure infinite loop doesn't happen which I ran into when trying
 ; to do this backwards this backwards
 define <4 x i32> @reconstruct(<4 x i32> %c) {
-; CHECK-LABEL: @reconstruct(
-; CHECK-NEXT:    [[C3:%.*]] = extractelement <4 x i32> [[C:%.*]], i64 3
-; CHECK-NEXT:    [[C2:%.*]] = extractelement <4 x i32> [[C]], i64 2
-; CHECK-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i64 1
-; CHECK-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C]], i64 0
-; CHECK-NEXT:    [[RA:%.*]] = insertelement <4 x i32> poison, i32 [[C0]], i32 0
-; CHECK-NEXT:    [[RB:%.*]] = insertelement <4 x i32> [[RA]], i32 [[C1]], i32 1
-; CHECK-NEXT:    [[RC:%.*]] = insertelement <4 x i32> [[RB]], i32 [[C2]], i32 2
-; CHECK-NEXT:    [[RD:%.*]] = insertelement <4 x i32> [[RC]], i32 [[C3]], i32 3
-; CHECK-NEXT:    ret <4 x i32> [[RD]]
+; FORCED-LABEL: @reconstruct(
+; FORCED-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[C:%.*]], i64 3
+; FORCED-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[C]], i64 2
+; FORCED-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[C]], i64 1
+; FORCED-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[C]], i64 0
+; FORCED-NEXT:    [[RA:%.*]] = insertelement <4 x i32> poison, i32 [[TMP4]], i32 0
+; FORCED-NEXT:    [[RB:%.*]] = insertelement <4 x i32> [[RA]], i32 [[TMP3]], i32 1
+; FORCED-NEXT:    [[RC:%.*]] = insertelement <4 x i32> [[RB]], i32 [[TMP2]], i32 2
+; FORCED-NEXT:    [[RD:%.*]] = insertelement <4 x i32> [[RC]], i32 [[TMP1]], i32 3
+; FORCED-NEXT:    ret <4 x i32> [[RD]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1
@@ -305,24 +305,6 @@ define <4 x float> @simple_select_partial_vector(<4 x float> %a, <4 x float> %b,
 ; FORCED-NEXT:    [[TMP10:%.*]] = extractelement <2 x float> [[TMP8]], i32 1
 ; FORCED-NEXT:    [[RB:%.*]] = insertelement <4 x float> [[RA]], float [[TMP10]], i32 1
 ; FORCED-NEXT:    ret <4 x float> [[RB]]
-;
-; COST-LABEL: @simple_select_partial_vector(
-; COST-NEXT:    [[C0:%.*]] = extractelement <4 x i32> [[C:%.*]], i32 0
-; COST-NEXT:    [[C1:%.*]] = extractelement <4 x i32> [[C]], i32 1
-; COST-NEXT:    [[A0:%.*]] = extractelement <4 x float> [[A:%.*]], i32 0
-; COST-NEXT:    [[A1:%.*]] = extractelement <4 x float> [[A]], i32 1
-; COST-NEXT:    [[B0:%.*]] = extractelement <4 x float> [[B:%.*]], i32 0
-; COST-NEXT:    [[B1:%.*]] = extractelement <4 x float> [[B]], i32 1
-; COST-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[C0]], i32 0
-; COST-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[C1]], i32 1
-; COST-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; COST-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[A0]], i32 0
-; COST-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> [[TMP4]], float [[A1]], i32 1
-; COST-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> poison, float [[B0]], i32 0
-; COST-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[B1]], i32 1
-; COST-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x float> [[TMP5]], <2 x float> [[TMP7]]
-; COST-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; COST-NEXT:    ret <4 x float> [[TMP9]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
   %c1 = extractelement <4 x i32> %c, i32 1

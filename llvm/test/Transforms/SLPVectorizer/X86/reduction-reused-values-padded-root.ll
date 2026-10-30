@@ -5,14 +5,17 @@ define i16 @test(ptr %q) {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P11:%.*]] = getelementptr i16, ptr [[Q]], i64 11
 ; CHECK-NEXT:    [[P9:%.*]] = getelementptr i16, ptr [[Q]], i64 9
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i16>, ptr [[P9]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i16> [[TMP0]], <3 x i16> poison, <4 x i32> <i32 2, i32 1, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = mul <4 x i16> [[TMP1]], splat (i16 1)
-; CHECK-NEXT:    [[RDX_OP:%.*]] = add <4 x i16> zeroinitializer, [[TMP2]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[RDX_OP]], <4 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <16 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 1, i16 0, i16 0, i16 0>, <16 x i16> [[TMP3]], <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> [[TMP4]])
+; CHECK-NEXT:    [[L11:%.*]] = load i16, ptr [[P11]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[P9]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i16> [[TMP0]], <2 x i16> poison, <20 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <20 x i16> [[TMP1]], <20 x i16> <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 1, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison>, <20 x i32> <i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 0, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <20 x i16> [[TMP2]], i16 [[L11]], i64 16
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <20 x i16> <i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 0, i16 0, i16 0>, <20 x i16> [[TMP3]], <20 x i32> <i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 17, i32 18, i32 19, i32 36, i32 37, i32 38, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = sub <20 x i16> [[TMP4]], <i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <20 x i16> [[TMP7]], <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 2, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = call i16 @llvm.vector.reduce.add.v20i16(<20 x i16> [[TMP6]])
 ; CHECK-NEXT:    ret i16 [[TMP5]]
 ;
 entry:

@@ -9,10 +9,18 @@
 define double @mul_fun() {
 ; NOFMA-LABEL: @mul_fun(
 ; NOFMA-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; NOFMA-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i64 0
-; NOFMA-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
-; NOFMA-NEXT:    [[TMP3:%.*]] = fmul contract <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[TMP2]]
-; NOFMA-NEXT:    [[TMP4:%.*]] = call contract double @llvm.vector.reduce.fadd.v4f64(double [[CVT0]], <4 x double> [[TMP3]])
+; NOFMA-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CVT0]], i64 0
+; NOFMA-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; NOFMA-NEXT:    [[TMP3:%.*]] = fmul contract <2 x double> <double -4.300000e+01, double 7.000000e+00>, [[TMP2]]
+; NOFMA-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; NOFMA-NEXT:    [[ADD0:%.*]] = fadd contract double [[TMP9]], [[CVT0]]
+; NOFMA-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; NOFMA-NEXT:    [[ADD1:%.*]] = fadd contract double [[TMP5]], [[ADD0]]
+; NOFMA-NEXT:    [[TMP6:%.*]] = fmul contract <2 x double> <double 9.500000e+00, double 2.200000e-02>, [[TMP2]]
+; NOFMA-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
+; NOFMA-NEXT:    [[ADD2:%.*]] = fadd contract double [[TMP7]], [[ADD1]]
+; NOFMA-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; NOFMA-NEXT:    [[TMP4:%.*]] = fadd contract double [[TMP8]], [[ADD2]]
 ; NOFMA-NEXT:    ret double [[TMP4]]
 ;
 ; FMA-LABEL: @mul_fun(
@@ -44,12 +52,19 @@ define double @mul_fun() {
 define double @mul_fun_multiuse(ptr %dst) {
 ; NOFMA-LABEL: @mul_fun_multiuse(
 ; NOFMA-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; NOFMA-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i64 0
-; NOFMA-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
-; NOFMA-NEXT:    [[TMP3:%.*]] = fmul contract <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[TMP2]]
-; NOFMA-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP3]], i64 1
+; NOFMA-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CVT0]], i64 0
+; NOFMA-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; NOFMA-NEXT:    [[TMP3:%.*]] = fmul contract <2 x double> <double -4.300000e+01, double 7.000000e+00>, [[TMP2]]
+; NOFMA-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; NOFMA-NEXT:    [[ADD0:%.*]] = fadd contract double [[TMP9]], [[CVT0]]
+; NOFMA-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; NOFMA-NEXT:    store double [[TMP4]], ptr [[DST:%.*]], align 8
-; NOFMA-NEXT:    [[TMP5:%.*]] = call contract double @llvm.vector.reduce.fadd.v4f64(double [[CVT0]], <4 x double> [[TMP3]])
+; NOFMA-NEXT:    [[ADD1:%.*]] = fadd contract double [[TMP4]], [[ADD0]]
+; NOFMA-NEXT:    [[TMP6:%.*]] = fmul contract <2 x double> <double 9.500000e+00, double 2.200000e-02>, [[TMP2]]
+; NOFMA-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
+; NOFMA-NEXT:    [[ADD2:%.*]] = fadd contract double [[TMP7]], [[ADD1]]
+; NOFMA-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; NOFMA-NEXT:    [[TMP5:%.*]] = fadd contract double [[TMP8]], [[ADD2]]
 ; NOFMA-NEXT:    ret double [[TMP5]]
 ;
 ; FMA-LABEL: @mul_fun_multiuse(
@@ -83,24 +98,33 @@ define double @mul_fun_multiuse(ptr %dst) {
 define double @mul_fun_no_contract() {
 ; NOFMA-LABEL: @mul_fun_no_contract(
 ; NOFMA-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; NOFMA-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i64 0
-; NOFMA-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
-; NOFMA-NEXT:    [[TMP3:%.*]] = fmul <4 x double> <double 7.000000e+00, double -4.300000e+01, double 2.200000e-02, double 9.500000e+00>, [[TMP2]]
-; NOFMA-NEXT:    [[TMP4:%.*]] = call double @llvm.vector.reduce.fadd.v4f64(double [[CVT0]], <4 x double> [[TMP3]])
+; NOFMA-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CVT0]], i64 0
+; NOFMA-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; NOFMA-NEXT:    [[TMP3:%.*]] = fmul <2 x double> <double -4.300000e+01, double 7.000000e+00>, [[TMP2]]
+; NOFMA-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
+; NOFMA-NEXT:    [[ADD0:%.*]] = fadd double [[TMP9]], [[CVT0]]
+; NOFMA-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; NOFMA-NEXT:    [[ADD1:%.*]] = fadd double [[TMP5]], [[ADD0]]
+; NOFMA-NEXT:    [[TMP6:%.*]] = fmul <2 x double> <double 9.500000e+00, double 2.200000e-02>, [[TMP2]]
+; NOFMA-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
+; NOFMA-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[ADD1]]
+; NOFMA-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; NOFMA-NEXT:    [[TMP4:%.*]] = fadd double [[TMP8]], [[ADD2]]
 ; NOFMA-NEXT:    ret double [[TMP4]]
 ;
 ; FMA-LABEL: @mul_fun_no_contract(
 ; FMA-NEXT:    [[CVT0:%.*]] = uitofp i16 3 to double
-; FMA-NEXT:    [[MUL0:%.*]] = fmul double 7.000000e+00, [[CVT0]]
+; FMA-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[CVT0]], i64 0
+; FMA-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> zeroinitializer
+; FMA-NEXT:    [[TMP3:%.*]] = fmul <2 x double> <double -4.300000e+01, double 7.000000e+00>, [[TMP2]]
+; FMA-NEXT:    [[MUL0:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; FMA-NEXT:    [[ADD0:%.*]] = fadd double [[MUL0]], [[CVT0]]
-; FMA-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CVT0]], i64 0
-; FMA-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> zeroinitializer
-; FMA-NEXT:    [[TMP3:%.*]] = fmul <4 x double> [[TMP2]], <double -4.300000e+01, double 2.200000e-02, double 9.500000e+00, double 1.000000e+00>
-; FMA-NEXT:    [[TMP4:%.*]] = extractelement <4 x double> [[TMP3]], i64 0
+; FMA-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; FMA-NEXT:    [[ADD1:%.*]] = fadd double [[TMP4]], [[ADD0]]
-; FMA-NEXT:    [[TMP5:%.*]] = extractelement <4 x double> [[TMP3]], i64 1
+; FMA-NEXT:    [[TMP7:%.*]] = fmul <2 x double> <double 9.500000e+00, double 2.200000e-02>, [[TMP2]]
+; FMA-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
 ; FMA-NEXT:    [[ADD2:%.*]] = fadd double [[TMP5]], [[ADD1]]
-; FMA-NEXT:    [[TMP6:%.*]] = extractelement <4 x double> [[TMP3]], i64 2
+; FMA-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP7]], i64 0
 ; FMA-NEXT:    [[ADD3:%.*]] = fadd double [[TMP6]], [[ADD2]]
 ; FMA-NEXT:    ret double [[ADD3]]
 ;

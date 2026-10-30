@@ -5,16 +5,20 @@ define void @test(i1 %c, ptr %arg) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[ARG2_2:%.*]] = getelementptr inbounds i8, ptr [[ARG:%.*]], i64 24
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i64>, ptr [[ARG2_2]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> [[TMP1]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[ARG:%.*]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i64> poison)
+; CHECK-NEXT:    [[ARG2_3:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 32
+; CHECK-NEXT:    [[I2_3:%.*]] = load i64, ptr [[ARG2_3]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> poison, <4 x i32> <i32 poison, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> poison, i64 [[I2_3]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> [[TMP3]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[ARG_2:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 24
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x i64>, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i64>, ptr [[ARG_2]], align 8
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i64> [[TMP5]], <2 x i64> [[TMP4]], <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i64> @llvm.masked.load.v4i64.p0(ptr align 8 [[ARG]], <4 x i1> <i1 true, i1 true, i1 false, i1 true>, <4 x i64> poison)
+; CHECK-NEXT:    [[ARG_3:%.*]] = getelementptr inbounds i8, ptr [[ARG]], i64 32
+; CHECK-NEXT:    [[I_3:%.*]] = load i64, ptr [[ARG_3]], align 8
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i64> [[TMP5]], <4 x i64> poison, <4 x i32> <i32 poison, i32 3, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> poison, i64 [[I_3]], i64 0
+; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i64> [[TMP8]], <4 x i64> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi <4 x i64> [ [[TMP6]], [[IF]] ], [ [[TMP12]], [[ELSE]] ]

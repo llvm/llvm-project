@@ -73,10 +73,22 @@ FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
 bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
                               unsigned Sz, bool ReVec);
 
+/// Widths at or below this are supported even though \p NumElts - 1 is a power
+/// of two; this is what admits 3 and 5 lanes.
+static constexpr unsigned SmallProfitableNonPowerOf2 = 5;
+
+/// The narrowest non-power-of-2 width considered at all.
+static constexpr unsigned SmallestNonPowerOf2 = 3;
+
 /// True when \p AllowNonPowerOf2 is set and \p NumElts is a supported
-/// non-power-of-2 width: \p NumElts + 1 must be a power of two (e.g. 3 or 7
-/// lanes, i.e. almost a full power-of-2 register).
-bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2);
+/// non-power-of-2 width. The width is supported if \p NumElts is not a power
+/// of two and either it is small (<= SmallProfitableNonPowerOf2, e.g. 3 or 5
+/// lanes), or \p NumElts - 1 is also not a power of two (e.g. 6, 7, 10..15
+/// lanes), or the elements being vectorized are themselves vectors
+/// (\p IsRevecVectorElement). Widths one above a power of two, such as 9, are
+/// excluded unless one of the latter two conditions holds.
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2,
+                            bool IsRevecVectorElement = false);
 
 /// Returns number of parts, the type \p VecTy will be split at the codegen
 /// phase. If the type is going to be scalarized or does not use whole

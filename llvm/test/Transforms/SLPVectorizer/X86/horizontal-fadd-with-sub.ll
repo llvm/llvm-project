@@ -275,13 +275,19 @@ define float @alt_fmul_fsub_preserved(ptr %a, ptr %b) {
 ; CHECK-LABEL: define float @alt_fmul_fsub_preserved(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[GB2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[GB3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 12
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[GB2]], align 4
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[GB3]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc nsz <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 1.000000e+00>, float [[B2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc <4 x float> [[TMP0]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP4]])
-; CHECK-NEXT:    ret float [[TMP5]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = fsub reassoc nsz float [[TMP5]], [[B3]]
+; CHECK-NEXT:    ret float [[OP_RDX]]
 ;
 entry:
   %ga1 = getelementptr inbounds nuw i8, ptr %a, i64 4

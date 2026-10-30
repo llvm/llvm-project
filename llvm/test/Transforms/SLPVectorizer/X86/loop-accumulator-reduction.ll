@@ -113,19 +113,16 @@ define double @loop_acc_fadd_leftover(ptr %p) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[OP_RDX1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_ACC:%.*]] = phi <5 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[SLPRDX_ACC1:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr double, ptr [[P0]], i64 4
-; CHECK-NEXT:    [[L4:%.*]] = load double, ptr [[P4]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP0]])
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd fast double [[TMP1]], [[L4]]
-; CHECK-NEXT:    [[OP_RDX1]] = fadd fast double [[OP_RDX]], [[ACC]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <5 x double>, ptr [[P0]], align 8
+; CHECK-NEXT:    [[SLPRDX_ACC1]] = fadd reassoc nnan ninf nsz arcp afn <5 x double> [[SLPRDX_ACC]], [[TMP0]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV]], 64
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RES:%.*]] = phi double [ [[OP_RDX1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SLPRDX_EXIT:%.*]] = phi <5 x double> [ [[SLPRDX_ACC1]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RES:%.*]] = call fast double @llvm.vector.reduce.fadd.v5f64(double 0.000000e+00, <5 x double> [[SLPRDX_EXIT]])
 ; CHECK-NEXT:    ret double [[RES]]
 ;
 entry:

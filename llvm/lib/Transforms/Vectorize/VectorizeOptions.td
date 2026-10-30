@@ -310,7 +310,7 @@ defm : BoolField<"slp-vectorize-hor-store", "false",
   "Attempt to vectorize horizontal reductions feeding into a store">;
 defm : BoolField<"slp-vectorize-loop-acc-rdx", "true",
   "Emit loop-carried horizontal reductions as a vector accumulator in the loop plus a single reduction after it">;
-defm : BoolField<"slp-vectorize-non-power-of-2", "false",
+defm : BoolField<"slp-vectorize-non-power-of-2", "true",
   "Try to vectorize with non-power-of-2 number of elements">;
 defm : BoolField<"slp-vectorize-once-used", "true",
   "Use instructions with the single user as standalone vectorization seeds">;

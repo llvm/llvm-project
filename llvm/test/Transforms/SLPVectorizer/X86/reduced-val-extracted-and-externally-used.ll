@@ -5,18 +5,20 @@ define void @test(i32 %arg) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i64 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <13 x i32> poison, i32 [[ARG]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = add i32 1, 0
 ; CHECK-NEXT:    br label %[[BB1:.*]]
 ; CHECK:       [[BB1]]:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[XOR27:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <12 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP6:%.*]], %[[BB1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add <12 x i32> [[TMP1]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP0]], <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP6]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <12 x i32> <i32 1, i32 1, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
-; CHECK-NEXT:    [[ADD26:%.*]] = extractelement <12 x i32> [[TMP6]], i64 3
-; CHECK-NEXT:    [[XOR28:%.*]] = call i32 @llvm.vector.reduce.xor.v12i32(<12 x i32> [[TMP2]])
-; CHECK-NEXT:    [[XOR27]] = xor i32 [[XOR28]], [[ADD26]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <12 x i32> [[TMP6]], i64 0
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i32 [ 0, %[[BB]] ], [ [[TMP9:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, %[[BB]] ], [ [[TMP4:%.*]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <13 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <13 x i32> [[TMP7]], <13 x i32> [[TMP2]], <13 x i32> <i32 13, i32 14, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <13 x i32> [[TMP3]], <13 x i32> poison, <13 x i32> <i32 0, i32 0, i32 0, i32 1, i32 0, i32 0, i32 1, i32 0, i32 0, i32 1, i32 0, i32 0, i32 2>
+; CHECK-NEXT:    [[TMP10:%.*]] = add <13 x i32> [[TMP8]], zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <13 x i32> [[TMP3]], <13 x i32> poison, <2 x i32> <i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> <i32 poison, i32 0>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP4]] = add <2 x i32> [[TMP0]], <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP9]] = call i32 @llvm.vector.reduce.xor.v13i32(<13 x i32> [[TMP10]])
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[TMP5]], 0
 ; CHECK-NEXT:    br label %[[BB1]]
 ;

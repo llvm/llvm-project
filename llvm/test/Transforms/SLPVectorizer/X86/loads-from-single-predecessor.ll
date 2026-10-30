@@ -12,26 +12,17 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i1 %c) {
 ; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    [[SRC4:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 4
 ; CHECK-NEXT:    [[SRC5:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 5
-; CHECK-NEXT:    [[SRC6:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 6
 ; CHECK-NEXT:    [[SRC7:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 7
 ; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 2
-; CHECK-NEXT:    [[DST5:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 5
 ; CHECK-NEXT:    [[DST6:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 6
 ; CHECK-NEXT:    [[DST7:%.*]] = getelementptr inbounds i16, ptr [[DST]], i64 7
 ; CHECK-NEXT:    br i1 [[C]], label %[[EVEN:.*]], label %[[ODD:.*]]
 ; CHECK:       [[EVEN]]:
-; CHECK-NEXT:    [[E3:%.*]] = load i16, ptr [[SRC3]], align 2
-; CHECK-NEXT:    [[E6:%.*]] = load i16, ptr [[SRC6]], align 2
-; CHECK-NEXT:    [[E7:%.*]] = load i16, ptr [[SRC7]], align 2
 ; CHECK-NEXT:    store i16 [[L0]], ptr [[DST]], align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[SRC1]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[SRC4]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i16> [[TMP1]], <2 x i16> [[TMP0]], <4 x i32> <i32 0, i32 2, i32 1, i32 3>
-; CHECK-NEXT:    store <4 x i16> [[TMP2]], ptr [[DST1]], align 2
-; CHECK-NEXT:    store i16 [[E6]], ptr [[DST5]], align 2
-; CHECK-NEXT:    store i16 [[E3]], ptr [[DST6]], align 2
-; CHECK-NEXT:    store i16 [[E7]], ptr [[DST7]], align 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load <7 x i16>, ptr [[SRC1]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <7 x i16> [[TMP0]], <7 x i16> poison, <7 x i32> <i32 3, i32 0, i32 4, i32 1, i32 5, i32 2, i32 6>
+; CHECK-NEXT:    store <7 x i16> [[TMP1]], ptr [[DST1]], align 2
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[ODD]]:
 ; CHECK-NEXT:    [[O3:%.*]] = load i16, ptr [[SRC3]], align 2
@@ -215,14 +206,10 @@ define void @clobber_in_successor(ptr noalias %dst, ptr %src, ptr %p, i1 %c) {
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[SRC3]], align 4
 ; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
 ; CHECK-NEXT:    store i32 [[L0]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST1]], align 4
-; CHECK-NEXT:    store i32 [[L3]], ptr [[DST3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[DST1]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -262,14 +249,10 @@ define void @clobber_in_predecessor(ptr noalias %dst, ptr %src, ptr %p, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[SRC3]], align 4
 ; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
 ; CHECK-NEXT:    store i32 [[L0]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST1]], align 4
-; CHECK-NEXT:    store i32 [[L3]], ptr [[DST3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[DST1]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -310,14 +293,10 @@ define void @not_single_predecessor(ptr noalias %dst, ptr noalias %src, i1 %c, i
 ; CHECK-NEXT:    br i1 [[C2]], label %[[BB]], label %[[EXIT:.*]]
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[SRC3]], align 4
 ; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
 ; CHECK-NEXT:    store i32 [[L0]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST1]], align 4
-; CHECK-NEXT:    store i32 [[L3]], ptr [[DST3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[DST1]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -358,14 +337,10 @@ define void @metadata(ptr noalias %dst, ptr noalias %src, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SRC3:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 3
-; CHECK-NEXT:    [[L3:%.*]] = load i32, ptr [[SRC3]], align 4, !tbaa [[FLOAT_TBAA4:![0-9]+]]
 ; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
 ; CHECK-NEXT:    store i32 [[L0]], ptr [[DST]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[SRC1]], align 4, !tbaa [[FLOAT_TBAA4]]
-; CHECK-NEXT:    store <2 x i32> [[TMP0]], ptr [[DST1]], align 4
-; CHECK-NEXT:    store i32 [[L3]], ptr [[DST3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[SRC1]], align 4, !tbaa [[FLOAT_TBAA4:![0-9]+]]
+; CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[DST1]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -404,14 +379,11 @@ define void @gathered_loads(ptr noalias %dst, ptr noalias %src, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C]], label %[[BB:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SRC5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <3 x i32>, ptr [[SRC5]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <3 x i32> [[TMP5]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP6]], <4 x i32> <i32 poison, i32 1, i32 3, i32 5>
+; CHECK-NEXT:    [[TMP0:%.*]] = load <7 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <7 x i32> [[TMP0]], <7 x i32> poison, <4 x i32> <i32 poison, i32 1, i32 3, i32 5>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP7]], <4 x i32> [[TMP4]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP6]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <7 x i32> [[TMP0]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]
@@ -465,14 +437,11 @@ define void @gathered_loads_clobber(ptr noalias %dst, ptr %src, ptr %p, i1 %c) {
 ; CHECK:       [[BB]]:
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 4
 ; CHECK-NEXT:    [[SRC1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 1
-; CHECK-NEXT:    [[SRC5:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 5
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[SRC1]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[SRC5]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP2]], <4 x i32> <i32 poison, i32 1, i32 3, i32 5>
+; CHECK-NEXT:    [[TMP0:%.*]] = load <7 x i32>, ptr [[SRC1]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <7 x i32> [[TMP0]], <7 x i32> poison, <4 x i32> <i32 poison, i32 1, i32 3, i32 5>
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[L0]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> [[TMP2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <7 x i32> [[TMP0]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i32> [[TMP8]], [[TMP10]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP9]], ptr [[DST]], align 4
 ; CHECK-NEXT:    br label %[[EXIT]]

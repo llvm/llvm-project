@@ -745,17 +745,21 @@ define void @merge_cmp_pool(ptr %A, ptr %B, ptr %Out) {
 ; CHECK-NEXT:    [[PA2:%.*]] = getelementptr i32, ptr [[A:%.*]], i64 2
 ; CHECK-NEXT:    [[PB2:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <3 x i32> <i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[PA2]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <3 x i32> <i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <3 x i32> <i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x i32>, ptr [[PB2]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <2 x i32> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt <2 x i32> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = xor <2 x i1> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i1> [[TMP5]], <2 x i1> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP4]], [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i1> [[TMP8]], <2 x i1> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x i1> [[TMP6]], <2 x i1> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <3 x i32> <i32 0, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <3 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt <3 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = xor <3 x i1> [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <3 x i1> [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <3 x i1> [[TMP9]], i64 0
+; CHECK-NEXT:    [[X3:%.*]] = xor i1 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <3 x i1> [[TMP10]], <3 x i1> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i1> [[TMP13]], i1 [[X3]], i64 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i1> [[TMP11]] to <4 x i32>
 ; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[OUT:%.*]], align 4
 ; CHECK-NEXT:    ret void

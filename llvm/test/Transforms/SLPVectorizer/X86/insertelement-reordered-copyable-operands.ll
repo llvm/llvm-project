@@ -5,24 +5,21 @@ define i16 @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL88_I:%.*]] = call i32 @llvm.bswap.i32(i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = call <2 x i32> @llvm.smul.fix.sat.v2i32(<2 x i32> zeroinitializer, <2 x i32> zeroinitializer, i32 31)
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call i32 @llvm.smul.fix.sat.i32(i32 0, i32 0, i32 31)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP0:%.*]] = call <3 x i32> @llvm.smul.fix.sat.v3i32(<3 x i32> zeroinitializer, <3 x i32> zeroinitializer, i32 31)
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.smul.fix.sat.v2i32(<2 x i32> zeroinitializer, <2 x i32> zeroinitializer, i32 31)
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.smul.fix.sat.i32(i32 0, i32 0, i32 31)
 ; CHECK-NEXT:    [[TMP5:%.*]] = tail call i32 @llvm.smul.fix.sat.i32(i32 [[CALL88_I]], i32 0, i32 31)
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <8 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[TMP5]], i64 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[TMP7]], i32 [[TMP4]], i64 5
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP10]], <8 x i32> <i32 0, i32 poison, i32 2, i32 poison, i32 4, i32 5, i32 poison, i32 9>
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <8 x i32> <i32 poison, i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> [[TMP10]], <8 x i32> <i32 0, i32 poison, i32 2, i32 poison, i32 4, i32 5, i32 poison, i32 10>
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i32> [[TMP11]], <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 2, i32 2, i32 4, i32 5, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i32> [[TMP12]], <8 x i32> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <12 x i32> [[TMP13]], <12 x i32> <i32 0, i32 0, i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
 ; CHECK-NEXT:    [[TMP15:%.*]] = and <12 x i32> [[TMP14]], <i32 0, i32 0, i32 0, i32 0, i32 0, i32 -1, i32 0, i32 0, i32 -1, i32 -1, i32 -1, i32 -1>
-; CHECK-NEXT:    [[TMP16:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP16]], <4 x i32> <i32 0, i32 4, i32 5, i32 poison>
+; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i32> [[TMP17]], i32 [[TMP5]], i64 3
 ; CHECK-NEXT:    [[TMP19:%.*]] = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> zeroinitializer, <4 x i32> [[TMP18]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <12 x i32> [[TMP15]], <12 x i32> poison, <16 x i32> <i32 0, i32 1, i32 8, i32 9, i32 10, i32 2, i32 3, i32 11, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
