@@ -2512,6 +2512,57 @@ private:
     for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
+
+      // When using delayed privatization (the OpenMP conversion path), create
+      // a fir.local {type = shared} op at the module level. This serves as
+      // explicit documentation that the programmer marked this variable as
+      // SHARED, and prepares for future DEFAULT(NONE) support where we need
+      // to distinguish "explicitly shared" from "implicitly shared" variables.
+      //
+      // Note: the fir.local {type = shared} op is NOT added to local_vars on
+      // the fir.do_concurrent.loop. SHARED variables remain as implicit
+      // live-ins to the loop, which maps correctly to OpenMP's default(shared)
+      // semantics. Adding them to local_vars would require changes to the
+      // block arg remapping logic in DoConcurrentConversion, which assumes a
+      // 1:1 correspondence between local_vars entries and the privatizer
+      // block args on omp.wsloop (host) or omp.parallel (device). Since
+      // SHARED variables need no privatizer, including them in local_vars
+      // would break this correspondence.
+      //
+      // The fir.local op is cleaned up by DoConcurrentSpecifierOpConversion
+      // in CodeGen.cpp, which erases all unreferenced fir.local ops.
+      if (useDelayedPriv) {
+        const Fortran::semantics::Symbol &ultimate = sym->GetUltimate();
+        Fortran::lower::SymbolBox hsb = lookupSymbol(ultimate);
+        assert(hsb && "Host symbol box not found for shared variable");
+
+        mlir::Value hostAddr = hsb.getAddr();
+        mlir::Type allocType = fir::unwrapRefType(hostAddr.getType());
+        mlir::Location symLoc = hostAddr.getLoc();
+
+        // Build a unique name for the fir.local op, following the same
+        // naming convention as privatizeSymbol (mangled name + suffix + type).
+        std::string sharedPrefix = mangleName(ultimate) + "_shared";
+        std::string uniqueName = fir::getTypeAsString(
+            allocType, getKindMap(), sharedPrefix);
+
+        // Only create the op if it doesn't already exist (e.g., for the same
+        // type used in multiple do concurrent loops).
+        auto moduleOp = builder->getModule();
+        if (!moduleOp.lookupSymbol<fir::LocalitySpecifierOp>(uniqueName)) {
+          mlir::OpBuilder::InsertionGuard guard(*builder);
+          builder->setInsertionPointToStart(moduleOp.getBody());
+          fir::LocalitySpecifierOp::create(
+              *builder, symLoc, uniqueName,
+              /*sym_visibility=*/nullptr, allocType,
+              fir::LocalitySpecifierType::Shared);
+        }
+      }
+
+      // Regardless of delayed privatization mode, keep the existing behavior:
+      // alias the inner (host-associated) symbol to the host variable's MLIR
+      // value. This makes the SHARED variable a regular live-in to the loop
+      // body, which becomes implicitly shared in the OpenMP parallel region.
       copySymbolBinding(hostDetails->symbol(), *sym);
     }
 
