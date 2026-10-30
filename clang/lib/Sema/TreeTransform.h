@@ -8789,7 +8789,7 @@ TreeTransform<Derived>::TransformIndirectGotoStmt(IndirectGotoStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),
@@ -8804,7 +8804,7 @@ TreeTransform<Derived>::TransformContinueStmt(ContinueStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
-  if (!S->hasLabelTarget())
+  if (!S->isNamed())
     return S;
 
   Decl *LD = getDerived().TransformDecl(S->getLabelDecl()->getLocation(),

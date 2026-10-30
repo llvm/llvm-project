@@ -23,6 +23,23 @@ gpu.func @store_1D_vector(%vec: vector<8xf32>, %source: memref<8x16x32xf32>,
 }
 
 // -----
+
+// XeGPU store offsets and masks must be fixed-size vectors.
+gpu.module @xevm_module {
+gpu.func @no_store_scalable_vector(%value: vector<[3]xf32>,
+    %source: memref<?xf32>, %offset: index,
+    %indices: vector<[3]xindex>, %mask: vector<[3]xi1>) {
+  vector.scatter %source[%offset][%indices], %mask, %value
+    : memref<?xf32>, vector<[3]xindex>, vector<[3]xi1>, vector<[3]xf32>
+  gpu.return
+}
+// CHECK-LABEL: @no_store_scalable_vector
+// CHECK-SAME: %[[VAL:.*]]: vector<[3]xf32>, %[[SRC:.*]]: memref<?xf32>,
+// CHECK-SAME: %[[OFF:.*]]: index, %[[INDICES:.*]]: vector<[3]xindex>, %[[MASK:.*]]: vector<[3]xi1>
+// CHECK: vector.scatter %[[SRC]][%[[OFF]]] [%[[INDICES]]], %[[MASK]], %[[VAL]]
+}
+
+// -----
 gpu.module @xevm_module {
 gpu.func @store_2D_memref(%vec: vector<8xf32>, %source: memref<8x32xf32>,
      %off1: index, %off2: index,

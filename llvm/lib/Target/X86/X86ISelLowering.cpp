@@ -2322,13 +2322,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFP16()) {
     auto setGroup = [&] (MVT VT) {
-      setOperationAction(ISD::FADD,               VT, Legal);
       setOperationAction(ISD::STRICT_FADD,        VT, Legal);
-      setOperationAction(ISD::FSUB,               VT, Legal);
       setOperationAction(ISD::STRICT_FSUB,        VT, Legal);
-      setOperationAction(ISD::FMUL,               VT, Legal);
       setOperationAction(ISD::STRICT_FMUL,        VT, Legal);
-      setOperationAction(ISD::FDIV,               VT, Legal);
       setOperationAction(ISD::STRICT_FDIV,        VT, Legal);
       setOperationAction(ISD::FSQRT,              VT, Legal);
       setOperationAction(ISD::STRICT_FSQRT,       VT, Legal);
@@ -2351,7 +2347,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
 
-      setOperationAction(ISD::FMA,                VT, Legal);
       setOperationAction(ISD::STRICT_FMA,         VT, Legal);
       setOperationAction(ISD::VSELECT,            VT, Legal);
       setOperationAction(ISD::BUILD_VECTOR,       VT, Custom);
@@ -2440,6 +2435,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // Without VLX, these are widened to 512-bit compares during isel.
     setOperationAction(ISD::SETCC, MVT::v8f16, Custom);
     setOperationAction(ISD::SETCC, MVT::v16f16, Custom);
+
+    // Without VLX, v8f16/v16f16 are widened to 512-bit ops during isel.
+    for (auto VT : {MVT::f16, MVT::v8f16, MVT::v16f16, MVT::v32f16})
+      for (unsigned Opc :
+           {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FMA})
+        setOperationAction(Opc, VT, Legal);
 
     if (Subtarget.hasVLX()) {
       setGroup(MVT::v8f16);
@@ -3311,7 +3312,7 @@ static X86::CondCode TranslateX86CC(ISD::CondCode SetCCOpcode, const SDLoc &DL,
 /// Is there a floating point cmov for the specific X86 condition code?
 /// Current x86 isa includes the following FP cmov instructions:
 /// fcmovb, fcomvbe, fcomve, fcmovu, fcmovae, fcmova, fcmovne, fcmovnu.
-static bool hasFPCMov(unsigned X86CC) {
+static bool hasFPCMov(X86::CondCode X86CC) {
   switch (X86CC) {
   default:
     return false;
@@ -24614,8 +24615,8 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc,
     if (NSW && ((IsInc && EltC.isMaxSignedValue()) ||
                 (!IsInc && EltC.isMinSignedValue())))
       return SDValue();
-
-    NewVecC.push_back(EltC + (IsInc ? 1 : -1));
+    APInt NewEltC = EltC;
+    NewVecC.push_back(IsInc ? ++NewEltC : --NewEltC);
   }
   return getConstVector(NewVecC, VT, DAG, SDLoc(V));
 }
@@ -26051,7 +26052,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     bool IllegalFPCMov = false;
     if (VT.isFloatingPoint() && !VT.isVector() &&
         !isScalarFPTypeInSSEReg(VT) && Subtarget.canUseCMOV())  // FPStack?
-      IllegalFPCMov = !hasFPCMov(cast<ConstantSDNode>(CC)->getSExtValue());
+      IllegalFPCMov = !hasFPCMov(
+          static_cast<X86::CondCode>(cast<ConstantSDNode>(CC)->getZExtValue()));
 
     if ((isX86LogicalCmp(Cmp) && !IllegalFPCMov) ||
         Cmp.getOpcode() == X86ISD::BT) { // FIXME
@@ -34292,29 +34294,24 @@ static SDValue LowerADDSUBO_CARRY(SDValue Op, SelectionDAG &DAG) {
   MVT VT = N->getSimpleValueType(0);
   unsigned Opc = Op.getOpcode();
 
-  // Let legalize expand this if it isn't a legal type yet.
-  if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
-    return SDValue();
-
   SDVTList VTs = DAG.getVTList(VT, MVT::i32);
   SDLoc DL(N);
 
   // Set the carry flag.
   SDValue Carry = Op.getOperand(2);
   EVT CarryVT = Carry.getValueType();
-  Carry = DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32),
-                      Carry, DAG.getAllOnesConstant(DL, CarryVT));
+  SDValue Flags = DAG.getNode(X86ISD::ADD, DL, DAG.getVTList(CarryVT, MVT::i32),
+                              Carry, DAG.getAllOnesConstant(DL, CarryVT))
+                      .getValue(1);
 
   bool IsAdd = Opc == ISD::UADDO_CARRY || Opc == ISD::SADDO_CARRY;
-  SDValue Sum = DAG.getNode(IsAdd ? X86ISD::ADC : X86ISD::SBB, DL, VTs,
-                            Op.getOperand(0), Op.getOperand(1),
-                            Carry.getValue(1));
+  SDValue Sum =
+      DAG.getNode(IsAdd ? X86ISD::ADC : X86ISD::SBB, DL, VTs, Op.getOperand(0),
+                  Op.getOperand(1), Flags.getValue(1));
 
   bool IsSigned = Opc == ISD::SADDO_CARRY || Opc == ISD::SSUBO_CARRY;
   SDValue SetCC = getSETCC(IsSigned ? X86::COND_O : X86::COND_B,
                            Sum.getValue(1), DL, DAG);
-  if (N->getValueType(1) == MVT::i1)
-    SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
 
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
@@ -37883,7 +37880,7 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   const unsigned XORMIOpc =
       TFI.Uses64BitFramePtr ? X86::XOR64mi32 : X86::XOR32mi;
-  addRegOffset(BuildMI(blockMBB, MIMD, TII->get(XORMIOpc)), physSPReg, false, 0)
+  addRegOffset(BuildMI(blockMBB, MIMD, TII->get(XORMIOpc)), physSPReg, 0)
       .addImm(0);
 
   BuildMI(blockMBB, MIMD, TII->get(getSUBriOpcode(TFI.Uses64BitFramePtr)),
@@ -38469,9 +38466,9 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
     Register FramePtr = RegInfo->getFrameRegister(*MF);
     Register BasePtr = RegInfo->getBaseRegister();
     unsigned Opm = Uses64BitFramePtr ? X86::MOV64rm : X86::MOV32rm;
-    addRegOffset(BuildMI(restoreMBB, MIMD, TII->get(Opm), BasePtr),
-                 FramePtr, true, X86FI->getRestoreBasePointerOffset())
-      .setMIFlag(MachineInstr::FrameSetup);
+    addRegOffset(BuildMI(restoreMBB, MIMD, TII->get(Opm), BasePtr), FramePtr,
+                 X86FI->getRestoreBasePointerOffset())
+        .setMIFlag(MachineInstr::FrameSetup);
   }
   BuildMI(restoreMBB, MIMD, TII->get(X86::MOV32ri), restoreDstReg).addImm(1);
   BuildMI(restoreMBB, MIMD, TII->get(X86::JMP_1)).addMBB(sinkMBB);
@@ -38900,7 +38897,7 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
     Register FP = RI.getFrameRegister(*MF);
     Register BP = RI.getBaseRegister();
     unsigned Op = FPIs64Bit ? X86::MOV64rm : X86::MOV32rm;
-    addRegOffset(BuildMI(DispatchBB, MIMD, TII->get(Op), BP), FP, true,
+    addRegOffset(BuildMI(DispatchBB, MIMD, TII->get(Op), BP), FP,
                  MFI->getRestoreBasePointerOffset())
         .addRegMask(RI.getNoPreservedMask());
   } else {
@@ -39446,7 +39443,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // stack pointer + offset
     addRegOffset(BuildMI(*BB, MI, MIMD, TII->get(X86::LEA32r),
                          MI.getOperand(0).getReg()),
-                 X86::ESP, false, ArgOffset);
+                 X86::ESP, ArgOffset);
     MI.eraseFromParent();
     return BB;
   }
@@ -49999,7 +49996,8 @@ static SDValue combineCarryThroughADD(SDValue EFLAGS, SelectionDAG &DAG) {
       if (Carry.getOpcode() == X86ISD::SETCC ||
           Carry.getOpcode() == X86ISD::SETCC_CARRY) {
         // TODO: Merge this code with equivalent in combineAddOrSubToADCOrSBB?
-        uint64_t CarryCC = Carry.getConstantOperandVal(0);
+        auto CarryCC =
+            static_cast<X86::CondCode>(Carry.getConstantOperandVal(0));
         SDValue CarryOp1 = Carry.getOperand(1);
         if (CarryCC == X86::COND_B)
           return CarryOp1;
@@ -50985,7 +50983,7 @@ static SDValue combineMulSpecial(uint64_t MulAmt, SDNode *N, SelectionDAG &DAG,
 static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
                                    SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasSSE2())
+  if (!Subtarget.hasSSE2() || Subtarget.useSoftFloat())
     return SDValue();
 
   if (Subtarget.isPMADDWDSlow())
@@ -51095,7 +51093,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
 
 static SDValue combineMulToPMULDQ(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
                                   const X86Subtarget &Subtarget) {
-  if (!Subtarget.hasSSE2())
+  if (!Subtarget.hasSSE2() || Subtarget.useSoftFloat())
     return SDValue();
 
   EVT VT = N->getValueType(0);
@@ -58639,6 +58637,11 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
        !Subtarget.hasAnyFMA()) &&
       !(ScalarVT == MVT::f16 && Subtarget.hasFP16()) &&
       !(ScalarVT == MVT::bf16 && Subtarget.hasAVX10_2()))
+    return SDValue();
+
+  // Without VLX, strict v8f16/v16f16 FMAs are scalarized, not widened.
+  if (IsStrict && ScalarVT == MVT::f16 && VT.isVector() &&
+      !TLI.isOperationLegal(ISD::STRICT_FMA, VT))
     return SDValue();
 
   auto invertIfNegative = [&DAG, &TLI, &DCI](SDValue &V) {

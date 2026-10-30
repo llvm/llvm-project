@@ -211,6 +211,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// extended record.
   bool HasSwiftAsyncContext = false;
 
+  /// Whether this function makes a non-tail call, on Windows, to a function
+  /// that pops its own stack arguments. The unwinder gives the SP after that
+  /// pop, which isn't the SP our unwind info describes if we reserved the
+  /// argument area in the prologue, so we must be found via the frame pointer.
+  bool HasWinCallToCalleePopFunction = false;
+
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
 
@@ -599,6 +605,13 @@ public:
     HasSwiftAsyncContext = HasContext;
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setHasWinCallToCalleePopFunction(bool Has) {
+    HasWinCallToCalleePopFunction = Has;
+  }
+  bool hasWinCallToCalleePopFunction() const {
+    return HasWinCallToCalleePopFunction;
+  }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;

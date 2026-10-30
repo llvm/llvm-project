@@ -307,21 +307,24 @@ bool llvm::isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
   return computeKnownBits(V, SQ, Depth).isNonNegative();
 }
 
-bool llvm::isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
+bool llvm::isKnownPositive(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (auto *CI = dyn_cast<ConstantInt>(V.getValue()))
     return CI->getValue().isStrictlyPositive();
 
   // If `isKnownNonNegative` ever becomes more sophisticated, make sure to keep
   // this updated.
-  KnownBits Known = computeKnownBits(V, SQ, Depth);
+  KnownBits Known = Depth == 0 ? V.getKnownBits(SQ)
+                               : computeKnownBits(V.getValue(), SQ, Depth);
   return Known.isNonNegative() &&
-         (Known.isNonZero() || isKnownNonZero(V, SQ, Depth));
+         (Known.isNonZero() || isKnownNonZero(V.getValue(), SQ, Depth));
 }
 
-bool llvm::isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                           unsigned Depth) {
-  return computeKnownBits(V, SQ, Depth).isNegative();
+bool llvm::isKnownNegative(const WithCache<const Value *> &V,
+                           const SimplifyQuery &SQ, unsigned Depth) {
+  if (Depth == 0)
+    return V.getKnownBits(SQ).isNegative();
+  return computeKnownBits(V.getValue(), SQ, Depth).isNegative();
 }
 
 static bool isKnownNonEqual(const Value *V1, const Value *V2,
@@ -5320,13 +5323,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.setKnownFPClasses(fcPosZero);
-    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     return;
   }
 
@@ -5334,9 +5335,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
-    Known.setKnownFPClasses(fcNone);
-    bool SignBitAllZero = true;
-    bool SignBitAllOne = true;
+    Known = KnownFPClass::getEmpty();
 
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
@@ -5357,28 +5356,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      const APFloat &C = CElt->getValueAPF();
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-      if (C.isNegative())
-        SignBitAllZero = false;
-      else
-        SignBitAllOne = false;
+      Known |= KnownFPClass(CElt->getValueAPF());
     }
-    if (SignBitAllOne != SignBitAllZero)
-      Known.setSignBit(SignBitAllOne);
     return;
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      Known |= CDS->getElementAsAPFloat(I).classify();
+      Known |= KnownFPClass(CDS->getElementAsAPFloat(I));
     return;
   }
 
   if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
     // TODO: Handle complex aggregates
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (const Use &Op : CA->operands()) {
       auto *CFP = dyn_cast<ConstantFP>(Op.get());
       if (!CFP) {
@@ -5386,7 +5378,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      Known |= CFP->getValueAPF().classify();
+      Known |= KnownFPClass(CFP->getValueAPF());
     }
 
     return;
@@ -5554,8 +5546,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::experimental_constrained_sqrt: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedClasses & fcNan)
-        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+      if (InterestedClasses & fcQNan)
+        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+      // Subnormals may flush to zero.
+      if (InterestedClasses & fcZero)
+        InterestedSrcs |= fcSubnormal;
 
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
@@ -6149,8 +6144,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     Value *LHS = Op->getOperand(0);
     Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
-    if (LHS == RHS &&
-        isGuaranteedNotToBeUndef(LHS, Q.AC, Q.CtxI, Q.DT, Depth + 1)) {
+    // FIXME: Should check isGuaranteedNotToBeUndef
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
                           Depth + 1);
@@ -6415,7 +6410,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -6451,7 +6446,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
@@ -6688,7 +6683,7 @@ KnownFPClass llvm::computeKnownFPClass(const Value *V, FastMathFlags FMF,
 bool llvm::cannotBeNegativeZero(const Value *V, const SimplifyQuery &SQ,
                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcNegZero, SQ, Depth);
-  return Known.isKnownNeverNegZero();
+  return Known.isKnownNever(fcNegZero);
 }
 
 bool llvm::cannotBeOrderedLessThanZero(const Value *V, const SimplifyQuery &SQ,
@@ -11059,7 +11054,8 @@ void llvm::findValuesAffectedByCondition(
       // fcmp fneg(x), y
       // fcmp fabs(x), y
       // fcmp fneg(fabs(x)), y
-      if (match(A, m_FNeg(m_Value(A))))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(A, m_FNegOrFSubNegZero(m_Value(A))))
         AddAffected(A);
       if (match(A, m_FAbs(m_Value(A))))
         AddAffected(A);
@@ -11095,6 +11091,14 @@ const Value *llvm::stripNullTest(const Value *V) {
         return X;
     }
   }
+
+  // select(cond, X, -X)
+  {
+    const Value *X;
+    if (match(V, m_c_Select(m_Value(X), m_Neg(m_Deferred(X)))))
+      return X;
+  }
+
   return nullptr;
 }
 

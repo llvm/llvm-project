@@ -49,9 +49,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
   static opt::RegisterLibraryOptions<RISCVOptions> O;
   auto *PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
-  initializeRISCVO0PreLegalizerCombinerPass(*PR);
-  initializeRISCVPreLegalizerCombinerPass(*PR);
-  initializeRISCVPostLegalizerCombinerPass(*PR);
+  initializeRISCVO0PreLegalizerCombinerLegacyPass(*PR);
+  initializeRISCVPreLegalizerCombinerLegacyPass(*PR);
+  initializeRISCVPostLegalizerCombinerLegacyPass(*PR);
   initializeMachineKCFILegacyPass(*PR);
   initializeRISCVDeadRegisterDefinitionsLegacyPass(*PR);
   initializeRISCVLateBranchOptLegacyPass(*PR);
@@ -459,9 +459,9 @@ bool RISCVPassConfig::addIRTranslator() {
 
 void RISCVPassConfig::addPreLegalizeMachineIR() {
   if (getOptLevel() == CodeGenOptLevel::None) {
-    addPass(createRISCVO0PreLegalizerCombiner());
+    addPass(createRISCVO0PreLegalizerCombinerLegacyPass());
   } else {
-    addPass(createRISCVPreLegalizerCombiner());
+    addPass(createRISCVPreLegalizerCombinerLegacyPass());
   }
 }
 
@@ -472,7 +472,7 @@ bool RISCVPassConfig::addLegalizeMachineIR() {
 
 void RISCVPassConfig::addPreRegBankSelect() {
   if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createRISCVPostLegalizerCombiner());
+    addPass(createRISCVPostLegalizerCombinerLegacyPass());
 }
 
 bool RISCVPassConfig::addRegBankSelect() {
@@ -569,7 +569,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVExpandPseudoPreRALegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetLegacyPass());
-    // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptLegacyPass());
   }
 
