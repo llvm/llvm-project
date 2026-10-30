@@ -5275,6 +5275,7 @@ cc_library(
         ":__support_number_pair",
         ":__support_range_reduction",
         ":__support_range_reduction_double",
+        ":__support_sign",
         ":__support_sincos_eval",
         ":__support_sincosf_utils",
         ":__support_str_to_float",
