@@ -7283,10 +7283,10 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 458
   - 1 bit
   - ENABLE_WAVEFRONT_SIZE32
-  - GFX6-GFX9
+  - GFX6-GFX9, GFX125*
     : Reserved, must be 0.
 
-    GFX10-GFX11
+    GFX10-GFX11, GFX120*, GFX13
     : - If 0 execute in wavefront size 64 mode.
       - If 1 execute in native wavefront size 32 mode.
 * - 459
@@ -17628,7 +17628,7 @@ terminated by an `.end_amdhsa_kernel` directive.
   - Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_wavefront_size32`
   - Target Feature Specific (wavefrontsize64)
-  - GFX10-GFX12
+  - GFX10-GFX13 (except GFX125*)
   - Controls ENABLE_WAVEFRONT_SIZE32 in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_uses_dynamic_stack`
   - 0
