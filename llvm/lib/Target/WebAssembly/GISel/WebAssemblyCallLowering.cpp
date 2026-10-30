@@ -298,7 +298,8 @@ bool WebAssemblyCallLowering::lowerFormalArguments(
 
     HasSwiftSelfArg |= Arg.hasSwiftSelfAttr();
     HasSwiftErrorArg |= Arg.hasSwiftErrorAttr();
-    // TODO: Pass swiftasync in parameter 0.
+    // TODO: Support SwiftAsync attributes instead of falling back to
+    // SelectionDAG.
     if (Arg.hasAttribute(Attribute::SwiftAsync))
       return false;
     if (Arg.hasInAllocaAttr())
@@ -436,7 +437,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (CallConv == CallingConv::Swift)
     return false;
 
-  // TODO: Pass swiftasync in parameter 0.
+  // TODO: Support SwiftAsync attributes instead of falling back to
+  // SelectionDAG.
   if (Info.CB)
     for (unsigned I = 0, E = Info.CB->arg_size(); I != E; ++I)
       if (Info.CB->paramHasAttr(I, Attribute::SwiftAsync))
