@@ -2881,6 +2881,11 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
             .Case(
                 [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
             .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
+            .Case([](const VPWidenStoreEVLRecipe *R) {
+              return Instruction::Store;
+            })
+            .Case(
+                [](const VPWidenLoadEVLRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
