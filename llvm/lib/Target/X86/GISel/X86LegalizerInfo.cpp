@@ -50,7 +50,8 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   bool HasPOPCNT = Subtarget.hasPOPCNT();
   bool HasLZCNT = Subtarget.hasLZCNT();
   bool HasBMI = Subtarget.hasBMI();
-  bool HasVPOPCNTDQ = Subtarget.hasVPOPCNTDQ() && Subtarget.hasVLX();
+  bool HasVPOPCNTDQ = Subtarget.hasVPOPCNTDQ();
+  bool HasVPOPCNTDQVL = HasVPOPCNTDQ && Subtarget.hasVLX();
 
   const LLT p0 = LLT::pointer(0, Subtarget.isTarget64BitLP64() ? 64 : 32);
   const LLT s1 = LLT::scalar(1);
@@ -287,16 +288,18 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
       .clampScalar(0, s32, sMaxScalar);
 
   // popcount
-  // Vector forms are only legal when a VPOPCNT instruction is available. Other
-  // vector queries intentionally match no rule here and are reported as
-  // unsupported rather than falling through to the scalar-only rules below.
+  // Vector forms are only legal when a VPOPCNT instruction is available.
+  // 512-bit forms only need AVX512VPOPCNTDQ; 128-bit and 256-bit forms also
+  // need VLX. Other vector queries intentionally match no rule here and are
+  // reported as unsupported rather than falling through to the scalar-only
+  // rules below.
   getActionDefinitionsBuilder(G_CTPOP)
       .legalFor(HasPOPCNT, {{s16, s16}, {s32, s32}})
       .legalFor(HasPOPCNT && Is64Bit, {{s64, s64}})
-      .legalFor(HasVPOPCNTDQ, {{v4s32, v4s32},
-                               {v8s32, v8s32},
-                               {v2s64, v2s64},
-                               {v4s64, v4s64}})
+      .legalFor(HasVPOPCNTDQ, {{v16s32, v16s32}, {v8s64, v8s64}})
+      .legalFor(
+          HasVPOPCNTDQVL,
+          {{v4s32, v4s32}, {v8s32, v8s32}, {v2s64, v2s64}, {v4s64, v4s64}})
       .widenScalarToNextPow2(1, /*Min=*/16)
       .clampScalar(1, s16, sMaxScalar)
       .scalarSameSizeAs(0, 1);

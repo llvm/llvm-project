@@ -389,8 +389,7 @@ TEST(LegalizerInfoTest, ScalarSameSizeAsVector) {
   const LLT v4s32 = LLT::fixed_vector(4, 32);
 
   LegalizerInfo LI;
-  LI.getActionDefinitionsBuilder(TargetOpcode::G_ANYEXT)
-      .scalarSameSizeAs(0, 1);
+  LI.getActionDefinitionsBuilder(TargetOpcode::G_ANYEXT).scalarSameSizeAs(0, 1);
 
   // Scalar behavior is unchanged: s16 is widened to the element size of s32.
   EXPECT_ACTION(WidenScalar, 0, s32,
@@ -408,6 +407,7 @@ TEST(LegalizerInfoTest, ScalarSameSizeAsVector) {
   EXPECT_ACTION(Unsupported, 0, LLT(),
                 LegalityQuery(TargetOpcode::G_ANYEXT, {v4s32, v4s32}));
 }
+
 // AArch64GISemMITest instead of LegalizerInfoTest
 // as we need a target machine for MRI.
 //
