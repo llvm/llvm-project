@@ -117,8 +117,9 @@ LLVMInitializeAArch64Target() {
 }
 
 bool AArch64TargetMachine::isGlobalISelOptNone() const {
-  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
-                              cl::boolOrDefault::BOU_TRUE;
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption(*this).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE;
 
   return getOptLevel() == CodeGenOptLevel::None ||
          (static_cast<unsigned>(getOptLevel()) >
@@ -151,8 +152,8 @@ static StringRef computeDefaultCPU(const Triple &TT, StringRef CPU) {
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,
                                            std::optional<Reloc::Model> RM) {
-  // AArch64 Darwin and Windows are always PIC.
-  if (TT.isOSDarwin() || TT.isOSWindows())
+  // AArch64 Darwin, Windows and UEFI are always PIC.
+  if (TT.isOSDarwin() || TT.isOSWindowsOrUEFI())
     return Reloc::PIC_;
   // On ELF platforms the default static relocation model has a smart enough
   // linker to cope with referencing external symbols defined in a shared
@@ -198,24 +199,14 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, computeDefaultCPU(TT, CPU), FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      CLOpts(AArch64Options::Global), TLOF(createTLOF(getTargetTriple())),
-      isLittle(LittleEndian) {
+      CLOpts(cl::LibraryOptionsContext::get<AArch64Options>(
+          Options.MCOptions.LibraryOptions)),
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
     this->Options.TrapUnreachable = true;
     this->Options.NoTrapAfterNoreturn = true;
-  }
-
-  if (getMCAsmInfo().getExceptionHandlingType() == ExceptionHandling::WinEH &&
-      getMCAsmInfo().usesWindowsCFI()) {
-    // Unwinding can get confused if the last instruction in an
-    // exception-handling region (function, funclet, try block, etc.)
-    // is a call.
-    //
-    // FIXME: We could elide the trap if the next instruction would be in
-    // the same region anyway.
-    this->Options.TrapUnreachable = true;
   }
 
   if (this->Options.TLSSize == 0) // default
@@ -234,8 +225,9 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO());
 
-  const bool GlobalISelFlag = getCGPassBuilderOption().EnableGlobalISelOption ==
-                              cl::boolOrDefault::BOU_TRUE;
+  const bool GlobalISelFlag =
+      getCGPassBuilderOption(*this).EnableGlobalISelOption ==
+      cl::boolOrDefault::BOU_TRUE;
 
   // Enable GlobalISel at or below EnableGlobalISelAt0, unless this is
   // MachO/CodeModel::Large, which GlobalISel does not support.
@@ -469,7 +461,7 @@ void AArch64TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (Level != OptimizationLevel::O0)
           LPM.addPass(LoopIdiomVectorizePass());
       });
-  if (getTargetTriple().isOSWindows())
+  if (getTargetTriple().isOSWindowsOrUEFI())
     PB.registerPipelineEarlySimplificationEPCallback(
         [](ModulePassManager &PM, OptimizationLevel, ThinOrFullLTOPhase) {
           PM.addPass(LowerIFuncPass());
@@ -495,6 +487,7 @@ void AArch64PassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   if (getOptLevel() >= CodeGenOptLevel::Default &&
+      CLOpts.enable_subreg_liveness_tracking &&
       CLOpts.enable_predicate_as_counter_loop_rewrites)
     addPass(createAArch64PredicateAsCounterLoopRewritesPass());
 
@@ -541,7 +534,7 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createSelectOptimizePass());
 
   addPass(createAArch64StackTaggingPass(
-      /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
+      CLOpts, /*IsOptNone=*/TM->getOptLevel() == CodeGenOptLevel::None));
 
   // Try to use tbl in place of other shuffling operations if doing so would
   // reduce the total number of instructions. Shuffle masks for big endian may
@@ -712,8 +705,6 @@ void AArch64PassConfig::addPreRegAlloc() {
     // be register coalescer friendly.
     addPass(&PeepholeOptimizerLegacyID);
   }
-  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.enable_pipeliner)
-    addPass(&MachinePipelinerID);
 }
 
 void AArch64PassConfig::addPostRewrite() {
@@ -776,7 +767,7 @@ void AArch64PassConfig::addPreEmitPass() {
 
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
-    addPass(createCFGuardLongjmpPass());
+    addPass(createCFGuardLongjmpLegacyPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardTargetsLegacy());
   }
@@ -808,7 +799,7 @@ void AArch64PassConfig::addPostBBSections() {
 
 void AArch64PassConfig::addPreEmitPass2() {
   // Insert pseudo probe annotation for callsite profiling
-  addPass(createPseudoProbeInserter());
+  addPass(createPseudoProbeInserterLegacyPass());
 
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.

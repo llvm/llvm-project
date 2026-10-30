@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_file_unittests)
+add_libc_testsuite(libc-sys-file-tests)
 
 add_libc_test(
   flock_test
   SUITE
-    libc_sys_file_unittests
+    libc-sys-file-tests
   SRCS
     flock_test.cpp
   DEPENDS

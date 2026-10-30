@@ -98,12 +98,11 @@ public:
   /// Return metadata specifying that a branch or switch is unpredictable.
   LLVM_ABI MDNode *createUnpredictable();
 
-  /// Return metadata containing the entry \p Count for a function, a boolean
-  /// \Synthetic indicating whether the counts were synthetized, and the
+  /// Return metadata containing the entry \p Count for a function and the
   /// GUIDs stored in \p Imports that need to be imported for sample PGO, to
   /// enable the same inlines as the profiled optimized binary
   LLVM_ABI MDNode *
-  createFunctionEntryCount(uint64_t Count, bool Synthetic,
+  createFunctionEntryCount(uint64_t Count,
                            const DenseSet<GlobalValue::GUID> *Imports);
 
   /// Return metadata containing the section prefix for a global object.

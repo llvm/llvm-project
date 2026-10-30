@@ -24,8 +24,10 @@
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static bool isAligned(const Value *Base, Align Alignment,
                       const DataLayout &DL) {
@@ -720,10 +722,10 @@ Value *llvm::findAvailablePtrLoadStore(
   const Value *StrippedPtr = Loc.Ptr->stripPointerCasts();
 
   while (ScanFrom != ScanBB->begin()) {
-    // We must ignore debug info directives when counting (otherwise they
+    // We must ignore pseudo probes when counting (otherwise they
     // would affect codegen).
     Instruction *Inst = &*--ScanFrom;
-    if (Inst->isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     // Restore ScanFrom to expected value in case next test succeeds
@@ -811,7 +813,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {
-    if (Inst.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(Inst))
       continue;
 
     if (MaxInstsToScan-- == 0)
@@ -955,6 +957,10 @@ bool llvm::isReadOnlyLoop(
     SmallVectorImpl<const SCEVPredicate *> *Predicates) {
   for (BasicBlock *BB : L->blocks()) {
     for (Instruction &I : *BB) {
+      // Pseudo-probes are placeholders with side effects but
+      // no real memory access, and do not affect dereferenceability.
+      if (isa<PseudoProbeInst>(I))
+        continue;
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
           NonDereferenceableAndAlignedLoads.push_back(LI);
@@ -998,6 +1004,34 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
     // members past this point.
     Expr.BasePtr = GEP->getPointerOperand();
     Expr.Flags = Expr.Flags.intersectForOffsetAdd(GEP->getNoWrapFlags());
+
+    // Try to look through mul and shl
+    APInt IndexScale(BitWidth, 1);
+    if (auto *BO = dyn_cast_or_null<BinaryOperator>(VarIndex)) {
+      Value *UnscaledIndex = nullptr;
+      const APInt *Constant;
+      bool FoundIndexScale = true;
+      if (match(BO, m_Mul(m_Value(UnscaledIndex), m_APInt(Constant)))) {
+        IndexScale *= *Constant;
+      } else if (match(BO, m_Shl(m_Value(UnscaledIndex), m_APInt(Constant))) &&
+                 Constant->ult(BitWidth)) {
+        IndexScale <<= *Constant;
+      } else {
+        FoundIndexScale = false;
+      }
+
+      if (FoundIndexScale) {
+        // If we do not have nuw or nsw on the mul/shl we need to update the
+        // flags
+        if (!BO->hasNoSignedWrap())
+          Expr.Flags = Expr.Flags.withoutNoUnsignedSignedWrap();
+        if (!BO->hasNoUnsignedWrap())
+          Expr.Flags = Expr.Flags.withoutNoUnsignedWrap();
+
+        VarIndex = UnscaledIndex;
+      }
+    }
+
     for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
          GTI != GTE; ++GTI) {
       Value *Index = GTI.getOperand();
@@ -1013,17 +1047,18 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
         // Truncate if type size exceeds index space.
         APInt IndexedSize(BitWidth, GTI.getSequentialElementStride(DL),
                           /*isSigned=*/false,
-                          /*implcitTrunc=*/true);
-        Expr.Offset += ConstOffset->getValue() * IndexedSize;
+                          /*implicitTrunc=*/true);
+        Expr.Offset +=
+            ConstOffset->getValue().sextOrTrunc(BitWidth) * IndexedSize;
         continue;
       }
 
-      // FIXME: Also look through a mul/shl in the index.
       assert(Expr.Index == nullptr && "Shouldn't have index yet");
-      Expr.Index = Index;
+      Expr.Index = VarIndex;
       // Truncate if type size exceeds index space.
       Expr.Scale = APInt(BitWidth, GTI.getSequentialElementStride(DL),
-                         /*isSigned=*/false, /*implicitTrunc=*/true);
+                         /*isSigned=*/false, /*implicitTrunc=*/true) *
+                   IndexScale;
     }
   }
 

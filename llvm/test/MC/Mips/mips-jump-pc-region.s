@@ -11,7 +11,16 @@
 # CHECK-NEXT: 1000000c: 08 00 00 03                   j       0xc <foo>
 # CHECK-NEXT: 10000010: 0c 00 00 04                   jal     0x10 <foo+0x4>
 # CHECK-NEXT: 10000014: 74 00 00 05                   jalx    0x14 <foo+0x8>
+# CHECK-LABEL: 10000018 <nonbranch>:
+# CHECK-NEXT: 10000018: 24 47 00 0a                   addiu   $7, $2, 10{{$}}
+# CHECK-NEXT: 1000001c: 34 83 00 0c                   ori     $3, $4, 12{{$}}
+# CHECK-NEXT: 10000020: 00 06 2a 00                   sll     $5, $6, 8{{$}}
+
 foo:
 	j 12
 	jal 16
 	jalx 20
+nonbranch:
+	addiu $7, $2, 10
+	ori   $3, $4, 12
+	sll   $5, $6, 8

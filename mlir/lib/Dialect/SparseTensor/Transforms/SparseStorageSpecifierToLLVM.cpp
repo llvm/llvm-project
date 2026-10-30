@@ -334,7 +334,7 @@ struct StorageSpecifierGetOpConverter
 struct StorageSpecifierInitOpConverter
     : public OpConversionPattern<StorageSpecifierInitOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
   LogicalResult
   matchAndRewrite(StorageSpecifierInitOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {

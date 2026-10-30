@@ -86,8 +86,8 @@ protected:
   void getRegisterPressures(bool AtTop, const RegPressureTracker &RPTracker,
                             SUnit *SU, std::vector<unsigned> &Pressure,
                             std::vector<unsigned> &MaxPressure,
-                            GCNDownwardRPTracker &DownwardTracker,
-                            GCNUpwardRPTracker &UpwardTracker,
+                            const GCNDownwardRPTrackerBase &DownwardTracker,
+                            const GCNUpwardRPTracker &UpwardTracker,
                             ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
 
   std::vector<unsigned> Pressure;
@@ -105,7 +105,7 @@ protected:
   SmallVectorImpl<GCNSchedStageID>::iterator CurrentStage = nullptr;
 
   // GCN RP Tracker for top-down scheduling
-  mutable GCNDownwardRPTracker DownwardTracker;
+  mutable GCNManualDownwardRPTracker DownwardTracker;
 
   // GCN RP Tracker for botttom-up scheduling
   mutable GCNUpwardRPTracker UpwardTracker;
@@ -175,9 +175,9 @@ public:
     return GCNTrackersOverride.value_or(UseGCNTrackers);
   }
 
-  GCNDownwardRPTracker *getDownwardTracker() { return &DownwardTracker; }
+  GCNDownwardRPTrackerBase &getDownwardTracker() { return DownwardTracker; }
 
-  GCNUpwardRPTracker *getUpwardTracker() { return &UpwardTracker; }
+  GCNUpwardRPTracker &getUpwardTracker() { return UpwardTracker; }
 };
 
 /// The goal of this scheduling strategy is to maximize kernel occupancy (i.e.
@@ -562,8 +562,9 @@ public:
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
 ///    extended by the rematerialization.
-/// 4. The register has a single non-debug user in a different region from its
-///    defining region.
+/// 4. The register has at least one user outside its defining region. If
+///    rematerialized, one copy is made per using region and the original
+///    register stays if the defining region has users.
 /// 5. The register is not used by or using another register that is going to be
 ///    rematerialized.
 class PreRARematStage : public GCNSchedStage {
@@ -744,6 +745,13 @@ private:
   /// achieve that objective and mark those that don't achieve it in \ref
   /// TargetRegions. Returns whether there is any target region.
   bool setObjective();
+
+  /// Determines whether users of rematerialization candidate \p CandIdx are
+  /// compatible with the stage's rematerialization constraints/limitations.
+  /// Registers in \p MarkedRegs have already been deemed rematerializable by
+  /// the stage.
+  bool candidateHasValidUsers(RegisterIdx CandIdx,
+                              const SmallSet<Register, 4> &MarkedRegs) const;
 
   /// In all regions set in \p Regions, saves pressure \p RPSave and clear it as
   /// a target if its RP target has been reached.

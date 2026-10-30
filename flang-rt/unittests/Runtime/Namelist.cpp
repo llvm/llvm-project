@@ -22,6 +22,7 @@
 
 using namespace Fortran::runtime;
 using namespace Fortran::runtime::io;
+using Fortran::common::numeric_limits;
 
 struct NamelistTests : CrashHandlerFixture {};
 
@@ -44,11 +45,10 @@ TEST(NamelistTests, BasicSanity) {
   for (int j{0}; j < 20; ++j) {
     ints.push_back(j % 2 == 0 ? (1 << j) : -(1 << j));
   }
-  std::vector<double> reals{0.0, -0.0, std::numeric_limits<double>::infinity(),
-      -std::numeric_limits<double>::infinity(),
-      std::numeric_limits<double>::quiet_NaN(),
-      std::numeric_limits<double>::max(), std::numeric_limits<double>::lowest(),
-      std::numeric_limits<double>::epsilon()};
+  std::vector<double> reals{0.0, -0.0, numeric_limits<double>::infinity(),
+      -numeric_limits<double>::infinity(), numeric_limits<double>::quiet_NaN(),
+      numeric_limits<double>::max(), numeric_limits<double>::lowest(),
+      numeric_limits<double>::epsilon()};
   std::vector<std::uint8_t> logicals;
   logicals.push_back(false);
   logicals.push_back(true);

@@ -62,10 +62,11 @@ LLVM_ABI void setGlobalVariableLargeSection(const Triple &TargetTriple,
 
 // Insert GCOV profiling instrumentation
 struct GCOVOptions {
-  LLVM_ABI static GCOVOptions getDefault();
-
   // Specify whether to emit .gcno files.
   bool EmitNotes;
+
+  // Specify whether to force absolute paths in coverage notes files.
+  bool UseAbsolutePathsInNotes;
 
   // Specify whether to modify the program to emit .gcda files when run.
   bool EmitData;

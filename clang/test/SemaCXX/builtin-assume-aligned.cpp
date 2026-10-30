@@ -146,3 +146,13 @@ namespace GH173767 {
   constexpr int g1 = (delete (G*)__builtin_assume_aligned(new G, alignof(int)), 0);
 #endif
 } // namespace GH173767
+
+namespace GH194289 {
+void h(int);    // expected-note {{possible target for call}}
+void h(double); // expected-note {{possible target for call}}
+template <typename T> void ft(); // expected-note {{possible target for call}}
+void unresolvable_pointer_argument() {
+  (void)__builtin_assume_aligned(h, 8); // expected-error {{reference to overloaded function could not be resolved}}
+  (void)__builtin_assume_aligned(ft, 8); // expected-error {{reference to overloaded function could not be resolved}}
+}
+}

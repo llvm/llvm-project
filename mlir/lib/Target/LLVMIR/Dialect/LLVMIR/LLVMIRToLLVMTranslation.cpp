@@ -126,15 +126,9 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
   StringRef profName = name->getString();
 
   // Handle function entry count metadata.
-  if (profName == llvm::MDProfLabels::FunctionEntryCount ||
-      profName == llvm::MDProfLabels::SyntheticFunctionEntryCount) {
+  if (profName == llvm::MDProfLabels::FunctionEntryCount) {
     if (node->getNumOperands() < 2)
       return failure();
-
-    bool isSynthetic =
-        profName == llvm::MDProfLabels::SyntheticFunctionEntryCount;
-    ProfileCountType profileCountType =
-        isSynthetic ? ProfileCountType::Synthetic : ProfileCountType::Real;
 
     std::optional<uint64_t> entryCountValue =
         getUInt64Metadata(node->getOperand(1));
@@ -152,9 +146,8 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     }
 
     if (auto funcOp = dyn_cast<LLVMFuncOp>(op)) {
-      funcOp.setFunctionEntryCountAttr(
-          FunctionEntryCountAttr::get(builder.getContext(), *entryCountValue,
-                                      profileCountType, importGUIDValues));
+      funcOp.setFunctionEntryCountAttr(FunctionEntryCountAttr::get(
+          builder.getContext(), *entryCountValue, importGUIDValues));
       return success();
     }
     return op->emitWarning()

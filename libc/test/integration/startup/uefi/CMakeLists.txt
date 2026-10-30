@@ -1,5 +1,4 @@
-add_custom_target(libc-startup-tests)
-add_dependencies(libc-integration-tests libc-startup-tests)
+add_libc_testsuite(libc-startup-tests PARENT libc-integration-tests)
 
 add_integration_test(
   startup_no_args_test

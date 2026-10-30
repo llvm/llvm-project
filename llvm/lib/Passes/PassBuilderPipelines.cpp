@@ -152,6 +152,7 @@
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
@@ -164,19 +165,24 @@ namespace llvm {
 extern cl::opt<std::string> UseCtxProfile;
 
 extern cl::opt<bool> EnableMemProfContextDisambiguation;
+
+extern cl::opt<bool> EnableProfcheckInPipeline;
 } // namespace llvm
 
-PipelineTuningOptions::PipelineTuningOptions() {
-  const PassesOptions &Opts = PassesOptions::Global;
+PipelineTuningOptions::PipelineTuningOptions(
+    const cl::LibraryOptionsContext *LibraryOptions) {
+  const PassesOptions &Opts =
+      cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions);
   LoopInterleaving = true;
   LoopVectorization = true;
   SLPVectorization = false;
   LoopUnrolling = true;
   LoopInterchange = Opts.enable_loopinterchange;
   LoopFusion = false;
-  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll();
-  LicmMssaOptCap = getLicmMssaOptCap();
-  LicmMssaNoAccForPromotionCap = getLicmMssaNoAccForPromotionCap();
+  ForgetAllSCEVInLoopUnroll = getForgetSCEVInLoopUnroll(LibraryOptions);
+  LicmMssaOptCap = getLicmMssaOptCap(LibraryOptions);
+  LicmMssaNoAccForPromotionCap =
+      getLicmMssaNoAccForPromotionCap(LibraryOptions);
   CallGraphProfile = true;
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;
@@ -276,6 +282,24 @@ static void instructionCountersPass(ModulePassManager &MPM,
     MPM.addPass(createModuleToFunctionPassAdaptor(
         FunctionPropertiesStatisticsPass(IsPreOptimization)));
   }
+}
+
+// Add passes to run at the start of the pipeline. This includes things like
+// statistics passes.
+static void addPipelineStartPasses(ModulePassManager &MPM,
+                                   const PassesOptions &Opts) {
+  instructionCountersPass(MPM, /*IsPreOptimization=*/true);
+  if (EnableProfcheckInPipeline)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
+}
+
+// Add passes to run at the end of the pipeline. This includes things like
+// statistics passes.
+static void addPipelineEndPasses(ModulePassManager &MPM,
+                                 const PassesOptions &Opts) {
+  instructionCountersPass(MPM, /*IsPreOptimization=*/false);
+  if (EnableProfcheckInPipeline)
+    MPM.addPass(ProfileVerifierPass());
 }
 
 // Helper to add AnnotationRemarksPass.
@@ -1108,7 +1132,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsPreLink = !isThinLTOPostLink(Phase);
   // Enable contextual profiling instrumentation.
   const bool IsCtxProfGen =
-      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled();
+      IsPreLink && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+                       Context.getLibraryOptions());
   const bool IsPGOPreLink = !IsCtxProfGen && PGOOpt && IsPreLink;
   const bool IsPGOInstrGen =
       IsPGOPreLink && PGOOpt->Action == PGOOptions::IRInstr;
@@ -1117,18 +1142,19 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
   const bool IsMemprofUse = IsPGOPreLink && !PGOOpt->MemoryProfile.empty();
   // We don't want to mix pgo ctx gen and pgo gen; we also don't currently
   // enable ctx profiling from the frontend.
-  assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled()) &&
+  assert(!(IsPGOInstrGen && PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+                                Context.getLibraryOptions())) &&
          "Enabling both instrumented PGO and contextual instrumentation is not "
          "supported.");
   const bool IsCtxProfUse = !UseCtxProfile.empty() && isThinLTOPreLink(Phase);
 
   assert((Opts.instrument_cold_function_only_path.empty() ||
-          isPGOInstrumentColdFunctionOnly()) &&
+          isPGOInstrumentColdFunctionOnly(Context.getLibraryOptions())) &&
          "--instrument-cold-function-only-path is provided but "
          "--pgo-instrument-cold-function-only is not enabled");
   const bool IsColdFuncOnlyInstrGen =
-      isPGOInstrumentColdFunctionOnly() && IsPGOPreLink &&
-      !Opts.instrument_cold_function_only_path.empty();
+      isPGOInstrumentColdFunctionOnly(Context.getLibraryOptions()) &&
+      IsPGOPreLink && !Opts.instrument_cold_function_only_path.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
       IsCtxProfUse || IsColdFuncOnlyInstrGen)
@@ -1620,7 +1646,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
     return buildO0DefaultPipeline(Level, Phase);
 
   ModulePassManager MPM;
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
   // Currently this pipeline is only invoked in an LTO pre link pass or when we
   // are not running LTO. If that changes the below checks may need updating.
   assert(isLTOPreLink(Phase) || Phase == ThinOrFullLTOPhase::None);
@@ -1662,7 +1688,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
   return MPM;
 }
 
@@ -1671,7 +1697,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
                                         bool EmitSummary, bool Verify) {
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   if (ThinLTO)
     MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
@@ -1689,7 +1715,8 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
   // Perform any cleanups to the IR that aren't suitable for per TU compilation,
   // like removing CFI/WPD related instructions. Note, we reuse
   // DropTypeTestsPass to clean up type tests rather than duplicate that logic
-  // in FatLtoCleanup.
+  // in FatLtoCleanup; checked-load cleanup is shared the other way, with
+  // FatLtoCleanup calling lowertypetests::cleanUpTypeCheckedLoad.
   MPM.addPass(FatLtoCleanup());
 
   // If we're doing FatLTO w/ CFI enabled, we don't want the type tests in the
@@ -1722,7 +1749,7 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     addAnnotationRemarksPass(MPM);
   }
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -1734,7 +1761,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
@@ -1791,7 +1818,7 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 
   addRequiredLTOPreLinkPasses(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -1800,7 +1827,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   invokeThinLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
@@ -1873,7 +1900,7 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -1890,7 +1917,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
@@ -2021,7 +2048,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
 
-    instructionCountersPass(MPM, /* IsPreOptimization */ false);
+    addPipelineEndPasses(MPM, Opts);
 
     return MPM;
   }
@@ -2264,7 +2291,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }
@@ -2277,7 +2304,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
 
   ModulePassManager MPM;
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+  addPipelineStartPasses(MPM, Opts);
 
   // Perform pseudo probe instrumentation in O0 mode. This is for the
   // consistency between different build modes. For example, a LTO build can be
@@ -2398,7 +2425,7 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
-  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+  addPipelineEndPasses(MPM, Opts);
 
   return MPM;
 }

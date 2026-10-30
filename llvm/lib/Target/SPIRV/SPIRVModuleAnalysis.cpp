@@ -91,15 +91,19 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   bool MinVerOK = SPIRVVersion.empty() || SPIRVVersion >= ReqMinVer;
   bool MaxVerOK =
       ReqMaxVer.empty() || SPIRVVersion.empty() || SPIRVVersion <= ReqMaxVer;
+  bool VerOK = MinVerOK && MaxVerOK;
   CapabilityList ReqCaps = getSymbolicOperandCapabilities(Category, i);
   ExtensionList ReqExts = getSymbolicOperandExtensions(Category, i);
+  // A met minimum version makes the extension unnecessary.
+  if (VerOK && !ReqMinVer.empty())
+    ReqExts.clear();
   if (ReqCaps.empty()) {
     if (ReqExts.empty()) {
-      if (MinVerOK && MaxVerOK)
+      if (VerOK)
         return {true, {}, {}, ReqMinVer, ReqMaxVer};
       return {false, {}, {}, VersionTuple(), VersionTuple()};
     }
-  } else if (MinVerOK && MaxVerOK) {
+  } else if (VerOK) {
     if (ReqCaps.size() == 1) {
       auto Cap = ReqCaps[0];
       if (Reqs.isCapabilityAvailable(Cap)) {
@@ -130,15 +134,15 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
   }
   // If there are no capabilities, or we can't satisfy the version or
   // capability requirements, use the list of extensions (if the subtarget
-  // can handle them all).
-  if (llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
+  // can handle them all). Without an extension the version must hold. An
+  // extension stands in for an unmet version.
+  if ((!ReqExts.empty() || VerOK) &&
+      llvm::all_of(ReqExts, [&ST](const SPIRV::Extension::Extension &Ext) {
         return ST.canUseExtension(Ext);
       })) {
-    return {true,
-            {},
-            std::move(ReqExts),
-            VersionTuple(),
-            VersionTuple()}; // TODO: add versions to extensions.
+    if (VerOK)
+      return {true, {}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
+    return {true, {}, std::move(ReqExts), VersionTuple(), VersionTuple()};
   }
   return {false, {}, {}, VersionTuple(), VersionTuple()};
 }
@@ -1071,6 +1075,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
+                    Capability::Geometry,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
@@ -1082,6 +1087,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
                     Capability::DerivativeControl,
+                    Capability::SampleRateShading,
                     Capability::MinLod,
                     Capability::ImageQuery,
                     Capability::ImageGatherExtended,
@@ -1095,6 +1101,10 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
       ST.canUseExtension(Extension::SPV_KHR_variable_pointers))
     addAvailableCaps({Capability::VariablePointersStorageBuffer,
                       Capability::VariablePointers});
+
+  // Became core in Vulkan 1.1.
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    addAvailableCaps({Capability::DrawParameters, Capability::MultiView});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -1122,6 +1132,27 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
 } // namespace SPIRV
 } // namespace llvm
 
+// Add a capability that became core in SPIR-V 1.3. Earlier versions require
+// the extension that introduced it.
+static void addCoreInSPIRV13Capability(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       SPIRV::Capability::Capability Cap,
+                                       SPIRV::Extension::Extension Ext) {
+  Reqs.addCapability(Cap);
+  if (ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    return;
+  if (!ST.canUseExtension(Ext))
+    report_fatal_error(
+        Twine("capability ") +
+            getSymbolicOperandMnemonic(
+                SPIRV::OperandCategory::CapabilityOperand, Cap) +
+            " requires SPIR-V 1.3 or the following SPIR-V extension: " +
+            getSymbolicOperandMnemonic(SPIRV::OperandCategory::ExtensionOperand,
+                                       Ext),
+        false);
+  Reqs.addExtension(Ext);
+}
+
 // Add the required capabilities from a decoration instruction (including
 // BuiltIns).
 static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
@@ -1135,8 +1166,30 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
   if (Dec == SPIRV::Decoration::BuiltIn) {
     int64_t BuiltInOp = MI.getOperand(DecIndex + 1).getImm();
     auto BuiltIn = static_cast<SPIRV::BuiltIn::BuiltIn>(BuiltInOp);
-    Reqs.addRequirements(getSymbolicOperandRequirements(
-        SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+    if ((BuiltIn == SPIRV::BuiltIn::BaryCoordKHR ||
+         BuiltIn == SPIRV::BuiltIn::BaryCoordNoPerspKHR) &&
+        !ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_fragment_shader_barycentric))
+      report_fatal_error(
+          "Barycentric built-ins require the following SPIR-V extension: "
+          "SPV_KHR_fragment_shader_barycentric",
+          false);
+    switch (BuiltIn) {
+    case SPIRV::BuiltIn::BaseVertex:
+    case SPIRV::BuiltIn::BaseInstance:
+      addCoreInSPIRV13Capability(
+          Reqs, ST, SPIRV::Capability::DrawParameters,
+          SPIRV::Extension::SPV_KHR_shader_draw_parameters);
+      break;
+    case SPIRV::BuiltIn::ViewIndex:
+      addCoreInSPIRV13Capability(Reqs, ST, SPIRV::Capability::MultiView,
+                                 SPIRV::Extension::SPV_KHR_multiview);
+      break;
+    default:
+      Reqs.addRequirements(getSymbolicOperandRequirements(
+          SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
+      break;
+    }
   } else if (Dec == SPIRV::Decoration::LinkageAttributes) {
     int64_t LinkageOp = MI.getOperand(MI.getNumOperands() - 1).getImm();
     SPIRV::LinkageType::LinkageType LnkType =

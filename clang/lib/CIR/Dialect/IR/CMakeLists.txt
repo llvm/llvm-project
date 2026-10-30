@@ -8,12 +8,12 @@ add_clang_library(MLIRCIR
   CIROpenCLAttrs.cpp
 
   DEPENDS
-  MLIRCIROpsIncGen
   MLIRCIRDialectBytecodeIncGen
-  MLIRCIRTypeConstraintsIncGen
   MLIRCIREnumsGen
-  MLIRCIROpInterfacesIncGen
-  MLIRCIRLoopOpInterfaceIncGen
+  mlir-headers
+
+  LINK_COMPONENTS
+  TargetParser
 
   LINK_LIBS PUBLIC
   MLIRIR

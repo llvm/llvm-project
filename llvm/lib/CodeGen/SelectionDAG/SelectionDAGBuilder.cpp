@@ -85,6 +85,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Statepoint.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
@@ -2625,8 +2626,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   if (BPI != nullptr) {
     // See if we are either likely to get an early out or compute both lhs/rhs
     // of the condition.
-    BasicBlock *IfFalse = I.getSuccessor(0);
-    BasicBlock *IfTrue = I.getSuccessor(1);
+    BasicBlock *IfTrue = I.getSuccessor(0);
+    BasicBlock *IfFalse = I.getSuccessor(1);
+    if (ProfcheckDisableMetadataFixes)
+      std::swap(IfTrue, IfFalse);
 
     std::optional<bool> Likely;
     if (BPI->isEdgeHot(I.getParent(), IfTrue))
@@ -8041,7 +8044,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     TargetLowering::ArgListTy Args;
     if (Intrinsic == Intrinsic::ubsantrap) {
       Value *Arg = I.getArgOperand(0);
-      Args.emplace_back(Arg, getValue(Arg));
+      Args.emplace_back(Arg, getValue(Arg),
+                        LibInfo->getExtAttrForI8Param(/*Signed=*/false));
     }
 
     TargetLowering::CallLoweringInfo CLI(DAG);
@@ -8677,11 +8681,15 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::vector_partial_reduce_fadd: {
+    SDNodeFlags Flags;
+    if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
+      Flags.copyFMF(*FPOp);
     SDValue Acc = getValue(I.getOperand(0));
     SDValue Input = getValue(I.getOperand(1));
-    setValue(&I, DAG.getNode(
-                     ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(), Acc,
-                     Input, DAG.getConstantFP(1.0, sdl, Input.getValueType())));
+    setValue(&I, DAG.getNode(ISD::PARTIAL_REDUCE_FMLA, sdl, Acc.getValueType(),
+                             Acc, Input,
+                             DAG.getConstantFP(1.0, sdl, Input.getValueType()),
+                             Flags));
     return;
   }
   case Intrinsic::experimental_cttz_elts: {
@@ -9287,7 +9295,8 @@ SDValue SelectionDAGBuilder::lowerStartEH(SDValue Chain,
 
   // Skip emitting EH_LABEL on targets whose exception tables don't reference
   // them (32-bit x86 SEH, Wasm).
-  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels()) {
+  if (!MF.getContext().getAsmInfo().usesPerInvokeEHLabels(
+          FuncInfo.ExceptionModel)) {
     BeginLabel = nullptr;
     return Chain;
   }
@@ -10317,6 +10326,9 @@ getRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
         // i64, which can be passed with two i32 values on a 32-bit machine.
       } else if (RegVT.isInteger() && OpInfo.ConstraintVT.isFloatingPoint()) {
         MVT VT = MVT::getIntegerVT(OpInfo.ConstraintVT.getSizeInBits());
+        // No integer type of that size to bitcast to (e.g. f80).
+        if (!VT.isValid())
+          return std::nullopt;
         if (OpInfo.Type == InlineAsm::isInput)
           OpInfo.CallOperand =
               DAG.getNode(ISD::BITCAST, DL, VT, OpInfo.CallOperand);
@@ -10539,7 +10551,7 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
     //
     // Due to current llvm inline asm architecture designed to not "recognize"
     // the asm code, there are quite troubles for us to treat mem addressing
-    // differently for same value/adress used in different instuctions.
+    // differently for same value/adress used in different instructions.
     // For example, in pic model, call a func may in plt way or direclty
     // pc-related, but lea/mov a function adress may use got.
     //
@@ -12041,9 +12053,8 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       // We will look through cast uses, so ignore them completely.
       if (I.isCast())
         continue;
-      // Ignore debug info and pseudo op intrinsics, they don't escape or store
-      // to allocas.
-      if (I.isDebugOrPseudoInst())
+      // Ignore pseudo op intrinsics, they don't escape or store to allocas.
+      if (isa<PseudoProbeInst>(I))
         continue;
       // This is an unknown instruction. Assume it escapes or writes to all
       // static alloca operands.
@@ -12171,7 +12182,7 @@ static void tryToElideArgumentCopy(
   }
 }
 
-void SelectionDAGISel::LowerArguments(const Function &F) {
+void SelectionDAGISel::LowerArguments(const Function &F, bool FastISel) {
   SelectionDAG &DAG = SDB->DAG;
   SDLoc dl = SDB->getCurSDLoc();
   const DataLayout &DL = DAG.getDataLayout();
@@ -12507,7 +12518,7 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
         continue;
       }
     }
-    if (!isOnlyUsedInEntryBlock(&Arg, TM.Options.EnableFastISel)) {
+    if (!isOnlyUsedInEntryBlock(&Arg, FastISel)) {
       FuncInfo->InitializeRegForValue(&Arg);
       SDB->CopyToExportRegsIfNeeded(&Arg);
     }
@@ -12745,8 +12756,8 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
     if (I == W.LastCluster) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
-      FallthroughUnreachable = isa<UnreachableInst>(
-          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+      FallthroughUnreachable =
+          isa<UnreachableInst>(DefaultMBB->getBasicBlock()->getFirstNonPHIIt());
     } else {
       Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
       CurMF->insert(BBI, Fallthrough);
@@ -12787,16 +12798,22 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // JTH->FallthroughUnreachable which will use it to suppress the range
         // check.
         //
-        // However, don't do this if we're doing branch target enforcement,
-        // because a table branch _without_ a range check can be a tempting JOP
-        // gadget - out-of-bounds inputs that are impossible in correct
-        // execution become possible again if an attacker can influence the
-        // control flow. So if an attacker doesn't already have a BTI bypass
-        // available, we don't want them to be able to get one out of this
-        // table branch.
+        // However, don't do this if we're doing branch target enforcement
+        // (e.g. Arm BTI, or the cf-protection-branch module flag used by
+        // RISC-V Zicfilp and X86 IBT), because a table branch _without_ a
+        // range check can be a tempting JOP gadget - out-of-bounds inputs
+        // that are impossible in correct execution become possible again if
+        // an attacker can influence the control flow. So if an attacker
+        // doesn't already have a branch target enforcement bypass available,
+        // we don't want them to be able to get one out of this table branch.
         if (FallthroughUnreachable) {
           Function &CurFunc = CurMF->getFunction();
-          if (!CurFunc.hasFnAttribute("branch-target-enforcement"))
+          bool HasCFBranch = false;
+          if (auto *CFBranch = mdconst::extract_or_null<ConstantInt>(
+                  CurFunc.getParent()->getModuleFlag("cf-protection-branch")))
+            HasCFBranch = !CFBranch->isZero();
+          if (!HasCFBranch &&
+              !CurFunc.hasFnAttribute("branch-target-enforcement"))
             JTH->FallthroughUnreachable = true;
         }
 

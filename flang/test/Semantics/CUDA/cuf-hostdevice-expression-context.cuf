@@ -15,7 +15,7 @@ contains
   end function
   attributes(host,device) subroutine select_h()
     integer :: x
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     select case(h())
     case(1)
       x = 1
@@ -23,7 +23,7 @@ contains
   end subroutine
   attributes(host,device) subroutine select_d()
     integer :: x
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     select case(d())
     case(1)
       x = 1
@@ -37,34 +37,34 @@ contains
     end select
   end subroutine
   attributes(host,device) subroutine print_h()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     print *, h()
   end subroutine
   attributes(host,device) subroutine print_d()
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     print *, d()
   end subroutine
   attributes(host,device) subroutine print_b()
     print *, b()
   end subroutine
   attributes(host,device) subroutine write_item_h()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     write(*,*) h()
   end subroutine
   attributes(host,device) subroutine write_item_d()
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     write(*,*) d()
   end subroutine
   attributes(host,device) subroutine write_item_b()
     write(*,*) b()
   end subroutine
   attributes(host,device) subroutine write_unit_h()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     write(h(),*) 1
   end subroutine
   attributes(host,device) subroutine write_unit_d()
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     write(d(),*) 1
   end subroutine
@@ -74,12 +74,12 @@ contains
   end subroutine
   attributes(host,device) subroutine write_implied_do_h()
     integer :: i
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     write(*,*) (i, i=1,h())
   end subroutine
   attributes(host,device) subroutine write_implied_do_d()
     integer :: i
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     write(*,*) (i, i=1,d())
   end subroutine
   attributes(host,device) subroutine write_implied_do_b()
@@ -88,12 +88,12 @@ contains
   end subroutine
   attributes(host,device) subroutine write_subscript_h()
     integer :: x(4)
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     write(*,*) x(h())
   end subroutine
   attributes(host,device) subroutine write_subscript_d()
     integer :: x(4)
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     write(*,*) x(d())
   end subroutine
   attributes(host,device) subroutine write_subscript_b()
@@ -102,13 +102,13 @@ contains
   end subroutine
   attributes(host,device) subroutine read_subscript_h()
     integer :: x(4)
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     read(*,*) x(h())
   end subroutine
   attributes(host,device) subroutine read_subscript_d()
     integer :: x(4)
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     !WARNING: I/O statement might not be supported on device [-Wcuda-usage]
     read(*,*) x(d())
   end subroutine
@@ -119,12 +119,12 @@ contains
   end subroutine
   attributes(host,device) subroutine allocate_bound_h()
     integer, allocatable :: a(:)
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     allocate(a(h()))
   end subroutine
   attributes(host,device) subroutine allocate_bound_d()
     integer, allocatable :: a(:)
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     allocate(a(d()))
   end subroutine
   attributes(host,device) subroutine allocate_bound_b()
@@ -133,12 +133,12 @@ contains
   end subroutine
   attributes(host,device) subroutine allocate_source_h()
     integer, allocatable :: a(:)
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     allocate(a,source=[h()])
   end subroutine
   attributes(host,device) subroutine allocate_source_d()
     integer, allocatable :: a(:)
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     allocate(a,source=[d()])
   end subroutine
   attributes(host,device) subroutine allocate_source_b()
@@ -147,12 +147,12 @@ contains
   end subroutine
   attributes(host,device) subroutine allocate_mold_h()
     integer, allocatable :: a(:)
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     allocate(a,mold=[h()])
   end subroutine
   attributes(host,device) subroutine allocate_mold_d()
     integer, allocatable :: a(:)
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     allocate(a,mold=[d()])
   end subroutine
   attributes(host,device) subroutine allocate_mold_b()
@@ -161,12 +161,12 @@ contains
   end subroutine
   attributes(host,device) subroutine allocate_length_h()
     character(:), allocatable :: text
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     allocate(character(h()) :: text)
   end subroutine
   attributes(host,device) subroutine allocate_length_d()
     character(:), allocatable :: text
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     allocate(character(d()) :: text)
   end subroutine
   attributes(host,device) subroutine allocate_length_b()
@@ -176,13 +176,13 @@ contains
   attributes(host,device) subroutine deallocate_stat_h()
     integer, allocatable :: a(:)
     integer :: status(4)
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     deallocate(a,stat=status(h()))
   end subroutine
   attributes(host,device) subroutine deallocate_stat_d()
     integer, allocatable :: a(:)
     integer :: status(4)
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     deallocate(a,stat=status(d()))
   end subroutine
   attributes(host,device) subroutine deallocate_stat_b()
@@ -191,12 +191,12 @@ contains
     deallocate(a,stat=status(b()))
   end subroutine
   attributes(host,device) subroutine automatic_bound_h()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     integer :: a(h())
     a = 1
   end subroutine
   attributes(host,device) subroutine automatic_bound_d()
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     integer :: a(d())
     a = 1
   end subroutine
@@ -205,12 +205,12 @@ contains
     a = 1
   end subroutine
   attributes(host,device) subroutine character_length_h()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     character(h()) :: text
     text = 'x'
   end subroutine
   attributes(host,device) subroutine character_length_d()
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     character(d()) :: text
     text = 'x'
   end subroutine
@@ -285,23 +285,23 @@ contains
   end subroutine
   attributes(host,device) subroutine block_bound_h()
     block
-      !ERROR: 'h' may not be called in device code
+      !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
       integer :: a(h())
       a = 1
     end block
   end subroutine
-  !ERROR: 'h' may not be called in device code
+  !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
   attributes(host,device) character(h()) function header_h()
     header_h = 'x'
   end function
   attributes(host,device) subroutine block_bound_d()
     block
-      !ERROR: 'd' may not be called in host code
+      !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
       integer :: a(d())
       a = 1
     end block
   end subroutine
-  !ERROR: 'd' may not be called in host code
+  !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
   attributes(host,device) character(d()) function header_d()
     header_d = 'x'
   end function
@@ -325,13 +325,13 @@ contains
   end function
   attributes(device) subroutine device_bound(n)
     integer, value :: n
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from device code
     real :: a(h(n))
     a = 0.0
   end subroutine
   attributes(global) subroutine global_print(n)
     integer, value :: n
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from device code
     print *, h(n)
   end subroutine
   subroutine kernel_print(a, n)
@@ -339,7 +339,7 @@ contains
     integer, device :: a(n)
     !$cuf kernel do <<<*,*>>>
     do i = 1, n
-      !ERROR: 'h' may not be called in device code
+      !ERROR: 'h', a procedure with the HOST attribute, may not be called from device code
       print *, h(i)
       a(i) = i
     end do

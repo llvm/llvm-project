@@ -1,0 +1,63 @@
+! RUN: split-file %s %t
+! RUN: %flang_fc1 -fsyntax-only -module-dir %t %t/interface.cuf
+! RUN: %python %S/../test_errors.py %t/implementation.cuf %flang_fc1 -I%t
+
+! Check effective specifications without the original interface parse tree.
+! Diagnostics belong to the implementation, not to the imported declaration.
+
+!--- interface.cuf
+module imported_spec
+  interface
+    attributes(host,device) module subroutine bounds(n,a)
+      integer, intent(in) :: n
+      integer :: a(host_extent(n):device_extent(n))
+    end subroutine
+    attributes(device) module function text(n) result(r)
+      integer, intent(in) :: n
+      character(host_extent(n)) :: r
+    end function
+    attributes(device) module subroutine valid_device(n,a)
+      integer, intent(in) :: n
+      integer, device :: a(device_extent(n))
+    end subroutine
+    attributes(host,device) module subroutine valid(n,a,s)
+      integer, intent(in) :: n
+      integer :: a(both_extent(n))
+      character(both_extent(n)) :: s
+    end subroutine
+  end interface
+contains
+  pure integer function host_extent(n)
+    integer, intent(in) :: n
+    host_extent = n
+  end function
+  attributes(device) pure integer function device_extent(n)
+    integer, intent(in) :: n
+    device_extent = n+1
+  end function
+  attributes(host,device) pure integer function both_extent(n)
+    integer, intent(in) :: n
+    both_extent = n
+  end function
+end module
+
+!--- implementation.cuf
+submodule(imported_spec) implementation
+contains
+  !ERROR: 'host_extent', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
+  !ERROR: 'device_extent', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
+  module procedure bounds
+    a = 1
+  end procedure
+  !ERROR: 'host_extent', a procedure with the HOST attribute, may not be called from device code
+  module procedure text
+    r = 'x'
+  end procedure
+  module procedure valid_device
+    a = 1
+  end procedure
+  module procedure valid
+    a = 1
+    s = 'x'
+  end procedure
+end submodule

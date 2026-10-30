@@ -110,6 +110,8 @@ LLVMContextImpl::~LLVMContextImpl() {
     I->dropAllReferences();
   for (auto *I : VectorConstants)
     I->dropAllReferences();
+  for (auto *I : ConstantPtrAuths)
+    I->dropAllReferences();
   ExprConstants.freeConstants();
   ArrayConstants.freeConstants();
   StructConstants.freeConstants();

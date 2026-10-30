@@ -30,8 +30,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ctx-instr-lower"
 
-bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled() {
-  return !InstrumentationOptions::Global.profile_context_root.empty();
+bool PGOCtxProfLoweringPass::isCtxIRPGOInstrEnabled(
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return !LibraryOptions.get<InstrumentationOptions>()
+              .profile_context_root.empty();
 }
 
 // the names of symbols we expect in compiler-rt. Using a namespace for
@@ -153,9 +155,10 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                                       I32Ty, /*NumCallsites*/
                                                   });
 
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   // Define a global for each entrypoint. We'll reuse the entrypoint's name
   // as prefix. We assume the entrypoint names to be unique.
-  for (StringRef Fname : InstrumentationOptions::Global.profile_context_root) {
+  for (StringRef Fname : Opts.profile_context_root) {
     if (const auto *F = M.getFunction(Fname)) {
       if (F->isDeclaration())
         continue;

@@ -99,8 +99,8 @@ subroutine distribute_parallel_do_simd_simdlen()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) simdlen(4) {
-  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) simdlen(4) {
+  ! DEFAULT-NEXT: omp.simd simdlen(4) linear({{.*}}) linear_var_types([i32]) {
+  ! OPENMP52-NEXT: omp.simd simdlen(4) linear(val({{.*}})) linear_var_types([i32]) {
   ! CHECK-NEXT: omp.loop_nest
   !$omp distribute parallel do simd simdlen(4)
   do index_ = 1, 10
@@ -124,9 +124,9 @@ subroutine distribute_parallel_do_simd_private()
   ! CHECK:      omp.parallel {
   ! CHECK:      omp.distribute {
   ! CHECK-NEXT: omp.wsloop {
-  ! DEFAULT-NEXT: omp.simd linear(%{{.*}}) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! DEFAULT-NEXT: omp.simd linear({{.*}}) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
   ! DEFAULT-SAME:                  : !fir.ref<i64>) {
-  ! OPENMP52-NEXT: omp.simd linear(val(%{{.*}})) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
+  ! OPENMP52-NEXT: omp.simd linear(val({{.*}})) linear_var_types([i32]) private(@{{.*}} %[[X]]#0 -> %[[X_ARG:[^:]+]]
   ! OPENMP52-SAME:                  : !fir.ref<i64>) {
   ! CHECK-NEXT: omp.loop_nest
   ! CHECK:      %[[X_PRIV:.*]]:2 = hlfir.declare %[[X_ARG]]

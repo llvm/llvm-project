@@ -881,7 +881,7 @@ removeTriviallyEmptyRange(IntrinsicInst &EndI, InstCombinerImpl &IC,
   BasicBlock::reverse_iterator BI(EndI), BE(EndI.getParent()->rend());
   for (; BI != BE; ++BI) {
     if (auto *I = dyn_cast<IntrinsicInst>(&*BI)) {
-      if (I->isDebugOrPseudoInst() ||
+      if (isa<PseudoProbeInst>(I) ||
           I->getIntrinsicID() == EndI.getIntrinsicID())
         continue;
       if (IsStart(*I)) {
@@ -2532,10 +2532,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Value *V = foldCmpIntrinsicOfExtended(II, Builder, DL))
       return replaceInstUsesWith(CI, V);
 
+    auto *Cmp = cast<CmpIntrinsic>(II);
+    Value *I0 = Cmp->getLHS(), *I1 = Cmp->getRHS();
+    Value *LHS, *RHS;
+    if (matchCommonBinOpOperands(I0, I1, Cmp->getLTPredicate(), LHS, RHS,
+                                 SQ.getWithInstruction(II)))
+      return replaceInstUsesWith(
+          CI, Builder.CreateIntrinsic(II->getType(), IID, {LHS, RHS}));
+
     if (IID == Intrinsic::ucmp)
       break;
-
-    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
 
     // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
     if (match(I1, m_Zero())) {
@@ -2545,7 +2551,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(
             CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
     }
-    Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(
           CI,
@@ -4013,10 +4018,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(Ptr1);
         MaybeSimplifyHint(Ptr2);
+        SimpleAAQueryInfo AAQI(*AA);
+        AAQI.AllowEphemerals = false;
+        if (AA->alias(MemoryLocation::getBeforeOrAfter(Ptr1),
+                      MemoryLocation::getBeforeOrAfter(Ptr2), AAQI,
+                      II) == AliasResult::NoAlias) {
+          return RemoveBundle();
+        }
       } break;
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
+      case BundleAttr::Range:
         break;
 
       // This cannot be simplified
@@ -4025,10 +4038,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // If the assume has operand bundles, the folds below will never work, so
-    // don't bother trying.
-    if (II->hasOperandBundles())
+    if (II->hasOperandBundles()) {
+      // Merge consecutive assumes to save some resources
+      if (auto *PrevAI = dyn_cast_or_null<AssumeInst>(II->getPrevNode());
+          PrevAI && PrevAI->hasOperandBundles()) {
+        SmallVector<OperandBundleDef, 4> Bundles;
+        Bundles.reserve(II->getNumOperandBundles() +
+                        PrevAI->getNumOperandBundles());
+        for (auto Bundle : PrevAI->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        for (auto Bundle : II->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        Builder.CreateAssumption(Bundles);
+        eraseInstFromFunction(*PrevAI);
+        return eraseInstFromFunction(*II);
+      }
+
+      // If the assume has operand bundles, the folds below will never work, so
+      // don't bother trying.
       break;
+    }
 
     Value *IIOperand = II->getArgOperand(0);
 
@@ -5292,9 +5321,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         auto *OpIntTy = GCR.getOperand(2)->getType();
         GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
       }
-
-      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-      // Canonicalize on the type from the uses to the defs
 
       // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
       LiveGcValues.insert(BasePtr);
