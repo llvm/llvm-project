@@ -167,6 +167,10 @@ struct MachineVerifier {
   SmallVector<MCRegister, 4> LivePhysDefs;
   SmallVector<unsigned, 4> DeadPhysDefOps;
 
+  // Live physical register defs, with their subregisters, of the instructions
+  // visited so far in the current bundle.
+  RegSet BundleLivePhysDefs;
+
   SlotIndex lastIndex;
 
   // Add Reg and any sub-registers to RV
@@ -341,7 +345,6 @@ struct MachineVerifier {
 
   void verifyInlineAsm(const MachineInstr *MI);
 
-  bool isPartlyDefinedInBundle(const MachineInstr &MI, MCRegister Reg) const;
   void checkLiveness(const MachineOperand *MO, unsigned MONum);
   void checkLivenessAtUse(const MachineOperand *MO, unsigned MONum,
                           SlotIndex UseIdx, const LiveRange &LR,
@@ -927,6 +930,8 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
 // This function gets called for all bundle headers, including normal
 // stand-alone unbundled instructions.
 void MachineVerifier::visitMachineBundleBefore(const MachineInstr *MI) {
+  BundleLivePhysDefs.clear();
+
   if (Indexes && Indexes->hasIndex(*MI)) {
     SlotIndex idx = Indexes->getInstructionIndex(*MI);
     if (!(idx > lastIndex)) {
@@ -2346,6 +2351,10 @@ void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {
     }
   }
 
+  if (MI->isBundled() && !MI->isBundle())
+    for (MCRegister Reg : LivePhysDefs)
+      BundleLivePhysDefs.insert_range(TRI->subregs_inclusive(Reg));
+
   LivePhysDefs.clear();
   DeadPhysDefOps.clear();
 }
@@ -3061,38 +3070,6 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
   }
 }
 
-// Return true if a non-dead def of an instruction before MI in the same bundle
-// overlaps Reg. For a BUNDLE header, all bundled instructions are checked.
-bool MachineVerifier::isPartlyDefinedInBundle(const MachineInstr &MI,
-                                              MCRegister Reg) const {
-  auto HasOverlappingDef = [&](const MachineInstr &BundledMI) {
-    if (BundledMI.isBundle())
-      return false;
-    return any_of(BundledMI.all_defs(), [&](const MachineOperand &Def) {
-      return !Def.isDead() && Def.getReg().isPhysical() &&
-             TRI->regsOverlap(Def.getReg(), Reg);
-    });
-  };
-
-  const MachineBasicBlock *MBB = MI.getParent();
-  if (MI.isBundle()) {
-    for (auto I = std::next(MI.getIterator()), E = MBB->instr_end();
-         I != E && I->isBundledWithPred(); ++I) {
-      if (HasOverlappingDef(*I))
-        return true;
-    }
-    return false;
-  }
-
-  for (auto I = MI.getIterator(), B = MBB->instr_begin();
-       I != B && I->isBundledWithPred();) {
-    --I;
-    if (HasOverlappingDef(*I))
-      return true;
-  }
-  return false;
-}
-
 void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
   const MachineInstr *MI = MO->getParent();
   const Register Reg = MO->getReg();
@@ -3170,22 +3147,22 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
     }
 
     // Use of a dead register.
-    if (!regsLive.count(Reg)) {
+    if (!regsLive.count(Reg) && !BundleLivePhysDefs.count(Reg)) {
       if (Reg.isPhysical()) {
-        // Reserved registers may be used even when 'dead'.
-        bool Bad = !isReserved(Reg);
+        // Reserved registers may be used even when 'dead'. The uses of a
+        // BUNDLE header repeat those of the bundled instructions, which are
+        // checked on their own.
+        bool Bad = !isReserved(Reg) && !MI->isBundle();
         // We are fine if just any subregister has a defined value.
         if (Bad) {
 
           for (const MCPhysReg &SubReg : TRI->subregs(Reg)) {
-            if (regsLive.count(SubReg)) {
+            if (regsLive.count(SubReg) || BundleLivePhysDefs.count(SubReg)) {
               Bad = false;
               break;
             }
           }
         }
-        if (Bad && isPartlyDefinedInBundle(*MI, Reg.asMCReg()))
-          Bad = false;
         // If there is an additional implicit-use of a super register we stop
         // here. By definition we are fine if the super register is not
         // (completely) dead, if the complete super register is dead we will
