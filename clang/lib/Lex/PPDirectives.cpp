@@ -3876,7 +3876,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     // expression.
     if (EvaluatedDefined) {
       Diag(CurTok, diag::err_defined_in_pp_embed);
-      if (CurTok.isNot(EndTokenKind))
+      if (!CurTok.isOneOf(EndTokenKind, tok::eod))
         DiscardUntilEndOfDirective(CurTok);
       return std::nullopt;
     }
@@ -3886,7 +3886,7 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
       if (Result.isNegative()) {
         Diag(CurTok, diag::err_requires_positive_value)
             << toString(Result, 10) << /*positive*/ 0;
-        if (CurTok.isNot(EndTokenKind))
+        if (!CurTok.isOneOf(EndTokenKind, tok::eod))
           DiscardUntilEndOfDirective(CurTok);
         return std::nullopt;
       }
