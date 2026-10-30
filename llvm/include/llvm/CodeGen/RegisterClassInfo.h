@@ -107,6 +107,10 @@ public:
   /// registers, register costs, and allocation orders must remain unchanged.
   LLVM_ABI void updateReservedRegs(const BitVector &ReservedInput);
 
+  /// Whether the cached information was filtered by MRI's frozen reserved
+  /// registers, i.e. no change to them was left unpublished.
+  LLVM_ABI bool hasCurrentReservedRegs() const;
+
   bool invalidate(MachineFunction &, const PreservedAnalyses &PA,
                   MachineFunctionAnalysisManager::Invalidator &) {
     auto PAC = PA.getChecker<MachineRegisterClassAnalysis>();
