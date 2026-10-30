@@ -895,6 +895,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS1, UniS32}, {{None}, {None}}}) // should be combined away
       .Any({{UniS1, UniS64}, {{None}, {None}}}) // should be combined away
       .Any({{UniS16, S32}, {{Sgpr16}, {Sgpr32}}})
+      // Wider sources have no 16 bit sub-register, truncate to 32 bits first.
+      .Any({{UniS16, UniBRC}, {{Sgpr32Trunc}, {SgprBRC}}})
       .Any({{UniBRC, UniBRC}, {{SgprBRC}, {SgprBRC}}})
       .Any({{DivBRC, DivBRC}, {{VgprBRC}, {VgprBRC}}})
       .Any({{UniV2S16, V2S32}, {{SgprV2S16}, {SgprV2S32}}})
