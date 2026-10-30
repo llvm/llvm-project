@@ -1205,6 +1205,151 @@ body:             |
     %copy:_(<4 x f32>) = COPY %insert
 ...
 ---
+# A result wider than the element does not carry the lane's class.
+name:            VecExtractElemWiderResult
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecExtractElemWiderResult
+  ; CHECK-NEXT: %c0:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %c1:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %extract:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %c0:_(f16) = G_FCONSTANT half 0xH0000
+    %c1:_(f16) = G_FCONSTANT half 0xH0000
+    %vec:_(<2 x f16>) = G_BUILD_VECTOR %c0, %c1
+    %idx:_(i64) = G_CONSTANT i64 0
+    %extract:_(f32) = G_EXTRACT_VECTOR_ELT %vec, %idx
+    %copy:_(f32) = COPY %extract
+...
+---
+# Neither does a narrower one.
+name:            VecExtractElemNarrowerResult
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecExtractElemNarrowerResult
+  ; CHECK-NEXT: %c0:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %c1:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %extract:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %c0:_(f32) = G_FCONSTANT float 1.0
+    %c1:_(f32) = G_FCONSTANT float 1.0
+    %vec:_(<2 x f32>) = G_BUILD_VECTOR %c0, %c1
+    %idx:_(i64) = G_CONSTANT i64 0
+    %extract:_(f16) = G_EXTRACT_VECTOR_ELT %vec, %idx
+    %copy:_(f16) = COPY %extract
+...
+---
+# An inserted value narrower than the element does not carry its class into
+# the lane.
+name:            VecInsertElemNarrowerValue
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecInsertElemNarrowerValue
+  ; CHECK-NEXT: %c0:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %c1:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %val:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %insert:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %c0:_(f32) = G_FCONSTANT float 0.0
+    %c1:_(f32) = G_FCONSTANT float 0.0
+    %vec:_(<2 x f32>) = G_BUILD_VECTOR %c0, %c1
+    %val:_(f16) = G_FCONSTANT half 0xH0000
+    %idx:_(i64) = G_CONSTANT i64 0
+    %insert:_(<2 x f32>) = G_INSERT_VECTOR_ELT %vec, %val, %idx
+    %copy:_(<2 x f32>) = COPY %insert
+...
+---
+# Neither does a wider one, which is implicitly truncated.
+name:            VecInsertElemWiderValue
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecInsertElemWiderValue
+  ; CHECK-NEXT: %c0:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %c1:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %val:_ FPClasses:(pnorm) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %insert:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %c0:_(f16) = G_FCONSTANT half 0xH3C00
+    %c1:_(f16) = G_FCONSTANT half 0xH3C00
+    %vec:_(<2 x f16>) = G_BUILD_VECTOR %c0, %c1
+    %val:_(f32) = G_FCONSTANT float 1.0
+    %idx:_(i64) = G_CONSTANT i64 0
+    %insert:_(<2 x f16>) = G_INSERT_VECTOR_ELT %vec, %val, %idx
+    %copy:_(<2 x f16>) = COPY %insert
+...
+---
+# Lanes other than the inserted one keep the vector's class.
+name:            VecInsertElemNarrowerValueOtherLane
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecInsertElemNarrowerValueOtherLane
+  ; CHECK-NEXT: %c0:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %c1:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %val:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %insert:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %one:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %other:_ FPClasses:(pzero) SignBitKnown:0
+  ; CHECK-NEXT: %copy:_ FPClasses:(pzero) SignBitKnown:0
+    %c0:_(f32) = G_FCONSTANT float 0.0
+    %c1:_(f32) = G_FCONSTANT float 0.0
+    %vec:_(<2 x f32>) = G_BUILD_VECTOR %c0, %c1
+    %val:_(f16) = G_FCONSTANT half 0xH0000
+    %idx:_(i64) = G_CONSTANT i64 0
+    %insert:_(<2 x f32>) = G_INSERT_VECTOR_ELT %vec, %val, %idx
+    %one:_(i64) = G_CONSTANT i64 1
+    %other:_(f32) = G_EXTRACT_VECTOR_ELT %insert, %one
+    %copy:_(f32) = COPY %other
+...
+---
+# A result of the same width in another format does not carry the lane's class
+# either. 0x7C00 is +inf as a half but a normal number as a bfloat.
+name:            VecExtractElemOtherFormatResult
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecExtractElemOtherFormatResult
+  ; CHECK-NEXT: %c0:_ FPClasses:(pinf) SignBitKnown:0
+  ; CHECK-NEXT: %c1:_ FPClasses:(pinf) SignBitKnown:0
+  ; CHECK-NEXT: %vec:_ FPClasses:(pinf) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %extract:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %c0:_(f16) = G_FCONSTANT half 0xH7C00
+    %c1:_(f16) = G_FCONSTANT half 0xH7C00
+    %vec:_(<2 x f16>) = G_BUILD_VECTOR %c0, %c1
+    %idx:_(i64) = G_CONSTANT i64 0
+    %extract:_(bf16) = G_EXTRACT_VECTOR_ELT %vec, %idx
+    %copy:_(bf16) = COPY %extract
+...
+---
+# Nor does an inserted value of the same width in another format.
+name:            VecInsertElemOtherFormatValue
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @VecInsertElemOtherFormatValue
+  ; CHECK-NEXT: %vec:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %val:_ FPClasses:(pinf) SignBitKnown:0
+  ; CHECK-NEXT: %idx:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %insert:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lane:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(all) SignBitKnown:?
+    %vec:_(<2 x bf16>) = G_IMPLICIT_DEF
+    %val:_(f16) = G_FCONSTANT half 0xH7C00
+    %idx:_(i64) = G_CONSTANT i64 0
+    %insert:_(<2 x bf16>) = G_INSERT_VECTOR_ELT %vec, %val, %idx
+    %lane:_(bf16) = G_EXTRACT_VECTOR_ELT %insert, %idx
+    %copy:_(bf16) = COPY %lane
+...
+---
 name:            FSinh
 body:             |
   bb.0:
