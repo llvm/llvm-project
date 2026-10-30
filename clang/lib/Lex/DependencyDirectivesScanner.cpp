@@ -1113,11 +1113,9 @@ void clang::printDependencyDirectivesAsSource(
     // between the name and the body to avoid it being converted to a
     // function-like macro.
     constexpr unsigned FirstBodyIdx = 3; // `#`, `define`, <NAME>, <BODY...>
-    if (Kind == pp_define && TokIdx == FirstBodyIdx &&
-        Prev.is(tok::raw_identifier) && Tok.is(tok::l_paren) &&
-        Tok.Offset > Prev.getEnd())
-      return true;
-    return false;
+    return Kind == pp_define && TokIdx == FirstBodyIdx &&
+       Prev.is(tok::raw_identifier) && Tok.is(tok::l_paren) &&
+       Tok.Offset > Prev.getEnd();
   };
 
   for (const dependency_directives_scan::Directive &Directive : Directives) {
