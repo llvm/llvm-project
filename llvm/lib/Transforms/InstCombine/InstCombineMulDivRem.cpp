@@ -2743,12 +2743,12 @@ Instruction *InstCombinerImpl::visitFRem(BinaryOperator &I) {
   Value *Op1 = I.getOperand(1), *Y;
 
   // frem(x, -y) -> frem(x, y)
-    if (match(Op1, m_FNeg(m_Value(Y))))
-      return replaceOperand(I, 1, Y);
+  if (match(Op1, m_FNeg(m_Value(Y))))
+    return replaceOperand(I, 1, Y);
 
-    // frem(x, |y|) -> frem(x, y)
-    if (match(Op1, m_FAbs(m_Value(Y))))
-      return replaceOperand(I, 1, Y);
+  // frem(x, |y|) -> frem(x, y)
+  if (match(Op1, m_FAbs(m_Value(Y))))
+    return replaceOperand(I, 1, Y);
 
   return nullptr;
 }
