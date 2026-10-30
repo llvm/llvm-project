@@ -406,7 +406,9 @@ public:
 
   void print(raw_ostream &os);
   void print(raw_ostream &os, AsmState &state);
-  void dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   /// Print out the name of the block without printing its body.
   /// NOTE: The printType argument is ignored.  We keep it for compatibility

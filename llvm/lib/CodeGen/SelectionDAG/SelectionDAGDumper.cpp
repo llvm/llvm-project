@@ -756,7 +756,7 @@ void SDNode::print_types(raw_ostream &OS, const SelectionDAG *G) const {
     if (getValueType(i) == MVT::Other)
       OS << "ch";
     else
-      OS << getValueType(i).getEVTString();
+      OS << getValueType(i);
   }
 }
 

@@ -85,7 +85,10 @@ public:
     std::optional<Regex> substringRegex;
   };
 
-  SourceMgrDiagnosticVerifier() = default;
+  /// Recognizes directives starting with any of \p prefixes (e.g.
+  /// 'expected-error').
+  explicit SourceMgrDiagnosticVerifier(ArrayRef<StringRef> prefixes = {
+                                           "expected"});
 
   /// Computes and caches the list of expected diagnostics for \p buf, if not
   /// already cached. Returns the (mutable) cached list.
@@ -124,9 +127,8 @@ public:
   bool verify(raw_ostream &os, SourceMgr &mgr);
 
 private:
-  /// Regex used to recognize 'expected-<kind>' comments.
-  Regex expected{"expected-(error|note|remark|warning)(-re)? "
-                 "*(@([+-][0-9]+|above|below|unknown))? *{{(.*)}}$"};
+  /// Regex used to recognize '<prefix>-<kind>' comments.
+  Regex expected;
 
   /// The expected diagnostics for each buffer that has been scanned so far,
   /// keyed by buffer identifier (i.e. file name).

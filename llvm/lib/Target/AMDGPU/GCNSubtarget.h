@@ -676,7 +676,9 @@ public:
     return getGeneration() == GFX12 && HasGFX1250Insts;
   }
 
-  bool hasAddPC64Inst() const { return HasGFX1250Insts; }
+  bool useAddPCI64Inst() const {
+    return hasSAddPCI64Inst() && !hasUnusableSAddPCI64();
+  }
 
   /// \returns true if the target supports expert scheduling mode 2 which relies
   /// on the compiler to insert waits to avoid hazards between VMEM and VALU
