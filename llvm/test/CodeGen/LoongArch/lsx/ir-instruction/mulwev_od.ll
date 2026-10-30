@@ -7,13 +7,7 @@ define void @vmulwev_h_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickev.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vpickev.b $vr1, $vr1, $vr1
-; CHECK-NEXT:    vslti.b $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.b $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwev.h.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -33,13 +27,7 @@ define void @vmulwev_w_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickev.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vpickev.h $vr1, $vr1, $vr1
-; CHECK-NEXT:    vslti.h $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.h $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwev.w.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -59,13 +47,7 @@ define void @vmulwev_d_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 8
-; CHECK-NEXT:    vshuf4i.w $vr1, $vr1, 8
-; CHECK-NEXT:    vslti.w $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwev.d.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -85,64 +67,19 @@ define void @vmulwev_q_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 0
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 1
-; LA32-NEXT:    srai.w $a5, $a2, 31
-; LA32-NEXT:    srai.w $a6, $a4, 31
-; LA32-NEXT:    mulh.wu $a7, $a1, $a3
-; LA32-NEXT:    mul.w $t0, $a2, $a3
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    sltu $t0, $a7, $t0
-; LA32-NEXT:    mulh.wu $t1, $a2, $a3
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    mul.w $t1, $a1, $a4
-; LA32-NEXT:    add.w $a7, $t1, $a7
-; LA32-NEXT:    sltu $t1, $a7, $t1
-; LA32-NEXT:    mulh.wu $t2, $a1, $a4
-; LA32-NEXT:    add.w $t1, $t2, $t1
-; LA32-NEXT:    add.w $t1, $t0, $t1
-; LA32-NEXT:    mul.w $t2, $a2, $a4
-; LA32-NEXT:    add.w $t3, $t2, $t1
-; LA32-NEXT:    mul.w $t4, $a3, $a5
-; LA32-NEXT:    mul.w $t5, $a6, $a1
-; LA32-NEXT:    add.w $t6, $t5, $t4
-; LA32-NEXT:    add.w $t7, $t3, $t6
-; LA32-NEXT:    sltu $t8, $t7, $t3
-; LA32-NEXT:    sltu $t2, $t3, $t2
-; LA32-NEXT:    sltu $t0, $t1, $t0
-; LA32-NEXT:    mulh.wu $t1, $a2, $a4
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    add.w $t0, $t0, $t2
-; LA32-NEXT:    mulh.wu $t1, $a3, $a5
-; LA32-NEXT:    add.w $t1, $t1, $t4
-; LA32-NEXT:    mul.w $a4, $a4, $a5
-; LA32-NEXT:    add.w $a4, $t1, $a4
-; LA32-NEXT:    mul.w $a2, $a6, $a2
-; LA32-NEXT:    mulh.wu $a5, $a6, $a1
-; LA32-NEXT:    add.w $a2, $a5, $a2
-; LA32-NEXT:    add.w $a2, $a2, $t5
-; LA32-NEXT:    add.w $a2, $a2, $a4
-; LA32-NEXT:    sltu $a4, $t6, $t5
-; LA32-NEXT:    add.w $a2, $a2, $a4
-; LA32-NEXT:    add.w $a2, $t0, $a2
-; LA32-NEXT:    add.w $a2, $a2, $t8
-; LA32-NEXT:    mul.w $a1, $a1, $a3
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    st.w $a7, $a0, 4
-; LA32-NEXT:    st.w $t7, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 12
+; LA32-NEXT:    vmulwev.q.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a1, $a1, 0
-; LA64-NEXT:    ld.d $a2, $a2, 0
-; LA64-NEXT:    mul.d $a3, $a1, $a2
-; LA64-NEXT:    mulh.d $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 8
-; LA64-NEXT:    st.d $a3, $a0, 0
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwev.q.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -161,13 +98,7 @@ define void @vmulwod_h_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickod.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vpickod.b $vr1, $vr1, $vr1
-; CHECK-NEXT:    vslti.b $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.b $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.h.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -187,13 +118,7 @@ define void @vmulwod_w_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickod.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vpickod.h $vr1, $vr1, $vr1
-; CHECK-NEXT:    vslti.h $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.h $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.w.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -213,13 +138,7 @@ define void @vmulwod_d_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 13
-; CHECK-NEXT:    vshuf4i.w $vr1, $vr1, 13
-; CHECK-NEXT:    vslti.w $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vslti.w $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.d.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -239,64 +158,19 @@ define void @vmulwod_q_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 3
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 3
-; LA32-NEXT:    srai.w $a5, $a2, 31
-; LA32-NEXT:    srai.w $a6, $a4, 31
-; LA32-NEXT:    mulh.wu $a7, $a1, $a3
-; LA32-NEXT:    mul.w $t0, $a2, $a3
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    sltu $t0, $a7, $t0
-; LA32-NEXT:    mulh.wu $t1, $a2, $a3
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    mul.w $t1, $a1, $a4
-; LA32-NEXT:    add.w $a7, $t1, $a7
-; LA32-NEXT:    sltu $t1, $a7, $t1
-; LA32-NEXT:    mulh.wu $t2, $a1, $a4
-; LA32-NEXT:    add.w $t1, $t2, $t1
-; LA32-NEXT:    add.w $t1, $t0, $t1
-; LA32-NEXT:    mul.w $t2, $a2, $a4
-; LA32-NEXT:    add.w $t3, $t2, $t1
-; LA32-NEXT:    mul.w $t4, $a3, $a5
-; LA32-NEXT:    mul.w $t5, $a6, $a1
-; LA32-NEXT:    add.w $t6, $t5, $t4
-; LA32-NEXT:    add.w $t7, $t3, $t6
-; LA32-NEXT:    sltu $t8, $t7, $t3
-; LA32-NEXT:    sltu $t2, $t3, $t2
-; LA32-NEXT:    sltu $t0, $t1, $t0
-; LA32-NEXT:    mulh.wu $t1, $a2, $a4
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    add.w $t0, $t0, $t2
-; LA32-NEXT:    mulh.wu $t1, $a3, $a5
-; LA32-NEXT:    add.w $t1, $t1, $t4
-; LA32-NEXT:    mul.w $a4, $a4, $a5
-; LA32-NEXT:    add.w $a4, $t1, $a4
-; LA32-NEXT:    mul.w $a2, $a6, $a2
-; LA32-NEXT:    mulh.wu $a5, $a6, $a1
-; LA32-NEXT:    add.w $a2, $a5, $a2
-; LA32-NEXT:    add.w $a2, $a2, $t5
-; LA32-NEXT:    add.w $a2, $a2, $a4
-; LA32-NEXT:    sltu $a4, $t6, $t5
-; LA32-NEXT:    add.w $a2, $a2, $a4
-; LA32-NEXT:    add.w $a2, $t0, $a2
-; LA32-NEXT:    add.w $a2, $a2, $t8
-; LA32-NEXT:    mul.w $a1, $a1, $a3
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    st.w $a7, $a0, 4
-; LA32-NEXT:    st.w $t7, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 12
+; LA32-NEXT:    vmulwod.q.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a1, $a1, 8
-; LA64-NEXT:    ld.d $a2, $a2, 8
-; LA64-NEXT:    mul.d $a3, $a1, $a2
-; LA64-NEXT:    mulh.d $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 8
-; LA64-NEXT:    st.d $a3, $a0, 0
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwod.q.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -314,13 +188,8 @@ define void @vmulwev_h_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_h_bu:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI8_0)
-; CHECK-NEXT:    vld $vr1, $a1, %pc_lo12(.LCPI8_0)
-; CHECK-NEXT:    vld $vr2, $a2, 0
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.b $vr0, $vr3, $vr0, $vr1
-; CHECK-NEXT:    vshuf.b $vr1, $vr3, $vr2, $vr1
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.h.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -338,15 +207,9 @@ entry:
 define void @vmulwev_w_hu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_w_hu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI9_0)
-; CHECK-NEXT:    vld $vr0, $a3, %pc_lo12(.LCPI9_0)
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vld $vr2, $a2, 0
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vori.b $vr4, $vr0, 0
-; CHECK-NEXT:    vshuf.h $vr4, $vr3, $vr1
-; CHECK-NEXT:    vshuf.h $vr0, $vr3, $vr2
-; CHECK-NEXT:    vmul.w $vr0, $vr4, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.w.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -364,15 +227,9 @@ entry:
 define void @vmulwev_d_wu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwev_d_wu:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI10_0)
-; CHECK-NEXT:    vld $vr0, $a3, %pc_lo12(.LCPI10_0)
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vld $vr2, $a2, 0
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vori.b $vr4, $vr0, 0
-; CHECK-NEXT:    vshuf.w $vr4, $vr3, $vr1
-; CHECK-NEXT:    vshuf.w $vr0, $vr3, $vr2
-; CHECK-NEXT:    vmul.d $vr0, $vr4, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwev.d.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -392,44 +249,19 @@ define void @vmulwev_q_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 1
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 0
-; LA32-NEXT:    mulh.wu $a5, $a2, $a4
-; LA32-NEXT:    mul.w $a6, $a1, $a4
-; LA32-NEXT:    add.w $a5, $a6, $a5
-; LA32-NEXT:    sltu $a6, $a5, $a6
-; LA32-NEXT:    mulh.wu $a7, $a1, $a4
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    mul.w $a7, $a2, $a3
-; LA32-NEXT:    add.w $a5, $a7, $a5
-; LA32-NEXT:    sltu $a7, $a5, $a7
-; LA32-NEXT:    mulh.wu $t0, $a2, $a3
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    add.w $a7, $a6, $a7
-; LA32-NEXT:    mul.w $t0, $a1, $a3
-; LA32-NEXT:    add.w $t1, $t0, $a7
-; LA32-NEXT:    sltu $t0, $t1, $t0
-; LA32-NEXT:    sltu $a6, $a7, $a6
-; LA32-NEXT:    mulh.wu $a1, $a1, $a3
-; LA32-NEXT:    add.w $a1, $a1, $a6
-; LA32-NEXT:    add.w $a1, $a1, $t0
-; LA32-NEXT:    mul.w $a2, $a2, $a4
-; LA32-NEXT:    st.w $a2, $a0, 0
-; LA32-NEXT:    st.w $a5, $a0, 4
-; LA32-NEXT:    st.w $t1, $a0, 8
-; LA32-NEXT:    st.w $a1, $a0, 12
+; LA32-NEXT:    vmulwev.q.du $vr0, $vr0, $vr1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_du:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a1, $a1, 0
-; LA64-NEXT:    ld.d $a2, $a2, 0
-; LA64-NEXT:    mul.d $a3, $a1, $a2
-; LA64-NEXT:    mulh.du $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 8
-; LA64-NEXT:    st.d $a3, $a0, 0
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwev.q.du $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -448,10 +280,7 @@ define void @vmulwod_h_bu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.b $vr0, $vr2, $vr0
-; CHECK-NEXT:    vpackod.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.h.bu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -471,10 +300,7 @@ define void @vmulwod_w_hu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vpackod.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.w.hu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -494,10 +320,7 @@ define void @vmulwod_d_wu(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vpackod.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.d.wu $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -517,44 +340,19 @@ define void @vmulwod_q_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 3
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 2
-; LA32-NEXT:    mulh.wu $a5, $a2, $a4
-; LA32-NEXT:    mul.w $a6, $a1, $a4
-; LA32-NEXT:    add.w $a5, $a6, $a5
-; LA32-NEXT:    sltu $a6, $a5, $a6
-; LA32-NEXT:    mulh.wu $a7, $a1, $a4
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    mul.w $a7, $a2, $a3
-; LA32-NEXT:    add.w $a5, $a7, $a5
-; LA32-NEXT:    sltu $a7, $a5, $a7
-; LA32-NEXT:    mulh.wu $t0, $a2, $a3
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    add.w $a7, $a6, $a7
-; LA32-NEXT:    mul.w $t0, $a1, $a3
-; LA32-NEXT:    add.w $t1, $t0, $a7
-; LA32-NEXT:    sltu $t0, $t1, $t0
-; LA32-NEXT:    sltu $a6, $a7, $a6
-; LA32-NEXT:    mulh.wu $a1, $a1, $a3
-; LA32-NEXT:    add.w $a1, $a1, $a6
-; LA32-NEXT:    add.w $a1, $a1, $t0
-; LA32-NEXT:    mul.w $a2, $a2, $a4
-; LA32-NEXT:    st.w $a2, $a0, 0
-; LA32-NEXT:    st.w $a5, $a0, 4
-; LA32-NEXT:    st.w $t1, $a0, 8
-; LA32-NEXT:    st.w $a1, $a0, 12
+; LA32-NEXT:    vmulwod.q.du $vr0, $vr0, $vr1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_du:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a1, $a1, 8
-; LA64-NEXT:    ld.d $a2, $a2, 8
-; LA64-NEXT:    mul.d $a3, $a1, $a2
-; LA64-NEXT:    mulh.du $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 8
-; LA64-NEXT:    st.d $a3, $a0, 0
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwod.q.du $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -573,14 +371,7 @@ define void @vmulwev_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI16_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI16_0)
-; CHECK-NEXT:    vpickev.b $vr1, $vr1, $vr1
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.b $vr0, $vr3, $vr0, $vr2
-; CHECK-NEXT:    vslti.b $vr2, $vr1, 0
-; CHECK-NEXT:    vilvl.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwev.h.bu.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -600,14 +391,7 @@ define void @vmulwev_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI17_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI17_0)
-; CHECK-NEXT:    vpickev.h $vr1, $vr1, $vr1
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.h $vr2, $vr3, $vr0
-; CHECK-NEXT:    vslti.h $vr0, $vr1, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr1
-; CHECK-NEXT:    vmul.w $vr0, $vr2, $vr0
+; CHECK-NEXT:    vmulwev.w.hu.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -627,14 +411,7 @@ define void @vmulwev_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI18_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI18_0)
-; CHECK-NEXT:    vshuf4i.w $vr1, $vr1, 8
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.w $vr2, $vr3, $vr0
-; CHECK-NEXT:    vslti.w $vr0, $vr1, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr0, $vr1
-; CHECK-NEXT:    vmul.d $vr0, $vr2, $vr0
+; CHECK-NEXT:    vmulwev.d.wu.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -654,57 +431,19 @@ define void @vmulwev_q_du_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 0
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 1
-; LA32-NEXT:    srai.w $a5, $a4, 31
-; LA32-NEXT:    mulh.wu $a6, $a2, $a3
-; LA32-NEXT:    mul.w $a7, $a1, $a3
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    sltu $a7, $a6, $a7
-; LA32-NEXT:    mulh.wu $t0, $a1, $a3
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    mul.w $t0, $a2, $a4
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    sltu $t0, $a6, $t0
-; LA32-NEXT:    mulh.wu $t1, $a2, $a4
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    add.w $t0, $a7, $t0
-; LA32-NEXT:    mul.w $t1, $a1, $a4
-; LA32-NEXT:    add.w $t2, $t1, $t0
-; LA32-NEXT:    mul.w $t3, $a5, $a2
-; LA32-NEXT:    add.w $t4, $t2, $t3
-; LA32-NEXT:    sltu $t5, $t4, $t2
-; LA32-NEXT:    sltu $t1, $t2, $t1
-; LA32-NEXT:    sltu $a7, $t0, $a7
-; LA32-NEXT:    mulh.wu $a4, $a1, $a4
-; LA32-NEXT:    add.w $a4, $a4, $a7
-; LA32-NEXT:    add.w $a4, $a4, $t1
-; LA32-NEXT:    mul.w $a1, $a5, $a1
-; LA32-NEXT:    mulh.wu $a5, $a5, $a2
-; LA32-NEXT:    add.w $a1, $a5, $a1
-; LA32-NEXT:    add.w $a1, $a1, $t3
-; LA32-NEXT:    add.w $a1, $a4, $a1
-; LA32-NEXT:    add.w $a1, $a1, $t5
-; LA32-NEXT:    mul.w $a2, $a2, $a3
-; LA32-NEXT:    st.w $a2, $a0, 0
-; LA32-NEXT:    st.w $a6, $a0, 4
-; LA32-NEXT:    st.w $t4, $a0, 8
-; LA32-NEXT:    st.w $a1, $a0, 12
+; LA32-NEXT:    vmulwev.q.du.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_du_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a2, $a2, 0
-; LA64-NEXT:    ld.d $a1, $a1, 0
-; LA64-NEXT:    srai.d $a3, $a2, 63
-; LA64-NEXT:    mulh.du $a4, $a1, $a2
-; LA64-NEXT:    mul.d $a3, $a1, $a3
-; LA64-NEXT:    add.d $a3, $a4, $a3
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    st.d $a3, $a0, 8
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwev.q.du.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -721,14 +460,9 @@ entry:
 define void @vmulwod_h_bu_b(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_h_bu_b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vpickod.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vslti.b $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; CHECK-NEXT:    vmul.h $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.h.bu.b $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -746,14 +480,9 @@ entry:
 define void @vmulwod_w_hu_h(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_w_hu_h:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vpickod.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vslti.h $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vmul.w $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.w.hu.h $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -771,14 +500,9 @@ entry:
 define void @vmulwod_d_wu_w(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK-LABEL: vmulwod_d_wu_w:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vld $vr0, $a2, 0
-; CHECK-NEXT:    vld $vr1, $a1, 0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 13
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vslti.w $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vmul.d $vr0, $vr1, $vr0
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vmulwod.d.wu.w $vr0, $vr0, $vr1
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -798,57 +522,19 @@ define void @vmulwod_q_du_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 3
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 3
-; LA32-NEXT:    srai.w $a5, $a4, 31
-; LA32-NEXT:    mulh.wu $a6, $a2, $a3
-; LA32-NEXT:    mul.w $a7, $a1, $a3
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    sltu $a7, $a6, $a7
-; LA32-NEXT:    mulh.wu $t0, $a1, $a3
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    mul.w $t0, $a2, $a4
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    sltu $t0, $a6, $t0
-; LA32-NEXT:    mulh.wu $t1, $a2, $a4
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    add.w $t0, $a7, $t0
-; LA32-NEXT:    mul.w $t1, $a1, $a4
-; LA32-NEXT:    add.w $t2, $t1, $t0
-; LA32-NEXT:    mul.w $t3, $a5, $a2
-; LA32-NEXT:    add.w $t4, $t2, $t3
-; LA32-NEXT:    sltu $t5, $t4, $t2
-; LA32-NEXT:    sltu $t1, $t2, $t1
-; LA32-NEXT:    sltu $a7, $t0, $a7
-; LA32-NEXT:    mulh.wu $a4, $a1, $a4
-; LA32-NEXT:    add.w $a4, $a4, $a7
-; LA32-NEXT:    add.w $a4, $a4, $t1
-; LA32-NEXT:    mul.w $a1, $a5, $a1
-; LA32-NEXT:    mulh.wu $a5, $a5, $a2
-; LA32-NEXT:    add.w $a1, $a5, $a1
-; LA32-NEXT:    add.w $a1, $a1, $t3
-; LA32-NEXT:    add.w $a1, $a4, $a1
-; LA32-NEXT:    add.w $a1, $a1, $t5
-; LA32-NEXT:    mul.w $a2, $a2, $a3
-; LA32-NEXT:    st.w $a2, $a0, 0
-; LA32-NEXT:    st.w $a6, $a0, 4
-; LA32-NEXT:    st.w $t4, $a0, 8
-; LA32-NEXT:    st.w $a1, $a0, 12
+; LA32-NEXT:    vmulwod.q.du.d $vr0, $vr0, $vr1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_du_d:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a2, $a2, 8
-; LA64-NEXT:    ld.d $a1, $a1, 8
-; LA64-NEXT:    srai.d $a3, $a2, 63
-; LA64-NEXT:    mulh.du $a4, $a1, $a2
-; LA64-NEXT:    mul.d $a3, $a1, $a3
-; LA64-NEXT:    add.d $a3, $a4, $a3
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    st.d $a3, $a0, 8
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwod.q.du.d $vr0, $vr0, $vr1
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -867,14 +553,7 @@ define void @vmulwev_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickev.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI24_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI24_0)
-; CHECK-NEXT:    vslti.b $vr3, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr3, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.b $vr1, $vr3, $vr1, $vr2
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwev.h.bu.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -894,14 +573,7 @@ define void @vmulwev_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickev.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI25_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI25_0)
-; CHECK-NEXT:    vslti.h $vr3, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr3, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.h $vr2, $vr3, $vr1
-; CHECK-NEXT:    vmul.w $vr0, $vr0, $vr2
+; CHECK-NEXT:    vmulwev.w.hu.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -921,14 +593,7 @@ define void @vmulwev_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 8
-; CHECK-NEXT:    pcalau12i $a1, %pc_hi20(.LCPI26_0)
-; CHECK-NEXT:    vld $vr2, $a1, %pc_lo12(.LCPI26_0)
-; CHECK-NEXT:    vslti.w $vr3, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr3, $vr0
-; CHECK-NEXT:    vrepli.b $vr3, 0
-; CHECK-NEXT:    vshuf.w $vr2, $vr3, $vr1
-; CHECK-NEXT:    vmul.d $vr0, $vr0, $vr2
+; CHECK-NEXT:    vmulwev.d.wu.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -948,57 +613,19 @@ define void @vmulwev_q_du_d_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 1
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 0
-; LA32-NEXT:    srai.w $a5, $a2, 31
-; LA32-NEXT:    mulh.wu $a6, $a1, $a4
-; LA32-NEXT:    mul.w $a7, $a2, $a4
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    sltu $a7, $a6, $a7
-; LA32-NEXT:    mulh.wu $t0, $a2, $a4
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    mul.w $t0, $a1, $a3
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    sltu $t0, $a6, $t0
-; LA32-NEXT:    mulh.wu $t1, $a1, $a3
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    add.w $t0, $a7, $t0
-; LA32-NEXT:    mul.w $t1, $a2, $a3
-; LA32-NEXT:    add.w $t2, $t1, $t0
-; LA32-NEXT:    mul.w $t3, $a4, $a5
-; LA32-NEXT:    add.w $t4, $t2, $t3
-; LA32-NEXT:    sltu $t5, $t4, $t2
-; LA32-NEXT:    sltu $t1, $t2, $t1
-; LA32-NEXT:    sltu $a7, $t0, $a7
-; LA32-NEXT:    mulh.wu $a2, $a2, $a3
-; LA32-NEXT:    add.w $a2, $a2, $a7
-; LA32-NEXT:    add.w $a2, $a2, $t1
-; LA32-NEXT:    mulh.wu $a7, $a4, $a5
-; LA32-NEXT:    add.w $a7, $a7, $t3
-; LA32-NEXT:    mul.w $a3, $a3, $a5
-; LA32-NEXT:    add.w $a3, $a7, $a3
-; LA32-NEXT:    add.w $a2, $a2, $a3
-; LA32-NEXT:    add.w $a2, $a2, $t5
-; LA32-NEXT:    mul.w $a1, $a1, $a4
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    st.w $a6, $a0, 4
-; LA32-NEXT:    st.w $t4, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 12
+; LA32-NEXT:    vmulwev.q.du.d $vr0, $vr1, $vr0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_du_d_1:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a1, $a1, 0
-; LA64-NEXT:    ld.d $a2, $a2, 0
-; LA64-NEXT:    srai.d $a3, $a1, 63
-; LA64-NEXT:    mulh.du $a4, $a1, $a2
-; LA64-NEXT:    mul.d $a3, $a3, $a2
-; LA64-NEXT:    add.d $a3, $a4, $a3
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    st.d $a3, $a0, 8
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwev.q.du.d $vr0, $vr1, $vr0
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
@@ -1017,12 +644,7 @@ define void @vmulwod_h_bu_b_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickod.b $vr0, $vr0, $vr0
-; CHECK-NEXT:    vslti.b $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.b $vr0, $vr2, $vr0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.b $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.h $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.h.bu.b $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -1042,12 +664,7 @@ define void @vmulwod_w_hu_h_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vpickod.h $vr0, $vr0, $vr0
-; CHECK-NEXT:    vslti.h $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.h $vr0, $vr2, $vr0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.h $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.w $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.w.hu.h $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -1067,12 +684,7 @@ define void @vmulwod_d_wu_w_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    vld $vr1, $a2, 0
-; CHECK-NEXT:    vshuf4i.w $vr0, $vr0, 13
-; CHECK-NEXT:    vslti.w $vr2, $vr0, 0
-; CHECK-NEXT:    vilvl.w $vr0, $vr2, $vr0
-; CHECK-NEXT:    vrepli.b $vr2, 0
-; CHECK-NEXT:    vpackod.w $vr1, $vr2, $vr1
-; CHECK-NEXT:    vmul.d $vr0, $vr0, $vr1
+; CHECK-NEXT:    vmulwod.d.wu.w $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -1092,57 +704,19 @@ define void @vmulwod_q_du_d_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 3
-; LA32-NEXT:    vpickve2gr.w $a3, $vr1, 3
-; LA32-NEXT:    vpickve2gr.w $a4, $vr1, 2
-; LA32-NEXT:    srai.w $a5, $a2, 31
-; LA32-NEXT:    mulh.wu $a6, $a1, $a4
-; LA32-NEXT:    mul.w $a7, $a2, $a4
-; LA32-NEXT:    add.w $a6, $a7, $a6
-; LA32-NEXT:    sltu $a7, $a6, $a7
-; LA32-NEXT:    mulh.wu $t0, $a2, $a4
-; LA32-NEXT:    add.w $a7, $t0, $a7
-; LA32-NEXT:    mul.w $t0, $a1, $a3
-; LA32-NEXT:    add.w $a6, $t0, $a6
-; LA32-NEXT:    sltu $t0, $a6, $t0
-; LA32-NEXT:    mulh.wu $t1, $a1, $a3
-; LA32-NEXT:    add.w $t0, $t1, $t0
-; LA32-NEXT:    add.w $t0, $a7, $t0
-; LA32-NEXT:    mul.w $t1, $a2, $a3
-; LA32-NEXT:    add.w $t2, $t1, $t0
-; LA32-NEXT:    mul.w $t3, $a4, $a5
-; LA32-NEXT:    add.w $t4, $t2, $t3
-; LA32-NEXT:    sltu $t5, $t4, $t2
-; LA32-NEXT:    sltu $t1, $t2, $t1
-; LA32-NEXT:    sltu $a7, $t0, $a7
-; LA32-NEXT:    mulh.wu $a2, $a2, $a3
-; LA32-NEXT:    add.w $a2, $a2, $a7
-; LA32-NEXT:    add.w $a2, $a2, $t1
-; LA32-NEXT:    mulh.wu $a7, $a4, $a5
-; LA32-NEXT:    add.w $a7, $a7, $t3
-; LA32-NEXT:    mul.w $a3, $a3, $a5
-; LA32-NEXT:    add.w $a3, $a7, $a3
-; LA32-NEXT:    add.w $a2, $a2, $a3
-; LA32-NEXT:    add.w $a2, $a2, $t5
-; LA32-NEXT:    mul.w $a1, $a1, $a4
-; LA32-NEXT:    st.w $a1, $a0, 0
-; LA32-NEXT:    st.w $a6, $a0, 4
-; LA32-NEXT:    st.w $t4, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 12
+; LA32-NEXT:    vmulwod.q.du.d $vr0, $vr1, $vr0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_du_d_1:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a1, $a1, 8
-; LA64-NEXT:    ld.d $a2, $a2, 8
-; LA64-NEXT:    srai.d $a3, $a1, 63
-; LA64-NEXT:    mulh.du $a4, $a1, $a2
-; LA64-NEXT:    mul.d $a3, $a3, $a2
-; LA64-NEXT:    add.d $a3, $a4, $a3
-; LA64-NEXT:    mul.d $a1, $a1, $a2
-; LA64-NEXT:    st.d $a1, $a0, 0
-; LA64-NEXT:    st.d $a3, $a0, 8
+; LA64-NEXT:    vld $vr0, $a1, 0
+; LA64-NEXT:    vld $vr1, $a2, 0
+; LA64-NEXT:    vmulwod.q.du.d $vr0, $vr1, $vr0
+; LA64-NEXT:    vst $vr0, $a0, 0
 ; LA64-NEXT:    ret
 entry:
   %va = load <2 x i64>, ptr %a
