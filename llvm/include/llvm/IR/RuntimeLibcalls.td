@@ -234,6 +234,12 @@ foreach IntTy = ["I32", "I64", "I128" ] in {
   def MULO_#IntTy : RuntimeLibcall;
 }
 
+// Widening multiply: iN x iN -> i2N.
+foreach IntTy = ["I16", "I32"] in {
+  def SMUL_LOHI_#IntTy : RuntimeLibcall;
+  def UMUL_LOHI_#IntTy : RuntimeLibcall;
+}
+
 foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
   def SDIV_#IntTy : RuntimeLibcall;
   def UDIV_#IntTy : RuntimeLibcall;
