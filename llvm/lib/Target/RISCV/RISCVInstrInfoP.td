@@ -2652,10 +2652,10 @@ let append Predicates = [IsRV32] in {
   def : PatHorizontalMulAdd<riscv_pm2sub_x, PM2SUBA_HX, i32, v2i16>;
   def : PatHorizontalMulAdd<riscv_pm2addsu, PM2ADDASU_H, i32, v2i16>;
 
-  // Direct ternary-accumulate forms of the above (used by the new
+  // Direct ternary-accumulate forms of the above, used by the
   // pm2adda/pm2suba/etc. public intrinsics at every width they're
-  // overloaded at; i32/v2i16 here, v2i32/v4i16 and i64/v2i32 further
-  // below in the RV64-only block).
+  // overloaded at: i32/v2i16 here, v2i32/v4i16 and i64/v2i32 further
+  // below in the RV64-only block.
   def : PatHorizontalMulAcc<riscv_pm2adda, PM2ADDA_H, i32, v2i16>;
   def : PatHorizontalMulAcc<riscv_pm2adda_x, PM2ADDA_HX, i32, v2i16>;
   def : PatHorizontalMulAcc<riscv_pm2addau, PM2ADDAU_H, i32, v2i16>;

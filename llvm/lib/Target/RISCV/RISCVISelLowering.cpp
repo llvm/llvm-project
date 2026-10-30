@@ -13875,7 +13875,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pm2suba:
   case Intrinsic::riscv_pm2suba_x:
   case Intrinsic::riscv_pm2addasu: {
-
     MVT VT = Op.getSimpleValueType();
     SDValue Rd = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
@@ -13905,7 +13904,6 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::riscv_pm4adda:
   case Intrinsic::riscv_pm4addau:
   case Intrinsic::riscv_pm4addasu: {
-
     MVT VT = Op.getSimpleValueType();
     SDValue Rd = Op.getOperand(1);
     SDValue Rs1 = Op.getOperand(2);
@@ -13914,6 +13912,11 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                    : IntNo == Intrinsic::riscv_pm4addasu ? RISCVISD::PM4ADDASU
                                                          : RISCVISD::PM4ADDA;
 
+    // i32 (the "_i8x4" width) is reachable on both RV32 and RV64: it's the
+    // XLenVT on RV32, and on RV64 ISD::INTRINSIC_WO_CHAIN is registered
+    // Custom for i32 results (see the is64Bit() setOperationAction above),
+    // so this intrinsic's i32 result still reaches LowerOperation there too
+    // -- the generic legalizer appends the ABI-required sext.w afterward.
     if (VT == MVT::i32)
       return DAG.getNode(Opc, DL, MVT::i32, Rd, Rs1, Rs2);
     assert(Subtarget.is64Bit() && VT == MVT::i64 &&
