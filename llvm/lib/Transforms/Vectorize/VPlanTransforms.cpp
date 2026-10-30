@@ -1185,24 +1185,6 @@ void VPlanTransforms::optimizeInductionLiveOutUsers(
   }
 }
 
-void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
-  DenseMap<const SCEV *, VPValue *> SCEV2VPV;
-
-  for (VPExpandSCEVRecipe &ExpR :
-       make_early_inc_range(make_isa_range<VPExpandSCEVRecipe>(
-           *Plan.getEntry()->getEntryBasicBlock()))) {
-    const auto &[V, Inserted] = SCEV2VPV.try_emplace(ExpR.getSCEV(), &ExpR);
-    if (Inserted)
-      continue;
-
-    ExpR.replaceAllUsesWith(V->second);
-    if (&ExpR == Plan.getTripCount())
-      Plan.resetTripCount(V->second);
-
-    ExpR.eraseFromParent();
-  }
-}
-
 /// Try to simplify logical and bitwise recipes in \p Def.
 static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   VPValue *X;
@@ -2109,12 +2091,15 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
       continue;
 
     // Currently only handle cases where the single user is a header-mask
-    // comparison with the backedge-taken-count.
+    // comparison with the backedge-taken-count, TC - 1.
     VPUser *SingleUser = WideIV->getSingleUser();
+    VPValue *BTC;
     if (!SingleUser ||
-        !match(SingleUser,
-               m_ICmp(m_Specific(WideIV),
-                      m_Broadcast(m_Specific(Plan.getBackedgeTakenCount())))))
+        !match(
+            SingleUser,
+            m_ICmp(m_Specific(WideIV),
+                   m_Broadcast(m_VPValue(
+                       BTC, m_Sub(m_Specific(Plan.getTripCount()), m_One()))))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -2126,9 +2111,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
         WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
 
-    auto *NewBTC = new VPWidenCastRecipe(
-        Instruction::Trunc, Plan.getOrCreateBackedgeTakenCount(), NewIVTy,
-        nullptr, VPIRFlags::getDefaultFlags(Instruction::Trunc));
+    auto *NewBTC =
+        new VPWidenCastRecipe(Instruction::Trunc, BTC, NewIVTy, nullptr,
+                              VPIRFlags::getDefaultFlags(Instruction::Trunc));
     Plan.getVectorPreheader()->appendRecipe(NewBTC);
     auto *Cmp = cast<VPInstruction>(WideIV->getSingleUser());
     Cmp->replaceAllUsesWith(
@@ -2378,6 +2363,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // handled by cse.
     if (auto *Load = dyn_cast<VPWidenMemoryRecipe>(Def))
       return hash_combine(Result, Load->isConsecutive());
+    if (auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(Def))
+      return hash_combine(Result, ExpSCEV->getSCEV());
     return Result;
   }
 
@@ -2406,6 +2393,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // handled by cse.
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
       if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
+        return false;
+    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
+      if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
         return false;
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
@@ -2469,6 +2459,9 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
       if (auto *Call = dyn_cast<VPWidenCallRecipe>(V))
         Call->intersectAttrs(*cast<VPWidenCallRecipe>(Def), Plan.getContext());
       Def->replaceAllUsesWith(V);
+      // Reset Plan's TC when TC expressions are CSE'd.
+      if (Def == Plan.getTripCount())
+        Plan.resetTripCount(V);
     }
     LoadCSEMap.clear();
   }
@@ -6264,8 +6257,7 @@ bool VPlanTransforms::makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
           Ops.push_back(Mask);
         }
         Ops.push_back(VPI.getOperand(VPI.getNumOperandsWithoutMask() - 1));
-        VPIRAttributes Attrs(*CI, Decision.Variant->getFunctionType(),
-                             VPI.isMasked());
+        VPIRAttributes Attrs(VPI, Decision.Variant->getFunctionType());
         Replacement = new VPWidenCallRecipe(CI, Decision.Variant, Ops, VPI, VPI,
                                             Attrs, VPI.getDebugLoc());
         Widened = true;

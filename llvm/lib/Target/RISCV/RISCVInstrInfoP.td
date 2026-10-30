@@ -2630,6 +2630,14 @@ let append Predicates = [IsRV32] in {
   def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, i32, v4i8>;
   def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, i32, v4i8>;
   def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, i32, v4i8>;
+  def : PatHorizontalMulAdd<riscv_pm2add, PM2ADDA_H, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pm2add_x, PM2ADDA_HX, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pm2addu, PM2ADDAU_H, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pmq2add, PMQ2ADDA_H, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pmqr2add, PMQR2ADDA_H, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pm2sub, PM2SUBA_H, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pm2sub_x, PM2SUBA_HX, i32, v2i16>;
+  def : PatHorizontalMulAdd<riscv_pm2addsu, PM2ADDASU_H, i32, v2i16>;
 
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, i32, v4i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, i32, v2i16>;
@@ -3374,6 +3382,10 @@ let append Predicates = [IsRV64] in {
   // prefer plain mul when both operands are known to be sign/zero-extended.
   def : Pat<(i64 (mul sexti32:$rs1, (sext_inreg GPR:$rs2, i32))),
             (MUL_W00 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul sexti32:$rs1, (sra GPR:$rs2, (XLenVT 32)))),
+            (MUL_W01 sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (mul (sra GPR:$rs1, (XLenVT 32)), (sra GPR:$rs2, (XLenVT 32)))),
+            (MUL_W11 GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul zexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
             (MULU_W00 zexti32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul sexti32:$rs1, (and GPR:$rs2, 0xffffffff))),
@@ -3383,6 +3395,12 @@ let append Predicates = [IsRV64] in {
 
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
             (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1,
+                                           (sra GPR:$rs2, (XLenVT 32))))),
+            (MACC_W01 GPR:$rd, sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 32)),
+                                           (sra GPR:$rs2, (XLenVT 32))))),
+            (MACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
             (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
@@ -3521,6 +3539,14 @@ let append Predicates = [IsRV64] in {
   def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_B, v2i32, v8i8>;
   def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_B, v2i32, v8i8>;
   def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_B, v2i32, v8i8>;
+  def : PatHorizontalMulAdd<riscv_pm2add, PM2ADDA_H, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm2add_x, PM2ADDA_HX, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm2addu, PM2ADDAU_H, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pmq2add, PMQ2ADDA_H, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pmqr2add, PMQR2ADDA_H, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm2sub, PM2SUBA_H, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm2sub_x, PM2SUBA_HX, v2i32, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm2addsu, PM2ADDASU_H, v2i32, v4i16>;
 
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_B, v2i32, v8i8>;
   def : PatHorizontalMul<riscv_pm2add, PM2ADD_H, v2i32, v4i16>;
@@ -3547,6 +3573,17 @@ let append Predicates = [IsRV64] in {
   def : PatHorizontalMul<riscv_pm4add, PM4ADD_H, i64, v4i16>;
   def : PatHorizontalMul<riscv_pm4addu, PM4ADDU_H, i64, v4i16>;
   def : PatHorizontalMul<riscv_pm4addsu, PM4ADDSU_H, i64, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm2add, PM2ADDA_W, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pm2add_x, PM2ADDA_WX, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pm2addu, PM2ADDAU_W, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pmq2add, PMQ2ADDA_W, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pmqr2add, PMQR2ADDA_W, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pm2sub, PM2SUBA_W, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pm2sub_x, PM2SUBA_WX, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pm2addsu, PM2ADDASU_W, i64, v2i32>;
+  def : PatHorizontalMulAdd<riscv_pm4add, PM4ADDA_H, i64, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm4addu, PM4ADDAU_H, i64, v4i16>;
+  def : PatHorizontalMulAdd<riscv_pm4addsu, PM4ADDASU_H, i64, v4i16>;
   def : PatHorizontalMulAcc<riscv_pm4adda, PM4ADDA_H, i64, v4i16>;
   def : PatHorizontalMulAcc<riscv_pm4addau, PM4ADDAU_H, i64, v4i16>;
   def : PatHorizontalMulAcc<riscv_pm4addasu, PM4ADDASU_H, i64, v4i16>;

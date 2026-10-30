@@ -93,6 +93,12 @@ STATISTIC(FoundProfiledCalleeMaxDepth,
           "Maximum depth of profiled callees found via tail calls");
 STATISTIC(FoundProfiledCalleeNonUniquelyCount,
           "Number of profiled callees found via multiple tail call chains");
+STATISTIC(FoundProfiledCalleeIndirectTailCallCount,
+          "Number of tail calls in chains to profiled callees that are "
+          "indirect (thin link)");
+STATISTIC(IndirectTailCallsRecordedForICPThinBackend,
+          "Number of indirect tail calls recorded for ICP for cloning during "
+          "ThinLTO backend");
 STATISTIC(DeferredBackedges, "Number of backedges with deferred cloning");
 STATISTIC(NewMergedNodes, "Number of new nodes created during merging");
 STATISTIC(NonNewMergedNodes, "Number of non new nodes used during merging");
@@ -196,6 +202,14 @@ static cl::opt<unsigned>
                         cl::Hidden,
                         cl::desc("Max depth to recursively search for missing "
                                  "frames through tail calls."));
+
+// Whether the ThinLTO search for frames missing due to tail calls should look
+// through indirect tail calls, via the summary call edges to their profiled
+// targets.
+static cl::opt<bool> IndirectTailCallSearch(
+    "memprof-indirect-tail-call-search", cl::init(true), cl::Hidden,
+    cl::desc("Search for missing frames through indirect tail calls to their "
+             "profiled targets (ThinLTO)."));
 
 // Optionally enable cloning of callsites involved with recursive cycles
 static cl::opt<bool> AllowRecursiveCallsites(
@@ -3206,6 +3220,11 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
     for (auto &CallEdge : FS->calls()) {
       if (!CallEdge.second.hasTailCall())
         continue;
+      // Edges marked indirect are the profiled targets of indirect calls.
+      // If the tail call is indirect, the ThinLTO backend will perform
+      // ICP to the target in order to call a clone of it.
+      if (CallEdge.second.hasIndirectCall() && !IndirectTailCallSearch)
+        continue;
       if (CallEdge.first == ProfiledCallee) {
         if (FoundSingleCalleeChain) {
           FoundMultipleCalleeChains = true;
@@ -3216,6 +3235,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
         FoundProfiledCalleeDepth += Depth;
         if (Depth > FoundProfiledCalleeMaxDepth)
           FoundProfiledCalleeMaxDepth = Depth;
+        if (CallEdge.second.hasIndirectCall())
+          FoundProfiledCalleeIndirectTailCallCount++;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
@@ -3231,6 +3252,8 @@ bool IndexCallsiteContextGraph::findProfiledCalleeThroughTailCalls(
           return false;
         }
         FoundSingleCalleeChain = true;
+        if (CallEdge.second.hasIndirectCall())
+          FoundProfiledCalleeIndirectTailCallCount++;
         CreateAndSaveCallsiteInfo(CallEdge.first, FS);
         // Add FS to FSToVIMap  in case it isn't already there.
         assert(!FSToVIMap.count(FS) || FSToVIMap[FS] == FSVI);
@@ -5969,9 +5992,20 @@ bool CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::assignFunctions() {
 // in the summary, to use in detection of duplicate clones.
 uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
   SHA1 Hasher;
+  // Add a record for the callsite or alloc at the given index in the summary,
+  // with the given version. The index must be included, since two clones that
+  // assign the same versions to different callsites or allocs are not
+  // duplicates.
+  auto AddRecord = [&](char Kind, uint32_t Index, uint32_t Version) {
+    uint8_t Data[1 + 2 * sizeof(uint32_t)];
+    Data[0] = Kind;
+    support::endian::write32le(&Data[1], Index);
+    support::endian::write32le(&Data[1 + sizeof(uint32_t)], Version);
+    Hasher.update(Data);
+  };
   // Update hash with any callsites that call non-default (non-zero) callee
   // versions.
-  for (auto &SN : FS->callsites()) {
+  for (auto [Index, SN] : enumerate(FS->callsites())) {
     // In theory all callsites and allocs in this function should have the same
     // number of clone entries, but handle any discrepancies gracefully below
     // for NDEBUG builds.
@@ -5980,12 +6014,10 @@ uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
         "Callsite summary has fewer entries than other summaries in function");
     if (SN.Clones.size() <= I || !SN.Clones[I])
       continue;
-    uint8_t Data[sizeof(SN.Clones[I])];
-    support::endian::write32le(Data, SN.Clones[I]);
-    Hasher.update(Data);
+    AddRecord('c', Index, SN.Clones[I]);
   }
   // Update hash with any allocs that have non-default (non-None) hints.
-  for (auto &AN : FS->allocs()) {
+  for (auto [Index, AN] : enumerate(FS->allocs())) {
     // In theory all callsites and allocs in this function should have the same
     // number of clone entries, but handle any discrepancies gracefully below
     // for NDEBUG builds.
@@ -5994,10 +6026,31 @@ uint64_t ComputeHash(const FunctionSummary *FS, unsigned I) {
     if (AN.Versions.size() <= I ||
         (AllocationType)AN.Versions[I] == AllocationType::None)
       continue;
-    Hasher.update(ArrayRef<uint8_t>(&AN.Versions[I], 1));
+    AddRecord('a', Index, AN.Versions[I]);
   }
   return support::endian::read64le(Hasher.result().data());
 }
+
+#ifndef NDEBUG
+// Check that clones I and J of FS have identical callsite and alloc versions.
+static bool clonesHaveSameVersions(const FunctionSummary *FS, unsigned I,
+                                   unsigned J) {
+  for (auto &SN : FS->callsites()) {
+    assert(SN.Clones.size() > I && SN.Clones.size() > J &&
+           "Callsite summary has fewer entries than other summaries in "
+           "function");
+    if (SN.Clones[I] != SN.Clones[J])
+      return false;
+  }
+  for (auto &AN : FS->allocs()) {
+    assert(AN.Versions.size() > I && AN.Versions.size() > J &&
+           "Alloc summary has fewer entries than other summaries in function");
+    if (AN.Versions[I] != AN.Versions[J])
+      return false;
+  }
+  return true;
+}
+#endif
 
 static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     Function &F, unsigned NumClones, Module &M, OptimizationRemarkEmitter &ORE,
@@ -6038,8 +6091,8 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
   FunctionsClonedThinBackend++;
 
   // Map of hash of callsite/alloc versions to the instantiated function clone
-  // (possibly the original) implementing those calls. Used to avoid
-  // instantiating duplicate function clones.
+  // (possibly the original) implementing those calls and its clone number. Used
+  // to avoid instantiating duplicate function clones.
   // FIXME: Ideally the thin link would not generate such duplicate clones to
   // start with, but right now it happens due to phase ordering in the function
   // assignment and possible new clones that produces. We simply make each
@@ -6047,10 +6100,10 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
   // (except for available_externally which are made declarations as they would
   // be aliases in the prevailing module, and available_externally aliases are
   // not well supported right now).
-  DenseMap<uint64_t, Function *> HashToFunc;
+  DenseMap<uint64_t, std::pair<Function *, unsigned>> HashToFunc;
 
   // Save the hash of the original function version.
-  HashToFunc[ComputeHash(FS, 0)] = &F;
+  HashToFunc[ComputeHash(FS, 0)] = {&F, 0};
 
   for (unsigned I = 1; I < NumClones; I++) {
     VMaps.emplace_back(std::make_unique<ValueToValueMapTy>());
@@ -6059,9 +6112,11 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
     // If this clone would duplicate a previously seen clone, don't generate the
     // duplicate clone body, just make an alias to satisfy any (potentially
     // cross-module) references.
-    if (HashToFunc.contains(Hash)) {
+    if (auto It = HashToFunc.find(Hash); It != HashToFunc.end()) {
       FunctionCloneDuplicatesThinBackend++;
-      auto *Func = HashToFunc[Hash];
+      auto [Func, OrigI] = It->second;
+      assert(clonesHaveSameVersions(FS, I, OrigI) &&
+             "Duplicate clone hash collision");
       if (Func->hasAvailableExternallyLinkage()) {
         // Skip these as EliminateAvailableExternallyPass does not handle
         // available_externally aliases correctly and we end up with an
@@ -6085,7 +6140,7 @@ static SmallVector<std::unique_ptr<ValueToValueMapTy>, 4> createFunctionClones(
       continue;
     }
     auto *NewF = CloneFunction(&F, *VMaps.back());
-    HashToFunc[Hash] = NewF;
+    HashToFunc[Hash] = {NewF, I};
     FunctionClonesThinBackend++;
     // Strip memprof and callsite metadata from clone as they are no longer
     // needed.
@@ -6175,6 +6230,62 @@ static ValueInfo findValueInfoForFunc(const Function &F, const Module &M,
   // such declarations in the distributed summary.
   assert(TheFnVI || F.isDeclaration());
   return TheFnVI;
+}
+
+// Find the CallsiteInfo record synthesized by the thin link for profiled target
+// CandidateGUID of an indirect tail call, in MapTailCallCalleeVIToCallsite
+// (which maps each synthesized record's callee to the record). Returns null if
+// there is none. OrigNameGUIDToTailCallCallsite caches a map from the original
+// name GUID of each record's callee to the record, and is built on first use.
+static const CallsiteInfo *findIndirectTailCallCallsite(
+    uint64_t CandidateGUID,
+    const DenseMap<ValueInfo, CallsiteInfo> &MapTailCallCalleeVIToCallsite,
+    std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
+        &OrigNameGUIDToTailCallCallsite,
+    const ModuleSummaryIndex *ImportSummary, InstrProfSymtab &Symtab) {
+  auto End = MapTailCallCalleeVIToCallsite.end();
+  // The callee of the synthesized record is normally the VP metadata GUID, so
+  // check that first.
+  if (ValueInfo VI = ImportSummary->getValueInfo(CandidateGUID)) {
+    auto It = MapTailCallCalleeVIToCallsite.find(VI);
+    if (It != End)
+      return &It->second;
+  }
+  // For local targets the VP metadata may contain the GUID of the original
+  // name without the source file prefix, which the thin link translates to the
+  // actual GUID of the local function (see updateValueInfoForIndirectCalls).
+  if (auto LocalGUID = ImportSummary->getGUIDFromOriginalID(CandidateGUID)) {
+    if (ValueInfo LocalVI = ImportSummary->getValueInfo(LocalGUID)) {
+      auto It = MapTailCallCalleeVIToCallsite.find(LocalVI);
+      if (It != End)
+        return &It->second;
+    }
+  }
+  // The index for a distributed ThinLTO backend does not record the original
+  // names of local functions, in which case the above lookup via
+  // getGUIDFromOriginalID fails. Instead, compute the original name GUID of
+  // each record's callee from its function in this module, located via its
+  // GUID (which is recorded in the function's !guid metadata), using its name
+  // before any promotion.
+  if (!OrigNameGUIDToTailCallCallsite) {
+    // Construct the (initially empty) map so that it is marked as built, even
+    // if no entries are added below, to avoid rebuilding it on later calls.
+    OrigNameGUIDToTailCallCallsite.emplace();
+    for (const auto &[CalleeVI, Callsite] : MapTailCallCalleeVIToCallsite) {
+      Function *Callee = Symtab.getFunction(CalleeVI.getGUID());
+      if (!Callee)
+        continue;
+      StringRef OrigName =
+          ModuleSummaryIndex::getOriginalNameBeforePromote(Callee->getName());
+      auto [It, Inserted] = OrigNameGUIDToTailCallCallsite->try_emplace(
+          GlobalValue::getGUIDAssumingExternalLinkage(OrigName), &Callsite);
+      // If multiple callees have the same original name, we can't tell which
+      // corresponds to the profiled target.
+      if (!Inserted && It->second != &Callsite)
+        It->second = nullptr;
+    }
+  }
+  return OrigNameGUIDToTailCallCallsite->lookup(CandidateGUID);
 }
 
 bool MemProfContextDisambiguation::initializeIndirectCallPromotionInfo(
@@ -6423,6 +6534,10 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
         break;
       MapTailCallCalleeVIToCallsite.insert({Callsite.Callee, Callsite});
     }
+    // Maps the original name GUID of each synthesized callsite info's callee to
+    // the callsite info, built on first use by findIndirectTailCallCallsite.
+    std::optional<DenseMap<uint64_t, const CallsiteInfo *>>
+        OrigNameGUIDToTailCallCallsite;
 
     // Keeps track of needed ICP for the function.
     SmallVector<ICallAnalysisData> ICallAnalysisInfo;
@@ -6618,6 +6733,26 @@ bool MemProfContextDisambiguation::applyImport(Module &M) {
             assert(Callsite != MapTailCallCalleeVIToCallsite.end());
             CloneCallsite(Callsite->second, CB, CalledFunction, FS);
           }
+        } else if (CB->isTailCall() && !CalledFunction &&
+                   !MapTailCallCalleeVIToCallsite.empty()) {
+          // An indirect tail call, which the thin link may have identified as
+          // being on profiled contexts with a missing frame, via the profiled
+          // targets in its VP metadata. If so, the callsite infos synthesized
+          // for those targets are used to perform ICP so that each clone of
+          // this function calls the assigned clone of the target.
+          auto PrevNumICallAnalysisInfo = ICallAnalysisInfo.size();
+          auto NumClones = recordICPInfo(
+              CB,
+              [&](const InstrProfValueData &Candidate) {
+                return findIndirectTailCallCallsite(
+                    Candidate.Value, MapTailCallCalleeVIToCallsite,
+                    OrigNameGUIDToTailCallCallsite, ImportSummary, *Symtab);
+              },
+              ICallAnalysisInfo);
+          if (ICallAnalysisInfo.size() > PrevNumICallAnalysisInfo)
+            IndirectTailCallsRecordedForICPThinBackend++;
+          if (NumClones)
+            CloneFuncIfNeeded(NumClones, FS);
         }
       }
     }

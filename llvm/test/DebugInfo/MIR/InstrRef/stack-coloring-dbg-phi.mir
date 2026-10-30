@@ -121,8 +121,8 @@ body:             |
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     %18:gr32 = MOV32r0 implicit-def dead $eflags
-    %19:gr8 = COPY killed %18.sub_8bit
-    TEST8rr killed %19, %19, implicit-def $eflags, debug-location !9
+    %19:gr8 = COPY %18.sub_8bit
+    TEST8rr %19, %19, implicit-def $eflags, debug-location !9
     JCC_1 %bb.2, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.1, debug-location !9
   
@@ -139,7 +139,7 @@ body:             |
   
     %0:gr32 = PHI undef %21:gr32, %bb.2, %0, %bb.5, %0, %bb.6, %0, %bb.8, %0, %bb.10, %10, %bb.21
     %23:gr8 = COPY %27.sub_8bit
-    TEST8rr killed %23, %23, implicit-def $eflags, debug-location !9
+    TEST8rr %23, %23, implicit-def $eflags, debug-location !9
     JCC_1 %bb.5, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.4, debug-location !9
   
@@ -151,7 +151,7 @@ body:             |
   
     %1:gr32 = PHI %27, %bb.3, %24, %bb.4, debug-location !9
     %25:gr32 = nsw ADD32rr %1, %0, implicit-def dead $eflags, debug-location !9
-    CMP32ri killed %25, 6, implicit-def $eflags, debug-location !9
+    CMP32ri %25, 6, implicit-def $eflags, debug-location !9
     JCC_1 %bb.3, 7, implicit killed $eflags, debug-location !9
     JMP_1 %bb.6, debug-location !9
   
@@ -159,14 +159,14 @@ body:             |
     successors: %bb.3(0x2aaaaaab), %bb.7(0x55555555)
   
     %28:gr8 = COPY %27.sub_8bit
-    TEST8rr killed %28, %28, implicit-def $eflags, debug-location !9
+    TEST8rr %28, %28, implicit-def $eflags, debug-location !9
     JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.7, debug-location !9
   
   bb.7:
     successors: %bb.8(0x60000000), %bb.9(0x20000000)
   
-    TEST32rr killed %1, %1, implicit-def $eflags, debug-location !9
+    TEST32rr %1, %1, implicit-def $eflags, debug-location !9
     JCC_1 %bb.9, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.8, debug-location !9
   
@@ -174,7 +174,7 @@ body:             |
     successors: %bb.3(0x55555555), %bb.9(0x2aaaaaab)
   
     %30:gr8 = COPY %27.sub_8bit
-    TEST8rr killed %30, %30, implicit-def $eflags, debug-location !9
+    TEST8rr %30, %30, implicit-def $eflags, debug-location !9
     JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.9, debug-location !9
   
@@ -189,7 +189,7 @@ body:             |
     successors: %bb.11, %bb.3
   
     %34:gr8 = COPY %27.sub_8bit
-    TEST8rr killed %34, %34, implicit-def $eflags, debug-location !9
+    TEST8rr %34, %34, implicit-def $eflags, debug-location !9
     JCC_1 %bb.3, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.11, debug-location !9
   
@@ -210,7 +210,7 @@ body:             |
     %5:gr32 = PHI undef %35:gr32, %bb.11, %9, %bb.21
     DBG_INSTR_REF !10, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !9
     %39:gr8 = COPY %27.sub_8bit
-    TEST8rr killed %39, %39, implicit-def $eflags, debug-location !9
+    TEST8rr %39, %39, implicit-def $eflags, debug-location !9
     JCC_1 %bb.18, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.14, debug-location !9
   
@@ -218,19 +218,19 @@ body:             |
     successors: %bb.17(0x40000001), %bb.15(0x3fffffff)
   
     %41:gr8 = COPY %27.sub_8bit
-    TEST8rr killed %41, %41, implicit-def $eflags, debug-location !9
+    TEST8rr %41, %41, implicit-def $eflags, debug-location !9
     JCC_1 %bb.17, 5, implicit killed $eflags, debug-location !9
     JMP_1 %bb.15, debug-location !9
   
   bb.15:
   
   bb.16:
-    %6:gr32 = nsw INC32r killed %4, implicit-def dead $eflags, debug-location !9
+    %6:gr32 = nsw INC32r %4, implicit-def dead $eflags, debug-location !9
     %48:gr32 = MOV32r0 implicit-def dead $eflags
     JMP_1 %bb.21, debug-location !9
   
   bb.17:
-    %7:gr32 = nsw INC32r killed %5, implicit-def dead $eflags, debug-location !9
+    %7:gr32 = nsw INC32r %5, implicit-def dead $eflags, debug-location !9
     %46:gr32 = MOV32r0 implicit-def dead $eflags
     JMP_1 %bb.21, debug-location !9
   
@@ -247,9 +247,9 @@ body:             |
   
   bb.20:
     %43:gr32 = nsw DEC32r %5, implicit-def dead $eflags, debug-location !9
-    %44:gr64_nosp = SUBREG_TO_REG killed %43, %subreg.sub_32bit
+    %44:gr64_nosp = SUBREG_TO_REG %43, %subreg.sub_32bit
     ; Fiddled with to morph into llvm test,
-    %8:gr64 = LEA64r $noreg, 4, killed %44, @amd64_push_arguments, $noreg, debug-location !9
+    %8:gr64 = LEA64r $noreg, 4, %44, @amd64_push_arguments, $noreg, debug-location !9
     %42:gr32 = MOV32ri 8
     JMP_1 %bb.21, debug-location !9
   
@@ -260,21 +260,21 @@ body:             |
     %10:gr32 = PHI %4, %bb.20, %4, %bb.17, %6, %bb.16, debug-location !9
     %11:gr64 = PHI %8, %bb.20, undef %45:gr64, %bb.17, undef %47:gr64, %bb.16
     %12:gr32 = PHI %42, %bb.20, %46, %bb.17, %48, %bb.16, debug-location !9
-    %49:gr32 = MOV32rm killed %11, 1, $noreg, 0, $noreg, debug-location !9 :: (load (s32) from `ptr undef`)
+    %49:gr32 = MOV32rm %11, 1, $noreg, 0, $noreg, debug-location !9 :: (load (s32) from `ptr undef`)
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     $rdi = COPY %50, debug-location !9
     CALL64pcrel32 target-flags(x86-plt) &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit undef $rsi, implicit undef $rdx, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax, debug-location !9
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
     $rdi = COPY %15, debug-location !9
-    $esi = COPY killed %49, debug-location !9
-    $edx = COPY killed %12, debug-location !9
+    $esi = COPY %49, debug-location !9
+    $edx = COPY %12, debug-location !9
     $ecx = COPY %54, debug-location !9
     $r8 = COPY %50, debug-location !9
     CALL64r undef %55:gr64, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit killed $esi, implicit killed $edx, implicit killed $ecx, implicit killed $r8, implicit-def $rsp, implicit-def $ssp, debug-location !9
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp, debug-location !9
-    %13:gr64 = nuw nsw INC64r killed %3, implicit-def dead $eflags, debug-location !9
-    %14:gr32 = ADD32ri killed %2, -8, implicit-def dead $eflags, debug-location !9
+    %13:gr64 = nuw nsw INC64r %3, implicit-def dead $eflags, debug-location !9
+    %14:gr32 = ADD32ri %2, -8, implicit-def dead $eflags, debug-location !9
     CMP32ri %14, 8, implicit-def $eflags, debug-location !9
     JCC_1 %bb.13, 15, implicit killed $eflags, debug-location !9
     JMP_1 %bb.3, debug-location !9

@@ -14,8 +14,10 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <deque>
 #include <functional>
+#include <map>
 #include <mutex>
 #include <string>
 #include <system_error>
@@ -182,6 +184,56 @@ namespace plugin {
 
 namespace hsa_utils {
 
+/// Adapted from HSA-runtime.
+static void storeFence() {
+#if __has_builtin(__builtin_ia32_sfence)
+  __builtin_ia32_sfence();
+#elif __has_builtin(__builtin_arm_dmb)
+  __builtin_arm_dmb(0x2); // oshst
+#elif defined(__riscv)
+  __asm__ __volatile__("fence ow, ow" ::: "memory");
+#else
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
+}
+
+/// Adapted from HSA-runtime.
+static void memoryFence() {
+#if __has_builtin(__builtin_ia32_mfence)
+  __builtin_ia32_mfence();
+#elif __has_builtin(__builtin_arm_dsb)
+  __builtin_arm_dsb(0xf); // sy
+#elif defined(__riscv)
+  __asm__ __volatile__("fence iorw, iorw" ::: "memory");
+#else
+  __atomic_thread_fence(__ATOMIC_SEQ_CST);
+#endif
+}
+
+/// Copied from HSA-runtime.
+/// Force a WC flush on PCIe devices by doing a write and then read-back
+static void flushPcieWc(void *Ptr, size_t Size) {
+  storeFence();
+  *((uint8_t *)Ptr + Size - 1) = *((uint8_t *)Ptr + Size - 1);
+  memoryFence();
+  auto Readback = *(reinterpret_cast<volatile uint8_t *>(Ptr) + Size - 1);
+  (void)Readback;
+}
+
+/// Copy \p Size bytes from \p Src to the device memory at \p Dst.
+/// \p OverXGMI tells whether the host reaches that memory over XGMI.
+///
+/// Without XGMI, this needs a WC flush. With XGMI, this isn't necessary
+/// (according to the code in HSA-runtime).
+static Error publishToDeviceMemory(void *Dst, const void *Src, size_t Size,
+                                   bool OverXGMI) {
+  std::memcpy(Dst, Src, Size);
+  if (OverXGMI)
+    return Plugin::success();
+  hsa_utils::flushPcieWc(Dst, Size);
+  return Plugin::success();
+}
+
 /// Iterate elements using an HSA iterate function. Do not use this function
 /// directly but the specialized ones below instead.
 template <typename ElemTy, typename IterFuncTy, typename CallbackTy>
@@ -320,6 +372,24 @@ static std::optional<llvm::VersionTuple> getAMDExtensionVersion() {
           HSA_STATUS_SUCCESS)
     return std::nullopt;
   return llvm::VersionTuple(Major, Minor);
+}
+
+/// Whether the host can write \p Size bytes at \p Ptr directly: they must lie
+/// within an ordinary allocation of this device. On a large BAR system ROCr
+/// maps all of those for the host, which HIP relies on as well. Memory mapped
+/// through hsa_amd_vmem_* (such as the record-replay slab) is an example for
+/// something the host cannot write to directly without explicit access grant
+/// (needs to be checked explicitly; not yet handled here).
+static bool isHostWritable(hsa_agent_t Agent, const void *Ptr, int64_t Size) {
+  hsa_amd_pointer_info_t Info;
+  Info.size = sizeof(hsa_amd_pointer_info_t);
+  if (hsa_amd_pointer_info(Ptr, &Info, nullptr, nullptr, nullptr) !=
+      HSA_STATUS_SUCCESS)
+    return false;
+  return Info.type == HSA_EXT_POINTER_TYPE_HSA &&
+         Info.agentOwner.handle == Agent.handle &&
+         utils::getPtrDiff(Ptr, Info.agentBaseAddress) + Size <=
+             int64_t(Info.sizeInBytes);
 }
 } // namespace hsa_utils
 
@@ -465,6 +535,25 @@ struct AMDGPUMemoryPoolTy {
             Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_ACCESS, &Access))
       return false;
     return Access != HSA_AMD_MEMORY_POOL_ACCESS_NEVER_ALLOWED;
+  }
+
+  /// Returns if the \p Agent reaches the memory pool over XGMI only, i.e.,
+  /// without any PCIe (or other) hop along the way.
+  bool isLinkedOverXGMI(hsa_agent_t Agent) {
+    uint32_t NumHops = 0;
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_NUM_LINK_HOPS,
+            &NumHops) ||
+        NumHops == 0)
+      return false;
+    llvm::SmallVector<hsa_amd_memory_pool_link_info_t> Links(NumHops);
+    if (hsa_amd_agent_memory_pool_get_info(
+            Agent, MemoryPool, HSA_AMD_AGENT_MEMORY_POOL_INFO_LINK_INFO,
+            Links.data()))
+      return false;
+    return llvm::all_of(Links, [](const hsa_amd_memory_pool_link_info_t &L) {
+      return L.link_type == HSA_AMD_LINK_INFO_TYPE_XGMI;
+    });
   }
 
   /// Allow the device to access a specific allocation.
@@ -2426,6 +2515,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     setHSATicksToTimeConstant();
 
+    HostWritesDeviceMemory =
+        !CoarseGrainedMemoryPools.empty() &&
+        CoarseGrainedMemoryPools[0]->canAccess(HostDevice.getAgent());
+    // The writing thread may run on any host agent, so all of them must reach
+    // the device over XGMI.
+    HostLinkIsXGMI =
+        HostWritesDeviceMemory &&
+        CoarseGrainedMemoryPools[0]->isLinkedOverXGMI(HostDevice.getAgent());
+
     char GPUName[64];
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_NAME, GPUName))
       return Err;
@@ -2485,7 +2583,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_GRID_MAX_DIM, GridMaxDim))
       return Err;
 
-    GridValues.GV_Max_Teams = GridMaxDim.x / GridValues.GV_Max_WG_Size;
+    // The HSA grid is expressed in work items, so it limits blocks * threads
+    // rather than blocks alone. A block has at least one thread.
+    GridValues.GV_Max_Teams = GridMaxDim.x;
+    MaxGridSize = GridMaxDim.x;
     if (GridValues.GV_Max_Teams == 0)
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "maximum number of teams cannot be zero");
@@ -2755,18 +2856,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// See GenericDeviceTy::getComputeUnitKind().
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
 
-  /// See GenericDeviceTy::getBlockLimit(uint32_t). The HSA launch configuration
-  /// is an int32_t grid representing blocks * threads. This means the block
-  /// limit depends on the user's requested thread count.
-  uint32_t getBlockLimit(uint32_t NumThreads) const override {
-    if (NumThreads == 0)
-      return GridValues.GV_Max_Teams;
-    uint64_t MaxGridItems =
-        uint64_t(GridValues.GV_Max_Teams) * getThreadLimit();
-    uint64_t MaxBlocks = MaxGridItems / NumThreads;
-    return std::min<uint64_t>(MaxBlocks, UINT32_MAX);
-  }
-
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
@@ -2982,6 +3071,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return true;
   }
 
+  /// Whether a transfer of \p Size bytes should be done via direct H2D
+  /// transfer.
+  bool allowsDirectWrite(const void *Ptr, int64_t Size) const {
+    // A first heuristic, tune as new insights arise.
+    static constexpr int64_t MaxDirectWriteSize = 2 * 4096;
+    return HostWritesDeviceMemory && Size > 0 && Size <= MaxDirectWriteSize &&
+           hsa_utils::isHostWritable(Agent, Ptr, Size);
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper,
@@ -2990,6 +3088,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     void *PinnedPtr = nullptr;
 
     auto ProfilerSpecificData = getOrNullProfilerSpecificData(AsyncInfoWrapper);
+
+    // A synchronous transfer is not ordered with the work on any queue, so the
+    // host can write the memory directly.
+    if (AsyncInfoWrapper.isSynchronous() && allowsDirectWrite(TgtPtr, Size))
+      return hsa_utils::publishToDeviceMemory(TgtPtr, HstPtr, Size,
+                                              HostLinkIsXGMI);
 
     // Use one-step asynchronous operation when host memory is already pinned.
     if (void *PinnedPtr =
@@ -3878,6 +3982,13 @@ private:
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
 
+  /// Whether the host can map this device's memory (large BAR) and write small
+  /// transfers into it directly.
+  bool HostWritesDeviceMemory = false;
+
+  /// Whether the host reaches this device's memory over XGMI rather than PCIe.
+  bool HostLinkIsXGMI = false;
+
   /// The current size of the stack that will be used in cases where it could
   /// not be statically determined.
   uint64_t StackSize = 16 * 1024 /* 16 KB */;
@@ -4649,7 +4760,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
 
   // Kernel Arguments Info
   auto ArgNum = LaunchArgs.NumArgs;
-  auto LoopTripCount = LaunchArgs.Tripcount;
 
   // Details for AMDGPU kernels (read from image)
   // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata
@@ -4669,15 +4779,13 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
   // LDS Usage: Amount of bytes used in LDS storage
   // S/VGPR Count: the number of S/V GPRs occupied by the kernel
   // S/VGPR Spill Count: how many S/VGPRs are spilled by the kernel
-  // Tripcount: loop tripcount for the kernel
   INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
        "#Args: %d Teams x Thrds: %4ux%4u (MaxFlatWorkGroupSize: %u) LDS "
-       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u Tripcount: "
-       "%lu\n",
+       "Usage: %uB #SGPRs/VGPRs: %u/%u #SGPR/VGPR Spills: %u/%u\n",
        ArgNum, NumGroups[0] * NumGroups[1] * NumGroups[2],
        ThreadsPerGroup[0] * ThreadsPerGroup[1] * ThreadsPerGroup[2],
        MaxFlatWorkgroupSize, GroupSegmentSize, SGPRCount, VGPRCount,
-       SGPRSpillCount, VGPRSpillCount, LoopTripCount);
+       SGPRSpillCount, VGPRSpillCount);
 
   return Plugin::success();
 }

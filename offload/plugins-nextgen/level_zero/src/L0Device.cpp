@@ -179,6 +179,8 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
   // Adjust the static SPIR-V grid values based on the device's reported limits.
   if (uint32_t MaxGroupSize = std::min(getMaxGroupSizeX(), getMaxGroupSize()))
     GridValues.GV_Max_WG_Size = MaxGroupSize;
+  if (uint32_t MaxGroupCount = getMaxGroupCountX())
+    GridValues.GV_Max_Teams = MaxGroupCount;
   if (uint32_t SIMDWidth = getSIMDWidth())
     GridValues.GV_Warp_Size = SIMDWidth;
 
@@ -444,8 +446,8 @@ const char *L0DeviceTy::getArchCStr() const {
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
-  Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
-  Info.add("Product Name", getArchCStr(), "", DeviceInfo::PRODUCT_NAME);
+  Info.add("Device Name", getArchCStr(), "", DeviceInfo::NAME);
+  Info.add("Product Name", getNameCStr(), "", DeviceInfo::PRODUCT_NAME);
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);

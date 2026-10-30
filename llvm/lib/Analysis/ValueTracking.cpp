@@ -5323,13 +5323,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
   if (isa<ConstantAggregateZero>(V)) {
     Known.setKnownFPClasses(fcPosZero);
-    Known.setSignBit(false);
     return;
   }
 
   if (isa<PoisonValue>(V)) {
-    Known.setKnownFPClasses(fcNone);
-    Known.setSignBit(false);
+    Known = KnownFPClass::getEmpty();
     return;
   }
 
@@ -5337,9 +5335,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
   auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
   const Constant *CV = dyn_cast<Constant>(V);
   if (VFVTy && CV) {
-    Known.setKnownFPClasses(fcNone);
-    bool SignBitAllZero = true;
-    bool SignBitAllOne = true;
+    Known = KnownFPClass::getEmpty();
 
     // For vectors, verify that each element is not NaN.
     unsigned NumElts = VFVTy->getNumElements();
@@ -5360,28 +5356,21 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      const APFloat &C = CElt->getValueAPF();
-      Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-      if (C.isNegative())
-        SignBitAllZero = false;
-      else
-        SignBitAllOne = false;
+      Known |= KnownFPClass(CElt->getValueAPF());
     }
-    if (SignBitAllOne != SignBitAllZero)
-      Known.setSignBit(SignBitAllOne);
     return;
   }
 
   if (const auto *CDS = dyn_cast<ConstantDataSequential>(V)) {
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (size_t I = 0, E = CDS->getNumElements(); I != E; ++I)
-      Known |= CDS->getElementAsAPFloat(I).classify();
+      Known |= KnownFPClass(CDS->getElementAsAPFloat(I));
     return;
   }
 
   if (const auto *CA = dyn_cast<ConstantAggregate>(V)) {
     // TODO: Handle complex aggregates
-    Known.setKnownFPClasses(fcNone);
+    Known = KnownFPClass::getEmpty();
     for (const Use &Op : CA->operands()) {
       auto *CFP = dyn_cast<ConstantFP>(Op.get());
       if (!CFP) {
@@ -5389,7 +5378,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         return;
       }
 
-      Known |= CFP->getValueAPF().classify();
+      Known |= KnownFPClass(CFP->getValueAPF());
     }
 
     return;
@@ -5557,8 +5546,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     case Intrinsic::experimental_constrained_sqrt: {
       KnownFPClass KnownSrc;
       FPClassTest InterestedSrcs = InterestedClasses;
-      if (InterestedClasses & fcNan)
-        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+      if (InterestedClasses & fcQNan)
+        InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+      // Subnormals may flush to zero.
+      if (InterestedClasses & fcZero)
+        InterestedSrcs |= fcSubnormal;
 
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
@@ -6418,7 +6410,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -6454,7 +6446,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
@@ -6691,7 +6683,7 @@ KnownFPClass llvm::computeKnownFPClass(const Value *V, FastMathFlags FMF,
 bool llvm::cannotBeNegativeZero(const Value *V, const SimplifyQuery &SQ,
                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcNegZero, SQ, Depth);
-  return Known.isKnownNeverNegZero();
+  return Known.isKnownNever(fcNegZero);
 }
 
 bool llvm::cannotBeOrderedLessThanZero(const Value *V, const SimplifyQuery &SQ,
