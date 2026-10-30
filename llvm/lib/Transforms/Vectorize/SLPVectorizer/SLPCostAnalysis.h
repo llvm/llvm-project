@@ -59,11 +59,6 @@ InstructionCost getStridedLoadCost(
 /// Describe a single compressed load for costing and generating the vector
 /// instruction.
 struct CompressedLoadInfo {
-  CompressedLoadInfo(bool IsMasked, unsigned InterleaveFactor,
-                     SmallVector<int> CompressMask, VectorType *LoadVecTy)
-      : IsMasked(IsMasked), InterleaveFactor(InterleaveFactor),
-        CompressMask(std::move(CompressMask)), LoadVecTy(LoadVecTy) {}
-
   bool IsMasked = false;
   unsigned InterleaveFactor = 0;
   SmallVector<int> CompressMask;

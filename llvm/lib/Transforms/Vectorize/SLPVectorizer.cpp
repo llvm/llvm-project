@@ -6312,13 +6312,13 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     // Check that the sorted loads are consecutive.
     if (static_cast<uint64_t>(Diff) == Sz - 1)
       return LoadsState::Vectorize;
-    auto [CanCompress, _] = isMaskedLoadCompress(
-        VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-        [&](Value *V) {
-          return areAllUsersVectorized(cast<Instruction>(V), UserIgnoreList);
-        },
-        Opts.slp_revec, Cache);
-    if (CanCompress)
+    if (isMaskedLoadCompress(
+            VL, PointerOps, Order, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
+            [&](Value *V) {
+              return areAllUsersVectorized(cast<Instruction>(V),
+                                           UserIgnoreList);
+            },
+            Opts.slp_revec, Cache))
       return LoadsState::CompressVectorize;
     // Widened strided loads must be legal for every group, not just the first
     // pointer, which may have a stronger alignment than the remaining loads.
@@ -14613,9 +14613,10 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
     return;
 
   auto *LI0 = cast<LoadInst>(E.Scalars.front());
-  auto [_, CompressInfo] = isMaskedLoadCompress(
+  CompressedLoadInfo CompressInfo;
+  (void)isMaskedLoadCompress(
       E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
-      [](Value *) { return true; }, Opts.slp_revec, Cache);
+      [](Value *) { return true; }, Opts.slp_revec, CompressInfo, Cache);
   InstructionCost CompressedCost =
       getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
 
@@ -17964,10 +17965,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         SmallVector<Value *> PointerOps(Scalars.size());
         for (auto [I, V] : enumerate(Scalars))
           PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        auto [_, CompressInfo] = isMaskedLoadCompress(
+        CompressedLoadInfo CompressInfo;
+        (void)isMaskedLoadCompress(
             Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
             *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            Cache);
+            CompressInfo, Cache);
         CompressEntryToData.try_emplace(E, CompressInfo);
         VecLdCost = getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
         break;
