@@ -79,17 +79,17 @@ uint64_t encodeCompressedFragmentLocation(uint32_t FirstChunk,
 
 class MSFZFile::Impl {
   struct FileRange {
-    uint64_t Offset;
-    uint64_t Size;
+    uint64_t Offset = 0;
+    uint64_t Size = 0;
   };
 
   struct Fragment {
-    uint64_t StreamOffset;
-    uint32_t Size;
-    uint64_t FileOffset;
-    uint32_t FirstChunk;
-    uint32_t ChunkOffset;
-    bool IsCompressed;
+    uint64_t StreamOffset = 0;
+    uint32_t Size = 0;
+    uint64_t FileOffset = 0;
+    uint32_t FirstChunk = 0;
+    uint32_t ChunkOffset = 0;
+    bool IsCompressed = false;
   };
 
   struct Stream {
@@ -599,7 +599,7 @@ class MSFZWriter::Impl {
   };
 
   struct OutputStream {
-    uint32_t Size;
+    uint32_t Size = 0;
     uint32_t NextOffset = 0;
     MD5 Hash;
     SmallVector<OutputFragment, 1> Fragments;
@@ -612,12 +612,12 @@ class MSFZWriter::Impl {
   };
 
   struct CompressedChunk {
-    uint32_t Index;
+    uint32_t Index = 0;
     SmallVector<uint8_t, 0> Data;
   };
 
   struct PendingChunk {
-    size_t ReservedBytes;
+    size_t ReservedBytes = 0;
     std::shared_ptr<CompressedChunk> Result;
     std::shared_future<void> Future;
   };
