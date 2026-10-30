@@ -13193,8 +13193,35 @@ static void DiagnoseImpCast(Sema &S, const Expr *E, QualType SourceType,
                               << SourceRange(CContext));
     return;
   }
-  S.Diag(E->getExprLoc(), diag)
-    << SourceType << T << E->getSourceRange() << SourceRange(CContext);
+  if (diag == clang::diag::warn_impcast_float_precision) {
+    // Suggest explicit cast without changing the expression's intermediate
+    // calculations.
+    SmallString<32> CastBuf;
+    llvm::raw_svector_ostream CastFix(CastBuf);
+
+    // Apply cast syntax appropriate to the language.
+    CastFix << (S.LangOpts.CPlusPlus ? "static_cast<" : "(");
+    T.print(CastFix, S.Context.getPrintingPolicy());
+    CastFix << (S.LangOpts.CPlusPlus ? ">(" : ")(");
+
+    auto DB = S.Diag(E->getBeginLoc(), diag);
+    DB << SourceType << T << E->getSourceRange() << SourceRange(CContext);
+
+    // Avoid suggesting edits when either boundary comes from a macro expansion.
+    if (E->getBeginLoc().isValid() && E->getEndLoc().isValid() &&
+        !E->getBeginLoc().isMacroID() && !E->getEndLoc().isMacroID()) {
+      SourceLocation EndLoc = S.SourceMgr.getSpellingLoc(E->getEndLoc());
+      SourceLocation After = EndLoc.getLocWithOffset(
+          Lexer::MeasureTokenLength(EndLoc, S.SourceMgr, S.LangOpts));
+
+      // Enclose the expression in explicit cast.
+      DB << FixItHint::CreateInsertion(E->getBeginLoc(), CastFix.str())
+         << FixItHint::CreateInsertion(After, ")");
+    }
+  } else {
+    S.Diag(E->getExprLoc(), diag)
+        << SourceType << T << E->getSourceRange() << SourceRange(CContext);
+  }
 }
 
 /// Diagnose an implicit cast;  purely a helper for CheckImplicitConversion.
