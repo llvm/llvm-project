@@ -288,6 +288,63 @@ define <8 x i8> @same_param_01(<8 x i8> %a, <8 x i8> %b) {
   ret <8 x i8> %vbsl.i
 }
 
+; vbsl on types that aren't legal NEON types used to crash because the
+; intrinsic was combined into ARMISD::VBSP before type legalization.
+
+define <4 x i8> @vbsl_v4i8_promote(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c) nounwind {
+; CHECK-LABEL: vbsl_v4i8_promote:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i16 d16, #0xff
+; CHECK-NEXT:    vand d17, d0, d1
+; CHECK-NEXT:    veor d16, d0, d16
+; CHECK-NEXT:    vand d16, d16, d2
+; CHECK-NEXT:    vorr d0, d17, d16
+; CHECK-NEXT:    bx lr
+  %r = tail call <4 x i8> @llvm.arm.neon.vbsl.v4i8(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c)
+  ret <4 x i8> %r
+}
+
+define <2 x i16> @vbsl_v2i16_promote(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c) nounwind {
+; CHECK-LABEL: vbsl_v2i16_promote:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov.i32 d16, #0xffff
+; CHECK-NEXT:    vand d17, d0, d1
+; CHECK-NEXT:    veor d16, d0, d16
+; CHECK-NEXT:    vand d16, d16, d2
+; CHECK-NEXT:    vorr d0, d17, d16
+; CHECK-NEXT:    bx lr
+  %r = tail call <2 x i16> @llvm.arm.neon.vbsl.v2i16(<2 x i16> %a, <2 x i16> %b, <2 x i16> %c)
+  ret <2 x i16> %r
+}
+
+define <8 x i32> @vbsl_v8i32_split(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c) nounwind {
+; CHECK-LABEL: vbsl_v8i32_split:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
+; CHECK-NEXT:    vbsl q0, q2, q8
+; CHECK-NEXT:    vbsl q1, q3, q9
+; CHECK-NEXT:    bx lr
+  %r = tail call <8 x i32> @llvm.arm.neon.vbsl.v8i32(<8 x i32> %a, <8 x i32> %b, <8 x i32> %c)
+  ret <8 x i32> %r
+}
+
+define <8 x float> @vbsl_v8f32_split(<8 x float> %a, <8 x float> %b, <8 x float> %c) nounwind {
+; CHECK-LABEL: vbsl_v8f32_split:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vld1.64 {d18, d19}, [r0]
+; CHECK-NEXT:    vbsl q0, q2, q8
+; CHECK-NEXT:    vbsl q1, q3, q9
+; CHECK-NEXT:    bx lr
+  %r = tail call <8 x float> @llvm.arm.neon.vbsl.v8f32(<8 x float> %a, <8 x float> %b, <8 x float> %c)
+  ret <8 x float> %r
+}
+
 declare <4 x i32> @llvm.arm.neon.vbsl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>) nounwind readnone
 declare <8 x i16> @llvm.arm.neon.vbsl.v8i16(<8 x i16>, <8 x i16>, <8 x i16>) nounwind readnone
 declare <16 x i8> @llvm.arm.neon.vbsl.v16i8(<16 x i8>, <16 x i8>, <16 x i8>) nounwind readnone
@@ -298,3 +355,7 @@ declare <2 x float> @llvm.arm.neon.vbsl.v2f32(<2 x float>, <2 x float>, <2 x flo
 declare <4 x float> @llvm.arm.neon.vbsl.v4f32(<4 x float>, <4 x float>, <4 x float>) nounwind readnone
 declare <2 x i64> @llvm.arm.neon.vbsl.v2i64(<2 x i64>, <2 x i64>, <2 x i64>) nounwind readnone
 declare <1 x i64> @llvm.arm.neon.vbsl.v1i64(<1 x i64>, <1 x i64>, <1 x i64>) nounwind readnone
+declare <4 x i8> @llvm.arm.neon.vbsl.v4i8(<4 x i8>, <4 x i8>, <4 x i8>) nounwind readnone
+declare <2 x i16> @llvm.arm.neon.vbsl.v2i16(<2 x i16>, <2 x i16>, <2 x i16>) nounwind readnone
+declare <8 x i32> @llvm.arm.neon.vbsl.v8i32(<8 x i32>, <8 x i32>, <8 x i32>) nounwind readnone
+declare <8 x float> @llvm.arm.neon.vbsl.v8f32(<8 x float>, <8 x float>, <8 x float>) nounwind readnone

@@ -18052,8 +18052,22 @@ SDValue ARMTargetLowering::PerformIntrinsicCombine(SDNode *N,
 
   case Intrinsic::arm_neon_vbsl: {
     SDLoc dl(N);
-    return DAG.getNode(ARMISD::VBSP, dl, N->getValueType(0), N->getOperand(1),
-                       N->getOperand(2), N->getOperand(3));
+    EVT VT = N->getValueType(0);
+    if (DAG.getTargetLoweringInfo().isTypeLegal(VT))
+      return DAG.getNode(ARMISD::VBSP, dl, VT, N->getOperand(1),
+                         N->getOperand(2), N->getOperand(3));
+
+    // This combine runs before type legalization, and type legalization
+    // doesn't know how to split or promote VBSP. Expand a vbsl of an illegal
+    // type into (Mask & A) | (~Mask & B) instead, which it can.
+    EVT IntVT = VT.changeVectorElementTypeToInteger();
+    SDValue Mask = DAG.getBitcast(IntVT, N->getOperand(1));
+    SDValue A = DAG.getBitcast(IntVT, N->getOperand(2));
+    SDValue B = DAG.getBitcast(IntVT, N->getOperand(3));
+    SDValue Sel = DAG.getNode(
+        ISD::OR, dl, IntVT, DAG.getNode(ISD::AND, dl, IntVT, Mask, A),
+        DAG.getNode(ISD::AND, dl, IntVT, DAG.getNOT(dl, Mask, IntVT), B));
+    return DAG.getBitcast(VT, Sel);
   }
   case Intrinsic::arm_mve_vqdmlah:
   case Intrinsic::arm_mve_vqdmlash:
