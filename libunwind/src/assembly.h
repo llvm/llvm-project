@@ -17,19 +17,15 @@
 
 #if defined(__x86_64__) && !defined(_LIBUNWIND_IS_BAREMETAL) &&                \
     (defined(__linux__) || defined(__FreeBSD__))
+#include <sys/syscall.h>
 #if defined(__linux__)
-// Use the kernel UAPI headers, which are safe to include from assembly. The
-// libc <sys/syscall.h> is not: on Android it pulls in <sys/cdefs.h> and
-// <android/api-level.h>, which contain C declarations.
 #include <asm/prctl.h>
-#include <asm/unistd.h>
 #define X86_64_GET_FSBASE ARCH_GET_FS
 #define X86_64_GET_GSBASE ARCH_GET_GS
 #define X86_64_SET_FSBASE ARCH_SET_FS
 #define X86_64_SET_GSBASE ARCH_SET_GS
-#define X86_64_BASE_SYSCALL __NR_arch_prctl
+#define X86_64_BASE_SYSCALL SYS_arch_prctl
 #else
-#include <sys/syscall.h>
 // <machine/sysarch.h> contains C declarations and cannot be included here.
 #define X86_64_GET_FSBASE 128 // AMD64_GET_FSBASE
 #define X86_64_GET_GSBASE 130 // AMD64_GET_GSBASE
