@@ -122,7 +122,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   default:
     // If this assert fails, add/remove the newly added/removed opcode from the
     // switch and update the expected value.
-    static_assert(ISD::BUILTIN_OP_END == 479, "Unexpected number of opcodes");
+    static_assert(ISD::BUILTIN_OP_END == 480, "Unexpected number of opcodes");
     if (getOpcode() < ISD::BUILTIN_OP_END)
       return "<<Unknown DAG Node>>";
     if (isMachineOpcode()) {
@@ -186,6 +186,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::PCMARKER:                   return "PCMarker";
   case ISD::READCYCLECOUNTER:           return "ReadCycleCounter";
   case ISD::READSTEADYCOUNTER:          return "ReadSteadyCounter";
+  case ISD::IS_DEBUGGING_ENABLED:       return "IsDebuggingEnabled";
   case ISD::SRCVALUE:                   return "SrcValue";
   case ISD::MDNODE_SDNODE:              return "MDNode";
   case ISD::EntryToken:                 return "EntryToken";

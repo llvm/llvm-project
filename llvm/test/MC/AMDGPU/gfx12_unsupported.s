@@ -80,18 +80,6 @@ global_atomic_cmpswap_f32 v[5:6], off, s[96:99], s3
 s_barrier
 // CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_barrier
 
-s_cbranch_cdbgsys 0
-// CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_cbranch_cdbgsys
-
-s_cbranch_cdbgsys_and_user 0
-// CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_cbranch_cdbgsys_and_user
-
-s_cbranch_cdbgsys_or_user 0
-// CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_cbranch_cdbgsys_or_user
-
-s_cbranch_cdbguser 0
-// CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_cbranch_cdbguser
-
 s_cmpk_eq_i32 s0, 0
 // CHECK: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_cmpk_eq_i32
 
