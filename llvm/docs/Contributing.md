@@ -49,7 +49,7 @@ Once you have a patch ready, it is time to submit it. The patch should:
 * conform to the {doc}`CodingStandards`. See [format patches](#format patches) below. 
 * not contain any unrelated changes
 * be an isolated change. Independent changes should be submitted as separate patches as this makes reviewing easier.
-* Follow  {ref}`GitHub <github-reviews>` from here on out.
+* Follow the {ref}`GitHub review process <github-reviews>` from here on out.
 
 (format patches)=
 
