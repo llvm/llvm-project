@@ -1496,12 +1496,17 @@ SUnit *ScheduleDAGRRList::PickNodeToScheduleBottomUp() {
   }
 
   if (!CurSU) {
-    // Can't backtrack. If it's too expensive to copy the value, then try
-    // duplicate the nodes that produces these "too expensive to copy"
-    // values to break the dependency. In case even that doesn't work,
-    // insert cross class copies.
-    // If it's not too expensive, i.e. cost != -1, issue copies.
-    SUnit *TrySU = Interferences[0];
+    // No node became schedulable after backtracking. Try to resolve a live
+    // physical register by duplicating its definition or inserting copies.
+    // CallResource is a scheduling constraint and cannot be copied.
+    auto TryIt = llvm::find_if(Interferences, [&](SUnit *SU) {
+      return !is_contained(LRegsMap[SU], TRI->getNumRegs());
+    });
+    // If every candidate still needs CallResource, there is no register to
+    // rename here.
+    if (TryIt == Interferences.end())
+      report_fatal_error("Cannot resolve call sequence resource interference");
+    SUnit *TrySU = *TryIt;
     SmallVectorImpl<unsigned> &LRegs = LRegsMap[TrySU];
     assert(LRegs.size() == 1 && "Can't handle this yet!");
     unsigned Reg = LRegs[0];
