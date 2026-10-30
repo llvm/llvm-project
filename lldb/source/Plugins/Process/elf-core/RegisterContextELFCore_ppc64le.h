@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_ppc64le.h ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_PPC64LE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_PPC64LE_H
 
 #include "Plugins/Register/Core/RegisterContextCore_ppc64le.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_ppc64le : public RegisterContextCore_ppc64le {
+class RegisterContextELFCore_ppc64le : public RegisterContextCore_ppc64le {
 public:
-  RegisterContextCorePOSIX_ppc64le(
+  RegisterContextELFCore_ppc64le(
       lldb_private::Thread &thread,
       lldb_private::RegisterInfoInterface *register_info,
       const lldb_private::DataExtractor &gpregset,
@@ -45,4 +45,4 @@ private:
   lldb_private::DataExtractor m_vsx;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_PPC64LE_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_PPC64LE_H

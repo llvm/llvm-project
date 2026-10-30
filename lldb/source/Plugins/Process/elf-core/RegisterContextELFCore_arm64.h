@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_arm64.h ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM64_H
 
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Register/Core/RegisterContextCore_arm64.h"
@@ -17,14 +17,14 @@
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_arm64 : public RegisterContextCore_arm64 {
+class RegisterContextELFCore_arm64 : public RegisterContextCore_arm64 {
 public:
-  static std::unique_ptr<RegisterContextCorePOSIX_arm64>
+  static std::unique_ptr<RegisterContextELFCore_arm64>
   Create(lldb_private::Thread &thread, const lldb_private::ArchSpec &arch,
          const lldb_private::DataExtractor &gpregset,
          llvm::ArrayRef<lldb_private::CoreNote> notes);
 
-  ~RegisterContextCorePOSIX_arm64() override;
+  ~RegisterContextELFCore_arm64() override;
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;
@@ -39,7 +39,7 @@ public:
   bool HardwareSingleStep(bool enable) override;
 
 protected:
-  RegisterContextCorePOSIX_arm64(
+  RegisterContextELFCore_arm64(
       lldb_private::Thread &thread,
       std::unique_ptr<RegisterInfo_arm64> register_info,
       const lldb_private::DataExtractor &gpregset,
@@ -89,4 +89,4 @@ private:
   uint64_t GetSVERegVG() { return m_sve_vector_length / 8; }
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM64_H

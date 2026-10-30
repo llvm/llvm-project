@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_s390x.h ------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM_H
 
-#include "Plugins/Register/Core/RegisterContextCore_s390x.h"
+#include "Plugins/Register/Core/RegisterContextCore_arm.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_s390x : public RegisterContextCore_s390x {
+class RegisterContextELFCore_arm : public RegisterContextCore_arm {
 public:
-  RegisterContextCorePOSIX_s390x(
+  RegisterContextELFCore_arm(
       lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
+      std::unique_ptr<RegisterInfo_arm> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 
-  ~RegisterContextCorePOSIX_s390x() override;
+  ~RegisterContextELFCore_arm() override;
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;
@@ -47,9 +48,7 @@ protected:
 private:
   lldb::DataBufferSP m_gpr_buffer;
   lldb_private::DataExtractor m_gpr;
-
-  lldb::DataBufferSP m_fpr_buffer;
   lldb_private::DataExtractor m_fpr;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM_H

@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_arm.cpp ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextPOSIXCore_arm.h"
+#include "RegisterContextELFCore_arm.h"
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/RegisterValue.h"
@@ -15,7 +15,7 @@
 
 using namespace lldb_private;
 
-RegisterContextCorePOSIX_arm::RegisterContextCorePOSIX_arm(
+RegisterContextELFCore_arm::RegisterContextELFCore_arm(
     Thread &thread, std::unique_ptr<RegisterInfo_arm> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextCore_arm(thread, std::move(register_info)) {
@@ -29,23 +29,23 @@ RegisterContextCorePOSIX_arm::RegisterContextCorePOSIX_arm(
   m_fpr = getRegset(notes, target_triple, ARM_VFP_Desc);
 }
 
-RegisterContextCorePOSIX_arm::~RegisterContextCorePOSIX_arm() = default;
+RegisterContextELFCore_arm::~RegisterContextELFCore_arm() = default;
 
-bool RegisterContextCorePOSIX_arm::ReadGPR() { return true; }
+bool RegisterContextELFCore_arm::ReadGPR() { return true; }
 
-bool RegisterContextCorePOSIX_arm::ReadFPR() { return false; }
+bool RegisterContextELFCore_arm::ReadFPR() { return false; }
 
-bool RegisterContextCorePOSIX_arm::WriteGPR() {
+bool RegisterContextELFCore_arm::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm::WriteFPR() {
+bool RegisterContextELFCore_arm::WriteFPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm::ReadRegister(const RegisterInfo *reg_info,
+bool RegisterContextELFCore_arm::ReadRegister(const RegisterInfo *reg_info,
                                                 RegisterValue &value) {
   const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   if (reg == LLDB_INVALID_REGNUM)
@@ -69,21 +69,21 @@ bool RegisterContextCorePOSIX_arm::ReadRegister(const RegisterInfo *reg_info,
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm::ReadAllRegisterValues(
+bool RegisterContextELFCore_arm::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm::WriteRegister(const RegisterInfo *reg_info,
+bool RegisterContextELFCore_arm::WriteRegister(const RegisterInfo *reg_info,
                                                  const RegisterValue &value) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm::WriteAllRegisterValues(
+bool RegisterContextELFCore_arm::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   return false;
 }
 
-bool RegisterContextCorePOSIX_arm::HardwareSingleStep(bool enable) {
+bool RegisterContextELFCore_arm::HardwareSingleStep(bool enable) {
   return false;
 }

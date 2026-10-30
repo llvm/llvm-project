@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIXCore_powerpc.h ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,22 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
 
-#include "Plugins/Register/Core/RegisterContextCore_powerpc.h"
+#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
-#include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_powerpc : public RegisterContextCore_powerpc {
+class RegisterContextELFCore_x86 : public RegisterContextCore_x86 {
 public:
-  RegisterContextCorePOSIX_powerpc(
+  RegisterContextELFCore_x86(
       lldb_private::Thread &thread,
       lldb_private::RegisterInfoInterface *register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
-
-  ~RegisterContextCorePOSIX_powerpc() override;
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
                     lldb_private::RegisterValue &value) override;
@@ -40,21 +37,13 @@ protected:
 
   bool ReadFPR() override;
 
-  bool ReadVMX() override;
-
   bool WriteGPR() override;
 
   bool WriteFPR() override;
 
-  bool WriteVMX() override;
-
 private:
-  lldb::DataBufferSP m_gpr_buffer;
-  lldb::DataBufferSP m_fpr_buffer;
-  lldb::DataBufferSP m_vec_buffer;
-  lldb_private::DataExtractor m_gpr;
-  lldb_private::DataExtractor m_fpr;
-  lldb_private::DataExtractor m_vec;
+  std::unique_ptr<uint8_t[]> m_gpregset;
+  std::unique_ptr<uint8_t[]> m_fpregset;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_X86_H
