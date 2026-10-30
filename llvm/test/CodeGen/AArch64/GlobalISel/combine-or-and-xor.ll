@@ -42,16 +42,10 @@ entry:
 }
 
 define i32 @or_and_xor_to_xor_or(i32 %x, i32 %y) {
-; CHECK-SD-LABEL: or_and_xor_to_xor_or:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    and w8, w0, w1
-; CHECK-SD-NEXT:    orn w0, w8, w1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: or_and_xor_to_xor_or:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    orn w0, w0, w1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: or_and_xor_to_xor_or:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orn w0, w0, w1
+; CHECK-NEXT:    ret
 entry:
 ; (X&Y)|~Y --> X|~Y
   %not = xor i32 %y, -1
@@ -61,16 +55,10 @@ entry:
 }
 
 define i64 @or_and_xor_to_xor_or_i64(i64 %x, i64 %y) {
-; CHECK-SD-LABEL: or_and_xor_to_xor_or_i64:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    and x8, x0, x1
-; CHECK-SD-NEXT:    orn x0, x8, x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: or_and_xor_to_xor_or_i64:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    orn x0, x0, x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: or_and_xor_to_xor_or_i64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orn x0, x0, x1
+; CHECK-NEXT:    ret
 entry:
 ; (X&Y)|~Y --> X|~Y
   %not = xor i64 %y, -1
@@ -80,16 +68,10 @@ entry:
 }
 
 define <4 x i32> @or_and_xor_to_xor_or_vector(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-SD-LABEL: or_and_xor_to_xor_or_vector:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    orn v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: or_and_xor_to_xor_or_vector:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    orn v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: or_and_xor_to_xor_or_vector:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    orn v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
 entry:
 ; (X&Y)|~Y --> X|~Y
   %not = xor <4 x i32> %y, <i32 -1, i32 -1, i32 -1, i32 -1>

@@ -8,6 +8,12 @@
 
 #include "FMaximumMagTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/fmaximum_magf128.h"
 
-LIST_FMAXIMUM_MAG_TESTS(float128, LIBC_NAMESPACE::fmaximum_magf128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_FMAXIMUM_MAG_TESTS(FmaximumMagf128, float128,
+                        LIBC_NAMESPACE::fmaximum_magf128)

@@ -50,7 +50,6 @@ define <4 x float> @load_float4_float3_as_float2_float(ptr nocapture readonly de
 ; TOPOLOGICAL:       # %bb.0:
 ; TOPOLOGICAL-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; TOPOLOGICAL-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; TOPOLOGICAL-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[3,0]
 ; TOPOLOGICAL-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,2]
 ; TOPOLOGICAL-NEXT:    retq
   %2 = load <2 x float>, ptr %0, align 4

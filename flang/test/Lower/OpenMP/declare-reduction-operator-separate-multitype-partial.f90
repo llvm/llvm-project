@@ -42,7 +42,7 @@ end module
 ! Exactly one op is materialized (for tok). The CHECK-NOT between the tok op and
 ! the loop rejects a spurious second op (which is what materializing the
 ! unsupported tbad sibling would produce). No TODO aborts the compile.
-! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.op\.[A-Za-z0-9_.]*tok]] : !fir.ref
+! CHECK: omp.declare_reduction @[[RED:_QQ[A-Za-z0-9_.]*op\.op\.[A-Za-z0-9_.]*tok]] byref_element_type({{.*}}) : !fir.ref
 ! CHECK-NOT: omp.declare_reduction
 ! CHECK: omp.wsloop
 ! CHECK-SAME: reduction(byref @[[RED]]

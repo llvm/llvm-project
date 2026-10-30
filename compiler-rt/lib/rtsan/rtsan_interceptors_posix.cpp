@@ -869,28 +869,32 @@ INTERCEPTOR(void *, calloc, SIZE_T num, SIZE_T size) {
 }
 
 INTERCEPTOR(void, free, void *ptr) {
-  if (DlsymAlloc::PointerIsMine(ptr))
-    return DlsymAlloc::Free(ptr);
-
   // According to the C and C++ standard, freeing a nullptr is guaranteed to be
   // a no-op (and thus real-time safe). This can be confirmed for looking at
   // __libc_free in the glibc source.
-  if (ptr != nullptr)
-    __rtsan_notify_intercepted_call("free");
+  // Crucially must be done before DlsymAlloc::Free, as it can crash on
+  // nullptr input on linux.
+  if (UNLIKELY(!ptr))
+    return;
+
+  if (DlsymAlloc::PointerIsMine(ptr))
+    return DlsymAlloc::Free(ptr);
+
+  __rtsan_notify_intercepted_call("free");
 
   return REAL(free)(ptr);
 }
 
 #if SANITIZER_INTERCEPT_FREE_SIZED
 INTERCEPTOR(void, free_sized, void *ptr, SIZE_T size) {
+  // see above comment in `free` interceptor
+  if (UNLIKELY(!ptr))
+    return;
+
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
-  // a no-op (and thus real-time safe). This can be confirmed for looking at
-  // __libc_free in the glibc source.
-  if (ptr != nullptr)
-    __rtsan_notify_intercepted_call("free_sized");
+  __rtsan_notify_intercepted_call("free_sized");
 
   if (REAL(free_sized))
     return REAL(free_sized)(ptr, size);
@@ -904,14 +908,14 @@ INTERCEPTOR(void, free_sized, void *ptr, SIZE_T size) {
 #if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
 INTERCEPTOR(void, free_aligned_sized, void *ptr, SIZE_T alignment,
             SIZE_T size) {
+  // see above comment in `free` interceptor
+  if (UNLIKELY(!ptr))
+    return;
+
   if (DlsymAlloc::PointerIsMine(ptr))
     return DlsymAlloc::Free(ptr);
 
-  // According to the C and C++ standard, freeing a nullptr is guaranteed to be
-  // a no-op (and thus real-time safe). This can be confirmed for looking at
-  // __libc_free in the glibc source.
-  if (ptr != nullptr)
-    __rtsan_notify_intercepted_call("free_aligned_sized");
+  __rtsan_notify_intercepted_call("free_aligned_sized");
 
   if (REAL(free_aligned_sized))
     return REAL(free_aligned_sized)(ptr, alignment, size);

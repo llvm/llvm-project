@@ -14,8 +14,6 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVInstrInfo.h"
 
-#include "SPIRV.h"
-
 namespace llvm {
 [[maybe_unused]] static bool definesATypeRegister(const MachineInstr &MI) {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
@@ -46,5 +44,9 @@ bool SPIRVTypeInst::isPointer() const {
 
 bool SPIRVTypeInst::isTypePtr() const {
   return MI->getOpcode() == SPIRV::OpTypePointer;
+}
+
+bool SPIRVTypeInst::isTypeUntypedPtr() const {
+  return MI->getOpcode() == SPIRV::OpTypeUntypedPointerKHR;
 }
 } // namespace llvm

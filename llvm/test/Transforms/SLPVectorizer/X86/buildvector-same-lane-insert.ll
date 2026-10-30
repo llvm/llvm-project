@@ -10,9 +10,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> undef, <2 x float> [[TMP3]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> zeroinitializer, float 0.000000e+00, i64 0
 ; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr null, align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> [[TMP2]], <2 x i32> <i32 3, i32 1>
 ; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -37,14 +38,19 @@ define void @test() {
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr undef, i32 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr undef, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = fsub <2 x float> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x float> [[TMP4]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr undef, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub float [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, ptr undef, i32 3
+; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP9]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr undef, i32 1
+; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[TMP11]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fsub float [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fcmp olt float [[TMP6]], [[TMP5]]
+; CHECK-NEXT:    [[DOTSROA_0_0_VEC_INSERT_I5_I10:%.*]] = insertelement <2 x float> undef, float [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[DOTSROA_0_0_VEC_INSERT_I5_I10]], float [[TMP12]], i64 1
 ; CHECK-NEXT:    store <2 x float> [[TMP3]], ptr null, align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[DOTSROA_0_0_VEC_INSERT_I5_I10]], float [[TMP10]], i64 1
 ; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr null, align 4
 ; CHECK-NEXT:    ret void
 ;

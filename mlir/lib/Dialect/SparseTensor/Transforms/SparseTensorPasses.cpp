@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -47,6 +47,28 @@ namespace {
 //===----------------------------------------------------------------------===//
 // Passes implementation.
 //===----------------------------------------------------------------------===//
+
+static bool supportsCollapsedRangeBetween(LevelType lt) {
+  return isSingletonLT(lt);
+}
+
+static LogicalResult verifyLowerableCollapsedIterSpaces(Operation *op) {
+  WalkResult result = op->walk([&](ExtractIterSpaceOp op) {
+    auto [lvlLo, lvlHi] = op.getLvlRange();
+    SparseTensorEncodingAttr enc = cast<SparseTensorEncodingAttr>(
+        getRankedTensorType(op.getTensor()).getEncoding());
+    for (Level lvl = lvlLo + 1; lvl < lvlHi; ++lvl) {
+      LevelType lt = enc.getLvlType(lvl);
+      if (!supportsCollapsedRangeBetween(lt)) {
+        op.emitOpError() << "cannot lower collapsed iteration space with "
+                         << toMLIRString(lt) << " level after the first level";
+        return WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+  return failure(result.wasInterrupted());
+}
 
 struct SparseAssembler : public impl::SparseAssemblerBase<SparseAssembler> {
   SparseAssembler() = default;
@@ -167,6 +189,11 @@ struct LowerSparseIterationToSCFPass
       default;
 
   void runOnOperation() override {
+    if (failed(verifyLowerableCollapsedIterSpaces(getOperation()))) {
+      signalPassFailure();
+      return;
+    }
+
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
     SparseIterationTypeConverter converter;

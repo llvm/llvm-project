@@ -52,8 +52,6 @@ public:
   }
   APValue toAPValue(const ASTContext &) const { return APValue(toAPSInt()); }
 
-  Boolean toUnsigned() const { return *this; }
-
   constexpr static unsigned bitWidth() { return 1; }
   bool isZero() const { return !V; }
   bool isMin() const { return isZero(); }
@@ -109,10 +107,6 @@ public:
 
   template <typename T> static Boolean from(T Value, unsigned NumBits) {
     return Boolean(Value);
-  }
-
-  static bool inRange(int64_t Value, unsigned NumBits) {
-    return Value == 0 || Value == 1;
   }
 
   static bool increment(Boolean A, Boolean *R) {

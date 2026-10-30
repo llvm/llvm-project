@@ -1,5 +1,5 @@
 # RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu -start-before machine-scheduler -stop-after machine-scheduler -verify-machineinstrs %s -o - | FileCheck %s
-# RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu -disable-ppc-sched-addi-load -start-before machine-scheduler -stop-after machine-scheduler \
+# RUN: llc -mcpu=pwr9 -mtriple powerpc64le-unknown-linux-gnu -ppc-sched-addi-load=false -start-before machine-scheduler -stop-after machine-scheduler \
 # RUN:   -verify-machineinstrs %s -o - | FileCheck --check-prefix=CHECK-DISABLE %s
 # RUN: llc -mcpu=pwr8 -mtriple powerpc64le-unknown-linux-gnu -start-before machine-scheduler -stop-after machine-scheduler -verify-machineinstrs %s -o - | FileCheck --check-prefix=CHECK-P8 %s
 

@@ -125,7 +125,8 @@ public:
   void convertToNewDbgValues();
 
   /// \see BasicBlock::convertFromNewDbgValues.
-  void convertFromNewDbgValues();
+  /// Returns true if the conversion modified the function's IR.
+  bool convertFromNewDbgValues();
 
 private:
   friend class TargetLibraryInfoImpl;

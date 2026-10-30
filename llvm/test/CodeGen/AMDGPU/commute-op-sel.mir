@@ -48,7 +48,7 @@ name: test_machine_cse_op_sel_const_v_fma_f16
 tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: test_machine_cse_op_sel_const_v_fma_f16
-  ; GCN: %1:vgpr_32 = nofpexcept V_FMA_F16_e64 0, 3481272320, 0, 1, 0, %0, 0, 0, implicit $mode, implicit $exec
+  ; GCN: %1:vgpr_32 = nofpexcept V_FMA_F16_e64 0, 1, 0, 3481272320, 0, %0, 0, 0, implicit $mode, implicit $exec
   ; GCN-NEXT: DS_WRITE2_B32_gfx9 undef %3:vgpr_32, %1, %1, 0, 1, 0, implicit $exec
   bb.0:
     liveins: $vgpr0

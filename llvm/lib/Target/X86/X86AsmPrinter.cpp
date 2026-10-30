@@ -25,6 +25,7 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -199,9 +200,10 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   EmitKCFITypePadding(MF);
   unsigned DestReg = X86::EAX;
 
-  if (F.getParent()->getModuleFlag("kcfi-arity")) {
+  const Module *M = F.getParent();
+  if (M->getModuleFlag("kcfi-arity")) {
     // The ArityToRegMap assumes the 64-bit SysV ABI.
-    [[maybe_unused]] const auto &Triple = MF.getTarget().getTargetTriple();
+    [[maybe_unused]] const auto &Triple = M->getTargetTriple();
     assert(Triple.isX86_64() && !Triple.isOSWindows());
 
     // Determine the function's arity (i.e., the number of arguments) at the ABI
@@ -672,10 +674,11 @@ void X86AsmPrinter::emitMachOIFuncStubHelperBody(Module &M,
       *Subtarget);
 }
 
-static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
-                              char Mode, raw_ostream &O) {
+static bool printAsmMRegister(const X86AsmPrinter &P, const MachineInstr &MI,
+                              const MachineOperand &MO, char Mode,
+                              raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   if (!X86::GR8RegClass.contains(Reg) &&
       !X86::GR16RegClass.contains(Reg) &&
@@ -716,10 +719,10 @@ static bool printAsmMRegister(const X86AsmPrinter &P, const MachineOperand &MO,
   return false;
 }
 
-static bool printAsmVRegister(const MachineOperand &MO, char Mode,
-                              raw_ostream &O) {
+static bool printAsmVRegister(const MachineInstr &MI, const MachineOperand &MO,
+                              char Mode, raw_ostream &O) {
   Register Reg = MO.getReg();
-  bool EmitPercent = MO.getParent()->getInlineAsmDialect() == InlineAsm::AD_ATT;
+  bool EmitPercent = MI.getInlineAsmDialect() == InlineAsm::AD_ATT;
 
   unsigned Index;
   if (X86::VR128XRegClass.contains(Reg))
@@ -824,7 +827,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 'q': // Print DImode register
     case 'V': // Print native register without '%'
       if (MO.isReg())
-        return printAsmMRegister(*this, MO, ExtraCode[0], O);
+        return printAsmMRegister(*this, *MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -832,7 +835,7 @@ bool X86AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
     case 't': // Print V8SFmode register
     case 'g': // Print V16SFmode register
       if (MO.isReg())
-        return printAsmVRegister(MO, ExtraCode[0], O);
+        return printAsmVRegister(*MI, MO, ExtraCode[0], O);
       PrintOperand(MI, OpNo, O);
       return false;
 
@@ -918,7 +921,7 @@ bool X86AsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatELF()) {
     // Assemble feature flags that may require creation of a note section.
@@ -930,8 +933,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (FeatureFlagsAnd) {
       // Emit a .note.gnu.property section with the flags.
-      assert((TT.isX86_32() || TT.isX86_64()) &&
-             "CFProtection used on invalid architecture!");
+      assert(TT.isX86() && "CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
@@ -1060,7 +1062,7 @@ static bool usesMSVCFloatingPoint(const Triple &TT, const Module &M) {
 }
 
 void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
-  const Triple &TT = TM.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
 
   if (TT.isOSBinFormatMachO()) {
     // Mach-O uses non-lazy symbol stubs to encode per-TU information into
@@ -1120,8 +1122,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       // floating point operations in the program (including calls). A program
       // that only has: `scanf("%f", &global_float);` may fail to trigger this,
       // but oh well...that's a documented issue.
-      StringRef SymbolName =
-          (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
+      StringRef SymbolName = TT.isX86_32() ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
       OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;

@@ -9,6 +9,7 @@
 ; CHECK-DAG: [[I32:%[0-9]+]] = OpTypeInt 32 0
 ; CHECK-DAG: [[PATH:%[0-9]+]] = OpString "{{[/\\]}}src{{[/\\]}}debug-line-loop-merge.c"
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
+; CHECK-DAG: [[DF:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugFunction {{.*}}
 ; CHECK-DAG: [[V3:%[0-9]+]] = OpConstant [[I32]] 3{{$}}
 ; CHECK-DAG: [[V4:%[0-9]+]] = OpConstant [[I32]] 4{{$}}
 ; CHECK-DAG: [[V50:%[0-9]+]] = OpConstant [[I32]] 50{{$}}
@@ -16,6 +17,7 @@
 ; CHECK-DAG: [[V99:%[0-9]+]] = OpConstant [[I32]] 99{{$}}
 
 ; CHECK:      OpPhi [[I32]]
+; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugScope [[DF]]
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V4]] [[V4]] [[V3]] [[V4]]
 ; CHECK-NEXT: OpSLessThan
 ; CHECK-NEXT: OpExtInst [[VOID]] [[EXT]] DebugLine [[DS]] [[V99]] [[V99]] [[V50]] [[V51]]

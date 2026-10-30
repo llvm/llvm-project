@@ -63,6 +63,10 @@ Type *classifyPointerType(const Value *V, PointerTypeMap &Map) {
       // When store value is ptr type, cannot get more type info.
       if (NewPointeeTy->isPointerTy())
         continue;
+    } else if (const auto *Inst = dyn_cast<AtomicRMWInst>(User)) {
+      NewPointeeTy = Inst->getValOperand()->getType();
+    } else if (const auto *Inst = dyn_cast<AtomicCmpXchgInst>(User)) {
+      NewPointeeTy = Inst->getNewValOperand()->getType();
     } else if (const auto *GEP = dyn_cast<GEPOperator>(User)) {
       NewPointeeTy = GEP->getSourceElementType();
     }
@@ -108,7 +112,7 @@ Type *classifyFunctionType(const Function &F, PointerTypeMap &Map) {
   if (RetTy->isPointerTy()) {
     RetTy = nullptr;
     for (const auto &B : F) {
-      const auto *RetInst = dyn_cast_or_null<ReturnInst>(B.getTerminator());
+      const auto *RetInst = dyn_cast<ReturnInst>(B.getTerminator());
       if (!RetInst)
         continue;
 

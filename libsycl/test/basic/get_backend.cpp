@@ -1,8 +1,14 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
-
-#include <iostream>
 
 #include <sycl/sycl.hpp>
 
@@ -10,8 +16,8 @@ using namespace sycl;
 
 class Kernel1;
 
-bool check(backend be) {
-  switch (be) {
+bool check(backend Backend) {
+  switch (Backend) {
   case backend::opencl:
   case backend::level_zero:
   case backend::cuda:
@@ -22,32 +28,22 @@ bool check(backend be) {
   }
 }
 
-void return_fail() {
-  std::cout << "Failed" << std::endl;
-  exit(1);
-}
-
 int main() {
-  for (const auto &plt : platform::get_platforms()) {
-    if (!check(plt.get_backend())) {
-      return_fail();
-    }
+  for (const auto &Plt : platform::get_platforms()) {
+    if (!check(Plt.get_backend()))
+      return 1;
 
-    auto device = plt.get_devices()[0];
-    if (device.get_backend() != plt.get_backend()) {
-      return_fail();
-    }
+    auto Dev = Plt.get_devices()[0];
+    if (Dev.get_backend() != Plt.get_backend())
+      return 1;
 
-    queue q(device);
-    if (q.get_backend() != plt.get_backend()) {
-      return_fail();
-    }
+    queue Q(Dev);
+    if (Q.get_backend() != Plt.get_backend())
+      return 1;
 
-    event e = q.single_task<Kernel1>([]() {});
-    if (e.get_backend() != plt.get_backend()) {
-      return_fail();
-    }
+    event E = Q.single_task<Kernel1>([]() {});
+    if (E.get_backend() != Plt.get_backend())
+      return 1;
   }
-  std::cout << "Passed" << std::endl;
   return 0;
 }

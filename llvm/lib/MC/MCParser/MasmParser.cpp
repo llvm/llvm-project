@@ -54,7 +54,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <ctime>
@@ -1425,6 +1424,17 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
         return true;
       Res = MCUnaryExpr::createNot(Res, getContext(), FirstTokenLoc);
       return false;
+    }
+    // Parse IMAGEREL operator.
+    if (Identifier.equals_insensitive("imagerel")) {
+      if (parsePrimaryExpr(Res, EndLoc, nullptr))
+        return true;
+      if (const MCExpr *ModifiedRes =
+              applySpecifier(Res, MCSymbolRefExpr::VK_COFF_IMGREL32)) {
+        Res = ModifiedRes;
+        return false;
+      }
+      return Error(FirstTokenLoc, "cannot apply 'imagerel' to this expression");
     }
     // Parse directional local label references.
     if (Identifier.equals_insensitive("@b") ||
@@ -4619,11 +4629,11 @@ bool MasmParser::parseDirectiveComm(bool IsLocal) {
   // Create the Symbol as a common or local common with Size and Pow2Alignment.
   if (IsLocal) {
     getStreamer().emitLocalCommonSymbol(Sym, Size,
-                                        Align(1ULL << Pow2Alignment));
+                                        Align::fromLog2(Pow2Alignment));
     return false;
   }
 
-  getStreamer().emitCommonSymbol(Sym, Size, Align(1ULL << Pow2Alignment));
+  getStreamer().emitCommonSymbol(Sym, Size, Align::fromLog2(Pow2Alignment));
   return false;
 }
 

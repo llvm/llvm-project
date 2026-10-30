@@ -23,8 +23,7 @@ define void @conv_interleaved_loads_load(ptr noalias %a, ptr readonly %b, ptr re
 ; CHECK-GATHER-ENABLED-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
 ; CHECK-GATHER-ENABLED-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK-GATHER-ENABLED:       [[VECTOR_PH]]:
-; CHECK-GATHER-ENABLED-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP0]], 3
-; CHECK-GATHER-ENABLED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP3]]
+; CHECK-GATHER-ENABLED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
 ; CHECK-GATHER-ENABLED-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-GATHER-ENABLED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i64> poison, i64 [[COND]], i64 0
 ; CHECK-GATHER-ENABLED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
@@ -47,7 +46,7 @@ define void @conv_interleaved_loads_load(ptr noalias %a, ptr readonly %b, ptr re
 ; CHECK-GATHER-ENABLED-NEXT:    [[TMP11:%.*]] = add <vscale x 8 x i16> [[WIDE_LOAD]], [[PREDPHI]]
 ; CHECK-GATHER-ENABLED-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[INDEX]]
 ; CHECK-GATHER-ENABLED-NEXT:    store <vscale x 8 x i16> [[TMP11]], ptr [[TMP12]], align 2
-; CHECK-GATHER-ENABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP3]]
+; CHECK-GATHER-ENABLED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-GATHER-ENABLED-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-GATHER-ENABLED-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-GATHER-ENABLED:       [[MIDDLE_BLOCK]]:

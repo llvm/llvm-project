@@ -1444,7 +1444,7 @@ void DecoderEmitter::parseInstructionEncodings() {
           continue;
         }
         unsigned EncodingID = Encodings.size();
-        Encodings.emplace_back(EncodingDef, Inst);
+        Encodings.emplace_back(Target, EncodingDef, Inst);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
       continue; // Ignore encoding specified by Instruction itself.
@@ -1456,7 +1456,7 @@ void DecoderEmitter::parseInstructionEncodings() {
     }
 
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(InstDef, Inst);
+    Encodings.emplace_back(Target, InstDef, Inst);
 
     // This instruction is encoded the same on all HwModes.
     // According to user needs, add it to all, some, or only the default HwMode.
@@ -1479,7 +1479,8 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+    Encodings.emplace_back(Target, EncodingDef,
+                           &Target.getInstruction(InstDef));
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 
@@ -1491,7 +1492,6 @@ void DecoderEmitter::parseInstructionEncodings() {
 
 DecoderEmitter::DecoderEmitter(const RecordKeeper &RK)
     : RK(RK), Target(RK), CGH(Target.getHwModes()) {
-  Target.reverseBitsForLittleEndianEncoding();
   parseInstructionEncodings();
 }
 
@@ -1563,7 +1563,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   // template specialization to kick in).
   if (IsVarLenInst && SpecializeDecodersPerBitwidth)
     PrintFatalError(
-        "Cannot specialize decoders for variable length instuctions");
+        "Cannot specialize decoders for variable length instructions");
 
   DecoderContext Ctx;
   DecoderTreeBuilder TreeBuilder(Ctx, Target, Encodings);

@@ -454,19 +454,13 @@ define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i8 [[N:%.*]], i64 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[N_EXT:%.*]] = zext i8 [[N]] to i64
-; CHECK-NEXT:    [[UMIN7:%.*]] = call i64 @llvm.umin.i64(i64 [[N_EXT]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[N_EXT]], [[UMIN7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[N_EXT]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[UMIN7]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N_EXT]], i64 1)
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[N_EXT]], [[UMIN]]
-; CHECK-NEXT:    [[TMP8:%.*]] = udiv i64 [[TMP7]], 3
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[UMIN]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 12
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw nsw i64 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP11:%.*]] = add nuw nsw i64 [[TMP5]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[X]], 2
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP12]]
@@ -485,7 +479,7 @@ define void @dead_load_in_block(ptr %dst, ptr %src, i8 %N, i64 %x) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP3]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP2]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP18:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[INDEX]], 12
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP14]]
@@ -543,7 +537,7 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+64bit,+v" }
+attributes #0 = { "target-features"="+64bit,+v" vscale_range(2, 1024) }
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
@@ -557,7 +551,7 @@ attributes #0 = { "target-features"="+64bit,+v" }
 ; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
 ; CHECK: [[META10]] = !{[[META11:![0-9]+]]}
 ; CHECK: [[META11]] = distinct !{[[META11]], [[META12:![0-9]+]]}
-; CHECK: [[META12]] = distinct !{[[META12]], !"LVerDomain"}
+; CHECK: [[META12]] = distinct !{[[META12]], i1 false, !"LVerDomain"}
 ; CHECK: [[META13]] = !{[[META14:![0-9]+]], [[META15:![0-9]+]]}
 ; CHECK: [[META14]] = distinct !{[[META14]], [[META12]]}
 ; CHECK: [[META15]] = distinct !{[[META15]], [[META12]]}

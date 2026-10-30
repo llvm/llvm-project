@@ -16,6 +16,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
@@ -168,7 +169,7 @@ void ExecuteRegionOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"no_inline"});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult ExecuteRegionOp::verify() {
@@ -530,8 +531,7 @@ void ForOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/!getInitArgs().empty());
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elidedAttrs=*/getUnsignedCmpAttrName().strref());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -636,7 +636,7 @@ ForOp::replaceWithAdditionalYields(RewriterBase &rewriter,
   scf::ForOp newLoop = scf::ForOp::create(
       rewriter, getLoc(), getLowerBound(), getUpperBound(), getStep(), inits,
       [](OpBuilder &, Location, Value, ValueRange) {}, getUnsignedCmp());
-  newLoop->setAttrs(getPrunedAttributeList(getOperation(), {}));
+  newLoop->setDiscardableAttrs(getOperation()->getDiscardableAttrDictionary());
 
   // Generate the new yield values and append them to the scf.yield operation.
   auto yieldOp = cast<scf::YieldOp>(getBody()->getTerminator());
@@ -737,8 +737,7 @@ LogicalResult scf::ForallOp::promoteIfSingleIteration(RewriterBase &rewriter) {
       return failure();
   }
 
-  promote(rewriter, *this);
-  return success();
+  return promote(rewriter, *this);
 }
 
 Block::BlockArgListType ForallOp::getRegionIterArgs() {
@@ -750,15 +749,44 @@ MutableArrayRef<OpOperand> ForallOp::getInitsMutable() {
 }
 
 /// Promotes the loop body of a scf::ForallOp to its containing block.
-void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
+LogicalResult mlir::scf::promote(RewriterBase &rewriter,
+                                 scf::ForallOp forallOp) {
   OpBuilder::InsertionGuard g(rewriter);
   scf::InParallelOp terminator = forallOp.getTerminator();
+
+  // Check that all combining ops can be promoted before modifying the IR,
+  // including materializing the lower bounds below.
+  for (Operation &op : terminator.getYieldingOps()) {
+    if (!isa<tensor::ParallelInsertSliceOp>(op))
+      return rewriter.notifyMatchFailure(forallOp, [&](Diagnostic &diag) {
+        diag << "unsupported parallel combining op: " << op.getName();
+      });
+  }
 
   // Replace block arguments with lower bounds (replacements for IVs) and
   // outputs.
   SmallVector<Value> bbArgReplacements = forallOp.getLowerBound(rewriter);
   bbArgReplacements.append(forallOp.getOutputs().begin(),
                            forallOp.getOutputs().end());
+
+  // Collect combining ops in shared output order before inlining replaces the
+  // output block arguments. Keep a separate list for each output.
+  SmallVector<SmallVector<ParallelCombiningOpInterface, 1>> yieldingOps;
+  yieldingOps.reserve(forallOp.getNumResults());
+
+  for (BlockArgument outputArg : forallOp.getRegionIterArgs()) {
+    auto &outputOps = yieldingOps.emplace_back();
+
+    for (Operation *op : forallOp.getCombiningOps(outputArg)) {
+      auto combiningOp = cast<ParallelCombiningOpInterface>(op);
+      // Supported tensor.parallel_insert_slice ops have a single destination.
+      if (combiningOp->getParentOp() != terminator.getOperation() ||
+          combiningOp.getUpdatedDestinations()[0].get() != outputArg)
+        continue;
+
+      outputOps.push_back(combiningOp);
+    }
+  }
 
   // Move the loop body operations to the loop's containing block.
   rewriter.inlineBlockBefore(forallOp.getBody(), forallOp->getBlock(),
@@ -768,31 +796,28 @@ void mlir::scf::promote(RewriterBase &rewriter, scf::ForallOp forallOp) {
   rewriter.setInsertionPointAfter(forallOp);
   SmallVector<Value> results;
   results.reserve(forallOp.getResults().size());
-  for (auto &yieldingOp : terminator.getYieldingOps()) {
-    auto parallelInsertSliceOp =
-        dyn_cast<tensor::ParallelInsertSliceOp>(yieldingOp);
-    if (!parallelInsertSliceOp)
-      continue;
+  for (auto [output, combiningOps] :
+       llvm::zip_equal(forallOp.getOutputs(), yieldingOps)) {
+    Value result = output;
 
-    Value dst = parallelInsertSliceOp.getDest();
-    Value src = parallelInsertSliceOp.getSource();
-    if (llvm::isa<TensorType>(src.getType())) {
-      results.push_back(tensor::InsertSliceOp::create(
-          rewriter, forallOp.getLoc(), dst.getType(), src, dst,
-          parallelInsertSliceOp.getOffsets(), parallelInsertSliceOp.getSizes(),
-          parallelInsertSliceOp.getStrides(),
-          parallelInsertSliceOp.getStaticOffsets(),
-          parallelInsertSliceOp.getStaticSizes(),
-          parallelInsertSliceOp.getStaticStrides()));
-    } else {
-      llvm_unreachable("unsupported terminator");
+    for (ParallelCombiningOpInterface combiningOp : combiningOps) {
+      auto insertOp = cast<tensor::ParallelInsertSliceOp>(combiningOp);
+      result = tensor::InsertSliceOp::create(
+          rewriter, forallOp.getLoc(), result.getType(), insertOp.getSource(),
+          result, insertOp.getOffsets(), insertOp.getSizes(),
+          insertOp.getStrides(), insertOp.getStaticOffsets(),
+          insertOp.getStaticSizes(), insertOp.getStaticStrides());
     }
+
+    results.push_back(result);
   }
+
   rewriter.replaceAllUsesWith(forallOp.getResults(), results);
 
   // Erase the old terminator and the loop.
   rewriter.eraseOp(terminator);
   rewriter.eraseOp(forallOp);
+  return success();
 }
 
 LoopNest mlir::scf::buildLoopNest(
@@ -909,7 +934,8 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
       rewriter, forOp.getLoc(), forOp.getLowerBound(), forOp.getUpperBound(),
       forOp.getStep(), newIterOperands, /*bodyBuilder=*/nullptr,
       forOp.getUnsignedCmp());
-  newForOp->setAttrs(forOp->getAttrs());
+  newForOp->setDiscardableAttrs(
+      forOp->getDiscardableAttrDictionary().getValue());
   Block &newBlock = newForOp.getRegion().front();
   SmallVector<Value, 4> newBlockTransferArgs(newBlock.getArguments().begin(),
                                              newBlock.getArguments().end());
@@ -1139,10 +1165,11 @@ void ForallOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/getNumResults() > 0);
-  p.printOptionalAttrDict(op->getAttrs(), {getOperandSegmentSizesAttrName(),
-                                           getStaticLowerBoundAttrName(),
-                                           getStaticUpperBoundAttrName(),
-                                           getStaticStepAttrName()});
+  SmallVector<NamedAttribute> attrs(op->getDiscardableAttrs());
+  if (ArrayAttr mapping = getMappingAttr())
+    attrs.emplace_back(getMappingAttrName(), mapping);
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
 }
 
 ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -1455,12 +1482,13 @@ public:
       op.getDynamicStepMutable().assign(dynamicStep);
       op.setStaticStep(staticStep);
 
-      op->setAttr(ForallOp::getOperandSegmentSizeAttr(),
-                  rewriter.getDenseI32ArrayAttr(
-                      {static_cast<int32_t>(dynamicLowerBound.size()),
-                       static_cast<int32_t>(dynamicUpperBound.size()),
-                       static_cast<int32_t>(dynamicStep.size()),
-                       static_cast<int32_t>(op.getNumResults())}));
+      op->setInherentAttr(
+          rewriter.getStringAttr(ForallOp::getOperandSegmentSizeAttr()),
+          rewriter.getDenseI32ArrayAttr(
+              {static_cast<int32_t>(dynamicLowerBound.size()),
+               static_cast<int32_t>(dynamicUpperBound.size()),
+               static_cast<int32_t>(dynamicStep.size()),
+               static_cast<int32_t>(op.getNumResults())}));
     });
     return success();
   }
@@ -1622,7 +1650,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     // Compute new loop bounds that omit all single-iteration loop dimensions.
     SmallVector<OpFoldResult> newMixedLowerBounds, newMixedUpperBounds,
         newMixedSteps;
-    IRMapping mapping;
+    SmallVector<std::pair<Value, OpFoldResult>> singleIterationIVs;
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getMixedLowerBound(), op.getMixedUpperBound(),
                    op.getMixedStep(), op.getInductionVars())) {
@@ -1637,7 +1665,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
         // Replace the loop induction variable by the lower bound if the loop
         // performs a single iteration. Otherwise, copy the loop bounds.
         if (*numIterations == 1) {
-          mapping.map(iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
+          singleIterationIVs.emplace_back(iv, lb);
           continue;
         }
       }
@@ -1647,10 +1675,8 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     }
 
     // All of the loop dimensions perform a single iteration. Inline loop body.
-    if (newMixedLowerBounds.empty()) {
-      promote(rewriter, op);
-      return success();
-    }
+    if (newMixedLowerBounds.empty())
+      return promote(rewriter, op);
 
     // Exit if none of the loop dimensions perform a single iteration.
     if (newMixedLowerBounds.size() == static_cast<unsigned>(op.getRank())) {
@@ -1658,26 +1684,20 @@ struct ForallOpSingleOrZeroIterationDimsFolder
           op, "no dimensions have 0 or 1 iterations");
     }
 
+    // Materialize lower bounds only after all failure paths, including
+    // promotion above, so that failed rewrites leave the IR unchanged.
+    IRMapping mapping;
+    for (auto [iv, lb] : singleIterationIVs)
+      mapping.map(iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
+
     // Replace the loop by a lower-dimensional loop.
     ForallOp newOp;
     newOp = ForallOp::create(rewriter, loc, newMixedLowerBounds,
                              newMixedUpperBounds, newMixedSteps,
                              op.getOutputs(), std::nullopt, nullptr);
     newOp.getBodyRegion().getBlocks().clear();
-    // The new loop needs to keep all attributes from the old one, except for
-    // "operandSegmentSizes" and static loop bound attributes which capture
-    // the outdated information of the old iteration domain.
-    SmallVector<StringAttr> elidedAttrs{newOp.getOperandSegmentSizesAttrName(),
-                                        newOp.getStaticLowerBoundAttrName(),
-                                        newOp.getStaticUpperBoundAttrName(),
-                                        newOp.getStaticStepAttrName()};
-    for (const auto &namedAttr : op->getAttrs()) {
-      if (llvm::is_contained(elidedAttrs, namedAttr.getName()))
-        continue;
-      rewriter.modifyOpInPlace(newOp, [&]() {
-        newOp->setAttr(namedAttr.getName(), namedAttr.getValue());
-      });
-    }
+    newOp.setMappingAttr(op.getMappingAttr());
+    newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
                                newOp.getRegion().begin(), mapping);
     rewriter.replaceOp(op, newOp.getResults());
@@ -1875,7 +1895,8 @@ void InParallelOp::print(OpAsmPrinter &p) {
   p.printRegion(getRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
-  p.printOptionalAttrDict(getOperation()->getAttrs());
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 ParseResult InParallelOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -2104,7 +2125,7 @@ void IfOp::print(OpAsmPrinter &p) {
                   /*printBlockTerminators=*/printBlockTerminators);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 void IfOp::getSuccessorRegions(RegionBranchPoint point,
@@ -2343,8 +2364,29 @@ struct ConditionPropagation : public OpRewritePattern<IfOp> {
                                  [&]() { use.set(constantFalse); });
         break;
       }
-      case Parent::None:
+      case Parent::None: {
+        auto selectOp = dyn_cast<arith::SelectOp>(use.getOwner());
+        if (!selectOp || use.getOperandNumber() != 0)
+          break;
+
+        // Refine captured select results only at uses in the matching branch.
+        // Uses outside the if must retain the select result.
+        changed |= rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getTrueValue(),
+            [&](OpOperand &selectUse) {
+              return getParentType(
+                         selectUse.getOwner()->getParentRegion(), op, cache,
+                         op.getCondition().getParentRegion()) == Parent::Then;
+            });
+        changed |= rewriter.replaceUsesWithIf(
+            selectOp.getResult(), selectOp.getFalseValue(),
+            [&](OpOperand &selectUse) {
+              return getParentType(
+                         selectUse.getOwner()->getParentRegion(), op, cache,
+                         op.getCondition().getParentRegion()) == Parent::Else;
+            });
         break;
+      }
       }
     }
 
@@ -2761,11 +2803,15 @@ void ParallelOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps, ValueRange initVals,
     function_ref<void(OpBuilder &, Location, ValueRange, ValueRange)>
-        bodyBuilderFn) {
+        bodyBuilderFn,
+    bool unsignedCmp) {
   result.addOperands(lowerBounds);
   result.addOperands(upperBounds);
   result.addOperands(steps);
   result.addOperands(initVals);
+  if (unsignedCmp)
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
       builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
@@ -2795,7 +2841,8 @@ void ParallelOp::build(
 void ParallelOp::build(
     OpBuilder &builder, OperationState &result, ValueRange lowerBounds,
     ValueRange upperBounds, ValueRange steps,
-    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
+    bool unsignedCmp) {
   // Only pass a non-null wrapper if bodyBuilderFn is non-null itself. Make sure
   // we don't capture a reference to a temporary by constructing the lambda at
   // function level.
@@ -2808,8 +2855,8 @@ void ParallelOp::build(
   if (bodyBuilderFn)
     wrapper = wrappedBuilderFn;
 
-  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(),
-        wrapper);
+  build(builder, result, lowerBounds, upperBounds, steps, ValueRange(), wrapper,
+        unsignedCmp);
 }
 
 LogicalResult ParallelOp::verify() {
@@ -2877,6 +2924,10 @@ LogicalResult ParallelOp::verify() {
 
 ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   auto &builder = parser.getBuilder();
+  if (succeeded(parser.parseOptionalKeyword("unsigned")))
+    result.addAttribute(getUnsignedCmpAttrName(result.name),
+                        builder.getUnitAttr());
+
   // Parse an opening `(` followed by induction variables followed by `)`
   SmallVector<OpAsmParser::Argument, 4> ivs;
   if (parser.parseArgumentList(ivs, OpAsmParser::Delimiter::Paren))
@@ -2943,6 +2994,8 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void ParallelOp::print(OpAsmPrinter &p) {
+  if (getUnsignedCmp())
+    p << " unsigned";
   p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
     << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
   if (!getInitVals().empty())
@@ -2950,9 +3003,7 @@ void ParallelOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict(
-      (*this)->getAttrs(),
-      /*elidedAttrs=*/ParallelOp::getOperandSegmentSizeAttr());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 SmallVector<Region *> ParallelOp::getLoopRegions() { return {&getRegion()}; }
@@ -2998,8 +3049,8 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
     for (auto [lb, ub, step, iv] :
          llvm::zip(op.getLowerBound(), op.getUpperBound(), op.getStep(),
                    op.getInductionVars())) {
-      auto numIterations =
-          constantTripCount(lb, ub, step, /*isSigned=*/true, computeUbMinusLb);
+      auto numIterations = constantTripCount(lb, ub, step, !op.getUnsignedCmp(),
+                                             computeUbMinusLb);
       if (numIterations.has_value()) {
         // Remove the loop if it performs zero iterations.
         if (*numIterations == 0) {
@@ -3047,9 +3098,9 @@ struct ParallelOpSingleOrZeroIterationDimsFolder
       return success();
     }
     // Replace the parallel loop by lower-dimensional parallel loop.
-    auto newOp =
-        ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
-                           newUpperBounds, newSteps, op.getInitVals(), nullptr);
+    auto newOp = ParallelOp::create(rewriter, op.getLoc(), newLowerBounds,
+                                    newUpperBounds, newSteps, op.getInitVals(),
+                                    nullptr, op.getUnsignedCmp());
     // Erase the empty block that was inserted by the builder.
     rewriter.eraseBlock(newOp.getBody());
     // Clone the loop body and remap the block arguments of the collapsed loops
@@ -3072,6 +3123,9 @@ struct MergeNestedParallelLoops : public OpRewritePattern<ParallelOp> {
 
     auto innerOp = dyn_cast<ParallelOp>(outerBody.front());
     if (!innerOp)
+      return failure();
+
+    if (op.getUnsignedCmp() != innerOp.getUnsignedCmp())
       return failure();
 
     for (auto val : outerBody.getArguments())
@@ -3371,29 +3425,8 @@ void scf::WhileOp::print(OpAsmPrinter &p) {
   p.printRegion(getBefore(), /*printEntryBlockArgs=*/false);
   p << " do ";
   p.printRegion(getAfter());
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs());
-}
-
-/// Verifies that two ranges of types match, i.e. have the same number of
-/// entries and that types are pairwise equals. Reports errors on the given
-/// operation in case of mismatch.
-template <typename OpTy>
-static LogicalResult verifyTypeRangesMatch(OpTy op, TypeRange left,
-                                           TypeRange right, StringRef message) {
-  if (left.size() != right.size())
-    return op.emitOpError("expects the same number of ") << message;
-
-  for (unsigned i = 0, e = left.size(); i < e; ++i) {
-    if (left[i] != right[i]) {
-      InFlightDiagnostic diag = op.emitOpError("expects the same types for ")
-                                << message;
-      diag.attachNote() << "for argument " << i << ", found " << left[i]
-                        << " and " << right[i];
-      return diag;
-    }
-  }
-
-  return success();
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
 }
 
 LogicalResult scf::WhileOp::verify() {
@@ -3473,17 +3506,25 @@ struct WhileMoveIfDown : public OpRewritePattern<scf::WhileOp> {
     Location loc = op.getLoc();
 
     // Replace uses of ifOp results in the conditionOp with the yielded values
-    // from the ifOp branches.
+    // from the ifOp branches: the after-region argument takes the `then` value,
+    // while the condition operand -- which becomes a while result once the
+    // condition is false -- takes the `else` value.
+    //
+    // The same ifOp result may be forwarded to several condition operands, so
+    // assign into the specific operand instead of replacing all uses of the
+    // ifOp result, which would also rewrite the operands not yet visited.
     for (auto [idx, arg] : llvm::enumerate(conditionOp.getArgs())) {
       auto it = llvm::find(ifOp->getResults(), arg);
-      if (it != ifOp->getResults().end()) {
-        size_t ifOpIdx = it.getIndex();
-        Value thenValue = ifOp.thenYield()->getOperand(ifOpIdx);
-        Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
-
-        rewriter.replaceAllUsesWith(ifOp->getResults()[ifOpIdx], elseValue);
-        rewriter.replaceAllUsesWith(op.getAfterArguments()[idx], thenValue);
-      }
+      if (it == ifOp->getResults().end())
+        continue;
+      size_t ifOpIdx = it.getIndex();
+      rewriter.replaceAllUsesWith(op.getAfterArguments()[idx],
+                                  ifOp.thenYield()->getOperand(ifOpIdx));
+      unsigned argIdx = idx;
+      Value elseValue = ifOp.elseYield()->getOperand(ifOpIdx);
+      rewriter.modifyOpInPlace(conditionOp, [&] {
+        conditionOp.getArgsMutable()[argIdx].assign(elseValue);
+      });
     }
 
     // Collect additional used values from before region.
@@ -3684,7 +3725,7 @@ static bool hasDuplicates(ValueRange args) {
 /// args and op result values accordingly.
 /// Needed to simplify `scf.while` -> `scf.for` uplifting.
 struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(WhileOp loop,
                                 PatternRewriter &rewriter) const override {

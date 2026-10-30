@@ -763,12 +763,16 @@ protected:
     // branch. That said, would a synthesized body ever intend to handle
     // ownership? As of today they don't. And if they did, how would we
     // put notes inside it, given that it doesn't match any source locations?
-    if (!FD || !FD->hasBody())
+    if (!FD)
       return false;
+
+    Stmt *Body = FD->getBody();
+    if (!Body)
+      return false;
+
     using namespace clang::ast_matchers;
 
-    auto Matches =
-        match(findAll(callExpr().bind("call")), *FD->getBody(), ACtx);
+    auto Matches = match(findAll(callExpr().bind("call")), *Body, ACtx);
     for (BoundNodes Match : Matches) {
       if (const auto *Call = Match.getNodeAs<CallExpr>("call"))
         if (isClosingCallAsWritten(*Call))
@@ -1823,7 +1827,7 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
   std::tie(StateNotNull, StateNull) = CM.assumeDual(State, *Stream);
 
   if (!StateNotNull && StateNull) {
-    if (ExplodedNode *N = C.generateErrorNode(StateNull)) {
+    if (ExplodedNode *N = C.addSink(StateNull)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_FileNull, "Stream pointer might be NULL.", N);
       if (StreamE)
@@ -1889,7 +1893,7 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
   if (SS->isClosed()) {
     // Using a stream pointer after 'fclose' causes undefined behavior
     // according to cppreference.com .
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterClose, "Use of a stream that might be already closed", N);
       R->addVisitor<StreamClosedVisitor>(Sym);
@@ -1905,7 +1909,7 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
     // This should usually not occur because stream pointer is NULL.
     // But freopen can cause a state when stream pointer remains non-null but
     // failed to open.
-    ExplodedNode *N = C.generateErrorNode();
+    ExplodedNode *N = C.addSink();
     if (N) {
       C.emitReport(std::make_unique<PathSensitiveBugReport>(
           BT_UseAfterOpenFailed,
@@ -1956,7 +1960,7 @@ ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
 
     // Known or unknown error state without FEOF possible.
     // Stop analysis, report error.
-    if (ExplodedNode *N = C.generateErrorNode(State)) {
+    if (ExplodedNode *N = C.addSink(State)) {
       auto R = std::make_unique<PathSensitiveBugReport>(
           BT_IndeterminatePosition, BugMessage, N);
       R->markInteresting(Sym);

@@ -124,6 +124,22 @@ json::Value toJSON(const AcceleratorActions &data) {
   return obj;
 }
 
+bool fromJSON(const Value &value, LLDBSettings &data, Path path) {
+  ObjectMapper o(value, path);
+  return o && o.mapOptional("dyld_plugin_name", data.dyld_plugin_name) &&
+         o.mapOptional("accelerator_plugin_name",
+                       data.accelerator_plugin_name) &&
+         o.mapOptional("send_dyld_packet_to_accelerator",
+                       data.send_dyld_packet_to_accelerator);
+}
+
+json::Value toJSON(const LLDBSettings &data) {
+  return Object{{"dyld_plugin_name", data.dyld_plugin_name},
+                {"accelerator_plugin_name", data.accelerator_plugin_name},
+                {"send_dyld_packet_to_accelerator",
+                 data.send_dyld_packet_to_accelerator}};
+}
+
 bool fromJSON(const Value &value, AcceleratorBreakpointHitResponse &data,
               Path path) {
   ObjectMapper o(value, path);
@@ -140,6 +156,65 @@ json::Value toJSON(const AcceleratorBreakpointHitResponse &data) {
   if (data.actions)
     obj["actions"] = *data.actions;
   return obj;
+}
+
+bool fromJSON(const Value &value, AcceleratorSectionInfo &data, Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("names", data.names) &&
+         o.map("load_address", data.load_address);
+}
+
+json::Value toJSON(const AcceleratorSectionInfo &data) {
+  return Object{{"names", data.names},
+                {"load_address", static_cast<int64_t>(data.load_address)}};
+}
+
+bool fromJSON(const Value &value, AcceleratorDynamicLoaderLibraryInfo &data,
+              Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("pathname", data.pathname) &&
+         o.mapOptional("uuid", data.uuid_str) && o.map("load", data.load) &&
+         o.mapOptional("load_address", data.load_address) &&
+         o.mapOptional("loaded_sections", data.loaded_sections) &&
+         o.mapOptional("native_memory_address", data.native_memory_address) &&
+         o.mapOptional("native_memory_size", data.native_memory_size) &&
+         o.mapOptional("file_offset", data.file_offset) &&
+         o.mapOptional("file_size", data.file_size);
+}
+
+json::Value toJSON(const AcceleratorDynamicLoaderLibraryInfo &data) {
+  return Object{
+      {"pathname", data.pathname},
+      {"uuid", data.uuid_str},
+      {"load", data.load},
+      {"load_address", data.load_address},
+      {"loaded_sections", data.loaded_sections},
+      {"native_memory_address", data.native_memory_address},
+      {"native_memory_size", data.native_memory_size},
+      {"file_offset", data.file_offset},
+      {"file_size", data.file_size},
+  };
+}
+
+bool fromJSON(const Value &value, AcceleratorDynamicLoaderArgs &data,
+              Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("plugin_name", data.plugin_name) &&
+         o.map("full", data.full);
+}
+
+json::Value toJSON(const AcceleratorDynamicLoaderArgs &data) {
+  return Object{{"plugin_name", data.plugin_name}, {"full", data.full}};
+}
+
+bool fromJSON(const Value &value, AcceleratorDynamicLoaderResponse &data,
+              Path path) {
+  ObjectMapper o(value, path);
+  return o && o.map("library_infos", data.library_infos);
+}
+
+json::Value toJSON(const AcceleratorDynamicLoaderResponse &data) {
+  return Object{{"library_infos", data.library_infos}};
 }
 
 } // namespace lldb_private

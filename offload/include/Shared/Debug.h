@@ -38,6 +38,12 @@
 #ifndef OMPTARGET_SHARED_DEBUG_H
 #define OMPTARGET_SHARED_DEBUG_H
 
+#ifndef DEBUG_PREFIX
+#warning                                                                       \
+    "Debug support was included without defining DEBUG_PREFIX. Setting it to \"Unknown\""
+#define DEBUG_PREFIX "Unknown"
+#endif
+
 #include <atomic>
 #include <cstdarg>
 #include <mutex>

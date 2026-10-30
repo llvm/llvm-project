@@ -1,18 +1,19 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
 // RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
-// RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument
+// RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
+// RUN:                    -Wno-fortify-source
 // RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
 // RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
 // RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
-// RUN:                    -triple armv7-a15-linux
+// RUN:                    -Wno-fortify-source -triple armv7-a15-linux
 // RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
 // RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
 // RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
-// RUN:                    -triple aarch64_be-none-linux-gnu
+// RUN:                    -Wno-fortify-source -triple aarch64_be-none-linux-gnu
 // RUN: %clang_analyze_cc1 -analyzer-checker=unix.cstring.BadSizeArg -verify %s\
 // RUN:                    -Wno-strncat-size -Wno-sizeof-pointer-memaccess     \
 // RUN:                    -Wno-strlcpy-strlcat-size -Wno-sizeof-array-argument\
-// RUN:                    -triple i386-apple-darwin10
+// RUN:                    -Wno-fortify-source -triple i386-apple-darwin10
 
 typedef __SIZE_TYPE__ size_t;
 char  *strncat(char *, const char *, size_t);

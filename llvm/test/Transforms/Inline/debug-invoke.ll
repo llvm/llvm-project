@@ -5,7 +5,7 @@
 ; CHECK: invoke void @test()
 ; CHECK-NEXT: to label {{.*}} unwind label {{.*}}, !dbg [[INL_LOC:![0-9]+]]
 ; CHECK: [[SP:.*]] = distinct !DISubprogram(
-; CHECK: [[INL_LOC]] = !DILocation(line: 1, scope: [[SP]], inlinedAt: [[INL_AT:.*]])
+; CHECK: [[INL_LOC]] = distinct !DILocation(line: 1, scope: [[SP]], inlinedAt: [[INL_AT:.*]])
 ; CHECK: [[INL_AT]] = distinct !DILocation(line: 2, scope: [[SP]])
 
 declare void @test()

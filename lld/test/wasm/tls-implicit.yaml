@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: wasm-ld --shared-memory -o %t.wasm %t.o
 
-# Verify compatability with older object files that didn't mark individual
+# Verify compatibility with older object files that didn't mark individual
 # symbols as TLS.   In this case the symbol `bar` is being used in a TLS-only
 # relocation (R_WASM_MEMORY_ADDR_TLS_SLEB) but is not itself marked as TLS.
 # However, because it is defined in a section (`.mydata`) that *is* marked as

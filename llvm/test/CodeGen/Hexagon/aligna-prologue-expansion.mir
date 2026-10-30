@@ -57,7 +57,6 @@ body:             |
     renamable $r20 = COPY killed $r3
     renamable $r21 = COPY killed $r2
     renamable $r22 = COPY killed $r1
-    $r16 = PS_aligna 128, implicit killed $r30
     renamable $r25 = A2_tfrsi 0
     renamable $r2 = A2_tfrsi 0
     renamable $r23 = PS_alloca killed renamable $r6, 128, implicit-def dead $r29

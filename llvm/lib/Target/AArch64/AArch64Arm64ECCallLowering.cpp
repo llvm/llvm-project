@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64.h"
+#include "AArch64Subtarget.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -29,7 +30,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
@@ -40,11 +40,6 @@ using OperandBundleDef = OperandBundleDefT<Value *>;
 #define DEBUG_TYPE "arm64eccalllowering"
 
 STATISTIC(Arm64ECCallsLowered, "Number of Arm64EC calls lowered");
-
-static cl::opt<bool> LowerDirectToIndirect("arm64ec-lower-direct-to-indirect",
-                                           cl::Hidden, cl::init(true));
-static cl::opt<bool> GenerateThunks("arm64ec-generate-thunks", cl::Hidden,
-                                    cl::init(true));
 
 namespace {
 
@@ -76,6 +71,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
+  const AArch64Options *CLOpts = nullptr;
   ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
@@ -825,7 +821,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
-  if (!GenerateThunks)
+  CLOpts = &Mod.getContext().getLibraryOptions().get<AArch64Options>();
+  if (!CLOpts->arm64ec_generate_thunks)
     return false;
 
   M = &Mod;
@@ -1037,7 +1034,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
       // FIXME: getCalledFunction() fails if there's a bitcast (e.g.
       // unprototyped functions in C)
       if (Function *F = CB->getCalledFunction()) {
-        if (!LowerDirectToIndirect || F->hasLocalLinkage() ||
+        if (!CLOpts->arm64ec_lower_direct_to_indirect || F->hasLocalLinkage() ||
             F->isIntrinsic() || !F->isDeclarationForLinker())
           continue;
 

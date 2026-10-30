@@ -12,9 +12,9 @@ using namespace lldb_dap;
 
 BreakpointBase::BreakpointBase(DAP &d,
                                const std::optional<std::string> &condition,
-                               const std::optional<std::string> &hit_condition)
+                               const std::string &hit_condition)
     : m_dap(d), m_condition(condition.value_or("")),
-      m_hit_condition(hit_condition.value_or("")) {}
+      m_hit_condition(hit_condition) {}
 
 void BreakpointBase::UpdateBreakpoint(const BreakpointBase &request_bp) {
   if (m_condition != request_bp.m_condition) {

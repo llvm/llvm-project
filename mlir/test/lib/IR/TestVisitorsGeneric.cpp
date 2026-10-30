@@ -64,31 +64,33 @@ struct TestGenericIRVisitorInterruptPass
 
     auto walker = [&](Operation *op, const WalkStage &stage) {
       if (auto interruptBeforeAall =
-              op->getAttrOfType<BoolAttr>("interrupt_before_all"))
+              op->getDiscardableAttrOfType<BoolAttr>("interrupt_before_all"))
         if (interruptBeforeAall.getValue() && stage.isBeforeAllRegions())
           return WalkResult::interrupt();
 
       if (auto interruptAfterAll =
-              op->getAttrOfType<BoolAttr>("interrupt_after_all"))
+              op->getDiscardableAttrOfType<BoolAttr>("interrupt_after_all"))
         if (interruptAfterAll.getValue() && stage.isAfterAllRegions())
           return WalkResult::interrupt();
 
-      if (auto interruptAfterRegion =
-              op->getAttrOfType<IntegerAttr>("interrupt_after_region"))
+      if (auto interruptAfterRegion = op->getDiscardableAttrOfType<IntegerAttr>(
+              "interrupt_after_region"))
         if (stage.isAfterRegion(
                 static_cast<int>(interruptAfterRegion.getInt())))
           return WalkResult::interrupt();
 
-      if (auto skipBeforeAall = op->getAttrOfType<BoolAttr>("skip_before_all"))
+      if (auto skipBeforeAall =
+              op->getDiscardableAttrOfType<BoolAttr>("skip_before_all"))
         if (skipBeforeAall.getValue() && stage.isBeforeAllRegions())
           return WalkResult::skip();
 
-      if (auto skipAfterAll = op->getAttrOfType<BoolAttr>("skip_after_all"))
+      if (auto skipAfterAll =
+              op->getDiscardableAttrOfType<BoolAttr>("skip_after_all"))
         if (skipAfterAll.getValue() && stage.isAfterAllRegions())
           return WalkResult::skip();
 
       if (auto skipAfterRegion =
-              op->getAttrOfType<IntegerAttr>("skip_after_region"))
+              op->getDiscardableAttrOfType<IntegerAttr>("skip_after_region"))
         if (stage.isAfterRegion(static_cast<int>(skipAfterRegion.getInt())))
           return WalkResult::skip();
 
@@ -131,7 +133,7 @@ struct TestGenericIRBlockVisitorInterruptPass
 
     auto walker = [&](Block *block) {
       for (Operation &op : *block)
-        if (op.getAttrOfType<BoolAttr>("interrupt"))
+        if (op.getDiscardableAttrOfType<BoolAttr>("interrupt"))
           return WalkResult::interrupt();
 
       llvm::outs() << "step " << stepNo++ << "\n";
@@ -162,7 +164,7 @@ struct TestGenericIRRegionVisitorInterruptPass
 
     auto walker = [&](Region *region) {
       for (Operation &op : region->getOps())
-        if (op.getAttrOfType<BoolAttr>("interrupt"))
+        if (op.getDiscardableAttrOfType<BoolAttr>("interrupt"))
           return WalkResult::interrupt();
 
       llvm::outs() << "step " << stepNo++ << "\n";

@@ -19,6 +19,8 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/Support/Error.h"
+
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 using namespace lldb;
@@ -155,16 +157,18 @@ bool lldb_private::formatters::CFBitVectorSummaryProvider(
   if (error.Fail())
     return false;
   uint64_t num_bytes = count / 8 + ((count & 7) ? 1 : 0);
-  addr_t data_ptr = process_sp->ReadPointerFromMemory(
-      valobj_addr + 2 * ptr_size + 2 * ptr_size, error);
-  if (error.Fail())
+  llvm::Expected<addr_t> data_ptr = process_sp->ReadPointerFromMemory(
+      valobj_addr + 2 * ptr_size + 2 * ptr_size);
+  if (!data_ptr) {
+    llvm::consumeError(data_ptr.takeError());
     return false;
+  }
   // make sure we do not try to read huge amounts of data
   if (num_bytes > 1024)
     num_bytes = 1024;
   WritableDataBufferSP buffer_sp(new DataBufferHeap(num_bytes, 0));
-  num_bytes =
-      process_sp->ReadMemory(data_ptr, buffer_sp->GetBytes(), num_bytes, error);
+  num_bytes = process_sp->ReadMemory(*data_ptr, buffer_sp->GetBytes(),
+                                     num_bytes, error);
   if (error.Fail() || num_bytes == 0)
     return false;
   uint8_t *bytes = buffer_sp->GetBytes();

@@ -74,7 +74,7 @@ TEST(DapTypesTest, DAP_var_ref_t) {
   EXPECT_EQ(perm_ref.Kind(), eReferenceKindPermanent);
 
   const var_ref_t invalid_ref{};
-  EXPECT_EQ(invalid_ref.AsUInt32(), var_ref_t::k_invalid_var_ref);
+  EXPECT_EQ(invalid_ref, var_ref_t::k_invalid_var_ref);
   EXPECT_EQ(invalid_ref.Kind(), eReferenceKindInvalid);
 
   // Check unknown reference kind.
@@ -96,6 +96,5 @@ TEST(DapTypesTest, DAP_var_ref_t) {
   EXPECT_EQ(scope_ref2.Reference(), 3U);
   EXPECT_EQ(scope_ref2.Kind(), eReferenceKindTemporary);
 
-  EXPECT_EQ(var_ref_t().AsUInt32(),
-            var_ref_t{var_ref_t::k_invalid_var_ref}.AsUInt32());
+  EXPECT_EQ(var_ref_t().AsUInt32(), var_ref_t::k_invalid_var_ref.AsUInt32());
 }

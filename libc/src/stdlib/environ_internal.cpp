@@ -65,7 +65,8 @@ char **EnvironmentManager::get_array() {
 EnvironmentManager::iterator EnvironmentManager::begin() { return get_array(); }
 
 EnvironmentManager::iterator EnvironmentManager::end() {
-  return get_array() + count;
+  char **env_array = get_array();
+  return env_array ? env_array + count : nullptr;
 }
 
 size_t EnvironmentManager::size() const { return count; }
@@ -297,6 +298,27 @@ int EnvironmentManager::put(char *string) {
     count++;
     env_array[count] = nullptr;
   }
+
+  return 0;
+}
+
+int EnvironmentManager::clear() {
+  init_once();
+
+  // Free the pointer array, but leave the string buffers intact so that
+  // existing getenv pointers remain valid.
+  delete[] storage;
+  delete[] ownership;
+  storage = nullptr;
+  ownership = nullptr;
+  capacity = 0;
+  count = 0;
+  is_ours = false;
+
+  app.env_ptr = nullptr;
+#ifdef LIBC_COPT_SUPPORT_ENVIRON
+  environ = nullptr;
+#endif
 
   return 0;
 }

@@ -595,9 +595,13 @@ declare i32 @__kmpc_cancellationpoint(ptr, i32, i32)
 
 declare void @__kmpc_push_num_teams(ptr, i32, i32, i32)
 
+declare void @__kmpc_push_num_teams_51(ptr, i32, i32, i32, i32)
+
 declare void @__kmpc_fork_teams(ptr, i32, ptr, ...)
 
 declare void @__kmpc_taskloop(ptr, i32, ptr, i32, ptr, ptr, i64, i32, i32, i64, ptr)
+
+declare void @__kmpc_taskloop_5(ptr, i32, ptr, i32, ptr, ptr, i64, i32, i32, i64, i32, ptr)
 
 declare ptr @__kmpc_omp_target_task_alloc(ptr, i32, i32, i64, i64, ptr, i64)
 
@@ -1177,10 +1181,16 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK-NEXT: declare void @__kmpc_push_num_teams(ptr, i32, i32, i32)
 
 ; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare void @__kmpc_push_num_teams_51(ptr, i32, i32, i32, i32)
+
+; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__kmpc_fork_teams(ptr, i32, ptr, ...)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare void @__kmpc_taskloop(ptr, i32, ptr, i32, ptr, ptr, i64, i32, i32, i64, ptr)
+
+; CHECK: ; Function Attrs: nounwind
+; CHECK-NEXT: declare void @__kmpc_taskloop_5(ptr, i32, ptr, i32, ptr, ptr, i64, i32, i32, i64, i32, ptr)
 
 ; CHECK: ; Function Attrs: nounwind
 ; CHECK-NEXT: declare noalias ptr @__kmpc_omp_target_task_alloc(ptr, i32, i32, i64, i64, ptr, i64)
@@ -1818,11 +1828,17 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
 ; OPTIMISTIC-NEXT: declare void @__kmpc_push_num_teams(ptr nofree readonly captures(none), i32, i32, i32)
 
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite)
+; OPTIMISTIC-NEXT: declare void @__kmpc_push_num_teams_51(ptr nofree readonly captures(none), i32, i32, i32, i32)
+
 ; OPTIMISTIC: ; Function Attrs: nounwind
 ; OPTIMISTIC-NEXT: declare void @__kmpc_fork_teams(ptr nofree readonly captures(none), i32, ptr nofree readonly captures(none), ...)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare void @__kmpc_taskloop(ptr nofree readonly captures(none), i32, ptr, i32, ptr nofree captures(none), ptr nofree captures(none), i64, i32, i32, i64, ptr)
+
+; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
+; OPTIMISTIC-NEXT: declare void @__kmpc_taskloop_5(ptr nofree readonly captures(none), i32, ptr, i32, ptr nofree captures(none), ptr nofree captures(none), i64, i32, i32, i64, i32, ptr)
 
 ; OPTIMISTIC: ; Function Attrs: nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare noalias ptr @__kmpc_omp_target_task_alloc(ptr nofree readonly captures(none), i32, i32, i64, i64, ptr nofree readonly captures(none), i64)
@@ -2477,10 +2493,16 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT-NEXT: declare void @__kmpc_push_num_teams(ptr, i32 signext, i32 signext, i32 signext)
 
 ; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_push_num_teams_51(ptr, i32 signext, i32 signext, i32 signext, i32 signext)
+
+; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare void @__kmpc_fork_teams(ptr, i32 signext, ptr, ...)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare void @__kmpc_taskloop(ptr, i32 signext, ptr, i32 signext, ptr, ptr, i64, i32 signext, i32 signext, i64, ptr)
+
+; EXT: ; Function Attrs: nounwind
+; EXT-NEXT: declare void @__kmpc_taskloop_5(ptr, i32 signext, ptr, i32 signext, ptr, ptr, i64, i32 signext, i32 signext, i64, i32 signext, ptr)
 
 ; EXT: ; Function Attrs: nounwind
 ; EXT-NEXT: declare noalias ptr @__kmpc_omp_target_task_alloc(ptr, i32 signext, i32 signext, i64, i64, ptr, i64)
@@ -2690,7 +2712,7 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare void @__tgt_interop_destroy(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare void @__tgt_interop_init(ptr, i32 signext, ptr, i32 signext, i32 signext, i32, ptr, i32 signext)
+; EXT: declare void @__tgt_interop_init(ptr, i32 signext, ptr, i32 signext, i32 signext, i32 signext, ptr, i32 signext)
 
 ; EXT-NOT: Function Attrs
 ; EXT: declare void @__tgt_interop_use(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)

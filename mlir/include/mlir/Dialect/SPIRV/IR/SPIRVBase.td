@@ -52,7 +52,6 @@ def SPIRV_Dialect : Dialect {
   let hasOperationAttrVerify = 1;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
-  let useStrictPropertiesInAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
     void registerAttributes();
@@ -88,9 +87,7 @@ class SPIRV_BitEnum<string name, string description,
 }
 class SPIRV_BitEnumAttr<string name, string description, string mnemonic,
                         list<BitEnumAttrCaseBase> cases> :
-    EnumAttr<SPIRV_Dialect, SPIRV_BitEnum<name, description, cases>, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<SPIRV_Dialect, SPIRV_BitEnum<name, description, cases>, mnemonic>;
 
 // Wrapper over base I32EnumAttr to set common fields.
 class SPIRV_I32Enum<string name, string description,
@@ -101,9 +98,7 @@ class SPIRV_I32Enum<string name, string description,
 }
 class SPIRV_I32EnumAttr<string name, string description, string mnemonic,
                         list<I32EnumAttrCase> cases> :
-    EnumAttr<SPIRV_Dialect, SPIRV_I32Enum<name, description, cases>, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<SPIRV_Dialect, SPIRV_I32Enum<name, description, cases>, mnemonic>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V availability definitions
@@ -3369,6 +3364,54 @@ def SPIRV_FunctionControlAttr :
       SPIRV_FC_OptNoneINTEL
     ]>;
 
+def SPIRV_FPA_Zext        : I32EnumAttrCase<"Zext", 0> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_Sext        : I32EnumAttrCase<"Sext", 1> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_ByVal       : I32EnumAttrCase<"ByVal", 2> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_Sret        : I32EnumAttrCase<"Sret", 3> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_NoAlias     : I32EnumAttrCase<"NoAlias", 4> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_NoCapture   : I32EnumAttrCase<"NoCapture", 5> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_NoWrite     : I32EnumAttrCase<"NoWrite", 6> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+def SPIRV_FPA_NoReadWrite : I32EnumAttrCase<"NoReadWrite", 7> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Kernel]>
+  ];
+}
+
+def SPIRV_FunctionParameterAttributeAttr :
+    SPIRV_I32EnumAttr<"FunctionParameterAttribute", "valid SPIR-V FunctionParameterAttribute", "function_parameter_attribute", [
+      SPIRV_FPA_Zext, SPIRV_FPA_Sext, SPIRV_FPA_ByVal, SPIRV_FPA_Sret,
+      SPIRV_FPA_NoAlias, SPIRV_FPA_NoCapture, SPIRV_FPA_NoWrite,
+      SPIRV_FPA_NoReadWrite
+    ]>;
+
 def SPIRV_GO_Reduce                     : I32EnumAttrCase<"Reduce", 0> {
   list<Availability> availability = [
     Capability<[SPIRV_C_GroupNonUniformArithmetic, SPIRV_C_GroupNonUniformBallot, SPIRV_C_Kernel]>
@@ -4523,6 +4566,8 @@ def SPIRV_OC_OpUConvert                       : I32EnumAttrCase<"OpUConvert", 11
 def SPIRV_OC_OpSConvert                       : I32EnumAttrCase<"OpSConvert", 114>;
 def SPIRV_OC_OpFConvert                       : I32EnumAttrCase<"OpFConvert", 115>;
 def SPIRV_OC_OpConvertPtrToU                  : I32EnumAttrCase<"OpConvertPtrToU", 117>;
+def SPIRV_OC_OpSatConvertSToU                 : I32EnumAttrCase<"OpSatConvertSToU", 118>;
+def SPIRV_OC_OpSatConvertUToS                 : I32EnumAttrCase<"OpSatConvertUToS", 119>;
 def SPIRV_OC_OpConvertUToPtr                  : I32EnumAttrCase<"OpConvertUToPtr", 120>;
 def SPIRV_OC_OpPtrCastToGeneric               : I32EnumAttrCase<"OpPtrCastToGeneric", 121>;
 def SPIRV_OC_OpGenericCastToPtr               : I32EnumAttrCase<"OpGenericCastToPtr", 122>;
@@ -4634,6 +4679,8 @@ def SPIRV_OC_OpKill                           : I32EnumAttrCase<"OpKill", 252>;
 def SPIRV_OC_OpReturn                         : I32EnumAttrCase<"OpReturn", 253>;
 def SPIRV_OC_OpReturnValue                    : I32EnumAttrCase<"OpReturnValue", 254>;
 def SPIRV_OC_OpUnreachable                    : I32EnumAttrCase<"OpUnreachable", 255>;
+def SPIRV_OC_OpLifetimeStart                  : I32EnumAttrCase<"OpLifetimeStart", 256>;
+def SPIRV_OC_OpLifetimeStop                   : I32EnumAttrCase<"OpLifetimeStop", 257>;
 def SPIRV_OC_OpGroupBroadcast                 : I32EnumAttrCase<"OpGroupBroadcast", 263>;
 def SPIRV_OC_OpGroupIAdd                      : I32EnumAttrCase<"OpGroupIAdd", 264>;
 def SPIRV_OC_OpGroupFAdd                      : I32EnumAttrCase<"OpGroupFAdd", 265>;
@@ -4759,7 +4806,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpImageQuerySize,
       SPIRV_OC_OpConvertFToU, SPIRV_OC_OpConvertFToS, SPIRV_OC_OpConvertSToF,
       SPIRV_OC_OpConvertUToF, SPIRV_OC_OpUConvert, SPIRV_OC_OpSConvert,
-      SPIRV_OC_OpFConvert, SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpConvertUToPtr,
+      SPIRV_OC_OpFConvert, SPIRV_OC_OpConvertPtrToU, SPIRV_OC_OpSatConvertSToU,
+      SPIRV_OC_OpSatConvertUToS, SPIRV_OC_OpConvertUToPtr,
       SPIRV_OC_OpPtrCastToGeneric, SPIRV_OC_OpGenericCastToPtr,
       SPIRV_OC_OpGenericCastToPtrExplicit, SPIRV_OC_OpBitcast, SPIRV_OC_OpSNegate,
       SPIRV_OC_OpFNegate, SPIRV_OC_OpIAdd, SPIRV_OC_OpFAdd, SPIRV_OC_OpISub,
@@ -4800,7 +4848,8 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpPhi, SPIRV_OC_OpLoopMerge, SPIRV_OC_OpSelectionMerge,
       SPIRV_OC_OpLabel, SPIRV_OC_OpBranch, SPIRV_OC_OpBranchConditional,
       SPIRV_OC_OpSwitch, SPIRV_OC_OpKill, SPIRV_OC_OpReturn, SPIRV_OC_OpReturnValue,
-      SPIRV_OC_OpUnreachable, SPIRV_OC_OpGroupBroadcast, SPIRV_OC_OpGroupIAdd,
+      SPIRV_OC_OpUnreachable, SPIRV_OC_OpLifetimeStart, SPIRV_OC_OpLifetimeStop,
+      SPIRV_OC_OpGroupBroadcast, SPIRV_OC_OpGroupIAdd,
       SPIRV_OC_OpGroupFAdd, SPIRV_OC_OpGroupFMin, SPIRV_OC_OpGroupUMin,
       SPIRV_OC_OpGroupSMin, SPIRV_OC_OpGroupFMax, SPIRV_OC_OpGroupUMax,
       SPIRV_OC_OpGroupSMax, SPIRV_OC_OpNoLine, SPIRV_OC_OpModuleProcessed,

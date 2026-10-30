@@ -94,7 +94,7 @@ class CheckerRegistrationOrderPrinter
 public:
   void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {
     ExplodedNode *N = nullptr;
-    N = C.generateErrorNode();
+    N = C.addSink();
     llvm::SmallString<200> Buf;
     llvm::raw_svector_ostream OS(Buf);
     C.getAnalysisManager()

@@ -198,7 +198,7 @@ define <8 x half> @frinta_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -212,14 +212,14 @@ define <8 x half> @frinta_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1
@@ -531,7 +531,7 @@ define <8 x half> @frinti_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -545,14 +545,14 @@ define <8 x half> @frinti_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1
@@ -884,7 +884,7 @@ define <8 x half> @frintm_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -898,14 +898,14 @@ define <8 x half> @frintm_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1
@@ -1203,7 +1203,7 @@ define <8 x half> @frintn_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -1217,14 +1217,14 @@ define <8 x half> @frintn_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1
@@ -1522,7 +1522,7 @@ define <8 x half> @frintp_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -1536,14 +1536,14 @@ define <8 x half> @frintp_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1
@@ -1841,7 +1841,7 @@ define <8 x half> @frintx_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -1855,14 +1855,14 @@ define <8 x half> @frintx_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1
@@ -2160,7 +2160,7 @@ define <8 x half> @frintz_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vcvtb.f16.f32 s2, s2
 ; CHECK-NOFP16-NEXT:    pkhbt r1, r2, r1, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov r2, s2
-; CHECK-NOFP16-NEXT:    vmov.32 d18[0], r1
+; CHECK-NOFP16-NEXT:    vmov.32 d17[0], r1
 ; CHECK-NOFP16-NEXT:    pkhbt r2, r3, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.32 d16[0], r2
 ; CHECK-NOFP16-NEXT:    vmov r2, s0
@@ -2174,14 +2174,14 @@ define <8 x half> @frintz_8h(<8 x half> %A) nounwind {
 ; CHECK-NOFP16-NEXT:    vmov.u16 r3, d16[3]
 ; CHECK-NOFP16-NEXT:    pkhbt r0, r1, r2, lsl #16
 ; CHECK-NOFP16-NEXT:    vmov.u16 r2, d16[2]
-; CHECK-NOFP16-NEXT:    vmov.32 d18[1], r0
+; CHECK-NOFP16-NEXT:    vmov.32 d17[1], r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r12
 ; CHECK-NOFP16-NEXT:    vmov s1, lr
-; CHECK-NOFP16-NEXT:    vmov.u16 r0, d18[0]
+; CHECK-NOFP16-NEXT:    vmov.u16 r0, d17[0]
 ; CHECK-NOFP16-NEXT:    vmov s3, r3
-; CHECK-NOFP16-NEXT:    vmov.u16 r1, d18[1]
-; CHECK-NOFP16-NEXT:    vmov.u16 r4, d18[2]
-; CHECK-NOFP16-NEXT:    vmov.u16 r5, d18[3]
+; CHECK-NOFP16-NEXT:    vmov.u16 r1, d17[1]
+; CHECK-NOFP16-NEXT:    vmov.u16 r4, d17[2]
+; CHECK-NOFP16-NEXT:    vmov.u16 r5, d17[3]
 ; CHECK-NOFP16-NEXT:    vmov s2, r2
 ; CHECK-NOFP16-NEXT:    vmov s4, r0
 ; CHECK-NOFP16-NEXT:    vmov s5, r1

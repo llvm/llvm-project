@@ -23,10 +23,6 @@ add_entrypoint_object(
     libc.src.__support.threads.thread
     libc.include.threads
     libc.src.errno.errno
-  COMPILE_OPTIONS
-    ${libc_opt_high_flag}
-    -fno-omit-frame-pointer # This allows us to sniff out the thread args from
-  # the new thread's stack reliably.
 )
 
 add_entrypoint_object(
@@ -223,4 +219,18 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.cnd_broadcast
+)
+
+add_entrypoint_object(
+  thrd_sleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.thrd_sleep
+)
+
+add_entrypoint_object(
+  thrd_yield
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.thrd_yield
 )

@@ -171,9 +171,9 @@ body:             |
 # CHECK-LABEL: merge_mmos
 # CHECK: S_BUFFER_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (s64), align 4)
 # CHECK: BUFFER_LOAD_DWORDX2_OFFSET %0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 4)
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET_exact killed %{{[0-9]+}}, %0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 4)
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET_exact %{{[0-9]+}}, %0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s64), align 4)
 # CHECK: BUFFER_LOAD_DWORDX2_OFFSET %0, 0, 64, 0, 0, implicit $exec :: (dereferenceable load (s64) from %ir.ptr_addr1 + 64, align 4
-# CHECK: BUFFER_STORE_DWORDX2_OFFSET_exact killed %{{[0-9]+}}, %0, 0, 64, 0, 0, implicit $exec :: (dereferenceable store (s64) into %ir.ptr_addr1 + 64, align 4
+# CHECK: BUFFER_STORE_DWORDX2_OFFSET_exact %{{[0-9]+}}, %0, 0, 64, 0, 0, implicit $exec :: (dereferenceable store (s64) into %ir.ptr_addr1 + 64, align 4
 name: merge_mmos
 tracksRegLiveness: true
 body: |
@@ -197,8 +197,8 @@ body: |
 ...
 ---
 # CHECK-LABEL: reorder_offsets
-# CHECK-DAG: BUFFER_STORE_DWORDX2_OFFSET_exact killed %{{[0-9]+}}, %0, 0, 16, 0, 0, implicit $exec :: (dereferenceable store (s64) into %ir.reorder_addr1 + 16, align 4, addrspace 1)
-# CHECK-DAG: BUFFER_STORE_DWORDX4_OFFSET_exact killed %{{[0-9]+}}, %0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.reorder_addr1, align 4, addrspace 1)
+# CHECK-DAG: BUFFER_STORE_DWORDX2_OFFSET_exact %{{[0-9]+}}, %0, 0, 16, 0, 0, implicit $exec :: (dereferenceable store (s64) into %ir.reorder_addr1 + 16, align 4, addrspace 1)
+# CHECK-DAG: BUFFER_STORE_DWORDX4_OFFSET_exact %{{[0-9]+}}, %0, 0, 0, 0, 0, implicit $exec :: (dereferenceable store (s128) into %ir.reorder_addr1, align 4, addrspace 1)
 
 name: reorder_offsets
 tracksRegLiveness: true

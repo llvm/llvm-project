@@ -22,6 +22,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/Support/DataExtractor.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include <memory>
 
 namespace llvm {
@@ -47,6 +48,7 @@ private:
   mutable uint64_t Literal;
   mutable bool HasLiteral;
   mutable std::optional<bool> EnableWavefrontSize32;
+  mutable AMDGPU::TargetID TargetID;
   unsigned CodeObjectVersion;
   const MCExpr *UCVersionW64Expr;
   const MCExpr *UCVersionW32Expr;
@@ -173,8 +175,6 @@ public:
   MCOperand decodeVersionImm(unsigned Imm) const;
 
   int getTTmpIdx(unsigned Val) const;
-
-  const MCInstrInfo *getMCII() const { return MCII.get(); }
 
   bool isVI() const;
   bool isGFX9() const;

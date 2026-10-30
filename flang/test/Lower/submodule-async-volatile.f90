@@ -26,8 +26,8 @@ contains
   ! n and k must resolve to the module globals.
   ! CHECK-DAG: %[[N:.*]] = fir.address_of(@_QMm1En) : !fir.ref<i32>
   ! CHECK-DAG: %[[K:.*]] = fir.address_of(@_QMm1Ek) : !fir.ref<i32>
-  ! CHECK-DAG: hlfir.declare %[[N]] {uniq_name = "_QMm1En"}
-  ! CHECK-DAG: hlfir.declare %[[K]] {uniq_name = "_QMm1Ek"}
+  ! CHECK-DAG: hlfir.declare %[[N]] uniq_name("_QMm1En")
+  ! CHECK-DAG: hlfir.declare %[[K]] uniq_name("_QMm1Ek")
   ! FIXME: The volatile/asynchronous fortran_attrs are not propagated to the
   ! hlfir.declare or fir.ref type for host-associated variables (this affects
   ! regular subprograms too, not just submodules).

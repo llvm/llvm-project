@@ -173,7 +173,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Note that Fuchsia never needs to link in sanitizer runtime deps.  Any
     // sanitizer runtimes with system dependencies use the `.deplibs` feature
     // instead.
-    addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+    addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
 
     addXRayRuntime(ToolChain, Args, CmdArgs);
 
@@ -217,6 +217,7 @@ void fuchsia::StaticLibTool::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {

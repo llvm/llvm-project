@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_uio_unittests)
+add_libc_testsuite(libc-sys-uio-tests)
 
 add_libc_test(
   writev_test
   SUITE
-    libc_sys_uio_unittests
+    libc-sys-uio-tests
   SRCS
     writev_test.cpp
   DEPENDS
@@ -20,7 +20,7 @@ add_libc_test(
 add_libc_test(
   readv_test
   SUITE
-    libc_sys_uio_unittests
+    libc-sys-uio-tests
   SRCS
     readv_test.cpp
   DEPENDS

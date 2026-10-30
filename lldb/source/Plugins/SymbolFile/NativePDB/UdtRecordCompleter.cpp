@@ -37,14 +37,11 @@ using Error = llvm::Error;
 UdtRecordCompleter::UdtRecordCompleter(
     PdbTypeSymId id, CompilerType &derived_ct, clang::TagDecl &tag_decl,
     PdbAstBuilderClang &ast_builder, PdbIndex &index,
-    llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status,
-    llvm::DenseMap<lldb::opaque_compiler_type_t,
-                   llvm::SmallSet<std::pair<llvm::StringRef, CompilerType>, 8>>
-        &cxx_record_map)
+    llvm::DenseMap<clang::Decl *, DeclStatus> &decl_to_status)
     : m_cv_tag_record(CVTagRecord::create(index.tpi().getType(id.index))),
       m_id(id), m_derived_ct(derived_ct), m_tag_decl(tag_decl),
       m_ast_builder(ast_builder), m_index(index),
-      m_decl_to_status(decl_to_status), m_cxx_record_map(cxx_record_map) {
+      m_decl_to_status(decl_to_status) {
   switch (m_cv_tag_record.kind()) {
   case CVTagRecord::Enum:
     break;
@@ -58,6 +55,12 @@ UdtRecordCompleter::UdtRecordCompleter(
     m_record.record.kind = Member::Struct;
     break;
   }
+}
+
+llvm::Error
+UdtRecordCompleter::visitMemberEnd(llvm::codeview::CVMemberRecord &Record) {
+  ++m_member_index;
+  return Error::success();
 }
 
 clang::QualType UdtRecordCompleter::AddBaseClassForTypeIndex(
@@ -90,22 +93,15 @@ void UdtRecordCompleter::AddMethod(llvm::StringRef name, TypeIndex type_idx,
     return;
   CompilerType method_ct = m_ast_builder.ToCompilerType(method_qt);
   TypeSystemClang::RequireCompleteType(method_ct);
-  lldb::opaque_compiler_type_t derived_opaque_ty =
-      m_derived_ct.GetOpaqueQualType();
-  auto iter = m_cxx_record_map.find(derived_opaque_ty);
-  if (iter != m_cxx_record_map.end()) {
-    if (iter->getSecond().contains({name, method_ct})) {
-      return;
-    }
-  }
-
   bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                        MethodOptions::CompilerGenerated;
-  m_ast_builder.clang().AddMethodToCXXRecordType(
-      derived_opaque_ty, name.data(), /*asm_label=*/{}, method_ct,
-      attrs.isVirtual(), attrs.isStatic(), false, false, false, is_artificial);
-
-  m_cxx_record_map[derived_opaque_ty].insert({name, method_ct});
+  auto *pdb = static_cast<SymbolFileNativePDB *>(
+      m_ast_builder.clang().GetSymbolFile()->GetBackingSymbolFile());
+  std::string asm_label = pdb->GetMethodCallLabel(
+      type_idx, (m_cv_tag_record.name() + "::" + name).str());
+  m_ast_builder.GetOrCreateMethodDecl(m_derived_ct.GetOpaqueQualType(), name,
+                                      asm_label, method_ct, attrs.isVirtual(),
+                                      attrs.isStatic(), is_artificial);
 }
 
 Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
@@ -300,8 +296,8 @@ Error UdtRecordCompleter::visitKnownMember(CVMemberRecord &cvr,
       bitfield_width ? bitfield_width : GetSizeOfType(ti, m_index.tpi()) * 8;
   if (field_size == 0)
     return Error::success();
-  m_record.CollectMember(data_member.Name, offset, field_size, member_qt, access,
-                bitfield_width);
+  m_record.CollectMember(data_member.Name, offset, field_size, member_qt,
+                         access, bitfield_width, m_member_index);
   return Error::success();
 }
 
@@ -465,11 +461,22 @@ void UdtRecordCompleter::FinishRecord() {
   }
 }
 
+void UdtRecordCompleter::Member::RestoreOriginalOrder() {
+  llvm::stable_sort(fields, [](const MemberUP &lhs, const MemberUP &rhs) {
+    return std::tie(lhs->original_index, lhs->bit_offset) <
+           std::tie(rhs->original_index, rhs->bit_offset);
+  });
+
+  for (MemberUP &field : fields)
+    field->RestoreOriginalOrder();
+}
+
 void UdtRecordCompleter::Record::CollectMember(
     llvm::StringRef name, uint64_t offset, uint64_t field_size,
-    clang::QualType qt, lldb::AccessType access, uint64_t bitfield_width) {
+    clang::QualType qt, lldb::AccessType access, uint64_t bitfield_width,
+    uint32_t member_index) {
   fields_map[offset].push_back(std::make_unique<Member>(
-      name, offset, field_size, qt, access, bitfield_width));
+      name, offset, field_size, qt, access, bitfield_width, member_index));
   if (start_offset > offset)
     start_offset = offset;
 }
@@ -555,6 +562,7 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       if (parent->kind == Member::Struct) {
         parent->fields.push_back(std::make_unique<Member>(Member::Union));
         parent = parent->fields.back().get();
+        parent->original_index = std::numeric_limits<uint32_t>::max();
         parent->bit_offset = offset;
       } else {
         assert(parent == &record &&
@@ -562,10 +570,15 @@ void UdtRecordCompleter::Record::ConstructRecord() {
       }
       for (auto &field : fields) {
         int64_t bit_size = field->bit_size;
+        // Use the lowest index of the union members.
+        parent->original_index =
+            std::min(parent->original_index, field->original_index);
         parent->fields.push_back(std::move(field));
         end_offset_map[offset + bit_size].push_back(
             parent->fields.back().get());
       }
     }
   }
+
+  record.RestoreOriginalOrder();
 }

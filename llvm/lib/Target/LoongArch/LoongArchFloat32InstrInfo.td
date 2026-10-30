@@ -54,112 +54,189 @@ def loongarch_sitof : SDNode<"LoongArchISD::SITOF", SDT_LoongArchITOF>;
 let Predicates = [HasBasicF] in {
 
 // Arithmetic Operation Instructions
-def FADD_S : FP_ALU_3R<0x01008000>;
-def FSUB_S : FP_ALU_3R<0x01028000>;
-def FMUL_S : FP_ALU_3R<0x01048000>;
-def FDIV_S : FP_ALU_3R<0x01068000>;
-def FMADD_S  : FP_ALU_4R<0x08100000>;
-def FMSUB_S  : FP_ALU_4R<0x08500000>;
-def FNMADD_S : FP_ALU_4R<0x08900000>;
-def FNMSUB_S : FP_ALU_4R<0x08d00000>;
-def FMAX_S  : FP_ALU_3R<0x01088000>;
-def FMIN_S  : FP_ALU_3R<0x010a8000>;
-def FMAXA_S : FP_ALU_3R<0x010c8000>;
-def FMINA_S : FP_ALU_3R<0x010e8000>;
-def FABS_S   : FP_ALU_2R<0x01140400>;
-def FNEG_S   : FP_ALU_2R<0x01141400>;
-def FSQRT_S  : FP_ALU_2R<0x01144400>;
-def FRECIP_S : FP_ALU_2R<0x01145400>;
-def FRSQRT_S : FP_ALU_2R<0x01146400>;
-def FRECIPE_S : FP_ALU_2R<0x01147400>;
-def FRSQRTE_S : FP_ALU_2R<0x01148400>;
-def FSCALEB_S : FP_ALU_3R<0x01108000>;
-def FLOGB_S   : FP_ALU_2R<0x01142400>;
-def FCOPYSIGN_S : FP_ALU_3R<0x01128000>;
-def FCLASS_S  : FP_ALU_2R<0x01143400>;
+def FADD_S : FP_ALU_3R<0x01008000>,
+             Sched<[WriteFADD, ReadFADD, ReadFADD]>;
+def FSUB_S : FP_ALU_3R<0x01028000>,
+             Sched<[WriteFADD, ReadFADD, ReadFADD]>;
+def FMUL_S : FP_ALU_3R<0x01048000>,
+             Sched<[WriteFMUL, ReadFMUL, ReadFMUL]>;
+def FDIV_S : FP_ALU_3R<0x01068000>,
+             Sched<[WriteFDIV32, ReadFDIV32, ReadFDIV32]>;
+def FMADD_S  : FP_ALU_4R<0x08100000>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FMSUB_S  : FP_ALU_4R<0x08500000>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FNMADD_S : FP_ALU_4R<0x08900000>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FNMSUB_S : FP_ALU_4R<0x08d00000>,
+               Sched<[WriteFMADD, ReadFMADD, ReadFMADD, ReadFMADD]>;
+def FMAX_S  : FP_ALU_3R<0x01088000>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FMIN_S  : FP_ALU_3R<0x010a8000>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FMAXA_S : FP_ALU_3R<0x010c8000>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FMINA_S : FP_ALU_3R<0x010e8000>,
+              Sched<[WriteFMinMax, ReadFMinMax, ReadFMinMax]>;
+def FABS_S   : FP_ALU_2R<0x01140400>,
+               Sched<[WriteFABS, ReadFABS]>;
+def FNEG_S   : FP_ALU_2R<0x01141400>,
+               Sched<[WriteFNEG, ReadFNEG]>;
+def FSQRT_S  : FP_ALU_2R<0x01144400>,
+               Sched<[WriteFSQRT32, ReadFSQRT32]>;
+def FRECIP_S : FP_ALU_2R<0x01145400>,
+               Sched<[WriteFRECIP32, ReadFRECIP32]>;
+def FRSQRT_S : FP_ALU_2R<0x01146400>,
+               Sched<[WriteFRSQRT32, ReadFRSQRT32]>;
+def FRECIPE_S : FP_ALU_2R<0x01147400>,
+                Sched<[WriteFRECIPE, ReadFRECIPE]>;
+def FRSQRTE_S : FP_ALU_2R<0x01148400>,
+                Sched<[WriteFRSQRTE, ReadFRSQRTE]>;
+def FSCALEB_S : FP_ALU_3R<0x01108000>,
+                Sched<[WriteFSCALEB, ReadFSCALEB, ReadFSCALEB]>;
+def FLOGB_S   : FP_ALU_2R<0x01142400>,
+                Sched<[WriteFLOGB, ReadFLOGB]>;
+def FCOPYSIGN_S : FP_ALU_3R<0x01128000>,
+                  Sched<[WriteFCOPYSIGN, ReadFCOPYSIGN, ReadFCOPYSIGN]>;
+def FCLASS_S  : FP_ALU_2R<0x01143400>,
+                Sched<[WriteFCLASS, ReadFCLASS]>;
 
 
 // Comparison Instructions
-def FCMP_CAF_S  : FP_CMP<0x0c100000>;
-def FCMP_CUN_S  : FP_CMP<0x0c140000>;
-def FCMP_CEQ_S  : FP_CMP<0x0c120000>;
-def FCMP_CUEQ_S : FP_CMP<0x0c160000>;
-def FCMP_CLT_S  : FP_CMP<0x0c110000>;
-def FCMP_CULT_S : FP_CMP<0x0c150000>;
-def FCMP_CLE_S  : FP_CMP<0x0c130000>;
-def FCMP_CULE_S : FP_CMP<0x0c170000>;
-def FCMP_CNE_S  : FP_CMP<0x0c180000>;
-def FCMP_COR_S  : FP_CMP<0x0c1a0000>;
-def FCMP_CUNE_S : FP_CMP<0x0c1c0000>;
-def FCMP_SAF_S  : FP_CMP<0x0c108000>;
-def FCMP_SUN_S  : FP_CMP<0x0c148000>;
-def FCMP_SEQ_S  : FP_CMP<0x0c128000>;
-def FCMP_SUEQ_S : FP_CMP<0x0c168000>;
-def FCMP_SLT_S  : FP_CMP<0x0c118000>;
-def FCMP_SULT_S : FP_CMP<0x0c158000>;
-def FCMP_SLE_S  : FP_CMP<0x0c138000>;
-def FCMP_SULE_S : FP_CMP<0x0c178000>;
-def FCMP_SNE_S  : FP_CMP<0x0c188000>;
-def FCMP_SOR_S  : FP_CMP<0x0c1a8000>;
-def FCMP_SUNE_S : FP_CMP<0x0c1c8000>;
+def FCMP_CAF_S  : FP_CMP<0x0c100000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CUN_S  : FP_CMP<0x0c140000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CEQ_S  : FP_CMP<0x0c120000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CUEQ_S : FP_CMP<0x0c160000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CLT_S  : FP_CMP<0x0c110000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CULT_S : FP_CMP<0x0c150000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CLE_S  : FP_CMP<0x0c130000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CULE_S : FP_CMP<0x0c170000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CNE_S  : FP_CMP<0x0c180000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_COR_S  : FP_CMP<0x0c1a0000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_CUNE_S : FP_CMP<0x0c1c0000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SAF_S  : FP_CMP<0x0c108000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SUN_S  : FP_CMP<0x0c148000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SEQ_S  : FP_CMP<0x0c128000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SUEQ_S : FP_CMP<0x0c168000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SLT_S  : FP_CMP<0x0c118000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SULT_S : FP_CMP<0x0c158000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SLE_S  : FP_CMP<0x0c138000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SULE_S : FP_CMP<0x0c178000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SNE_S  : FP_CMP<0x0c188000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SOR_S  : FP_CMP<0x0c1a8000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
+def FCMP_SUNE_S : FP_CMP<0x0c1c8000>,
+                  Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
 
 // Conversion Instructions
-def FFINT_S_W    : FP_CONV<0x011d1000>;
-def FTINT_W_S    : FP_CONV<0x011b0400>;
-def FTINTRM_W_S  : FP_CONV<0x011a0400>;
-def FTINTRP_W_S  : FP_CONV<0x011a4400>;
-def FTINTRZ_W_S  : FP_CONV<0x011a8400>;
-def FTINTRNE_W_S : FP_CONV<0x011ac400>;
-def FRINT_S      : FP_CONV<0x011e4400>;
+def FFINT_S_W    : FP_CONV<0x011d1000>,
+                   Sched<[WriteFCvtStoW, ReadFCvtStoW]>;
+def FTINT_W_S    : FP_CONV<0x011b0400>,
+                   Sched<[WriteFCvtWtoS, ReadFCvtWtoS]>;
+def FTINTRM_W_S  : FP_CONV<0x011a0400>,
+                   Sched<[WriteFCvtWtoS_RM, ReadFCvtWtoS_RM]>;
+def FTINTRP_W_S  : FP_CONV<0x011a4400>,
+                   Sched<[WriteFCvtWtoS_RP, ReadFCvtWtoS_RP]>;
+def FTINTRZ_W_S  : FP_CONV<0x011a8400>,
+                   Sched<[WriteFCvtWtoS_RZ, ReadFCvtWtoS_RZ]>;
+def FTINTRNE_W_S : FP_CONV<0x011ac400>,
+                   Sched<[WriteFCvtWtoS_RNE, ReadFCvtWtoS_RNE]>;
+def FRINT_S      : FP_CONV<0x011e4400>,
+                   Sched<[WriteFCvtFStoIS, ReadFCvtFStoIS]>;
 
 // Move Instructions
-def FSEL_xS    : FP_SEL<0x0d000000>;
-def FMOV_S     : FP_MOV<0x01149400>;
-def MOVGR2FR_W : FP_MOV<0x0114a400, FPR32, GPR>;
-def MOVFR2GR_S : FP_MOV<0x0114b400, GPR, FPR32>;
+def FSEL_xS    : FP_SEL<0x0d000000>,
+                 Sched<[WriteFSEL, ReadFSEL, ReadFSEL, ReadFSEL]>;
+def FMOV_S     : FP_MOV<0x01149400>,
+                 Sched<[WriteFMovS, ReadFMovS]>;
+def MOVGR2FR_W : FP_MOV<0x0114a400, FPR32, GPR>,
+                 Sched<[WriteFMovGRtoFRW, ReadFMovGRtoFRW]>;
+def MOVFR2GR_S : FP_MOV<0x0114b400, GPR, FPR32>,
+                 Sched<[WriteFMovFRtoGRS, ReadFMovFRtoGRS]>;
 let hasSideEffects = 1 in {
-def MOVGR2FCSR : FP_MOV<0x0114c000, FCSR, GPR>;
-def MOVFCSR2GR : FP_MOV<0x0114c800, GPR, FCSR>;
+def MOVGR2FCSR : FP_MOV<0x0114c000, FCSR, GPR>,
+                 Sched<[WriteFMovGRtoFCSR, ReadFMovGRtoFCSR]>;
+def MOVFCSR2GR : FP_MOV<0x0114c800, GPR, FCSR>,
+                 Sched<[WriteFMovFCSRtoGR, ReadFMovFCSRtoGR]>;
 } // hasSideEffects = 1
-def MOVFR2CF_xS : FP_MOV<0x0114d000, CFR, FPR32>;
-def MOVCF2FR_xS : FP_MOV<0x0114d400, FPR32, CFR>;
-def MOVGR2CF    : FP_MOV<0x0114d800, CFR, GPR>;
-def MOVCF2GR    : FP_MOV<0x0114dc00, GPR, CFR>;
+def MOVFR2CF_xS : FP_MOV<0x0114d000, CFR, FPR32>,
+                  Sched<[WriteFMoveFRtoCF, ReadFMoveFRtoCF]>;
+def MOVCF2FR_xS : FP_MOV<0x0114d400, FPR32, CFR>,
+                  Sched<[WriteFMoveCFtoFR, ReadFMoveCFtoFR]>;
+def MOVGR2CF    : FP_MOV<0x0114d800, CFR, GPR>,
+                  Sched<[WriteFMoveGRtoCF, ReadFMoveGRtoCF]>;
+def MOVCF2GR    : FP_MOV<0x0114dc00, GPR, CFR>,
+                  Sched<[WriteFMoveCFtoGR, ReadFMoveCFtoGR]>;
 
 // Branch Instructions
-def BCEQZ : FP_BRANCH<0x48000000>;
-def BCNEZ : FP_BRANCH<0x48000100>;
+def BCEQZ : FP_BRANCH<0x48000000>,
+            Sched<[WriteFJump, ReadFJump]>;
+def BCNEZ : FP_BRANCH<0x48000100>,
+            Sched<[WriteFJump, ReadFJump]>;
 
 // Common Memory Access Instructions
-def FLD_S : FP_LOAD_2RI12<0x2b000000>;
-def FST_S : FP_STORE_2RI12<0x2b400000>;
-def FLDX_S : FP_LOAD_3R<0x38300000>;
-def FSTX_S : FP_STORE_3R<0x38380000>;
+def FLD_S : FP_LOAD_2RI12<0x2b000000>,
+            Sched<[WriteFLD, ReadFMemBase]>;
+def FST_S : FP_STORE_2RI12<0x2b400000>,
+            Sched<[WriteFST, ReadFSTData, ReadFMemBase]>;
+def FLDX_S : FP_LOAD_3R<0x38300000>,
+             Sched<[WriteFLDX, ReadFMemBase, ReadFMemOffset]>;
+def FSTX_S : FP_STORE_3R<0x38380000>,
+             Sched<[WriteFSTX, ReadFSTData, ReadFMemBase, ReadFMemOffset]>;
 
 // Bound Check Memory Access Instructions
-def FLDGT_S : FP_LOAD_3R<0x38740000>;
-def FLDLE_S : FP_LOAD_3R<0x38750000>;
-def FSTGT_S : FP_STORE_3R<0x38760000>;
-def FSTLE_S : FP_STORE_3R<0x38770000>;
+def FLDGT_S : FP_LOAD_3R<0x38740000>,
+              Sched<[WriteFLDGT, ReadFMemBase, ReadFMemCmp]>;
+def FLDLE_S : FP_LOAD_3R<0x38750000>,
+              Sched<[WriteFLDLE, ReadFMemBase, ReadFMemCmp]>;
+def FSTGT_S : FP_STORE_3R<0x38760000>,
+              Sched<[WriteFSTGT, ReadFSTData, ReadFMemBase, ReadFMemCmp]>;
+def FSTLE_S : FP_STORE_3R<0x38770000>,
+              Sched<[WriteFSTLE, ReadFSTData, ReadFMemBase, ReadFMemCmp]>;
 
 // Pseudo instructions for spill/reload CFRs.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 def PseudoST_CFR : Pseudo<(outs),
-                          (ins CFR:$ccd, GPR:$rj, grlenimm:$imm)>;
+                          (ins CFR:$ccd, GPR:$rj, grlenimm:$imm)>,
+                   Sched<[WritePseudo, ReadPseudo, ReadPseudo]>;
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def PseudoLD_CFR : Pseudo<(outs CFR:$ccd),
-                          (ins GPR:$rj, grlenimm:$imm)>;
+                          (ins GPR:$rj, grlenimm:$imm)>,
+                   Sched<[WritePseudo, ReadPseudo]>;
 
 // SET_CFR_{FALSE,TRUE}
 // These instructions are defined in order to avoid expensive check error if
 // regular instruction patterns are used.
 // fcmp.caf.s $dst, $fa0, $fa0
-def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">;
+def SET_CFR_FALSE : SET_CFR<0x0c100000, "fcmp.caf.s">,
+                    Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
 // fcmp.cueq.s $dst, $fa0, $fa0
-def SET_CFR_TRUE  : SET_CFR<0x0c160000, "fcmp.cueq.s">;
+def SET_CFR_TRUE  : SET_CFR<0x0c160000, "fcmp.cueq.s">,
+                    Sched<[WriteFCMP, ReadFCMP, ReadFCMP]>;
 
 // Pseudo instruction for copying CFRs.
-def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)> {
+def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)>,
+                    Sched<[WritePseudo, ReadPseudo]> {
   let mayLoad = 0;
   let mayStore = 0;
   let hasSideEffects = 0;

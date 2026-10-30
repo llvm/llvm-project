@@ -123,7 +123,7 @@ void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
 /// holds for all instances of the kernel. The latter is dynamic and provides
 /// per-launch information.
 KernelEnvironmentTy &getKernelEnvironment();
-KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
+Global<KernelLaunchEnvironmentTy> &getKernelLaunchEnvironment();
 
 /// TODO
 enum ValueKind {

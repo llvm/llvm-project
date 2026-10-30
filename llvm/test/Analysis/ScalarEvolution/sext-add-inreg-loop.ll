@@ -15,7 +15,7 @@ define dso_local i32 @test_loop(ptr nocapture noundef readonly %x) {
 ; CHECK-NEXT:    %idxprom = ashr exact i64 %sext, 32
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.body> U: [0,9) S: [0,9) Exits: 8 LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %x, i64 %idxprom
-; CHECK-NEXT:    --> {%x,+,4}<nuw><%for.body> U: full-set S: full-set Exits: (32 + %x) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {%x,+,4}<nuw><%for.body> U: full-set S: full-set Exits: (32 + %x)<u nuw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %0 = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %call = tail call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @.str, i32 noundef %0)

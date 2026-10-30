@@ -33,8 +33,7 @@ subroutine test_udr_allocatable()
 end subroutine
 
 ! The 2-D allocatable: boxed by-ref op, iterated combiner, cleanup freemem.
-! CHECK-LABEL: omp.declare_reduction @{{.*}}foo_byref_box_heap_UxUxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
-! CHECK-SAME:  attributes {byref_element_type = !fir.array<?x?xi32>}
+! CHECK-LABEL: omp.declare_reduction @{{.*}}foo_byref_box_heap_UxUxi32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xi32>>>>
 ! CHECK:       alloc {
 ! CHECK:         fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>>
 ! CHECK:         omp.yield
@@ -60,8 +59,7 @@ end subroutine
 ! CHECK:         omp.yield
 
 ! The 1-D allocatable.
-! CHECK-LABEL: omp.declare_reduction @{{.*}}foo_byref_box_heap_Uxi32 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK-SAME:  attributes {byref_element_type = !fir.array<?xi32>}
+! CHECK-LABEL: omp.declare_reduction @{{.*}}foo_byref_box_heap_Uxi32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:       alloc {
 ! CHECK:         fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
 ! CHECK:         omp.yield
@@ -85,8 +83,7 @@ end subroutine
 ! CHECK:         omp.yield
 
 ! The scalar allocatable.
-! CHECK-LABEL: omp.declare_reduction @{{.*}}foo_byref_box_heap_i32 : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK-SAME:  attributes {byref_element_type = i32}
+! CHECK-LABEL: omp.declare_reduction @{{.*}}foo_byref_box_heap_i32 byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK:       alloc {
 ! CHECK:         fir.alloca !fir.box<!fir.heap<i32>>
 ! CHECK:         omp.yield

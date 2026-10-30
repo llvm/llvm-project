@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-- -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ; wave_shuffle(Value, Index): result is divergent only when both Value and
 ; Index are divergent. A uniform Value read from any lane yields the same

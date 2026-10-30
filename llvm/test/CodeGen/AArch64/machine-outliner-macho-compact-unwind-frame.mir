@@ -1,5 +1,9 @@
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN:     -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MACHO
+# RUN: llc -mtriple=arm64-apple-darwin \
+# RUN:     -run-pass=mir-strip-debug,prolog-epilog,machine-outliner \
+# RUN:     -mir-strip-debugify-only=0 -verify-machineinstrs %s -o - | \
+# RUN:     FileCheck %s --check-prefix=MACHO
 # RUN: llc -mtriple=arm64-apple-darwin -run-pass=prolog-epilog -run-pass=machine-outliner \
 # RUN:     -aarch64-outliner-compact-unwind-frame=false -verify-machineinstrs %s -o - | \
 # RUN:     FileCheck %s --check-prefix=NOFRAME
@@ -10,6 +14,8 @@
 # record (stp x29,x30 ; mov x29,sp) so the compact-unwind encoder can use the
 # small FRAME encoding instead of falling back to a DWARF FDE. Everywhere else
 # keep the cheaper LR-alone save (str x30), which is all DWARF unwind needs.
+# The debug-only FP references inside the repeated sequence must not change the
+# frame choice; the first two RUN lines check both raw and stripped MIR.
 
 --- |
   define void @baz() #0 { ret void }
@@ -29,38 +35,50 @@ body:             |
     ; Calls interleaved with single defs so the only repeated sequence is the
     ; call-containing one, forcing a MachineOutlinerDefault (LR-save) frame.
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 6
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 5
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 4
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 3
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 2
 
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     BL @baz, implicit-def dead $lr, implicit $sp
+    DBG_VALUE $fp, $noreg
     $w17 = ORRWri $wzr, 1
     $w0 = ORRWri $wzr, 1
 

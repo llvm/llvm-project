@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=csky -show-encoding -csky-no-aliases -enable-csky-asm-compressed-inst=true -mattr=+e1 \
+# RUN: llvm-mc %s -triple=csky -show-encoding -csky-no-aliases -csky-asm-compressed-inst -mattr=+e1 \
 # RUN: -mattr=+e2 -mattr=+2e3 -mattr=+btst16 | FileCheck -check-prefixes=CHECK-ASM %s
 
 # CHECK-ASM: addu16 a0, a1

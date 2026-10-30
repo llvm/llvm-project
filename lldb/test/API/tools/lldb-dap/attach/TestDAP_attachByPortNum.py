@@ -38,6 +38,7 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
 
     @skipIfWindows
     @skipIfNetBSD  # Try enable, get_debug_server_path previously returned None.
+    @requireSocketPermission  # the debug server listens on the port we attach to
     def test_by_port(self):
         """Tests attaching to a process by port."""
         program_path = self.build_for_attach()
@@ -93,7 +94,7 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
         port = -1
         attach_args = AttachArgs(program, gdbRemotePort=port)
         pending = session.initialize_and_launch(attach_args)
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
         pending.error(f"The user can't attach to invalid port {port}")
 
     @skipIfWindows
@@ -119,5 +120,5 @@ class TestDAP_attachByPortNum(DAPTestCaseBase):
                 gdbRemotePort=port,
             )
         )
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
         pending.error(f"The user can't attach with illegal port ({port})")

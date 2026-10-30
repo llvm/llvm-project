@@ -255,16 +255,16 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @shuffle_i8_cdef89ab45u700123(<16 x i8> %s1, <16 x i8> %s2) {
 ; CHECK-LABEL: shuffle_i8_cdef89ab45u700123:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov q1, q0
 ; CHECK-NEXT:    vmov.u8 r0, q0[4]
-; CHECK-NEXT:    vmov.8 q1[8], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[5]
-; CHECK-NEXT:    vmov.8 q1[9], r0
-; CHECK-NEXT:    vmov.u8 r0, q0[0]
-; CHECK-NEXT:    vmov.8 q1[11], r0
-; CHECK-NEXT:    vmov.f32 s4, s3
-; CHECK-NEXT:    vmov.f32 s5, s2
-; CHECK-NEXT:    vmov.f32 s7, s0
-; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    vmov.8 q0[8], r0
+; CHECK-NEXT:    vmov.u8 r0, q1[5]
+; CHECK-NEXT:    vmov.8 q0[9], r0
+; CHECK-NEXT:    vmov.u8 r0, q1[0]
+; CHECK-NEXT:    vmov.8 q0[11], r0
+; CHECK-NEXT:    vmov.f32 s0, s7
+; CHECK-NEXT:    vmov.f32 s1, s6
+; CHECK-NEXT:    vmov.f32 s3, s4
 ; CHECK-NEXT:    bx lr
 entry:
   %out = shufflevector <16 x i8> %s1, <16 x i8> %s2, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 undef, i32 0, i32 0, i32 1, i32 2, i32 3>

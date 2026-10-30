@@ -85,15 +85,6 @@ def G_ZIP2 : AArch64GenericInstruction {
   let GISelMatchGenericTypes = 1;
 }
 
-// Represents a dup instruction. Produced post-legalization from
-// G_SHUFFLE_VECTORs with appropriate masks.
-def G_DUP: AArch64GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$lane);
-  let hasSideEffects = 0;
-  let GISelMatchGenericTypes = 1;
-}
-
 // Represents a lane duplicate operation.
 def G_DUPLANE8 : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -316,7 +307,7 @@ def : GINodeEquiv<G_UZP1, AArch64uzp1>;
 def : GINodeEquiv<G_UZP2, AArch64uzp2>;
 def : GINodeEquiv<G_ZIP1, AArch64zip1>;
 def : GINodeEquiv<G_ZIP2, AArch64zip2>;
-def : GINodeEquiv<G_DUP, AArch64dup>;
+def : GINodeEquiv<G_SPLAT_VECTOR, AArch64dup>;
 def : GINodeEquiv<G_DUPLANE8, AArch64duplane8>;
 def : GINodeEquiv<G_DUPLANE16, AArch64duplane16>;
 def : GINodeEquiv<G_DUPLANE32, AArch64duplane32>;

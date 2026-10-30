@@ -105,7 +105,13 @@ private:
     return innermostSymbol_ && IsPureProcedure(*innermostSymbol_);
   }
   bool InElemental() const {
-    return innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    // IsElementalProcedure() characterizes the whole procedure, including
+    // all of its dummy arguments, so evaluate it at most once per scope.
+    if (!innermostIsElemental_) {
+      innermostIsElemental_ =
+          innermostSymbol_ && IsElementalProcedure(*innermostSymbol_);
+    }
+    return *innermostIsElemental_;
   }
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
@@ -184,6 +190,8 @@ private:
   // This symbol is the one attached to the innermost enclosing scope
   // that has a symbol.
   const Symbol *innermostSymbol_{nullptr};
+  // Cached result of InElemental() for innermostSymbol_
+  mutable std::optional<bool> innermostIsElemental_;
   // Cache of calls to Procedure::Characterize(Symbol)
   std::map<SymbolRef, std::optional<Procedure>, SymbolAddressCompare>
       characterizeCache_;
@@ -255,6 +263,16 @@ static bool IsBlockData(const Scope &scope) {
 
 static bool IsBlockData(const Symbol &symbol) {
   return symbol.scope() && IsBlockData(*symbol.scope());
+}
+
+// Was this entity declared with an explicit-shape-bounds-spec (F2023 R818),
+// i.e. a rank-1 integer array as its bounds?  Name resolution marks the
+// resulting shape (a constant bounds array is folded into ordinary
+// per-dimension bounds, so the bounds themselves need not show it); a
+// zero-size base yields a scalar whose bounds were stashed for checking.
+static bool HasRankOneBounds(const ObjectEntityDetails &details) {
+  return details.shape().isFromRankOneBounds() ||
+      !details.droppedBoundsToCheck().empty();
 }
 
 void CheckHelper::Check(const Symbol &symbol) {
@@ -774,6 +792,15 @@ void CheckHelper::CheckObjectEntity(
   for (const Bound &bound : details.droppedBoundsToCheck()) {
     Check(bound);
   }
+  // F2023 C816 allows only an explicit-shape-spec-list for a nonallocatable
+  // nonpointer function result; an explicit-shape-bounds-spec (a rank-1
+  // integer array as the bounds, R818) is accepted as an extension there.
+  if (details.isFuncResult() && !IsAllocatableOrPointer(symbol) &&
+      HasRankOneBounds(details)) {
+    Warn(common::LanguageFeature::RankOneBoundsOnFunctionResult,
+        "Function result '%s' should not be declared with a rank-1 integer array as its bounds (F2023 C816)"_port_en_US,
+        symbol.name());
+  }
   if (details.shape().Rank() > common::maxRank) {
     messages_.Say(
         "'%s' has rank %d, which is greater than the maximum supported rank %d"_err_en_US,
@@ -1179,14 +1206,17 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a host subprogram"_err_en_US,
             symbol.name());
+      } else if (!isComponent && progUnit.kind() == Scope::Kind::MainProgram) {
+        messages_.Say(
+            "Object '%s' with ATTRIBUTES(CONSTANT) may not be declared in a main program"_err_en_US,
+            symbol.name());
       } else if (IsAllocatableOrPointer(symbol) ||
           symbol.attrs().test(Attr::TARGET)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) may not be allocatable, pointer, or target"_err_en_US,
             symbol.name());
       } else if (auto shape{evaluate::GetShape(foldingContext_, symbol)};
-                 !shape ||
-                 !evaluate::AsConstantExtents(foldingContext_, *shape)) {
+          !shape || !evaluate::AsConstantExtents(foldingContext_, *shape)) {
         messages_.Say(
             "Object '%s' with ATTRIBUTES(CONSTANT) must have constant array bounds"_err_en_US,
             symbol.name());
@@ -1733,6 +1763,29 @@ void CheckHelper::CheckSubprogram(
             symbol.name() == "logical")) { // F'2023 C1503
       messages_.Say(
           "An ABSTRACT interface may not have the same name as an intrinsic type"_err_en_US);
+    }
+    if (IsBindCProcedure(symbol) &&
+        context_.ShouldWarn(common::UsageWarning::BindCArrayDescriptor)) {
+      // A BIND(C) binding name that starts with '_' identifies an
+      // implementation-internal interface (e.g. one of the compiler's own
+      // runtime library wrappers, which choose such names deliberately)
+      // rather than a genuine external C/C++ interoperability interface,
+      // so it is excluded here: those internal wrappers are written to
+      // receive the CFI descriptor this warning is about, and warning on
+      // every one of them would drown out the cases that matter.
+      const std::string *bindName{symbol.GetBindName()};
+      bool isImplementationInternal{
+          bindName && !bindName->empty() && bindName->front() == '_'};
+      if (!isImplementationInternal) {
+        for (const Symbol *dummy : details.dummyArgs()) {
+          if (dummy && (IsAssumedShape(*dummy) || IsAssumedRank(*dummy))) {
+            Warn(common::UsageWarning::BindCArrayDescriptor, dummy->name(),
+                "Dummy argument '%s' of BIND(C) interface '%s' is %s; the C/C++ side must accept a Fortran 2018 CFI descriptor (CFI_cdesc_t), not a bare address, which may not match an external interface written for an older calling convention"_port_en_US,
+                dummy->name(), symbol.name(),
+                IsAssumedRank(*dummy) ? "assumed-rank" : "assumed-shape");
+          }
+        }
+      }
     }
   }
   CheckExternal(symbol);
@@ -2851,8 +2904,13 @@ void CheckHelper::CheckProcBinding(
 void CheckHelper::Check(const Scope &scope) {
   scope_ = &scope;
   common::Restorer<const Symbol *> restorer{innermostSymbol_, innermostSymbol_};
+  // InElemental() is cached per procedure: recompute it when entering a scope
+  // with its own symbol, and restore the enclosing procedure's value on exit.
+  common::Restorer<std::optional<bool>> elementalRestorer{
+      innermostIsElemental_, innermostIsElemental_};
   if (const Symbol *symbol{scope.symbol()}) {
     innermostSymbol_ = symbol;
+    innermostIsElemental_.reset();
   }
   if (scope.IsParameterizedDerivedTypeInstantiation()) {
     auto restorer{common::ScopedSet(scopeIsUninstantiatedPDT_, false)};
@@ -3684,7 +3742,9 @@ void CheckHelper::CheckAlreadySeenDefinedIo(const DerivedTypeSpec &derivedType,
 void CheckHelper::CheckDioDummyIsDerived(const Symbol &proc, const Symbol &arg,
     common::DefinedIo ioKind, const Symbol &generic) {
   if (const DeclTypeSpec *type{arg.GetType()}) {
-    if (const DerivedTypeSpec *derivedType{type->AsDerived()}) {
+    // An enumeration type is not a derived type (F2023 R1221).
+    if (const DerivedTypeSpec *derivedType{type->AsDerived()};
+        derivedType && !IsEnumerationType(derivedType->typeSymbol())) {
       if (derivedType->IsVectorType()) {
         messages_.Say(arg.name(),
             "Dummy argument '%s' of a defined input/output procedure must not be a vector type"_err_en_US,

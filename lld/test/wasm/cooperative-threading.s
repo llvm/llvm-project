@@ -208,7 +208,7 @@ baz:
 # PIC:           Field:           __wasm_set_tls_base
 # PIC-NEXT:      Kind:            FUNCTION
 
-# The PIC `__init_tls_base` global (global 3) is mutable and initialized ot
+# The PIC `__init_tls_base` global (global 3) is mutable and initialized to
 # 0 since its final value is calculated once `__memory_base` is provided.
 # PIC:       - Type:            GLOBAL
 # PIC-NEXT:    Globals:

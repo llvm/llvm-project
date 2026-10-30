@@ -1,8 +1,7 @@
-! UNSUPPORTED: system-windows
+! -fsafe-trampoline is supported on x86-64 and AArch64 targets.
+! REQUIRES: target=x86_64{{.*}}-linux-gnu || target=aarch64{{.*}}-linux-gnu
 ! UNSUPPORTED: offload-cuda
-! UNSUPPORTED: system-darwin
-! UNSUPPORTED: target=powerpc{{.*}}
-! UNSUPPORTED: target={{.*solaris.*}}
+
 
 ! Verify that -fsafe-trampoline produces an executable whose
 ! GNU_STACK program header is RW (not RWE), proving W^X compliance.

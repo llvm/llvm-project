@@ -21,7 +21,6 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -68,8 +67,6 @@ class VEAsmParser : public MCTargetAsmParser {
   // Custom parse functions for VE specific operands.
   ParseStatus parseMEMOperand(OperandVector &Operands);
   ParseStatus parseMEMAsOperand(OperandVector &Operands);
-  ParseStatus parseCCOpOperand(OperandVector &Operands);
-  ParseStatus parseRDOpOperand(OperandVector &Operands);
   ParseStatus parseMImmOperand(OperandVector &Operands);
   ParseStatus parseOperand(OperandVector &Operands, StringRef Name);
   ParseStatus parseVEAsmOperand(std::unique_ptr<VEOperand> &Operand);
