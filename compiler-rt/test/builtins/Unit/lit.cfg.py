@@ -53,6 +53,8 @@ default_builtins_opts = ""
 config.test_source_root = os.path.dirname(__file__)
 
 # Path to the static library
+# On generic ELF targets %librt also links libm (-lm); spirv links libm.bc
+# instead.
 is_msvc = get_required_attr(config, "is_msvc")
 if is_msvc:
     base_lib = os.path.join(
@@ -118,17 +120,11 @@ else:
             config.substitutions.append(
                 (
                     "%librt ",
-                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ",
+                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group -lm ",
                 )
             )
         else:
-            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
-
-# spirv-link does not support -lm, libm.bc is linked via %librt.
-if "spirv" in config.target_arch:
-    config.substitutions.append(("%libm", ""))
-else:
-    config.substitutions.append(("%libm", "-lm"))
+            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc -lm "))
 
 builtins_test_crt = get_required_attr(config, "builtins_test_crt")
 if builtins_test_crt:

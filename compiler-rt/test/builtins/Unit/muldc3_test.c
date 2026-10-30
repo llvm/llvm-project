@@ -1,4 +1,4 @@
-// RUN: %clang_builtins %s -ffp-contract=off %librt %libm -o %t && %run %t
+// RUN: %clang_builtins %s -ffp-contract=off %librt -o %t && %run %t
 // REQUIRES: librt_has_muldc3
 // REQUIRES: c99-complex
 

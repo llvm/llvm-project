@@ -1,4 +1,4 @@
-// RUN: %clang_builtins %s %librt %libm -o %t && %run %t
+// RUN: %clang_builtins %s %librt -o %t && %run %t
 // REQUIRES: librt_has_divtc3
 // REQUIRES: c99-complex
 
