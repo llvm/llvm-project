@@ -70,6 +70,15 @@ AIRKernelParams addKernelParams(
     Module &M, ArrayRef<AIRKernelParamRequest> Requests,
     function_ref<Argument *(Function &, StringRef Key)> Existing = nullptr);
 
+/// The name of kernel parameter A in the kernel's interface (air.arg_name):
+/// its "air-arg-name" attribute, which survives where the context discards
+/// value names (as release builds do) and module clones, or else its name.
+StringRef airArgName(const Argument &A);
+
+/// Names A, or, where the context discards value names, gives it the
+/// "air-arg-name" attribute that airArgName reads.
+void setAIRArgName(Argument &A, StringRef Name);
+
 /// Whether F is called (directly) from a function, i.e. not a kernel.
 bool isCalledFunction(const Function &F);
 

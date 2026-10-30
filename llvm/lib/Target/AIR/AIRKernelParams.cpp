@@ -18,6 +18,18 @@
 
 using namespace llvm;
 
+StringRef llvm::airArgName(const Argument &A) {
+  Attribute Name =
+      A.getParent()->getAttributes().getParamAttr(A.getArgNo(), "air-arg-name");
+  return Name.isValid() ? Name.getValueAsString() : A.getName();
+}
+
+void llvm::setAIRArgName(Argument &A, StringRef Name) {
+  A.setName(Name);
+  if (A.getName() != Name) // a context that discards value names
+    A.addAttr(Attribute::get(A.getContext(), "air-arg-name", Name));
+}
+
 bool llvm::isCalledFunction(const Function &F) {
   for (const User *U : F.users())
     if (auto *CB = dyn_cast<CallBase>(U))
@@ -113,7 +125,7 @@ AIRKernelParams llvm::addKernelParams(
     bool Kernel = !isCalledFunction(*F);
     for (auto [I, K] : enumerate(New)) {
       Argument *A = NewF->getArg(FT->getNumParams() + I);
-      A->setName(Keys[K].Name);
+      setAIRArgName(*A, Keys[K].Name);
       Have[Keys[K].Key] = A;
       if (Kernel)
         R.Added.push_back({NewF, Keys[K].Key, A});

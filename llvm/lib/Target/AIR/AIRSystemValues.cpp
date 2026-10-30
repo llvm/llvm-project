@@ -286,7 +286,7 @@ static bool airSystemValues(Module &M) {
               MDString::get(Ctx, Info->MDTag),
               MDString::get(Ctx, kMDArgTypeName),
               MDString::get(Ctx, Info->IsVector ? "uint3" : "uint"),
-              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, A->getName())}));
+              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, airArgName(*A))}));
     K->replaceOperandWith(2, MDNode::get(Ctx, Ops));
   }
 
@@ -471,7 +471,7 @@ static bool airSystemValues(Module &M) {
           continue;
 
         BufferType BT = describeBuffer(*F.getArg(I), DL, Names);
-        StringRef ArgName = F.getArg(I)->getName();
+        StringRef ArgName = airArgName(*F.getArg(I));
         char NameBuf[16];
         if (ArgName.empty()) {
           std::snprintf(NameBuf, sizeof(NameBuf), "%u", I);
@@ -513,7 +513,7 @@ static bool airSystemValues(Module &M) {
                     MDString::get(Ctx, SV.Info->MDTag),
                     MDString::get(Ctx, kMDArgTypeName),
                     MDString::get(Ctx, TypeName), MDString::get(Ctx, kMDArgName),
-                    MDString::get(Ctx, F.getArg(SV.ArgNo)->getName())}));
+                    MDString::get(Ctx, airArgName(*F.getArg(SV.ArgNo)))}));
         }
       }
 
