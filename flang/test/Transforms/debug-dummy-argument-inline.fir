@@ -9,12 +9,12 @@
 
 func.func @foo_(%arg0: !fir.ref<i32> {fir.bindc_name = "i"} loc("debug-dummy-argument-inline.f90":5:1)) attributes {fir.internal_name = "_QPfoo"} {
   %0 = fir.undefined !fir.dscope loc(#loc5)
-  %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFfooEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc6)
+  %1 = fircg.ext_declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFfooEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc6)
   %2 = fir.undefined !fir.dscope loc(#loc11)
-  %3 = fircg.ext_declare %1 dummy_scope %2 arg 1 {uniq_name = "_QFbarEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc12)
+  %3 = fircg.ext_declare %1 dummy_scope %2 arg 1 uniq_name("_QFbarEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc12)
   fir.call @buzz_(%3) fastmath<contract> : (!fir.ref<i32>) -> () loc(#loc13)
   %4 = fir.undefined !fir.dscope loc(#loc14)
-  %5 = fircg.ext_declare %1 dummy_scope %4 arg 1 {uniq_name = "_QFbarEi"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc15)
+  %5 = fircg.ext_declare %1 dummy_scope %4 arg 1 uniq_name("_QFbarEi") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32> loc(#loc15)
   fir.call @buzz_(%5) fastmath<contract> : (!fir.ref<i32>) -> () loc(#loc16)
   return loc(#loc9)
 } loc(#loc5)

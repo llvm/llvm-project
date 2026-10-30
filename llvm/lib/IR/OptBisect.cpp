@@ -86,6 +86,16 @@ static cl::list<std::string> OptDisablePasses(
     }),
     cl::desc("Optimization pass(es) to disable (comma-separated list)"));
 
+static cl::list<std::string> OptBisectFuncsList(
+    "opt-bisect-funcs", cl::value_desc("function names"), cl::CommaSeparated,
+    cl::cb<void, std::string>([](const std::string &FuncName) {
+      getOptBisector().setEnabledFunc(FuncName);
+    }),
+    cl::Hidden,
+    cl::desc(
+        "Only perform opt bisect on functions in this list. Passes on all "
+        "other functions run as usual. If empty, apply to all functions."));
+
 static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
                              bool Running) {
   StringRef Status = Running ? "" : "NOT ";
@@ -93,9 +103,15 @@ static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
          << " on " << TargetDesc << '\n';
 }
 
-bool OptBisect::shouldRunPass(StringRef PassName,
-                              StringRef IRDescription) const {
+bool OptBisect::shouldRunPass(StringRef PassName, StringRef IRDescription,
+                              StringRef FuncName) const {
   assert(isEnabled());
+
+  // -opt-bisect-funcs restricts bisection to the listed functions. Excluded
+  // passes behave as if bisection were off, i.e. always run.
+  if (!FuncName.empty() && !OptBisectFuncNames.empty() &&
+      !OptBisectFuncNames.contains(FuncName))
+    return true;
 
   int CurBisectNum = ++LastBisectNum;
 

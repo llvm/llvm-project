@@ -6,12 +6,12 @@
 ! CHECK:           %[[VAL_1:.*]] = fir.zero_bits !fir.heap<i32>
 ! CHECK:           %[[VAL_2:.*]] = fir.embox %[[VAL_1]] : (!fir.heap<i32>) -> !fir.box<!fir.heap<i32>>
 ! CHECK:           fir.store %[[VAL_2]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
 ! CHECK:           omp.parallel {
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}} -> %{{.*}}, @{{.*}} %{{.*}} -> %[[VAL_17:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>) private_barrier {
 ! CHECK:               omp.loop_nest
-! CHECK:                   %[[VAL_16:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = {{.*}}<allocatable>, uniq_name = "_QFEa"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK:                   %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                   %[[VAL_16:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEa") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+! CHECK:                   %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_17]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
 !                        [...]
 !                        if this is the last iteration
@@ -39,11 +39,11 @@ program lastprivate_allocatable
 end program
 
 ! CHECK-LABEL:  func @_QPlastprivate_realloc()
-! CHECK:          %[[A:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlastprivate_reallocEa"} :
+! CHECK:          %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlastprivate_reallocEa") fortran_attrs<allocatable> :
 ! CHECK-SAME:       (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>) ->
 ! CHECK-SAME:       (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>)
 ! CHECK:          omp.parallel {
-! CHECK:            %[[A_PRIV:.*]]:2 = hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFlastprivate_reallocEa"} :
+! CHECK:            %[[A_PRIV:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFlastprivate_reallocEa") fortran_attrs<allocatable> :
 ! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>) ->
 ! CHECK-SAME:         (!fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>)
 ! CHECK:            omp.sections {

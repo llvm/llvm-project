@@ -10,7 +10,7 @@ entry:
 
 define arm_aapcs_vfpcc <4 x i32> @test_vldrbq_gather_offset_z_s32(ptr %base, <4 x i32> %offset, i16 zeroext %p) {
 ; CHECK-LABEL: name: test_vldrbq_gather_offset_z_s32
-; CHECK: early-clobber %4:mqpr = MVE_VLDRBS32_rq %0, %1, 1, killed %3, $noreg :: (load (s32), align 1)
+; CHECK: early-clobber %4:mqpr = MVE_VLDRBS32_rq %0, %1, 1, %3, $noreg :: (load (s32), align 1)
 entry:
   %0 = zext i16 %p to i32
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
@@ -28,7 +28,7 @@ entry:
 
 define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_z_f32(<4 x i32> %addr, i16 zeroext %p) {
 ; CHECK-LABEL: name: test_vldrwq_gather_base_z_f32
-; CHECK: early-clobber %3:mqpr = MVE_VLDRWU32_qi %0, -300, 1, killed %2, $noreg :: (load (s128), align 1)
+; CHECK: early-clobber %3:mqpr = MVE_VLDRWU32_qi %0, -300, 1, %2, $noreg :: (load (s128), align 1)
 entry:
   %0 = zext i16 %p to i32
   %1 = call <4 x i1> @llvm.arm.mve.pred.i2v.v4i1(i32 %0)
@@ -50,7 +50,7 @@ entry:
 
 define arm_aapcs_vfpcc <4 x float> @test_vldrwq_gather_base_wb_z_f32(ptr %addr, i16 zeroext %p) {
 ; CHECK-LABEL: name: test_vldrwq_gather_base_wb_z_f32
-; CHECK: %4:mqpr, early-clobber %5:mqpr = MVE_VLDRWU32_qi_pre %3, -352, 1, killed %2, $noreg :: (load (s128), align 1)
+; CHECK: %4:mqpr, early-clobber %5:mqpr = MVE_VLDRWU32_qi_pre %3, -352, 1, %2, $noreg :: (load (s128), align 1)
 entry:
   %0 = load <4 x i32>, ptr %addr, align 8
   %1 = zext i16 %p to i32
@@ -73,7 +73,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vstrbq_scatter_offset_p_s8(ptr %base, <16 x i8> %offset, <16 x i8> %value, i16 zeroext %p) {
 ; CHECK-LABEL: name: test_vstrbq_scatter_offset_p_s8
-; CHECK: MVE_VSTRB8_rq %2, %0, %1, 1, killed %4, $noreg :: (store (s128), align 1)
+; CHECK: MVE_VSTRB8_rq %2, %0, %1, 1, %4, $noreg :: (store (s128), align 1)
 entry:
   %0 = zext i16 %p to i32
   %1 = call <16 x i1> @llvm.arm.mve.pred.i2v.v16i1(i32 %0)
@@ -91,7 +91,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_p_s64(<2 x i64> %addr, <2 x i64> %value, i16 zeroext %p) {
 ; CHECK-LABEL: name: test_vstrdq_scatter_base_p_s64
-; CHECK: MVE_VSTRD64_qi %1, %0, 888, 1, killed %3, $noreg :: (store (s128), align 1)
+; CHECK: MVE_VSTRD64_qi %1, %0, 888, 1, %3, $noreg :: (store (s128), align 1)
 entry:
   %0 = zext i16 %p to i32
   %1 = call <2 x i1> @llvm.arm.mve.pred.i2v.v2i1(i32 %0)
@@ -111,7 +111,7 @@ entry:
 
 define arm_aapcs_vfpcc void @test_vstrdq_scatter_base_wb_p_s64(ptr %addr, <2 x i64> %value, i16 zeroext %p) {
 ; CHECK-LABEL: name: test_vstrdq_scatter_base_wb_p_s64
-; CHECK: %5:mqpr = MVE_VSTRD64_qi_pre %1, %3, 248, 1, killed %4, $noreg :: (store (s128), align 1)
+; CHECK: %5:mqpr = MVE_VSTRD64_qi_pre %1, %3, 248, 1, %4, $noreg :: (store (s128), align 1)
 entry:
   %0 = load <2 x i64>, ptr %addr, align 8
   %1 = zext i16 %p to i32

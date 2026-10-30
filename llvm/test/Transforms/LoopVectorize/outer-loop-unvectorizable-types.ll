@@ -309,5 +309,51 @@ exit:
   ret void
 }
 
+; swifterror values may only be used as load and store pointer operands or as
+; swifterror call arguments, so the store must not be widened to a scatter.
+define void @swifterror_store(ptr swifterror %err, i64 %N, i64 %M) {
+; CHECK-LABEL: define void @swifterror_store(
+; CHECK-SAME: ptr swifterror [[ERR:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER:.*]]
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER]] ]
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw nsw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_EC:%.*]] = icmp eq i64 [[INNER_IV_NEXT]], [[M]]
+; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[OUTER_LATCH]], label %[[INNER]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    store ptr null, ptr [[ERR]], align 8
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_EC:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OUTER_EC]], label %[[EXIT:.*]], label %[[OUTER_HEADER]], !llvm.loop [[LOOP0]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner
+
+inner:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
+  %inner.iv.next = add nuw nsw i64 %inner.iv, 1
+  %inner.ec = icmp eq i64 %inner.iv.next, %M
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  store ptr null, ptr %err, align 8
+  %outer.iv.next = add nuw nsw i64 %outer.iv, 1
+  %outer.ec = icmp eq i64 %outer.iv.next, %N
+  br i1 %outer.ec, label %exit, label %outer.header, !llvm.loop !0
+
+exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.enable"}

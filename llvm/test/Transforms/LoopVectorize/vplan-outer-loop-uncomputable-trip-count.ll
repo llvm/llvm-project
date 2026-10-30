@@ -31,8 +31,8 @@ exit:
 }
 
 ; The outer loop has no induction phi, but a computable backedge-taken count
-; (0). It must be rejected like an inner loop without an integer induction,
-; as the widest induction type is used for the canonical IV and trip count.
+; (0). It must be rejected like an inner loop without an induction, as the
+; widest induction type is used for the canonical IV and trip count.
 define void @outer_loop_without_induction(ptr %p) {
 ; CHECK: remark: <unknown>:0:0: loop not vectorized: Unsupported outer loop
 ;

@@ -30,8 +30,8 @@ struct DeclOrExpr {
   bool isValueDecl() const { return isa_and_nonnull<ValueDecl>(asDecl()); }
   bool isVarDecl() const { return isa_and_nonnull<VarDecl>(asDecl()); }
 
-  const Expr *asExpr() const { return V.dyn_cast<const Expr *>(); }
-  const Decl *asDecl() const { return V.dyn_cast<const Decl *>(); }
+  const Expr *asExpr() const { return dyn_cast<const Expr *>(V); }
+  const Decl *asDecl() const { return dyn_cast<const Decl *>(V); }
   const ValueDecl *asValueDecl() const {
     return dyn_cast_if_present<ValueDecl>(asDecl());
   }

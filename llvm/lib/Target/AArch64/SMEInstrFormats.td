@@ -3715,7 +3715,7 @@ multiclass sme2_spill_fill_vector<string mnemonic, bits<8> opc, SDPatternOperato
 //===----------------------------------------------------------------------===///
 // SME2 move to/from lookup table
 class sme2_movt_zt_to_scalar<string mnemonic, bits<7> opc>
-    : I<(outs GPR64:$Rt), (ins ZTR:$ZTt, uimm3s8:$imm3),
+    : I<(outs GPR64:$Rt), (ins ZTR:$ZTt, sme_elm_idx0_56s8:$imm3),
          mnemonic, "\t$Rt, $ZTt[$imm3]",
          "", []>, Sched<[]> {
   bits<0> ZTt;
@@ -3728,7 +3728,7 @@ class sme2_movt_zt_to_scalar<string mnemonic, bits<7> opc>
 }
 
 class sme2_movt_scalar_to_zt<string mnemonic, bits<7> opc>
-    : I<(outs ZTR:$ZTt), (ins uimm3s8:$imm3, GPR64:$Rt),
+    : I<(outs ZTR:$ZTt), (ins sme_elm_idx0_56s8:$imm3, GPR64:$Rt),
          mnemonic, "\t$ZTt[$imm3], $Rt",
          "", []>, Sched<[]> {
   bits<0> ZTt;
@@ -6415,4 +6415,61 @@ multiclass sme2_fp8_fdot_multi_vg1x4<string mnemonic, bits<7> op,
   def _PSEUDO : sme2_za_array_2op_multi_multi_pseudo<NAME, sme_elm_idx0_7, ZZZZ_b_mul_r, SMEMatrixArray>;
 
   def : SME2_ZA_TwoOp_VG4_Multi_Multi_Pat<NAME, intrinsic, sme_elm_idx0_7, nxv16i8, tileslice16>;
+}
+
+class sme2_fp8_fmop_za16<string asm, bit tb>
+  : I<(outs TileOp16:$ZAda), (ins TileOp16:$_ZAda, ZZ_h_mul_r:$Zn, ZPR8:$Zm, ZK_b:$Zk),
+     asm, "\t$ZAda, $Zn, $Zm, $Zk", "", []>, Sched<[]> {
+  bits<1> ZAda;
+  bits<4> Zn;
+  bits<3> Zk;
+  bits<5> Zm;
+  let Inst{31-21} = 0b10000000101;
+  let Inst{20-16} = Zm;
+  let Inst{15}    = tb;
+  let Inst{14-13} = 0b00;
+  let Inst{12-10} = Zk;
+  let Inst{9-6}   = Zn;
+  let Inst{5-1}   = 0b01100;
+  let Inst{0}     = ZAda;
+
+  let Constraints = "$ZAda = $_ZAda";
+  let Uses = [ FPCR, FPMR ];
+}
+
+class sme2_fp8_fdot_za16_vg1x2<string mnemonic, bit v>: I<(outs MatrixOp16:$ZA),
+                  (ins MatrixOp16:$_ZA, MatrixIndexGPR32Op8_11:$Rv,
+                   sme_elm_idx0_7:$off3, ZZ_b_mul_r:$Zn, ZPR4b16:$Zm,
+                   VectorIndexS:$i2, ZK_b:$Zk), mnemonic,
+                   "\t$ZA[$Rv, $off3, vgx2], $Zn, $Zm$i2, $Zk", "", []>, Sched<[]> {
+  bits<0> ZA;
+  bits<3> off3;
+  bits<2> i2;
+  bits<4> Zn;
+  bits<3> Zk;
+  bits<2> Rv;
+  bits<4> Zm;
+  let Inst{31-24} = 0b11000000;
+  let Inst{23}    = v;
+  let Inst{22-20} = 0b110;
+  let Inst{19-16} = Zm;
+  let Inst{15}    = 0b0;
+  let Inst{14-13} = Rv;
+  let Inst{12-10} = Zk;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-3}   = i2;
+  let Inst{2-0}   = off3;
+
+  let Constraints = "$ZA = $_ZA";
+  let Uses = [ FPCR, FPMR ];
+}
+
+multiclass sme2_fp8_fdot_za16_vg1x2<string mnemonic, bit v> {
+  def NAME : sme2_fp8_fdot_za16_vg1x2<mnemonic, v>;
+
+  def : InstAlias<mnemonic # "\t$ZA[$Rv, $off3], $Zn, $Zm$i2, $Zk",
+        (!cast<Instruction>(NAME) MatrixOp16:$ZA,  MatrixIndexGPR32Op8_11:$Rv,
+         sme_elm_idx0_7:$off3, ZZ_b_mul_r:$Zn, ZPR4b16:$Zm, VectorIndexS:$i2,
+         ZK_b:$Zk), 0>;
 }

@@ -65,7 +65,7 @@ constexpr void test() {
   // Contraint failure
   test_constraint_fail<bool>();
   test_constraint_fail<char>();
-#ifndef TEST_HAS_NO_INT128
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
   test_constraint_fail<wchar_t>();
 #endif
   test_constraint_fail<char8_t>();

@@ -7,7 +7,7 @@ fir.local {type = local} @_QFlocal_spec_translationElocal_var_private_f32 : f32
 
 func.func @_QPlocal_spec_translation() {
   %3 = fir.alloca f32 {bindc_name = "local_var", uniq_name = "_QFlocal_spec_translationElocal_var"}
-  %4:2 = hlfir.declare %3 {uniq_name = "_QFlocal_spec_translationElocal_var"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  %4:2 = hlfir.declare %3 uniq_name("_QFlocal_spec_translationElocal_var") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 
   %c4_i32 = arith.constant 4 : index
   %c11_i32 = arith.constant 11 : index
@@ -15,14 +15,14 @@ func.func @_QPlocal_spec_translation() {
 
   fir.do_concurrent {
     %7 = fir.alloca i32 {bindc_name = "i"}
-    %8:2 = hlfir.declare %7 {uniq_name = "_QFlocal_spec_translationEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %8:2 = hlfir.declare %7 uniq_name("_QFlocal_spec_translationEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     fir.do_concurrent.loop (%arg0) = (%c4_i32) to (%c11_i32) step (%c1)
       local(@_QFlocal_spec_translationElocal_var_private_f32 %4#0 -> %arg1 : !fir.ref<f32>) {
       %9 = fir.convert %arg0 : (index) -> i32
       fir.store %9 to %8#0 : !fir.ref<i32>
 
-      %10:2 = hlfir.declare %arg1 {uniq_name = "_QFlocal_spec_translationElocal_var"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+      %10:2 = hlfir.declare %arg1 uniq_name("_QFlocal_spec_translationElocal_var") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
       %cst = arith.constant 4.200000e+01 : f32
       hlfir.assign %cst to %10#0 : f32, !fir.ref<f32>
     }

@@ -45,7 +45,9 @@ struct s2 {};
 // CHECK-LP64: call ptr @objc_memmove_collectable(
 
 // CHECK-LP64: define internal void @"\01-[A a]"(
-// (do nothing)
+// CHECK-LP64-NOT: objc_copyStruct
+// CHECK-LP64: ret void
 
 // CHECK-LP64: define internal void @"\01-[A setA:]"(
-// (do nothing)
+// CHECK-LP64-NOT: objc_copyStruct
+// CHECK-LP64: ret void

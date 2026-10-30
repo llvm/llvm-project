@@ -60,20 +60,15 @@ subroutine teams_workdistribute()
   !$omp end teams workdistribute
 end subroutine teams_workdistribute
 
-! At -O0 host (no -fopenmp-is-target-device):
-!   - target teams workdistribute inlines both the saxpy and the scalar
-!     broadcast via workdistributeRuntimeCallLower, so no _FortranAAssign
-!     runtime call appears.
-!   - teams workdistribute (no target) keeps the saxpy result write-back
-!     and the scalar broadcast as _FortranAAssign runtime calls. The
-!     two calls correspond to source lines 50 (saxpy) and 58 (scalar
-!     broadcast) respectively; the ordered CHECK-O0 lines below match
-!     each region in source order so neither expectation can accidentally
-!     match the other assignment.
+! At -O0, target teams workdistribute expands both assignments. On the host,
+! the saxpy result write-back still uses the runtime, but the scalar broadcast
+! is inlined and workshared.
 ! CHECK-O0-LABEL: func @_QPtarget_teams_workdistribute
 ! CHECK-O0-NOT: fir.call @_FortranAAssign
 
 ! CHECK-O0-LABEL: func @_QPteams_workdistribute
 ! CHECK-O0: omp.wsloop
 ! CHECK-O0: fir.call @_FortranAAssignSimple({{.*}}%c50_i32)
-! CHECK-O0: fir.call @_FortranAAssign({{.*}}%c58_i32)
+! CHECK-O0-NOT: fir.call @_FortranAAssign
+! CHECK-O0: omp.wsloop
+! CHECK-O0-NOT: fir.call @_FortranAAssign

@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-routine-lowering -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -acc-routine-lowering=device-type=nvidia -split-input-file | FileCheck %s --check-prefix=DEVICE-NVIDIA
 
 // Test seq routine: body is wrapped in acc.compute_region with one
 // acc.par_width (sequential).
@@ -108,6 +109,19 @@ acc.routine @routine_bind func(@host_bind) seq bind("myname")
 func.func @host_bind() {
   return
 }
+
+// -----
+
+// Test routine with bind(name) under device_type(*): skipped because bind applies to device_type nvidia
+// which is not named on the acc.routine directive
+acc.routine @star_bind func(@star_bound) seq bind("myname" [#acc.device_type<star>])
+// DEVICE-NVIDIA: acc.routine @star_bind func(@star_bound)
+// DEVICE-NVIDIA-NOT: acc.specialized_routine
+// DEVICE-NVIDIA: func.func @star_bound()
+func.func @star_bound() {
+  return
+}
+
 
 // -----
 

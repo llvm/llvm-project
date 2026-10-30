@@ -46,7 +46,6 @@ body:             |
     %3:_(p0) = G_CONSTANT i64 0
     G_STORE %1(<16 x i32>), %3(p0) :: (store (<16 x i32>))
     G_BR %bb.2
-
 ...
 ---
 name:            boolean_vector_to_scalar
@@ -116,5 +115,138 @@ body:             |
       %bc:_(i8) = G_BITCAST %vec(<8 x i1>)
       %ext:_(i32) = G_ANYEXT %bc(i8)
       $w0 = COPY %ext(i32)
+      RET_ReallyLR implicit $w0
+...
+---
+name:            v3i16_to_v2i24
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+    ; CHECK-LABEL: name: v3i16_to_v2i24
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:_(<4 x i16>) = COPY $d0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<8 x i8>) = G_BITCAST %vec(<4 x i16>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i8), [[UV1:%[0-9]+]]:_(i8), [[UV2:%[0-9]+]]:_(i8), [[UV3:%[0-9]+]]:_(i8), [[UV4:%[0-9]+]]:_(i8), [[UV5:%[0-9]+]]:_(i8), [[UV6:%[0-9]+]]:_(i8), [[UV7:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[BITCAST]](<8 x i8>)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UV1]](i8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT]], [[C]](i64)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[UV]](i8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT1]], [[SHL]]
+    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(i32) = G_ZEXT [[UV2]](i8)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[ZEXT2]], [[C1]](i64)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
+    ; CHECK-NEXT: [[ZEXT3:%[0-9]+]]:_(i32) = G_ZEXT [[UV4]](i8)
+    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[ZEXT3]], [[C]](i64)
+    ; CHECK-NEXT: [[ZEXT4:%[0-9]+]]:_(i32) = G_ZEXT [[UV3]](i8)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[ZEXT4]], [[SHL2]]
+    ; CHECK-NEXT: [[ZEXT5:%[0-9]+]]:_(i32) = G_ZEXT [[UV5]](i8)
+    ; CHECK-NEXT: [[SHL3:%[0-9]+]]:_(i32) = G_SHL [[ZEXT5]], [[C1]](i64)
+    ; CHECK-NEXT: [[OR3:%[0-9]+]]:_(i32) = G_OR [[OR2]], [[SHL3]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[OR1]](i32), [[OR3]](i32)
+    ; CHECK-NEXT: $d0 = COPY [[BUILD_VECTOR]](<2 x i32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+      %vec:_(<4 x i16>) = COPY $d0
+      %e0:_(i16), %e1:_(i16), %e2:_(i16), %e3:_(i16) = G_UNMERGE_VALUES %vec(<4 x i16>)
+      %src:_(<3 x i16>) = G_BUILD_VECTOR %e0(i16), %e1(i16), %e2(i16)
+      %bc:_(<2 x i24>) = G_BITCAST %src(<3 x i16>)
+      %ext:_(<2 x i32>) = G_ANYEXT %bc(<2 x i24>)
+      $d0 = COPY %ext(<2 x i32>)
+      RET_ReallyLR implicit $d0
+...
+---
+name:            v2i24_to_v3i16
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $d0
+    ; CHECK-LABEL: name: v2i24_to_v3i16
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vec:_(<2 x i32>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES %vec(<2 x i32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i8), [[UV3:%[0-9]+]]:_(i8), [[UV4:%[0-9]+]]:_(i8), [[UV5:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[UV]](i32)
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i8), [[UV7:%[0-9]+]]:_(i8), [[UV8:%[0-9]+]]:_(i8), [[UV9:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES [[UV1]](i32)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x i8>) = G_BUILD_VECTOR [[UV2]](i8), [[UV3]](i8), [[UV4]](i8), [[UV6]](i8), [[UV7]](i8), [[UV8]](i8), [[DEF]](i8), [[DEF]](i8)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<4 x i16>) = G_BITCAST [[BUILD_VECTOR]](<8 x i8>)
+    ; CHECK-NEXT: $d0 = COPY [[BITCAST]](<4 x i16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
+      %vec:_(<2 x i32>) = COPY $d0
+      %src:_(<2 x i24>) = G_TRUNC %vec(<2 x i32>)
+      %bc:_(<3 x i16>) = G_BITCAST %src(<2 x i24>)
+      %e0:_(i16), %e1:_(i16), %e2:_(i16) = G_UNMERGE_VALUES %bc(<3 x i16>)
+      %undef:_(i16) = G_IMPLICIT_DEF
+      %out:_(<4 x i16>) = G_BUILD_VECTOR %e0(i16), %e1(i16), %e2(i16), %undef(i16)
+      $d0 = COPY %out(<4 x i16>)
+      RET_ReallyLR implicit $d0
+...
+---
+name:            v2i12_to_v3i8
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: v2i12_to_v3i8
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %w:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i8), [[UV1:%[0-9]+]]:_(i8), [[UV2:%[0-9]+]]:_(i8), [[UV3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES %w(i32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UV1]](i8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT]], [[C]](i64)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[UV]](i8)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT1]], [[SHL]]
+    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(i32) = G_ZEXT [[UV2]](i8)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[ZEXT2]], [[C1]](i64)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
+    ; CHECK-NEXT: $w0 = COPY [[OR1]](i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+      %w:_(i32) = COPY $w0
+      %t:_(i24) = G_TRUNC %w(i32)
+      %src:_(<2 x i12>) = G_BITCAST %t(i24)
+      %bc:_(<3 x i8>) = G_BITCAST %src(<2 x i12>)
+      %r:_(i24) = G_BITCAST %bc(<3 x i8>)
+      %e:_(i32) = G_ANYEXT %r(i24)
+      $w0 = COPY %e(i32)
+      RET_ReallyLR implicit $w0
+...
+---
+name:            v4i3_to_v3i4
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $w0
+    ; CHECK-LABEL: name: v4i3_to_v3i4
+    ; CHECK: liveins: $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %w:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i8), [[UV1:%[0-9]+]]:_(i8), [[UV2:%[0-9]+]]:_(i8), [[UV3:%[0-9]+]]:_(i8) = G_UNMERGE_VALUES %w(i32)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[UV]](i8)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 4
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[ZEXT]], [[C]](i64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[LSHR]], [[C1]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[AND]], [[C]](i64)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[UV]](i8)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[ANYEXT]], [[C1]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND1]], [[SHL]]
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[UV1]](i8)
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[ANYEXT1]], [[C1]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 8
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[AND2]], [[C2]](i64)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[OR]], [[SHL1]]
+    ; CHECK-NEXT: $w0 = COPY [[OR1]](i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+      %w:_(i32) = COPY $w0
+      %t:_(i12) = G_TRUNC %w(i32)
+      %src:_(<4 x i3>) = G_BITCAST %t(i12)
+      %bc:_(<3 x i4>) = G_BITCAST %src(<4 x i3>)
+      %r:_(i12) = G_BITCAST %bc(<3 x i4>)
+      %e:_(i32) = G_ANYEXT %r(i12)
+      $w0 = COPY %e(i32)
       RET_ReallyLR implicit $w0
 ...

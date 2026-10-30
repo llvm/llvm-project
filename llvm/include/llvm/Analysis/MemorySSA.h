@@ -108,6 +108,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -618,13 +619,6 @@ public:
         [&](const MemoryAccess *, const BasicBlock *B) { return BB == B; });
   }
 
-  // After deleting incoming memory access MA, the incoming accesses order may
-  // be changed.
-  void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
-    unorderedDeleteIncomingIf(
-        [&](const MemoryAccess *M, const BasicBlock *) { return MA == M; });
-  }
-
   static bool classof(const Value *V) {
     return V->getValueID() == MemoryPhiVal;
   }
@@ -866,6 +860,7 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;
@@ -1320,11 +1315,6 @@ inline upward_defs_iterator upward_defs_begin(const UpwardDefsElem &Pair,
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-
-inline iterator_range<upward_defs_iterator>
-upward_defs(const UpwardDefsElem &Pair, DominatorTree &DT) {
-  return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
-}
 
 /// Walks the defining accesses of MemoryDefs. Stops after we hit something that
 /// has no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when

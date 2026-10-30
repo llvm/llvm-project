@@ -14,31 +14,31 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
   ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub3
   ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub2
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub5
   ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub4
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub7
   ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub6
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
-  ; GFX11-REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), killed [[S_MOV_B32_]], implicit $exec
+  ; GFX11-REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
-  ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
-  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
-  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
-  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 killed [[REG_SEQUENCE2]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_:%[0-9]+]]:vgpr_16 = GLOBAL_LOAD_SHORT_D16_SADDR_t16 [[REG_SEQUENCE2]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep3, addrspace 1)
   ; GFX11-REAL16-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 14336, 0, implicit $exec
-  ; GFX11-REAL16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, killed [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, killed [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   [[V_ADD_F16_t16_e64_:%[0-9]+]]:vgpr_16 = nofpexcept V_ADD_F16_t16_e64 0, [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
   ; GFX11-REAL16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-REAL16-NEXT:   [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE killed [[V_ADD_F16_t16_e64_]], %subreg.lo16, killed [[DEF]], %subreg.hi16
-  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F16_t16_:%[0-9]+]]:vgpr_16 = nofpexcept V_FMA_MIX_F16_t16 0, killed [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[GLOBAL_LOAD_DWORD_SADDR1]], 8, killed [[REG_SEQUENCE4]], 0, 0, 0, implicit $mode, implicit $exec
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIX_F16_t16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[V_ADD_F16_t16_e64_]], %subreg.lo16, [[DEF]], %subreg.hi16
+  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F16_t16_:%[0-9]+]]:vgpr_16 = nofpexcept V_FMA_MIX_F16_t16 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[GLOBAL_LOAD_DWORD_SADDR1]], 8, [[REG_SEQUENCE4]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_SHORT_SADDR_t16 [[V_MOV_B32_e32_]], [[V_FMA_MIX_F16_t16_]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: fma_mix_f16
@@ -50,30 +50,30 @@ define amdgpu_kernel void @fma_mix_f16 (ptr addrspace(1) %a, ptr addrspace(1) %b
   ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX8_IMM:%[0-9]+]]:sgpr_256 = S_LOAD_DWORDX8_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s256) from %ir.a.kernarg.offset, align 4, addrspace 4)
   ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub1
   ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub0
-  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY3]], %subreg.sub0, killed [[COPY2]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub3
   ; GFX11-FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub2
-  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY5]], %subreg.sub0, killed [[COPY4]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub5
   ; GFX11-FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub4
-  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY7]], %subreg.sub0, killed [[COPY6]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub7
   ; GFX11-FAKE16-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX8_IMM]].sub6
-  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
-  ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), killed [[S_MOV_B32_]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 2
-  ; GFX11-FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 killed [[S_MOV_B32_1]], killed [[V_AND_B32_e64_]], implicit $exec
-  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
-  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR killed [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
-  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR killed [[REG_SEQUENCE2]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep3, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_USHORT_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_USHORT_SADDR [[REG_SEQUENCE2]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s16) from %ir.in.gep3, addrspace 1)
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 14336
-  ; GFX11-FAKE16-NEXT:   [[V_ADD_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F16_fake16_e64 0, killed [[GLOBAL_LOAD_USHORT_SADDR]], 0, killed [[S_MOV_B32_2]], 0, 0, implicit $mode, implicit $exec
+  ; GFX11-FAKE16-NEXT:   [[V_ADD_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, [[S_MOV_B32_2]], 0, 0, implicit $mode, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
   ; GFX11-FAKE16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF]]
-  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIXLO_F16 0, killed [[GLOBAL_LOAD_DWORD_SADDR]], 0, killed [[GLOBAL_LOAD_DWORD_SADDR1]], 8, killed [[V_ADD_F16_fake16_e64_]], 0, [[COPY10]], 0, 0, implicit $mode, implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR killed [[V_MOV_B32_e32_]], killed [[V_FMA_MIXLO_F16_]], killed [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIXLO_F16_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIXLO_F16 0, [[GLOBAL_LOAD_DWORD_SADDR]], 0, [[GLOBAL_LOAD_DWORD_SADDR1]], 8, [[V_ADD_F16_fake16_e64_]], 0, [[COPY10]], 0, 0, implicit $mode, implicit $exec
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_SHORT_SADDR [[V_MOV_B32_e32_]], [[V_FMA_MIXLO_F16_]], [[REG_SEQUENCE3]], 0, 0, implicit $exec :: (store (s16) into %ir.4, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -89,5 +89,57 @@ entry:
   %half = fptrunc float %result to half
   store half %half, ptr addrspace(1) %out
   ret void
+}
+
+; Extracting channel 1 of a <4 x half> that lives in a single 64-bit register,
+; as produced by a D16 image sample, is legalized to trunc(srl(i64, 16)).
+; V_FMA_MIX_F32 reads hi16 from a 32-bit source via op_sel, so isExtractHiElt
+; must not fold the 64-bit shift into it: doing so builds a COPY from a 64-bit
+; virtual register to a 32-bit operand. optnone keeps the DAG combiner from
+; splitting the i64 into two i32s before isel, which is what hides this at the
+; other optimization levels.
+
+define float @fma_mix_f32_hi16_from_64bit_src(ptr addrspace(4) inreg %p) noinline optnone {
+  ; GFX11-REAL16-LABEL: name: fma_mix_f32_hi16_from_64bit_src
+  ; GFX11-REAL16: bb.0.entry:
+  ; GFX11-REAL16-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GFX11-REAL16-NEXT: {{  $}}
+  ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s64) from %ir.p, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 [[COPY2]]
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX11-REAL16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[S_LOAD_DWORDX2_IMM]], [[S_MOV_B32_1]], implicit-def dead $scc
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
+  ; GFX11-REAL16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sgpr_32 = S_MOV_B32 [[COPY3]]
+  ; GFX11-REAL16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, [[S_MOV_B32_2]], 8, [[S_MOV_B32_]], 8, [[S_MOV_B32_]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-REAL16-NEXT:   $vgpr0 = COPY [[V_FMA_MIX_F32_]]
+  ; GFX11-REAL16-NEXT:   SI_RETURN implicit $vgpr0
+  ;
+  ; GFX11-FAKE16-LABEL: name: fma_mix_f32_hi16_from_64bit_src
+  ; GFX11-FAKE16: bb.0.entry:
+  ; GFX11-FAKE16-NEXT:   liveins: $sgpr0, $sgpr1
+  ; GFX11-FAKE16-NEXT: {{  $}}
+  ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr1
+  ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY]], %subreg.sub1
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[REG_SEQUENCE]], 0, 0 :: (load (s64) from %ir.p, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 16
+  ; GFX11-FAKE16-NEXT:   [[S_LSHR_B64_:%[0-9]+]]:sreg_64 = S_LSHR_B64 [[S_LOAD_DWORDX2_IMM]], [[S_MOV_B32_]], implicit-def dead $scc
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LSHR_B64_]].sub0
+  ; GFX11-FAKE16-NEXT:   [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, [[COPY3]], 8, [[COPY2]], 8, [[COPY2]], 0, 0, 0, implicit $mode, implicit $exec
+  ; GFX11-FAKE16-NEXT:   $vgpr0 = COPY [[V_FMA_MIX_F32_]]
+  ; GFX11-FAKE16-NEXT:   SI_RETURN implicit $vgpr0
+entry:
+  %vec = load <4 x half>, ptr addrspace(4) %p
+  %ch0 = extractelement <4 x half> %vec, i64 0
+  %ch1 = extractelement <4 x half> %vec, i64 1
+  %ch0.ext = fpext half %ch0 to float
+  %ch1.ext = fpext half %ch1 to float
+  %result = call float @llvm.fmuladd.f32(float %ch1.ext, float %ch0.ext, float %ch0.ext)
+  ret float %result
 }
 

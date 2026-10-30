@@ -153,6 +153,18 @@ public:
                                       BaseOffsets, VirtualBaseOffsets);
   }
 
+  void StartedQualifiedLookup(const clang::DeclContext *DC) override {
+    if (auto *sema_source =
+            llvm::dyn_cast<clang::ExternalSemaSource>(m_Source.get()))
+      sema_source->StartedQualifiedLookup(DC);
+  }
+
+  void FinishedQualifiedLookup(const clang::DeclContext *DC) override {
+    if (auto *sema_source =
+            llvm::dyn_cast<clang::ExternalSemaSource>(m_Source.get()))
+      sema_source->FinishedQualifiedLookup(DC);
+  }
+
   /// This gets called when Sema is reconciling undefined but used decls.
   /// For LLDB's use-case, we never provide Clang with function definitions,
   /// instead we rely on linkage names and symbol resolution to call the
@@ -633,6 +645,16 @@ public:
         return true;
     }
     return false;
+  }
+
+  void StartedQualifiedLookup(const clang::DeclContext *DC) override {
+    for (auto &Source : Sources)
+      Source->StartedQualifiedLookup(DC);
+  }
+
+  void FinishedQualifiedLookup(const clang::DeclContext *DC) override {
+    for (auto &Source : Sources)
+      Source->FinishedQualifiedLookup(DC);
   }
 };
 

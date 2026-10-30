@@ -147,6 +147,15 @@ def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
   }];
 }
 
+def OIListOptionalAttr : TEST_Op<"oilist_optional_attr"> {
+  let arguments = (ins UnitAttr:$keyword,
+                       OptionalAttr<CompoundAttrNested>:$nested);
+  let assemblyFormat = [{
+    oilist( `keyword` $keyword
+          | `nested` $nested) attr-dict
+  }];
+}
+
 def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
   let assemblyFormat = [{
     oilist( `foo` | `bar` ) `buzz` attr-dict

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple arm-unknown -mattr=+vfp2,+v6t2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=ARM
-; RUN: llc -mtriple thumb-unknown -mattr=+vfp2,+v6t2 -global-isel -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=THUMB
+; RUN: llc -mtriple arm-unknown -mattr=+vfp2,+v6t2 -global-isel -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=ARM
+; RUN: llc -mtriple thumb-unknown -mattr=+vfp2,+v6t2 -global-isel -stop-after=ir-translator -verify-machineinstrs %s -o - | FileCheck %s -check-prefix=CHECK -check-prefix=THUMB
 
 declare arm_aapcscc i32 @int_varargs_target(i32, ...)
 

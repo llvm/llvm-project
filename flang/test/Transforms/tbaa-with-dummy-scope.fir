@@ -45,18 +45,18 @@
 module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4xi64>, i1 = dense<8> : vector<2xi64>, i8 = dense<8> : vector<2xi64>, i16 = dense<16> : vector<2xi64>, i32 = dense<32> : vector<2xi64>, i64 = dense<[32, 64]> : vector<2xi64>, f16 = dense<16> : vector<2xi64>, f64 = dense<64> : vector<2xi64>, f128 = dense<128> : vector<2xi64>, "dlti.endianness" = "little">, llvm.data_layout = ""} {
 func.func @test1(%arg0: !fir.ref<f32> {fir.bindc_name = "x", fir.target}, %arg1: !fir.ref<f32> {fir.bindc_name = "y", fir.target}) {
   %scope_out = fir.dummy_scope : !fir.dscope
-  %0 = fir.declare %arg0 dummy_scope %scope_out {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %1 = fir.declare %arg1 dummy_scope %scope_out {fortran_attrs = #fir.var_attrs<target>, uniq_name = "_QFtestEy"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %0 = fir.declare %arg0 dummy_scope %scope_out uniq_name("_QFtestEx") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %1 = fir.declare %arg1 dummy_scope %scope_out uniq_name("_QFtestEy") fortran_attrs<target> : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %2 = fir.load %1 : !fir.ref<f32>
   fir.store %2 to %0 : !fir.ref<f32>
   %scope_in1 = fir.dummy_scope : !fir.dscope
-  %3 = fir.declare %0 dummy_scope %scope_in1 {uniq_name = "_QFtestFinnerEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %4 = fir.declare %1 dummy_scope %scope_in1 {uniq_name = "_QFtestFinnerEy"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %3 = fir.declare %0 dummy_scope %scope_in1 uniq_name("_QFtestFinnerEx") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %4 = fir.declare %1 dummy_scope %scope_in1 uniq_name("_QFtestFinnerEy") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %5 = fir.load %4 : !fir.ref<f32>
   fir.store %5 to %3 : !fir.ref<f32>
   %scope_in2 = fir.dummy_scope : !fir.dscope
-  %6 = fir.declare %0 dummy_scope %scope_in2 {uniq_name = "_QFtestFinnerEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
-  %7 = fir.declare %1 dummy_scope %scope_in2 {uniq_name = "_QFtestFinnerEy"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %6 = fir.declare %0 dummy_scope %scope_in2 uniq_name("_QFtestFinnerEx") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %7 = fir.declare %1 dummy_scope %scope_in2 uniq_name("_QFtestFinnerEy") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %8 = fir.load %7 : !fir.ref<f32>
   fir.store %8 to %6 : !fir.ref<f32>
   return
@@ -102,18 +102,18 @@ func.func @test1(%arg0: !fir.ref<f32> {fir.bindc_name = "x", fir.target}, %arg1:
 // CHECK-SAME:                              %[[VAL_0:.*]]: !fir.ref<f32> {fir.bindc_name = "z"}) {
 // CHECK:           %[[VAL_1:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_2:.*]] = fir.address_of(@_QMtestEx) : !fir.ref<f32>
-// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_2]] {uniq_name = "_QMtestEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_3:.*]] = fir.declare %[[VAL_2]] uniq_name("_QMtestEx") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_4:.*]] = fir.address_of(@_QMtestEy) : !fir.ref<f32>
-// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]] {uniq_name = "_QMtestEy"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] {uniq_name = "_QMtestFcallerEz"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+// CHECK:           %[[VAL_5:.*]] = fir.declare %[[VAL_4]] uniq_name("_QMtestEy") : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_6:.*]] = fir.declare %[[VAL_0]] dummy_scope %[[VAL_1]] uniq_name("_QMtestFcallerEz") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]] <{tbaa = [#[[$ATTR_46]]]}> : !fir.ref<f32>
 // CHECK:           fir.store %[[VAL_7]] to %[[VAL_3]] <{tbaa = [#[[$ATTR_47]]]}> : !fir.ref<f32>
 // CHECK:           %[[VAL_8:.*]] = fir.dummy_scope : !fir.dscope
 // CHECK:           %[[VAL_9:.*]] = fir.address_of(@_QMtestEx) : !fir.ref<f32>
-// CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] {uniq_name = "_QMtestEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_10:.*]] = fir.declare %[[VAL_9]] uniq_name("_QMtestEx") : (!fir.ref<f32>) -> !fir.ref<f32>
 // CHECK:           %[[VAL_11:.*]] = fir.address_of(@_QMtestEy) : !fir.ref<f32>
-// CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_11]] {uniq_name = "_QMtestEy"} : (!fir.ref<f32>) -> !fir.ref<f32>
-// CHECK:           %[[VAL_13:.*]] = fir.declare %[[VAL_6]] dummy_scope %[[VAL_8]] {uniq_name = "_QMtestFcalleeEz"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+// CHECK:           %[[VAL_12:.*]] = fir.declare %[[VAL_11]] uniq_name("_QMtestEy") : (!fir.ref<f32>) -> !fir.ref<f32>
+// CHECK:           %[[VAL_13:.*]] = fir.declare %[[VAL_6]] dummy_scope %[[VAL_8]] uniq_name("_QMtestFcalleeEz") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
 // CHECK:           %[[VAL_14:.*]] = fir.load %[[VAL_12]] <{tbaa = [#[[$ATTR_48]]]}> : !fir.ref<f32>
 // CHECK:           fir.store %[[VAL_14]] to %[[VAL_10]] <{tbaa = [#[[$ATTR_49]]]}> : !fir.ref<f32>
 // CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_13]] <{tbaa = [#[[$ATTR_50]]]}> : !fir.ref<f32>
@@ -122,18 +122,18 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr = dense<64> : vector<4
 func.func @_QMtestPcaller(%arg0: !fir.ref<f32> {fir.bindc_name = "z"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.address_of(@_QMtestEx) : !fir.ref<f32>
-  %2 = fir.declare %1 {uniq_name = "_QMtestEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %2 = fir.declare %1 uniq_name("_QMtestEx") : (!fir.ref<f32>) -> !fir.ref<f32>
   %3 = fir.address_of(@_QMtestEy) : !fir.ref<f32>
-  %4 = fir.declare %3 {uniq_name = "_QMtestEy"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %5 = fir.declare %arg0 dummy_scope %0 {uniq_name = "_QMtestFcallerEz"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %4 = fir.declare %3 uniq_name("_QMtestEy") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %5 = fir.declare %arg0 dummy_scope %0 uniq_name("_QMtestFcallerEz") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %6 = fir.load %4 : !fir.ref<f32>
   fir.store %6 to %2 : !fir.ref<f32>
   %7 = fir.dummy_scope : !fir.dscope
   %8 = fir.address_of(@_QMtestEx) : !fir.ref<f32>
-  %9 = fir.declare %8 {uniq_name = "_QMtestEx"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  %9 = fir.declare %8 uniq_name("_QMtestEx") : (!fir.ref<f32>) -> !fir.ref<f32>
   %10 = fir.address_of(@_QMtestEy) : !fir.ref<f32>
-  %11 = fir.declare %10 {uniq_name = "_QMtestEy"} : (!fir.ref<f32>) -> !fir.ref<f32>
-  %12 = fir.declare %5 dummy_scope %7 {uniq_name = "_QMtestFcalleeEz"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %11 = fir.declare %10 uniq_name("_QMtestEy") : (!fir.ref<f32>) -> !fir.ref<f32>
+  %12 = fir.declare %5 dummy_scope %7 uniq_name("_QMtestFcalleeEz") : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
   %13 = fir.load %11 : !fir.ref<f32>
   fir.store %13 to %9 : !fir.ref<f32>
   %14 = fir.load %12 : !fir.ref<f32>

@@ -66,7 +66,7 @@ protected:
 
 public:
   BasicAATest()
-      : M("BasicAATest", C), B(C), DL(DLString), TLII(M.getTargetTriple()),
+      : M("BasicAATest", C), B(M), DL(DLString), TLII(M.getTargetTriple()),
         TLI(TLII), F(nullptr) {}
 };
 

@@ -37,7 +37,8 @@ module attributes {
   // CIR:   %[[GEP:.*]] = cir.ptr_stride %[[U8]], %[[OFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
   // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[GEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
   // CIR:   cir.store %arg0, %[[CAST]] : !s64i, !cir.ptr<!s64i>
-  // CIR:   %{{.*}} = cir.load %[[SLOT]] : !cir.ptr<!rec_HiWord>, !rec_HiWord
+  // CIR:   %[[H:.*]] = cir.alloca "h" align(8) : !cir.ptr<!rec_HiWord>
+  // CIR:   cir.copy %[[SLOT]] align(8) to %[[H]] align(8) : !cir.ptr<!rec_HiWord>
 
   // The return value is read in place from byte 8 of the local aggregate.
   cir.func @give_hiword() -> !rec_HiWord {
@@ -138,7 +139,8 @@ module attributes {
   // CIR:   %[[CGEP:.*]] = cir.ptr_stride %[[CU8]], %[[COFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
   // CIR:   %[[CCAST:.*]] = cir.cast bitcast %[[CGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
   // CIR:   cir.store %[[CRET]], %[[CCAST]] : !s64i, !cir.ptr<!s64i>
-  // CIR:   %{{.*}} = cir.load %[[CSLOT]] : !cir.ptr<!rec_HiWord>, !rec_HiWord
+  // CIR:   %[[R:.*]] = cir.alloca "r" align(8) : !cir.ptr<!rec_HiWord>
+  // CIR:   cir.copy %[[CSLOT]] align(8) to %[[R]] align(8) : !cir.ptr<!rec_HiWord>
 
   // Passing an aggregate argument runs the extraction direction at the call
   // site: the operand's byte 8 is read out to form the register.
@@ -148,9 +150,9 @@ module attributes {
   }
 
   // CIR-LABEL: cir.func{{.*}} @pass_hiword(%arg0: !s64i)
-  // CIR:   %[[PREC:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_HiWord>, !rec_HiWord
+  // CIR:   %[[PARAM:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiWord>
   // CIR:   %[[PSLOT:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!rec_HiWord>
-  // CIR:   cir.store %[[PREC]], %[[PSLOT]] : !rec_HiWord, !cir.ptr<!rec_HiWord>
+  // CIR:   cir.copy %[[PARAM]] align(8) to %[[PSLOT]] align(8) : !cir.ptr<!rec_HiWord>
   // CIR:   %[[PU8:.*]] = cir.cast bitcast %[[PSLOT]] : !cir.ptr<!rec_HiWord> -> !cir.ptr<!u8i>
   // CIR:   %[[POFF:.*]] = cir.const #cir.int<8> : !s64i
   // CIR:   %[[PGEP:.*]] = cir.ptr_stride %[[PU8]], %[[POFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
@@ -175,7 +177,8 @@ module attributes {
   // CIR:   %[[LGEP:.*]] = cir.ptr_stride %[[LU8]], %[[LOFF]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
   // CIR:   %[[LCAST:.*]] = cir.cast bitcast %[[LGEP]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
   // CIR:   cir.store %arg0, %[[LCAST]] : !s32i, !cir.ptr<!s32i>
-  // CIR:   %{{.*}} = cir.load %[[LSLOT]] : !cir.ptr<!rec_LeadPad>, !rec_LeadPad
+  // CIR:   %[[L:.*]] = cir.alloca "l" align(4) : !cir.ptr<!rec_LeadPad>
+  // CIR:   cir.copy %[[LSLOT]] align(4) to %[[L]] align(4) : !cir.ptr<!rec_LeadPad>
 }
 
 // LLVM: define i64 @take_hiword(i64 %{{.+}})
