@@ -667,12 +667,22 @@ void ObjFile::initializeSymbols() {
   }
 
   for (auto &kv : weakAliases) {
-    Symbol *sym = kv.first;
-    const coff_aux_weak_external *aux = kv.second;
-    checkAndSetWeakAlias(symtab, this, sym, symbols[aux->TagIndex],
-                         aux->Characteristics ==
-                             IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
+  Symbol *sym = kv.first;
+  const coff_aux_weak_external *aux = kv.second;
+
+  uint32_t tagIndex = aux->TagIndex;
+
+  // Validate the weak external's target symbol index.
+  if (tagIndex >= symbols.size() || !symbols[tagIndex]) {
+    error(toString(this) + ": invalid TagIndex in weak external " +
+          sym->getName());
+    continue;
   }
+
+  checkAndSetWeakAlias(
+      symtab, this, sym, symbols[tagIndex],
+      aux->Characteristics == IMAGE_WEAK_EXTERN_ANTI_DEPENDENCY);
+}
 
   // Free the memory used by sparseChunks now that symbol loading is finished.
   decltype(sparseChunks)().swap(sparseChunks);
