@@ -863,6 +863,7 @@ private:
 
   SDValue ScalarizeVecRes_FIX(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
+  SDValue ScalarizeVecRes_PartialReduction(SDNode *N);
 
   // Vector Operand Scalarization: <1 x ty> -> ty.
   bool ScalarizeVectorOperand(SDNode *N, unsigned OpNo);

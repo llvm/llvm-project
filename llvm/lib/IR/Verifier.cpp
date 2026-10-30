@@ -2185,6 +2185,13 @@ Verifier::visitModuleFlag(const MDNode *Op,
     return;
   }
 
+  if (Name == "debugger-tuning") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "debugger-tuning metadata requires a non-empty string argument", Op);
+    return;
+  }
+
   if (Name == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might
@@ -6363,6 +6370,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
         Check(OBU.Inputs.size() == 1,
               "noundef assumptions should have 1 argument", Call);
         break;
+      case BundleAttr::Range: {
+        Check(OBU.Inputs.size() == 3,
+              "range assumptions should have 3 arguments", Call);
+        Check(GetTypeAt(0)->isIntegerTy(),
+              "first argument should be an integer", Call);
+        auto *LowerBound = dyn_cast<ConstantInt>(OBU.Inputs[1]);
+        Check(LowerBound, "second argument should be a constant integer", Call);
+        auto *UpperBound = dyn_cast<ConstantInt>(OBU.Inputs[2]);
+        Check(UpperBound, "third argument should be a constant integer", Call);
+        Check(LowerBound != UpperBound || LowerBound->isZero(),
+              "an empty range has to be represented as `0, 0`");
+        Check(GetTypeAt(0)->getIntegerBitWidth() ==
+                      GetTypeAt(1)->getIntegerBitWidth() &&
+                  GetTypeAt(1)->getIntegerBitWidth() ==
+                      GetTypeAt(2)->getIntegerBitWidth(),
+              "all arguments should have the same bit width", Call);
+      } break;
       case BundleAttr::SeparateStorage:
         Check(OBU.Inputs.size() == 2,
               "separate_storage assumptions should have 2 arguments", Call);
@@ -6828,12 +6852,7 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
             "gc.relocate: statepoint derived index out of bounds", Call);
     }
 
-    // Relocated value must be either a pointer type or vector-of-pointer type,
-    // but gc_relocate does not need to return the same pointer type as the
-    // relocated pointer. It can be casted to the correct type later if it's
-    // desired. However, they must have the same address space and 'vectorness'
     GCRelocateInst &Relocate = cast<GCRelocateInst>(Call);
-    auto *ResultType = Call.getType();
     auto *DerivedType = Relocate.getDerivedPtr()->getType();
     auto *BaseType = Relocate.getBasePtr()->getType();
 
@@ -6841,15 +6860,8 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "gc.relocate: relocated value must be a pointer", Call);
     Check(DerivedType->isPtrOrPtrVectorTy(),
           "gc.relocate: relocated value must be a pointer", Call);
-
-    Check(ResultType->isVectorTy() == DerivedType->isVectorTy(),
-          "gc.relocate: vector relocates to vector and pointer to pointer",
-          Call);
-    Check(
-        ResultType->getPointerAddressSpace() ==
-            DerivedType->getPointerAddressSpace(),
-        "gc.relocate: relocating a pointer shouldn't change its address space",
-        Call);
+    Check(Call.getType() == DerivedType,
+          "gc.relocate: must return the type of the relocated value", Call);
 
     auto GC = llvm::getGCStrategy(Relocate.getFunction()->getGC());
     Check(GC, "gc.relocate: calling function must have GCStrategy",
@@ -6858,7 +6870,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
       auto isGCPtr = [&GC](Type *PTy) {
         return GC->isGCManagedPointer(PTy->getScalarType()).value_or(true);
       };
-      Check(isGCPtr(ResultType), "gc.relocate: must return gc pointer", Call);
       Check(isGCPtr(BaseType),
             "gc.relocate: relocated value must be a gc pointer", Call);
       Check(isGCPtr(DerivedType),
@@ -8379,13 +8390,29 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+static bool isNewFormatTBAATypeNode(const MDNode *Type) {
   if (!Type || Type->getNumOperands() < 3)
     return false;
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
+}
+
+/// Returns true if the parent chain of the TBAA type node \p MD is acyclic.
+static bool hasAcyclicTBAAParentChain(const MDNode *MD) {
+  SmallPtrSet<const MDNode *, 4> Visited;
+  for (const MDNode *N = MD; N;) {
+    if (!Visited.insert(N).second)
+      return false;
+    if (isNewFormatTBAATypeNode(N)) {
+      N = cast<MDNode>(N->getOperand(0));
+    } else {
+      N = IsRootTBAANode(N) ? nullptr
+                            : dyn_cast_or_null<MDNode>(N->getOperand(1));
+    }
+  }
+  return true;
 }
 
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
@@ -8448,6 +8475,9 @@ bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {
     CheckTBAA(isValidScalarTBAANode(AccessType),
               "Access type node must be a valid scalar type", I, MD,
               AccessType);
+  } else {
+    CheckTBAA(hasAcyclicTBAAParentChain(AccessType),
+              "Cycle detected in access type parent chain", I, MD, AccessType);
   }
 
   auto *OffsetCI = mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(2));

@@ -232,6 +232,13 @@ void MCStreamer::emitCFIMTETaggedFrame() {
   CurFrame->IsMTETaggedFrame = true;
 }
 
+void MCStreamer::emitCFINonHintPAuthFrame() {
+  MCDwarfFrameInfo *CurFrame = getCurrentDwarfFrameInfo();
+  if (!CurFrame)
+    return;
+  CurFrame->IsNonHintPAuthFrame = true;
+}
+
 void MCStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
                                        unsigned Column, unsigned Flags,
                                        unsigned Isa, unsigned Discriminator,

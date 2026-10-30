@@ -210,7 +210,8 @@ Expected<bool> RISCVCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
 }
 
 void RISCVCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
-  if (getOptLevel() != CodeGenOptLevel::None)
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      getTM().getCLOpts().enable_copyelim)
     addMachineFunctionPass(RISCVRedundantCopyEliminationPass(), PMW);
 }
 
@@ -268,8 +269,8 @@ void RISCVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
       }),
       PMW);
 
-  // RISCVTargetMachine's constructor sets Options.EnableCFIFixup to the
-  // inverse of -riscv-enable-cfi-instr-inserter (a flag private to
+  // RISCVTargetMachine's constructor sets Options.enable_cfi_instr_inserter to
+  // the inverse of -riscv-enable-cfi-instr-inserter (a flag private to
   // RISCVTargetMachine.cpp), so checking it here is equivalent to checking
   // that flag directly -- the two passes solve overlapping problems and
   // this target picks exactly one.

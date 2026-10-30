@@ -490,17 +490,6 @@ void CIRGenModule::constructAttributeList(
     if (langOpts.OffloadUniformBlock)
       addUnitAttr(cir::CIRDialect::getUniformWorkGroupSizeAttrName());
 
-    if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
-        targetDecl->hasAttr<CUDAGlobalAttr>()) {
-      GlobalDecl kernel(calleeInfo.getCalleeDecl());
-      llvm::StringRef kernelName = getMangledName(
-          kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-      auto attr = cir::CUDAKernelNameAttr::get(
-          &getMLIRContext(),
-          mlir::StringAttr::get(&getMLIRContext(), kernelName));
-      attrs.set(attr.getMnemonic(), attr);
-    }
-
     // TODO(cir): we should also do 'aarch64_pstate_sm_body' here.
 
     if (auto *modularFormat = targetDecl->getAttr<ModularFormatAttr>()) {
