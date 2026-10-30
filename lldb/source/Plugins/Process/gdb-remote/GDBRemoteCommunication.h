@@ -109,7 +109,10 @@ public:
     bool m_timeout_modified;
   };
 
-  GDBRemoteCommunication();
+  /// Construct a GDB-remote communication channel named \p name.
+  ///
+  /// The name identifies the channel in packet logs.
+  explicit GDBRemoteCommunication(llvm::StringRef name);
 
   ~GDBRemoteCommunication() override;
 
@@ -199,6 +202,8 @@ protected:
   bool DecompressPacket();
 
 private:
+  const std::string m_name;
+
 #if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;

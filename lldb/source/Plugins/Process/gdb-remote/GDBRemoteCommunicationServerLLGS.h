@@ -37,8 +37,8 @@ class GDBRemoteCommunicationServerLLGS
 public:
   // Constructors and Destructors
   GDBRemoteCommunicationServerLLGS(
-      MainLoop &mainloop,
-      NativeProcessProtocol::Manager &process_manager);
+      MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager,
+      llvm::StringRef name);
 
   void SetLaunchInfo(const ProcessLaunchInfo &info);
 

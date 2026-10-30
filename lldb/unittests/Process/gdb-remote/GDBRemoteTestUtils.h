@@ -53,7 +53,7 @@ public:
 
 class MockServer : public GDBRemoteCommunicationServer {
 public:
-  MockServer() : GDBRemoteCommunicationServer() {
+  MockServer() : GDBRemoteCommunicationServer("test.server") {
     m_send_acks = false;
     m_send_error_strings = true;
   }
