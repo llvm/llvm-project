@@ -17,6 +17,7 @@
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -480,7 +481,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 /// to the \p Head SU.
 /// \p Visited should allocate enough bits for the number of SUnits, but its
 /// value can otherwise be uninitialized.
-static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
+static void collectLoads(SmallSetVector<SUnit *, 8> &Loads, BitVector &Visited,
                          SUnit &Head, bool Forward, bool StopAtLoads) {
   if (Head.isBoundaryNode())
     return;
@@ -518,15 +519,17 @@ static void collectLoads(SmallPtrSet<SUnit *, 8> &Loads, BitVector &Visited,
 /// the corresponding set in \p LoadPredsCache should hold all transitive load
 /// dependencies (via collectLoads with StopAtLoads=false). The \p Scratch
 /// bitvector should allocate enough bits for the number of SUnits.
-static bool loadsMayOverlap(
-    [[maybe_unused]] SUnit &I, const SmallPtrSet<SUnit *, 8> &ILoadSuccs,
-    SUnit &J, BitVector &LoadPredsComputed,
-    SmallVector<SmallPtrSet<SUnit *, 8>> &LoadPredsCache, BitVector &Scratch) {
+static bool
+loadsMayOverlap([[maybe_unused]] SUnit &I,
+                const SmallSetVector<SUnit *, 8> &ILoadSuccs, SUnit &J,
+                BitVector &LoadPredsComputed,
+                SmallVector<SmallSetVector<SUnit *, 8>> &LoadPredsCache,
+                BitVector &Scratch) {
 
   if (ILoadSuccs.empty())
     return false;
 
-  SmallPtrSet<SUnit *, 8> &JLoadPreds = LoadPredsCache[J.NodeNum];
+  SmallSetVector<SUnit *, 8> &JLoadPreds = LoadPredsCache[J.NodeNum];
   if (!LoadPredsComputed.test(J.NodeNum)) {
     collectLoads(JLoadPreds, Scratch, J, /*Forward=*/false,
                  /*StopAtLoads=*/true);
@@ -536,7 +539,7 @@ static bool loadsMayOverlap(
     return false;
 
   for (SUnit *ILoad : ILoadSuccs) {
-    SmallPtrSet<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
+    SmallSetVector<SUnit *, 8> &ILoadDeps = LoadPredsCache[ILoad->NodeNum];
     if (!LoadPredsComputed.test(ILoad->NodeNum)) {
       collectLoads(ILoadDeps, Scratch, *ILoad, /*Forward=*/false,
                    /*StopAtLoads=*/false);
@@ -596,13 +599,13 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     }
 
     IIdx = 0;
-    SmallPtrSet<SUnit *, 8> ILoadSuccs;
+    SmallSetVector<SUnit *, 8> ILoadSuccs;
 
     // Cache collected load predecessors.
     // For VOPDCapable nodes, this caches collectLoads with StopAtLoads=true
     // For loads, this caches collectLoads with StopAtLoads=false
     BitVector LoadPredsComputed(DAG->SUnits.size());
-    SmallVector<SmallPtrSet<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
+    SmallVector<SmallSetVector<SUnit *, 8>> LoadPredsCache(DAG->SUnits.size());
 
     BitVector Scratch(DAG->SUnits.size());
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;

@@ -545,7 +545,8 @@ TEST_F(AMDGPUTargetInfoTest, KernelGlobalPointerUnchangedUnderHIP) {
   std::unique_ptr<FunctionInfo> FI;
   std::unique_ptr<TargetInfo> TI = hipTarget();
   const ABIType *GlobalPtr =
-      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::GLOBAL_ADDRESS);
+      TB.getPointerType(64, llvm::Align(8), llvm::AMDGPUAS::GLOBAL_ADDRESS,
+                        /*HasAddressSpaceQualifier=*/true);
   expectDirectPointerAS(classifyKernelArg(GlobalPtr, FI, TI),
                         llvm::AMDGPUAS::GLOBAL_ADDRESS);
 }

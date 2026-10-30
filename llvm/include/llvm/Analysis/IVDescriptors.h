@@ -396,7 +396,7 @@ public:
   InductionKind getKind() const { return IK; }
   const SCEV *getStep() const { return Step; }
   BinaryOperator *getInductionBinOp() const { return InductionBinOp; }
-  LLVM_ABI ConstantInt *getConstIntStepValue() const;
+  LLVM_ABI std::optional<APInt> getConstStepValue() const;
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
@@ -516,6 +516,12 @@ public:
 
   /// Returns the SCEV no-wrap flags that apply to StepInst.
   SCEVFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
+
+  /// Returns an over-approximation of the conditional induction as a SCEVAddRec
+  /// assuming the condition is always true. The loop \p L must be the loop
+  /// containing the conditional induction.
+  LLVM_ABI const SCEV *getUnconditionalAddRec(ScalarEvolution &SE,
+                                              const Loop &L) const;
 
 private:
   ConditionalInductionDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,

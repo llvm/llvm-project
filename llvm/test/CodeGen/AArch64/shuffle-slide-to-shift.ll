@@ -264,9 +264,9 @@ define <4 x i32> @slide_left_v4i32_lane_independent(<4 x i32> %v) {
 ;
 ; CHECK-GI-LABEL: slide_left_v4i32_lane_independent:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI14_0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    trn1 v1.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    trn2 v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
   %r = shufflevector <4 x i32> %v, <4 x i32> zeroinitializer,
        <4 x i32> <i32 1, i32 4, i32 3, i32 6>

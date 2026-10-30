@@ -19,7 +19,7 @@
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
 
 #include <array>
 

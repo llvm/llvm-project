@@ -4342,6 +4342,199 @@ func.func @test7(%arg0: i32) -> i1 {
 
 // -----
 
+// Integer conversion can produce NaN in formats without infinities. For
+// example, x = 1000 produces NaN here, so the results are false, true, false,
+// and true, respectively. Comparing x against integer zero would be incorrect.
+// CHECK-LABEL: @cmpf_sitofp_nan_overflow(
+// CHECK: %[[FP:.*]] = arith.sitofp %arg0 : i32 to f8E4M3FN
+// CHECK: %[[GT:.*]] = arith.cmpf ogt, %[[FP]], %{{.*}} : f8E4M3FN
+// CHECK: %[[EQ:.*]] = arith.cmpf ueq, %[[FP]], %{{.*}} : f8E4M3FN
+// CHECK: %[[ORD:.*]] = arith.cmpf ord, %[[FP]], %{{.*}} : f8E4M3FN
+// CHECK: %[[UNO:.*]] = arith.cmpf uno, %[[FP]], %{{.*}} : f8E4M3FN
+// CHECK: return %[[GT]], %[[EQ]], %[[ORD]], %[[UNO]]
+func.func @cmpf_sitofp_nan_overflow(%x: i32) -> (i1, i1, i1, i1) {
+  %zero = arith.constant 0.0 : f8E4M3FN
+  %fp = arith.sitofp %x : i32 to f8E4M3FN
+  %gt = arith.cmpf ogt, %fp, %zero : f8E4M3FN
+  %eq = arith.cmpf ueq, %fp, %zero : f8E4M3FN
+  %ord = arith.cmpf ord, %fp, %zero : f8E4M3FN
+  %uno = arith.cmpf uno, %fp, %zero : f8E4M3FN
+  return %gt, %eq, %ord, %uno : i1, i1, i1, i1
+}
+
+// The formats that encode NaN as negative zero have the same overflow issue.
+// x = 65536 overflows each of these conversions to NaN.
+// CHECK-LABEL: @cmpf_uitofp_fnuz_overflow(
+// CHECK: %[[FP5:.*]] = arith.uitofp %arg0 : i32 to f8E5M2FNUZ
+// CHECK: %[[R5:.*]] = arith.cmpf ueq, %[[FP5]], %{{.*}} : f8E5M2FNUZ
+// CHECK: %[[FP4:.*]] = arith.uitofp %arg0 : i32 to f8E4M3FNUZ
+// CHECK: %[[R4:.*]] = arith.cmpf one, %[[FP4]], %{{.*}} : f8E4M3FNUZ
+// CHECK: %[[FP11:.*]] = arith.uitofp %arg0 : i32 to f8E4M3B11FNUZ
+// CHECK: %[[R11:.*]] = arith.cmpf ord, %[[FP11]], %{{.*}} : f8E4M3B11FNUZ
+// CHECK: return %[[R5]], %[[R4]], %[[R11]]
+func.func @cmpf_uitofp_fnuz_overflow(%x: i32) -> (i1, i1, i1) {
+  %zero5 = arith.constant 0.0 : f8E5M2FNUZ
+  %zero4 = arith.constant 0.0 : f8E4M3FNUZ
+  %zero11 = arith.constant 0.0 : f8E4M3B11FNUZ
+  %fp5 = arith.uitofp %x : i32 to f8E5M2FNUZ
+  %r5 = arith.cmpf ueq, %fp5, %zero5 : f8E5M2FNUZ
+  %fp4 = arith.uitofp %x : i32 to f8E4M3FNUZ
+  %r4 = arith.cmpf one, %fp4, %zero4 : f8E4M3FNUZ
+  %fp11 = arith.uitofp %x : i32 to f8E4M3B11FNUZ
+  %r11 = arith.cmpf ord, %fp11, %zero11 : f8E4M3B11FNUZ
+  return %r5, %r4, %r11 : i1, i1, i1
+}
+
+// The unsigned floating-point format can also overflow to NaN, e.g. x = 131072.
+// CHECK-LABEL: @cmpf_uitofp_unsigned_nan_overflow(
+// CHECK: %[[FP:.*]] = arith.uitofp %arg0 : i32 to f8E5M3FNU
+// CHECK: %[[R:.*]] = arith.cmpf ueq, %[[FP]], %{{.*}} : f8E5M3FNU
+// CHECK: return %[[R]]
+func.func @cmpf_uitofp_unsigned_nan_overflow(%x: i32) -> i1 {
+  %zero = arith.constant 0.0 : f8E5M3FNU
+  %fp = arith.uitofp %x : i32 to f8E5M3FNU
+  %r = arith.cmpf ueq, %fp, %zero : f8E5M3FNU
+  return %r : i1
+}
+
+// Computing the floating-point representation of the signed integer minimum
+// must not crash for a format that cannot represent negative values.
+// CHECK-LABEL: @cmpf_sitofp_unsigned_format(
+// CHECK: %[[FP:.*]] = arith.sitofp %arg0 : i32 to f8E5M3FNU
+// CHECK: %[[R:.*]] = arith.cmpf ogt, %[[FP]], %{{.*}} : f8E5M3FNU
+// CHECK: return %[[R]]
+func.func @cmpf_sitofp_unsigned_format(%x: i32) -> i1 {
+  %zero = arith.constant 0.0 : f8E5M3FNU
+  %fp = arith.sitofp %x : i32 to f8E5M3FNU
+  %r = arith.cmpf ogt, %fp, %zero : f8E5M3FNU
+  return %r : i1
+}
+
+// E8M0 has neither a sign nor zero: converting integer zero produces its
+// smallest positive value. Do not apply reasoning that assumes zero is exact.
+// CHECK-LABEL: @cmpf_int_to_fp_no_zero(
+// CHECK: %[[U:.*]] = arith.uitofp %arg0 : i8 to f8E8M0FNU
+// CHECK: %[[UR:.*]] = arith.cmpf oeq, %[[U]], %{{.*}} : f8E8M0FNU
+// CHECK: %[[S:.*]] = arith.sitofp %arg1 : i32 to f8E8M0FNU
+// CHECK: %[[SR:.*]] = arith.cmpf ogt, %[[S]], %{{.*}} : f8E8M0FNU
+// CHECK: return %[[UR]], %[[SR]]
+func.func @cmpf_int_to_fp_no_zero(%x: i8, %y: i32) -> (i1, i1) {
+  %smallest = arith.constant 0x00 : f8E8M0FNU
+  %one = arith.constant 1.0 : f8E8M0FNU
+  %u = arith.uitofp %x : i8 to f8E8M0FNU
+  %ur = arith.cmpf oeq, %u, %smallest : f8E8M0FNU
+  %s = arith.sitofp %y : i32 to f8E8M0FNU
+  %sr = arith.cmpf ogt, %s, %one : f8E8M0FNU
+  return %ur, %sr : i1, i1
+}
+
+// Finite-only overflow saturates. Even though i4 fits in the precision of
+// f6E2M3FN, unsigned 8 and signed -8 convert to 7.5 and -7.5. Equality against
+// these fractional constants is therefore not always false.
+// CHECK-LABEL: @cmpf_int_to_fp_saturating_overflow(
+// CHECK: %[[U:.*]] = arith.uitofp %arg0 : i4 to f6E2M3FN
+// CHECK: %[[UR:.*]] = arith.cmpf oeq, %[[U]], %{{.*}} : f6E2M3FN
+// CHECK: %[[S:.*]] = arith.sitofp %arg0 : i4 to f6E2M3FN
+// CHECK: %[[SR:.*]] = arith.cmpf oeq, %[[S]], %{{.*}} : f6E2M3FN
+// CHECK: return %[[UR]], %[[SR]]
+func.func @cmpf_int_to_fp_saturating_overflow(%x: i4) -> (i1, i1) {
+  %max = arith.constant 7.5 : f6E2M3FN
+  %min = arith.constant -7.5 : f6E2M3FN
+  %u = arith.uitofp %x : i4 to f6E2M3FN
+  %ur = arith.cmpf oeq, %u, %max : f6E2M3FN
+  %s = arith.sitofp %x : i4 to f6E2M3FN
+  %sr = arith.cmpf oeq, %s, %min : f6E2M3FN
+  return %ur, %sr : i1, i1
+}
+
+// Formats without infinities remain supported when the integer range fits
+// within their exponent range, including equality at the exponent bound.
+// CHECK-LABEL: @cmpf_int_to_fp_safe_nan_only(
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i9
+// CHECK-DAG: %[[C2:.*]] = arith.constant 1 : i16
+// CHECK: %[[R1:.*]] = arith.cmpi sgt, %arg0, %[[C1]] : i9
+// CHECK: %[[R2:.*]] = arith.cmpi eq, %arg1, %[[C2]] : i16
+// CHECK: return %[[R1]], %[[R2]]
+func.func @cmpf_int_to_fp_safe_nan_only(%x: i9, %y: i16) -> (i1, i1) {
+  %one1 = arith.constant 1.0 : f8E4M3FN
+  %one2 = arith.constant 1.0 : f8E5M3FNU
+  %s = arith.sitofp %x : i9 to f8E4M3FN
+  %r1 = arith.cmpf ogt, %s, %one1 : f8E4M3FN
+  %u = arith.uitofp %y : i16 to f8E5M3FNU
+  %r2 = arith.cmpf oeq, %u, %one2 : f8E5M3FNU
+  return %r1, %r2 : i1, i1
+}
+
+// CHECK-LABEL: @cmpf_int_to_fp_safe_finite_only(
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : i2
+// CHECK-DAG: %[[C2:.*]] = arith.constant 1 : i3
+// CHECK-DAG: %[[C3:.*]] = arith.constant 1 : i4
+// CHECK: %[[R1:.*]] = arith.cmpi eq, %arg0, %[[C1]] : i2
+// CHECK: %[[R2:.*]] = arith.cmpi eq, %arg1, %[[C2]] : i3
+// CHECK: %[[R3:.*]] = arith.cmpi ugt, %arg2, %[[C3]] : i4
+// CHECK: return %[[R1]], %[[R2]], %[[R3]]
+func.func @cmpf_int_to_fp_safe_finite_only(%x: i2, %y: i3, %z: i4) -> (i1, i1, i1) {
+  %one1 = arith.constant 1.0 : f4E2M1FN
+  %one2 = arith.constant 1.0 : f6E2M3FN
+  %one3 = arith.constant 1.0 : f6E3M2FN
+  %f1 = arith.uitofp %x : i2 to f4E2M1FN
+  %r1 = arith.cmpf oeq, %f1, %one1 : f4E2M1FN
+  %f2 = arith.sitofp %y : i3 to f6E2M3FN
+  %r2 = arith.cmpf oeq, %f2, %one2 : f6E2M3FN
+  %f3 = arith.uitofp %z : i4 to f6E3M2FN
+  %r3 = arith.cmpf ogt, %f3, %one3 : f6E3M2FN
+  return %r1, %r2, %r3 : i1, i1, i1
+}
+
+// IEEE-style FP8 formats can overflow to infinity without producing NaN or
+// saturating. This comparison remains valid even for integers that overflow.
+// CHECK-LABEL: @cmpf_sitofp_ieee_fp8(
+// CHECK: %[[ZERO:.*]] = arith.constant 0 : i8
+// CHECK: %[[R:.*]] = arith.cmpi sle, %arg0, %[[ZERO]] : i8
+// CHECK: return %[[R]]
+func.func @cmpf_sitofp_ieee_fp8(%x: i8) -> i1 {
+  %half = arith.constant 0.5 : f8E3M4
+  %fp = arith.sitofp %x : i8 to f8E3M4
+  %r = arith.cmpf olt, %fp, %half : f8E3M4
+  return %r : i1
+}
+
+// Rounding guards are still needed even when overflow has IEEE semantics.
+// +/-16777217 round to +/-16777216, but only 16677216 converts to 16677216.0.
+// CHECK-LABEL: @cmpf_sitofp_rounding_boundary(
+// CHECK: %[[C:.*]] = arith.constant 16677216 : i32
+// CHECK: %[[FP:.*]] = arith.sitofp %arg0 : i32 to f32
+// CHECK: %[[EXACT:.*]] = arith.cmpi eq, %arg0, %[[C]] : i32
+// CHECK: %[[POS:.*]] = arith.cmpf oeq, %[[FP]], %{{.*}} : f32
+// CHECK: %[[NEG:.*]] = arith.cmpf oeq, %[[FP]], %{{.*}} : f32
+// CHECK: return %[[EXACT]], %[[POS]], %[[NEG]]
+func.func @cmpf_sitofp_rounding_boundary(%x: i32) -> (i1, i1, i1) {
+  %exact = arith.constant 16677216.0 : f32
+  %pos = arith.constant 16777216.0 : f32
+  %neg = arith.constant -16777216.0 : f32
+  %fp = arith.sitofp %x : i32 to f32
+  %r1 = arith.cmpf oeq, %fp, %exact : f32
+  %r2 = arith.cmpf oeq, %fp, %pos : f32
+  %r3 = arith.cmpf oeq, %fp, %neg : f32
+  return %r1, %r2, %r3 : i1, i1, i1
+}
+
+// Unconditional predicates must not reach convertToIntegerPredicate, which
+// only accepts predicates with an integer comparison equivalent.
+// CHECK-LABEL: @cmpf_int_to_fp_always(
+// CHECK-DAG: %[[TRUE:.*]] = arith.constant true
+// CHECK-DAG: %[[FALSE:.*]] = arith.constant false
+// CHECK: return %[[TRUE]], %[[FALSE]]
+func.func @cmpf_int_to_fp_always(%x: i32) -> (i1, i1) {
+  %zero = arith.constant 0.0 : f32
+  %fp = arith.sitofp %x : i32 to f32
+  %t = arith.cmpf true, %fp, %zero : f32
+  %f = arith.cmpf false, %fp, %zero : f32
+  return %t, %f : i1, i1
+}
+
+// -----
+
 // CHECK-LABEL: @foldShl(
 // CHECK: %[[res:.+]] = arith.constant 4294967296 : i64
 // CHECK: return %[[res]]
@@ -4897,6 +5090,60 @@ func.func @truncIShrSIExactToTrunciShrUIExact(%a: i64) -> i32 {
   %sh = arith.shrsi %a, %c32 exact : i64
   %hi = arith.trunci %sh: i64 to i32
   return %hi : i32
+}
+
+// For %a = -256, the arithmetic shift produces -1, which fits in signed i8.
+// The logical shift produces 255, so retaining nsw would introduce poison.
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nsw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_nsw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 : i16
+  %hi = arith.trunci %sh overflow<nsw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nuw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] overflow<nuw> : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_nuw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 : i16
+  %hi = arith.trunci %sh overflow<nuw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_exact_nsw_nuw(
+//  CHECK-SAME:   %[[A:.+]]: i16
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant 8 : i16
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] exact : i16
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] overflow<nuw> : i16 to i8
+//  CHECK-NEXT:   return %[[TRU]] : i8
+func.func @truncIShrSIToTrunciShrUI_exact_nsw_nuw(%a: i16) -> i8 {
+  %c8 = arith.constant 8 : i16
+  %sh = arith.shrsi %a, %c8 exact : i16
+  %hi = arith.trunci %sh overflow<nsw, nuw> : i16 to i8
+  return %hi : i8
+}
+
+// CHECK-LABEL: @truncIShrSIToTrunciShrUI_nsw_vector(
+//  CHECK-SAME:   %[[A:.+]]: vector<2xi16>
+//  CHECK-NEXT:   %[[C8:.+]] = arith.constant dense<8> : vector<2xi16>
+//  CHECK-NEXT:   %[[SHR:.+]] = arith.shrui %[[A]], %[[C8]] : vector<2xi16>
+//  CHECK-NEXT:   %[[TRU:.+]] = arith.trunci %[[SHR]] : vector<2xi16> to vector<2xi8>
+//  CHECK-NEXT:   return %[[TRU]] : vector<2xi8>
+func.func @truncIShrSIToTrunciShrUI_nsw_vector(%a: vector<2xi16>) -> vector<2xi8> {
+  %c8 = arith.constant dense<8> : vector<2xi16>
+  %sh = arith.shrsi %a, %c8 : vector<2xi16>
+  %hi = arith.trunci %sh overflow<nsw> : vector<2xi16> to vector<2xi8>
+  return %hi : vector<2xi8>
 }
 
 // CHECK-LABEL: @truncIShrSIToTrunciShrUIBadShiftAmt1

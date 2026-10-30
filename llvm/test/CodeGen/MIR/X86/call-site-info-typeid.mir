@@ -21,7 +21,7 @@
 ---
 name:            call_foo
 callSites:
-  - { bb: 0, offset: 0, fwdArgRegs: [], calleeTypeIds: [ 123456789 ] }
+  - { bb: '%bb.0', offset: 0, fwdArgRegs: [], calleeTypeIds: [ 123456789 ] }
 body:             |
   bb.0.entry:    
     CALL64m $noreg, 1, $noreg, 0, $noreg, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp :: (load (s64) from `ptr null`)

@@ -770,6 +770,14 @@ static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
   if (FullUnswitch)
     hoistLoopToNewParent(L, *NewPH, DT, LI, MSSAU, SE);
 
+  // If UnswitchedBB was split off LoopExitBB, it is reached from both the old
+  // preheader and LoopExitBB. For enclosing loops that contain the old
+  // preheader but not UnswitchedBB, it is now a non-dedicated exit.
+  for (Loop *ParentL = LI.getLoopFor(OldPH);
+       ParentL && !ParentL->contains(UnswitchedBB);
+       ParentL = ParentL->getParentLoop())
+    formDedicatedExitBlocks(ParentL, &DT, &LI, MSSAU, /*PreserveLCSSA*/ true);
+
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
@@ -3385,8 +3393,7 @@ static bool unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI,
                          TargetTransformInfo &TTI, bool Trivial,
                          bool NonTrivial, ScalarEvolution *SE,
                          MemorySSAUpdater *MSSAU, LPMUpdater &LoopUpdater) {
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   assert(L.isRecursivelyLCSSAForm(DT, LI) &&
          "Loops must be in LCSSA form before unswitching.");
 

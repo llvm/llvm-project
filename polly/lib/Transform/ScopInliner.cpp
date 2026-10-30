@@ -52,11 +52,9 @@ bool runScopInlinerImpl(Function *F, SCC_t &SCC,
     return false;
   }
 
-  PassBuilder PB(
-      /*TM=*/nullptr,
-      PipelineTuningOptions(&F->getContext().getLibraryOptions()),
-      /*PGOOpt=*/{},
-      /*PIC=*/nullptr, std::move(FS));
+  PassBuilder PB(F->getContext(), /*TM=*/nullptr, /*PTO=*/std::nullopt,
+                 /*PGOOpt=*/{},
+                 /*PIC=*/nullptr, std::move(FS));
   // Populate analysis managers and register Polly-specific analyses.
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;

@@ -66,6 +66,17 @@ LIBC_INLINE constexpr bool remove(sigset_t &set, int signal) {
   return set_bit(set, signal, false);
 }
 
+/// Test if the bit corresponding to |signal| in |set| is set.
+/// Returns 1 if set, 0 if not set, or Error(EINVAL) if |signal| is invalid.
+LIBC_INLINE constexpr ErrorOr<int> is_member(const sigset_t &set, int signal) {
+  if (signal >= NSIG || signal <= 0)
+    return Error(EINVAL);
+  size_t n = static_cast<size_t>(signal) - 1;
+  size_t word = n / BITS_PER_SIGWORD;
+  size_t bit = n % BITS_PER_SIGWORD;
+  return (set.__signals[word] & (1UL << bit)) ? 1 : 0;
+}
+
 /// Block the signals in |set|. If |old_set| is non-null, store the previous
 /// signal mask in |*old_set|.
 LIBC_INLINE ErrorOr<int> block(const sigset_t &set,

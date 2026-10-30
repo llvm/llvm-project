@@ -44,12 +44,15 @@ class LoadInst;
 class Loop;
 class PHINode;
 class ScalarEvolution;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+class SLPAnalysisCache;
 
 /// Limit of the number of uses for potentially transformed instructions/values,
 /// used in checks to avoid compile-time explode.
@@ -288,7 +291,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 /// equivalent shuffle mask.
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC);
+                     AssumptionCache *AC, SLPAnalysisCache &Cache);
 
 /// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
@@ -356,6 +359,10 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
 /// the loads \p VL.
 Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
                                       const DataLayout &DL);
+
+/// Returns the select instruction picking between the candidate base pointers
+/// of the blended loads \p VL.
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL);
 
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.

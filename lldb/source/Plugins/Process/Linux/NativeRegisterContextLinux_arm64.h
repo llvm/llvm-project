@@ -14,7 +14,7 @@
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterInfo_arm64.h"
 
 #include "llvm/ADT/BitmaskEnum.h"
 

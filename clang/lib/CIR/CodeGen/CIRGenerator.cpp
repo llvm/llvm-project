@@ -12,6 +12,7 @@
 
 #include "CIRGenModule.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -54,8 +55,10 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlirContext->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                            cir::CIRDialect>();
   const LangOptions &langOpts = astContext.getLangOpts();
+  // OpenACC lowering emits Arith constants for bounds and clause operands.
   if (langOpts.OpenACC)
-    mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
+    mlirContext
+        ->loadDialect<mlir::acc::OpenACCDialect, mlir::arith::ArithDialect>();
   if (langOpts.OpenMP)
     mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 

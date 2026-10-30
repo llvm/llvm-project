@@ -9,10 +9,12 @@ add_entrypoint_object(
     libc.hdr.types.regex_t
     libc.src.__support.alloc_checker
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.scope
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or
     libc.src.__support.macros.null_check
     libc.src.__support.regex.regex_internal
+    libc.src.__support.regex.regex_parser
 )
 
 add_entrypoint_object(

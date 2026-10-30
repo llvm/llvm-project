@@ -3,7 +3,7 @@
 # GFX11-LABEL: name: image_load_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_merged_v1v3
 body:             |
@@ -21,7 +21,7 @@ body:             |
 # GFX11-LABEL: name: image_load_merged_v1v3_reversed
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
 
 name: image_load_merged_v1v3_reversed
 body:             |
@@ -40,7 +40,7 @@ body:             |
 # GFX11-LABEL: name: image_load_merged_v2v2
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX11: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY killed %8.sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
 
 name: image_load_merged_v2v2
 body:             |
@@ -59,7 +59,7 @@ body:             |
 # GFX11-LABEL: name: image_load_merged_v2v2_reversed
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX11: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY killed %8.sub0_sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
 
 name: image_load_merged_v2v2_reversed
 body:             |
@@ -78,7 +78,7 @@ body:             |
 # GFX11-LABEL: name: image_load_merged_v3v1
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 # GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub3
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
 
 name: image_load_merged_v3v1
 body:             |
@@ -97,7 +97,7 @@ body:             |
 # GFX11-LABEL: name: image_load_merged_v3v1_reversed
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %8.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
 
 name: image_load_merged_v3v1_reversed
 body:             |
@@ -411,7 +411,7 @@ body:             |
 # GFX11-LABEL: name: image_load_mip_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_MIP_V4_V3_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_mip_merged_v1v3
 body:             |
@@ -432,7 +432,7 @@ body:             |
 # GFX11-LABEL: name: image_load_mip_pck_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_MIP_PCK_V4_V3_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_mip_pck_merged_v1v3
 body:             |
@@ -453,7 +453,7 @@ body:             |
 # GFX11-LABEL: name: image_load_mip_pck_sgn_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_MIP_PCK_SGN_V4_V3_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_mip_pck_sgn_merged_v1v3
 body:             |
@@ -472,7 +472,7 @@ body:             |
 # GFX11-LABEL: name: image_load_pck_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_PCK_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_pck_merged_v1v3
 body:             |
@@ -491,7 +491,7 @@ body:             |
 # GFX11-LABEL: name: image_load_pck_sgn_merged_v1v3
 # GFX11: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_PCK_SGN_V4_V2_gfx11 %5, %3, 15, 1, -1, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), align 4, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %8.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_pck_sgn_merged_v1v3
 body:             |

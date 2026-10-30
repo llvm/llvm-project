@@ -1,4 +1,5 @@
 // RUN: llvm-mc -filetype=obj %s -o - -triple x86_64-pc-linux | llvm-readobj -S - | FileCheck %s
+// RUN: llvm-mc -n %s -triple x86_64 | FileCheck %s --check-prefix=ASM
 
 // This used to crash. Test that it create an empty section instead.
 
@@ -19,3 +20,6 @@
 // CHECK-NEXT:    AddressAlignment: 1
 // CHECK-NEXT:    EntrySize: 0
 // CHECK-NEXT:  }
+
+// ASM:     .section foo,"",@progbits
+// ASM-NOT: {{.}}

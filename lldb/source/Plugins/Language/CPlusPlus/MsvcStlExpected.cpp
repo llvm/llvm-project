@@ -25,7 +25,8 @@ public:
       Update();
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (!m_active)
       return llvm::createStringErrorV("type has no child named '{0}'", name);
     if (m_has_value) {
