@@ -256,6 +256,16 @@ bool __ubsan::checkDynamicType(void *Object, void *Type, HashValue Hash) {
   return true;
 }
 
+// Itanium ABI compilers prefix the RTTI name with a '*' for internal linkage
+// types to request comparison by address. The marker is not part of the mangled
+// name, so strip it before the name is demangled or matched against
+// suppressions. The C++ standard libraries strip it in std::type_info::name(),
+// but the runtime uses its own type_info above, which returns the raw name so
+// that checkTypeInfoEquality can still see the marker.
+static const char *stripInternalLinkage(const char *Name) {
+  return Name && Name[0] == '*' ? Name + 1 : Name;
+}
+
 __ubsan::DynamicTypeInfo
 __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   VtablePrefix *Vtable = getVtablePrefix(VtablePtr);
@@ -266,8 +276,9 @@ __ubsan::getDynamicTypeInfoFromVtable(void *VtablePtr) {
   const abi::__class_type_info *ObjectType = findBaseAtOffset(
     static_cast<const abi::__class_type_info*>(Vtable->TypeInfo),
     -Vtable->Offset);
-  return DynamicTypeInfo(Vtable->TypeInfo->name(), -Vtable->Offset,
-                         ObjectType ? ObjectType->name() : "<unknown>");
+  return DynamicTypeInfo(
+      stripInternalLinkage(Vtable->TypeInfo->name()), -Vtable->Offset,
+      ObjectType ? stripInternalLinkage(ObjectType->name()) : "<unknown>");
 }
 
 bool __ubsan::checkTypeInfoEquality(const void *TypeInfo1,

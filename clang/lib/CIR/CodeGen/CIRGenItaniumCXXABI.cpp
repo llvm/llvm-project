@@ -851,12 +851,18 @@ CIRGenItaniumRTTIBuilder::getAddrOfTypeName(mlir::Location loc, QualType ty,
   llvm::raw_svector_ostream out(name);
   cgm.getCXXABI().getMangleContext().mangleCXXRTTIName(ty, out);
 
-  // We know that the mangled name of the type starts at index 4 of the
-  // mangled name of the typename, so we can just index into it in order to
-  // get the mangled name of the type.
+  // RTTI type-name symbol has form "_ZTS<mangled-string>". The string stored in
+  // type_info object excludes the "_ZTS" prefix. So we skip past the first 4
+  // characters. For types that do not have externally visible Clang/C++
+  // linkage, '*' is prepended to the type-name string so that within libstdc++
+  // RTTI names compare correctly via strcmp across translation units. Linkage
+  // of the type name is used, not the LLVM linkage of the typeinfo.
+  SmallString<256> typeName;
+  if (!isExternallyVisible(ty->getLinkage()))
+    typeName += '*';
+  typeName += StringRef(name).substr(4);
   mlir::Attribute init = builder.getString(
-      name.substr(4), cgm.convertType(cgm.getASTContext().CharTy),
-      std::nullopt);
+      typeName, cgm.convertType(cgm.getASTContext().CharTy), std::nullopt);
 
   CharUnits align =
       cgm.getASTContext().getTypeAlignInChars(cgm.getASTContext().CharTy);
