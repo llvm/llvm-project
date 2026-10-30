@@ -465,8 +465,11 @@ define i64 @test_fptosi_i64(ptr %p) nounwind {
 ; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    bl __fixsfdi
+; PPC32-NEXT:    fctiwz f0, f1
+; PPC32-NEXT:    stfd f0, 8(r1)
+; PPC32-NEXT:    lwz r4, 12(r1)
 ; PPC32-NEXT:    lwz r0, 20(r1)
+; PPC32-NEXT:    srawi r3, r4, 31
 ; PPC32-NEXT:    addi r1, r1, 16
 ; PPC32-NEXT:    mtlr r0
 ; PPC32-NEXT:    blr
@@ -633,7 +636,10 @@ define i64 @test_fptoui_i64(ptr %p) nounwind {
 ; PPC32-NEXT:    stw r0, 20(r1)
 ; PPC32-NEXT:    lhz r3, 0(r3)
 ; PPC32-NEXT:    bl __extendhfsf2
-; PPC32-NEXT:    bl __fixunssfdi
+; PPC32-NEXT:    fctiwz f0, f1
+; PPC32-NEXT:    stfd f0, 8(r1)
+; PPC32-NEXT:    li r3, 0
+; PPC32-NEXT:    lwz r4, 12(r1)
 ; PPC32-NEXT:    lwz r0, 20(r1)
 ; PPC32-NEXT:    addi r1, r1, 16
 ; PPC32-NEXT:    mtlr r0
