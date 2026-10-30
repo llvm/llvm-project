@@ -812,7 +812,7 @@ define <4 x i32> @uabd_known_order_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ushr v0.4s, v0.4s, #1
 ; CHECK-NEXT:    orr v1.4s, #128, lsl #24
-; CHECK-NEXT:    uabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %l = lshr <4 x i32> %a, splat (i32 1)
   %r = or <4 x i32> %b, splat (i32 -2147483648)

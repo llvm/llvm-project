@@ -336,17 +336,15 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (LSym->getType() != CommonTy || RSym->getType() != CommonTy)
     return std::nullopt;
 
+  APSIntType CommonAPSIntTy = BV.getAPSIntType(CommonTy);
+  if (APSIntType(LInt) != CommonAPSIntTy || APSIntType(RInt) != CommonAPSIntTy)
+    return std::nullopt;
+
   auto InBounds = [State](auto... X) {
     return (... && isWithinConstantOverflowBounds(X, State));
   };
   if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
-
-  // FIXME: Why can we assert these?
-  assert(APSIntType(LInt) == BV.getAPSIntType(CommonTy) &&
-         "Integers are not of the same type as symbols!");
-  assert(APSIntType(RInt) == BV.getAPSIntType(CommonTy) &&
-         "Integers are not of the same type as symbols!");
 
   if (LSym == RSym)
     return SVB

@@ -112,15 +112,16 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::init(true));
 
 // PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
-// (see shouldExpandAtomicRMWInIR), so we'd normally fall back to a CAS loop
-// when they disagree. This option (enabled by default) allows using atom.add
-// anyway, trading correct denormal handling for the speed of the native
-// instruction.
+// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
+// when they disagree (strict mode), unless declared insignificant via
+// !atomic.ignore.denormal.mode metadata or this option. This option allows
+// using atom.add anyway, trading correct denormal handling for the speed of the
+// native instruction.
 static cl::opt<bool> AllowFTZAtomics(
     "nvptx-allow-ftz-atomics", cl::Hidden,
     cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
              "FTZ behavior does not match the function's denormal mode."),
-    cl::init(true));
+    cl::init(false));
 
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
@@ -655,8 +656,9 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::VECTOR_SHUFFLE, {MVT::v2f32, MVT::v2i32}, Expand);
 
   setOperationAction(ISD::TRUNCATE, MVT::v2i16, Expand);
-  setOperationAction({ISD::ANY_EXTEND, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
-                     MVT::v2i32, Expand);
+  setOperationAction(
+      {ISD::ANY_EXTEND, ISD::BSWAP, ISD::ZERO_EXTEND, ISD::SIGN_EXTEND},
+      MVT::v2i32, Expand);
 
   // Need custom lowering in case the index is dynamic.
   if (STI.hasF32x2Instructions())
@@ -779,6 +781,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                    {MVT::v2i8, MVT::v2i16}, Expand);
   setTruncStoreAction(MVT::v2i16, MVT::v2i8, Expand);
   setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
+  setTruncStoreAction(MVT::v2i32, MVT::v2i1, Expand);
   setTruncStoreAction(MVT::v2i32, MVT::v2i8, Expand);
 
   // Register custom handling for illegal type loads/stores. We'll try to custom
@@ -7480,30 +7483,19 @@ static SDValue combineFAddWithNeg(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, SDLoc(N), VT, SubOp1, SubOp2);
 }
 
-// TODO: Remove the type-legality checks here once
-// https://github.com/llvm/llvm-project/pull/172442 lands, adding support for
-// explicit type constraints for overloaded intrinsics in tablegen.
 static bool isSupportedFPArith(SDNode *N, const NVPTXSubtarget &STI,
-                               unsigned ISDOpcode, Intrinsic::ID IID,
-                               APFloat::roundingMode RoundingMode) {
+                               unsigned ISDOpcode, Intrinsic::ID IID) {
   const EVT VT = N->getValueType(0);
-  if (VT.isVector() && VT.getVectorElementCount() != ElementCount::getFixed(2))
-    return false;
-
-  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
-  const bool IsFTZ = nvvm::FPArithShouldFTZ(IID);
-  const bool IsSat = nvvm::FPArithIsSaturating(IID);
   switch (VT.getScalarType().getSimpleVT().SimpleTy) {
   case MVT::f16:
-    return IsRN;
+    return STI.hasFP16Math() &&
+           (!nvvm::FPArithIsRelu(IID) || STI.hasFeature(NVPTX::SM80));
   case MVT::bf16:
-    return IsRN && !IsSat && !IsFTZ && STI.hasNativeBF16Support(ISDOpcode);
+    return STI.hasNativeBF16Support(ISDOpcode);
   case MVT::f32:
-    return !VT.isVector() || (!IsSat && STI.hasF32x2Instructions());
-  case MVT::f64:
-    return !VT.isVector() && !IsSat && !IsFTZ;
+    return !VT.isVector() || STI.hasF32x2Instructions();
   default:
-    return false;
+    return true;
   }
 }
 
@@ -7535,20 +7527,32 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   case Intrinsic::nvvm_fadd_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FADD, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FADD, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
   case Intrinsic::nvvm_spcompress:
   case Intrinsic::nvvm_spdecompress:
     return lowerSPIntrinsic(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_ftz_sat:
+  case Intrinsic::nvvm_fma_relu:
+  case Intrinsic::nvvm_fma_ftz_relu: {
+    const auto RoundingMode = static_cast<APFloat::roundingMode>(
+        N->getConstantOperandAPInt(4).getSExtValue());
+    if (!isSupportedFPArith(N, STI, ISD::FMA, IID))
+      return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
+    break;
+  }
   case Intrinsic::nvvm_fmul:
   case Intrinsic::nvvm_fmul_ftz:
   case Intrinsic::nvvm_fmul_sat:
   case Intrinsic::nvvm_fmul_ftz_sat: {
     const auto RoundingMode = static_cast<APFloat::roundingMode>(
         N->getConstantOperandAPInt(3).getSExtValue());
-    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID, RoundingMode))
+    if (!isSupportedFPArith(N, STI, ISD::FMUL, IID))
       return diagnoseUnsupportedFPArith(N, DCI.DAG, IID, RoundingMode);
     break;
   }

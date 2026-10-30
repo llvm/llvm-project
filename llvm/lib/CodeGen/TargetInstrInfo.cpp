@@ -1648,7 +1648,7 @@ void TargetInstrInfo::genAlternativeCodeSequence(
                   .addReg(Instr->getOperand(3).getReg());
       } else {
         // For the remaining cases, we need to use an output register of one of
-        // the newly inserted instuctions as operand 1
+        // the newly inserted instructions as operand 1
         AccReg = Instr->getOperand(0).getReg() == Root.getOperand(0).getReg()
                      ? MRI.createVirtualRegister(
                            MRI.getRegClass(Root.getOperand(0).getReg()))
