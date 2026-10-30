@@ -5770,6 +5770,20 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
                         m_Value(Y))))
     return BinaryOperator::CreateXor(Builder.CreateXor(X, Y), C1);
 
+  // (X | C) ^ Y --> (X ^ Y) ^ C  iff X & C == 0 (disjoint or) and X ^ Y
+  // already exists. Reusing the existing xor removes the or and shares the
+  // common subexpression, no rewrite when there is nothing to share.
+  if (match(&I, m_c_Xor(m_OneUse(m_DisjointOr(m_Value(X), m_ImmConstant(C1))),
+                        m_Value(Y))) &&
+      !isa<Constant>(X)) {
+    for (User *U : X->users()) {
+      auto *UI = dyn_cast<Instruction>(U);
+      if (UI && match(UI, m_c_Xor(m_Specific(X), m_Specific(Y))) &&
+          DT.dominates(UI, &I))
+        return BinaryOperator::CreateXor(UI, C1);
+    }
+  }
+
   if (Instruction *R = reassociateForUses(I, Builder))
     return R;
 
