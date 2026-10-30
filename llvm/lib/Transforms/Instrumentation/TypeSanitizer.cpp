@@ -647,8 +647,7 @@ bool TypeSanitizer::instrumentWithShadowUpdate(
         ConstantInt::get(OrdTy, (int)IsRead | (((int)IsWrite) << 1));
 
     IRB.CreateCall(TysanInstrumentWithShadowUpdate,
-                    {Ptr, TD,
-                    SanitizeFunction ? IRB.getTrue() : IRB.getFalse(),
+                   {Ptr, TD, SanitizeFunction ? IRB.getTrue() : IRB.getFalse(),
                     IRB.getInt64(AccessSize), Flags});
   } else if (ForceSetType || IsWrite) {
     // In the mode where writes always set the type, for a write (which does
