@@ -600,11 +600,7 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
 }
 
 static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
-  std::optional<cir::FPDynamicRoundingMode> rounding =
-      fenv.getDynamicRoundingMode();
-  if (!rounding)
-    return "round.tonearest";
-  switch (*rounding) {
+  switch (fenv.getDynamicRoundingModeOrDefault()) {
   case cir::FPDynamicRoundingMode::ToNearest:
     return "round.tonearest";
   case cir::FPDynamicRoundingMode::Downward:
@@ -621,14 +617,14 @@ static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
   llvm_unreachable("unknown FP dynamic rounding mode");
 }
 
+// Strict exceptions keep the FP status exact even when exceptions are masked.
+// Otherwise, masked exceptions cannot trap, so they can be ignored.
 static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
-  std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
-  if (exceptMode == cir::FPExceptionMode::Masked)
+  if (fenv.getStrictExceptOrDefault())
+    return "fpexcept.strict";
+  if (fenv.getExceptionModeOrDefault() == cir::FPExceptionMode::Masked)
     return "fpexcept.ignore";
-  mlir::BoolAttr strictExcept = fenv.getStrictExcept();
-  if (!strictExcept)
-    return "fpexcept.ignore";
-  return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
+  return "fpexcept.maytrap";
 }
 
 static mlir::Value

@@ -905,9 +905,9 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
       This means the FP status is written non-deterministically, and, if
       exceptions are unmasked, the instruction traps non-deterministically.
 
-    An absent `dynamic_rounding_mode` defaults to `unknown`, an absent
-    `except_mode` defaults to `masked`, and an absent `strict_except` defaults
-    to `false`.
+    An absent parameter takes its value in the default floating-point
+    environment: `dynamic_rounding_mode` defaults to `tonearest`, `except_mode`
+    to `masked`, and `strict_except` to `false`.
 
     The empty `#cir.fenv<>`, with no parameter set, does not constrain the
     operation that carries it. It is the default value of the `fenv`
@@ -940,7 +940,7 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
 
     static constexpr cir::FPDynamicRoundingMode
     getDefaultDynamicRoundingMode() {
-      return cir::FPDynamicRoundingMode::Unknown;
+      return cir::FPDynamicRoundingMode::ToNearest;
     }
 
     static constexpr cir::FPExceptionMode getDefaultExceptionMode() {

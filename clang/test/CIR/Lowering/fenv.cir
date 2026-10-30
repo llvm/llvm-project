@@ -55,13 +55,21 @@ module {
     %0 = cir.fadd %a, %b : !cir.float fenv<strict_except = true>
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.maytrap">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
-    %1 = cir.fadd %a, %b : !cir.float fenv<strict_except = false>
+    %1 = cir.fadd %a, %b : !cir.float fenv<except_mode = unknown, strict_except = false>
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
     %2 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked, strict_except = false>
     // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
     // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
     %3 = cir.fadd %a, %b : !cir.float fenv<dynamic_rounding_mode = tonearest>
+    // An absent except_mode is masked.
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.ignore">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %4 = cir.fadd %a, %b : !cir.float fenv<strict_except = false>
+    // Strict exceptions stay strict when masked.
+    // CHECK: llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fadd"
+    %5 = cir.fadd %a, %b : !cir.float fenv<except_mode = masked, strict_except = true>
     cir.return
   }
 

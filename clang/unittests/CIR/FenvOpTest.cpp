@@ -170,7 +170,7 @@ TEST_F(CIRFenvOpTest, Speculatability) {
   EXPECT_TRUE(getEffects(ops[1]).empty());
   cir::FenvAttr fenv = fenvOp.getFenv();
   EXPECT_EQ(fenv.getDynamicRoundingModeOrDefault(),
-            cir::FPDynamicRoundingMode::Unknown);
+            cir::FPDynamicRoundingMode::ToNearest);
   EXPECT_EQ(fenv.getExceptionModeOrDefault(), cir::FPExceptionMode::Masked);
   EXPECT_FALSE(fenv.getStrictExceptOrDefault());
 }
