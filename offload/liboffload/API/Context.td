@@ -59,6 +59,7 @@ def ol_context_info_t : Enum {
     TaggedEtor<"NUM_DEVICES", "size_t", "The number of devices in the context.">,
     TaggedEtor<"DEVICES", "ol_device_handle_t *", "The devices in the context. The returned array has NUM_DEVICES entries.">,
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "The platform associated with the context.">,
+    TaggedEtor<"NATIVE_HANDLE", "void *", "The backend-native handle of the context, reinterpreted as a void pointer.">,
   ];
 }
 

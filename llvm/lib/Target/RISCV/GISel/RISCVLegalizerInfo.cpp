@@ -636,9 +636,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalFor(ST.hasStdExtF(), {s32})
       .legalFor(ST.hasStdExtD(), {s64})
       .legalFor(ST.hasStdExtZfhmin(), {s16})
-      .customFor(!ST.is64Bit(), {s32})
-      .customFor(ST.is64Bit(), {s32, s64})
-      .lowerFor({s64, s128});
+      .lowerFor({s32, s64, s128});
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -665,6 +663,23 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .libcallFor({{s32, s32}, {s64, s32}, {s32, s64}, {s64, s64}})
       .libcallFor(ST.is64Bit(), {{s32, s128}, {s64, s128}}) // FIXME RV32.
       .libcallFor(ST.is64Bit(), {{s128, s32}, {s128, s64}, {s128, s128}});
+
+  // Unlike G_FPTOSI/G_FPTOUI these need no libcalls for out-of-range values:
+  // the RISC-V conversions already saturate. There is no legalFor() because
+  // they do not produce 0 for NaN, which legalizeCustom fixes up with a
+  // compare and a select. The remaining cases fall back to the generic
+  // lowering, which clamps before converting and only handles scalars.
+  getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+      .customFor(ST.hasStdExtF(), {{sXLen, s32}})
+      .customFor(ST.hasStdExtD(), {{sXLen, s64}})
+      .customFor(ST.hasStdExtZfh(), {{sXLen, s16}})
+      .customFor(ST.is64Bit() && ST.hasStdExtF(), {{s32, s32}})
+      .customFor(ST.is64Bit() && ST.hasStdExtD(), {{s32, s64}})
+      .customFor(ST.is64Bit() && ST.hasStdExtZfh(), {{s32, s16}})
+      // f16 extends exactly to f32; converting via f32 avoids needing rules
+      // for every {sXX, s16} combination.
+      .widenScalarIf(typeIs(1, s16), changeTo(1, s32))
+      .lowerIf(all(isScalar(0), isScalar(1)));
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalFor(ST.hasStdExtF(), {{sXLen, s32}})
@@ -1704,16 +1719,6 @@ bool RISCVLegalizerInfo::legalizeCustom(
     MI.eraseFromParent();
     return true;
   }
-  case TargetOpcode::G_FCONSTANT: {
-    const APFloat &FVal = MI.getOperand(1).getFPImm()->getValueAPF();
-
-    // Convert G_FCONSTANT to G_CONSTANT.
-    Register DstReg = MI.getOperand(0).getReg();
-    MIRBuilder.buildConstant(DstReg, FVal.bitcastToAPInt());
-
-    MI.eraseFromParent();
-    return true;
-  }
   case TargetOpcode::G_CONSTANT: {
     const Function &F = MF.getFunction();
     // TODO: if PSI and BFI are present, add " ||
@@ -1800,6 +1805,41 @@ bool RISCVLegalizerInfo::legalizeCustom(
     MI.setDesc(MIRBuilder.getTII().get(getRISCVWOpcode(MI.getOpcode())));
     MI.addOperand(MachineOperand::CreateImm(RISCVFPRndMode::RTZ));
     Helper.Observer.changedInstr(MI);
+    return true;
+  }
+  case TargetOpcode::G_FPTOSI_SAT:
+  case TargetOpcode::G_FPTOUI_SAT: {
+    // Mirror lowerFP_TO_INT_SAT (RISCVISelLowering.cpp): the conversion
+    // saturates out-of-range values, but we need to select 0 for NaN as
+    // required by the intrinsics.
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    unsigned DstBits = DstTy.getScalarSizeInBits();
+    bool IsSigned = MI.getOpcode() == TargetOpcode::G_FPTOSI_SAT;
+
+    unsigned FCvtOp;
+    if (DstBits == XLen) {
+      FCvtOp = IsSigned ? RISCV::G_FCVT_X : RISCV::G_FCVT_XU;
+    } else {
+      assert(STI.is64Bit() && "Non-XLen results are only custom on RV64");
+      FCvtOp = IsSigned ? RISCV::G_FCVT_W_RV64 : RISCV::G_FCVT_WU_RV64;
+    }
+
+    auto FCvt = MIRBuilder.buildInstr(FCvtOp, {sXLen}, {Src})
+                    .addImm(RISCVFPRndMode::RTZ);
+
+    // RISC-V G_FCMP results are XLen wide, and so are G_SELECT conditions.
+    auto IsNaN = MIRBuilder.buildFCmp(CmpInst::FCMP_UNO, sXLen, Src, Src);
+
+    Register FCvtReg = FCvt.getReg(0);
+    if (DstBits != XLen)
+      FCvtReg = MIRBuilder.buildTrunc(DstTy, FCvtReg).getReg(0);
+
+    MIRBuilder.buildSelect(Dst, IsNaN, MIRBuilder.buildConstant(DstTy, 0),
+                           FCvtReg);
+
+    MI.eraseFromParent();
     return true;
   }
   case TargetOpcode::G_LROUND: {

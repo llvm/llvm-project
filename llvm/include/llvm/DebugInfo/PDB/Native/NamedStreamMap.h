@@ -35,8 +35,6 @@ struct NamedStreamMapTraits {
 };
 
 class NamedStreamMap {
-  friend class NamedStreamMapBuilder;
-
 public:
   LLVM_ABI NamedStreamMap();
 

@@ -36,6 +36,9 @@
 # if defined(__linux__)
 #  define _LIBUNWIND_TARGET_LINUX 1
 # endif
+# if defined(__FreeBSD__)
+#  define _LIBUNWIND_TARGET_FREEBSD 1
+# endif
 # if defined(__HAIKU__)
 #  define _LIBUNWIND_TARGET_HAIKU 1
 # endif

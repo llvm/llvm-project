@@ -80,3 +80,10 @@ TEST_P(olGetDeviceInfoSizeTest, InvalidNullPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, nullptr));
 }
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessNativeHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(
+      olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NATIVE_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
+}
