@@ -480,6 +480,7 @@ private:
                    MachineInstr &I) const;
   bool selectSincos(Register ResVReg, SPIRVTypeInst ResType,
                     MachineInstr &I) const;
+  bool selectSincospi(Register ResVReg, MachineInstr &I) const;
   bool selectExp10(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
@@ -1751,6 +1752,27 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     return true;
   }
   return false;
+}
+
+bool SPIRVInstructionSelector::selectSincospi(Register ResVReg,
+                                              MachineInstr &I) const {
+  if (!STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std))
+    return diagnoseUnsupported(
+        I, "llvm.sincospi requires the OpenCL.std extended instruction set");
+  // Operands: sin, cos, intrinsic ID, argument.
+  Register Src = I.getOperand(3).getReg();
+  // An unused result has no float type, so take it from the argument.
+  SPIRVTypeInst Ty = GR.getSPIRVTypeForVReg(Src);
+  if (Ty->getOpcode() == SPIRV::OpTypeVectorIdEXT ||
+      GR.getScalarOrVectorBitWidth(Ty) > 64)
+    return diagnoseUnsupported(I, "llvm.sincospi requires a 16, 32 or 64-bit "
+                                  "float or a vector of 2, 3, 4, 8 or 16");
+  for (auto [Res, Op] : {std::pair{ResVReg, CL::sinpi},
+                         std::pair{I.getOperand(1).getReg(), CL::cospi}})
+    if (!MRI->use_nodbg_empty(Res))
+      selectExtInst(Res, Ty, I, Op, /*setMIFlags=*/true, /*useMISrc=*/false,
+                    {Src});
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
@@ -5904,6 +5926,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       return selectMaskedScatter(I);
     return diagnoseUnsupported(
         I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
+  case Intrinsic::sincospi:
+    return selectSincospi(ResVReg, I);
   case Intrinsic::returnaddress:
   case Intrinsic::frameaddress: {
     // SPIR-V does not have a stack or return address. Lower to null.
