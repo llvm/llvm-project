@@ -1,0 +1,39 @@
+// RUN: cir-opt %s --cir-lowering-prepare -o %t.hip.once.cir
+// RUN: cir-opt %t.hip.once.cir --cir-lowering-prepare -o %t.hip.twice.cir
+// RUN: diff %t.hip.once.cir %t.hip.twice.cir
+// RUN: FileCheck %s --input-file=%t.hip.once.cir --check-prefixes=CHECK,HIP \
+// RUN:   --implicit-check-not=cu.kernel_name --implicit-check-not=cu.var_registration
+
+// RUN: sed -e 's/hip = true/hip = false/' \
+// RUN:     -e 's/module attributes {/module attributes {cir.cu.device_binary = "abc" : !cir.array<!u8i x 3>, /' \
+// RUN:     %s | cir-opt --cir-lowering-prepare -o %t.cuda.once.cir
+// RUN: cir-opt %t.cuda.once.cir --cir-lowering-prepare -o %t.cuda.twice.cir
+// RUN: diff %t.cuda.once.cir %t.cuda.twice.cir
+// RUN: FileCheck %s --input-file=%t.cuda.once.cir --check-prefixes=CHECK,CUDA \
+// RUN:   --implicit-check-not=cu.kernel_name --implicit-check-not=cu.var_registration
+
+// LoweringPrepare consumes 'cu.kernel_name' and 'cu.var_registration' when it
+// registers the kernels and device variables with the runtime, so running it
+// again on its own output registers nothing a second time. HIP builds the
+// module ctor without a device-side binary; CUDA needs one.
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+module attributes {cir.lowering_lang_options = #cir.lowering_lang_options<exceptions = false, threadsafe_statics = true, cuda = true, cuda_is_device = false, hip = true, hlsl = false, gpu_rdc = false, openmp = false, openmp_is_target_device = false, clang_abi_compat = 16, long_double_size = 0>, cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global "private" internal dso_local @dv = #cir.undef : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<dv, Variable>}
+  cir.global constant external @_Z1kv = #cir.global_view<@_Z16__device_stub__kv> : !cir.ptr<!cir.func<()>> align(8)
+  cir.func @_Z16__device_stub__kv() attributes {cu.kernel_name = #cir.cu.kernel_name<"_Z1kv">} {
+    cir.return
+  }
+}
+
+// HIP:  cir.func internal private @__hip_register_globals
+// HIP:    cir.call @__hipRegisterFunction
+// HIP:    cir.call @__hipRegisterVar
+// HIP:  cir.func internal private @__hip_module_ctor()
+// CUDA: cir.func internal private @__cuda_register_globals
+// CUDA:   cir.call @__cudaRegisterFunction
+// CUDA:   cir.call @__cudaRegisterVar
+// CUDA: cir.func internal private @__cuda_module_ctor()
+// CHECK: cir.global "private" internal dso_local @dv = #cir.undef : !s32i align(4)
+// CHECK: cir.func @_Z16__device_stub__kv() {

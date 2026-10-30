@@ -2,8 +2,9 @@
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir \
 // RUN:            -x hip -fhip-new-launch-api \
-// RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-cir %s -o %t.cir
-// RUN: FileCheck --check-prefix=CIR-HOST --input-file=%t.cir %s
+// RUN:            -I%S/../CodeGenCUDA/Inputs/ -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2> %t-before.cir
+// RUN: FileCheck --check-prefix=CIR-HOST-BEFORE-LPP --input-file=%t-before.cir %s
+// RUN: FileCheck --check-prefix=CIR-HOST --input-file=%t.cir %s --implicit-check-not=cu.kernel_name
 
 // RUN: %clang_cc1 -triple=amdgpu-amd-amdhsa -x hip -fclangir \
 // RUN:            -fcuda-is-device -fhip-new-launch-api \
@@ -42,7 +43,8 @@ __global__ void global_fn(int a) {}
 // CIR-DEVICE: cir.func {{.*}}{{.*}} @_Z9global_fni
 // OGCG-DEVICE: define protected amdgpu_kernel void @_Z9global_fni
 
-// CIR-HOST: @_Z24__device_stub__global_fni{{.*}}attributes {{{.*}}cu.kernel_name = #cir.cu.kernel_name<"_Z9global_fni">{{.*}}}
+// CIR-HOST: @_Z24__device_stub__global_fni
+// CIR-HOST-BEFORE-LPP: @_Z24__device_stub__global_fni{{.*}}attributes {{{.*}}cu.kernel_name = #cir.cu.kernel_name<"_Z9global_fni">{{.*}}}
 // CIR-HOST: %[[#CIRKernelArgs:]] = cir.alloca {{.*}}"kernel_args"
 // CIR-HOST: %[[#Decayed:]] = cir.cast array_to_ptrdecay %[[#CIRKernelArgs]]
 // CIR-HOST: cir.call @__hipPopCallConfiguration
