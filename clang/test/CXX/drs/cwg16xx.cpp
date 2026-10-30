@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98-14,cxx98
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx98-14,since-cxx11,cxx11
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,cxx98-14,since-cxx11
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-14,cxx98-14,since-cxx11,cxx11
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,cxx11-14,since-cxx14,cxx98-14,since-cxx11
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx17,since-cxx11
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx11-20,since-cxx14,since-cxx20,since-cxx17,since-cxx11
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx23,since-cxx14,since-cxx20,since-cxx17,since-cxx11
