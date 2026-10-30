@@ -120,13 +120,6 @@ references to LLVM IR specific terms.
 
 ## Sanitizer features
 
-### Instrumentation code inlining
-
-By default TypeSanitizer inserts instrumentation through function calls. This may lead to a reduction in
-runtime performance. `-fno-sanitize-type-outline-instrumentation` (default: `false`) forces all
-code instrumentation to be inlined. This will increase the size of the generated code and compiler
-overhead, but may improve the runtime performance of the resulting code.
-
 ### `__has_feature(type_sanitizer)`
 
 In some cases one may need to execute different code depending on whether

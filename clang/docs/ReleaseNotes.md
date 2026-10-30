@@ -410,6 +410,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Removed Compiler Flags
 
+- The compiler flag `-fsanitize-type-outline-instrumentation` (and `-fno` derivative) has been removed.
+  TypeSanitizer no longer supports inserting inline instrumentation.
+
 ### Attribute Changes in Clang
 
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
