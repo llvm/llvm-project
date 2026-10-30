@@ -826,6 +826,8 @@ NativeProcessWindows::OnDebugException(bool first_chance,
 
 void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
   llvm::sys::ScopedLock lock(m_mutex);
+  const StateType state = GetState();
+  std::lock_guard<std::recursive_mutex> threads_guard(m_threads_mutex);
 
   auto thread = std::make_unique<NativeThreadWindows>(*this, new_thread);
   thread->GetRegisterContext().ClearAllHardwareWatchpoints();
@@ -835,8 +837,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
                           wp.m_hardware);
   }
 
-  if (StateType state = GetState();
-      state == eStateStopped || state == eStateCrashed) {
+  if (state == eStateStopped || state == eStateCrashed) {
     if (Status error = thread->DoStop(); error.Fail()) {
       Log *log = GetLog(WindowsLog::Thread);
       LLDB_LOG(log, "failed to suspend newly-created thread {0}: {1}",
@@ -847,12 +848,12 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
     thread->SetStopReason(stop_info, "");
   }
 
-  std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   m_threads.push_back(std::move(thread));
 }
 
 void NativeProcessWindows::OnExitThread(lldb::tid_t thread_id,
                                         uint32_t exit_code) {
+  llvm::sys::ScopedLock lock(m_mutex);
   std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
   llvm::erase_if(m_threads, [thread_id](const auto &t) {
     return t->GetID() == thread_id;

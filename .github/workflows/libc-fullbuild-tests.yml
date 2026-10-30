@@ -34,6 +34,7 @@ jobs:
             build_type: Debug
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
             testing: BUILD
@@ -42,14 +43,25 @@ jobs:
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
             build_fuzzing_tests: ON
+          - name: linux-x86_64-Release-Asserts
+            os: llvm-premerge-linux-32-runners
+            build_type: Release
+            assertions: ON
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            linker: lld-23
+            target: x86_64-unknown-linux-llvm
+            include_scudo: ON
           - name: linux-x86_64-MinSizeRel
             os: llvm-premerge-linux-32-runners
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
             testing: BUILD
@@ -58,6 +70,7 @@ jobs:
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
           - name: uefi-x86_64-clang
@@ -65,6 +78,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: x86_64-unknown-uefi-llvm
             testing: SKIP
           - name: baremetal-armv6m
@@ -72,6 +86,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: armv6m-none-eabi
             testing: SKIP
           - name: baremetal-armv7m
@@ -79,6 +94,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: armv7m-none-eabi
             testing: SKIP
           - name: baremetal-armv7em
@@ -86,6 +102,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: armv7em-none-eabi
             testing: SKIP
           - name: baremetal-armv8m-softfp
@@ -93,6 +110,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: armv8m.main-none-eabi
             testing: SKIP
           - name: baremetal-armv8m-hard
@@ -100,6 +118,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: armv8m.main-none-eabihf
             testing: SKIP
           - name: baremetal-armv8.1m
@@ -107,6 +126,7 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: armv8.1m.main-none-eabi
             testing: SKIP
           - name: baremetal-riscv32
@@ -114,13 +134,24 @@ jobs:
             build_type: MinSizeRel
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: riscv32-unknown-elf
             testing: SKIP
+          - name: baremetal-hexagon
+            os: ubuntu-24.04
+            build_type: MinSizeRel
+            c_compiler: clang-23
+            cpp_compiler: clang++-23
+            linker: lld
+            target: hexagon-unknown-none-elf
+            build_builtins: ON
+            testing: RUN
           - name: amd-gpu
             os: ubuntu-26.04
             build_type: Release
             c_compiler: clang-23
             cpp_compiler: clang++-23
+            linker: lld-23
             target: amdgcn-amd-amdhsa
             testing: SKIP
           # TODO: add back gcc build when it is fixed
@@ -164,10 +195,14 @@ jobs:
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
           -DCMAKE_C_COMPILER_LAUNCHER=sccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
-          -DLLVM_USE_LINKER=lld-23
+          -DLLVM_USE_LINKER=${{ matrix.linker }}
           -DCMAKE_INSTALL_PREFIX=/__w/llvm-project/llvm-project/install
           -DLIBC_COMPILE_OPTIONS_NATIVE=''
         "
+
+        if [[ "${{ matrix.assertions }}" == "ON" ]]; then
+          export CMAKE_FLAGS="$CMAKE_FLAGS -DLLVM_ENABLE_ASSERTIONS=ON"
+        fi
 
         if [[ "${{ matrix.testing }}" != "SKIP" ]]; then
           export CMAKE_FLAGS="$CMAKE_FLAGS
@@ -176,7 +211,7 @@ jobs:
           "
         fi
 
-        if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" ]]; then
+        if [[ "${{ matrix.include_scudo }}" == "ON" || "${{ matrix.build_fuzzing_tests }}" == "ON" || "${{ matrix.build_builtins }}" == "ON" ]]; then
           export RUNTIMES="$RUNTIMES;compiler-rt"
         fi
 
@@ -190,6 +225,16 @@ jobs:
 
         case "${{ matrix.name }}" in
           baremetal-* )
+            if [[ "${{ matrix.build_builtins }}" == "ON" ]]; then
+              export CMAKE_FLAGS="$CMAKE_FLAGS -DLLVM_ENABLE_RUNTIMES=$RUNTIMES"
+            fi
+            if [[ "${{ matrix.name }}" == "baremetal-hexagon" ]]; then
+              # Clang's Hexagon driver fails to identify LLD when binary is named ld.lld-23
+              # TODO : remove this workaround when the below issue is fixed and we move
+              # to new toolchain version which has the fix
+              # https://github.com/llvm/llvm-project/issues/227780
+              sudo ln -sf /usr/bin/ld.lld-23 /usr/bin/ld.lld
+            fi
             cmake $CMAKE_FLAGS \
               -C /__w/llvm-project/llvm-project/libc/cmake/caches/${{ matrix.target }}.cmake
             ;;

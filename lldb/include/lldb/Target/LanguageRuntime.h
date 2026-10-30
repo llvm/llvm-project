@@ -153,6 +153,17 @@ public:
     return false;
   }
 
+  /// Create a breakpoint that catches an error escaping an expression
+  /// that runs as top-level code, such as a REPL line, where no
+  /// handler encloses it.
+  virtual lldb::BreakpointSP CreateErrorBackstopBreakpoint() { return {}; }
+
+  /// Return the error value that reached the breakpoint from
+  /// CreateErrorBackstopBreakpoint, with \p frame stopped there.
+  virtual lldb::ValueObjectSP GetErrorValueAtBackstop(StackFrame &frame) {
+    return {};
+  }
+
   static lldb::BreakpointSP
   CreateExceptionBreakpoint(Target &target, lldb::LanguageType language,
                             bool catch_bp, bool throw_bp,

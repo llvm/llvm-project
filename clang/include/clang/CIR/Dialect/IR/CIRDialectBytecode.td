@@ -87,8 +87,8 @@ def AddressPointAttr : DialectAttribute<(attr
 )>;
 
 def OpenCLVersionAttr : DialectAttribute<(attr
-  CheckedInt32:$major,
-  CheckedInt32:$minor
+  CheckedInt32:$majorVersion,
+  CheckedInt32:$minorVersion
 )>;
 
 def BlockAddrInfoAttr : DialectAttribute<(attr

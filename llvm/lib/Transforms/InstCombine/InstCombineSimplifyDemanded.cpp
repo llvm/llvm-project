@@ -2396,7 +2396,17 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                  Depth + 1))
     return &I;
 
-  Known = KnownFPClass::fptrunc(KnownSrc);
+  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const Function *Fn = I.getFunction();
+  DenormalMode DstMode =
+      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
+
+  Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
   Known.knownNot(~DemandedMask);
 
   return simplifyDemandedFPClassResult(&I, FMF, DemandedMask, Known,
@@ -2894,6 +2904,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if ((DemandedMask & fcPosNormal) != fcNone)
       SrcDemandedMask |= fcPosSubnormal;
 
+    // TODO: Properly handle ppcf128 = fpext(f80) (since f80 has a larger
+    // exponent range than ppcf128).
+
     KnownFPClass KnownSrc;
     if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, SQ, Depth + 1))
       return I;
@@ -2902,7 +2915,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     const fltSemantics &SrcTy =
         I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
 
-    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy);
+    Known =
+        KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, F.getDenormalMode(DstTy),
+                            F.getDenormalMode(SrcTy));
     Known.knownNot(~DemandedMask);
 
     return simplifyDemandedFPClassResult(I, FMF, DemandedMask, Known,
@@ -3237,33 +3252,44 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                            KnownSrc);
     }
     case Intrinsic::sqrt: {
-      FPClassTest DemandedSrcMask =
-          DemandedMask & (fcNegZero | fcPositive | fcNan);
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
-      if (DemandedMask & fcNan)
-        DemandedSrcMask |= fcNan | (fcNegative & ~fcNegZero);
-
-      // sqrt(max_subnormal) is a normal value
+      // Be explicit about the DemandedSrcMask so we do not miss anything.
+      FPClassTest DemandedSrcMask = fcNone;
+      if (DemandedMask & fcSNan)
+        DemandedSrcMask |= fcSNan;
+      if (DemandedMask & fcQNan)
+        DemandedSrcMask |=
+            fcQNan | fcSNan | fcNegInf | fcNegNormal | fcNegSubnormal;
+      if (DemandedMask & fcNegZero) {
+        DemandedSrcMask |= fcNegZero;
+        if (Mode.Input == DenormalMode::PreserveSign ||
+            Mode.Input == DenormalMode::Dynamic)
+          DemandedSrcMask |= fcNegSubnormal;
+      }
+      if (DemandedMask & fcPosZero) {
+        DemandedSrcMask |= fcPosZero;
+        if (Mode.inputsMayBeZero())
+          DemandedSrcMask |= fcPosSubnormal;
+        if (Mode.inputsMayBePositiveZero())
+          DemandedSrcMask |= fcNegSubnormal;
+      }
       if (DemandedMask & fcPosNormal)
-        DemandedSrcMask |= fcPosSubnormal;
+        DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+      if (DemandedMask & fcPosInf)
+        DemandedSrcMask |= fcPosInf;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(I, 0, DemandedSrcMask, KnownSrc, SQ,
                                   Depth + 1))
         return I;
 
-      // Infer the source cannot be negative if the result cannot be nan.
-      if ((DemandedMask & fcNan) == fcNone)
-        KnownSrc.knownNot((fcNegative & ~fcNegZero) | fcNan);
-
-      // Infer the source cannot be +inf if the result is not +nf
-      if ((DemandedMask & fcPosInf) == fcNone)
-        KnownSrc.knownNot(fcPosInf);
-
-      Type *EltTy = VTy->getScalarType();
-      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      KnownSrc.knownNot(~DemandedSrcMask);
 
       // sqrt(-x) = nan, but be careful of negative subnormals flushed to 0.
+      // TODO: This becomes redundant if KnownFPClass::sqrt rules out
+      // fcPosNormal.
       if (KnownSrc.isKnownNever(fcPositive) &&
           KnownSrc.isKnownNeverLogicalZero(Mode))
         return ConstantFP::getQNaN(VTy);
@@ -3282,6 +3308,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         Copysign->takeName(CI);
         return Copysign;
       }
+
+      // TODO: fold sqrt(x) -> x when x is nan | pinf | zero
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
                                            {KnownSrc});
@@ -3338,6 +3366,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
 
+      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
+      // Rounding a finite multi-unit value may overflow to an infinity.
+      if (IsMultiUnitFPType) {
+        if (IID != Intrinsic::trunc && IID != Intrinsic::floor &&
+            (DemandedMask & fcPosInf))
+          DemandedSrcMask |= fcPosNormal;
+        if (IID != Intrinsic::trunc && IID != Intrinsic::ceil &&
+            (DemandedMask & fcNegInf))
+          DemandedSrcMask |= fcNegNormal;
+      }
+
       // Zero results imply valid subnormal sources.
       if (DemandedMask & fcNegZero)
         DemandedSrcMask |= fcNegSubnormal | fcNegNormal;
@@ -3383,11 +3422,21 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (IID == Intrinsic::ceil && KnownSrc.isKnownAlways(fcPosSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
-      const bool IsMultiUnitFPType = EltTy->isMultiUnitFPType();
-
-      const bool IsTrunc = IID == Intrinsic::trunc;
-      Known = KnownFPClass::roundToIntegral(KnownSrc, IsTrunc,
-                                            IsMultiUnitFPType, Mode);
+      switch (IID) {
+      case Intrinsic::trunc:
+        Known = KnownFPClass::trunc(KnownSrc, Mode);
+        break;
+      case Intrinsic::floor:
+        Known = KnownFPClass::floor(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      case Intrinsic::ceil:
+        Known = KnownFPClass::ceil(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      default:
+        Known =
+            KnownFPClass::roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+        break;
+      }
 
       Known.knownNot(~DemandedMask);
 

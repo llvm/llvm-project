@@ -594,7 +594,7 @@ class EncodingByHwMode<list<HwMode> Ms = [], list<InstructionEncoding> Ts = []>
 
 //===----------------------------------------------------------------------===//
 // Instruction set description - These classes correspond to the C++ classes in
-// the Target/TargetInstrInfo.h file.
+// the CodeGen/TargetInstrInfo.h file.
 //
 class Instruction : InstructionEncoding {
   string Namespace = "";
@@ -1784,7 +1784,7 @@ class AsmParser {
   // be preferentially selected.
   //
   // The preference order is:
-  //    Instrution size (if this option is enabled, smallest first)
+  //    Instruction size (if this option is enabled, smallest first)
   //    Number of Operands (least first),
   //    Operand Classes (lexicographically by operand),
   //    (Optional) Instruction id (see AsmMatcherEmitter.cpp for details),

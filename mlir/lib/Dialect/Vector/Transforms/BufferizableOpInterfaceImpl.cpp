@@ -91,13 +91,13 @@ struct TransferWriteOpInterface
         return true;
     }
 
-    // There is no mask.
-    if (writeOp.isMasked())
+    // No mask operand and not inside a masking op.
+    if (writeOp.getMask() || writeOp.isMasked())
       return true;
 
     // Must write at least the full dimension size.
     for (auto [d0, d1] : llvm::zip(writeOp.getShapedType().getShape(),
-                                   writeOp.getVectorType().getShape())) {
+                                   writeOp.getTransferChunkAccessed())) {
       if (d0 > d1)
         return true;
     }

@@ -18,10 +18,12 @@
 namespace llvm {
 namespace mca {
 
-SchedulerStatistics::SchedulerStatistics(const llvm::MCSubtargetInfo &STI)
-    : SM(STI.getSchedModel()), LQResourceID(0), SQResourceID(0), NumIssued(0),
-      NumCycles(0), MostRecentLoadDispatched(~0U),
-      MostRecentStoreDispatched(~0U),
+SchedulerStatistics::SchedulerStatistics(const llvm::MCSubtargetInfo &STI,
+                                         float ReservationStationScaleFactor)
+    : SM(STI.getSchedModel()),
+      ReservationStationScaleFactor(ReservationStationScaleFactor),
+      LQResourceID(0), SQResourceID(0), NumIssued(0), NumCycles(0),
+      MostRecentLoadDispatched(~0U), MostRecentStoreDispatched(~0U),
       Usage(STI.getSchedModel().NumProcResourceKinds, {0, 0, 0}) {
   if (SM.hasExtraProcessorInfo()) {
     const MCExtraProcessorInfo &EPI = SM.getExtraProcessorInfo();
@@ -138,7 +140,8 @@ void SchedulerStatistics::printSchedulerUsage(raw_ostream &OS) const {
   bool HasColors = FOS.has_colors();
   for (unsigned I = 0, E = SM.getNumProcResourceKinds(); I < E; ++I) {
     const MCProcResourceDesc &ProcResource = *SM.getProcResource(I);
-    const int BufferSize = SM.getResourceBufferSize(I);
+    const int BufferSize =
+        SM.getResourceBufferSize(I, ReservationStationScaleFactor);
     if (BufferSize <= 0)
       continue;
 

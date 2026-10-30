@@ -156,6 +156,24 @@ v_madmk_f32 v5, s1, 0x11213141, v255
 // CHECK-NEXT:{{^}}                ^
 
 //==============================================================================
+// invalid operand for instruction
+
+v_add_co_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT:{{^}}v_add_co_u32 v5, v1, v2
+// CHECK-NEXT:{{^}}                 ^
+
+v_sub_co_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT:{{^}}v_sub_co_u32 v5, v1, v2
+// CHECK-NEXT:{{^}}                 ^
+
+v_subrev_co_u32 v5, v1, v2
+// CHECK: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT:{{^}}v_subrev_co_u32 v5, v1, v2
+// CHECK-NEXT:{{^}}                    ^
+
+//==============================================================================
 // literal operands are not supported
 
 v_bfe_u32 v0, v2, v3, undef
