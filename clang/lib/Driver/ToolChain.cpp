@@ -1310,9 +1310,26 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   if (LinkerIsLLD)
     *LinkerIsLLD = false;
 
+  auto IsLLDPath = [&](StringRef Path) {
+    StringRef Name = llvm::sys::path::filename(Path);
+    Name.consume_back_insensitive(".exe");
+    StringRef LLDName = Triple.isOSDarwin() ? "ld64.lld" : "ld.lld";
+    return Name.starts_with_insensitive(LLDName) ||
+           Name.ends_with_insensitive(LLDName);
+  };
+
+  auto GetDefaultLinkerPath = [&]() {
+    const char *DefaultLinker = getDefaultLinker();
+    if (LinkerIsLLD)
+      *LinkerIsLLD = IsLLDPath(DefaultLinker);
+    if (llvm::sys::path::is_absolute(DefaultLinker))
+      return std::string(DefaultLinker);
+    return GetProgramPath(DefaultLinker);
+  };
+
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
-  const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
   StringRef UseLinker = A ? A->getValue() : getDriver().getPreferredLinker();
 
   // --ld-path= takes precedence over -fuse-ld= and specifies the executable
@@ -1320,29 +1337,25 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   // contain a path component separator.
   // -fuse-ld=lld can be used with --ld-path= to inform clang that the binary
   // that --ld-path= points to is lld.
-  if (const Arg *A = Args.getLastArg(options::OPT_ld_path_EQ)) {
-    std::string Path(A->getValue());
+  if (const Arg *LdPathArg = Args.getLastArg(options::OPT_ld_path_EQ)) {
+    std::string Path(LdPathArg->getValue());
     if (!Path.empty()) {
       if (llvm::sys::path::parent_path(Path).empty())
-        Path = GetProgramPath(A->getValue());
+        Path = GetProgramPath(LdPathArg->getValue());
       if (llvm::sys::fs::can_execute(Path)) {
         if (LinkerIsLLD)
-          *LinkerIsLLD = UseLinker == "lld";
-        return std::string(Path);
+          *LinkerIsLLD = (A && UseLinker == "lld") || IsLLDPath(Path);
+        return Path;
       }
     }
-    getDriver().Diag(diag::err_drv_invalid_linker_name) << A->getAsString(Args);
-    return GetProgramPath(getDefaultLinker());
+    getDriver().Diag(diag::err_drv_invalid_linker_name)
+        << LdPathArg->getAsString(Args);
+    return GetDefaultLinkerPath();
   }
   // If we're passed -fuse-ld= with no argument, or with the argument ld,
   // then use whatever the default system linker is.
-  if (UseLinker.empty() || UseLinker == "ld") {
-    const char *DefaultLinker = getDefaultLinker();
-    if (llvm::sys::path::is_absolute(DefaultLinker))
-      return std::string(DefaultLinker);
-    else
-      return GetProgramPath(DefaultLinker);
-  }
+  if (UseLinker.empty() || UseLinker == "ld")
+    return GetDefaultLinkerPath();
 
   // Extending -fuse-ld= to an absolute or relative path is unexpected. Checking
   // for the linker flavor is brittle. In addition, prepending "ld." or "ld64."
@@ -1354,8 +1367,11 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   if (llvm::sys::path::is_absolute(UseLinker)) {
     // If we're passed what looks like an absolute path, don't attempt to
     // second-guess that.
-    if (llvm::sys::fs::can_execute(UseLinker))
+    if (llvm::sys::fs::can_execute(UseLinker)) {
+      if (LinkerIsLLD)
+        *LinkerIsLLD = IsLLDPath(UseLinker);
       return std::string(UseLinker);
+    }
   } else {
     llvm::SmallString<8> LinkerName;
     if (Triple.isOSDarwin())
@@ -1375,7 +1391,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   if (A)
     getDriver().Diag(diag::err_drv_invalid_linker_name) << A->getAsString(Args);
 
-  return GetProgramPath(getDefaultLinker());
+  return GetDefaultLinkerPath();
 }
 
 std::string ToolChain::GetStaticLibToolPath() const {
