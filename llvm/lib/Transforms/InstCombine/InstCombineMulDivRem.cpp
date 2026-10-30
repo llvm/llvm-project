@@ -2548,6 +2548,38 @@ static Instruction *simplifyIRemMulShl(BinaryOperator &I,
   return nullptr;
 }
 
+static Instruction *simplifyURemShlConstantDivisor(BinaryOperator &I, InstCombinerImpl &IC) {
+  Value *Op0 = I.getOperand(0);
+  Value *Op1 = I.getOperand(1);
+
+  auto *Shl = dyn_cast<BinaryOperator>(Op0);
+  auto *Divisor = dyn_cast<ConstantInt>(Op1);
+  if (!Shl || Shl->getOpcode() != Instruction::Shl || !Divisor || !Shl->hasNoUnsignedWrap())
+    return nullptr;
+
+  auto *ShiftAmt = dyn_cast<ConstantInt>(Shl->getOperand(1));
+  if (!ShiftAmt)
+    return nullptr;
+
+  const APInt &DivisorValue = Divisor->getValue();
+  unsigned BitWidth = DivisorValue.getBitWidth();
+  uint64_t ShiftValue = ShiftAmt->getValue().getLimitedValue(BitWidth);
+
+  if (DivisorValue.isZero() || ShiftValue == 0 || ShiftValue >= BitWidth)
+    return nullptr;
+
+  unsigned Shift = static_cast<unsigned>(ShiftValue);
+  APInt Scale = APInt(BitWidth, 1).shl(Shift);
+  if (!DivisorValue.urem(Scale).isZero())
+    return nullptr;
+
+  Constant *NewDivisor = ConstantInt::get(I.getType(), DivisorValue.udiv(Scale));
+  Value *Rem = IC.Builder.CreateURem(Shl->getOperand(0), NewDivisor);
+  auto *NewShl = BinaryOperator::CreateShl(Rem, ShiftAmt);
+  NewShl->setHasNoUnsignedWrap();
+  return NewShl;
+}
+
 /// This function implements the transforms common to both integer remainder
 /// instructions (urem and srem). It is called by the visitors to those integer
 /// remainder instructions.
@@ -2581,6 +2613,10 @@ Instruction *InstCombinerImpl::commonIRemTransforms(BinaryOperator &I) {
         return &I;
     }
   }
+
+  if (I.getOpcode() == Instruction::URem)
+    if (Instruction *R = simplifyURemShlConstantDivisor(I, *this))
+      return R;
 
   if (Instruction *R = simplifyIRemMulShl(I, *this))
     return R;
