@@ -20910,11 +20910,15 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
           return false;
         return ValueToExtUses->contains(V);
       };
-      bool CanBeUsedAsScalar = all_of(Inst->operands(), OperandIsScalar);
+      // The original freeze may produce a value different from the vector lane
+      // if its operand is undef or poison.
+      bool CanBeUsedAsScalar =
+          !isa<FreezeInst>(Inst) && all_of(Inst->operands(), OperandIsScalar);
       bool CanBeUsedAsScalarCast = false;
       if (auto *CI = dyn_cast<CastInst>(Inst); CI && !CanBeUsedAsScalar) {
         if (auto *Op = dyn_cast<Instruction>(CI->getOperand(0));
-            Op && all_of(Op->operands(), OperandIsScalar)) {
+            Op && !isa<FreezeInst>(Op) &&
+            all_of(Op->operands(), OperandIsScalar)) {
           InstructionCost OpCost =
               (isVectorized(Op) && !ValueToExtUses->contains(Op))
                   ? TTI->getInstructionCost(Op, CostKind)
@@ -25515,6 +25519,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<Value *> OpVecs;
       for (int J = 1, N = GEP0->getNumOperands(); J < N; ++J) {
         Value *OpVec = vectorizeOperand(E, J);
+        // GEP sign-extends narrow indices, so extend the demoted index back to
+        // its original type.
+        auto *IdxVecTy = getWidenedType(E->getOperand(J).front()->getType(),
+                                        E->Scalars.size());
+        if (OpVec->getType() != IdxVecTy)
+          OpVec =
+              Builder.CreateIntCast(OpVec, IdxVecTy, GetOperandSignedness(J));
         OpVecs.push_back(OpVec);
       }
 

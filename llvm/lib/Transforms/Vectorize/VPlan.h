@@ -1268,19 +1268,24 @@ public:
 #endif
 };
 
-/// Manage IR per-argument and return attributes for call recipes. Only
-/// attributes that are valid to propagate to the widened call are stored.
+class VPInstruction;
+
+/// Manage IR attributes for call recipes. Call VPInstructions store all
+/// call-site attributes. Widened calls only store return and per-argument
+/// attributes that are valid to propagate to the widened call.
 class VPIRAttributes {
   AttributeList CallAttrs;
 
 public:
   VPIRAttributes() = default;
 
-  /// Stores the return and per-arg attributes of \p CI that are valid for a
-  /// widened call with type \p WideTy. If \p IsMaskedCall is true, the scalar
-  /// call only executes for some lanes, so argument attributes are only kept
-  /// for widened arguments passed to a masked variant.
-  VPIRAttributes(const CallInst &CI, FunctionType *WideTy, bool IsMaskedCall);
+  explicit VPIRAttributes(AttributeList CallAttrs) : CallAttrs(CallAttrs) {}
+
+  /// Stores the return and per-arg attributes of the call VPInstruction \p
+  /// Call that are valid for a widened call with type \p WideTy. If \p Call is
+  /// masked, the scalar call only executes for some lanes, so argument
+  /// attributes are only kept for widened arguments passed to a masked variant.
+  VPIRAttributes(const VPInstruction &Call, FunctionType *WideTy);
 
   /// Keep only the attributes valid for both this and \p Other.
   void intersectAttrs(const VPIRAttributes &Other, LLVMContext &Ctx);
@@ -1290,12 +1295,26 @@ public:
     WideCall.setAttributes(CallAttrs);
   }
 
+  /// Returns the memory effects of a call with these attributes to a callee
+  /// with function attributes \p CalleeFnAttrs.
+  MemoryEffects getMemoryEffects(AttributeSet CalleeFnAttrs) const {
+    return CallAttrs.getMemoryEffects() & CalleeFnAttrs.getMemoryEffects();
+  }
+
+  /// Returns true if the call site or \p CalleeFnAttrs has \p Kind.
+  bool hasFnAttr(Attribute::AttrKind Kind, AttributeSet CalleeFnAttrs) const {
+    return CallAttrs.hasFnAttr(Kind) || CalleeFnAttrs.hasAttribute(Kind);
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print return-value attributes carried with this object.
   void printRetAttrs(raw_ostream &O) const;
 
   /// Print per-arg attributes for argument \p ArgIdx.
   void printParamAttrs(raw_ostream &O, unsigned ArgIdx) const;
+
+  /// Print function attributes carried with this object.
+  void printFnAttrs(raw_ostream &O) const;
 #endif
 };
 
@@ -1306,7 +1325,8 @@ public:
 /// opcodes can take an optional mask. Masks may be assigned during
 /// predication.
 class LLVM_ABI_FOR_TEST VPInstruction : public VPRecipeWithIRFlags,
-                                        public VPIRMetadata {
+                                        public VPIRMetadata,
+                                        public VPIRAttributes {
 public:
   /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
   enum {
@@ -1481,7 +1501,7 @@ public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                 const VPIRFlags &Flags = {}, const VPIRMetadata &MD = {},
                 DebugLoc DL = DebugLoc::getUnknown(), const Twine &Name = "",
-                Type *ResultTy = nullptr);
+                Type *ResultTy = nullptr, const VPIRAttributes &Attrs = {});
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPInstructionSC)
 
@@ -1492,7 +1512,7 @@ public:
   VPInstruction *cloneWithOperands(ArrayRef<VPValue *> NewOperands,
                                    Type *ResultTy = nullptr) {
     auto *New = new VPInstruction(Opcode, NewOperands, *this, *this,
-                                  getDebugLoc(), Name, ResultTy);
+                                  getDebugLoc(), Name, ResultTy, *this);
     if (getUnderlyingValue())
       New->setUnderlyingValue(getUnderlyingInstr());
     return New;
