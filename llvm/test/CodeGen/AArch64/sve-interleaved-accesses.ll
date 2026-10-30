@@ -1780,27 +1780,23 @@ define void @store_ptrvec_factor4_intrinsic(ptr %ptr, <4 x ptr> %v0, <4 x ptr> %
 define void @store_factor2_wide_intrinsic(ptr %ptr, <8 x i64> %v0, <8 x i64> %v1) #0 {
 ; CHECK-LABEL: store_factor2_wide_intrinsic:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
-; CHECK-NEXT:    // kill: def $q4 killed $q4 def $z4
-; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    mov v17.16b, v6.16b
+; CHECK-NEXT:    mov v19.16b, v4.16b
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
-; CHECK-NEXT:    splice z6.d, p0, z6.d, z7.d
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
-; CHECK-NEXT:    splice z4.d, p0, z4.d, z5.d
-; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
-; CHECK-NEXT:    zip2 z1.d, z2.d, z6.d
-; CHECK-NEXT:    zip1 z2.d, z2.d, z6.d
-; CHECK-NEXT:    zip2 z3.d, z0.d, z4.d
-; CHECK-NEXT:    zip1 z0.d, z0.d, z4.d
-; CHECK-NEXT:    str z1, [x0, #3, mul vl]
-; CHECK-NEXT:    str z2, [x0, #2, mul vl]
-; CHECK-NEXT:    str z3, [x0, #1, mul vl]
-; CHECK-NEXT:    str z0, [x0]
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    mov v16.16b, v2.16b
+; CHECK-NEXT:    mov v18.16b, v0.16b
+; CHECK-NEXT:    ptrue p1.d
+; CHECK-NEXT:    splice z17.d, p0, z17.d, z7.d
+; CHECK-NEXT:    splice z19.d, p0, z19.d, z5.d
+; CHECK-NEXT:    splice z16.d, p0, z16.d, z3.d
+; CHECK-NEXT:    splice z18.d, p0, z18.d, z1.d
+; CHECK-NEXT:    st2d { z16.d, z17.d }, p1, [x0, x8, lsl #3]
+; CHECK-NEXT:    st2d { z18.d, z19.d }, p1, [x0]
 ; CHECK-NEXT:    ret
   %interleaved.vec = call <16 x i64> @llvm.vector.interleave2.v16i64(<8 x i64> %v0, <8 x i64> %v1)
   store <16 x i64> %interleaved.vec, ptr %ptr, align 4
