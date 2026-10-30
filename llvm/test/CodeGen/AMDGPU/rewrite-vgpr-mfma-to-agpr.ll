@@ -548,13 +548,13 @@ define void @test_rewrite_mfma_subreg_insert2(double %arg0, double %arg1, ptr ad
 define amdgpu_kernel void @test_rewrite_mfma_direct_copy_from_agpr_class(ptr addrspace(1) %arg0, ptr addrspace(1) %arg1) #0 {
 ; CHECK-LABEL: test_rewrite_mfma_direct_copy_from_agpr_class:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_accvgpr_write_b32 a34, 2.0
+; CHECK-NEXT:    v_accvgpr_write_b32 a33, 2.0
 ; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 7, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def a[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_accvgpr_write_b32 a32, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a34, v0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
 ; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v2, a2
@@ -587,12 +587,12 @@ define amdgpu_kernel void @test_rewrite_mfma_direct_copy_from_agpr_class(ptr add
 ; CHECK-NEXT:    v_accvgpr_read_b32 v29, a29
 ; CHECK-NEXT:    v_accvgpr_read_b32 v30, a30
 ; CHECK-NEXT:    v_accvgpr_read_b32 v31, a31
-; CHECK-NEXT:    v_accvgpr_write_b32 a33, 4.0
+; CHECK-NEXT:    v_accvgpr_write_b32 a32, 4.0
 ; CHECK-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[32:63], a34, a33, v[0:31]
+; CHECK-NEXT:    v_mfma_f32_32x32x1_2b_f32 v[32:63], a33, a32, v[0:31]
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0x41000000
-; CHECK-NEXT:    v_accvgpr_read_b32 v0, a32
+; CHECK-NEXT:    v_accvgpr_read_b32 v0, a34
 ; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    v_mov_b64_e32 v[2:3], v[32:33]
 ; CHECK-NEXT:    v_mov_b64_e32 v[4:5], v[34:35]

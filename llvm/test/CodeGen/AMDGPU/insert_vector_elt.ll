@@ -728,9 +728,9 @@ define amdgpu_kernel void @dynamic_insertelement_v9f32(ptr addrspace(1) %out, <9
 ; SI-NEXT:    s_mov_b32 m0, s8
 ; SI-NEXT:    s_mov_b32 s14, -1
 ; SI-NEXT:    v_movreld_b32_e32 v0, v9
-; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:32
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
+; SI-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:32
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: dynamic_insertelement_v9f32:
@@ -755,9 +755,9 @@ define amdgpu_kernel void @dynamic_insertelement_v9f32(ptr addrspace(1) %out, <9
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_mov_b32 m0, s0
 ; VI-NEXT:    v_movreld_b32_e32 v0, v9
-; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; VI-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:32
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
+; VI-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <9 x float> %a, float 5.000000e+00, i32 %b
   store <9 x float> %vecins, ptr addrspace(1) %out, align 32
@@ -1226,9 +1226,9 @@ define amdgpu_kernel void @dynamic_insertelement_v9i32(ptr addrspace(1) %out, <9
 ; SI-NEXT:    v_mov_b32_e32 v8, s10
 ; SI-NEXT:    s_mov_b32 m0, s8
 ; SI-NEXT:    v_movreld_b32_e32 v0, 5
-; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; SI-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:32
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
+; SI-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:32
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: dynamic_insertelement_v9i32:
@@ -1252,9 +1252,9 @@ define amdgpu_kernel void @dynamic_insertelement_v9i32(ptr addrspace(1) %out, <9
 ; VI-NEXT:    v_mov_b32_e32 v8, s0
 ; VI-NEXT:    s_mov_b32 m0, s1
 ; VI-NEXT:    v_movreld_b32_e32 v0, 5
-; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
-; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; VI-NEXT:    buffer_store_dword v8, off, s[0:3], 0 offset:32
+; VI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[12:15], 0 offset:16
+; VI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[12:15], 0
+; VI-NEXT:    buffer_store_dword v8, off, s[12:15], 0 offset:32
 ; VI-NEXT:    s_endpgm
   %vecins = insertelement <9 x i32> %a, i32 5, i32 %b
   store <9 x i32> %vecins, ptr addrspace(1) %out, align 32

@@ -10479,273 +10479,258 @@ define amdgpu_kernel void @half32_inselt(ptr addrspace(1) %out, <32 x half> %vec
 ;
 ; GCN-O0-LABEL: half32_inselt:
 ; GCN-O0:       ; %bb.0: ; %entry
-; GCN-O0-NEXT:    s_load_dword s0, s[4:5], 0xa4
-; GCN-O0-NEXT:    s_load_dwordx16 s[8:23], s[4:5], 0x64
+; GCN-O0-NEXT:    s_mov_b64 s[0:1], s[4:5]
+; GCN-O0-NEXT:    s_load_dword s2, s[0:1], 0xa4
+; GCN-O0-NEXT:    s_load_dwordx16 s[4:19], s[0:1], 0x64
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-O0-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; GCN-O0-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-O0-NEXT:    s_load_dwordx16 s[36:51], s[0:1], 0x64
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-O0-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GCN-O0-NEXT:    s_load_dwordx16 s[36:51], s[4:5], 0x64
-; GCN-O0-NEXT:    s_load_dword s4, s[4:5], 0xa4
-; GCN-O0-NEXT:    s_mov_b32 s15, 2
+; GCN-O0-NEXT:    s_load_dword s2, s[0:1], 0xa4
+; GCN-O0-NEXT:    s_mov_b32 s12, 2
 ; GCN-O0-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-O0-NEXT:    s_lshr_b32 s14, s4, s15
-; GCN-O0-NEXT:    s_mov_b32 s2, 7
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s2
-; GCN-O0-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; GCN-O0-NEXT:    s_mov_b32 s16, 3
-; GCN-O0-NEXT:    s_and_b32 s4, s4, s16
-; GCN-O0-NEXT:    s_mov_b32 s17, 4
-; GCN-O0-NEXT:    s_lshl_b32 s6, s4, s17
-; GCN-O0-NEXT:    s_mov_b64 s[4:5], 0xffff
-; GCN-O0-NEXT:    s_lshl_b64 s[8:9], s[4:5], s6
-; GCN-O0-NEXT:    s_mov_b32 s10, s9
+; GCN-O0-NEXT:    s_lshr_b32 s22, s2, s12
+; GCN-O0-NEXT:    s_mov_b32 s0, 7
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s0
+; GCN-O0-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; GCN-O0-NEXT:    s_mov_b32 s10, 3
+; GCN-O0-NEXT:    s_and_b32 s2, s2, s10
+; GCN-O0-NEXT:    s_mov_b32 s8, 4
+; GCN-O0-NEXT:    s_lshl_b32 s6, s2, s8
+; GCN-O0-NEXT:    s_mov_b64 s[2:3], 0xffff
+; GCN-O0-NEXT:    s_lshl_b64 s[14:15], s[2:3], s6
+; GCN-O0-NEXT:    s_mov_b32 s18, s15
 ; GCN-O0-NEXT:    s_mov_b64 s[6:7], 0
-; GCN-O0-NEXT:    s_mov_b32 s11, s7
-; GCN-O0-NEXT:    s_and_b64 s[4:5], s[2:3], exec
-; GCN-O0-NEXT:    s_cselect_b32 s4, s10, s11
-; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
-; GCN-O0-NEXT:    s_mov_b32 s9, s6
-; GCN-O0-NEXT:    s_and_b64 s[2:3], s[2:3], exec
-; GCN-O0-NEXT:    s_cselect_b32 s2, s8, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
-; GCN-O0-NEXT:    s_mov_b32 s3, s4
+; GCN-O0-NEXT:    s_mov_b32 s19, s7
+; GCN-O0-NEXT:    s_and_b64 s[2:3], s[0:1], exec
+; GCN-O0-NEXT:    s_cselect_b32 s2, s18, s19
+; GCN-O0-NEXT:    s_mov_b32 s16, s14
+; GCN-O0-NEXT:    s_mov_b32 s17, s6
+; GCN-O0-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; GCN-O0-NEXT:    s_cselect_b32 s0, s16, s17
+; GCN-O0-NEXT:    ; kill: def $sgpr0 killed $sgpr0 def $sgpr0_sgpr1
+; GCN-O0-NEXT:    s_mov_b32 s1, s2
 ; GCN-O0-NEXT:    s_mov_b32 s6, s51
-; GCN-O0-NEXT:    s_mov_b32 s4, s50
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
-; GCN-O0-NEXT:    s_mov_b32 s5, s6
-; GCN-O0-NEXT:    s_andn2_b64 s[4:5], s[4:5], s[2:3]
+; GCN-O0-NEXT:    s_mov_b32 s2, s50
+; GCN-O0-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; GCN-O0-NEXT:    s_mov_b32 s3, s6
+; GCN-O0-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
 ; GCN-O0-NEXT:    s_mov_b32 s6, 0x3c003c00
-; GCN-O0-NEXT:    s_mov_b32 s12, s6
-; GCN-O0-NEXT:    s_mov_b32 s13, s6
-; GCN-O0-NEXT:    s_and_b64 s[2:3], s[2:3], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[4:5], s[2:3], s[4:5]
-; GCN-O0-NEXT:    s_mov_b32 s2, s5
-; GCN-O0-NEXT:    s_mov_b32 s3, s4
-; GCN-O0-NEXT:    s_mov_b32 s4, 6
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s4
-; GCN-O0-NEXT:    s_cselect_b64 s[4:5], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[6:7], s[4:5], exec
-; GCN-O0-NEXT:    s_cselect_b32 s6, s10, s11
-; GCN-O0-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GCN-O0-NEXT:    s_cselect_b32 s4, s8, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
-; GCN-O0-NEXT:    s_mov_b32 s5, s6
-; GCN-O0-NEXT:    s_mov_b32 s18, s49
+; GCN-O0-NEXT:    s_mov_b32 s20, s6
+; GCN-O0-NEXT:    s_mov_b32 s21, s6
+; GCN-O0-NEXT:    s_and_b64 s[0:1], s[0:1], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[2:3], s[0:1], s[2:3]
+; GCN-O0-NEXT:    s_mov_b32 s0, s3
+; GCN-O0-NEXT:    s_mov_b32 s1, s2
+; GCN-O0-NEXT:    s_mov_b32 s2, 6
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s2
+; GCN-O0-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GCN-O0-NEXT:    s_and_b64 s[6:7], s[2:3], exec
+; GCN-O0-NEXT:    s_cselect_b32 s6, s18, s19
+; GCN-O0-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GCN-O0-NEXT:    s_cselect_b32 s2, s16, s17
+; GCN-O0-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
+; GCN-O0-NEXT:    s_mov_b32 s3, s6
+; GCN-O0-NEXT:    s_mov_b32 s9, s49
 ; GCN-O0-NEXT:    s_mov_b32 s6, s48
 ; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
-; GCN-O0-NEXT:    s_mov_b32 s7, s18
-; GCN-O0-NEXT:    s_andn2_b64 s[6:7], s[6:7], s[4:5]
-; GCN-O0-NEXT:    s_and_b64 s[4:5], s[4:5], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[6:7], s[4:5], s[6:7]
-; GCN-O0-NEXT:    s_mov_b32 s4, s7
-; GCN-O0-NEXT:    s_mov_b32 s5, s6
+; GCN-O0-NEXT:    s_mov_b32 s7, s9
+; GCN-O0-NEXT:    s_andn2_b64 s[6:7], s[6:7], s[2:3]
+; GCN-O0-NEXT:    s_and_b64 s[2:3], s[2:3], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[6:7], s[2:3], s[6:7]
+; GCN-O0-NEXT:    s_mov_b32 s2, s7
+; GCN-O0-NEXT:    s_mov_b32 s3, s6
 ; GCN-O0-NEXT:    s_mov_b32 s6, 5
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s6
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s6
 ; GCN-O0-NEXT:    s_cselect_b64 s[6:7], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[18:19], s[6:7], exec
-; GCN-O0-NEXT:    s_cselect_b32 s18, s10, s11
+; GCN-O0-NEXT:    s_and_b64 s[14:15], s[6:7], exec
+; GCN-O0-NEXT:    s_cselect_b32 s9, s18, s19
 ; GCN-O0-NEXT:    s_and_b64 s[6:7], s[6:7], exec
-; GCN-O0-NEXT:    s_cselect_b32 s6, s8, s9
+; GCN-O0-NEXT:    s_cselect_b32 s6, s16, s17
 ; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
-; GCN-O0-NEXT:    s_mov_b32 s7, s18
-; GCN-O0-NEXT:    s_mov_b32 s20, s47
-; GCN-O0-NEXT:    s_mov_b32 s18, s46
-; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 def $sgpr18_sgpr19
-; GCN-O0-NEXT:    s_mov_b32 s19, s20
-; GCN-O0-NEXT:    s_andn2_b64 s[18:19], s[18:19], s[6:7]
-; GCN-O0-NEXT:    s_and_b64 s[6:7], s[6:7], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[18:19], s[6:7], s[18:19]
-; GCN-O0-NEXT:    s_mov_b32 s6, s19
-; GCN-O0-NEXT:    s_mov_b32 s7, s18
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s17
-; GCN-O0-NEXT:    s_cselect_b64 s[18:19], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[20:21], s[18:19], exec
-; GCN-O0-NEXT:    s_cselect_b32 s17, s10, s11
-; GCN-O0-NEXT:    s_and_b64 s[18:19], s[18:19], exec
-; GCN-O0-NEXT:    s_cselect_b32 s18, s8, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 def $sgpr18_sgpr19
-; GCN-O0-NEXT:    s_mov_b32 s19, s17
-; GCN-O0-NEXT:    s_mov_b32 s17, s45
-; GCN-O0-NEXT:    s_mov_b32 s20, s44
-; GCN-O0-NEXT:    ; kill: def $sgpr20 killed $sgpr20 def $sgpr20_sgpr21
-; GCN-O0-NEXT:    s_mov_b32 s21, s17
-; GCN-O0-NEXT:    s_andn2_b64 s[20:21], s[20:21], s[18:19]
-; GCN-O0-NEXT:    s_and_b64 s[18:19], s[18:19], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[18:19], s[18:19], s[20:21]
-; GCN-O0-NEXT:    s_mov_b32 s24, s19
-; GCN-O0-NEXT:    s_mov_b32 s25, s18
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s16
-; GCN-O0-NEXT:    s_cselect_b64 s[16:17], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[18:19], s[16:17], exec
-; GCN-O0-NEXT:    s_cselect_b32 s18, s10, s11
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], exec
-; GCN-O0-NEXT:    s_cselect_b32 s16, s8, s9
+; GCN-O0-NEXT:    s_mov_b32 s7, s9
+; GCN-O0-NEXT:    s_mov_b32 s9, s47
+; GCN-O0-NEXT:    s_mov_b32 s14, s46
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 def $sgpr14_sgpr15
+; GCN-O0-NEXT:    s_mov_b32 s15, s9
+; GCN-O0-NEXT:    s_andn2_b64 s[14:15], s[14:15], s[6:7]
+; GCN-O0-NEXT:    s_and_b64 s[6:7], s[6:7], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[14:15], s[6:7], s[14:15]
+; GCN-O0-NEXT:    s_mov_b32 s6, s15
+; GCN-O0-NEXT:    s_mov_b32 s7, s14
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s8
+; GCN-O0-NEXT:    s_cselect_b64 s[8:9], -1, 0
+; GCN-O0-NEXT:    s_and_b64 s[14:15], s[8:9], exec
+; GCN-O0-NEXT:    s_cselect_b32 s11, s18, s19
+; GCN-O0-NEXT:    s_and_b64 s[8:9], s[8:9], exec
+; GCN-O0-NEXT:    s_cselect_b32 s8, s16, s17
+; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
+; GCN-O0-NEXT:    s_mov_b32 s9, s11
+; GCN-O0-NEXT:    s_mov_b32 s11, s45
+; GCN-O0-NEXT:    s_mov_b32 s14, s44
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 def $sgpr14_sgpr15
+; GCN-O0-NEXT:    s_mov_b32 s15, s11
+; GCN-O0-NEXT:    s_andn2_b64 s[14:15], s[14:15], s[8:9]
+; GCN-O0-NEXT:    s_and_b64 s[8:9], s[8:9], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[14:15], s[8:9], s[14:15]
+; GCN-O0-NEXT:    s_mov_b32 s8, s15
+; GCN-O0-NEXT:    s_mov_b32 s9, s14
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s10
+; GCN-O0-NEXT:    s_cselect_b64 s[10:11], -1, 0
+; GCN-O0-NEXT:    s_and_b64 s[14:15], s[10:11], exec
+; GCN-O0-NEXT:    s_cselect_b32 s13, s18, s19
+; GCN-O0-NEXT:    s_and_b64 s[10:11], s[10:11], exec
+; GCN-O0-NEXT:    s_cselect_b32 s10, s16, s17
+; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
+; GCN-O0-NEXT:    s_mov_b32 s11, s13
+; GCN-O0-NEXT:    s_mov_b32 s13, s43
+; GCN-O0-NEXT:    s_mov_b32 s14, s42
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 def $sgpr14_sgpr15
+; GCN-O0-NEXT:    s_mov_b32 s15, s13
+; GCN-O0-NEXT:    s_andn2_b64 s[14:15], s[14:15], s[10:11]
+; GCN-O0-NEXT:    s_and_b64 s[10:11], s[10:11], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[14:15], s[10:11], s[14:15]
+; GCN-O0-NEXT:    s_mov_b32 s10, s15
+; GCN-O0-NEXT:    s_mov_b32 s11, s14
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s12
+; GCN-O0-NEXT:    s_cselect_b64 s[12:13], -1, 0
+; GCN-O0-NEXT:    s_and_b64 s[14:15], s[12:13], exec
+; GCN-O0-NEXT:    s_cselect_b32 s14, s18, s19
+; GCN-O0-NEXT:    s_and_b64 s[12:13], s[12:13], exec
+; GCN-O0-NEXT:    s_cselect_b32 s12, s16, s17
+; GCN-O0-NEXT:    ; kill: def $sgpr12 killed $sgpr12 def $sgpr12_sgpr13
+; GCN-O0-NEXT:    s_mov_b32 s13, s14
+; GCN-O0-NEXT:    s_mov_b32 s23, s41
+; GCN-O0-NEXT:    s_mov_b32 s14, s40
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 def $sgpr14_sgpr15
+; GCN-O0-NEXT:    s_mov_b32 s15, s23
+; GCN-O0-NEXT:    s_andn2_b64 s[14:15], s[14:15], s[12:13]
+; GCN-O0-NEXT:    s_and_b64 s[12:13], s[12:13], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[14:15], s[12:13], s[14:15]
+; GCN-O0-NEXT:    s_mov_b32 s12, s15
+; GCN-O0-NEXT:    s_mov_b32 s13, s14
+; GCN-O0-NEXT:    s_mov_b32 s14, 1
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s14
+; GCN-O0-NEXT:    s_cselect_b64 s[14:15], -1, 0
+; GCN-O0-NEXT:    s_and_b64 s[24:25], s[14:15], exec
+; GCN-O0-NEXT:    s_cselect_b32 s23, s18, s19
+; GCN-O0-NEXT:    s_and_b64 s[14:15], s[14:15], exec
+; GCN-O0-NEXT:    s_cselect_b32 s14, s16, s17
+; GCN-O0-NEXT:    ; kill: def $sgpr14 killed $sgpr14 def $sgpr14_sgpr15
+; GCN-O0-NEXT:    s_mov_b32 s15, s23
+; GCN-O0-NEXT:    s_mov_b32 s23, s39
+; GCN-O0-NEXT:    s_mov_b32 s24, s38
+; GCN-O0-NEXT:    ; kill: def $sgpr24 killed $sgpr24 def $sgpr24_sgpr25
+; GCN-O0-NEXT:    s_mov_b32 s25, s23
+; GCN-O0-NEXT:    s_andn2_b64 s[24:25], s[24:25], s[14:15]
+; GCN-O0-NEXT:    s_and_b64 s[14:15], s[14:15], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[24:25], s[14:15], s[24:25]
+; GCN-O0-NEXT:    s_mov_b32 s14, s25
+; GCN-O0-NEXT:    s_mov_b32 s15, s24
+; GCN-O0-NEXT:    s_mov_b32 s23, 0
+; GCN-O0-NEXT:    s_cmp_eq_u32 s22, s23
+; GCN-O0-NEXT:    s_cselect_b64 s[22:23], -1, 0
+; GCN-O0-NEXT:    s_and_b64 s[24:25], s[22:23], exec
+; GCN-O0-NEXT:    s_cselect_b32 s18, s18, s19
+; GCN-O0-NEXT:    s_and_b64 s[22:23], s[22:23], exec
+; GCN-O0-NEXT:    s_cselect_b32 s16, s16, s17
 ; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
 ; GCN-O0-NEXT:    s_mov_b32 s17, s18
-; GCN-O0-NEXT:    s_mov_b32 s20, s43
-; GCN-O0-NEXT:    s_mov_b32 s18, s42
+; GCN-O0-NEXT:    s_mov_b32 s22, s37
+; GCN-O0-NEXT:    s_mov_b32 s18, s36
 ; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 def $sgpr18_sgpr19
-; GCN-O0-NEXT:    s_mov_b32 s19, s20
+; GCN-O0-NEXT:    s_mov_b32 s19, s22
 ; GCN-O0-NEXT:    s_andn2_b64 s[18:19], s[18:19], s[16:17]
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[16:17], s[16:17], s[18:19]
-; GCN-O0-NEXT:    s_mov_b32 s26, s17
-; GCN-O0-NEXT:    s_mov_b32 s27, s16
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s15
-; GCN-O0-NEXT:    s_cselect_b64 s[16:17], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[18:19], s[16:17], exec
-; GCN-O0-NEXT:    s_cselect_b32 s15, s10, s11
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], exec
-; GCN-O0-NEXT:    s_cselect_b32 s16, s8, s9
+; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], s[20:21]
+; GCN-O0-NEXT:    s_or_b64 s[18:19], s[16:17], s[18:19]
+; GCN-O0-NEXT:    s_mov_b32 s16, s19
+; GCN-O0-NEXT:    s_mov_b32 s36, s18
+; GCN-O0-NEXT:    ; kill: def $sgpr36 killed $sgpr36 def $sgpr36_sgpr37_sgpr38_sgpr39_sgpr40_sgpr41_sgpr42_sgpr43_sgpr44_sgpr45_sgpr46_sgpr47_sgpr48_sgpr49_sgpr50_sgpr51
+; GCN-O0-NEXT:    s_mov_b32 s37, s16
+; GCN-O0-NEXT:    s_mov_b32 s38, s15
+; GCN-O0-NEXT:    s_mov_b32 s39, s14
+; GCN-O0-NEXT:    s_mov_b32 s40, s13
+; GCN-O0-NEXT:    s_mov_b32 s41, s12
+; GCN-O0-NEXT:    s_mov_b32 s42, s11
+; GCN-O0-NEXT:    s_mov_b32 s43, s10
+; GCN-O0-NEXT:    s_mov_b32 s44, s9
+; GCN-O0-NEXT:    s_mov_b32 s45, s8
+; GCN-O0-NEXT:    s_mov_b32 s46, s7
+; GCN-O0-NEXT:    s_mov_b32 s47, s6
+; GCN-O0-NEXT:    s_mov_b32 s48, s3
+; GCN-O0-NEXT:    s_mov_b32 s49, s2
+; GCN-O0-NEXT:    s_mov_b32 s50, s1
+; GCN-O0-NEXT:    s_mov_b32 s51, s0
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], s[44:45]
+; GCN-O0-NEXT:    s_mov_b64 s[10:11], s[46:47]
+; GCN-O0-NEXT:    s_mov_b64 s[12:13], s[48:49]
+; GCN-O0-NEXT:    s_mov_b64 s[14:15], s[50:51]
+; GCN-O0-NEXT:    s_mov_b64 s[0:1], s[12:13]
+; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[14:15]
+; GCN-O0-NEXT:    s_mov_b64 s[18:19], 32
+; GCN-O0-NEXT:    s_mov_b32 s6, s4
+; GCN-O0-NEXT:    s_mov_b32 s7, s5
+; GCN-O0-NEXT:    s_mov_b32 s17, s18
+; GCN-O0-NEXT:    s_mov_b32 s16, s19
+; GCN-O0-NEXT:    s_add_u32 s6, s6, s17
+; GCN-O0-NEXT:    s_addc_u32 s16, s7, s16
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GCN-O0-NEXT:    s_mov_b32 s7, s16
+; GCN-O0-NEXT:    s_mov_b64 s[18:19], 16
+; GCN-O0-NEXT:    s_mov_b32 s16, s6
+; GCN-O0-NEXT:    s_mov_b32 s17, s7
+; GCN-O0-NEXT:    s_mov_b32 s21, s18
+; GCN-O0-NEXT:    s_mov_b32 s20, s19
+; GCN-O0-NEXT:    s_add_u32 s16, s16, s21
+; GCN-O0-NEXT:    s_addc_u32 s20, s17, s20
 ; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
-; GCN-O0-NEXT:    s_mov_b32 s17, s15
-; GCN-O0-NEXT:    s_mov_b32 s15, s41
-; GCN-O0-NEXT:    s_mov_b32 s18, s40
-; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 def $sgpr18_sgpr19
-; GCN-O0-NEXT:    s_mov_b32 s19, s15
-; GCN-O0-NEXT:    s_andn2_b64 s[18:19], s[18:19], s[16:17]
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[16:17], s[16:17], s[18:19]
-; GCN-O0-NEXT:    s_mov_b32 s28, s17
-; GCN-O0-NEXT:    s_mov_b32 s29, s16
-; GCN-O0-NEXT:    s_mov_b32 s15, 1
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s15
-; GCN-O0-NEXT:    s_cselect_b64 s[16:17], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[18:19], s[16:17], exec
-; GCN-O0-NEXT:    s_cselect_b32 s15, s10, s11
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], exec
-; GCN-O0-NEXT:    s_cselect_b32 s16, s8, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr16 killed $sgpr16 def $sgpr16_sgpr17
-; GCN-O0-NEXT:    s_mov_b32 s17, s15
-; GCN-O0-NEXT:    s_mov_b32 s15, s39
-; GCN-O0-NEXT:    s_mov_b32 s18, s38
-; GCN-O0-NEXT:    ; kill: def $sgpr18 killed $sgpr18 def $sgpr18_sgpr19
-; GCN-O0-NEXT:    s_mov_b32 s19, s15
-; GCN-O0-NEXT:    s_andn2_b64 s[18:19], s[18:19], s[16:17]
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[16:17], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[16:17], s[16:17], s[18:19]
-; GCN-O0-NEXT:    s_mov_b32 s30, s17
-; GCN-O0-NEXT:    s_mov_b32 s31, s16
-; GCN-O0-NEXT:    s_mov_b32 s15, 0
-; GCN-O0-NEXT:    s_cmp_eq_u32 s14, s15
-; GCN-O0-NEXT:    s_cselect_b64 s[14:15], -1, 0
-; GCN-O0-NEXT:    s_and_b64 s[16:17], s[14:15], exec
-; GCN-O0-NEXT:    s_cselect_b32 s10, s10, s11
-; GCN-O0-NEXT:    s_and_b64 s[14:15], s[14:15], exec
-; GCN-O0-NEXT:    s_cselect_b32 s8, s8, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9
-; GCN-O0-NEXT:    s_mov_b32 s9, s10
-; GCN-O0-NEXT:    s_mov_b32 s14, s37
-; GCN-O0-NEXT:    s_mov_b32 s10, s36
-; GCN-O0-NEXT:    ; kill: def $sgpr10 killed $sgpr10 def $sgpr10_sgpr11
-; GCN-O0-NEXT:    s_mov_b32 s11, s14
-; GCN-O0-NEXT:    s_andn2_b64 s[10:11], s[10:11], s[8:9]
-; GCN-O0-NEXT:    s_and_b64 s[8:9], s[8:9], s[12:13]
-; GCN-O0-NEXT:    s_or_b64 s[8:9], s[8:9], s[10:11]
-; GCN-O0-NEXT:    s_mov_b32 s33, s9
-; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
-; GCN-O0-NEXT:    ; kill: def $sgpr8 killed $sgpr8 def $sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15_sgpr16_sgpr17_sgpr18_sgpr19_sgpr20_sgpr21_sgpr22_sgpr23
-; GCN-O0-NEXT:    s_mov_b32 s9, s33
-; GCN-O0-NEXT:    s_mov_b32 s10, s31
-; GCN-O0-NEXT:    s_mov_b32 s11, s30
-; GCN-O0-NEXT:    s_mov_b32 s12, s29
-; GCN-O0-NEXT:    s_mov_b32 s13, s28
-; GCN-O0-NEXT:    s_mov_b32 s14, s27
-; GCN-O0-NEXT:    s_mov_b32 s15, s26
-; GCN-O0-NEXT:    s_mov_b32 s16, s25
-; GCN-O0-NEXT:    s_mov_b32 s17, s24
-; GCN-O0-NEXT:    s_mov_b32 s18, s7
-; GCN-O0-NEXT:    s_mov_b32 s19, s6
-; GCN-O0-NEXT:    s_mov_b32 s20, s5
-; GCN-O0-NEXT:    s_mov_b32 s21, s4
-; GCN-O0-NEXT:    s_mov_b32 s22, s3
-; GCN-O0-NEXT:    s_mov_b32 s23, s2
-; GCN-O0-NEXT:    s_mov_b32 s2, s23
-; GCN-O0-NEXT:    s_mov_b32 s3, s22
-; GCN-O0-NEXT:    s_mov_b32 s4, s21
-; GCN-O0-NEXT:    s_mov_b32 s5, s20
-; GCN-O0-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-O0-NEXT:    v_mov_b32_e32 v6, s4
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
-; GCN-O0-NEXT:    v_mov_b32_e32 v4, v1
-; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
-; GCN-O0-NEXT:    s_mov_b64 s[6:7], 32
-; GCN-O0-NEXT:    s_mov_b32 s2, s0
-; GCN-O0-NEXT:    s_mov_b32 s3, s1
-; GCN-O0-NEXT:    s_mov_b32 s5, s6
-; GCN-O0-NEXT:    s_mov_b32 s4, s7
-; GCN-O0-NEXT:    s_add_u32 s2, s2, s5
-; GCN-O0-NEXT:    s_addc_u32 s4, s3, s4
-; GCN-O0-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
-; GCN-O0-NEXT:    s_mov_b32 s3, s4
-; GCN-O0-NEXT:    s_mov_b64 s[6:7], 16
-; GCN-O0-NEXT:    s_mov_b32 s4, s2
-; GCN-O0-NEXT:    s_mov_b32 s5, s3
-; GCN-O0-NEXT:    s_mov_b32 s25, s6
-; GCN-O0-NEXT:    s_mov_b32 s24, s7
-; GCN-O0-NEXT:    s_add_u32 s4, s4, s25
-; GCN-O0-NEXT:    s_addc_u32 s24, s5, s24
-; GCN-O0-NEXT:    ; kill: def $sgpr4 killed $sgpr4 def $sgpr4_sgpr5
-; GCN-O0-NEXT:    s_mov_b32 s5, s24
+; GCN-O0-NEXT:    s_mov_b32 s17, s20
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s16
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, s17
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GCN-O0-NEXT:    s_mov_b64 s[0:1], s[8:9]
+; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[10:11]
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, s7
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GCN-O0-NEXT:    s_mov_b64 s[8:9], s[36:37]
+; GCN-O0-NEXT:    s_mov_b64 s[10:11], s[38:39]
+; GCN-O0-NEXT:    s_mov_b64 s[12:13], s[40:41]
+; GCN-O0-NEXT:    s_mov_b64 s[14:15], s[42:43]
+; GCN-O0-NEXT:    s_mov_b64 s[0:1], s[12:13]
+; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[14:15]
+; GCN-O0-NEXT:    s_mov_b32 s6, s4
+; GCN-O0-NEXT:    s_mov_b32 s7, s5
+; GCN-O0-NEXT:    s_mov_b32 s17, s18
+; GCN-O0-NEXT:    s_mov_b32 s16, s19
+; GCN-O0-NEXT:    s_add_u32 s6, s6, s17
+; GCN-O0-NEXT:    s_addc_u32 s16, s7, s16
+; GCN-O0-NEXT:    ; kill: def $sgpr6 killed $sgpr6 def $sgpr6_sgpr7
+; GCN-O0-NEXT:    s_mov_b32 s7, s16
+; GCN-O0-NEXT:    v_mov_b32_e32 v0, s6
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, s7
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
+; GCN-O0-NEXT:    s_mov_b64 s[0:1], s[8:9]
+; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; GCN-O0-NEXT:    s_mov_b32 s4, s19
-; GCN-O0-NEXT:    s_mov_b32 s5, s18
-; GCN-O0-NEXT:    s_mov_b32 s24, s17
-; GCN-O0-NEXT:    s_mov_b32 s25, s16
-; GCN-O0-NEXT:    v_mov_b32_e32 v2, s25
-; GCN-O0-NEXT:    v_mov_b32_e32 v6, s24
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
-; GCN-O0-NEXT:    v_mov_b32_e32 v4, v1
-; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; GCN-O0-NEXT:    s_mov_b32 s2, s15
-; GCN-O0-NEXT:    s_mov_b32 s3, s14
-; GCN-O0-NEXT:    s_mov_b32 s4, s13
-; GCN-O0-NEXT:    s_mov_b32 s5, s12
-; GCN-O0-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-O0-NEXT:    v_mov_b32_e32 v6, s4
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
-; GCN-O0-NEXT:    v_mov_b32_e32 v4, v1
-; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
-; GCN-O0-NEXT:    s_mov_b32 s2, s0
-; GCN-O0-NEXT:    s_mov_b32 s3, s1
-; GCN-O0-NEXT:    s_mov_b32 s5, s6
-; GCN-O0-NEXT:    s_mov_b32 s4, s7
-; GCN-O0-NEXT:    s_add_u32 s2, s2, s5
-; GCN-O0-NEXT:    s_addc_u32 s4, s3, s4
-; GCN-O0-NEXT:    ; kill: def $sgpr2 killed $sgpr2 def $sgpr2_sgpr3
-; GCN-O0-NEXT:    s_mov_b32 s3, s4
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
-; GCN-O0-NEXT:    s_mov_b32 s2, s11
-; GCN-O0-NEXT:    s_mov_b32 s3, s10
-; GCN-O0-NEXT:    s_mov_b32 s4, s9
-; GCN-O0-NEXT:    s_mov_b32 s5, s8
-; GCN-O0-NEXT:    v_mov_b32_e32 v2, s5
-; GCN-O0-NEXT:    v_mov_b32_e32 v6, s4
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-O0-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3_vgpr4_vgpr5 killed $exec
-; GCN-O0-NEXT:    v_mov_b32_e32 v3, v6
-; GCN-O0-NEXT:    v_mov_b32_e32 v4, v1
-; GCN-O0-NEXT:    v_mov_b32_e32 v5, v0
-; GCN-O0-NEXT:    v_mov_b32_e32 v0, s0
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-O0-NEXT:    v_mov_b32_e32 v5, s3
+; GCN-O0-NEXT:    v_mov_b32_e32 v4, s2
+; GCN-O0-NEXT:    v_mov_b32_e32 v3, s1
+; GCN-O0-NEXT:    v_mov_b32_e32 v2, s0
 ; GCN-O0-NEXT:    flat_store_dwordx4 v[0:1], v[2:5]
 ; GCN-O0-NEXT:    s_endpgm
 entry:

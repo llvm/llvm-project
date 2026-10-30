@@ -2609,17 +2609,17 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-FLATSCR:       ; %bb.0:
 ; GFX9-FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s0, s2
 ; GFX9-FLATSCR-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v23, 0x3f5f2ee2
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v24, 0x3f523be1
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v25, 0x3f3d349e
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v27, 0x3f5f2ee2
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v28, 0x3f523be1
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v29, 0x3f3d349e
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v17, 0xbeae29dc
 ; GFX9-FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s1, 0
-; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v26, 0x1fc, v0
+; GFX9-FLATSCR-NEXT:    v_and_b32_e32 v30, 0x1fc, v0
 ; GFX9-FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v1, v25
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v2, v24
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v3, v23
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v1, v29
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v2, v28
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v3, v27
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v19, 0xbefcd89f
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v20, 0xbefcd8a3
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v18, v17
@@ -2646,8 +2646,8 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v24, v22
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f5
 ; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v15, v11
-; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v16, v30
-; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[22:25], s0 offset:304
+; GFX9-FLATSCR-NEXT:    v_mov_b32_e32 v16, v25
+; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[26:29], s0 offset:304
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:256
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[6:9], s0 offset:240
 ; GFX9-FLATSCR-NEXT:    scratch_store_dwordx4 off, v[22:25], s0 offset:208
@@ -2783,20 +2783,20 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s2, s0
 ; GFX9-FLATSCR-PAL-NEXT:    s_load_dwordx2 s[2:3], s[2:3], 0x10
 ; GFX9-FLATSCR-PAL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v23, 0x3f5f2ee2
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v24, 0x3f523be1
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v25, 0x3f3d349e
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v27, 0x3f5f2ee2
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v28, 0x3f523be1
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v29, 0x3f3d349e
 ; GFX9-FLATSCR-PAL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-FLATSCR-PAL-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX9-FLATSCR-PAL-NEXT:    s_add_u32 flat_scratch_lo, s2, s0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v17, 0xbeae29dc
 ; GFX9-FLATSCR-PAL-NEXT:    s_addc_u32 flat_scratch_hi, s3, 0
-; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v26, 0x1fc, v0
+; GFX9-FLATSCR-PAL-NEXT:    v_and_b32_e32 v30, 0x1fc, v0
 ; GFX9-FLATSCR-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v0, 0xbf20e7f4
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, v25
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v24
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v23
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v1, v29
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v2, v28
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v3, v27
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v19, 0xbefcd89f
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v20, 0xbefcd8a3
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v18, v17
@@ -2823,8 +2823,8 @@ define amdgpu_cs float @cs_main(i32 %idx) {
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v24, v22
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v14, 0x3f20e7f5
 ; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v15, v11
-; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v16, v30
-; GFX9-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[22:25], s0 offset:304
+; GFX9-FLATSCR-PAL-NEXT:    v_mov_b32_e32 v16, v25
+; GFX9-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[26:29], s0 offset:304
 ; GFX9-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:256
 ; GFX9-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[6:9], s0 offset:240
 ; GFX9-FLATSCR-PAL-NEXT:    scratch_store_dwordx4 off, v[22:25], s0 offset:208
