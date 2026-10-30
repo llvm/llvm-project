@@ -12781,6 +12781,9 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,
          AddeSubeNode->getOperand(2).getValueType() == MVT::i32 &&
          "ADDE node has the wrong inputs");
 
+  if (AddeSubeNode->hasAnyUseOfValue(1))
+    return SDValue();
+
   // Check that we are chained to the right ADDC or SUBC node.
   SDNode *AddcSubcNode = AddeSubeNode->getOperand(2).getNode();
   if ((AddeSubeNode->getOpcode() == ARMISD::ADDE &&
@@ -12879,7 +12882,7 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddeSubeNode,
   // part of the result of the MLAL, furthermore the LowAddSub must be a constant
   // addition or subtraction with the value of 0x800000.
   if (Subtarget->hasV6Ops() && Subtarget->hasDSP() && Subtarget->useMulOps() &&
-      FinalOpc == ARMISD::SMLAL && !AddeSubeNode->hasAnyUseOfValue(1) &&
+      FinalOpc == ARMISD::SMLAL &&
       LowAddSub->getNode()->getOpcode() == ISD::Constant &&
       static_cast<ConstantSDNode *>(LowAddSub->getNode())->getZExtValue() ==
           0x80000000) {
@@ -12924,6 +12927,9 @@ static SDValue AddCombineTo64bitUMAAL(SDNode *AddeNode,
   // chance to use UMAAL. Check if Addc uses a node which has already
   // been combined into a UMLAL. The other pattern is UMLAL using Addc/Adde
   // as the addend, and it's handled in PerformUMLALCombine.
+
+  if (AddeNode->hasAnyUseOfValue(1))
+    return SDValue();
 
   if (!Subtarget->hasV6Ops() || !Subtarget->hasDSP())
     return AddCombineTo64bitMLAL(AddeNode, DCI, Subtarget);
