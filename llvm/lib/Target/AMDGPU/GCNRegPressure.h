@@ -420,9 +420,15 @@ public:
 protected:
   GCNDownwardRPTrackerBase(LiveIntervals &LIS) : GCNRPTracker(LIS) {}
 
-  /// Retires all lanes of \p MI's register operands that are dead at \p SI,
-  /// according to LIS.
-  void retireDeadOperands(const MachineInstr &MI, SlotIndex SI);
+  /// Retires the lanes of \p MI's used registers that die at \p MI, mirroring
+  /// RegPressureTracker::advance(). Early-clobber defs of \p MI are accounted
+  /// in \ref MaxPressure as live together with all of its uses. The uses of a
+  /// PHI are not retired since they do not die there.
+  void retireDeadUses(const MachineInstr &MI);
+
+  /// Retires the lanes defined by \p MI that are dead at \p SI, according to
+  /// LIS.
+  void retireDeadDefs(const MachineInstr &MI, SlotIndex SI);
 
   /// Adds all lanes (dead or not) defined by \p MI's register operands to \ref
   /// CurPressure.
@@ -447,6 +453,7 @@ private:
 public:
   GCNDownwardRPTracker(LiveIntervals &LIS) : GCNDownwardRPTrackerBase(LIS) {}
 
+  using GCNDownwardRPTrackerBase::addDefs;
   using GCNRPTracker::reset;
 
   /// Returns the next MI that will be advanced over.
@@ -468,12 +475,14 @@ public:
              const LiveRegSet *LiveRegsCopy = nullptr);
 
   /// Move to the state right before \ref NextMI or the end of the MBB. This
-  /// retires defs/uses of \ref LastTrackedMI that are dead after the
-  /// instruction. \p returns false if it reached the end of the block.
+  /// retires defs of \ref LastTrackedMI that are dead after the instruction.
+  /// Its dead uses were already retired by \ref advanceToNext. \p returns
+  /// false if it reached the end of the block.
   bool advanceBeforeNext();
 
-  /// Move to the state at \ref NextMI. This adds register lanes define by \p
-  /// NextMI to \ref CurPressure. Has to be called after \ref advanceBeforeNext.
+  /// Move to the state at \ref NextMI. This retires the uses that die at \p
+  /// NextMI, then adds the register lanes it defines to \ref CurPressure. Has
+  /// to be called after \ref advanceBeforeNext.
   void advanceToNext();
 
   /// Advance to the state at the next MI in program order. \p returns false if

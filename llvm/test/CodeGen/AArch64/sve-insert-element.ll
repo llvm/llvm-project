@@ -633,14 +633,13 @@ define <vscale x 32 x i1> @test_predicate_insert_32xi1(<vscale x 32 x i1> %val, 
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    addvl sp, sp, #-2
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
-; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    mov z0.b, p1/z, #1 // =0x1
 ; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    sub x8, x8, #1
+; CHECK-NEXT:    rdvl x8, #2
+; CHECK-NEXT:    sub w8, w8, #1
 ; CHECK-NEXT:    mov w9, w1
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    cmp x9, x8
-; CHECK-NEXT:    csel x8, x9, x8, lo
+; CHECK-NEXT:    and x8, x9, x8
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    str z0, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z1, [sp]
