@@ -16,6 +16,7 @@
 #include "mlir/IR/Operation.h"
 
 namespace mlir {
+class MemRefType;
 class RewriterBase;
 
 namespace nvgpu {
@@ -23,6 +24,15 @@ namespace nvgpu {
 ///
 /// Passes
 ///
+
+/// Returns true if `optimizeSharedMemoryReadsAndWrites` can swizzle accesses to
+/// shared memory buffers of type `memRefType`. Their rows, i.e., the innermost
+/// dimension, must be of static size, longer than 16 bytes, and span a power of
+/// 2 number of bits. The swizzle XORs the index of each 128-bit vector in a row
+/// with bits of the row index; it keeps the result within the row only if a row
+/// is a power of 2 number of vectors. Memrefs with vector element types are not
+/// supported.
+bool canSwizzleSharedMemoryAccesses(MemRefType memRefType);
 
 /// Optimizes vectorized accesses to a shared memory buffer specified by
 /// memrefValue. This transformation assumes the following:
