@@ -1026,3 +1026,12 @@ void unsigned_concrete_int_no_crash(void) {
   clang_analyzer_express(y); // expected-warning {{$y}}
   clang_analyzer_express(x == y); // expected-warning {{$x + 1U == $y + 1U}}
 }
+
+void add_shifted_same_symbol(void) {
+  int x = f();
+  clang_analyzer_denote(x, "$x");
+  clang_analyzer_express((x + 1) + (x + 2)); // expected-warning{{$x + $x + 3}}
+  clang_analyzer_express((x + 1) + x); // expected-warning{{$x + $x + 1}}
+  clang_analyzer_express((x - 1) + (x + 1)); // expected-warning{{$x + $x}}
+  clang_analyzer_express(x + x); // expected-warning{{$x + $x}}
+}

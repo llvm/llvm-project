@@ -346,7 +346,7 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   if (BinaryOperator::isComparisonOp(Op) && !InBounds(LInt, RInt, LSym, RSym))
     return std::nullopt;
 
-  if (LSym == RSym)
+  if (LSym == RSym && Op != BO_Add)
     return SVB
         .evalBinOpNN(State, Op, nonloc::ConcreteInt(BV.getValue(LInt)),
                      nonloc::ConcreteInt(BV.getValue(RInt)), ResultTy)
