@@ -1551,6 +1551,7 @@ add_header_library(
   HDRS
     ppoll.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.types.nfds_t
     libc.hdr.types.sigset_t
@@ -1839,11 +1840,10 @@ add_header_library(
   HDRS
     pause.h
   DEPENDS
-    libc.include.sys_syscall
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ppoll
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
-    libc.src.__support.OSUtil.osutil
 )
 
 add_header_library(
