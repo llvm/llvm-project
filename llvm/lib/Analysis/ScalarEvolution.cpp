@@ -9433,12 +9433,15 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       }
     }
     RHS = getAddExpr(getOne(RHS->getType()), RHS);
+    // RHS + 1 may not have the same sign as RHS, so samesign no longer applies.
+    Pred = Pred.dropSameSign();
     [[fallthrough]];
   case ICmpInst::ICMP_SLT:
   case ICmpInst::ICMP_ULT: { // while (X < Y)
     bool IsSigned = ICmpInst::isSigned(Pred);
-    ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, /*Invert=*/false,
-                                    ControlsOnlyExit, AllowPredicates);
+    ExitLimit EL =
+        howManyLessThans(LHS, RHS, L, IsSigned, Pred.hasSameSign(),
+                         /*Invert=*/false, ControlsOnlyExit, AllowPredicates);
     if (EL.hasAnyInfo())
       return EL;
     break;
@@ -9451,13 +9454,16 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
         !isLoopInvariant(RHS, L))
       break;
     RHS = getAddExpr(getMinusOne(RHS->getType()), RHS);
+    // RHS - 1 may not have the same sign as RHS, so samesign no longer applies.
+    Pred = Pred.dropSameSign();
     [[fallthrough]];
   case ICmpInst::ICMP_SGT:
   case ICmpInst::ICMP_UGT: { // while (X > Y)
     // "X > Y" is analyzed as the equivalent "~X < ~Y".
     bool IsSigned = ICmpInst::isSigned(Pred);
-    ExitLimit EL = howManyLessThans(LHS, RHS, L, IsSigned, /*Invert=*/true,
-                                    ControlsOnlyExit, AllowPredicates);
+    ExitLimit EL =
+        howManyLessThans(LHS, RHS, L, IsSigned, Pred.hasSameSign(),
+                         /*Invert=*/true, ControlsOnlyExit, AllowPredicates);
     if (EL.hasAnyInfo())
       return EL;
     break;
@@ -13235,10 +13241,9 @@ const SCEV *ScalarEvolution::getUDivCeilSCEV(const SCEV *N, const SCEV *D) {
   return getAddExpr(MinNOne, getUDivExpr(NMinusOne, D));
 }
 
-const SCEV *
-ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
-                                        const SCEV *End, unsigned BitWidth,
-                                        bool IsSigned, bool Invert) {
+const SCEV *ScalarEvolution::computeMaxBECountForLT(
+    const SCEV *Start, const SCEV *Stride, const SCEV *End, unsigned BitWidth,
+    bool IsSigned, bool IsSameSign, bool Invert) {
   // The logic in this function assumes we can represent a positive stride.
   // If we can't, the backedge-taken count must be zero.
   if (IsSigned && BitWidth == 1)
@@ -13253,7 +13258,33 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
   // Calculate the maximum backedge count based on the range of values
   // permitted by Start, End, and Stride. If Invert is true, both Start and End
   // need inverting. Stride was already negated by the caller.
-  APInt MinStart = getRangeMin(Start, IsSigned, Invert);
+  ConstantRange StartRange =
+      IsSigned ? getSignedRange(Start) : getUnsignedRange(Start);
+  ConstantRange EndRange =
+      IsSigned ? getSignedRange(End) : getUnsignedRange(End);
+
+  // Refine range of IV using the samesign (i.e. top bit is the same for LHS
+  // and RHS).
+  if (IsSameSign) {
+    APInt Zero = APInt::getZero(BitWidth);
+    if (isKnownNonNegative(Start) || isKnownNonNegative(End)) {
+      // If either LHS or RHS is known to have no top bit, we can infer the
+      // other potentially unknown side doesn't have top bit.
+      ConstantRange NonNeg =
+          ConstantRange::makeExactICmpRegion(ICmpInst::ICMP_SGE, Zero);
+      StartRange = StartRange.intersectWith(NonNeg);
+      EndRange = EndRange.intersectWith(NonNeg);
+    } else if (isKnownNegative(Start) || isKnownNegative(End)) {
+      // Similarly, if they are known to have top bit set, refine the range of
+      // the other side such that it has top bit set as well.
+      ConstantRange Neg =
+          ConstantRange::makeExactICmpRegion(ICmpInst::ICMP_SLT, Zero);
+      StartRange = StartRange.intersectWith(Neg);
+      EndRange = EndRange.intersectWith(Neg);
+    }
+  }
+
+  APInt MinStart = getRangeMin(StartRange, IsSigned, Invert);
 
   APInt MinStride =
       IsSigned ? getSignedRangeMin(Stride) : getUnsignedRangeMin(Stride);
@@ -13272,7 +13303,7 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
   // the case End = RHS of the loop termination condition. This is safe because
   // in the other case (End - Start) is zero, leading to a zero maximum backedge
   // taken count.
-  APInt MaxEnd = getRangeMax(End, IsSigned, Invert);
+  APInt MaxEnd = getRangeMax(EndRange, IsSigned, Invert);
   MaxEnd =
       IsSigned ? APIntOps::smin(MaxEnd, Limit) : APIntOps::umin(MaxEnd, Limit);
 
@@ -13291,10 +13322,9 @@ ScalarEvolution::computeMaxBECountForLT(const SCEV *Start, const SCEV *Stride,
   return getUDivCeilSCEV(getConstant(Delta), getConstant(StrideForMaxBECount));
 }
 
-ScalarEvolution::ExitLimit
-ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
-                                  const Loop *L, bool IsSigned, bool Invert,
-                                  bool ControlsOnlyExit, bool AllowPredicates) {
+ScalarEvolution::ExitLimit ScalarEvolution::howManyLessThans(
+    const SCEV *LHS, const SCEV *RHS, const Loop *L, bool IsSigned,
+    bool IsSameSign, bool Invert, bool ControlsOnlyExit, bool AllowPredicates) {
   SmallVector<const SCEVPredicate *> Predicates;
 
   LoopGuards Guards = LoopGuards::collectOnDemand(L, *this);
@@ -13801,7 +13831,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   } else {
     ConstantMaxBECount = computeMaxBECountForLT(
         Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned,
-        Invert);
+        IsSameSign, Invert);
     // If we know exactly how many times the backedge will be taken if it's
     // taken at least once, then the backedge count will either be that or
     // zero. If that count exceeds the range-based bound, the backedge can
