@@ -23,7 +23,11 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
 
   for (auto &BB : BF) {
     for (auto II = BB.begin(); II != BB.end();) {
-      if (MIB->isCall(*II) && !MIB->isIndirectCall(*II)) {
+      // RISC-V has no conditional tail call. One here usually comes from
+      // __builtin_unreachable(), so skip it. Branch relaxation can handle an
+      // out-of-range target later if needed.
+      if (MIB->isCall(*II) && !MIB->isIndirectCall(*II) &&
+          !MIB->isConditionalBranch(*II)) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 

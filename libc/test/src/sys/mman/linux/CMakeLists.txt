@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_mman_unittests)
+add_libc_testsuite(libc-sys-mman-tests)
 
 add_libc_test(
   mmap_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mmap_test.cpp
   DEPENDS
@@ -21,7 +21,7 @@ add_libc_test(
 add_libc_test(
   mremap_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mremap_test.cpp
   DEPENDS
@@ -35,29 +35,27 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-if(NOT LLVM_USE_SANITIZER)
-  add_libc_test(
-    mprotect_test
-    SUITE
-      libc_sys_mman_unittests
-    SRCS
-      mprotect_test.cpp
-    DEPENDS
-      libc.hdr.sys_mman_macros
-      libc.include.signal
-      libc.src.errno.errno
-      libc.src.sys.mman.mmap
-      libc.src.sys.mman.munmap
-      libc.src.sys.mman.mprotect
-      libc.test.UnitTest.ErrnoCheckingTest
-      libc.test.UnitTest.ErrnoSetterMatcher
-  )
-endif()
+add_libc_test(
+  mprotect_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    mprotect_test.cpp
+  DEPENDS
+    libc.hdr.sys_mman_macros
+    libc.include.signal
+    libc.src.errno.errno
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.mprotect
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
 
 add_libc_test(
   madvise_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     madvise_test.cpp
   DEPENDS
@@ -71,37 +69,32 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-# Disable sanitizers for pkey_test.
-# This test intentionally triggers segfaults to verify pkey_mprotect behavior,
-# and sanitizers register signal handlers that interfere with death testing.
-if(NOT LLVM_USE_SANITIZER)
-  add_libc_test(
-    pkey_test
-    SUITE
-      libc_sys_mman_unittests
-    SRCS
-      pkey_test.cpp
-    DEPENDS
-      libc.hdr.errno_macros
-      libc.hdr.signal_macros
-      libc.hdr.sys_mman_macros
-      libc.hdr.types.size_t
-      libc.src.sys.mman.mmap
-      libc.src.sys.mman.munmap
-      libc.src.sys.mman.pkey_alloc
-      libc.src.sys.mman.pkey_free
-      libc.src.sys.mman.pkey_get
-      libc.src.sys.mman.pkey_mprotect
-      libc.src.sys.mman.pkey_set
-      libc.test.UnitTest.ErrnoCheckingTest
-      libc.test.UnitTest.ErrnoSetterMatcher
-  )
-endif()
+add_libc_test(
+  pkey_test
+  SUITE
+    libc-sys-mman-tests
+  SRCS
+    pkey_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.sys.mman.pkey_alloc
+    libc.src.sys.mman.pkey_free
+    libc.src.sys.mman.pkey_get
+    libc.src.sys.mman.pkey_mprotect
+    libc.src.sys.mman.pkey_set
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
 
 add_libc_test(
   posix_madvise_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     posix_madvise_test.cpp
   DEPENDS
@@ -118,7 +111,7 @@ add_libc_test(
 add_libc_test(
   mincore_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mincore_test.cpp
   DEPENDS
@@ -140,7 +133,7 @@ add_libc_test(
 add_libc_test(
   mlock_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     mlock_test.cpp
   DEPENDS
@@ -168,7 +161,7 @@ add_libc_test(
 add_libc_test(
   msync_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     msync_test.cpp
   DEPENDS
@@ -195,7 +188,7 @@ else()
   add_libc_test(
     remap_file_pages_test
     SUITE
-      libc_sys_mman_unittests
+      libc-sys-mman-tests
     SRCS
       remap_file_pages_test.cpp
     DEPENDS
@@ -216,7 +209,7 @@ endif()
 add_libc_test(
   shm_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     shm_test.cpp
   DEPENDS
@@ -240,7 +233,7 @@ add_libc_test(
 add_libc_test(
   memfd_create_test
   SUITE
-    libc_sys_mman_unittests
+    libc-sys-mman-tests
   SRCS
     memfd_create_test.cpp
   DEPENDS

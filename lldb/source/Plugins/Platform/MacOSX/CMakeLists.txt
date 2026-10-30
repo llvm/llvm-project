@@ -42,6 +42,7 @@ add_lldb_library(lldbPluginPlatformMacOSX PLUGIN
   ${PLUGIN_PLATFORM_MACOSX_SOURCES}
 
   LINK_COMPONENTS
+    Option
     Support
     TargetParser
   LINK_LIBS

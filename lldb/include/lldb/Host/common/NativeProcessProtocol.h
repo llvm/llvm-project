@@ -114,7 +114,7 @@ public:
   virtual Status WriteMemoryTags(int32_t type, lldb::addr_t addr, size_t len,
                                  const std::vector<uint8_t> &tags);
 
-  /// Reads a null terminated string from memory.
+  /// Reads a null-terminated string from memory.
   ///
   /// Reads up to \p max_size bytes of memory until it finds a '\0'.
   /// If a '\0' is not found then it reads max_size-1 bytes as a string and a
@@ -544,8 +544,11 @@ protected:
 
   NativeThreadProtocol *GetThreadByIDUnlocked(lldb::tid_t tid);
 
-private:
+  /// Notify the delegates of \p state. For plugins that set a state with
+  /// SetState(state, /*notify_delegates=*/false) and report it later.
   void SynchronouslyNotifyProcessStateChanged(lldb::StateType state);
+
+private:
   llvm::Expected<SoftwareBreakpoint>
   EnableSoftwareBreakpoint(lldb::addr_t addr, uint32_t size_hint);
 };

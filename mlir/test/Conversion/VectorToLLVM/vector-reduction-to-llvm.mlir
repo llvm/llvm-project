@@ -246,6 +246,136 @@ func.func @masked_reduce_minimumf_f32_fast(%arg0: vector<16xf32>, %mask : vector
 
 // -----
 
+// `maximumnum`/`minimumnum` have no predicated LLVM intrinsic, so inactive
+// lanes are filled with a mask neutral value before an unmasked reduction.
+// The neutral is a quiet NaN, which these operations ignore.
+
+func.func @masked_reduce_maximumnumf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <maximumnumf>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_maximumnumf_f32(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0x7FC00000> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[MASKED]]) : (vector<16xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+func.func @masked_reduce_minimumnumf_f32(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <minimumnumf>, %arg0 : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_minimumnumf_f32(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0x7FC00000> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[MASKED]]) : (vector<16xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+// Under `nnan` a NaN neutral would be poison, so the neutral becomes an
+// infinity instead.
+
+func.func @masked_reduce_maximumnumf_f32_nnan(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <maximumnumf>, %arg0 fastmath<nnan> : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_maximumnumf_f32_nnan(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0xFF800000> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[MASKED]]) fastmath<nnan> : (vector<16xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+func.func @masked_reduce_minimumnumf_f32_nnan(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <minimumnumf>, %arg0 fastmath<nnan> : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_minimumnumf_f32_nnan(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0x7F800000> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[MASKED]]) fastmath<nnan> : (vector<16xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+// `fast` is a group that includes `nnan` and `ninf`, so it selects the finite
+// neutral.
+
+func.func @masked_reduce_maximumnumf_f32_fast(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <maximumnumf>, %arg0 fastmath<fast> : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_maximumnumf_f32_fast(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<-3.40282347E+38> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[MASKED]]) fastmath<fast> : (vector<16xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+func.func @masked_reduce_minimumnumf_f32_fast(%arg0: vector<16xf32>, %mask : vector<16xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <minimumnumf>, %arg0 fastmath<fast> : vector<16xf32> into f32 } : vector<16xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_minimumnumf_f32_fast(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<16xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<16xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<3.40282347E+38> : vector<16xf32>) : vector<16xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<16xi1>, vector<16xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[MASKED]]) fastmath<fast> : (vector<16xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+func.func @masked_reduce_maximumnumf_f32_scalable(%arg0: vector<[16]xf32>, %mask : vector<[16]xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <maximumnumf>, %arg0 : vector<[16]xf32> into f32 } : vector<[16]xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_maximumnumf_f32_scalable(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<[16]xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<[16]xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0x7FC00000> : vector<[16]xf32>) : vector<[16]xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<[16]xi1>, vector<[16]xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[MASKED]]) : (vector<[16]xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
+func.func @masked_reduce_minimumnumf_f32_scalable(%arg0: vector<[16]xf32>, %mask : vector<[16]xi1>) -> f32 {
+  %0 = vector.mask %mask { vector.reduction <minimumnumf>, %arg0 : vector<[16]xf32> into f32 } : vector<[16]xi1> -> f32
+  return %0 : f32
+}
+
+// CHECK-LABEL:   func.func @masked_reduce_minimumnumf_f32_scalable(
+// CHECK-SAME:                                      %[[INPUT:.*]]: vector<[16]xf32>,
+// CHECK-SAME:                                      %[[MASK:.*]]: vector<[16]xi1>) -> f32 {
+// CHECK:           %[[NEUTRAL:.*]] = llvm.mlir.constant(dense<0x7FC00000> : vector<[16]xf32>) : vector<[16]xf32>
+// CHECK:           %[[MASKED:.*]] = llvm.select %[[MASK]], %[[INPUT]], %[[NEUTRAL]] : vector<[16]xi1>, vector<[16]xf32>
+// CHECK:           %[[RESULT:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[MASKED]]) : (vector<[16]xf32>) -> f32
+// CHECK:           return %[[RESULT]]
+
+// -----
+
 func.func @masked_reduce_add_i8(%arg0: vector<32xi8>, %mask : vector<32xi1>) -> i8 {
   %0 = vector.mask %mask { vector.reduction <add>, %arg0 : vector<32xi8> into i8 } : vector<32xi1> -> i8
   return %0 : i8

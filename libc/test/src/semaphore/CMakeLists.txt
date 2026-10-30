@@ -1,4 +1,4 @@
-add_custom_target(libc_semaphore_unittests)
+add_libc_testsuite(libc-semaphore-tests)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
@@ -7,7 +7,7 @@ endif()
 add_libc_test(
   sem_init_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     sem_init_test.cpp
   DEPENDS
@@ -32,7 +32,7 @@ add_libc_test(
 add_libc_test(
   sem_wait_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     sem_wait_test.cpp
   DEPENDS
@@ -58,7 +58,7 @@ add_libc_test(
 add_libc_test(
   sem_getvalue_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     sem_getvalue_test.cpp
   DEPENDS
@@ -77,7 +77,7 @@ add_libc_test(
 add_libc_test(
   sem_open_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     sem_open_test.cpp
   DEPENDS
@@ -99,7 +99,7 @@ add_libc_test(
 add_libc_test(
   sem_unlink_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     sem_unlink_test.cpp
   DEPENDS

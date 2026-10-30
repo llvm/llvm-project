@@ -34,12 +34,12 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
-#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -90,10 +90,6 @@ static cl::opt<std::string> RemarksFormat(
     "pass-remarks-format",
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
-
-static cl::list<std::string>
-    PassPlugins("load-pass-plugin",
-                cl::desc("Load passes from plugin library"));
 
 static cl::opt<std::string> PassPipeline(
     "passes",
@@ -229,20 +225,34 @@ Expected<StringRef> createOutputFile(const Twine &Prefix, StringRef Extension) {
 }
 
 /// Execute the command \p ExecutablePath with the arguments \p Args.
-Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
+/// If \p Proc is set, launch without waiting and store the process handle.
+Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args,
+                      sys::ProcessInfo *Proc = nullptr) {
   if (Verbose || DryRun)
     printCommands(Args);
 
   if (DryRun)
     return Error::success();
 
-  // If the command line fits within system limits, execute directly.
-  if (sys::commandLineFitsWithinSystemLimits(ExecutablePath, Args)) {
-    if (sys::ExecuteAndWait(ExecutablePath, Args))
+  auto Launch = [&](ArrayRef<StringRef> ExecArgs) -> Error {
+    if (Proc) {
+      bool ExecutionFailed = false;
+      *Proc = sys::ExecuteNoWait(ExecutablePath, ExecArgs, std::nullopt, {}, 0,
+                                 nullptr, &ExecutionFailed);
+      if (ExecutionFailed)
+        return createStringError(
+            "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
+      return Error::success();
+    }
+    if (sys::ExecuteAndWait(ExecutablePath, ExecArgs))
       return createStringError(
           "'%s' failed", sys::path::filename(ExecutablePath).str().c_str());
     return Error::success();
-  }
+  };
+
+  // If the command line fits within system limits, execute directly.
+  if (sys::commandLineFitsWithinSystemLimits(ExecutablePath, Args))
+    return Launch(Args);
 
   // Write the arguments to a response file and pass that instead.
   auto TempFileOrErr = createOutputFile("response", "rsp");
@@ -262,10 +272,7 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
 
   std::string ResponseFile = ("@" + *TempFileOrErr).str();
   SmallVector<StringRef, 2> NewArgs = {Args.front(), ResponseFile};
-  if (sys::ExecuteAndWait(ExecutablePath, NewArgs))
-    return createStringError("'%s' failed",
-                             sys::path::filename(ExecutablePath).str().c_str());
-  return Error::success();
+  return Launch(NewArgs);
 }
 
 Expected<std::string> findProgram(StringRef Name, ArrayRef<StringRef> Paths) {
@@ -423,28 +430,6 @@ fatbinary(ArrayRef<std::pair<StringRef, StringRef>> InputFiles,
 
 namespace amdgcn {
 
-// Constructs a triple string for clang offload bundler.
-// NOTE: copied from HIPUtility.cpp.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
-  // FIXME: Short-term hack, mirrors HIPUtility.cpp. The HIP runtime (CLR)
-  // hardcodes the legacy "amdgcn-amd-amdhsa" spelling when parsing the target
-  // IDs embedded in the fatbin bundle. The new amdgpu subarch triples (e.g.
-  // "amdgpu9.00-amd-amdhsa"), and the plain canonical "amdgpu" arch name, do
-  // not match, producing hipErrorInvalidImage at load time. Force the legacy
-  // "amdgcn-amd-amdhsa" spelling in the bundle entry until CLR stops
-  // hardcoding this.
-  if (HasTargetID && T.isAMDGCN())
-    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
-            T.getEnvironmentName())
-        .str();
-
-  return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
-                        T.getOSName() + "-" + T.getEnvironmentName())
-                           .str()
-                     : T.normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-}
-
 Expected<StringRef>
 fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
           const ArgList &Args) {
@@ -481,7 +466,7 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
       Saver.save("-targets=host-" + HostTriple.normalize())};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
-        normalizeForBundler(Triple(TripleRef), !Arch.empty());
+        clang::normalizeForBundler(Triple(TripleRef), Arch);
     Targets.push_back(Saver.save("hip-" + NormalizedTriple + "-" + Arch));
   }
   CmdArgs.push_back(Saver.save(llvm::join(Targets, ",")));
@@ -612,7 +597,24 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
-  if (Error Err = executeCommands(*ClangPath, CmdArgs))
+  // We cannot generate temporary assembly files to satisfy `--save-temps`
+  // through the LTO pipeline. Launch a separate clang job to emit the file.
+  sys::ProcessInfo AsmProc;
+  if (SaveTemps && Triple.isAMDGPU()) {
+    SmallVector<StringRef, 16> AsmArgs(CmdArgs);
+    llvm::erase(AsmArgs, "-Wl,--save-temps");
+    AsmArgs.append({"-Xlinker", "--lto-emit-asm"});
+    if (Error Err = executeCommands(*ClangPath, AsmArgs, &AsmProc))
+      return std::move(Err);
+  }
+
+  Error Err = executeCommands(*ClangPath, CmdArgs);
+  if (SaveTemps && Triple.isAMDGPU() && !DryRun) {
+    if (sys::Wait(AsmProc, std::nullopt).ReturnCode && !Err)
+      Err = createStringError("'%s' failed",
+                              sys::path::filename(*ClangPath).str().c_str());
+  }
+  if (Err)
     return std::move(Err);
 
   return *TempFileOrErr;
@@ -1554,14 +1556,8 @@ int main(int Argc, char **Argv) {
     NewArgv.push_back(Arg->getValue());
   for (const opt::Arg *Arg : Args.filtered(OPT_offload_opt_eq_minus))
     NewArgv.push_back(Arg->getValue());
-  SmallVector<PassPlugin, 1> PluginList;
-  PassPlugins.setCallback([&](const std::string &PluginPath) {
-    auto Plugin = PassPlugin::Load(PluginPath);
-    if (!Plugin)
-      reportFatalUsageError(Plugin.takeError());
-    PluginList.emplace_back(Plugin.get());
-  });
-  cl::ParseCommandLineOptions(NewArgv.size(), &NewArgv[0]);
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, NewArgv);
 
   Verbose = Args.hasArg(OPT_verbose);
   DryRun = Args.hasArg(OPT_dry_run);

@@ -106,6 +106,7 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[N]])
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[M]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -130,11 +131,11 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP33:%.*]] = sext i32 [[TMP32]] to i64
 ; CHECK-NEXT:    [[TMP34:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP33]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2f64.p0(<vscale x 2 x double> zeroinitializer, ptr align 8 [[TMP34]], <vscale x 2 x i1> [[TMP23]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP11]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP35:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP36:%.*]] = xor i1 [[TMP35]], true
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP36]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -213,6 +214,7 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl nuw i64 [[TMP10]], 1
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 [[TMP0]])
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_VF:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[TMP0]], i64 [[TMP11]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[MUL_2_I]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
@@ -240,11 +242,11 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[TMP37:%.*]] = ashr i64 [[TMP36]], 32
 ; CHECK-NEXT:    [[TMP38:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP37]]
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[TMP23]], ptr align 4 [[TMP38]], <vscale x 2 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP11]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX_NEXT]], i64 [[TMP0]])
+; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 [[INDEX]], i64 [[TRIP_COUNT_MINUS_VF]])
 ; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <vscale x 2 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-NEXT:    [[TMP40:%.*]] = xor i1 [[TMP39]], true
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP40]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]

@@ -376,3 +376,61 @@ exit:
 done:
   ret ptr %first
 }
+
+define i32 @exit_value_of_scaled_add_with_use_flags(ptr %p, i64 %n) {
+; CHECK-LABEL: define i32 @exit_value_of_scaled_add_with_use_flags(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[N_PLUS_1:%.*]] = add i64 [[N]], 1
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
+; CHECK:       [[INNER_HEADER]]:
+; CHECK-NEXT:    [[INNER_COUNT:%.*]] = phi i64 [ [[N_PLUS_1]], %[[OUTER_HEADER]] ], [ [[INNER_COUNT_DEC:%.*]], %[[INNER_HEADER]] ]
+; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, %[[OUTER_HEADER]] ], [ [[INNER_IV_NEXT:%.*]], %[[INNER_HEADER]] ]
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i64 [[OUTER_IV]], [[N_PLUS_1]]
+; CHECK-NEXT:    [[GEP_ROW:%.*]] = getelementptr nuw i32, ptr [[P]], i64 [[MUL]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[GEP_ROW]], i64 [[INNER_IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw i64 [[INNER_IV]], 1
+; CHECK-NEXT:    [[INNER_COUNT_DEC]] = add i64 [[INNER_COUNT]], -1
+; CHECK-NEXT:    [[INNER_COND:%.*]] = icmp sgt i64 [[INNER_COUNT]], 0
+; CHECK-NEXT:    br i1 [[INNER_COND]], label %[[INNER_HEADER]], label %[[OUTER_LATCH]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i32 [ [[L]], %[[INNER_HEADER]] ]
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_COND:%.*]] = icmp ne i64 [[OUTER_IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[OUTER_COND]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[L_LCSSA_LCSSA:%.*]] = phi i32 [ [[L_LCSSA]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[L_LCSSA_LCSSA]]
+;
+entry:
+  %n.plus.1 = add i64 %n, 1
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %inner.count = phi i64 [ %n.plus.1, %outer.header ], [ %inner.count.dec, %inner.header ]
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner.header ]
+  %mul = mul nuw i64 %outer.iv, %n.plus.1
+  %gep.row = getelementptr nuw i32, ptr %p, i64 %mul
+  %gep = getelementptr i32, ptr %gep.row, i64 %inner.iv
+  %l = load i32, ptr %gep, align 4
+  %inner.iv.next = add i64 %inner.iv, 1
+  %inner.count.dec = add i64 %inner.count, -1
+  %inner.cond = icmp sgt i64 %inner.count, 0
+  br i1 %inner.cond, label %inner.header, label %outer.latch
+
+outer.latch:
+  %outer.iv.next = add i64 %outer.iv, 1
+  %outer.cond = icmp ne i64 %outer.iv.next, %n
+  br i1 %outer.cond, label %outer.header, label %exit
+
+exit:
+  ret i32 %l
+}

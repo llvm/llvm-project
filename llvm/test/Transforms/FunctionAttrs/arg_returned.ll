@@ -260,8 +260,8 @@ entry:
 
 ; TEST another SCC test
 ;
-; FNATTR:  define ptr @rt2_helper(ptr nofree readnone captures(address_is_null) %a)
-; FNATTR:  define ptr @rt2(ptr nofree readnone captures(address_is_null) %a, ptr nofree readnone captures(ret: address, provenance) %b)
+; FNATTR:  define ptr @rt2_helper(ptr nofree readnone %a)
+; FNATTR:  define ptr @rt2(ptr nofree readnone %a, ptr nofree readnone captures(ret: address, provenance) %b)
 define ptr @rt2_helper(ptr %a) #0 {
 entry:
   %call = call ptr @rt2(ptr %a, ptr %a)

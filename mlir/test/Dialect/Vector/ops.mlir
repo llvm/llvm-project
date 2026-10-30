@@ -624,6 +624,10 @@ func.func @reduce_fp(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
   vector.reduction <minimumf>, %arg0 : vector<16xf32> into f32
   // CHECK:    %[[X1:.*]] = vector.reduction <maximumf>, %{{.*}} : vector<16xf32> into f32
   %1 = vector.reduction <maximumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    vector.reduction <minimumnumf>, %{{.*}} : vector<16xf32> into f32
+  vector.reduction <minimumnumf>, %arg0 : vector<16xf32> into f32
+  // CHECK:    %[[X2:.*]] = vector.reduction <maximumnumf>, %{{.*}} : vector<16xf32> into f32
+  %2 = vector.reduction <maximumnumf>, %arg0 : vector<16xf32> into f32
   // CHECK:    return %[[X0]] : f32
   return %0 : f32
 }
@@ -921,8 +925,8 @@ func.func @multi_reduction(%0: vector<4x8x16x32xf32>, %acc0: vector<4x16xf32>,
   // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [1, 3] : vector<4x8x16x32xf32> to vector<4x16xf32>
   %1 = vector.multi_reduction <add>, %0, %acc0 [1, 3] :
     vector<4x8x16x32xf32> to vector<4x16xf32>
-  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} [0, 1] : vector<4x16xf32> to f32
-  %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
+  // CHECK: vector.multi_reduction <add>, %{{.*}}, %{{.*}} fastmath<reassoc> [0, 1] : vector<4x16xf32> to f32
+  %2 = vector.multi_reduction <add>, %1, %acc1 fastmath<reassoc> [0, 1] :
     vector<4x16xf32> to f32
   return %2 : f32
 }

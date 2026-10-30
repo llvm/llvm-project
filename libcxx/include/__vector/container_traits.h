@@ -11,9 +11,8 @@
 
 #include <__config>
 #include <__fwd/vector.h>
-#include <__memory/allocator_traits.h>
 #include <__type_traits/container_traits.h>
-#include <__type_traits/disjunction.h>
+#include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -30,8 +29,12 @@ struct __container_traits<vector<_Tp, _Allocator> > {
   //  inserting a single element at the end and T is Cpp17CopyInsertable or is_nothrow_move_constructible_v<T> is true,
   //  there are no effects. Otherwise, if an exception is thrown by the move constructor of a non-Cpp17CopyInsertable T,
   //  the effects are unspecified.
+  //
+  // The "no effects" guarantee for an insertion at the end does not cover an insertion in the middle, which
+  // move-constructs and move-assigns existing elements. Emplacement at an arbitrary position therefore has the
+  // strong guarantee only when neither of those operations can throw.
   static _LIBCPP_CONSTEXPR const bool __emplacement_has_strong_exception_safety_guarantee =
-      is_nothrow_move_constructible<_Tp>::value || __is_cpp17_copy_insertable_v<_Allocator>;
+      is_nothrow_move_constructible<_Tp>::value && is_nothrow_move_assignable<_Tp>::value;
 
   static _LIBCPP_CONSTEXPR const bool __reservable = true;
 };

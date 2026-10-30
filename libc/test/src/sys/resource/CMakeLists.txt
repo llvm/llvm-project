@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_resource_unittests)
+add_libc_testsuite(libc-sys-resource-tests)
 
 add_libc_test(
   getpriority_setpriority_test
   SUITE
-    libc_sys_resource_unittests
+    libc-sys-resource-tests
   SRCS
     getpriority_setpriority_test.cpp
   DEPENDS
@@ -18,7 +18,7 @@ add_libc_test(
 add_libc_test(
   getrlimit_setrlimit_test
   SUITE
-    libc_sys_resource_unittests
+    libc-sys-resource-tests
   SRCS
     getrlimit_setrlimit_test.cpp
   DEPENDS
@@ -39,7 +39,7 @@ add_libc_test(
 add_libc_test(
   getrusage_test
   SUITE
-    libc_sys_resource_unittests
+    libc-sys-resource-tests
   SRCS
     getrusage_test.cpp
   DEPENDS

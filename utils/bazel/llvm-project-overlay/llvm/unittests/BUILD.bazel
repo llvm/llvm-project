@@ -212,6 +212,7 @@ cc_test(
     ),
     deps = [
         "//llvm:CGData",
+        "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -426,6 +427,7 @@ cc_test(
         "//llvm:OrcShared",
         "//llvm:OrcTargetProcess",
         "//llvm:Support",
+        "//llvm:Target",
         "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
@@ -511,6 +513,7 @@ cc_test(
     ),
     deps = [
         "//llvm:Core",
+        "//llvm:FrontendDirective",
         "//llvm:FrontendHLSL",
         "//llvm:FrontendOffloading",
         "//llvm:FrontendOpenACC",
@@ -645,6 +648,15 @@ cc_test(
 )
 
 gentbl_cc_library(
+    name = "library_opts_tests_gen",
+    strip_include_prefix = "Option",
+    tbl_outs = {"Option/LibraryOpts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "Option/LibraryOpts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
+gentbl_cc_library(
     name = "option_tests_gen",
     strip_include_prefix = "Option",
     tbl_outs = {"Option/Opts.inc": ["-gen-opt-parser-defs"]},
@@ -682,10 +694,12 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        ":library_opts_tests_gen",
         ":option_tests_gen",
         ":sub_command_opts_tests_gen",
         "//llvm:Option",
         "//llvm:Support",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],
@@ -742,6 +756,26 @@ cc_test(
         "//llvm:ProfileData",
         "//llvm:Support",
         "//llvm:Symbolize",
+        "//llvm:TestingSupport",
+        "//llvm:config",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "TargetParserTests",
+    size = "small",
+    srcs = glob(
+        [
+            "TargetParser/*.cpp",
+        ],
+        allow_empty = False,
+    ),
+    deps = [
+        "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
         "//third-party/unittest:gmock",
@@ -900,6 +934,7 @@ cc_test(
     deps = [
         "//llvm:Analysis",
         "//llvm:AsmParser",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:IPO",
         "//llvm:IRReader",

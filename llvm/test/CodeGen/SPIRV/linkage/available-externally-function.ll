@@ -9,7 +9,7 @@
 
 ; Passing the flag without the extension is a fatal error.
 
-; RUN: not --crash llc -O0 -mtriple=spirv64-unknown-unknown --spirv-preserve-auxdata %s -o - 2>&1 | FileCheck %s --check-prefix=ERR
+; RUN: not llc -O0 -mtriple=spirv64-unknown-unknown --spirv-preserve-auxdata %s -o - 2>&1 | FileCheck %s --check-prefix=ERR
 ; ERR: -spirv-preserve-auxdata requires the SPV_KHR_non_semantic_info extension to be enabled.
 
 ; NOAUX-NOT: OpExtension "SPV_KHR_non_semantic_info"
@@ -25,12 +25,20 @@
 ; With -spirv-preserve-auxdata: Export linkage plus a NonSemantic.AuxData
 ; Linkage annotation recording the original available_externally linkage.
 
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=AUX
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=AUX
-;; spirv-val rejects the AuxData forward-ref without
-;; SPV_KHR_relaxed_extended_instruction; matches Translator behavior.
+; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=AUX
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=AUX
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_relaxed_extended_instruction --spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
+
+; The annotation forward-references the function, which requires
+; SPV_KHR_relaxed_extended_instruction; without it, it is dropped.
+
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=NORELAXED
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
+; NORELAXED: OpExtInstImport "NonSemantic.AuxData"
+; NORELAXED-NOT: OpExtInst{{(WithForwardRefsKHR)?}} %
 
 ; AUX-DAG: OpExtension "SPV_KHR_non_semantic_info"
+; AUX-DAG: OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; AUX-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; AUX-DAG: OpName %[[#ae_func:]] "ae_func"
 ; AUX-DAG: OpName %[[#caller:]] "caller"
@@ -38,7 +46,7 @@
 ; AUX-DAG: %[[#void:]] = OpTypeVoid
 ; AUX-DAG: %[[#i32:]] = OpTypeInt 32 0
 ; AUX-DAG: %[[#zero:]] = OpConstant %[[#i32]] 0
-; AUX:     %[[#]] = OpExtInst %[[#void]] %[[#auxset]] {{.+}} %[[#ae_func]] %[[#zero]]
+; AUX:     %[[#]] = OpExtInstWithForwardRefsKHR %[[#void]] %[[#auxset]] {{.+}} %[[#ae_func]] %[[#zero]]
 ; AUX:     %[[#ae_func]] = OpFunction
 ; AUX:     OpFunctionEnd
 ; AUX:     %[[#caller]] = OpFunction

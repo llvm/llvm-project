@@ -1,0 +1,57 @@
+add_libc_testsuite(libc-sys-eventfd-tests)
+
+add_libc_test(
+  eventfd_test
+  SUITE
+    libc-sys-eventfd-tests
+  SRCS
+    eventfd_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fcntl_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_eventfd_macros
+    libc.src.errno.errno
+    libc.src.fcntl.fcntl
+    libc.src.sys.eventfd.eventfd
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  eventfd_read_test
+  SUITE
+    libc-sys-eventfd-tests
+  SRCS
+    eventfd_read_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_eventfd_macros
+    libc.hdr.types.eventfd_t
+    libc.src.errno.errno
+    libc.src.sys.eventfd.eventfd
+    libc.src.sys.eventfd.eventfd_read
+    libc.src.unistd.close
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  eventfd_write_test
+  SUITE
+    libc-sys-eventfd-tests
+  SRCS
+    eventfd_write_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.sys_eventfd_macros
+    libc.src.errno.errno
+    libc.src.sys.eventfd.eventfd
+    libc.src.sys.eventfd.eventfd_write
+    libc.src.unistd.close
+    libc.src.unistd.read
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -287,6 +287,15 @@ TEST_F(RegistryTest, PolymorphicMatchers) {
       matches("class Foo { public: Foo(); }; Foo foo = Foo();", ConstructExpr));
 }
 
+TEST_F(RegistryTest, DynCastAllOfConvertsArgumentsToDerivedKind) {
+  VariantMatcher AnyDecl = VariantMatcher::SingleMatcher(decl());
+  Matcher<Decl> Record =
+      constructMatcher("recordDecl", AnyDecl).getTypedMatcher<Decl>();
+
+  EXPECT_TRUE(matches("struct X {};", Record));
+  EXPECT_FALSE(matches("void f();", Record));
+}
+
 TEST_F(RegistryTest, TemplateArgument) {
   Matcher<Decl> HasTemplateArgument = constructMatcher(
       "classTemplateSpecializationDecl",

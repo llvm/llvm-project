@@ -48,6 +48,8 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -5385,6 +5387,54 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
   return false;
 }
 
+/// Return the payload of an LC_NOTE, decompressing it if needed.
+///
+/// A payload is either stored as is, or compressed in the layout of a GNU
+/// .zdebug section:
+///
+///   offset  size  contents
+///        0     4  magic "ZLIB"
+///        4     8  uncompressed size, big-endian uint64_t
+///       12     n  RFC 1950 zlib stream
+///
+/// The size is big-endian regardless of the corefile's byte order. An
+/// uncompressed payload must not start with the magic.
+static llvm::Expected<std::string> ReadLCNotePayload(const DataExtractor &data,
+                                                     lldb::offset_t offset,
+                                                     uint64_t size) {
+  const uint8_t *bytes = data.PeekData(offset, size);
+  if (!bytes)
+    return llvm::createStringError(
+        "payload of %" PRIu64 " bytes is out of bounds", size);
+  llvm::ArrayRef<uint8_t> payload(bytes, size);
+
+  constexpr llvm::StringLiteral magic = "ZLIB";
+  constexpr size_t header_size = magic.size() + sizeof(uint64_t);
+  if (!llvm::toStringRef(payload).starts_with(magic))
+    return llvm::toStringRef(payload).str();
+  if (payload.size() < header_size)
+    return llvm::createStringError("compressed payload header is truncated");
+
+  uint64_t uncompressed_size =
+      llvm::support::endian::read64be(payload.data() + magic.size());
+  llvm::ArrayRef<uint8_t> compressed = payload.drop_front(header_size);
+  // Deflate cannot exceed a 1032:1 ratio. A larger claimed size is corrupt and
+  // must not size the allocation.
+  if (uncompressed_size / 1032 > compressed.size())
+    return llvm::createStringError("uncompressed size %" PRIu64
+                                   " is impossible for %zu compressed bytes",
+                                   uncompressed_size, compressed.size());
+  if (!llvm::compression::zlib::isAvailable())
+    return llvm::createStringError(
+        "payload is zlib-compressed but LLDB was built without zlib");
+
+  llvm::SmallVector<uint8_t, 0> uncompressed;
+  if (llvm::Error err = llvm::compression::zlib::decompress(
+          compressed, uncompressed, uncompressed_size))
+    return err;
+  return llvm::toStringRef(uncompressed).str();
+}
+
 StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
@@ -5401,18 +5451,16 @@ StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
         log,
         "Multiple 'process metadata' LC_NOTEs found, only using the first.");
 
-  auto [payload_offset, strsize] = lc_notes[0];
-  std::string buf(strsize, '\0');
-  if (m_data_nsp->CopyData(payload_offset, strsize, buf.data()) != strsize) {
-    LLDB_LOGF(log,
-              "Unable to read %" PRIu64
-              " bytes of 'process metadata' LC_NOTE JSON contents",
-              strsize);
+  auto [payload_offset, payload_size] = lc_notes[0];
+  llvm::Expected<std::string> json =
+      ReadLCNotePayload(*m_data_nsp, payload_offset, payload_size);
+  if (!json) {
+    LLDB_LOG_ERROR(log, json.takeError(),
+                   "Unable to read 'process metadata' LC_NOTE: {0}");
     return {};
   }
-  while (buf.back() == '\0')
-    buf.resize(buf.size() - 1);
-  StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+  StructuredData::ObjectSP object_sp =
+      StructuredData::ParseJSON(llvm::StringRef(*json).rtrim('\0'));
   if (!object_sp) {
     LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
                    "parse as valid JSON.");
@@ -6112,9 +6160,9 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
-        // the right one, doesn't need to be nul terminated.
+        // the right one, doesn't need to be null-terminated.
         // The segment name in a Mach-O LC_SEGMENT/LC_SEGMENT_64 is char[16] and
-        // is not guaranteed to be nul-terminated if all 16 characters are
+        // is not guaranteed to be null-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
         strncpy(seg_vmaddr.segname, name.data(),
@@ -6466,9 +6514,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           char namebuf[16];
           memset(namebuf, 0, sizeof(namebuf));
           // This is the uncommon case where strncpy is exactly
-          // the right one, doesn't need to be nul terminated.
+          // the right one, doesn't need to be null-terminated.
           // LC_NOTE name field is char[16] and is not guaranteed to be
-          // nul-terminated.
+          // null-terminated.
           // coverity[buffer_size_warning]
           strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
           buffer.PutRawBytes(namebuf, sizeof(namebuf));

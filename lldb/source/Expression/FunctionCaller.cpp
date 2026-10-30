@@ -114,7 +114,7 @@ bool FunctionCaller::WriteFunctionWrapper(
       ConstString const_func_name(FunctionName());
       FileSpec jit_file;
       jit_file.SetFilename(const_func_name);
-      jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+      jit_module_sp->SetFileSpecAndObjectName(jit_file, std::string());
       m_jit_module_wp = jit_module_sp;
       process->GetTarget().GetImages().Append(jit_module_sp,
                                               true /* notify */);

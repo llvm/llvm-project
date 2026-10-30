@@ -17,6 +17,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -196,6 +197,37 @@ bool UnrolledInstAnalyzer::visitPHINode(PHINode &PN) {
   return PN.getParent() == L->getHeader();
 }
 
+/// Returns true if \p I computes the same value on every iteration of the
+/// loop: it does not access memory, has no side effects, and all of its
+/// operands are defined outside the loop or are themselves such computations.
+/// Unlike SCEV-based invariance this works for any type, e.g. floating point.
+bool UnrolledInstAnalyzer::isInvariantComputation(Instruction *I) {
+  if (!L->contains(I))
+    return true;
+  if (auto It = InvariantInsts.find(I); It != InvariantInsts.end())
+    return It->second;
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (isa<PHINode, AllocaInst>(I) || I->isTerminator() ||
+      (II && II->isAssumeLikeIntrinsic()) || I->mayReadOrWriteMemory() ||
+      I->mayHaveSideEffects()) {
+    InvariantInsts[I] = false;
+    return false;
+  }
+  bool Invariant = all_of(I->operands(), [&](Value *Op) {
+    auto *OpI = dyn_cast<Instruction>(Op);
+    return !OpI || isInvariantComputation(OpI);
+  });
+  InvariantInsts[I] = Invariant;
+  return Invariant;
+}
+
 bool UnrolledInstAnalyzer::visitInstruction(Instruction &I) {
-  return simplifyInstWithSCEV(&I);
+  if (simplifyInstWithSCEV(&I))
+    return true;
+
+  // Invariance of SCEVable values is decided by SCEV above. For other values,
+  // e.g. floating point, an invariant computation likewise only has to be
+  // performed once after unrolling; all but the first occurrence are free.
+  return !SE.isSCEVable(I.getType()) && !IterationNumber->isZero() &&
+         isInvariantComputation(&I);
 }

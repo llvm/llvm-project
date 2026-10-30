@@ -310,7 +310,7 @@ using TargetRegisterClass = MCRegisterClass;
     virtual void
     getOpndList(SmallVectorImpl<SDValue> &Ops,
                 std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
-                bool IsPICCall, bool GlobalOrExternal, bool InternalLinkage,
+                bool IsPICCall, bool GlobalOrExternal, bool LocalLinkage,
                 bool IsCallReloc, CallLoweringInfo &CLI, SDValue Callee,
                 SDValue Chain) const;
 
@@ -382,6 +382,7 @@ using TargetRegisterClass = MCRegisterClass;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 
     /// isEligibleForTailCallOptimization - Check whether the call is eligible
     /// for tail call optimization.
@@ -490,11 +491,9 @@ using TargetRegisterClass = MCRegisterClass;
     EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
-    /// isFPImmLegal - Returns true if the target can instruction select the
-    /// specified FP immediate natively. If false, the legalizer will
-    /// materialize the FP immediate as a load from a constant pool.
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    /// Returns how to materialize the specified FP immediate.
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     bool isLegalICmpImmediate(int64_t Imm) const override;
     bool isLegalAddImmediate(int64_t Imm) const override;
@@ -526,7 +525,6 @@ using TargetRegisterClass = MCRegisterClass;
     MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr &MI,
                                                  MachineBasicBlock *BB,
                                                  unsigned Size) const;
-    MachineBasicBlock *emitSEL_D(MachineInstr &MI, MachineBasicBlock *BB) const;
     MachineBasicBlock *emitPseudoSELECT(MachineInstr &MI, MachineBasicBlock *BB,
                                         bool isFPCmp, unsigned Opc) const;
     MachineBasicBlock *emitPseudoD_SELECT(MachineInstr &MI,

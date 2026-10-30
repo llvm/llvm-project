@@ -431,7 +431,7 @@ cl::opt<uint32_t> ModuleIndex(
     "mod",
     cl::desc(
         "Limit options in the Modules category to the specified module index"),
-    cl::Optional, cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
+    cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
 cl::opt<bool> ModuleSyms("syms", cl::desc("Dump symbol record substream"),
                          cl::sub(BytesSubcommand), cl::cat(ModuleCategory));
 cl::opt<bool> ModuleC11("c11-chunks", cl::Hidden,
@@ -569,14 +569,14 @@ cl::opt<bool> DumpFpo("fpo", cl::desc("dump FPO records"),
                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
 cl::opt<uint32_t> DumpSymbolOffset(
-    "symbol-offset", cl::Optional,
+    "symbol-offset",
     cl::desc("only dump symbol record with the specified symbol offset"),
     cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<bool> DumpParents("show-parents",
                           cl::desc("dump the symbols record's all parents."),
                           cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<uint32_t>
-    DumpParentDepth("parent-recurse-depth", cl::Optional, cl::init(-1U),
+    DumpParentDepth("parent-recurse-depth", cl::init(-1U),
                     cl::desc("only recurse to a depth of N when displaying "
                              "parents of a symbol record."),
                     cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
@@ -584,7 +584,7 @@ cl::opt<bool> DumpChildren("show-children",
                            cl::desc("dump the symbols record's all children."),
                            cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 cl::opt<uint32_t>
-    DumpChildrenDepth("children-recurse-depth", cl::Optional, cl::init(-1U),
+    DumpChildrenDepth("children-recurse-depth", cl::init(-1U),
                       cl::desc("only recurse to a depth of N when displaying "
                                "children of a symbol record."),
                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
@@ -614,11 +614,11 @@ cl::opt<bool> DumpXme(
     cl::desc(
         "dump cross module exports (DEBUG_S_CROSSSCOPEEXPORTS subsection)"),
     cl::cat(FileOptions), cl::sub(DumpSubcommand));
-cl::opt<uint32_t> DumpModi("modi", cl::Optional,
+cl::opt<uint32_t> DumpModi("modi",
                            cl::desc("For all options that iterate over "
                                     "modules, limit to the specified module"),
                            cl::cat(FileOptions), cl::sub(DumpSubcommand));
-cl::opt<bool> JustMyCode("jmc", cl::Optional,
+cl::opt<bool> JustMyCode("jmc",
                          cl::desc("For all options that iterate over modules, "
                                   "ignore modules from system libraries"),
                          cl::cat(FileOptions), cl::sub(DumpSubcommand));
@@ -764,7 +764,7 @@ cl::list<uint64_t> Offsets("offset", cl::desc("The file offset to explain"),
 
 cl::opt<InputFileType> InputType(
     "input-type", cl::desc("Specify how to interpret the input file"),
-    cl::init(InputFileType::PDBFile), cl::Optional, cl::sub(ExplainSubcommand),
+    cl::init(InputFileType::PDBFile), cl::sub(ExplainSubcommand),
     cl::values(clEnumValN(InputFileType::PDBFile, "pdb-file",
                           "Treat input as a PDB file (default)"),
                clEnumValN(InputFileType::PDBStream, "pdb-stream",
@@ -786,18 +786,16 @@ cl::opt<std::string> OutputFile("out",
                                 cl::desc("The file to write the stream to"),
                                 cl::Required, cl::sub(ExportSubcommand));
 cl::opt<std::string>
-    Stream("stream", cl::Optional,
+    Stream("stream",
            cl::desc("The index or name of the stream whose contents to export"),
            cl::sub(ExportSubcommand));
 cl::opt<bool> ForceName("name",
                         cl::desc("Force the interpretation of -stream as a "
                                  "string, even if it is a valid integer"),
-                        cl::sub(ExportSubcommand), cl::Optional,
-                        cl::init(false));
+                        cl::sub(ExportSubcommand), cl::init(false));
 cl::opt<bool> DXContainer("dxcontainer",
                           cl::desc("Export DirectX Container, if present"),
-                          cl::sub(ExportSubcommand), cl::Optional,
-                          cl::init(false));
+                          cl::sub(ExportSubcommand), cl::init(false));
 } // namespace exportstream
 }
 

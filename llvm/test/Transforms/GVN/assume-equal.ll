@@ -464,20 +464,6 @@ define i8 @assume_ptr_eq_same_prov(ptr %p, i64 %x) {
   ret i8 %v
 }
 
-define ptr @test_strip_invariant(ptr %x) {
-; CHECK-LABEL: define ptr @test_strip_invariant(
-; CHECK-SAME: ptr [[X:%.*]]) {
-; CHECK-NEXT:    [[X_STRIP:%.*]] = call ptr @llvm.strip.invariant.group.p0(ptr [[X]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], [[X_STRIP]]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret ptr [[X_STRIP]]
-;
-  %x.strip = call ptr @llvm.strip.invariant.group(ptr %x)
-  %cmp = icmp eq ptr %x, %x.strip
-  call void @llvm.assume(i1 %cmp)
-  ret ptr %x.strip
-}
-
 define ptr @test_launder_invariant(ptr %x) {
 ; CHECK-LABEL: define ptr @test_launder_invariant(
 ; CHECK-SAME: ptr [[X:%.*]]) {

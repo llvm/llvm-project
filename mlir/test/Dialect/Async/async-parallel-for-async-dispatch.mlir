@@ -7,8 +7,7 @@ func.func @loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
 
   // CHECK:      %[[RANGE:.*]] = arith.subi %[[UB]], %[[LB]]
-  // CHECK:      %[[RAW_TRIP_CNT:.*]] = arith.ceildivsi %[[RANGE]], %[[STEP]]
-  // CHECK:      %[[TRIP_CNT:.*]] = arith.maxsi %[[RAW_TRIP_CNT]], %[[C0]]
+  // CHECK:      %[[TRIP_CNT:.*]] = arith.ceildivsi %[[RANGE]], %[[STEP]]
   // CHECK:      %[[IS_NOOP:.*]] = arith.cmpi eq, %[[TRIP_CNT]], %[[C0]] : index
 
   // CHECK:      scf.if %[[IS_NOOP]] {
@@ -86,6 +85,21 @@ func.func @loop_2d(%arg0: index, %arg1: index, %arg2: index, // lb, ub, step
 
 // CHECK-LABEL: func private @async_dispatch_fn
 
+// -----
+
+// Unsigned bounds are not supported by the trip-count computation; the loop
+// is left untouched.
+// CHECK-LABEL: @unsigned_loop_1d(
+// CHECK-NOT:     async.execute
+// CHECK:         scf.parallel unsigned (
+// CHECK-NOT:     async.execute
+func.func @unsigned_loop_1d(%arg0: index, %arg1: index, %arg2: index, %arg3: memref<?xf32>) {
+  scf.parallel unsigned (%i) = (%arg0) to (%arg1) step (%arg2) {
+    %one = arith.constant 1.0 : f32
+    memref.store %one, %arg3[%i] : memref<?xf32>
+  }
+  return
+}
 // -----
 
 // CHECK-LABEL: @empty_2d_dynamic

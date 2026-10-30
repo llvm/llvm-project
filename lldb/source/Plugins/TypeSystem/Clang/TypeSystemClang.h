@@ -163,6 +163,8 @@ public:
 
   static void Terminate();
 
+  static void DebuggerInitialize(Debugger &debugger);
+
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
   /// Returns the display name of this TypeSystemClang that indicates what

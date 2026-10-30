@@ -30,31 +30,30 @@ using namespace llvm;
 
 static cl::OptionCategory UndNameCategory("UndName Options");
 
-static cl::opt<bool> DumpBackReferences("backrefs", cl::Optional,
+static cl::opt<bool> DumpBackReferences("backrefs",
                                         cl::desc("dump backreferences"),
                                         cl::Hidden, cl::init(false),
                                         cl::cat(UndNameCategory));
-static cl::opt<bool> NoAccessSpecifier("no-access-specifier", cl::Optional,
+static cl::opt<bool> NoAccessSpecifier("no-access-specifier",
                                        cl::desc("skip access specifiers"),
                                        cl::Hidden, cl::init(false),
                                        cl::cat(UndNameCategory));
-static cl::opt<bool> NoCallingConvention("no-calling-convention", cl::Optional,
+static cl::opt<bool> NoCallingConvention("no-calling-convention",
                                          cl::desc("skip calling convention"),
                                          cl::Hidden, cl::init(false),
                                          cl::cat(UndNameCategory));
-static cl::opt<bool> NoReturnType("no-return-type", cl::Optional,
+static cl::opt<bool> NoReturnType("no-return-type",
                                   cl::desc("skip return types"), cl::Hidden,
                                   cl::init(false), cl::cat(UndNameCategory));
-static cl::opt<bool> NoMemberType("no-member-type", cl::Optional,
+static cl::opt<bool> NoMemberType("no-member-type",
                                   cl::desc("skip member types"), cl::Hidden,
                                   cl::init(false), cl::cat(UndNameCategory));
-static cl::opt<bool> NoVariableType("no-variable-type", cl::Optional,
+static cl::opt<bool> NoVariableType("no-variable-type",
                                     cl::desc("skip variable types"), cl::Hidden,
                                     cl::init(false), cl::cat(UndNameCategory));
-static cl::opt<std::string> RawFile("raw-file", cl::Optional,
-                                    cl::desc("for fuzzer data"), cl::Hidden,
-                                    cl::cat(UndNameCategory));
-static cl::opt<bool> WarnTrailing("warn-trailing", cl::Optional,
+static cl::opt<std::string> RawFile("raw-file", cl::desc("for fuzzer data"),
+                                    cl::Hidden, cl::cat(UndNameCategory));
+static cl::opt<bool> WarnTrailing("warn-trailing",
                                   cl::desc("warn on trailing characters"),
                                   cl::Hidden, cl::init(false),
                                   cl::cat(UndNameCategory));

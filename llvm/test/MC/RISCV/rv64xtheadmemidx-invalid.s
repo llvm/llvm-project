@@ -33,3 +33,52 @@ th.lrh		a0, a1, a2, 5
 # CHECK-RV32: :[[@LINE+2]]:22: error: immediate must be an integer in the range [0, 3]
 # CHECK-RV64: :[[@LINE+1]]:22: error: immediate must be an integer in the range [0, 3]
 th.lrhu		a0, a1, a2, -1
+
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lbia  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lbib  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lbuia a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lbuib a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lhia  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lhib  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lhuia a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lhuib a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lwia  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lwib  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:1: error: instruction requires the following: RV64I Base Instruction Set
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lwuia a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:1: error: instruction requires the following: RV64I Base Instruction Set
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lwuib a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:1: error: instruction requires the following: RV64I Base Instruction Set
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.ldia  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:1: error: instruction requires the following: RV64I Base Instruction Set
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.ldib  a0, (a0), 0, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lbia  a0, (x10), 1, 0
+# CHECK-RV32: :[[@LINE+2]]:10: error: rd and rs1 must be different
+# CHECK-RV64: :[[@LINE+1]]:10: error: rd and rs1 must be different
+th.lbia  zero, (zero), 0, 0

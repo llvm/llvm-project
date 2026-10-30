@@ -68,7 +68,10 @@ char *strsignal(int sig) {
       signalName[sig])
     return const_cast<char *>(signalName[sig]);
   static char msg[256];
-  sprintf(msg, "Unknown signal %d", sig);
+  snprintf(msg, sizeof(msg), "Unknown signal %d", sig);
+  // Ensure the message is NUL-terminated, just in case the NUL terminator
+  // was overwritten due to a race condition on the static buffer.
+  msg[sizeof(msg) - 1] = '\0';
   return msg;
 }
 

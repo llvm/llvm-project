@@ -3,6 +3,7 @@
 ; when -spirv-preserve-auxdata is passed.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=NOAUX
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; NOAUX-NOT: NonSemantic.AuxData
 ; NOAUX-DAG: OpName %[[#ae_gv:]] "ae_gv"
@@ -13,6 +14,7 @@
 ; Linkage annotation recording the original available_externally linkage.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --spirv-preserve-auxdata %s -o - | FileCheck %s --check-prefix=AUX
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info --spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; AUX-DAG: %[[#auxset:]] = OpExtInstImport "NonSemantic.AuxData"
 ; AUX-DAG: OpName %[[#ae_gv:]] "ae_gv"

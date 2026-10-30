@@ -27,6 +27,10 @@
 
 namespace llvm {
 
+namespace object {
+class ObjectFile;
+}
+
 namespace gsym {
 class FileWriter;
 class OutputAggregator;
@@ -415,9 +419,17 @@ public:
   ///
   /// \param  OS Output stream to report duplicate function infos, overlapping
   ///         function infos, and function infos that were merged or removed.
+  /// \param  Obj An optional object file that the function infos were created
+  ///         from. The last function info often has no size, and its size gets
+  ///         filled in from the valid text ranges. A valid text range can span
+  ///         more than one section, so the object file is used to find the
+  ///         section that contains the function and keep the size from
+  ///         extending past the end of that section. If no object file is
+  ///         supplied the size is filled in from the valid text ranges alone.
   /// \returns An error object that indicates success or failure of the
   ///          finalize.
-  LLVM_ABI llvm::Error finalize(OutputAggregator &OS);
+  LLVM_ABI llvm::Error finalize(OutputAggregator &OS,
+                                const object::ObjectFile *Obj = nullptr);
 
   /// Set the UUID value.
   ///

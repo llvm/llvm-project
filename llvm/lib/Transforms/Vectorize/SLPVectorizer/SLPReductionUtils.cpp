@@ -9,9 +9,17 @@
 #include "SLPReductionUtils.h"
 
 #include "SLPCostAnalysis.h"
+#include "SLPUtils.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -68,6 +76,57 @@ Type *getBoolReduxWideTy(RecurKind RdxKind, Type *RootTy, Type *LeafTy) {
   return nullptr;
 }
 
+BoolBitmask isBoolBitmaskRdx(
+    RecurKind RdxKind,
+    const SmallDenseMap<Value *, NarrowedLeafInfo> &NarrowedLeafShifts,
+    const DataLayout &DL) {
+  if (RdxKind != RecurKind::Or || DL.isBigEndian() ||
+      NarrowedLeafShifts.empty())
+    return BoolBitmask::None;
+  unsigned NumLeaves = NarrowedLeafShifts.size();
+  SmallBitVector Seen(NumLeaves);
+  bool NeedMask = false;
+  for (const auto &[V, L] : NarrowedLeafShifts) {
+    if (L.Shift >= NumLeaves || Seen.test(L.Shift))
+      return BoolBitmask::None;
+    Seen.set(L.Shift);
+    KnownBits Known = computeKnownBits(V, DL);
+    // The masked leaf must be known to be 0 or 1.
+    if ((L.Mask & ~Known.Zero).ugt(1))
+      return BoolBitmask::None;
+    // The mask is redundant if it keeps all not-known-zero bits.
+    NeedMask |= !(Known.Zero | L.Mask).isAllOnes();
+  }
+  return NeedMask ? BoolBitmask::NeedMask : BoolBitmask::NoMask;
+}
+
+bool matchPackedFields(Value *V, unsigned MaxDepth,
+                       SmallVectorImpl<Value *> &Fields,
+                       SmallVectorImpl<Instruction *> &Chain) {
+  auto *PackTy = dyn_cast<IntegerType>(V->getType());
+  if (!PackTy)
+    return false;
+  SmallVector<NarrowedLeafInfo> Leaves;
+  collectNarrowedLeaves(V, Instruction::Or, PackTy->getBitWidth(), MaxDepth,
+                        Leaves, Chain);
+  if (Leaves.size() < 2)
+    return false;
+  Type *FieldTy = Leaves.front().V->getType();
+  if (!FieldTy->isIntegerTy() ||
+      PackTy->getBitWidth() != Leaves.size() * FieldTy->getIntegerBitWidth())
+    return false;
+  llvm::sort(Leaves, [](const NarrowedLeafInfo &A, const NarrowedLeafInfo &B) {
+    return A.Shift < B.Shift;
+  });
+  for (const auto &[Pos, L] : enumerate(Leaves))
+    if (L.V->getType() != FieldTy || !L.Mask.isAllOnes() ||
+        L.Shift != Pos * FieldTy->getIntegerBitWidth())
+      return false;
+  append_range(
+      Fields, map_range(Leaves, [](const NarrowedLeafInfo &L) { return L.V; }));
+  return true;
+}
+
 Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
                                   const TargetTransformInfo &TTI,
                                   RecurKind RdxKind, Value *Vec,
@@ -111,6 +170,50 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
   }
   Builder.SetCurrentDebugLocation(DL);
   return Res;
+}
+
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI) {
+  // There are situations where the reduction value is not dominated by the
+  // reduction phi. Vectorizing such cases has been reported to cause
+  // miscompiles. See PR25787.
+  auto DominatedReduxValue = [&](Value *R) {
+    return isa<Instruction>(R) &&
+           DT->dominates(P->getParent(), cast<Instruction>(R)->getParent());
+  };
+
+  Instruction *Rdx = nullptr;
+
+  // Return the incoming value if it comes from the same BB as the phi node.
+  if (P->getIncomingBlock(0) == ParentBB) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
+  } else if (P->getIncomingBlock(1) == ParentBB) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
+  }
+
+  if (Rdx && DominatedReduxValue(Rdx))
+    return Rdx;
+
+  // Otherwise, check whether we have a loop latch to look at.
+  Loop *BBL = LI->getLoopFor(ParentBB);
+  if (!BBL)
+    return nullptr;
+  BasicBlock *BBLatch = BBL->getLoopLatch();
+  if (!BBLatch)
+    return nullptr;
+
+  // There is a loop latch, return the incoming value if it comes from
+  // that. This reduction pattern occasionally turns up.
+  if (P->getIncomingBlock(0) == BBLatch) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(0));
+  } else if (P->getIncomingBlock(1) == BBLatch) {
+    Rdx = dyn_cast<Instruction>(P->getIncomingValue(1));
+  }
+
+  if (Rdx && DominatedReduxValue(Rdx))
+    return Rdx;
+
+  return nullptr;
 }
 
 } // namespace llvm::slpvectorizer

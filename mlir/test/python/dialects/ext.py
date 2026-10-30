@@ -200,6 +200,79 @@ def testBareOperandAndResult():
         print(len(empty.ins), empty.maybe_in, len(empty.outs), empty.maybe_out)
 
 
+# CHECK: TEST: testBareAttribute
+@run
+def testBareAttribute():
+    class TestBareAttr(Dialect, name="ext_bare_attr"):
+        pass
+
+    class CustomAttr(TestBareAttr.Attribute, name="custom"):
+        value: StringAttr
+
+    class BareOp(TestBareAttr.Operation, name="bare"):
+        lhs: Attribute
+        rhs: Attribute
+
+    class BareSpecifierOp(TestBareAttr.Operation, name="bare_specifier"):
+        a: Attribute = attribute()
+        b: Attribute = attribute(kw_only=True)
+        c: Attribute = attribute(default_factory=lambda: StringAttr.get("default"))
+
+    with Context(), Location.unknown():
+        TestBareAttr.load()
+
+        # CHECK: irdl.dialect @ext_bare_attr {
+        # CHECK:   irdl.attribute @custom {
+        # CHECK:     %0 = irdl.base "#builtin.string"
+        # CHECK:     irdl.parameters(value: %0)
+        # CHECK:   }
+        # CHECK:   irdl.operation @bare {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     %1 = irdl.any
+        # CHECK:     irdl.attributes {"lhs" = %0, "rhs" = %1}
+        # CHECK:   }
+        # CHECK:   irdl.operation @bare_specifier {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     %1 = irdl.any
+        # CHECK:     %2 = irdl.any
+        # CHECK:     irdl.attributes {"a" = %0, "b" = %1, "c" = %2}
+        # CHECK:   }
+        # CHECK: }
+        print(TestBareAttr._mlir_module)
+
+        # CHECK: (self, /, lhs, rhs, *, loc=None, ip=None)
+        print(BareOp.__init__.__signature__)
+        # CHECK: (self, /, a, *, b, c=None, loc=None, ip=None)
+        print(BareSpecifierOp.__init__.__signature__)
+
+        i32 = IntegerType.get_signless(32)
+        iattr = IntegerAttr.get(i32, 42)
+        sattr = StringAttr.get("hello")
+        tattr = TypeAttr.get(i32)
+        custom = CustomAttr.get(sattr)
+        module = Module.create()
+        with InsertionPoint(module.body):
+            bare = BareOp(iattr, sattr)
+            BareOp(sattr, iattr)
+            defaulted = BareSpecifierOp(custom, b=tattr)
+            overridden = BareSpecifierOp(tattr, b=UnitAttr.get(), c=iattr)
+
+        assert module.operation.verify()
+        # CHECK: "ext_bare_attr.bare"() {lhs = 42 : i32, rhs = "hello"} : () -> ()
+        # CHECK: "ext_bare_attr.bare"() {lhs = "hello", rhs = 42 : i32} : () -> ()
+        # CHECK: "ext_bare_attr.bare_specifier"() {a = #ext_bare_attr.custom<"hello">, b = i32, c = "default"} : () -> ()
+        # CHECK: "ext_bare_attr.bare_specifier"() {a = i32, b, c = 42 : i32} : () -> ()
+        print(module)
+
+        # Different bare attributes are constrained independently.
+        # CHECK: 42 : i32 "hello"
+        print(bare.lhs, bare.rhs)
+        # CHECK: #ext_bare_attr.custom<"hello"> i32 "default"
+        print(defaulted.a, defaulted.b, defaulted.c)
+        # CHECK: i32 unit 42 : i32
+        print(overridden.a, overridden.b, overridden.c)
+
+
 # CHECK: TEST: testDialectLoadInMultipleContexts
 @run
 def testDialectLoadInMultipleContexts():

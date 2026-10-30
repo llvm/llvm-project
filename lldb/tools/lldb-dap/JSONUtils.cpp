@@ -275,7 +275,7 @@ VariableDescription::VariableDescription(
 
   type_obj = val.GetType();
   const llvm::StringRef type_name = type_obj.GetDisplayTypeName();
-  display_type_name = type_name.empty() ? NO_TYPENAME : type_name;
+  display_type_name = type_name;
 
   // Only format hex/default if there is no existing special format.
   if (const lldb::Format current_format = val.GetFormat();
@@ -357,14 +357,6 @@ bool ValuePointsToCode(lldb::SBValue v) {
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
   return line_entry.IsValid();
-}
-
-int64_t PackLocation(int64_t var_ref, bool is_value_location) {
-  return var_ref << 1 | is_value_location;
-}
-
-std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
-  return std::pair{location_id >> 1, location_id & 1};
 }
 
 /// See

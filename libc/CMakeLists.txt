@@ -102,69 +102,114 @@ set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all 
 # Enable source-based code coverage using Clang's continuous profiling mode.
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LIBC_ENABLE_COVERAGE_MCDC
-       "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
+  "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
 if(LIBC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
-         "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fcoverage-mapping"
-         "-fprofile-continuous")
+      "-fprofile-instr-generate=libc_cov_%p.profraw"
+      "-fcoverage-mapping"
+      "-fprofile-continuous")
     list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
-         "-fprofile-instr-generate=libc_cov_%p.profraw"
-         "-fprofile-continuous")
+      "-fprofile-instr-generate=libc_cov_%p.profraw"
+      "-fprofile-continuous")
     if(LIBC_ENABLE_COVERAGE_MCDC)
       list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
     endif()
   else()
     message(FATAL_ERROR
-            "Coverage instrumentation is currently only supported with Clang")
+      "Coverage instrumentation is currently only supported with Clang")
   endif()
 endif()
 
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
+set(LIBC_TEST_BUILTINS_TARGET "" CACHE STRING
+  "CMake target of compiler-rt builtins to link into libc tests")
+set(LIBC_TEST_BUILTINS_LIBRARY "" CACHE FILEPATH
+  "Compiler runtime builtins library to link into libc tests")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
 
 list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT ${LIBC_COMMON_TUNE_OPTIONS})
 
-# Check --print-resource-dir to find the compiler resource dir if this flag
-# is supported by the compiler.
-execute_process(
-  OUTPUT_STRIP_TRAILING_WHITESPACE
-  COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
-  RESULT_VARIABLE COMMAND_RETURN_CODE
-  OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-)
-# Retrieve the host compiler's resource dir.
-if(COMMAND_RETURN_CODE EQUAL 0)
-  set(COMPILER_RESOURCE_DIR
-    "${COMPILER_RESOURCE_DIR}" CACHE PATH "path to compiler resource dir"
-  )
-  message(STATUS "Set COMPILER_RESOURCE_DIR to "
-    "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
-else()
-  # Try with GCC option: -print-search-dirs, which will output in the form:
-  #   install: <path>
-  #   programs: ........
-  # So we try to capture the <path> after "install: " in the first line of the
-  # output.
-  execute_process(
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
-    RESULT_VARIABLE COMMAND_RETURN_CODE
-    OUTPUT_VARIABLE COMPILER_RESOURCE_DIR
-  )
-  if(COMMAND_RETURN_CODE EQUAL 0)
-    string(REPLACE " " ";" COMPILER_RESOURCE_DIR ${COMPILER_RESOURCE_DIR})
-    string(REPLACE "\n" ";" COMPILER_RESOURCE_DIR "${COMPILER_RESOURCE_DIR}")
-    list(GET COMPILER_RESOURCE_DIR 1 COMPILER_RESOURCE_DIR)
-    message(STATUS "Set COMPILER_RESOURCE_DIR to "
-      "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
-  else()
+# Find the compiler resource dir for compilers that support it.
+if(NOT COMPILER_RESOURCE_DIR)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    endif()
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0 AND RES_DIR MATCHES "install:[ \t]*([^\r\n]+)")
+      string(STRIP "${CMAKE_MATCH_1}" RES_DIR)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+    endif()
+  elseif(MSVC)
     if(LIBC_TARGET_OS_IS_GPU)
       message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
     else()
-      set(COMPILER_RESOURCE_DIR OFF)
+      set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
+      message(STATUS "COMPILER_RESOURCE_DIR not set (not supported by MSVC)")
+    endif()
+  else()
+    # Try generic options for other compilers.
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} --print-resource-dir
+      RESULT_VARIABLE COMMAND_RETURN_CODE
+      OUTPUT_VARIABLE RES_DIR
+      ERROR_QUIET
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(COMMAND_RETURN_CODE EQUAL 0)
+      set(COMPILER_RESOURCE_DIR
+        "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+      )
+      message(STATUS "Set COMPILER_RESOURCE_DIR to "
+        "${COMPILER_RESOURCE_DIR} using --print-resource-dir")
+    else()
+      execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -print-search-dirs
+        RESULT_VARIABLE COMMAND_RETURN_CODE
+        OUTPUT_VARIABLE RES_DIR
+        ERROR_QUIET
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+      if(COMMAND_RETURN_CODE EQUAL 0 AND RES_DIR MATCHES "install:[ \t]*([^\r\n]+)")
+        string(STRIP "${CMAKE_MATCH_1}" RES_DIR)
+        set(COMPILER_RESOURCE_DIR
+          "${RES_DIR}" CACHE PATH "path to compiler resource dir"
+        )
+        message(STATUS "Set COMPILER_RESOURCE_DIR to "
+          "${COMPILER_RESOURCE_DIR} using --print-search-dirs")
+      endif()
+    endif()
+  endif()
+
+  if(NOT COMPILER_RESOURCE_DIR AND NOT MSVC)
+    if(LIBC_TARGET_OS_IS_GPU)
+      message(FATAL_ERROR "COMPILER_RESOURCE_DIR must be set for GPU builds")
+    else()
+      set(COMPILER_RESOURCE_DIR OFF CACHE PATH "path to compiler resource dir")
       message(STATUS "COMPILER_RESOURCE_DIR not set
                       --print-resource-dir not supported by host compiler")
     endif()
@@ -200,16 +245,16 @@ if(LIBC_ENABLE_COVERAGE)
     endif()
     execute_process(
       COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
-              --print-file-name=libclang_rt.profile.a
+        --print-file-name=libclang_rt.profile.a
       OUTPUT_STRIP_TRAILING_WHITESPACE
       OUTPUT_VARIABLE libc_profile_lib
     )
     if(NOT EXISTS "${libc_profile_lib}")
       set(profile_arch_lib
-          "libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a")
+        "libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a")
       execute_process(
         COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
-                --print-file-name=${profile_arch_lib}
+          --print-file-name=${profile_arch_lib}
         OUTPUT_STRIP_TRAILING_WHITESPACE
         OUTPUT_VARIABLE libc_profile_lib
       )
@@ -218,14 +263,23 @@ if(LIBC_ENABLE_COVERAGE)
       message(FATAL_ERROR "Coverage enabled but profile runtime not found.")
     endif()
     set(LIBC_CLANG_PROFILE_LIB "${libc_profile_lib}"
-        CACHE INTERNAL "Clang profile runtime")
+      CACHE INTERNAL "Clang profile runtime")
   endif()
 endif()
+option(LLVM_LIBC_HERMETIC_TEST_USE_INTERNAL_STARTUP
+  "Link hermetic tests against LLVM libc's own startup object"
+  ON)
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)
 option(LLVM_LIBC_ALL_HEADERS "Outputs all functions in header files, regardless of whether they are enabled on this target" OFF)
 option(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS
   "Enable entrypoints with known-incomplete implementations (off by default)" OFF)
+option(LLVM_LIBC_ENABLE_MINOR_VARIANT
+  "Build LLVM libc minor variant archive" OFF)
+set(LLVM_LIBC_SUBARCHIVE_NAME "" CACHE STRING
+  "Target and archive name for the LLVM libc minor variant")
+set(LLVM_LIBC_SUBARCHIVE_ENTRYPOINTS "" CACHE STRING
+  "Semicolon-separated entrypoint targets for the LLVM libc minor variant")
 
 option(LIBC_CONFIG_PATH "The path to user provided folder that configures the build for the target system." OFF)
 
@@ -367,49 +421,35 @@ endif()
 include(LLVMLibCCheckMPFR)
 include(LLVMLibCCheckMPC)
 
+# Linting is opt in.  Naming a clang-tidy binary with LLVM_LIBC_CLANG_TIDY
+# turns it on as well.  Once linting is requested, every problem below stops
+# the configure: an empty libc-lint target that always succeeds would hide a
+# misconfiguration behind a green build.
 if(LLVM_LIBC_CLANG_TIDY)
   set(LLVM_LIBC_ENABLE_LINTING ON)
+  set(LIBC_CLANG_TIDY_EXPLICIT TRUE)
+else()
+  set(LIBC_CLANG_TIDY_EXPLICIT FALSE)
 endif()
 
 if(LLVM_LIBC_ENABLE_LINTING)
   if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(LLVM_LIBC_ENABLE_LINTING OFF)
-    message(WARNING "C++ compiler is not clang++, linting with be disabled.")
-  else()
-    if(NOT LLVM_LIBC_CLANG_TIDY)
-      find_program(LLVM_LIBC_CLANG_TIDY NAMES clang-tidy)
-    endif()
+    message(FATAL_ERROR "
+      Linting needs clang++ as the C++ compiler so that clang-tidy can replay
+      the compile commands, but the configured compiler is
+      ${CMAKE_CXX_COMPILER_ID}.
 
-    if(LLVM_LIBC_CLANG_TIDY)
-      # Check clang-tidy major version.
-      execute_process(COMMAND ${LLVM_LIBC_CLANG_TIDY} "--version"
-        OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
-        ERROR_VARIABLE CLANG_TIDY_ERROR
-        RESULT_VARIABLE CLANG_TIDY_RESULT)
+      To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
+      (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+  endif()
 
-      if(CLANG_TIDY_RESULT AND NOT CLANG_TIDY_RESULT EQUAL 0)
-        message(FATAL_ERROR "Failed to execute '${LLVM_LIBC_CLANG_TIDY} --version'
-          output : '${CLANG_TIDY_OUTPUT}'
-          error  : '${CLANG_TIDY_ERROR}'
-          result : '${CLANG_TIDY_RESULT}'
-          ")
-      endif()
-      string(REGEX MATCH "[0-9]+" CLANG_TIDY_VERSION "${CLANG_TIDY_OUTPUT}")
-      string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
-        "${CMAKE_CXX_COMPILER_VERSION}")
-
-      if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
-        set(LLVM_LIBC_ENABLE_LINTING OFF)
-        message(WARNING "
-          'clang-tidy' (version ${CLANG_TIDY_VERSION}) is not the same as
-          'clang' (version ${CLANG_MAJOR_VERSION}).  Linting will
-          be disabled.
-
-          The path to the clang-tidy binary can be set manually by passing
-          -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake.")
-      endif()
-      add_custom_target(libc-lint)
-    else()
+  if(NOT LIBC_CLANG_TIDY_EXPLICIT)
+    # Discover into a separate cache entry so that LLVM_LIBC_CLANG_TIDY keeps
+    # meaning "chosen by the user" on later reconfigures.  A bootstrapping
+    # build picks up the clang-tidy that was built next to the compiler.
+    find_program(LIBC_CLANG_TIDY_DISCOVERED NAMES clang-tidy
+      HINTS ${LLVM_TOOLS_BINARY_DIR})
+    if(NOT LIBC_CLANG_TIDY_DISCOVERED)
       message(FATAL_ERROR "
         Linting is enabled but 'clang-tidy' is not found!
 
@@ -419,7 +459,57 @@ if(LLVM_LIBC_ENABLE_LINTING)
         To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
         (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
     endif()
+    set(LLVM_LIBC_CLANG_TIDY "${LIBC_CLANG_TIDY_DISCOVERED}")
   endif()
+
+  execute_process(COMMAND "${LLVM_LIBC_CLANG_TIDY}" --version
+    OUTPUT_VARIABLE CLANG_TIDY_OUTPUT
+    ERROR_VARIABLE CLANG_TIDY_ERROR
+    RESULT_VARIABLE CLANG_TIDY_RESULT)
+  if(NOT CLANG_TIDY_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to execute '${LLVM_LIBC_CLANG_TIDY} --version'
+      output : '${CLANG_TIDY_OUTPUT}'
+      error  : '${CLANG_TIDY_ERROR}'
+      result : '${CLANG_TIDY_RESULT}'
+      ")
+  endif()
+
+  # clang-tidy carries its own clang front end.  A different major version
+  # than the compiler means different builtins, resource headers and warning
+  # flags, which shows up as spurious diagnostics rather than as a clear
+  # failure, so the majors have to agree unless the user chose the binary.
+  if(NOT CLANG_TIDY_OUTPUT MATCHES "LLVM version ([0-9]+)")
+    message(FATAL_ERROR "
+      Could not read a version from '${LLVM_LIBC_CLANG_TIDY} --version':
+      ${CLANG_TIDY_OUTPUT}")
+  endif()
+  set(CLANG_TIDY_VERSION ${CMAKE_MATCH_1})
+  string(REGEX MATCH "[0-9]+" CLANG_MAJOR_VERSION
+    "${CMAKE_CXX_COMPILER_VERSION}")
+
+  if(NOT CLANG_TIDY_VERSION EQUAL CLANG_MAJOR_VERSION)
+    if(LIBC_CLANG_TIDY_EXPLICIT)
+      message(WARNING "
+        'clang-tidy' (version ${CLANG_TIDY_VERSION}) is not the same as
+        'clang' (version ${CLANG_MAJOR_VERSION}).  Using
+        ${LLVM_LIBC_CLANG_TIDY} anyway because LLVM_LIBC_CLANG_TIDY was set
+        explicitly.  Expect spurious diagnostics where the two versions
+        disagree.")
+    else()
+      message(FATAL_ERROR "
+        'clang-tidy' (version ${CLANG_TIDY_VERSION}, found at
+        ${LLVM_LIBC_CLANG_TIDY}) is not the same as 'clang' (version
+        ${CLANG_MAJOR_VERSION}).
+
+        Pass -DLLVM_LIBC_CLANG_TIDY=<path/to/clang-tidy> to CMake to select a
+        matching clang-tidy, or to use this one regardless.
+
+        To disable linting set LLVM_LIBC_ENABLE_LINTING to OFF
+        (pass -DLLVM_LIBC_ENABLE_LINTING=OFF to cmake).")
+    endif()
+  endif()
+
+  add_custom_target(libc-lint)
 endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)

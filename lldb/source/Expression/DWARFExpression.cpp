@@ -43,7 +43,7 @@
 #include "lldb/Target/StackID.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionUnit.h"
 #include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/ErrorExtras.h"
 
@@ -145,7 +145,7 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
   };
   options.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
-  llvm::printDwarfExpression(&E, s->AsRawOstream(), options, nullptr);
+  llvm::printDwarfExpression(&E, s->AsRawOstream(), options);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }

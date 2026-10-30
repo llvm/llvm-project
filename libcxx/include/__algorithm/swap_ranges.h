@@ -33,8 +33,7 @@ template <
     class _SpecialAlg =
         __specialized_algorithm<_Algorithm::__swap_ranges, __iterator_pair<_Iter1, _Sent1>, __single_iterator<_Iter2> >,
     __enable_if_t<_SpecialAlg::__has_algorithm, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter2>
-__swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter2> __swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   return _SpecialAlg()(std::move(__first1), std::move(__last1), std::move(__first2));
 }
 
@@ -46,8 +45,7 @@ template <
     class _SpecialAlg =
         __specialized_algorithm<_Algorithm::__swap_ranges, __iterator_pair<_Iter1, _Sent1>, __single_iterator<_Iter2> >,
     __enable_if_t<!_SpecialAlg::__has_algorithm, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter2>
-__swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 pair<_Iter1, _Iter2> __swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
   while (__first1 != __last1) {
     _IterOps<_AlgPolicy>::iter_swap(__first1, __first2);
     ++__first1;
@@ -58,7 +56,7 @@ __swap_ranges(_Iter1 __first1, _Sent1 __last1, _Iter2 __first2) {
 }
 
 template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator2
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator2
 swap_ranges(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2) {
   return std::__swap_ranges<_ClassicAlgPolicy>(std::move(__first1), std::move(__last1), std::move(__first2)).second;
 }

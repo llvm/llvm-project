@@ -135,8 +135,7 @@ public:
   }
 
   clang::CharUnits
-  getArrayCookieSizeImpl(mlir::Type elementType,
-                         const mlir::DataLayout &dataLayout) const override {
+  getArrayCookieSizeImpl(clang::CharUnits elementAlign) const override {
     llvm_unreachable("Microsoft ABI array cookie lowering NYI");
   }
 

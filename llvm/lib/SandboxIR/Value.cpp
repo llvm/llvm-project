@@ -82,11 +82,14 @@ const Value *Value::stripAndAccumulateConstantOffsets(
     bool AllowInvariantGroup,
     function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis,
     bool LookThroughIntToPtr) const {
-  auto LLVMExternalAnalysis = [&ExternalAnalysis, this](llvm::Value &LLVMValue,
-                                                        APInt &Offset) -> bool {
+  auto LLVMExternalAnalysisLambda =
+      [&ExternalAnalysis, this](llvm::Value &LLVMValue, APInt &Offset) -> bool {
     Value &ValueRef = *Ctx.getValue(&LLVMValue);
     return ExternalAnalysis(ValueRef, Offset);
   };
+  function_ref<bool(llvm::Value &, APInt & Offset)> LLVMExternalAnalysis =
+      ExternalAnalysis ? LLVMExternalAnalysisLambda
+                       : decltype(LLVMExternalAnalysis)(nullptr);
   const llvm::Value *LLVMV = Val->stripAndAccumulateConstantOffsets(
       DL, Offset, AllowNonInbounds, AllowInvariantGroup, LLVMExternalAnalysis);
   return Ctx.getValue(LLVMV);
@@ -97,11 +100,14 @@ Value *Value::stripAndAccumulateConstantOffsets(
     bool AllowInvariantGroup,
     function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis,
     bool LookThroughIntToPtr) {
-  auto LLVMExternalAnalysis = [&ExternalAnalysis, this](llvm::Value &LLVMValue,
-                                                        APInt &Offset) -> bool {
+  auto LLVMExternalAnalysisLambda =
+      [&ExternalAnalysis, this](llvm::Value &LLVMValue, APInt &Offset) -> bool {
     Value &ValueRef = *Ctx.getValue(&LLVMValue);
     return ExternalAnalysis(ValueRef, Offset);
   };
+  function_ref<bool(llvm::Value &, APInt & Offset)> LLVMExternalAnalysis =
+      ExternalAnalysis ? LLVMExternalAnalysisLambda
+                       : decltype(LLVMExternalAnalysis)(nullptr);
   llvm::Value *LLVMV = Val->stripAndAccumulateConstantOffsets(
       DL, Offset, AllowNonInbounds, AllowInvariantGroup, LLVMExternalAnalysis);
   return Ctx.getValue(LLVMV);

@@ -2129,3 +2129,17 @@ decltype(P(_U1())) operator<=>(pair<_U1>, pair<_U1>);
 decltype(P(pair<int>())) g;
 
 }
+
+namespace GH226663 {
+namespace N1 {
+template <typename T>
+concept foo = true;
+}
+
+namespace N2 {
+void bar() {
+  N1::template foo<int>; // expected-warning {{expression result unused}}
+  N2::template foo<int>; // expected-error {{no member named 'foo' in namespace 'GH226663::N2'}}
+}
+} // namespace N2
+}

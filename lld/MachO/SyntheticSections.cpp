@@ -300,10 +300,10 @@ void RebaseSection::writeTo(uint8_t *buf) const {
   memcpy(buf, contents.data(), contents.size());
 }
 
-NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
-                                                     const char *name)
-    : SyntheticSection(segname, name) {
+GotSection::GotSection()
+    : SyntheticSection(segment_names::data, section_names::got) {
   align = target->wordSize;
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
 }
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
@@ -336,8 +336,9 @@ void macho::addNonLazyBindingEntries(const Symbol *sym,
   }
 }
 
-void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
+void GotSection::addEntry(Symbol *sym) {
   if (entries.insert(sym)) {
+    // Every symbol has at most one non-lazy pointer slot.
     assert(!sym->isInGot());
     sym->gotIndex = entries.size() - 1;
 
@@ -382,7 +383,7 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
     writeChainedRebase(buf, sym->getVA() + addend);
 }
 
-void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
+void GotSection::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries))
       writeChainedFixup(&buf[i * target->wordSize], entry, 0);
@@ -391,17 +392,6 @@ void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
       if (auto *defined = dyn_cast<Defined>(entry))
         write64le(&buf[i * target->wordSize], defined->getVA());
   }
-}
-
-GotSection::GotSection()
-    : NonLazyPointerSectionBase(segment_names::data, section_names::got) {
-  flags = S_NON_LAZY_SYMBOL_POINTERS;
-}
-
-TlvPointerSection::TlvPointerSection()
-    : NonLazyPointerSectionBase(segment_names::data,
-                                section_names::threadPtrs) {
-  flags = S_THREAD_LOCAL_VARIABLE_POINTERS;
 }
 
 BindingSection::BindingSection()
@@ -1504,25 +1494,20 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  uint32_t size = in.got->getEntries().size() +
-                  in.tlvPointers->getEntries().size() +
-                  in.stubs->getEntries().size();
+  uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.tlvPointers->isNeeded() ||
-         in.stubs->isNeeded();
+  return in.got->isNeeded() || in.stubs->isNeeded();
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
-  in.tlvPointers->reserved1 = off;
-  off += in.tlvPointers->getEntries().size();
   in.stubs->reserved1 = off;
   if (in.lazyPointers) {
     off += in.stubs->getEntries().size();
@@ -1539,10 +1524,6 @@ static uint32_t indirectValue(const Symbol *sym) {
 void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   uint32_t off = 0;
   for (const Symbol *sym : in.got->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
-  }
-  for (const Symbol *sym : in.tlvPointers->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
@@ -1750,7 +1731,7 @@ void CStringSection::writeTo(uint8_t *buf) const {
 // `16 % A`.
 static Align getStringPieceAlignment(const CStringInputSection &isec,
                                      const StringPiece &piece) {
-  return llvm::Align(1ULL << llvm::countr_zero(isec.align | piece.inSecOff));
+  return llvm::Align::fromLog2(llvm::countr_zero(isec.align | piece.inSecOff));
 }
 
 void CStringSection::finalizeContents() {
@@ -1787,7 +1768,7 @@ void DeduplicatedCStringSection::finalizeContents() {
       },
       /*forceInputOrder=*/true);
 
-  // Like lexigraphical sort, except we read strings in reverse and take the
+  // Like lexicographical sort, except we read strings in reverse and take the
   // longest string first
   // TODO: We could improve performance by implementing our own sort that avoids
   // comparing characters we know to be the same. See
@@ -2067,14 +2048,14 @@ void InitOffsetsSection::setUp() {
       if (!attrs.hasAttr(RelocAttrBits::UNSIGNED))
         error(isec->getLocation(rel.offset) +
               ": unsupported relocation type: " + attrs.name);
-      if (rel.addend != 0)
+      if (rel.getAddend() != 0)
         error(isec->getLocation(rel.offset) +
               ": relocation addend is not representable in __init_offsets");
       if (isa<InputSection *>(rel.referent))
         error(isec->getLocation(rel.offset) +
               ": unexpected section relocation");
 
-      Symbol *sym = rel.referent.dyn_cast<Symbol *>();
+      Symbol *sym = dyn_cast<Symbol *>(rel.referent);
       if (auto *undefined = dyn_cast<Undefined>(sym))
         treatUndefinedSymbol(*undefined, isec, rel.offset);
       if (needsBinding(sym))
@@ -2222,7 +2203,7 @@ void ObjCMethListSection::writeRelativeOffsetForIsec(
     symVA = def->getVA();
   } else {
     auto *isec = cast<InputSection *>(reloc->referent);
-    symVA = isec->getVA(reloc->addend);
+    symVA = isec->getVA(reloc->getAddend());
   }
 
   uint32_t currentVA = isec->getVA() + outSecOff;
@@ -2566,9 +2547,21 @@ void ChainedFixupsSection::finalizeContents() {
   else
     importFormat = DYLD_CHAINED_IMPORT;
 
-  for (Location &loc : locations)
-    loc.offset =
+  const uint64_t pageSize = target->getPageSize();
+  for (Location &loc : locations) {
+    uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+    if (offset % pageSize + target->wordSize > pageSize) {
+      std::string msg = loc.isec->getLocation(loc.offset) +
+                        ": fixup straddles page boundary; stop packing structs "
+                        "containing pointers or link with -no_fixup_chains";
+      std::string src = loc.isec->getSourceLocation(loc.offset);
+      if (!src.empty())
+        msg += "\n>>> defined at " + src;
+      error(msg);
+    }
+    loc.offset = offset;
+  }
 
   llvm::sort(locations, [](const Location &a, const Location &b) {
     const OutputSegment *segA = a.isec->parent->parent;
@@ -2582,12 +2575,16 @@ void ChainedFixupsSection::finalizeContents() {
     return a.isec->parent->parent == b.isec->parent->parent;
   };
 
-  const uint64_t pageSize = target->getPageSize();
   for (size_t i = 0, count = locations.size(); i < count;) {
     const Location &firstLoc = locations[i];
     fixupSegments.emplace_back(firstLoc.isec->parent->parent);
     while (i < count && sameSegment(locations[i], firstLoc)) {
-      uint32_t pageIdx = locations[i].offset / pageSize;
+      uint64_t pageIdx = locations[i].offset / pageSize;
+      if (pageIdx >= UINT16_MAX) {
+        fatal("page index in " + locations[i].isec->getSegName() + "," +
+              locations[i].isec->getName() + " too large for chained fixups; " +
+              "use -no_fixup_chains");
+      }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
       ++i;

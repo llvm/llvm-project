@@ -111,16 +111,14 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:     cir.yield %[[OVERFLOW_B]] : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Bar>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load align(4) %[[VA_ARG_B]] : !cir.ptr<!rec_Bar>, !rec_Bar
-// CIR:   cir.store{{.*}} %[[VA_ARG_V]], %[[TMP_ADDR]] : !rec_Bar, !cir.ptr<!rec_Bar>
+// CIR:   cir.copy %[[VA_ARG_B]] align(4) to %[[TMP_ADDR]] align(4) : !cir.ptr<!rec_Bar>
 // CIR:   cir.copy %[[TMP_ADDR]] align(4) to %[[RET_ADDR]] align(4) : !cir.ptr<!rec_Bar>
 // CIR:   %[[VA_PTR2:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
 // CIR:   cir.va_end %[[VA_PTR2]] : !cir.ptr<!rec___va_list_tag>
-// CIR:   %[[RETVAL:.+]] = cir.load{{.*}} %[[RET_ADDR]] : !cir.ptr<!rec_Bar>, !rec_Bar
 // CIR:   %[[SLOT:.+]] = cir.cast bitcast %[[COERCE]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}> -> !cir.ptr<!rec_Bar>
-// CIR:   cir.store %[[RETVAL]], %[[SLOT]] : !rec_Bar, !cir.ptr<!rec_Bar>
-// CIR:   %[[COERCED:.+]] = cir.load %[[COERCE]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}>, !rec_anon_struct{{[0-9]*}}
-// CIR:   cir.return %[[COERCED]] : !rec_anon_struct{{[0-9]*}}
+// CIR-NEXT:   cir.copy %[[RET_ADDR]] align(4) to %[[SLOT]] align(8) : !cir.ptr<!rec_Bar>
+// CIR-NEXT:   %[[COERCED:.+]] = cir.load align(8) %[[COERCE]] : !cir.ptr<!rec_anon_struct{{[0-9]*}}>, !rec_anon_struct{{[0-9]*}}
+// CIR-NEXT:   cir.return %[[COERCED]] : !rec_anon_struct{{[0-9]*}}
 
 // GP pair: both eightbytes INTEGER, contiguous, so a single load suffices.
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate_gp_pair(
@@ -144,7 +142,7 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:     cir.yield %[[OVERFLOW_B]] : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_LongPair>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load align(8) %[[VA_ARG_B]] : !cir.ptr<!rec_LongPair>, !rec_LongPair
+// CIR:   cir.copy %[[VA_ARG_B]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_LongPair>
 
 // SSE pair: both eightbytes SSE, 16 bytes apart, reassembled via a temp.
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate_sse_pair(
@@ -178,7 +176,7 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:     cir.yield %{{.+}} : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[VA_ARG]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_DoublePair>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load align(8) %[[VA_ARG_B]] : !cir.ptr<!rec_DoublePair>, !rec_DoublePair
+// CIR:   cir.copy %[[VA_ARG_B]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_DoublePair>
 
 // MEMORY class: three eightbytes never fit in registers.
 // CIR-LABEL: cir.func {{.*}} @varargs_aggregate_memory(
@@ -189,7 +187,7 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // CIR:   %[[OVERFLOW_NEXT:.+]] = cir.ptr_stride %[[OVERFLOW_B]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
 // CIR:   cir.store %[[OVERFLOW_NEXT]], %{{.+}} : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR:   %[[VA_ARG_B:.+]] = cir.cast bitcast %[[OVERFLOW_B]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Big>
-// CIR:   %[[VA_ARG_V:.+]] = cir.load align(8) %[[VA_ARG_B]] : !cir.ptr<!rec_Big>, !rec_Big
+// CIR:   cir.copy %[[VA_ARG_B]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_Big>
 
 // LLVM-LABEL: define dso_local { <2 x float>, i32 } @varargs_aggregate_mixed_pair(i32 noundef %{{.*}}, ...)
 // OGCG:    %[[RETVAL:.+]] = alloca %struct.Bar, align 4
@@ -228,13 +226,14 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // LLVM:   store ptr %[[OVERFLOW_NEXT]], ptr %[[OVERFLOW_P]], align 8
 // LLVM:   br label %[[END_BB]]
 // LLVM: [[END_BB]]:
-// The fetched value is materialized by loading the record on one side and by
-// copying it on the other, so only the address feeding it is shared.
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[OVERFLOW]], %[[MEM_BB]] ], [ %[[REG_TMP]], %[[REG_BB]] ]
-// LLVMCIR: %[[VA_ARG:.+]] = load %struct.Bar, ptr %[[ADDR]], align 4
-// LLVMCIR: store %struct.Bar %[[VA_ARG]], ptr %{{.*}}, align 4
+// LLVMCIR: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.+}}, ptr align 4 %[[ADDR]], i64 12, i1 false)
 // OGCG:   %[[ADDR:.+]] = phi ptr [ %{{.*}}, %[[REG_BB]] ], [ %{{.*}}, %[[MEM_BB]] ]
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %{{.*}}, ptr align 4 %{{.*}}, i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR:.+]], ptr align 4 %{{[^,]+}}, i64 12, i1 false)
+// LLVM:   call void @llvm.va_end.p0(ptr %{{.+}})
+// LLVM-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[COERCE:.+]], ptr align 4 %[[RETVAL_ADDR]], i64 12, i1 false)
+// LLVM-NEXT:   %[[RES:.+]] = load { <2 x float>, i32 }, ptr %[[COERCE]], align 8
+// LLVM-NEXT:   ret { <2 x float>, i32 } %[[RES]]
 
 // LLVM-LABEL: define dso_local { i64, i64 } @varargs_aggregate_gp_pair(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
@@ -258,10 +257,8 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // LLVM:   br label %[[END_BB]]
 // LLVM: [[END_BB]]:
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[OVERFLOW]], %[[MEM_BB]] ], [ %[[REG_ADDR]], %[[REG_BB]] ]
-// LLVMCIR: %[[VA_ARG:.+]] = load %struct.LongPair, ptr %[[ADDR]], align 8
-// LLVMCIR: store %struct.LongPair %[[VA_ARG]], ptr %{{.*}}, align 8
 // OGCG:   %[[ADDR:.+]] = phi ptr [ %{{.*}}, %[[REG_BB]] ], [ %{{.*}}, %[[MEM_BB]] ]
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
 
 // LLVM-LABEL: define dso_local { double, double } @varargs_aggregate_sse_pair(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[FP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 1
@@ -287,19 +284,15 @@ struct Big varargs_aggregate_memory(int count, ...) {
 // LLVM:   br label %[[END_BB]]
 // LLVM: [[END_BB]]:
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %{{.*}}, %[[MEM_BB]] ], [ %[[REG_TMP]], %[[REG_BB]] ]
-// LLVMCIR: %[[VA_ARG:.+]] = load %struct.DoublePair, ptr %[[ADDR]], align 8
-// LLVMCIR: store %struct.DoublePair %[[VA_ARG]], ptr %{{.*}}, align 8
 // OGCG:   %[[ADDR:.+]] = phi ptr [ %{{.*}}, %[[REG_BB]] ], [ %{{.*}}, %[[MEM_BB]] ]
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %[[ADDR]], i64 16, i1 false)
 
 // LLVM-LABEL: define dso_local void @varargs_aggregate_memory(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.*}}, i32 noundef %{{.*}}, ...)
 // LLVM:   %[[OVERFLOW_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 2
 // LLVM:   %[[OVERFLOW:.+]] = load ptr, ptr %[[OVERFLOW_P]], align 8
 // LLVM:   %[[OVERFLOW_NEXT:.+]] = getelementptr i8, ptr %[[OVERFLOW]], i{{32|64}} 24
 // LLVM:   store ptr %[[OVERFLOW_NEXT]], ptr %[[OVERFLOW_P]], align 8
-// LLVMCIR: %[[VA_ARG:.+]] = load %struct.Big, ptr %[[OVERFLOW]], align 8
-// LLVMCIR: store %struct.Big %[[VA_ARG]], ptr %{{.*}}, align 8
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 24, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %[[OVERFLOW]], i64 24, i1 false)
 
 struct RevMixed {
   long a;
@@ -345,7 +338,7 @@ struct RevMixed varargs_aggregate_mixed_pair_rev(int count, ...) {
 // CIR:     cir.yield %[[REG_TMP_B]] : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_RevMixed>
-// CIR:   cir.load align(8) %[[RESULT_P]] : !cir.ptr<!rec_RevMixed>, !rec_RevMixed
+// CIR:   cir.copy %[[RESULT_P]] align(8) to %{{.+}} align(8) : !cir.ptr<!rec_RevMixed>
 
 // LLVM-LABEL: define dso_local { i64, double } @varargs_aggregate_mixed_pair_rev(i32 noundef %{{.*}}, ...)
 // LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %{{.+}}, align 4
@@ -372,8 +365,7 @@ struct RevMixed varargs_aggregate_mixed_pair_rev(int count, ...) {
 // OGCG:    store double %[[HI_VAL]], ptr %{{.+}}, align 8
 // LLVM:   add i32 %[[GP_OFFSET]], 8
 // LLVM:   add i32 %[[FP_OFFSET]], 16
-// LLVMCIR: load %struct.RevMixed, ptr %{{.+}}, align 8
-// OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %{{.+}}, i64 16, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.+}}, ptr align 8 %{{.+}}, i64 16, i1 false)
 
 struct __attribute__((aligned(16))) OverAligned {
   long a;
@@ -400,8 +392,7 @@ struct OverAligned varargs_aggregate_overaligned(int count, ...) {
 // CIR:   %[[ADDR:.+]] = cir.ternary(%[[FITS]], true {
 // CIR:     %[[REG_ADDR:.+]] = cir.ptr_stride %{{.+}}, %[[GP_OFFSET]] : (!cir.ptr<!u8i>, !u32i) -> !cir.ptr<!u8i>
 // CIR:     %[[REG_ADDR_V:.+]] = cir.cast bitcast %[[REG_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_OverAligned>
-// CIR:     %[[VAL:.+]] = cir.load align(8) %[[REG_ADDR_V]] : !cir.ptr<!rec_OverAligned>, !rec_OverAligned
-// CIR:     cir.store %[[VAL]], %[[TEMP]] : !rec_OverAligned, !cir.ptr<!rec_OverAligned>
+// CIR:     cir.copy %[[REG_ADDR_V]] align(8) to %[[TEMP]] align(16) : !cir.ptr<!rec_OverAligned>
 // CIR:     %[[TEMP_B:.+]] = cir.cast bitcast %[[TEMP]] : !cir.ptr<!rec_OverAligned> -> !cir.ptr<!u8i>
 // CIR:     cir.yield %[[TEMP_B]] : !cir.ptr<!u8i>
 // CIR:   }, false {
@@ -412,25 +403,23 @@ struct OverAligned varargs_aggregate_overaligned(int count, ...) {
 // CIR:     cir.yield %[[ALIGNED]] : !cir.ptr<!u8i>
 // CIR:   }) : (!cir.bool) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_OverAligned>
-// CIR:   cir.load align(16) %[[RESULT_P]] : !cir.ptr<!rec_OverAligned>, !rec_OverAligned
+// CIR:   cir.copy %[[RESULT_P]] align(16) to %{{.+}} align(16) : !cir.ptr<!rec_OverAligned>
 
 // LLVM-LABEL: define dso_local { i64, i64 } @varargs_aggregate_overaligned(i32 noundef %{{.*}}, ...)
 // LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %{{.+}}, align 4
 // OGCG:    %[[GP_OFFSET:.+]] = load i32, ptr %{{.+}}, align 16
 // LLVM:   icmp ule i32 %[[GP_OFFSET]], 32
-// The register slot is only 8-aligned, so the copy reads at 8 and stores
-// into a temp carrying the record's declared 16.  The temp is bound at its
-// alloca, so that an under-aligned one cannot satisfy the store below.
+// The register slot is only 8-aligned, so the copy reads at 8 and writes a
+// temp carrying the record's declared 16.  The temp is bound at its alloca, so
+// that an under-aligned one cannot satisfy the copy below.
 // LLVMCIR: %[[TEMP:.+]] = alloca %struct.OverAligned, align 16
-// LLVMCIR: %[[VAL:.+]] = load %struct.OverAligned, ptr %{{.+}}, align 8
-// LLVMCIR: store %struct.OverAligned %[[VAL]], ptr %[[TEMP]], align 8
+// LLVMCIR: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TEMP]], ptr align 8 %{{.+}}, i64 16, i1 false)
 // OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[TEMP:.+]], ptr align 8 %{{.+}}, i64 16, i1 false)
 // LLVM:   %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -16)
 // LLVM:   %[[MEM_NEXT:.+]] = getelementptr i8, ptr %[[ALIGNED]], i{{32|64}} 16
 // LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[ALIGNED]], %{{.+}} ], [ %[[TEMP]], %{{.+}} ]
 // OGCG:    %[[ADDR:.+]] = phi ptr [ %[[TEMP]], %{{.+}} ], [ %[[ALIGNED]], %{{.+}} ]
-// LLVMCIR: load %struct.OverAligned, ptr %[[ADDR]], align 16
-// OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{.+}}, ptr align 16 %[[ADDR]], i64 16, i1 false)
+// LLVM:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{.+}}, ptr align 16 %[[ADDR]], i64 16, i1 false)
 
 // A record can require more alignment than the types of its members imply,
 // and the attribute that raises it need not sit on the record: it can sit on a
@@ -454,12 +443,11 @@ long varargs_overaligned_union(int count, ...) {
 // CIR-LABEL: cir.func {{.*}} @varargs_overaligned_union(
 // CIR:   %[[ALIGNED:.+]] = cir.ptr_mask %{{.+}}, %{{.+}} : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_OverAlignedUnion>
-// CIR:   cir.load align(32) %[[RESULT_P]] : !cir.ptr<!rec_OverAlignedUnion>, !rec_OverAlignedUnion
+// CIR:   cir.copy %[[RESULT_P]] align(32) to %{{.+}} align(32) : !cir.ptr<!rec_OverAlignedUnion>
 
 // LLVM-LABEL: define dso_local i64 @varargs_overaligned_union(i32 noundef %{{.*}}, ...)
 // LLVM:     %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
-// LLVMCIR:  load %union.OverAlignedUnion, ptr %{{.+}}, align 32
-// OGCG:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
 
 struct FieldOverAligned {
   __attribute__((aligned(32))) char c;
@@ -477,12 +465,11 @@ long varargs_field_overaligned(int count, ...) {
 // CIR-LABEL: cir.func {{.*}} @varargs_field_overaligned(
 // CIR:   %[[ALIGNED:.+]] = cir.ptr_mask %{{.+}}, %{{.+}} : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_FieldOverAligned>
-// CIR:   cir.load align(32) %[[RESULT_P]] : !cir.ptr<!rec_FieldOverAligned>, !rec_FieldOverAligned
+// CIR:   cir.copy %[[RESULT_P]] align(32) to %{{.+}} align(32) : !cir.ptr<!rec_FieldOverAligned>
 
 // LLVM-LABEL: define dso_local i64 @varargs_field_overaligned(i32 noundef %{{.*}}, ...)
 // LLVM:     %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
-// LLVMCIR:  load %struct.FieldOverAligned, ptr %{{.+}}, align 32
-// OGCG:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
 
 struct HoldsOverAlignedUnion {
   union OverAlignedUnion u;
@@ -500,12 +487,11 @@ long varargs_holds_overaligned_union(int count, ...) {
 // CIR-LABEL: cir.func {{.*}} @varargs_holds_overaligned_union(
 // CIR:   %[[ALIGNED:.+]] = cir.ptr_mask %{{.+}}, %{{.+}} : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_HoldsOverAlignedUnion>
-// CIR:   cir.load align(32) %[[RESULT_P]] : !cir.ptr<!rec_HoldsOverAlignedUnion>, !rec_HoldsOverAlignedUnion
+// CIR:   cir.copy %[[RESULT_P]] align(32) to %{{.+}} align(32) : !cir.ptr<!rec_HoldsOverAlignedUnion>
 
 // LLVM-LABEL: define dso_local i64 @varargs_holds_overaligned_union(i32 noundef %{{.*}}, ...)
 // LLVM:     %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
-// LLVMCIR:  load %struct.HoldsOverAlignedUnion, ptr %{{.+}}, align 32
-// OGCG:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
 
 // Packing lowers the alignment the members imply, and an attribute can still
 // raise the record above it.
@@ -526,9 +512,8 @@ long varargs_packed_overaligned(int count, ...) {
 // CIR-LABEL: cir.func {{.*}} @varargs_packed_overaligned(
 // CIR:   %[[ALIGNED:.+]] = cir.ptr_mask %{{.+}}, %{{.+}} : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %{{.+}} : !cir.ptr<!u8i> -> !cir.ptr<!rec_PackedOverAligned>
-// CIR:   cir.load align(32) %[[RESULT_P]] : !cir.ptr<!rec_PackedOverAligned>, !rec_PackedOverAligned
+// CIR:   cir.copy %[[RESULT_P]] align(32) to %{{.+}} align(32) : !cir.ptr<!rec_PackedOverAligned>
 
 // LLVM-LABEL: define dso_local i64 @varargs_packed_overaligned(i32 noundef %{{.*}}, ...)
 // LLVM:     %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -32)
-// LLVMCIR:  load %struct.PackedOverAligned, ptr %{{.+}}, align 32
-// OGCG:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)
+// LLVM:     call void @llvm.memcpy.p0.p0.i64(ptr align 32 %{{.+}}, ptr align 32 %[[ALIGNED]], i64 32, i1 false)

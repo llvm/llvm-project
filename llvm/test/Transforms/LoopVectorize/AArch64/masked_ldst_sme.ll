@@ -167,7 +167,7 @@ attributes #0 = { uwtable vscale_range(1,16) "aarch64_pstate_sm_body" "target-fe
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]]}
-; CHECK: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"LVerDomain"}
 ; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
 ; CHECK: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; CHECK: [[META5]] = !{[[META6:![0-9]+]], [[META1]], [[META7:![0-9]+]], [[META8:![0-9]+]]}

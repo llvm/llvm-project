@@ -265,7 +265,27 @@ public:
         SymbolType(GOFF::ESD_ST_PartReference), NameSpace(EDAttr.NameSpace) {
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
+    BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
+    // See
+    // https://www.ibm.com/docs/en/hla-and-tf/1.6.0?topic=statements-amode-instruction#amode__modcomb,
+    // Table 2. HLASM sets the AMODE based on the RMODE if no AMODE is given.
+    GOFF::ESDAmode Amode;
+    switch (EDAttr.Rmode) {
+    case GOFF::ESD_RMODE_24:
+      Amode = GOFF::ESD_AMODE_24;
+      break;
+    case GOFF::ESD_RMODE_31:
+      Amode = GOFF::ESD_AMODE_31;
+      break;
+    case GOFF::ESD_RMODE_64:
+      Amode = GOFF::ESD_AMODE_64;
+      break;
+    default:
+      Amode = GOFF::ESD_AMODE_None;
+      break;
+    }
+    BehavAttrs.setAmode(Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
   }
@@ -401,8 +421,8 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
                   ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
-                               Symbol.getLinkage(), Symbol.getBindingScope(),
-                               0});
+                               Symbol.getBindingStrength(), Symbol.getLinkage(),
+                               Symbol.getBindingScope(), 0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
@@ -599,9 +619,7 @@ void GOFFWriter::writeRelocations() {
   for (auto &RelocEntry : Relocations) {
     auto GetRptr = [](const MCSymbolGOFF *Sym) -> uint32_t {
       if (Sym->isTemporary())
-        return static_cast<MCSectionGOFF &>(Sym->getSection())
-            .getBeginSymbol()
-            ->getIndex();
+        return static_cast<MCSectionGOFF &>(Sym->getSection()).getOrdinal();
       return Sym->getIndex();
     };
 

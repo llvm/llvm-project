@@ -1,9 +1,9 @@
-# RUN: llc %s --start-after=livedebugvalues -o - --filetype=obj | llvm-dwarfdump -  | FileCheck %s
+# RUN: llc %s --start-after=live-debug-values -o - --filetype=obj | llvm-dwarfdump -  | FileCheck %s
 
 ## Check that DW_AT_call_target_clobbered is used for a location expression
 ## using a volatile register, otherwise DW_AT_call_target is used.
 
-## Generated from this C++ with llc -stop-after=livedebugvalues -simplify-mir:
+## Generated from this C++ with llc -stop-after=live-debug-values -simplify-mir:
 ## __attribute__((disable_tail_calls)) void call_mem(void (**f)()) {
 ##   (*f)();
 ##   (*f)();

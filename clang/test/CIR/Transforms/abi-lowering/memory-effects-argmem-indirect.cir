@@ -1,0 +1,42 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=test | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
+
+#none = #cir.memory_effects<other = none, arg_mem = none,
+                            inaccessible_mem = none, errno_mem = none,
+                            target_mem0 = none, target_mem1 = none>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The callee is opaque, so the slot comes from classifying the function
+  // pointer's pointee: the struct argument spills to a byval slot, which the
+  // callee reaches whatever the call promised.
+  cir.func @call_byval(%fp: !cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, %b: !rec_Big) -> !s64i {
+    %0 = cir.call %fp(%b) { memory_effects = #none }
+        : (!cir.ptr<!cir.func<(!rec_Big) -> !s64i>>, !rec_Big) -> !s64i
+    cir.return %0 : !s64i
+  }
+
+  // CHECK:      cir.func{{.*}} @call_byval
+  // CHECK:        cir.call %{{[^(]+}}(%{{[^,)]+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>) -> !s64i>>, !cir.ptr<!rec_Big>
+  // CHECK-SAME:     llvm.byval = !rec_Big
+  // CHECK-SAME:     -> !s64i
+
+  // Nothing is passed through a slot here, so the call keeps what it
+  // promised.
+  cir.func @call_scalar(%fp: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %x: !s32i) -> !s32i {
+    %0 = cir.call %fp(%x) { memory_effects = #none }
+        : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK:      cir.func{{.*}} @call_scalar
+  // CHECK-NEXT:   cir.call %{{[^(]+}}(%{{[^,)]+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+
+}

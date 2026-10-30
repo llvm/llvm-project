@@ -156,14 +156,14 @@ For later versions of Visual Studio, no setup is required.
   </Type>
 
   <Type Name="llvm::DenseMap&lt;*,*,*&gt;">
-    <DisplayString Condition="NumEntries == 0">empty</DisplayString>
-    <DisplayString Condition="NumEntries != 0">{{ size={NumEntries}, buckets={NumBuckets} }}</DisplayString>
+    <DisplayString Condition="Storage.NumEntries == 0">empty</DisplayString>
+    <DisplayString Condition="Storage.NumEntries != 0">{{ size={Storage.NumEntries}, buckets={Storage.NumBuckets} }}</DisplayString>
     <Expand>
-      <Item Name="[size]">NumEntries</Item>
-      <Item Name="[buckets]">NumBuckets</Item>
+      <Item Name="[size]">Storage.NumEntries</Item>
+      <Item Name="[buckets]">Storage.NumBuckets</Item>
       <ArrayItems>
-        <Size>NumBuckets</Size>
-        <ValuePointer>Buckets</ValuePointer>
+        <Size>Storage.NumBuckets</Size>
+        <ValuePointer>Storage.Buckets</ValuePointer>
       </ArrayItems>
     </Expand>
   </Type>

@@ -195,7 +195,17 @@ public:
       // Use the runtime for simplicity. An optimization pass will be added to
       // inline array assignment when profitable.
       mlir::Value from = emboxRHS(rhsExv);
-      mlir::Value to = fir::getBase(builder.createBox(loc, lhsExv));
+      mlir::Value to;
+      // A nonallocable coarray has an allocable descriptor and reallocation
+      // must not happen so we want to have a descriptor without the
+      // “allocatable” attribute
+      if (fir::getBoxCorank(lhs.getType()) > 0 &&
+          lhsExv.getBoxOf<fir::BoxValue>()) {
+        fir::ExtendedValue readLhs =
+            fir::factory::readBoxValue(builder, loc, fir::getBase(lhsExv));
+        to = fir::getBase(builder.createBox(loc, readLhs));
+      } else
+        to = fir::getBase(builder.createBox(loc, lhsExv));
       // This is not a whole allocatable assignment: the runtime will not
       // reallocate and modify "toMutableBox" even if it is taking it by
       // reference.
@@ -440,13 +450,13 @@ public:
     // Propagate other attributes from hlfir.declare to fir.declare.
     // OpenACC's acc.declare is one example. Right now, the propagation
     // is verbatim.
-    llvm::SmallSet<llvm::StringRef, 8> elidedAttrs;
-    for (const mlir::NamedAttribute &firAttr : firDeclareOp->getAttrs())
-      elidedAttrs.insert(firAttr.getName());
-    elidedAttrs.insert(declareOp.getSkipReboxAttrName());
-    for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
-      if (!elidedAttrs.contains(attr.getName()))
-        firDeclareOp->setAttr(attr.getName(), attr.getValue());
+    firDeclareOp->setDiscardableAttrs(
+        declareOp->getDiscardableAttrDictionary());
+
+    // Give line 0 to code that materializes the HLFIR base.
+    if (auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>())
+      loc = mlir::FileLineColLoc::get(fileLoc.getFilename(), /*line=*/0,
+                                      /*column=*/0);
 
     auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;

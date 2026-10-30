@@ -68,6 +68,8 @@
 #include "lldb/Target/ProcessIOHandler.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/TargetGroup.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/TargetList.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Utility/Args.h"
@@ -105,6 +107,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -945,7 +948,11 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
 
       if (!disable_stdio) {
         if (pty.GetPrimaryFileDescriptor() != PseudoTerminal::invalid_fd) {
+#ifdef _WIN32
           SetSTDIOFileDescriptor(pty.ReleasePrimaryFileDescriptor());
+#else
+          SetSTDIOPseudoTerminal(pty);
+#endif
         }
 #ifdef _WIN32
         else if (m_stdin_forward) {
@@ -1179,6 +1186,7 @@ void ProcessGDBRemote::LoadStubBinaries() {
       bin_spec.force_symbol_search = true;
       bin_spec.notify = true;
       bin_spec.set_address_in_target = true;
+      bin_spec.is_main_executable = true;
       llvm::Expected<ModuleSP> module =
           DynamicLoader::LocateAndLoadBinary(this, bin_spec);
       if (!module)
@@ -3129,6 +3137,7 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
         response_str);
 
   // Sizes are separated by a `,`.
+  unsigned num_sizes = 0;
   for (llvm::StringRef size_str : llvm::split(sizes_str, ',')) {
     uint64_t read_size;
     if (size_str.getAsInteger(BASE_16, read_size))
@@ -3140,17 +3149,27 @@ llvm::Error ProcessGDBRemote::ParseMultiMemReadPacket(
                                       "enough data, requested sizes: {0}",
                                       sizes_str);
 
+    if (read_size > buffer.size())
+      return llvm::createStringErrorV(
+          "MultiMemRead response size {0} exceeds remaining buffer {1}",
+          read_size, buffer.size());
+
     llvm::StringRef region_to_read = memory_data.take_front(read_size);
     memory_data = memory_data.drop_front(read_size);
 
-    assert(buffer.size() >= read_size);
     llvm::MutableArrayRef<uint8_t> region_to_write =
         buffer.take_front(read_size);
     buffer = buffer.drop_front(read_size);
 
     memcpy(region_to_write.data(), region_to_read.data(), read_size);
     memory_regions.push_back(region_to_write);
+    ++num_sizes;
   }
+
+  if (num_sizes != expected_num_ranges)
+    return llvm::createStringErrorV(
+        "MultiMemRead response had {0} sizes, expected {1}", num_sizes,
+        expected_num_ranges);
 
   return llvm::Error::success();
 }
@@ -3390,6 +3409,27 @@ size_t ProcessGDBRemote::DoWriteMemory(addr_t addr, const void *buf,
                                               packet.GetData());
   }
   return 0;
+}
+
+bool ProcessGDBRemote::DoCanAllocateMemory() {
+  // Probe the _M packet. Falling back to mmap() only needs its symbol.
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolCalculate) {
+    addr_t addr = m_gdb_comm.AllocateMemory(8, ePermissionsReadable |
+                                                   ePermissionsWritable |
+                                                   ePermissionsExecutable);
+    if (addr != LLDB_INVALID_ADDRESS)
+      m_gdb_comm.DeallocateMemory(addr);
+  }
+  if (m_gdb_comm.SupportsAllocDeallocMemory() == eLazyBoolYes)
+    return true;
+
+  ModuleFunctionSearchOptions options;
+  options.include_symbols = true;
+  options.include_inlines = false;
+  SymbolContextList sc_list;
+  GetTarget().GetImages().FindFunctions(
+      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  return !sc_list.IsEmpty();
 }
 
 lldb::addr_t ProcessGDBRemote::DoAllocateMemory(size_t size,
@@ -4346,12 +4386,45 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!accelerator_target_sp)
     return llvm::createStringError("failed to create accelerator target");
 
+  llvm::scope_exit delete_accelerator_target([&] {
+    debugger.GetTargetList().DeleteTarget(accelerator_target_sp);
+    accelerator_target_sp->Destroy();
+  });
+
   PlatformSP platform_sp = accelerator_target_sp->GetPlatform();
   if (!platform_sp)
     return llvm::createStringErrorV(
         "no platform '{0}' compatible with triple '{1}' for the accelerator "
         "target",
         connect_info.platform_name, connect_info.triple);
+
+  TargetSP native_target_sp = GetTarget().shared_from_this();
+  std::shared_ptr<TargetGroupCPUAndAccelerators> group_sp =
+      native_target_sp
+          ->GetFirstTargetGroupOfType<TargetGroupCPUAndAccelerators>();
+
+  bool created_group = !group_sp;
+  if (created_group) {
+    group_sp = debugger.GetTargetGroupList()
+                   .CreateTargetGroup<TargetGroupCPUAndAccelerators>(
+                       "CPU and accelerator targets");
+  }
+
+  llvm::scope_exit restore_target_group([&] {
+    group_sp->RemoveTarget(accelerator_target_sp);
+    if (created_group) {
+      group_sp->RemoveTarget(native_target_sp);
+      debugger.GetTargetGroupList().DeleteTargetGroup(group_sp);
+    }
+  });
+
+  if (llvm::Error membership_error =
+          group_sp->AddTarget(native_target_sp, TargetGroup::Role::CPU))
+    return membership_error;
+  if (llvm::Error membership_error = group_sp->AddTarget(
+          accelerator_target_sp, TargetGroup::Role::Accelerator))
+    return membership_error;
+
   ProcessSP process_sp =
       connect_info.synchronous
           ? platform_sp->ConnectProcessSynchronous(
@@ -4366,6 +4439,8 @@ llvm::Error ProcessGDBRemote::HandleAcceleratorConnection(
   if (!process_sp)
     return llvm::createStringError("failed to connect to the accelerator");
 
+  restore_target_group.release();
+  delete_accelerator_target.release();
   accelerator_target_sp->SetTargetSessionName(actions.session_name);
 
   // Broadcast the new-target event so API clients can detect it.
@@ -6344,7 +6419,7 @@ llvm::Error ProcessGDBRemote::LoadModules() {
         return IterationAction::Stop;
 
       lldb::ModuleSP module_copy_sp = module_sp;
-      target.SetExecutableModule(module_copy_sp, eLoadDependentsNo);
+      target.RebuildModuleListWithExecutable(module_copy_sp, eLoadDependentsNo);
       return IterationAction::Stop;
     });
 

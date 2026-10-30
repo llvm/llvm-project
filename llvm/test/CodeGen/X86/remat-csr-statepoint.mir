@@ -1,0 +1,39 @@
+# RUN: llc -x mir -mtriple=x86_64-unknown-linux-gnu \
+# RUN:   -passes=greedy,virt-reg-rewriter -restrict-statepoint-remat \
+# RUN:   -regalloc-csr-cost-scale=100 < %s | FileCheck %s --check-prefix=CSR
+# RUN: llc -x mir -mtriple=x86_64-unknown-linux-gnu \
+# RUN:   -passes=greedy,virt-reg-rewriter -restrict-statepoint-remat=false \
+# RUN:   -regalloc-csr-cost-scale=100 < %s | FileCheck %s --check-prefix=REMAT
+
+--- |
+  target triple = "x86_64-unknown-linux-gnu"
+  define void @variable_statepoint_operand() gc "statepoint-example" { ret void }
+  declare void @callee()
+  declare void @bar()
+...
+---
+# A variable statepoint operand cannot be rematerialized when the restriction
+# is enabled, so keep it in a CSR across the first call. Without the restriction,
+# rematerialize it after the call instead.
+name: variable_statepoint_operand
+tracksRegLiveness: true
+frameInfo:
+  adjustsStack: true
+body: |
+  bb.0:
+    ; CSR-LABEL: name: variable_statepoint_operand
+    ; CSR: renamable $ebx = MOV32ri 1
+    ; CSR-NEXT: CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    ; CSR-NEXT: STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 1, killed renamable $ebx, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    ; CSR-NEXT: RET 0
+    ;
+    ; REMAT-LABEL: name: variable_statepoint_operand
+    ; REMAT: CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    ; REMAT-NEXT: renamable $ebx = MOV32ri 1
+    ; REMAT-NEXT: STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 1, killed renamable $ebx, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    ; REMAT-NEXT: RET 0
+    %0:gr32 = MOV32ri 1
+    CALL64pcrel32 @callee, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp
+    STATEPOINT 0, 0, 0, @bar, 2, 0, 2, 0, 2, 1, %0, 2, 0, 2, 0, 2, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+    RET 0
+...

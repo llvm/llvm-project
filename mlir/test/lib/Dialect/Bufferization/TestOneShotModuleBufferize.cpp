@@ -18,6 +18,8 @@
 #include "TestDialect.h"
 #include "TestOps.h"
 
+#include "llvm/ADT/TypeSwitch.h"
+
 using namespace mlir;
 
 namespace {

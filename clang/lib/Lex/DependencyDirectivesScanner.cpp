@@ -153,8 +153,6 @@ private:
   [[nodiscard]] bool lexPPLine(const char *&First, const char *const End);
   [[nodiscard]] bool lexAt(const char *&First, const char *const End);
   [[nodiscard]] bool lexModule(const char *&First, const char *const End);
-  [[nodiscard]] bool lexDefine(const char *HashLoc, const char *&First,
-                               const char *const End);
   [[nodiscard]] bool lexPragma(const char *&First, const char *const End);
   [[nodiscard]] bool lex_Pragma(const char *&First, const char *const End);
   [[nodiscard]] bool lexEndif(const char *&First, const char *const End);

@@ -31,7 +31,6 @@ using namespace testing;
 namespace llvm {
 LLVM_ABI extern cl::opt<bool> EnableDetailedFunctionProperties;
 LLVM_ABI extern cl::opt<bool> BigBasicBlockInstructionThreshold;
-LLVM_ABI extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
 LLVM_ABI extern cl::opt<float> ir2vec::OpcWeight;
 LLVM_ABI extern cl::opt<float> ir2vec::TypeWeight;
 LLVM_ABI extern cl::opt<float> ir2vec::ArgWeight;

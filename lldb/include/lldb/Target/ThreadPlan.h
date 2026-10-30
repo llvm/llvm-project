@@ -11,6 +11,7 @@
 
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -19,6 +20,8 @@
 #include "lldb/Target/ThreadPlanTracer.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -313,6 +316,7 @@ public:
     eKindStepThrough,
     eKindStepUntil,
     eKindSingleThreadTimeout,
+    eKindRunToBreakpoint
   };
 
   virtual ~ThreadPlan();
@@ -622,6 +626,15 @@ protected:
   ThreadPlanNull(const ThreadPlanNull &) = delete;
   const ThreadPlanNull &operator=(const ThreadPlanNull &) = delete;
 };
+
+/// Returns the load addresses of the line table entries for \p lines in
+/// \p file, and of \p addresses, that are in the scope of \p frame. A
+/// line without entries resolves to the nearest following line with
+/// entries. Fails if no address is left.
+llvm::Expected<std::vector<lldb::addr_t>>
+GetStepUntilAddresses(StackFrame &frame, const FileSpec &file,
+                      llvm::ArrayRef<uint32_t> lines,
+                      llvm::ArrayRef<lldb::addr_t> requested_addresses);
 
 } // namespace lldb_private
 

@@ -1,9 +1,9 @@
-add_custom_target(libc_pthread_unittests)
+add_libc_testsuite(libc-pthread-tests)
 
 add_libc_test(
   pthread_attr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_attr_test.cpp
   DEPENDS
@@ -35,7 +35,7 @@ add_libc_test(
 add_libc_test(
   pthread_mutexattr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_mutexattr_test.cpp
   DEPENDS
@@ -54,7 +54,7 @@ add_libc_test(
 add_libc_test(
   pthread_condattr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_condattr_test.cpp
   DEPENDS
@@ -72,7 +72,7 @@ add_libc_test(
 add_libc_test(
   pthread_rwlockattr_test
   SUITE
-    libc_pthread_unittests
+    libc-pthread-tests
   SRCS
     pthread_rwlockattr_test.cpp
   DEPENDS

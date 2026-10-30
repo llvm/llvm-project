@@ -361,7 +361,7 @@ public:
         ++i;
       if (i == cies.begin() || i[-1].inputOff + i[-1].size <= off) {
         Err(ctx) << ".eh_frame: relocation is not in any piece";
-        return 0;
+        return -1;
       }
       it = i;
     }
@@ -762,6 +762,8 @@ static void addPltEntry(Ctx &ctx, PltSection &plt, GotPltSection &gotPlt,
     return;
   }
   gotPlt.addEntry(sym);
+  if (sym.isPreemptible && ctx.arg.zMarkPlt && type == ctx.target->pltRel)
+    expr = R_PLT;
   rel.addReloc(
       {type, &gotPlt, sym.getGotPltOffset(ctx), isPreemptible, sym, 0, expr});
 }
@@ -943,7 +945,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // If the target adjusted the expression to an optimizable form, we may
       // end up needing the GOT if we can't optimize everything.
       if (expr == R_RELAX_GOT_PC || expr == R_RELAX_GOT_PC_NOPIC)
-        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+        ctx.in.got->hasDeferredEntries.store(true, std::memory_order_relaxed);
     }
   }
 
@@ -1197,12 +1199,13 @@ template <class ELFT> void elf::scanRelocations(Ctx &ctx) {
                           ? 1
                           : std::min<size_t>(ctx.arg.threadCount, numFiles + 1);
   parallelFor(0, numWorkers, [&](unsigned shard) {
-    // Tasks claim work items off a shared counter: item i < numFiles scans
-    // ctx.objectFiles[i] while the last item scans special sections.
+    // Tasks claim work items off a shared counter: item 0 scans special
+    // sections (claimed first since .eh_frame is large) while item i scans
+    // ctx.objectFiles[i - 1].
     for (size_t i;
          (i = next.fetch_add(1, std::memory_order_relaxed)) <= numFiles;) {
-      if (i != numFiles) {
-        for (InputSectionBase *s : ctx.objectFiles[i]->getSections())
+      if (i != 0) {
+        for (InputSectionBase *s : ctx.objectFiles[i - 1]->getSections())
           if (s && s->kind() == SectionBase::Regular && s->isLive() &&
               (s->flags & SHF_ALLOC) &&
               !(s->type == SHT_ARM_EXIDX && ctx.arg.emachine == EM_ARM))

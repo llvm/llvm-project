@@ -152,8 +152,8 @@ public:
 
   bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -227,6 +227,8 @@ public:
 
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
+
+  bool optimizeVectorCrossLaneOperation(Instruction *I, Loop *L) const override;
 
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 
@@ -765,7 +767,9 @@ private:
   SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_REPEAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
@@ -779,6 +783,7 @@ private:
   SDValue LowerVECTOR_HISTOGRAM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerGET_ACTIVE_LANE_MASK(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMASK_BEFOREFIRST(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVectorSRA_SRL_SHL(SDValue Op, SelectionDAG &DAG) const;
@@ -986,7 +991,8 @@ FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
 
 // Determine the effective TLS model for an ELF global, applying
 // AArch64-specific restrictions and configuration.
-TLSModel::Model getELFTLSModel(const GlobalValue *GV, const TargetMachine &TM,
+TLSModel::Model getELFTLSModel(const GlobalValue *GV,
+                               const AArch64TargetMachine &TM,
                                bool HasELFSignedGOT);
 } // end namespace AArch64
 
