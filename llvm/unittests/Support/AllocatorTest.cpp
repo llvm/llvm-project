@@ -80,6 +80,101 @@ TEST(AllocatorTest, TestReset) {
   EXPECT_EQ(2U, Alloc.GetNumSlabs());
 }
 
+// Rewinding to a mark inside a slab resets the pointer, allowing the memory
+// to be reused for new allocations.
+TEST(AllocatorTest, TestRewindWithinSlab) {
+  BumpPtrAllocator Alloc;
+  void *A = Alloc.Allocate(100, 1);
+  BumpPtrAllocator::Mark M = Alloc.Save();
+  void *B = Alloc.Allocate(100, 1);
+  void *C = Alloc.Allocate(100, 1);
+
+  EXPECT_FALSE(Alloc.AllocatedAfter(A, M));
+  EXPECT_TRUE(Alloc.AllocatedAfter(B, M));
+  EXPECT_TRUE(Alloc.AllocatedAfter(C, M));
+
+  Alloc.Rewind(M);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  // Allocations in the same order get the same memory addresses.
+  EXPECT_EQ(B, Alloc.Allocate(100, 1));
+  EXPECT_EQ(C, Alloc.Allocate(100, 1));
+}
+
+// Rewinding frees the slabs created after the mark was saved.
+TEST(AllocatorTest, TestRewindAcrossSlabs) {
+  BumpPtrAllocator Alloc;
+  Alloc.Allocate(3000, 1);
+  BumpPtrAllocator::Mark M = Alloc.Save();
+  size_t MemoryAtMark = Alloc.getTotalMemory();
+
+  void *First = Alloc.Allocate(3000, 1);
+  for (int I = 0; I < 3; ++I)
+    Alloc.Allocate(3000, 1);
+  EXPECT_EQ(5U, Alloc.GetNumSlabs());
+  EXPECT_TRUE(Alloc.AllocatedAfter(First, M));
+
+  Alloc.Rewind(M);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(MemoryAtMark, Alloc.getTotalMemory());
+}
+
+// If the mark is saved before the first slab, rewinding clears the allocator.
+TEST(AllocatorTest, TestRewindToEmpty) {
+  BumpPtrAllocator Alloc;
+  BumpPtrAllocator::Mark M = Alloc.Save();
+  void *A = Alloc.Allocate(3000, 1);
+  EXPECT_TRUE(Alloc.AllocatedAfter(A, M));
+
+  Alloc.Rewind(M);
+  EXPECT_EQ(0U, Alloc.GetNumSlabs());
+  EXPECT_EQ(0U, Alloc.getTotalMemory());
+  // The allocator remains usable after rewinding to empty.
+  Alloc.Allocate(3000, 1);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+}
+
+// Slabs allocated after the mark are freed when rewound,
+// while slabs allocated before it keep their data.
+TEST(AllocatorTest, TestRewindCustomSizedSlabs) {
+  BumpPtrAllocator Alloc;
+  char *Old = (char *)Alloc.Allocate(5000, 1);
+  Old[0] = 42;
+  BumpPtrAllocator::Mark M = Alloc.Save();
+  void *New = Alloc.Allocate(5000, 1);
+  EXPECT_EQ(2U, Alloc.GetNumSlabs());
+
+  EXPECT_FALSE(Alloc.AllocatedAfter(Old, M));
+  EXPECT_TRUE(Alloc.AllocatedAfter(New, M));
+
+  Alloc.Rewind(M);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_EQ(42, Old[0]);
+}
+
+// Marks are LIFO: inner marks rewind first, and an outer mark stays valid
+// across rewinds to marks saved after it.
+TEST(AllocatorTest, TestRewindIsLIFO) {
+  BumpPtrAllocator Alloc;
+  BumpPtrAllocator::Mark Outer = Alloc.Save();
+  void *A = Alloc.Allocate(3000, 1);
+  BumpPtrAllocator::Mark Inner = Alloc.Save();
+  Alloc.Allocate(3000, 1);
+  Alloc.Allocate(5000, 1);
+
+  Alloc.Rewind(Inner);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+  EXPECT_FALSE(Alloc.AllocatedAfter(A, Inner));
+  EXPECT_TRUE(Alloc.AllocatedAfter(A, Outer));
+
+  // A mark can be rewound to repeatedly.
+  Alloc.Allocate(3000, 1);
+  Alloc.Rewind(Inner);
+  EXPECT_EQ(1U, Alloc.GetNumSlabs());
+
+  Alloc.Rewind(Outer);
+  EXPECT_EQ(0U, Alloc.GetNumSlabs());
+}
+
 // Test some allocations at varying alignments.
 TEST(AllocatorTest, TestAlignment) {
   BumpPtrAllocator Alloc;
