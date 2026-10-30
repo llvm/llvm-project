@@ -529,12 +529,22 @@ static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
   return false;
 }
 
+// Equivalent to any_of(Class, MI.definesRegister(Reg)), but walks MI's def
+// operands once instead of once per register in Class.
 static bool definesRegInClass(const MachineInstr &MI,
                               const TargetRegisterInfo *TRI,
                               const TargetRegisterClass &Class) {
-  return llvm::any_of(Class, [&MI, TRI](MCPhysReg Reg) {
-    return MI.definesRegister(Reg, TRI);
-  });
+  for (const MachineOperand &MO : MI.all_defs()) {
+    Register Reg = MO.getReg();
+    if (!Reg.isPhysical())
+      continue;
+    if (Class.contains(Reg))
+      return true;
+    for (MCPhysReg SubReg : TRI->subregs(Reg))
+      if (Class.contains(SubReg))
+        return true;
+  }
+  return false;
 }
 
 static bool readsRegInClass(const MachineInstr &MI,
