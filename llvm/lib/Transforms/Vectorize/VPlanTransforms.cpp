@@ -2216,11 +2216,11 @@ static bool isVectorLatchCheck(VPRecipeBase *Term, VPValue *Cond, VPlan &Plan) {
   if (!Cond)
     return false;
 
-  auto m_ActiveLaneMask = m_VPInstruction<VPInstruction::WideActiveLaneMask>();
   // The active-lane-mask form used when the tail is folded by masking.
-  return match(Cond, m_Not(m_CombineOr(m_ActiveLaneMask,
-                                       m_ExtractVectorForPart(m_ActiveLaneMask,
-                                                              m_ZeroInt()))));
+  return match(Cond,
+               m_Not(m_CombineOr(m_WideActiveLaneMask(),
+                                 m_ExtractVectorForPart(m_WideActiveLaneMask(),
+                                                        m_ZeroInt()))));
 }
 
 /// Try to simplify the branch condition of \p Plan. This may restrict the
@@ -4307,12 +4307,13 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
       VPValue *Mask = nullptr;
       VPValue *StoredValue = nullptr;
-      if (!match(&R, m_WidenLoad(m_ContiguousVecPtr)) &&
-          !match(&R,
-                 m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue))) &&
-          !match(&R, m_MaskedLoad(m_ContiguousVecPtr, m_VPValue(Mask))) &&
-          !match(&R, m_MaskedStore(m_ContiguousVecPtr, m_VPValue(StoredValue),
-                                   m_VPValue(Mask))))
+      if (!match(&R,
+                 m_CombineOr(
+                     m_WidenLoad(m_ContiguousVecPtr),
+                     m_WidenStore(m_ContiguousVecPtr, m_VPValue(StoredValue)),
+                     m_MaskedLoad(m_ContiguousVecPtr, m_VPValue(Mask)),
+                     m_MaskedStore(m_ContiguousVecPtr, m_VPValue(StoredValue),
+                                   m_VPValue(Mask)))))
         continue;
 
       auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
@@ -4369,8 +4370,8 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
 
       R.eraseFromParent();
       if (Mask) {
-        NewMemOp->addMask(Mask);
         assert((!MaskPhi || Mask == MaskPhi) && "Expected a single mask phi");
+        NewMemOp->addMask(Mask);
         MaskPhi = cast<VPActiveLaneMaskPHIRecipe>(Mask);
       }
     }
@@ -4396,12 +4397,11 @@ void VPlanTransforms::widenMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
   auto *MaskPart = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
                                         {MaskPhi, Plan.getConstantInt(64, 0)});
 
-  MaskPhi->replaceUsesWithIf(MaskPart, [&](VPUser *U) {
-    auto *VPI = dyn_cast<VPInstruction>(U);
-    return U != MaskPart &&
-           (!VPI || (VPI->getOpcode() != VPInstruction::WideVectorLoad &&
-                     VPI->getOpcode() != VPInstruction::WideVectorStore));
-  });
+  MaskPhi->replaceUsesWithIf(
+      MaskPart, match_fn(m_Unless(m_CombineOr(
+                    m_Specific(MaskPart),
+                    m_VPInstruction<VPInstruction::WideVectorLoad>(),
+                    m_VPInstruction<VPInstruction::WideVectorStore>()))));
 
   // Remove extra ExtractVectorForPart operations.
   assert(EntryMask->getOpcode() == VPInstruction::ExtractVectorForPart &&
