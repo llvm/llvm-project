@@ -262,18 +262,18 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v234, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v233, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v232, 0
-; CHECK-NEXT:    v_mov_b32_e32 v239, 0
-; CHECK-NEXT:    v_mov_b32_e32 v238, 0
-; CHECK-NEXT:    v_mov_b32_e32 v237, 0
-; CHECK-NEXT:    v_mov_b32_e32 v236, 0
-; CHECK-NEXT:    v_mov_b32_e32 v247, 0
-; CHECK-NEXT:    v_mov_b32_e32 v246, 0
-; CHECK-NEXT:    v_mov_b32_e32 v245, 0
-; CHECK-NEXT:    v_mov_b32_e32 v244, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v243, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v242, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v241, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v240, 0
+; CHECK-NEXT:    v_mov_b32_e32 v247, 0
+; CHECK-NEXT:    v_mov_b32_e32 v246, 0
+; CHECK-NEXT:    v_mov_b32_e32 v245, 0
+; CHECK-NEXT:    v_mov_b32_e32 v244, 0
+; CHECK-NEXT:    v_mov_b32_e32 v239, 0
+; CHECK-NEXT:    v_mov_b32_e32 v238, 0
+; CHECK-NEXT:    v_mov_b32_e32 v237, 0
+; CHECK-NEXT:    v_mov_b32_e32 v236, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v251, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v250, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v249, 0
@@ -314,12 +314,12 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
 ; CHECK-NEXT:    v_add_f32_e64 v232, v232, v232
 ; CHECK-NEXT:    v_add_f32_e64 v233, v233, v233
-; CHECK-NEXT:    v_pk_add_f32 v[238:239], v[238:239], v[238:239]
-; CHECK-NEXT:    v_pk_add_f32 v[236:237], v[236:237], v[236:237]
-; CHECK-NEXT:    v_pk_add_f32 v[246:247], v[246:247], v[246:247]
-; CHECK-NEXT:    v_pk_add_f32 v[244:245], v[244:245], v[244:245]
 ; CHECK-NEXT:    v_pk_add_f32 v[242:243], v[242:243], v[242:243]
 ; CHECK-NEXT:    v_pk_add_f32 v[240:241], v[240:241], v[240:241]
+; CHECK-NEXT:    v_pk_add_f32 v[246:247], v[246:247], v[246:247]
+; CHECK-NEXT:    v_pk_add_f32 v[244:245], v[244:245], v[244:245]
+; CHECK-NEXT:    v_pk_add_f32 v[238:239], v[238:239], v[238:239]
+; CHECK-NEXT:    v_pk_add_f32 v[236:237], v[236:237], v[236:237]
 ; CHECK-NEXT:    v_pk_add_f32 v[250:251], v[250:251], v[250:251]
 ; CHECK-NEXT:    v_pk_add_f32 v[248:249], v[248:249], v[248:249]
 ; CHECK-NEXT:    v_pk_add_f32 v[254:255], v[254:255], v[254:255]
@@ -466,7 +466,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_accvgpr_read_b32 v225, a1
 ; CHECK-NEXT:    v_accvgpr_read_b32 v224, a0
 ; CHECK-NEXT:    v_mov_b32_e32 v232, 0
-; CHECK-NEXT:    global_store_dwordx4 v232, v[236:239], s[0:1] offset:1984
+; CHECK-NEXT:    global_store_dwordx4 v232, v[240:243], s[0:1] offset:1984
 ; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[228:231], a[4:7], a[8:11], v[224:227]
 ; CHECK-NEXT:    global_store_dwordx4 v232, v[244:247], s[0:1] offset:1968
@@ -478,7 +478,7 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_add_f32_e32 v229, 2.0, v224
 ; CHECK-NEXT:    v_mov_b32_e32 v224, 0
 ; CHECK-NEXT:    global_store_dwordx2 v232, v[228:229], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v232, v[240:243], s[0:1] offset:1952
+; CHECK-NEXT:    global_store_dwordx4 v232, v[236:239], s[0:1] offset:1952
 ; CHECK-NEXT:    global_store_dwordx4 v232, v[248:251], s[0:1] offset:1936
 ; CHECK-NEXT:    global_store_dwordx4 v232, v[252:255], s[0:1] offset:1920
 ; CHECK-NEXT:    global_store_dwordx4 v224, v[192:195], s[0:1] offset:368

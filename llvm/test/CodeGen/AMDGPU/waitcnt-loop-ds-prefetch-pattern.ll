@@ -31,16 +31,17 @@ define amdgpu_kernel void @ds_prefetch_pattern(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    s_wait_dscnt 0x1
 ; CHECK-NEXT:    v_pk_add_f32 v[6:7], v[10:11], v[6:7]
 ; CHECK-NEXT:    v_pk_add_f32 v[4:5], v[8:9], v[4:5]
-; CHECK-NEXT:    v_lshl_add_u32 v10, s1, 5, v13
+; CHECK-NEXT:    v_lshl_add_u32 v14, s1, 5, v13
 ; CHECK-NEXT:    s_cmp_lt_i32 s1, s0
 ; CHECK-NEXT:    s_wait_dscnt 0x0
-; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[6:7], v[2:3]
-; CHECK-NEXT:    v_pk_add_f32 v[14:15], v[4:5], v[0:1]
+; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[6:7], v[2:3]
+; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[4:5], v[0:1]
+; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[10:11]
+; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[8:9]
 ; CHECK-NEXT:    s_barrier_wait -1
-; CHECK-NEXT:    ds_load_b128 v[4:7], v10
-; CHECK-NEXT:    ds_load_b128 v[0:3], v10 offset:16
-; CHECK-NEXT:    v_pk_add_f32 v[10:11], v[8:9], v[8:9]
-; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[14:15], v[14:15]
+; CHECK-NEXT:    ds_load_b128 v[4:7], v14
+; CHECK-NEXT:    ds_load_b128 v[0:3], v14 offset:16
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv

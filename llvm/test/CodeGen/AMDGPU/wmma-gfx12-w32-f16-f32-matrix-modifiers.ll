@@ -135,7 +135,12 @@ bb:
 define amdgpu_ps void @test_wmma_f16_16x16x16_f16_absC(<8 x half> %A, <8 x half> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_wmma_f16_16x16x16_f16_absC:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    v_wmma_f16_16x16x16_f16 v[8:11], v[0:3], v[4:7], v[8:11] neg_hi:[0,0,1]
+; GCN-NEXT:    v_and_b32_e32 v11, 0x7fff7fff, v11
+; GCN-NEXT:    v_and_b32_e32 v10, 0x7fff7fff, v10
+; GCN-NEXT:    v_and_b32_e32 v9, 0x7fff7fff, v9
+; GCN-NEXT:    v_and_b32_e32 v8, 0x7fff7fff, v8
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_wmma_f16_16x16x16_f16 v[8:11], v[0:3], v[4:7], v[8:11]
 ; GCN-NEXT:    global_store_b128 v[12:13], v[8:11], off
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -342,7 +347,12 @@ bb:
 define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negabsC(<8 x half> %A, <8 x half> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_wmma_f16_16x16x16_f16_negabsC:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    v_wmma_f16_16x16x16_f16 v[8:11], v[0:3], v[4:7], v[8:11] neg_lo:[0,0,1] neg_hi:[0,0,1]
+; GCN-NEXT:    v_and_b32_e32 v11, 0x7fff7fff, v11
+; GCN-NEXT:    v_and_b32_e32 v10, 0x7fff7fff, v10
+; GCN-NEXT:    v_and_b32_e32 v9, 0x7fff7fff, v9
+; GCN-NEXT:    v_and_b32_e32 v8, 0x7fff7fff, v8
+; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GCN-NEXT:    v_wmma_f16_16x16x16_f16 v[8:11], v[0:3], v[4:7], v[8:11] neg_lo:[0,0,1]
 ; GCN-NEXT:    global_store_b128 v[12:13], v[8:11], off
 ; GCN-NEXT:    s_endpgm
 bb:

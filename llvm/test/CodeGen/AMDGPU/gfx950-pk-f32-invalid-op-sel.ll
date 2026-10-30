@@ -16,20 +16,16 @@ define amdgpu_kernel void @case1_add_f32(ptr addrspace(1) %out, ptr addrspace(1)
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
   ; GCN-NEXT:   [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[GLOBAL_LOAD_DWORDX2_SADDR]], 4, [[GLOBAL_LOAD_DWORDX2_SADDR1]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[V_PK_ADD_F32_]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[V_PK_ADD_F32_]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case1_add_f32
@@ -77,20 +73,16 @@ define amdgpu_kernel void @case1_mul_f32(ptr addrspace(1) %out, ptr addrspace(1)
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
   ; GCN-NEXT:   [[V_PK_MUL_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_MUL_F32 8, [[GLOBAL_LOAD_DWORDX2_SADDR]], 4, [[GLOBAL_LOAD_DWORDX2_SADDR1]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[V_PK_MUL_F32_]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[V_PK_MUL_F32_]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case1_mul_f32
@@ -138,29 +130,25 @@ define amdgpu_kernel void @case2_fma_f32_opsel010(ptr addrspace(1) %out, ptr add
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 2048, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY6]], 0, [[COPY7]], 0, [[COPY8]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
-  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY9]], 0, [[COPY10]], 0, [[COPY11]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 2048, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY4]], 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY7]], 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case2_fma_f32_opsel010
@@ -220,28 +208,24 @@ define amdgpu_kernel void @case2_fma_f32_opsel100(ptr addrspace(1) %out, ptr add
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 16, 0 :: (dereferenceable invariant load (s64) from %ir.s.kernarg.offset, align 16, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY6]], 0, [[COPY7]], 0, [[COPY8]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
-  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY9]], 0, [[COPY10]], 0, [[COPY11]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY4]], 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY7]], 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case2_fma_f32_opsel100
@@ -299,29 +283,25 @@ define amdgpu_kernel void @case2_fma_f32_opsel110(ptr addrspace(1) %out, ptr add
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 2048, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY6]], 0, [[COPY7]], 0, [[COPY8]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
-  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY9]], 0, [[COPY10]], 0, [[COPY11]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 2048, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY4]], 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY7]], 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case2_fma_f32_opsel110
@@ -381,29 +361,25 @@ define amdgpu_kernel void @case2_fma_f32_opsel101(ptr addrspace(1) %out, ptr add
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 2048, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY6]], 0, [[COPY7]], 0, [[COPY8]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-  ; GCN-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
-  ; GCN-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY9]], 0, [[COPY10]], 0, [[COPY11]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.b, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 2048, 0, implicit $exec :: (load (s64) from %ir.gep.c, addrspace 1)
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub1
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY4]], 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
+  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
+  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR2]].sub0
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY7]], 0, [[COPY8]], 0, [[COPY9]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case2_fma_f32_opsel101
@@ -463,26 +439,22 @@ define amdgpu_kernel void @case2_fma_f32_imm_neg(ptr addrspace(1) %out, ptr addr
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a0, addrspace 1)
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.c0, addrspace 1)
-  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
-  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
-  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY6]], 0, -1082130432, 1, [[COPY7]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
-  ; GCN-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
-  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY8]], 0, -1082130432, 1, [[COPY9]], 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE2]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a0, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR1:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 1024, 0, implicit $exec :: (load (s64) from %ir.gep.c0, addrspace 1)
+  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub0
+  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub1
+  ; GCN-NEXT:   [[V_FMA_F32_e64_:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY4]], 0, -1082130432, 1, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR]].sub1
+  ; GCN-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORDX2_SADDR1]].sub0
+  ; GCN-NEXT:   [[V_FMA_F32_e64_1:%[0-9]+]]:vgpr_32 = V_FMA_F32_e64 0, [[COPY6]], 0, -1082130432, 1, [[COPY7]], 0, 0, implicit $mode, implicit $exec
+  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_FMA_F32_e64_]], %subreg.sub0, [[V_FMA_F32_e64_1]], %subreg.sub1
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: case2_fma_f32_imm_neg
@@ -544,19 +516,15 @@ define amdgpu_kernel void @not_case2_fma_f32(ptr addrspace(1) %out, ptr addrspac
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GCN-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 0, 0 :: (dereferenceable invariant load (s128) from %ir.out.kernarg.offset1, addrspace 4)
   ; GCN-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 16, 0 :: (dereferenceable invariant load (s64) from %ir.s.kernarg.offset, align 16, addrspace 4)
-  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GCN-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
-  ; GCN-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
-  ; GCN-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GCN-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
+  ; GCN-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub0_sub1
+  ; GCN-NEXT:   [[COPY3:%[0-9]+]]:sreg_64_xexec_xnull = COPY [[S_LOAD_DWORDX4_IMM]].sub2_sub3
   ; GCN-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GCN-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
   ; GCN-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GCN-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
-  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
+  ; GCN-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2_SADDR [[COPY3]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.gep.a, addrspace 1)
   ; GCN-NEXT:   [[V_PK_FMA_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_FMA_F32 8, [[GLOBAL_LOAD_DWORDX2_SADDR]], 8, [[S_LOAD_DWORDX2_IMM]], 0, 1065353216, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[V_PK_FMA_F32_]], [[REG_SEQUENCE]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
+  ; GCN-NEXT:   GLOBAL_STORE_DWORDX2_SADDR [[V_LSHLREV_B32_e64_]], [[V_PK_FMA_F32_]], [[COPY2]], 0, 0, implicit $exec :: (store (s64) into %ir.gep.out, addrspace 1)
   ; GCN-NEXT:   S_ENDPGM 0
   ;
   ; GISEL-LABEL: name: not_case2_fma_f32
