@@ -34,6 +34,8 @@
 // RUN:   | FileCheck -check-prefixes=CHK-NO-TARGETS-32 %s
 // CHK-NO-TARGETS-32-DAG: offload, "device-sycl (spirv32-unknown-unknown:xe-pvc)"
 // CHK-NO-TARGETS-32-DAG: offload, "device-sycl (spirv32-unknown-unknown:igca_20ca)"
+/// Names are kept as given, so two aliases of one device make two device jobs,
+/// and --no-offload-arch removes a name.
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=xe-mtl-u --offload-arch=xe-arl-u --offload-arch=xe-pvc \
 // RUN:   --no-offload-arch=xe-pvc -c %s 2>&1 \
