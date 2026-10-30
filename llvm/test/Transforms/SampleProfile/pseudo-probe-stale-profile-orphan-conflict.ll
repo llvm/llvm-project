@@ -1,6 +1,6 @@
 ; Test direct basename matching for orphan functions where multiple callee anchors may be
 ; matched to one same profile during stale profile matching. In this test case, both of the
-; `mid` functions will be matched to the same `_Z3midi` function in the profile during stale
+; `top` functions will be matched to the same `_Z3topi` function in the profile during stale
 ; profile matching. This ends up causing an assertation error because only one profile
 ; function is supposed to be matched to an IR function.
 ;
@@ -10,21 +10,14 @@
 ;                          |_ sub
 ; 
 ; Profile Function:
-;   foo: bar ; top ; mid
-;                     |_ sub
+;   foo: top; bar ; top
+;                     |_ mid
+;                          |_ sub
 ; 
 ; Stale profile match order:
 ;   foo:  top<ir>   ; bar<ir>   ; top(2)<ir>
 ;            |           |           |
 ;         top<prof> ; bar<prof> ; top<prof>
-;
-;   top(2)<ir>:  mid(2)<ir>
-;                  |
-;                mid<prof>
-;
-;   top<ir>:  mid<ir>
-;               |
-;             mid<prof>    => (Assertation error)
 
 
 ; REQUIRES: x86_64-linux
@@ -32,23 +25,15 @@
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/pseudo-probe-stale-profile-orphan-conflict.prof -o %t.prof
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof --salvage-stale-profile --salvage-unused-profile -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl 2>&1 | FileCheck %s
 
-; CHECK: Function _Z3midl is not in profile or profile symbol list.
-; CHECK: Function _Z3midll is not in profile or profile symbol list.
-; CHECK: Function _Z3topl is not in profile or profile symbol list.
-; CHECK: Function _Z3barl is not in profile or profile symbol list.
-; CHECK: Function _Z3topll is not in profile or profile symbol list.
-; CHECK: Function _Z3fool is not in profile or profile symbol list.
-; CHECK: Direct basename match: _Z3barl (IR) -> _Z3bari (Profile) [basename: bar]
-; CHECK: Direct basename match: _Z3fool (IR) -> _Z3fooi (Profile) [basename: foo]
-; CHECK: Direct basename matching found 2 matches
 ; CHECK: Run stale profile matching for _Z3fool
 ; CHECK: The functions _Z3topl(IR) and _Z3topi(Profile) share the same base name: top.
-; CHECK: Function:_Z3topl matches profile:_Z3topi
 ; CHECK: The functions _Z3barl(IR) and _Z3bari(Profile) share the same base name: bar.
-; CHECK: Function:_Z3barl matches profile:_Z3bari
 ; CHECK: The functions _Z3topll(IR) and _Z3topi(Profile) share the same base name: top.
+; CHECK: Function:_Z3topl matches profile:_Z3topi
+; CHECK: Function:_Z3barl matches profile:_Z3bari
 ; CHECK: Function:_Z3topll matches profile:_Z3topi
-; CHECK: Location is matched from 2 to 2
+; CHECK: Function:_Z3topll encounters conflicting profile matchings, remapping to new profile:_Z3topll
+; CHECK: Callsite with callee:_Z3topl is matched from 2 to 30
 ; CHECK: Callsite with callee:_Z3barl is matched from 3 to 57
 ; CHECK: Callsite with callee:_Z3topll is matched from 4 to 72
 ; CHECK: Run stale profile matching for _Z3topll
@@ -59,6 +44,7 @@
 ; CHECK: Run stale profile matching for _Z3topl
 ; CHECK: The functions _Z3midl(IR) and _Z3midi(Profile) share the same base name: mid.
 ; CHECK: Function:_Z3midl matches profile:_Z3midi
+; CHECK: Function:_Z3midl encounters conflicting profile matchings, remapping to new profile:_Z3midl
 ; CHECK: Callsite with callee:_Z3midl is matched from 1 to 2
 ; CHECK: Run stale profile matching for _Z3midll
 ; CHECK: Callsite with callee:_Z3subi is matched from 1 to 11
