@@ -6,7 +6,7 @@
 # MIPSELR6-NEXT: b	0x0 <aaa>
 # MIPSELR6:      0000000000000008 <bbb>:
 # MIPSELR6-NEXT: beqzc	$13, 0x8 <bbb>
-# MIPSELR6-NEXT: nop    <aaa>
+# MIPSELR6-NEXT: nop{{$}}
 # MIPSELR6:      b	0x8 <bbb>
 	.set noreorder
 aaa:

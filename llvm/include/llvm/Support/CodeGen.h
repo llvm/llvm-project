@@ -215,6 +215,59 @@ namespace llvm {
     return "";
   }
 
+  /// Identify a debugger for "tuning" the debug info.
+  ///
+  /// The "debugger tuning" concept allows us to present a more intuitive
+  /// interface that unpacks into different sets of defaults for the various
+  /// individual feature-flag settings, that suit the preferences of the
+  /// various debuggers.  However, it's worth remembering that debuggers are
+  /// not the only consumers of debug info, and some variations in DWARF might
+  /// better be treated as target/platform issues. Fundamentally,
+  /// o if the feature is useful (or not) to a particular debugger, regardless
+  ///   of the target, that's a tuning decision;
+  /// o if the feature is useful (or not) on a particular platform, regardless
+  ///   of the debugger, that's a target decision.
+  /// It's not impossible to see both factors in some specific case.
+  enum class DebuggerKind {
+    Default, ///< No specific tuning requested.
+    GDB,     ///< Tune debug info for gdb.
+    LLDB,    ///< Tune debug info for lldb.
+    SCE,     ///< Tune debug info for SCE targets (e.g. PS4).
+    DBX      ///< Tune debug info for dbx.
+  };
+
+  /// Parse the string spelling used by the "debugger-tuning" IR module flag
+  /// into a DebuggerKind.
+  inline std::optional<DebuggerKind> parseDebuggerTuning(StringRef S) {
+    if (S == "gdb")
+      return DebuggerKind::GDB;
+    if (S == "lldb")
+      return DebuggerKind::LLDB;
+    if (S == "sce")
+      return DebuggerKind::SCE;
+    if (S == "dbx")
+      return DebuggerKind::DBX;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "debugger-tuning" IR module flag
+  /// for a DebuggerKind.
+  inline StringRef getDebuggerTuningName(DebuggerKind Tuning) {
+    switch (Tuning) {
+    case DebuggerKind::GDB:
+      return "gdb";
+    case DebuggerKind::LLDB:
+      return "lldb";
+    case DebuggerKind::SCE:
+      return "sce";
+    case DebuggerKind::DBX:
+      return "dbx";
+    case DebuggerKind::Default:
+      break;
+    }
+    return "";
+  }
+
   enum class EABI {
     Unknown,
     Default, // Default means not specified
@@ -257,6 +310,16 @@ namespace llvm {
     AssemblyFile,
     ObjectFile,
     Null // Do not emit any output.
+  };
+
+  /// Specify where the machine verifier runs in the codegen pipeline.
+  enum class MachineVerifierMode {
+    /// Never run the machine verifier.
+    None,
+    /// Run the machine verifier once, at the end of the pipeline.
+    End,
+    /// Run the machine verifier before and after every machine pass.
+    Each
   };
 
   // Specify what functions should keep the frame pointer.

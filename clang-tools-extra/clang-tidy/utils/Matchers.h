@@ -26,6 +26,12 @@ AST_MATCHER(FunctionDecl, isOverloadedOperator) {
   return Node.isOverloadedOperator();
 }
 
+AST_MATCHER(Decl, isOutOfLine) { return Node.isOutOfLine(); }
+
+AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+
+AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
+
 AST_MATCHER(QualType, isExpensiveToCopy) {
   std::optional<bool> IsExpensive =
       utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());

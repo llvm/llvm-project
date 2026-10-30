@@ -8,10 +8,10 @@ define i32 @f() {
   ; CHECK: bb.0 (%ir-block.0):
   ; CHECK-NEXT:   [[GETPCX:%[0-9]+]]:intregs = GETPCX implicit-def dead $o7
   ; CHECK-NEXT:   [[SETHIi:%[0-9]+]]:intregs = SETHIi target-flags(<unknown>) @g
-  ; CHECK-NEXT:   [[ADDri:%[0-9]+]]:intregs = ADDri killed [[SETHIi]], target-flags(<unknown>) @g
-  ; CHECK-NEXT:   [[LDrr:%[0-9]+]]:intregs = LDrr [[GETPCX]], killed [[ADDri]] :: (load (s32) from got)
-  ; CHECK-NEXT:   [[LDrr1:%[0-9]+]]:intregs = LDrr killed [[LDrr]], $g0 :: (dereferenceable load (s32) from @g)
-  ; CHECK-NEXT:   $i0 = COPY [[LDrr1]]
+  ; CHECK-NEXT:   [[XORri:%[0-9]+]]:intregs = XORri [[SETHIi]], target-flags(<unknown>) @g
+  ; CHECK-NEXT:   [[GDOP_LDrr:%[0-9]+]]:intregs = GDOP_LDrr [[GETPCX]], [[XORri]], target-flags(<unknown>) @g :: (load (s32) from got)
+  ; CHECK-NEXT:   [[LDrr:%[0-9]+]]:intregs = LDrr [[GDOP_LDrr]], $g0 :: (dereferenceable load (s32) from @g)
+  ; CHECK-NEXT:   $i0 = COPY [[LDrr]]
   ; CHECK-NEXT:   RETL 8, implicit $i0
   %v = load i32, ptr @g
   ret i32 %v

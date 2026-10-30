@@ -27,7 +27,7 @@ def ol_device_info_t : Enum {
   list<TaggedEtor> basic_etors =[
     TaggedEtor<"TYPE", "ol_device_type_t", "type of the device">,
     TaggedEtor<"PLATFORM", "ol_platform_handle_t", "the platform associated with the device">,
-    TaggedEtor<"NAME", "char[]", "Device name">,
+    TaggedEtor<"NAME", "char[]", "Device name, typically identifying the device architecture (e.g. `gfx1100`). May be the same as `PRODUCT_NAME`">,
     TaggedEtor<"PRODUCT_NAME", "char[]", "Device user-facing marketing name">,
     TaggedEtor<"UID", "char[]", "Device UID">,
     TaggedEtor<"VENDOR", "char[]", "Device vendor">,
@@ -60,6 +60,33 @@ def ol_device_info_t : Enum {
        TaggedEtor<"DRIVER_ID", "uint32_t",
                   "Backend driver identifier; within a platform, devices "
                   "sharing the same value can be grouped in a single context">,
+       TaggedEtor<"COMPUTE_UNIT_KIND", "char[]",
+                  "Kind of the compute units of the device, e.g. sm_80 or "
+                  "gfx908">,
+       TaggedEtor<"TIMESTAMP_FREQUENCY", "uint64_t",
+                  "Frequency, in Hz, of the counter device code reads to "
+                  "measure time">,
+       TaggedEtor<"HARDWARE_PARALLELISM", "uint64_t",
+                  "Total number of lane groups that can be resident on the "
+                  "device simultaneously">,
+       // The LAUNCH_DEFAULT_ properties are the geometry the backend prefers
+       // for a kernel launch. Unlike the limits above, they are a preference
+       // and not a constraint.
+       TaggedEtor<"LAUNCH_DEFAULT_WORK_GROUP_SIZE", "uint32_t",
+                  "Work group size, in work items, to use when none is "
+                  "requested">,
+       TaggedEtor<"LAUNCH_DEFAULT_NUM_WORK_GROUPS", "uint32_t",
+                  "Number of work groups to use when none is requested">,
+       TaggedEtor<"LAUNCH_MAX_NUM_WORK_GROUPS", "uint32_t",
+                  "Maximum number of work groups a launch can have">,
+       TaggedEtor<"LAUNCH_MAX_GRID_SIZE", "uint64_t",
+                  "Maximum total number of work items (work groups times work "
+                  "group size) a launch can have, or zero if the device only "
+                  "limits the number of work groups">,
+       TaggedEtor<"NATIVE_HANDLE", "void *",
+                  "The backend-native handle of the device, reinterpreted as "
+                  "a void pointer. The actual type of the handle is backend "
+                  "dependent">,
   ];
   let etors = !listconcat(basic_etors, fp_configs, native_vec_widths,
                           fp_support, basic_etors2);

@@ -54,7 +54,7 @@ def Vector_ContractionOp :
                   TCresVTEtIsSameAsOpBase<0, 2>>,
       DeclareOpInterfaceMethods<ArithFastMathInterface>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
     ]>,
     Arguments<(ins AnyVectorOfNonZeroRankNonI0Elem:$lhs, AnyVectorOfNonZeroRankNonI0Elem:$rhs, AnyType:$acc,
                ArrayAttr:$indexing_maps,
@@ -99,6 +99,21 @@ def Vector_ContractionOp :
         lhs or rhs (but not both). The lhs and rhs free dimensions
         are unrelated to each other and do not co-iterate, which
         should be expressed in their indexing maps.
+
+    Depending on its iterator type and on the operands it indexes, a dimension
+    is one of the following kinds:
+
+    | Iterator type | In output | In lhs and rhs | Kind                     |
+    | ------------- | --------- | -------------- | ------------------------ |
+    | "parallel"    | yes       | both           | batch                    |
+    | "parallel"    | yes       | lhs only       | free (M-like)            |
+    | "parallel"    | yes       | rhs only       | free (N-like)            |
+    | "reduction"   | no        | both           | contracting              |
+    | "reduction"   | no        | one of them    | reduction on one operand |
+
+    The M-like and N-like terms follow
+    [`linalg.contract`](https://mlir.llvm.org/docs/Dialects/Linalg/#linalgcontract-linalgcontractop)
+    terminology.
 
     An indexing map attribute list must be specified with an entry for lhs, rhs
     and acc arguments. An indexing map attribute specifies a mapping from each
@@ -215,7 +230,12 @@ def Vector_ContractionOp :
     void getIterationIndexMap(
       std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap);
 
+    // Returns (lhs dim, rhs dim) pairs for the contracting dimensions:
+    // "reduction" iterators that index both lhs and rhs, and not the result.
     std::vector<std::pair<int64_t, int64_t>> getContractingDimMap();
+
+    // Returns (lhs dim, rhs dim) pairs for the batch dimensions: "parallel"
+    // iterators that index lhs, rhs, and the result.
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
 
     static CombiningKind getDefaultKind() {
@@ -253,7 +273,7 @@ def Vector_ReductionOp :
                             "dest", "acc", "::llvm::cast<Type>($_self)">,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
     ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                AnyVectorOfNonI0Elem:$vector,
@@ -311,14 +331,18 @@ def Vector_MultiDimReductionOp :
      AllTypesMatch<["dest", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
-                               ["getShapeForUnroll"]>]>,
+                               ["getIterationShapeToUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyType:$acc,
-                   DenseI64ArrayAttr:$reduction_dims)>,
+                   DenseI64ArrayAttr:$reduction_dims,
+                   DefaultValuedAttr<
+                     Arith_FastMathAttr,
+                     "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs AnyType:$dest)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
@@ -328,6 +352,14 @@ def Vector_MultiDimReductionOp :
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
+    The optional `fastmath` attribute holds `arith` fast-math flags, which have
+    the meaning given in the LLVM Language Reference ("Fast-Math Flags"). Every
+    combining operation of the reduction, including the one with the
+    accumulator, behaves like the matching `arith` op with these flags. For
+    example, with `nnan` on a `maximumf` reduction, the combining operations
+    assume that no operand or result is a NaN. The flags only affect the
+    floating-point kinds.
+
     Example:
 
     ```mlir
@@ -335,11 +367,15 @@ def Vector_MultiDimReductionOp :
       vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
       vector<4x16xf32> to f32
+    %3 = vector.multi_reduction <maximumf>, %0, %acc0 fastmath<nnan,nsz> [1, 3] :
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     ```
   }];
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$acc,
-                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>
+                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind,
+                   CArg<"::mlir::arith::FastMathFlags",
+                        "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
@@ -370,7 +406,8 @@ def Vector_MultiDimReductionOp :
     }
   }];
   let assemblyFormat =
-    "$kind `,` $source `,` $acc attr-dict $reduction_dims `:` type($source) `to` type($dest)";
+    "$kind `,` $source `,` $acc (`fastmath` `` $fastmath^)? attr-dict "
+    "$reduction_dims `:` type($source) `to` type($dest)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -378,7 +415,7 @@ def Vector_MultiDimReductionOp :
 
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [Pure,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
@@ -391,14 +428,14 @@ def Vector_BroadcastOp :
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
-    * a k-D vector <s_1 x .. x s_k x type> can be broadcast to
-      a n-D vector <t_1 x .. x t_n x type> if
-       * k <= n, and
-       * the sizes in the trailing dimensions n-k < i <= n with j=i+k-n
+    * a K-D vector <s_1 x .. x s_K x type> can be broadcast to
+      a N-D vector <t_1 x .. x t_N x type> if
+       * K <= N, and
+       * the sizes in the trailing dimensions N-K < i <= N with j=i+K-N
           match exactly as s_j = t_i or s_j = 1:
        ```
-           t_1 x   ..  t_n-k x t_n-k+1 x .. x t_i x .. x t_n
-                               s_1     x .. x s_j x .. x s_k
+           t_1 x   ..  t_N-K x t_N-K+1 x .. x t_i x .. x t_N
+                               s_1     x .. x s_j x .. x s_K
                <duplication>         <potential stretch>
        ```
        * in addition, any scalable unit dimension, `[1]`, must match exactly.
@@ -406,7 +443,7 @@ def Vector_BroadcastOp :
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal
     dimension of 1 (stretching a trailing dimension is also referred to as
-    "dim-1" broadcasting). These rules imply that any scalar broadcast (k=0) to
+    "dim-1" broadcasting). These rules imply that any scalar broadcast (K=0) to
     any shaped vector with the same element type is always legal.
 
     Example:
@@ -416,6 +453,18 @@ def Vector_BroadcastOp :
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
     ```
+
+    For every element in the result vector, the corresponding coordinate in
+    source dimension `j` can be computed from its linear offset `off` in the
+    result vector as follows:
+    ```
+                            / 0, if source_dim(j) == 1
+    source_coord[j](off) = |
+                            \ floor(off / result_stride(N - K + j)) % source_dim(j), otherwise
+
+    ```
+    where `j = 1 .. K` and `result_stride(N - K + j)` is the result stride
+    corresponding to source dimension `j`.
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
@@ -540,7 +589,7 @@ def ResultIsDoubleSourceVectorType : TypesMatchWith<
 def Vector_InterleaveOp :
   Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
     ResultIsDoubleSourceVectorType,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>]> {
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -619,7 +668,7 @@ def Vector_DeinterleaveOp :
     SourceVectorEvenElementCount,
     ResultIsHalfSourceVectorType<"res1">,
     AllTypesMatch<["res1", "res2"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
       let description = [{
@@ -748,7 +797,7 @@ def Vector_ExtractOp :
 def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [
        Pure, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
-       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
      ] # ElementwiseMappable.traits>,
     Arguments<(ins VectorOfAnyRankOf<[AnyFloat]>:$lhs,
                    VectorOfAnyRankOf<[AnyFloat]>:$rhs,
@@ -1258,7 +1307,7 @@ def Vector_ExtractStridedSliceOp :
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
@@ -1471,7 +1520,7 @@ def Vector_TransferReadOp :
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
     /// 2. Builder that sets padding to `padding` or poison if not provided and
-    /// an empty mask (variant without attrs). 
+    /// an empty mask (variant without attrs).
     /// If `padding` is null, a poison value is used.
     /// If `permutationMap` is null, a minor identity map is used.
     /// If `inBounds` is null, an empty mask is used.
@@ -1512,7 +1561,7 @@ def Vector_TransferReadOp :
 def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
@@ -1674,7 +1723,7 @@ def Vector_TransferWriteOp :
 
 // Promises IndexedAccessOpInterface.
 def Vector_LoadOp : Vector_Op<"load", [
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {
@@ -1802,7 +1851,7 @@ def Vector_LoadOp : Vector_Op<"load", [
 
 // Promises IndexedAccessOpInterface.
 def Vector_StoreOp : Vector_Op<"store", [
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {
@@ -2111,7 +2160,7 @@ def Vector_GatherOp :
   Vector_Op<"gather", [
     DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]>,
     Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
@@ -2491,7 +2540,7 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
@@ -2537,7 +2586,7 @@ def Vector_ShapeCastOp :
 
 def Vector_BitCastOp :
   Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>]>,
     Arguments<(ins AnyVectorOfNonI0Elem:$source)>,
     Results<(outs AnyVectorOfNonI0Elem:$result)>{
   let summary = "bitcast casts between vectors";
@@ -2831,7 +2880,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
   let summary = "vector transpose operation";

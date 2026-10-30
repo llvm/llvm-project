@@ -65,6 +65,10 @@ enum : unsigned {
 
   RESERVED_ADDRESS_SPACE_18 = 18, ///< Reserved for downstream use.
 
+  RESERVED_ADDRESS_SPACE_19 = 19, ///< Reserved for downstream use.
+
+  RESERVED_ADDRESS_SPACE_20 = 20, ///< Reserved for downstream use.
+
   /// Internal address spaces. Can be freely renumbered.
   STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
   /// end Internal address spaces.
@@ -176,7 +180,7 @@ static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
 ///
 /// This maps private/scratch to the focused lane view.
 ///
-/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.rst
+/// These mappings must be kept in sync with llvm/docs/AMDGPUUsage.md
 /// table "AMDGPU DWARF Address Space Mapping".
 ///
 /// Note: This could return std::optional<int> but that would require

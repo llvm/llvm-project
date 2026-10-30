@@ -16,7 +16,7 @@
 
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -40,6 +40,7 @@ namespace ento {
 
 class PathSensitiveBugReport;
 class BugReporterContext;
+class CallEvent;
 class ExplodedNode;
 class MemRegion;
 class PathDiagnosticPiece;

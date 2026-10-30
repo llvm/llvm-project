@@ -1,4 +1,4 @@
-# RUN: llc %s -start-after=livedebugvalues -o - | FileCheck %s
+# RUN: llc %s -start-after=live-debug-values -o - | FileCheck %s
 #
 ## Original code, compiled clang -O2 -g -c
 ## 

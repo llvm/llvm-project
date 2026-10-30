@@ -183,6 +183,10 @@ enum class AlignRequirementKind {
 
   /// The alignment comes from an alignment attribute on a enum type.
   RequiredByEnum,
+
+  /// The type's natural alignment is preserved under #pragma pack in MSVC
+  /// record layout (e.g., vectors, x87 fp80).
+  ResistPragmaPack,
 };
 
 struct TypeInfo {
@@ -195,7 +199,8 @@ struct TypeInfo {
            AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -209,7 +214,8 @@ struct TypeInfoChars {
                 AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -543,15 +549,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
       CtorClosureDefaultArgs;
 
-  /// Keeps track of all declaration attributes.
+  /// Storage for the AttrVecs pointed to by Decl::Attrs.
   ///
-  /// Since so few decls have attrs, we keep them in a hash map instead of
-  /// wasting space in the Decl class.
-  llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
-
-  /// One-entry cache for getDeclAttrs().
-  const Decl *LastDeclAttrsDecl = nullptr;
-  AttrVec *LastDeclAttrs = nullptr;
+  /// A SpecificBumpPtrAllocator so that the vectors are destroyed when the
+  /// context dies without having to track them individually.
+  llvm::SpecificBumpPtrAllocator<AttrVec> DeclAttrAllocator;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -873,7 +875,7 @@ public:
   };
 
   /// Returns the dynamic AST node parent map context.
-  ParentMapContext &getParentMapContext();
+  ParentMapContext &getParentMapContext() { return *ParentMapCtx; }
 
   // A traversal scope limits the parts of the AST visible to certain analyses.
   // RecursiveASTVisitor only visits specified children of TranslationUnitDecl.
@@ -1190,11 +1192,8 @@ public:
     return CommentCommandTraits;
   }
 
-  /// Retrieve the attributes for the given declaration.
-  AttrVec& getDeclAttrs(const Decl *D);
-
-  /// Erase the attributes corresponding to the given declaration.
-  void eraseDeclAttrs(const Decl *D);
+  /// Allocate an empty attribute vector with the lifetime of this context.
+  AttrVec *allocateAttrVec();
 
   ArrayRef<CXXDefaultArgExpr *>
   getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
@@ -1208,13 +1207,6 @@ public:
   /// Add an ExplicitInstantiationDecl for a given specialization.
   void addExplicitInstantiationDecl(const NamedDecl *Spec,
                                     ExplicitInstantiationDecl *EID);
-
-  /// If this variable is an instantiated static data member of a
-  /// class template specialization, returns the templated static data member
-  /// from which it was instantiated.
-  // FIXME: Remove ?
-  MemberSpecializationInfo *getInstantiatedFromStaticDataMember(
-                                                           const VarDecl *Var);
 
   /// Note that the static data member \p Inst is an instantiation of
   /// the static data member template \p Tmpl of a class template.
@@ -1393,6 +1385,7 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
+  CanQualType MetaInfoTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
       UnknownAnyTy;
   CanQualType BuiltinFnTy;
@@ -3656,6 +3649,13 @@ public:
   /// \returns true if the function/var must be CodeGen'ed/deserialized even if
   /// it is not used.
   bool DeclMustBeEmitted(const Decl *D);
+
+  /// Determines if the global variable or function \p D is emitted on the side
+  /// of the CUDA/HIP compilation, i.e. host or device, that is being compiled,
+  /// based on its host/device related attributes.
+  ///
+  /// \returns false if CodeGen never emits \p D in this compilation.
+  bool shouldEmitCUDADecl(const ValueDecl *D) const;
 
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.

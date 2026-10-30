@@ -17,6 +17,7 @@
 #include "clang/Basic/BitmaskEnum.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -246,6 +247,11 @@ public:
     }
 
     return false;
+  }
+
+  bool validateLocalRegisterVariable(StringRef RegName) const override {
+    return !llvm::is_contained(
+        {"argp", "flags", "fpcr", "fpsr", "dirflag", "frame"}, RegName);
   }
 
   bool validateOutputSize(const llvm::StringMap<bool> &FeatureMap,

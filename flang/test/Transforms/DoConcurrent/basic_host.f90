@@ -7,7 +7,7 @@
 
 ! CHECK-LABEL: DO_CONCURRENT_BASIC
 program do_concurrent_basic
-    ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+    ! CHECK: %[[ARR:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFEa") : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 
     implicit none
     integer :: a(10)
@@ -24,7 +24,7 @@ program do_concurrent_basic
     ! CHECK: omp.parallel {
 
     ! CHECK-NEXT: %[[ITER_VAR:.*]] = fir.alloca i32 <{bindc_name = "i"}>
-    ! CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    ! CHECK-NEXT: %[[BINDING:.*]]:2 = hlfir.declare %[[ITER_VAR]] uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 
     ! CHECK: omp.wsloop {
     ! CHECK-NEXT: omp.loop_nest (%[[ARG0:.*]]) : index = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {

@@ -63,7 +63,7 @@ llvm.func @masked_gather_scatter_metadata(%ptrs: vector<7 x !llvm.ptr>, %mask: v
 // CHECK-DAG: ![[TBAA_ROOT]] = !{!"Simple C/C++ TBAA"}
 // CHECK-DAG: ![[$SCOPE1]] = !{![[SCOPE1_DECL:[0-9]+]]}
 // CHECK-DAG: ![[SCOPE1_DECL]] = distinct !{![[SCOPE1_DECL]], ![[DOMAIN:[0-9]+]], !"The first scope"}
-// CHECK-DAG: ![[DOMAIN]] = distinct !{![[DOMAIN]], !"The domain"}
+// CHECK-DAG: ![[DOMAIN]] = distinct !{![[DOMAIN]], i1 false, !"The domain"}
 // CHECK-DAG: ![[$SCOPE2]] = !{![[SCOPE2_DECL:[0-9]+]]}
 // CHECK-DAG: ![[SCOPE2_DECL]] = distinct !{![[SCOPE2_DECL]], ![[DOMAIN]], !"The second scope"}
 // CHECK-DAG: ![[$AG]] = distinct !{}

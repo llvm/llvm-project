@@ -311,9 +311,16 @@ struct SimplifySwitch : public OpRewritePattern<SwitchOp> {
     };
 
     for (CaseOp c : cases) {
-      if (!cascadingCases.empty() &&
-          !isa_and_nonnull<CaseOp>(c->getPrevNode())) {
+      // Cascading cases must be textually adjacent to the previously
+      // collected cascading case. This is false when something is in the
+      // way (e.g. a goto) or when the previous cascading case was found
+      // nested inside a sibling case's body (e.g. a case label that falls
+      // through into a compound statement) rather than next to `c`.
+      bool isAdjacentToLastCascadingCase =
+          !cascadingCases.empty() &&
+          c->getPrevNode() == cascadingCases.back().getOperation();
 
+      if (!cascadingCases.empty() && !isAdjacentToLastCascadingCase) {
         if (cascadingCases.size() > 1)
           mergeLastCascadingAndFlush();
         else
@@ -364,8 +371,13 @@ struct SimplifyVecSplat : public OpRewritePattern<VecSplatOp> {
         !mlir::isa_and_nonnull<cir::FPAttr>(value))
       return mlir::failure();
 
-    cir::VectorType resultType = op.getResult().getType();
-    SmallVector<mlir::Attribute, 16> elements(resultType.getSize(), value);
+    // FIXME(CIR): We should consider making a matrix constant attribute so that
+    // we can simplify it here too.
+    assert(!MissingFeatures::matrixType());
+    auto resultType = mlir::dyn_cast<cir::VectorType>(op.getResult().getType());
+    if (!resultType || resultType.isScalable())
+      return mlir::failure();
+    SmallVector<mlir::Attribute, 16> elements(resultType.getFixedSize(), value);
     auto constVecAttr = cir::ConstVectorAttr::get(
         resultType, mlir::ArrayAttr::get(getContext(), elements));
 
@@ -410,8 +422,11 @@ void CIRSimplifyPass::runOnOperation() {
       ops.push_back(op);
   });
 
-  // Apply patterns.
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+  // Apply patterns. Scope the rewrite to the body region, which encloses
+  // the common ancestor the driver would otherwise search for.
+  GreedyRewriteConfig config;
+  config.setScope(&getOperation()->getRegion(0));
+  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 
   // SimplifyConstantLoad needs to query dominance information, which could be
@@ -429,7 +444,11 @@ void CIRSimplifyPass::runSimplifyConstantLoad() {
     if (isa<LoadOp>(op))
       ops.push_back(op);
   });
-  if (applyOpPatternsGreedily(ops, std::move(patterns)).failed())
+  // Scope the rewrite to the body region, which encloses the common
+  // ancestor the driver would otherwise search for.
+  GreedyRewriteConfig config;
+  config.setScope(&getOperation()->getRegion(0));
+  if (applyOpPatternsGreedily(ops, std::move(patterns), config).failed())
     signalPassFailure();
 }
 

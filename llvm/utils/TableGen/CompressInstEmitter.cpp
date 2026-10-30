@@ -35,7 +35,7 @@
 //   bit isCompressOnly = false;
 // }
 //
-// let Predicates = [HasStdExtC] in {
+// let Predicates = [HasStdExtZca] in {
 // def : CompressPat<(ADD GPRNoX0:$rs1, GPRNoX0:$rs1, GPRNoX0:$rs2),
 //                   (C_ADD GPRNoX0:$rs1, GPRNoX0:$rs2)>;
 // }

@@ -108,6 +108,7 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<0>, ir<0>, ir<4>
 ; CHECK-NEXT:    EMIT vp<%active.lane.mask.entry> = wide active lane mask ir<0>, ir<%N>, ir<1>
 ; CHECK-NEXT:    EMIT vp<%extract.entry.alm.part> = extract-vector-for-part vp<%active.lane.mask.entry>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<%trip.count.minus.vf> = call i64 @llvm.usub.sat(ir<%N>, vp<[[VP1]]>)
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -125,7 +126,7 @@ define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-
 ; CHECK-NEXT:      WIDEN ir<%load.b> = load vp<[[VP9]]>, vp<[[VP6]]>
 ; CHECK-NEXT:      EXPRESSION vp<[[VP10]]> = ir<%accum> + partial.reduce.add (mul (ir<%load.b> zext to i32), (ir<%load.a> zext to i32), vp<[[VP6]]>)
 ; CHECK-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
-; CHECK-NEXT:      EMIT vp<%active.lane.mask.next> = wide active lane mask vp<%index.next>, ir<%N>, ir<1>
+; CHECK-NEXT:      EMIT vp<%active.lane.mask.next> = wide active lane mask vp<[[VP4]]>, vp<%trip.count.minus.vf>, ir<1>
 ; CHECK-NEXT:      EMIT vp<%extract.next.alm.part> = extract-vector-for-part vp<%active.lane.mask.next>, ir<0>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = not vp<%extract.next.alm.part>
 ; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP11]]>

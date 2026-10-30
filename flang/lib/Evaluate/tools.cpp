@@ -713,6 +713,29 @@ std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
   return std::nullopt;
 }
 
+Expr<SomeType> MakeEnumerationIntCall(Expr<SomeDerived> &&operand) {
+  using IntType = Type<TypeCategory::Integer, 4>;
+  const semantics::DerivedTypeSpec *derived{
+      GetDerivedTypeSpec(operand.GetType())};
+  CHECK(derived);
+  DynamicType enumType{*derived};
+  DynamicType intResultType{TypeCategory::Integer, 4};
+  characteristics::DummyDataObject ddo{characteristics::TypeAndShape{enumType}};
+  ddo.intent = common::Intent::In;
+  characteristics::Procedure::Attrs attrs{
+      characteristics::Procedure::Attr::Pure,
+      characteristics::Procedure::Attr::Elemental};
+  characteristics::DummyArguments dummies;
+  dummies.emplace_back("a"s, std::move(ddo));
+  SpecificIntrinsic intSpec{"int"s,
+      characteristics::Procedure{characteristics::FunctionResult{intResultType},
+          std::move(dummies), attrs}};
+  ActualArguments intArgs;
+  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
+  return AsGenericExpr(Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
+      ProcedureDesignator{std::move(intSpec)}, std::move(intArgs)})));
+}
+
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
     RelationalOperator opr, Expr<SomeType> &&x, Expr<SomeType> &&y) {
   return common::visit(
@@ -797,35 +820,10 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
                   return Relate(
                       messages, opr, std::move(*xOrd), std::move(*yOrd));
                 }
-                // Non-constant operands: wrap in INT() to convert to
-                // integer comparison. Build FunctionRef<Int4> for each
-                // operand representing INT(enumExpr).
-                auto makeIntCall =
-                    [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
-                  using IntType = Type<TypeCategory::Integer, 4>;
-                  DynamicType enumType{*xDerived};
-                  DynamicType intResultType{TypeCategory::Integer, 4};
-                  characteristics::DummyDataObject ddo{
-                      characteristics::TypeAndShape{enumType}};
-                  ddo.intent = common::Intent::In;
-                  characteristics::Procedure::Attrs attrs{
-                      characteristics::Procedure::Attr::Pure,
-                      characteristics::Procedure::Attr::Elemental};
-                  characteristics::DummyArguments dummies;
-                  dummies.emplace_back("a"s, std::move(ddo));
-                  SpecificIntrinsic intSpec{"int"s,
-                      characteristics::Procedure{
-                          characteristics::FunctionResult{intResultType},
-                          std::move(dummies), attrs}};
-                  ActualArguments intArgs;
-                  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
-                  return AsGenericExpr(
-                      Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-                          ProcedureDesignator{std::move(intSpec)},
-                          std::move(intArgs)})));
-                };
-                return Relate(messages, opr, makeIntCall(std::move(dx)),
-                    makeIntCall(std::move(dy)));
+                // Non-constant operands: compare INT(x) and INT(y).
+                return Relate(messages, opr,
+                    MakeEnumerationIntCall(std::move(dx)),
+                    MakeEnumerationIntCall(std::move(dy)));
               }
             }
             DIE("invalid types for relational operator");
@@ -1198,6 +1196,34 @@ template semantics::UnorderedSymbolSet CollectSymbols(
     const ProcedureDesignator &);
 template semantics::UnorderedSymbolSet CollectSymbols(const Assignment &);
 
+struct CollectRankOneBoundProvenanceSymbolsHelper
+    : public SetTraverse<CollectRankOneBoundProvenanceSymbolsHelper,
+          semantics::UnorderedSymbolSet> {
+  using Base = SetTraverse<CollectRankOneBoundProvenanceSymbolsHelper,
+      semantics::UnorderedSymbolSet>;
+  CollectRankOneBoundProvenanceSymbolsHelper() : Base{*this} {}
+  using Base::operator();
+  semantics::UnorderedSymbolSet operator()(const RankOneBoundElement &x) const {
+    semantics::UnorderedSymbolSet result{(*this)(x.base())};
+    if (const auto &array{x.originatingArray()}) {
+      for (const Symbol &symbol : CollectSymbolsHelper{}(*array)) {
+        result.emplace(symbol);
+      }
+    }
+    return result;
+  }
+};
+template <typename A>
+semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(const A &x) {
+  return CollectRankOneBoundProvenanceSymbolsHelper{}(x);
+}
+template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
+    const Expr<SomeType> &);
+template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
+    const Expr<SomeInteger> &);
+template semantics::UnorderedSymbolSet CollectRankOneBoundProvenanceSymbols(
+    const Expr<SubscriptInteger> &);
+
 struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
                                       semantics::UnorderedSymbolSet> {
   using Base =
@@ -1327,8 +1353,12 @@ GetHostAndDeviceSymbols(const Expr<SomeType> &expr) {
 
 bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
   auto [hostSymbols, deviceSymbols] = GetHostAndDeviceSymbols(expr);
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols.size() > 0)) && deviceSymbols.size() > 0;
+  if (deviceSymbols.empty()) {
+    return false;
+  }
+  // Device data used in an operation, even one with no other operand such as
+  // a negation or a conversion, is copied to the host to evaluate it there.
+  return HasConstant(expr) || !hostSymbols.empty() || !IsVariable(expr);
 }
 
 bool HasOnlyCUDAConstntImplicitTransfer(const Expr<SomeType> &expr) {
@@ -1548,11 +1578,6 @@ static SignedNumericExpr<CAT, KIND> buildSignedAdd(
       true};
 }
 
-template <typename T>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
-  return std::nullopt;
-}
-
 template <common::TypeCategory CAT, int KIND>
 static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
     const NumericExpr<CAT, KIND> &expr) {
@@ -1596,24 +1621,6 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
   assert(result.isPositive &&
       "the first flattened term and therefore the split sum are positive");
   return std::move(result.expr);
-}
-
-template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const Expr<SomeKind<CAT>> &expr) {
-  // Keep the supported categories explicit: integer reassociation requires a
-  // separate intermediate-range policy.
-  if constexpr (CAT == common::TypeCategory::Real ||
-      CAT == common::TypeCategory::Complex) {
-    return common::visit(
-        [&](const auto &typedExpr) -> std::optional<Expr<SomeType>> {
-          if (auto result = tryBuildSplitSumExpressionTree(typedExpr))
-            return Expr<SomeType>{std::move(*result)};
-          return std::nullopt;
-        },
-        expr.u);
-  }
-  return std::nullopt;
 }
 
 template <typename> struct IsExpr : std::false_type {};
@@ -3003,7 +3010,9 @@ bool IsLenTypeParameter(const Symbol &symbol) {
 
 bool IsExtensibleType(const DerivedTypeSpec *derived) {
   return !IsSequenceOrBindCType(derived) && !IsIsoCType(derived) &&
-      !(derived && derived->IsVectorType());
+      !(derived && derived->IsVectorType()) &&
+      !(derived &&
+          derived->typeSymbol().get<DerivedTypeDetails>().isEnumerationType());
 }
 
 bool IsSequenceOrBindCType(const DerivedTypeSpec *derived) {

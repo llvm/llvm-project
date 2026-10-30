@@ -1173,12 +1173,12 @@ void Fortran::lower::associateMutableBox(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   if (Fortran::evaluate::UnwrapExpr<Fortran::evaluate::NullPointer>(source)) {
     fir::factory::disassociateMutableBox(builder, loc, box);
-    cuf::genPointerSync(box.getAddr(), builder);
+    cuf::genPointerSync(loc, box.getAddr(), builder);
     return;
   }
   fir::ExtendedValue rhs = converter.genExprAddr(loc, source, stmtCtx);
   fir::factory::associateMutableBox(builder, loc, box, rhs, lbounds);
-  cuf::genPointerSync(box.getAddr(), builder);
+  cuf::genPointerSync(loc, box.getAddr(), builder);
 }
 
 bool Fortran::lower::isWholeAllocatable(const Fortran::lower::SomeExpr &expr) {

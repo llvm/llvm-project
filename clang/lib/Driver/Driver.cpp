@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Driver.h"
+#include "ClangCLArgs.h"
 #include "ToolChains/AIX.h"
 #include "ToolChains/AMDGPU.h"
 #include "ToolChains/AVR.h"
@@ -353,52 +354,51 @@ InputArgList Driver::ParseArgStrings(ArrayRef<const char *> ArgStrings,
 // Determine which compilation mode we are in. We look for options which
 // affect the phase, starting with the earliest phases, and record which
 // option we used to determine the final phase.
-phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
+phases::ID Driver::getFinalPhase(const ArgList &Args,
                                  Arg **FinalPhaseArg) const {
   Arg *PhaseArg = nullptr;
   phases::ID FinalPhase;
 
   // -{E,EP,P,M,MM} only run the preprocessor.
-  if (CCCIsCPP() || (PhaseArg = DAL.getLastArg(options::OPT_E)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT__SLASH_EP)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT_M, options::OPT_MM)) ||
-      (PhaseArg = DAL.getLastArg(options::OPT__SLASH_P)) ||
-      CCGenDiagnostics) {
+  if (CCCIsCPP() || (PhaseArg = Args.getLastArg(options::OPT_E)) ||
+      (PhaseArg = Args.getLastArg(options::OPT__SLASH_EP)) ||
+      (PhaseArg = Args.getLastArg(options::OPT_M, options::OPT_MM)) ||
+      (PhaseArg = Args.getLastArg(options::OPT__SLASH_P)) || CCGenDiagnostics) {
     FinalPhase = phases::Preprocess;
 
     // --precompile only runs up to precompilation.
     // Options that cause the output of C++20 compiled module interfaces or
     // header units have the same effect.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT__precompile)) ||
+  } else if ((PhaseArg = Args.getLastArg(options::OPT__precompile)) ||
              (PhaseArg =
-                  DAL.getLastArg(options::OPT__precompile_reduced_bmi)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_extract_api)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_fmodule_header,
-                                        options::OPT_fmodule_header_EQ))) {
+                  Args.getLastArg(options::OPT__precompile_reduced_bmi)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_extract_api)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_fmodule_header,
+                                         options::OPT_fmodule_header_EQ))) {
     FinalPhase = phases::Precompile;
     // -{fsyntax-only,-analyze,emit-ast} only run up to the compiler.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_fsyntax_only)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_print_supported_cpus)) ||
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_fsyntax_only)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_print_supported_cpus)) ||
              (PhaseArg =
-                  DAL.getLastArg(options::OPT_print_enabled_extensions)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_module_file_info)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_verify_pch)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT__analyze)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_cir)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
+                  Args.getLastArg(options::OPT_print_enabled_extensions)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_module_file_info)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_verify_pch)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_rewrite_objc)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_rewrite_legacy_objc)) ||
+             (PhaseArg = Args.getLastArg(options::OPT__analyze)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_emit_cir)) ||
+             (PhaseArg = Args.getLastArg(options::OPT_emit_ast))) {
     FinalPhase = phases::Compile;
 
   // -S only runs up to the backend.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_S))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_S))) {
     FinalPhase = phases::Backend;
 
   // -c compilation only runs up to the assembler.
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_c))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_c))) {
     FinalPhase = phases::Assemble;
 
-  } else if ((PhaseArg = DAL.getLastArg(options::OPT_emit_interface_stubs))) {
+  } else if ((PhaseArg = Args.getLastArg(options::OPT_emit_interface_stubs))) {
     FinalPhase = phases::IfsMerge;
 
     // Otherwise do everything.
@@ -459,9 +459,14 @@ Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
   return A;
 }
 
-DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
+DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args,
+                                           const llvm::Triple &Triple) const {
   const llvm::opt::OptTable &Opts = getOpts();
   DerivedArgList *DAL = new DerivedArgList(Args);
+
+  std::optional<ClangCLArgs> CLArgs;
+  if (IsCLMode())
+    CLArgs.emplace(Args, Triple);
 
   bool HasNostdlib = Args.hasArg(options::OPT_nostdlib);
   bool HasNostdlibxx = Args.hasArg(options::OPT_nostdlibxx);
@@ -477,6 +482,21 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     }
     if (A->getOption().matches(options::OPT_end_no_unused_arguments)) {
       IgnoreUnused = false;
+      continue;
+    }
+
+    if (CLArgs && CLArgs->translateArg(A, *DAL))
+      continue;
+
+    // Preserve MSVC macro syntax for Clang's other driver modes as well.
+    if ((CLArgs || Triple.isWindowsMSVCEnvironment()) &&
+        A->getOption().matches(options::OPT_D)) {
+      const char *Value =
+          ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
+      if (Value == A->getValue())
+        DAL->append(A);
+      else
+        DAL->AddJoinedArg(A, Opts.getOption(options::OPT_D), Value);
       continue;
     }
 
@@ -733,8 +753,10 @@ static llvm::Triple computeTargetTriple(const Driver &D, StringRef TargetTriple,
   }
 #endif
 
-  // Currently the only architecture supported by *-uefi triples are x86_64.
-  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64)
+  // Currently the only architectures supported by *-uefi triples are x86_64
+  // and aarch64.
+  if (Target.isUEFI() && Target.getArch() != llvm::Triple::x86_64 &&
+      Target.getArch() != llvm::Triple::aarch64)
     D.Diag(diag::err_target_unknown_triple) << Target.str();
 
   // The `-maix[32|64]` flags are only valid for AIX targets.
@@ -1783,7 +1805,7 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   }
 
   // Perform the default argument translations.
-  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs);
+  DerivedArgList *TranslatedArgs = TranslateInputArgs(*UArgs, TC.getTriple());
 
   // Check if the environment version is valid except wasm case.
   llvm::Triple Triple = TC.getTriple();
@@ -3385,27 +3407,25 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                              const InputList &Inputs,
                              ActionList &Actions) const {
 
-  // Diagnose misuse of /Fo.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fo)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fo tries to name an output file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fo);
-    }
-  }
+  // Diagnose misuse of /Fo and /Fa.
+  if (Arg *FoArg = Args.getLastArg(options::OPT__SLASH_Fo),
+      *FaArg = Args.getLastArg(options::OPT__SLASH_Fa);
+      FoArg || FaArg) {
+    // Linker inputs do not produce the outputs named by /Fo and /Fa.
+    unsigned NumCompiledInputs = llvm::count_if(
+        Inputs, [](const InputTy &I) { return I.first != types::TY_Object; });
 
-  // Diagnose misuse of /Fa.
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_Fa)) {
-    StringRef V = A->getValue();
-    if (Inputs.size() > 1 && !V.empty() &&
-        !llvm::sys::path::is_separator(V.back())) {
-      // Check whether /Fa tries to name an asm file for multiple inputs.
-      Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
-          << A->getSpelling() << V;
-      Args.eraseArg(options::OPT__SLASH_Fa);
+    for (Arg *A : {FoArg, FaArg}) {
+      if (!A)
+        continue;
+      StringRef V = A->getValue();
+      if (NumCompiledInputs > 1 && !V.empty() &&
+          !llvm::sys::path::is_separator(V.back())) {
+        // Check whether /Fo or /Fa names an output file for multiple inputs.
+        Diag(clang::diag::err_drv_out_file_argument_with_multiple_sources)
+            << A->getSpelling() << V;
+        Args.eraseArg(A->getOption().getID());
+      }
     }
   }
 
@@ -3526,13 +3546,13 @@ void Driver::handleArguments(Compilation &C, DerivedArgList &Args,
                 Args.getLastArg(options::OPT_M, options::OPT_MM)) &&
                getPreprocessedType(InputType) == types::TY_INVALID)
         Diag(clang::diag::warn_drv_preprocessed_input_file_unused)
-            << InputArg->getAsString(Args) << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << InputArg->getAsString(Args) << !FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       else
         Diag(clang::diag::warn_drv_input_file_unused)
             << InputArg->getAsString(Args) << getPhaseName(InitialPhase)
-            << !!FinalPhaseArg
-            << (FinalPhaseArg ? FinalPhaseArg->getOption().getName() : "");
+            << !FinalPhaseArg
+            << (FinalPhaseArg ? FinalPhaseArg->getSpelling() : "");
       continue;
     }
 
@@ -3927,6 +3947,12 @@ static StringRef getCanonicalArchString(Compilation &C,
             << ArchStr << Triple.getArchName();
         return StringRef();
       }
+    }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
+    if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
+      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+          << "IGCA" << ArchStr;
+      return StringRef();
     }
   }
 
@@ -4452,8 +4478,13 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<AnalyzeJobAction>(Input, types::TY_Plist);
     if (Args.hasArg(options::OPT_emit_ast))
       return C.MakeAction<CompileJobAction>(Input, types::TY_AST);
-    if (Args.hasArg(options::OPT_emit_cir))
+    if (Args.hasArg(options::OPT_emit_cir)) {
+      // Like -emit-llvm, -c selects the binary form; bare -emit-cir and
+      // -emit-cir -S keep emitting text.
+      if (Args.hasArg(options::OPT_c) && !Args.hasArg(options::OPT_S))
+        return C.MakeAction<CompileJobAction>(Input, types::TY_CIRBC);
       return C.MakeAction<CompileJobAction>(Input, types::TY_CIR);
+    }
     if (Args.hasArg(options::OPT_module_file_info))
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
@@ -4493,8 +4524,11 @@ Action *Driver::ConstructPhaseAction(
       }
       return C.MakeAction<BackendJobAction>(Input, Output);
     }
+    // SYCL device compilations produce IR unless the user explicitly requested
+    // device-only assembly output, in which case emit textual SPIR-V.
     if (Args.hasArg(options::OPT_emit_llvm) ||
-        TargetDeviceOffloadKind == Action::OFK_SYCL) {
+        (TargetDeviceOffloadKind == Action::OFK_SYCL &&
+         !(offloadDeviceOnly() && Args.hasArg(options::OPT_S)))) {
       types::ID Output =
           Args.hasArg(options::OPT_S) ? types::TY_LLVM_IR : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
@@ -4522,7 +4556,8 @@ Action *Driver::ConstructPhaseAction(
 
 static bool isOffloadDeviceCC1JobCandidate(Command &Job) {
   const Action &Source = Job.getSource();
-  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source))
+  if (!isa<CompileJobAction>(Source) && !isa<BackendJobAction>(Source) &&
+      !isa<AssembleJobAction>(Source))
     return false;
 
   if (Job.getBoundArch().empty() && !Source.getOffloadingArch().empty())
@@ -5173,6 +5208,16 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
         /*CreatePrefixForHost=*/true);
   }
 
+  StringRef DefaultExt = ".json";
+  StringRef DefaultExtNoDot = "json";
+  if (const Arg *CompressArg =
+          Args.getLastArgNoClaim(options::OPT_ftime_trace_compress_EQ)) {
+    if (StringRef(CompressArg->getValue()) == "zstd") {
+      DefaultExt = ".json.zst";
+      DefaultExtNoDot = "json.zst";
+    }
+  }
+
   SmallString<128> Path;
   if (A->getOption().matches(options::OPT_ftime_trace_EQ)) {
     Path = A->getValue();
@@ -5181,7 +5226,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
                                ? llvm::sys::path::stem(Result.getFilename())
                                : llvm::sys::path::stem(BaseInput));
       Tmp += OffloadingPrefix;
-      Tmp += ".json";
+      Tmp += DefaultExt;
       llvm::sys::path::append(Path, Tmp);
     }
   } else {
@@ -5191,7 +5236,7 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       Path = DumpDir->getValue();
       Path += llvm::sys::path::stem(BaseInput);
       Path += OffloadingPrefix;
-      Path += ".json";
+      Path += DefaultExt;
     } else if (!OffloadingPrefix.empty()) {
       // For offloading, derive path from -o output directory combined with
       // the input filename and offload prefix.
@@ -5200,10 +5245,10 @@ static void handleTimeTrace(Compilation &C, const ArgList &Args,
       if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
         Path = llvm::sys::path::parent_path(FinalOutput->getValue());
       llvm::sys::path::append(Path, TraceName);
-      Path += ".json";
+      Path += DefaultExt;
     } else {
       Path = Result.getFilename();
-      llvm::sys::path::replace_extension(Path, "json");
+      llvm::sys::path::replace_extension(Path, DefaultExtNoDot);
     }
   }
   const char *ResultFile = C.getArgs().MakeArgString(Path);
@@ -5336,8 +5381,10 @@ InputInfoList Driver::BuildJobsForActionNoCache(
   const JobAction *JA = cast<JobAction>(A);
   ActionList CollapsedOffloadActions;
 
-  ToolSelector TS(JA, *TC, C, isSaveTempsEnabled(),
-                  embedBitcodeInObject() && !TC->isUsingLTO(C.getArgs()));
+  ToolSelector TS(
+      JA, *TC, C, isSaveTempsEnabled(),
+      embedBitcodeInObject() &&
+          !TC->isUsingLTO(C.getArgs(), JA->getOffloadingDeviceKind()));
   const Tool *T = TS.getTool(Inputs, CollapsedOffloadActions);
 
   if (!T)
@@ -5815,15 +5862,14 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput = C.getArgs().MakeArgString(TempPath.c_str());
   }
 
-  // If we're saving temps and the temp file conflicts with the input file,
-  // then avoid overwriting input file.
-  if (!AtTopLevel && isSaveTempsEnabled() && NamedOutput == BaseName) {
+  // If we're saving temps and the temp file is the input file, then avoid
+  // overwriting the input file. Compare the files, not their names: the output
+  // can name the input by another path (e.g. "sub/t.s" from -save-temps=obj),
+  // or with different case on a case-insensitive file system ("t.s" for an
+  // input "t.S").
+  if (!AtTopLevel && isSaveTempsEnabled()) {
     bool SameFile = false;
-    SmallString<256> Result;
-    llvm::sys::fs::current_path(Result);
-    llvm::sys::path::append(Result, BaseName);
-    llvm::sys::fs::equivalent(BaseInput, Result.c_str(), SameFile);
-    // Must share the same path to conflict.
+    llvm::sys::fs::equivalent(BaseInput, NamedOutput, SameFile);
     if (SameFile) {
       StringRef Name = llvm::sys::path::filename(BaseInput);
       std::pair<StringRef, StringRef> Split = Name.split('.');

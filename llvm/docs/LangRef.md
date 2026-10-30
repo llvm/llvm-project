@@ -432,13 +432,10 @@ added in the future:
     on the hot path and definitely executed a lot. Furthermore `preserve_mostcc`
     doesn't prevent the inliner from inlining the function call.
 
-    This calling convention will be used by a future version of the Objective-C
-    runtime and should therefore still be considered experimental at this time.
-    Although this convention was created to optimize certain runtime calls to
-    the Objective-C runtime, it is not limited to this runtime and might be used
-    by other runtimes in the future too. The current implementation only
-    supports X86-64, but the intention is to support more architectures in the
-    future.
+    This convention was created to optimize certain runtime calls to the
+    Objective-C runtime, but it is not limited to that runtime; it is also used
+    by other runtimes and libraries, such as the Swift runtime and the Linux
+    kernel.
 
 "`preserve_allcc`" - The `PreserveAll` calling convention
 :   This calling convention attempts to make the code in the caller even less
@@ -1943,6 +1940,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+(attr_range)=
+
 `range(<ty> <a>, <b>)`
 :   This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -2349,7 +2348,8 @@ define void @f() "no-sse" { ... }
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.
       target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
-      state.
+      state. In X86, target_mem0 represents the AMX tile registers and tile
+      configuration.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -2745,6 +2745,14 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `sanitize_alloc_token`
 :   This attribute indicates that implicit allocation token instrumentation
     is enabled for this function.
+
+(attr_speculative_load_oracle)=
+
+`"oracle-function"`
+:   This attribute indicates that the function is an oracle function of
+    '`llvm.speculative.load`'. A function with this attribute must have local
+    linkage, and it may only be used as the oracle argument of
+    '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -3326,6 +3334,10 @@ The following attributes are currently accepted:
 :   This indicates that no pointer {ref}`based <pointeraliasing>` on one of its
     arguments can alias any pointer based on the other.
 
+`"range"(iN %val, iN %lower_bound, iN %upper_bound)`
+:   Equivalent to {ref}`range(iN %lower_bound, %upper_bound) <attr_range>` on
+    `%val`.
+
 For example:
 
 ```llvm
@@ -3780,8 +3792,8 @@ can also be created by means not recognized by LLVM, e.g., by directly calling
 `mmap`. Those allocated objects are allowed to grow to the right (i.e.,
 keeping the same base address, but increasing their size) while maintaining the
 validity of existing pointers, as long as they always satisfy the properties
-described above. Currently, allocated objects are not permitted to grow to the
-left or to shrink, nor can they have holes.
+described above. Allocated objects are not permitted to grow to the left or to
+shrink, nor can they have holes.
 
 (objectlifetime)=
 
@@ -7230,6 +7242,57 @@ mandatory, and points at an {ref}`DILexicalBlockFile`, an
 !0 = !DILocation(line: 2900, column: 42, scope: !1, inlinedAt: !2)
 ```
 
+The optional `irlayers:` field points at a {ref}`DILayerLocList`, giving the
+instruction's position in one or more intermediate IRs it was lowered through, in
+addition to its primary source position. It is independent of `inlinedAt:`; a
+location may have either, both, or neither. A location with no intermediate
+position omits the field entirely. The field belongs to the location that
+carries it: locations in an `inlinedAt:` chain may each have their own, and LLVM
+defines no relationship between them.
+
+```text
+!0 = !DILocation(line: 2900, column: 42, scope: !1, irlayers: !3)
+```
+
+(DILayerLoc)=
+
+##### DILayerLoc
+
+`DILayerLoc` nodes represent a source position in one intermediate IR level that
+a program was lowered through — for example an MLIR module produced
+part-way through compilation. The `kind:` field names the level and the `file:`
+field points at a {ref}`DIFile` for it; both are mandatory. `line:` and
+`column:` are the position within that file.
+
+Unlike a {ref}`DILocation`, a `DILayerLoc` has no scope and no inlined-at
+context: it is a bare coordinate in a file, not a location in a scope tree.
+
+```text
+!0 = !DILayerLoc(line: 100, column: 1, file: !1, kind: "HighLevelIR")
+```
+
+(DILayerLocList)=
+
+##### DILayerLocList
+
+`DILayerLocList` nodes hold a non-empty list of {ref}`DILayerLoc` operands, and
+are referenced by a {ref}`DILocation`'s `irlayers:` field. A location with no
+intermediate position omits `irlayers:` rather than referencing an empty list.
+
+The operands are a sequence: order is part of the node's identity, so two lists
+with the same entries in a different order are different nodes. LLVM attaches no
+meaning to the order and does not require any particular arrangement.
+
+Both node types are normally uniqued, so instructions sharing a position at some
+level share the corresponding node. `distinct` forms are legal; nothing in LLVM
+requires a layer node to be shared.
+
+```text
+!0 = !DILayerLocList(!1, !2)
+!1 = !DILayerLoc(line: 100, column: 1, file: !3, kind: "HighLevelIR")
+!2 = !DILayerLoc(line: 7, column: 3, file: !4, kind: "LowLevelIR")
+```
+
 (DILocalVariable)=
 
 ##### DILocalVariable
@@ -7417,9 +7480,11 @@ The `name:` field is mandatory. The `configMacros:`, `includePath:`,
 dynamic length and location encoded as an expression.
 The `tag:` field is optional and defaults to `DW_TAG_string_type`. The `name:`,
 `stringLength:`, `stringLengthExpression`, `stringLocationExpression:`,
-`size:`, `align:`, and `encoding:` fields are optional.
+`size:`, `align:`, `encoding:`, and `charType:` fields are optional.
 
 If not present, the `size:` and `align:` fields default to the value zero.
+
+`charType:` specifies a non-default character type.
 
 The length in bits of the string is specified by the first of the following
 fields present:
@@ -7636,17 +7701,32 @@ subset of (or equal to) the set of scopes for that domain in another
 instruction's `noalias` list, then the two memory accesses are assumed not to
 alias.
 
+If a domain is declared as having disjoint scopes, two memory accesses are
+assumed not to alias if they both have entries for that domain in their
+`alias.scope` list and their `alias.scope` lists have no scopes in common for that
+domain. Equivalently, an instruction with a set of scopes from a disjoint-scope
+domain in its `alias.scope` list implicitly has all other scopes in that domain
+in its `noalias` set. This removes the need to spell out the complement of each
+alias scope when there is a set of N objects that mutually don't alias each other,
+simplifying the IR and reducing its size for this straightforward case.
+
 Because scopes in one domain don't affect scopes in other domains, separate
 domains can be used to compose multiple independent noalias sets.  This is
 used for example during inlining.  As the noalias function parameters are
 turned into noalias scope metadata, a new domain is used every time the
 function is inlined.
 
-The metadata identifying each domain is itself a list containing one or two
+The metadata identifying each domain is itself a list containing two or three
 entries. The first entry is the name of the domain. Note that if the name is a
 string then it can be combined across functions and translation units. A
-self-reference can be used to create globally unique domain names. A
-descriptive string may optionally be provided as a second list entry.
+self-reference can be used to create globally unique domain names. The second
+entry is an `i1` constant that marks the domain as having disjoint scopes when
+it is `true`. A descriptive string may optionally be provided as a third list
+entry.
+
+String names should not be used with disjoint-scope domains, as they will be
+uniqued across different invocations of the same function, and this is unlikely
+to be desirable behavior.
 
 The metadata identifying each scope is also itself a list containing two or
 three entries. The first entry is the name of the scope. Note that if the name
@@ -7659,8 +7739,8 @@ For example,
 
 ```llvm
 ; Two scope domains:
-!0 = !{!0}
-!1 = !{!1}
+!0 = !{!0, i1 false}
+!1 = !{!1, i1 false}
 
 ; Some scopes in these domains:
 !2 = !{!2, !0}
@@ -7686,6 +7766,32 @@ store float %2, ptr %arrayidx.i2, align 4, !noalias !6
 ; !alias.scope list):
 %2 = load float, ptr %c, align 4, !alias.scope !6
 store float %0, ptr %arrayidx.i, align 4, !noalias !7
+```
+
+And, with a domain whose scopes are disjoint,
+
+```llvm
+; A domain with disjoint scopes and three scopes within it:
+!0 = !{!0, i1 true, !"disjoint domain"}
+!1 = !{!1, !0}
+!2 = !{!2, !0}
+!3 = !{!3, !0}
+
+; Some scope lists:
+!4 = !{!1}
+!5 = !{!2}
+!6 = !{!2, !3}
+!7 = !{!1, !3}
+
+; These two instructions don't alias, because tagging them with !4 and !5
+; means that they are both tagged with scopes from a disjoint-scope domain (!1
+; and !2, respectively) and have no scopes from that domain in common. This is
+; equivalent to tagging them with !noalias !6 and !noalias !7, respectively:
+%0 = load float, ptr %a, align 4, !alias.scope !4
+store float %0, ptr %b, align 4, !alias.scope !5
+
+; This instruction could be either in scope !1 or !3, so is implicitly !noalias !5.
+%1 = load float, ptr %ac, align 4, !alias.scope !7
 ```
 
 (fpmath-metadata)=
@@ -9202,12 +9308,15 @@ allocation. This information is consumed by the `alloc-token` pass to
 instrument such calls with allocation token IDs.
 
 The metadata contains: string with the type of an allocation, and a boolean
-denoting if the type contains a pointer.
+denoting if the type contains a pointer. Optionally, it contains a string with
+the name of the function containing the allocation.
 
 ```
 call ptr @malloc(i64 64), !alloc_token !0
+call ptr @malloc(i64 64), !alloc_token !1
 
 !0 = !{!"<type-name>", i1 <contains-pointer>}
+!1 = !{!"<type-name>", i1 <contains-pointer>, !"<function-name>"}
 ```
 
 #### '`stack-protector`' Metadata
@@ -9417,6 +9526,23 @@ An example of module flags:
    The behavior is to emit an error if the `llvm.module.flags` does not
    contain a flag with the ID `!"foo"` that has the value '1' after linking is
    performed.
+
+### Microsoft Hotpatch Module Flag
+
+The `ms-hotpatch` module flag records whether the module was compiled with
+Microsoft hotpatch support. Its value is an `i32` integer, either 0 or 1. A value
+of 1 requests that the `HotPatch` bit be set in the CodeView `S_COMPILE3` record.
+The flag does not itself make function entries hotpatchable; that is controlled
+by the `"patchable-function"` function attribute.
+
+The flag uses the **Min** merge behavior, so linking modules preserves a value
+of 1 only if every module has the flag set to 1. If any module has a value of 0
+or lacks the flag, the merged value is 0.
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ms-hotpatch", i32 1}
+```
 
 ### Synthesized Functions Module Flags Metadata
 
@@ -9651,6 +9777,21 @@ models is rejected. For example:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"exception-model", !"sjlj"}
+```
+
+### Debugger Tuning Module Flags Metadata
+
+This module flag names the debugger that the module's debug info should be
+tuned for, which may affect the choice of DWARF extensions and accelerator
+tables that are emitted. The value is an `MDString` and is typically one of
+`"gdb"`, `"lldb"`, `"sce"`, or `"dbx"`.
+
+When the flag is absent, the tuning implied by the target triple is
+used.
+
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"debugger-tuning", !"lldb"}
 ```
 
 ### Long Double Type Module Flags Metadata
@@ -13991,9 +14132,13 @@ This instruction requires several arguments:
       the return value of the callee is returned to the caller's caller, even
       if a void return type is in use.
 
-   Both markers imply that the callee does not access allocas, va_args, or
-   byval arguments from the caller. As an exception to that, an alloca or byval
-   argument may be passed to the callee as a byval argument, which can be
+   Both markers imply that the callee does not access any value derived from
+   the caller's stack frame, which is torn down before the callee runs. That
+   covers allocas, va_args, and byval arguments, and equally an address of the
+   frame itself, including pointers returned by intrinsics such as
+   `llvm.frameaddress` with a level of zero, `llvm.localaddress`, or
+   `llvm.stacksave` evaluated in the caller. As an exception, an alloca or
+   byval argument may be passed to the callee as a byval argument, which can be
    dereferenced inside the callee. For example:
 
    ```llvm
@@ -14046,6 +14191,15 @@ This instruction requires several arguments:
    define void @invalid_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_ptr(ptr %x)
+     ret void
+   }
+
+   ; Invalid (assuming @take_ptr dereferences the pointer), because the frame
+   ; @frameaddress names is torn down before @take_ptr runs.
+   define void @invalid_frameaddress() {
+   entry:
+     %fp = call ptr @llvm.frameaddress.p0(i32 0)
+     tail call void @take_ptr(ptr %fp)
      ret void
    }
    ```
@@ -14183,9 +14337,10 @@ the `va_arg` macro in C.
 ##### Arguments:
 
 This instruction takes a `va_list*` value and the type of the
-argument. It returns a value of the specified argument type and
-increments the `va_list` to point to the next argument. The actual
-type of `va_list` is target specific.
+argument, which must not be an {ref}`aggregate <t_aggregate>` type. It
+returns a value of the specified argument type and increments the
+`va_list` to point to the next argument. The actual type of `va_list` is
+target specific.
 
 ##### Semantics:
 
@@ -14205,8 +14360,7 @@ function.
 See the {ref}`variable argument processing <int_varargs>` section.
 
 Note that the code generator does not yet fully support `va_arg` on many
-targets. Also, it does not currently support `va_arg` with aggregate
-types on any target.
+targets.
 
 (i_landingpad)=
 
@@ -17718,7 +17872,7 @@ are perfectly preserved.
 LLVM supports three pairs of floating-point min/max intrinsics, which differ
 in their handling of {ref}`NaN values <floatnan>`:
 
- * `llvm.minimum` and `llvm.maximum`: Return NaN if one the arguments is
+ * `llvm.minimum` and `llvm.maximum`: Return NaN if one of the arguments is
    NaN.
  * `llvm.minimumnum` and `llvm.maximumnum`: Return the other argument if
    one of the arguments is NaN.
@@ -17732,7 +17886,8 @@ specified, the order is non-deterministic: If the two inputs are zeros with
 opposite sign, either input may be returned.
 
 The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
-as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
+as follows (up to divergences permitted by the usual
+{ref}`NaN rules <floatnan>`):
 
 ```{list-table}
 :header-rows: 1
@@ -17784,9 +17939,9 @@ type.
 ##### Semantics:
 
 If both operands are qNaNs, returns a {ref}`NaN <floatnan>`. If one operand is
-qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the lesser of the two arguments. -0.0 is considered to be less
-than +0.0 for this intrinsic.
+qNaN and the other operand is a number, returns the number. If both operands
+are numbers, returns the lesser of the two arguments. -0.0 is considered to be
+less than +0.0 for this intrinsic.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17844,9 +17999,9 @@ type.
 ##### Semantics:
 
 If both operands are qNaNs, returns a {ref}`NaN <floatnan>`. If one operand is
-qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the greater of the two arguments. -0.0 is considered to be
-less than +0.0 for this intrinsic.
+qNaN and the other operand is a number, returns the number. If both operands
+are numbers, returns the greater of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17910,7 +18065,7 @@ This intrinsic follows the semantics of `fminimum` in C23 and `minimum` in
 IEEE 754-2019, except for signaling NaN inputs, which follow
 {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
-If the `nsz` flag is specified, `llvm.maximum` with one +0.0 and one
+If the `nsz` flag is specified, `llvm.minimum` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
 `nsz` semantics, if both operands have the same sign, the result must also
 have the same sign.
@@ -17990,9 +18145,9 @@ type.
 ##### Semantics:
 
 If both operands are NaNs (including sNaN), returns a {ref}`NaN <floatnan>`. If
-one operand is NaN (including sNaN) and another operand is a number,
-return the number.  Otherwise returns the lesser of the two
-arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
+one operand is NaN (including sNaN) and the other operand is a number, returns
+the number. Otherwise returns the lesser of the two arguments. -0.0 is
+considered to be less than +0.0 for this intrinsic.
 
 If the `nsz` flag is specified, `llvm.minimumnum` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -18039,7 +18194,7 @@ type.
 
 If both operands are NaNs (including sNaN), returns a
 {ref}`NaN <floatnan>`. If one operand is NaN (including sNaN) and
-another operand is a number, return the number.  Otherwise returns the
+the other operand is a number, returns the number. Otherwise returns the
 greater of the two arguments. -0.0 is considered to be less than +0.0
 for this intrinsic.
 
@@ -21393,6 +21548,40 @@ call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %l
 ; completion of the store.
 ```
 
+#### '`llvm.mask.beforefirst.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> %mask)
+declare <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> %mask)
+```
+
+##### Overview:
+
+Given a vector mask, returns a new mask with all elements before the first active element in the input set to 1, and every element afterwards set to 0.
+
+##### Arguments:
+
+Takes one argument which must be an i1 vector, and returns a vector of the same type.
+
+##### Semantics:
+
+When the input is all zeroes, the result is all ones.
+
+If any element in the input vector is poison, the result is poison.
+
+##### Examples:
+
+```llvm
+@llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
+@llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
+@llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
+@llvm.mask.beforefirst(<1,0,0,1>); ==> <0,0,0,0>
+```
+
 ### Experimental Vector Intrinsics
 
 #### '`llvm.experimental.cttz.elts`' Intrinsic
@@ -23106,7 +23295,7 @@ To ignore the start value, the neutral value can be used.
 ##### Examples:
 
 ```llvm
-%r = call float @llvm.vp.reduce.fmax.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+%r = call float @llvm.vp.reduce.fmax.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
 ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
 ; are treated as though %mask were false for those lanes.
 
@@ -23229,7 +23418,7 @@ To ignore the start value, the neutral value can be used.
 ##### Examples:
 
 ```llvm
-%r = call float @llvm.vp.reduce.fmaximum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+%r = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
 ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
 ; are treated as though %mask were false for those lanes.
 
@@ -24257,6 +24446,8 @@ directly. In the **oracle form**, the third argument must be a direct
 reference to a non-variadic function returning `i64` that is `nounwind`,
 `nosync` and `willreturn` and may only read memory through its arguments;
 the remaining arguments are forwarded to it, and its return value is `N`.
+The oracle function must have the
+{ref}`"oracle-function" <attr_speculative_load_oracle>` attribute.
 
 ##### Semantics:
 
@@ -25973,7 +26164,7 @@ The third argument specifies the exception behavior as described above.
 
 ##### Semantics:
 
-This function follows semantics specified in the draft of IEEE 754-2019.
+This function follows semantics specified in IEEE 754-2019.
 
 
 #### '`llvm.experimental.constrained.minimum`' Intrinsic
@@ -26000,7 +26191,7 @@ The third argument specifies the exception behavior as described above.
 
 ##### Semantics:
 
-This function follows semantics specified in the draft of IEEE 754-2019.
+This function follows semantics specified in IEEE 754-2019.
 
 
 #### '`llvm.experimental.constrained.ceil`' Intrinsic
@@ -26275,7 +26466,7 @@ exit:
   ret void
 }
 
-!0 = !{!0} ; domain
+!0 = !{!0, i1 false} ; domain
 !1 = !{!1, !0} ; scope
 !2 = !{!1} ; scope list
 ```
@@ -26743,7 +26934,7 @@ The '`llvm.ubsantrap`' intrinsic.
 
 ##### Arguments:
 
-An integer describing the kind of failure detected.
+An unsigned integer describing the kind of failure detected.
 
 ##### Semantics:
 
