@@ -2231,7 +2231,15 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
       !match(&I, m_FNegOrFSubNegZero(m_Value())))
     onCallPenalty();
 
-  return false;
+  // Free binary operators are, in practice, fused vector idioms and logic on
+  // i1 conditions. Skip the TTI query, which is comparatively expensive, for
+  // the scalar operations that dominate most code.
+  Type *Ty = I.getType();
+  if (!Ty->isVectorTy() && !Ty->isIntegerTy(1))
+    return false;
+
+  return TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency) ==
+         TargetTransformInfo::TCC_Free;
 }
 
 bool CallAnalyzer::visitFNeg(UnaryOperator &I) {
