@@ -308,17 +308,12 @@ endif()
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/keep.cpp
   experimental/log_hardening_failure.cpp
+  pstl/statpart.cpp
   )
 
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
-    )
-endif()
-
-if (LIBCXX_PSTL_BACKEND STREQUAL "statpart")
-  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
-    pstl/statpart.cpp
     )
 endif()
 

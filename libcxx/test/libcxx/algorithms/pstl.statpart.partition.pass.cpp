@@ -9,7 +9,6 @@
 // <algorithm>
 
 // REQUIRES: std-at-least-c++17
-// REQUIRES: libcpp-pstl-backend-statpart
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
 // template <class Iterator>
