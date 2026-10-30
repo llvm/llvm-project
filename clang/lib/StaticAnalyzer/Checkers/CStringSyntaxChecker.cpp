@@ -228,8 +228,10 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
       llvm::raw_svector_ostream os(S);
       os << "Potential buffer overflow; ";
       if (!DstName.empty()) {
-        os << "replace with 'sizeof(" << DstName << ") "
-              "- strlen(" << DstName <<") - 1'";
+        os << "replace with 'sizeof(" << DstName
+           << ") "
+              "- strlen("
+           << DstName << ") - 1'";
         os << " or u";
       } else
         os << "u";
