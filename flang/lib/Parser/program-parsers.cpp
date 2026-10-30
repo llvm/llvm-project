@@ -87,15 +87,30 @@ static constexpr auto globalOpenACCCompilerDirective{
     construct<ProgramUnit>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine))};
 
+// At file scope, DECLARE may start an unnamed main program. Diagnose it as
+// misplaced only when the following complete statement starts a subprogram.
+// Use the existing directive grammar, including clauses and continuations.
+static constexpr auto misplacedOpenACCDeclareAtFileScope{
+    lookAhead(
+        some(skipStuffBeforeStatement >> "!$ACC "_sptok >>
+            Parser<OpenACCStandaloneDeclarativeConstruct>{} / endOfLine) >>
+        skipStuffBeforeStatement >> maybe(label) >>
+        (validFunctionStmt >> ok ||
+            skipMany(prefixSpec) >> "SUBROUTINE"_tok >> name >>
+                maybe(parenthesized(optionalList(dummyArg))) >>
+                maybe(languageBindingSpec) >> atEndOfStmt >> ok)) >>
+    construct<ProgramUnit>(
+        MisplacedOpenACCAsProgramUnit{} >> construct<ErrorRecovery>())};
+
 // R501 program -> program-unit [program-unit]...
 // This is the top-level production for the Fortran language.
 TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
     (extension<LanguageFeature::EmptySourceFile>(
          "nonstandard usage: empty source file"_port_en_US,
          consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
-        some(skipStuffBeforeStatement >> (globalCompilerDirective ||
-                                             globalOpenACCCompilerDirective ||
-                                             normalProgramUnit)) /
+        some(skipStuffBeforeStatement >>
+            (globalCompilerDirective || globalOpenACCCompilerDirective ||
+                misplacedOpenACCDeclareAtFileScope || normalProgramUnit)) /
             skipStuffBeforeStatement)))
 
 // R507 declaration-construct ->
@@ -295,7 +310,9 @@ TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
     construct<ModuleSubprogram>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
-    construct<ModuleSubprogram>(indirect(compilerDirective)))
+    construct<ModuleSubprogram>(indirect(compilerDirective)) ||
+    construct<ModuleSubprogram>(
+        MisplacedOpenACCAsModuleSubprogram{} >> construct<ErrorRecovery>()))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC
 constexpr auto moduleNature{
@@ -382,7 +399,10 @@ TYPE_PARSER(construct<InterfaceSpecification>(Parser<InterfaceBody>{}) ||
     construct<InterfaceSpecification>(statement(Parser<ProcedureStmt>{})) ||
     construct<InterfaceSpecification>(indirect(skipStuffBeforeStatement >>
         "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
-    construct<InterfaceSpecification>(indirect(compilerDirective)))
+    construct<InterfaceSpecification>(indirect(compilerDirective)) ||
+    construct<InterfaceSpecification>(
+        MisplacedOpenACCAsInterfaceSpecification{} >>
+        construct<ErrorRecovery>()))
 
 // R1503 interface-stmt -> INTERFACE [generic-spec] | ABSTRACT INTERFACE
 TYPE_PARSER(construct<InterfaceStmt>("INTERFACE" >> maybe(genericSpec)) ||
