@@ -442,8 +442,7 @@ def LDSDMAIntrinsicTable : GenericTable {
 def CounterFieldFeatures : GenericTable {
   let FilterClass = "CounterFieldFeature";
   let CppTypeName = "CounterFieldFeature";
-  let Fields = ["FeatureEnum", "LayoutField", "CounterValue"];
+  let Fields = ["FeatureEnum", "LayoutField", "LayoutValue"];
   string TypeOf_FeatureEnum = "code";
   string TypeOf_LayoutField = "code";
-  string TypeOf_CounterValue = "code";
 }

@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/AMDGPUCounterLayout.h"
 
 namespace llvm {
 
@@ -21,6 +20,8 @@ class Function;
 class GCNSubtarget;
 
 namespace AMDGPU {
+
+struct CounterLayout;
 
 /// Return whether expert scheduling mode is available and enabled for \p F.
 bool isExpertSchedulingMode(const GCNSubtarget &ST, const Function &F);

@@ -44,7 +44,6 @@ struct GPUInfo {
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
   uint8_t BufferResourceNumRecordsWidth;
-  CounterLayout Counters;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -532,15 +531,6 @@ std::optional<unsigned> AMDGPU::getBufferResourceNumRecordsWidth(GPUKind AK) {
 std::optional<unsigned>
 AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
   return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
-}
-
-CounterLayout AMDGPU::getCounterLayout(GPUKind AK) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? Info->Counters : CounterLayout();
-}
-
-CounterLayout AMDGPU::getCounterLayout(Triple::SubArchType SubArch) {
-  return getCounterLayout(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getLDSAllocGranule(GPUKind AK) {

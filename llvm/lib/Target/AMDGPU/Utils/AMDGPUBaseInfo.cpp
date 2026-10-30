@@ -61,6 +61,15 @@ unsigned unpackBits(unsigned Src, unsigned Shift, unsigned Width) {
   return (Src & getBitMask(Shift, Width)) >> Shift;
 }
 
+/// \returns Expcnt bit width.
+unsigned getExpcntBitWidth() { return 3; }
+
+/// \returns Vmcnt bit shift (higher bits).
+unsigned getVmcntBitShiftHi() { return 14; }
+
+/// \returns Dscnt bit shift in combined S_WAIT instructions.
+unsigned getDscntBitShift() { return 0; }
+
 /// \returns VaSdst bit width
 inline unsigned getVaSdstBitWidth() { return 3; }
 
@@ -96,6 +105,9 @@ inline unsigned getVaSsrcBitWidth() { return 1; }
 
 /// \returns VaSsrc bit shift
 inline unsigned getVaSsrcBitShift() { return 8; }
+
+/// \returns HoldCnt bit shift
+inline unsigned getHoldCntBitShift() { return 7; }
 
 } // end anonymous namespace
 
@@ -1578,6 +1590,168 @@ CounterLayout getCounterLayout(const MCSubtargetInfo &STI) {
   return L;
 }
 
+unsigned getVmcntBitMask(const CounterLayout &Layout) {
+  return (1 << (Layout.VmcntLoBits + Layout.VmcntHiBits)) - 1;
+}
+
+unsigned getLoadcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.LoadcntBits) - 1;
+}
+
+unsigned getSamplecntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.SamplecntBits) - 1;
+}
+
+unsigned getBvhcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.BvhcntBits) - 1;
+}
+
+unsigned getExpcntBitMask(const CounterLayout &Layout) {
+  return (1 << getExpcntBitWidth()) - 1;
+}
+
+unsigned getLgkmcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.LgkmcntBits) - 1;
+}
+
+unsigned getDscntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.DscntBits) - 1;
+}
+
+unsigned getKmcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.KmcntBits) - 1;
+}
+
+unsigned getXcntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.XcntBits) - 1;
+}
+
+unsigned getAsynccntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.AsynccntBits) - 1;
+}
+
+unsigned getStorecntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.StorecntBits) - 1;
+}
+
+unsigned getBarrierMemberCountBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.BarrierMemberCountBits) - 1;
+}
+
+unsigned getWaitcntBitMask(const CounterLayout &Layout) {
+  unsigned VmcntLo = getBitMask(Layout.VmcntLoShift, Layout.VmcntLoBits);
+  unsigned Expcnt = getBitMask(Layout.ExpcntShift, getExpcntBitWidth());
+  unsigned Lgkmcnt = getBitMask(Layout.LgkmcntShift, Layout.LgkmcntBits);
+  unsigned VmcntHi = getBitMask(getVmcntBitShiftHi(), Layout.VmcntHiBits);
+  return VmcntLo | Expcnt | Lgkmcnt | VmcntHi;
+}
+
+unsigned decodeVmcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  unsigned VmcntLo =
+      unpackBits(Waitcnt, Layout.VmcntLoShift, Layout.VmcntLoBits);
+  unsigned VmcntHi =
+      unpackBits(Waitcnt, getVmcntBitShiftHi(), Layout.VmcntHiBits);
+  return VmcntLo | VmcntHi << Layout.VmcntLoBits;
+}
+
+unsigned decodeExpcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.ExpcntShift, getExpcntBitWidth());
+}
+
+unsigned decodeLgkmcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.LgkmcntShift, Layout.LgkmcntBits);
+}
+
+unsigned decodeLoadcnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.LoadStorecntShift, Layout.LoadcntBits);
+}
+
+unsigned decodeStorecnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, Layout.LoadStorecntShift, Layout.StorecntBits);
+}
+
+unsigned decodeDscnt(const CounterLayout &Layout, unsigned Waitcnt) {
+  return unpackBits(Waitcnt, getDscntBitShift(), Layout.DscntBits);
+}
+
+void decodeWaitcnt(const CounterLayout &Layout, unsigned Waitcnt,
+                   unsigned &Vmcnt, unsigned &Expcnt, unsigned &Lgkmcnt) {
+  Vmcnt = decodeVmcnt(Layout, Waitcnt);
+  Expcnt = decodeExpcnt(Layout, Waitcnt);
+  Lgkmcnt = decodeLgkmcnt(Layout, Waitcnt);
+}
+
+unsigned encodeVmcnt(const CounterLayout &Layout, unsigned Waitcnt,
+                     unsigned Vmcnt) {
+  Waitcnt = packBits(Vmcnt, Waitcnt, Layout.VmcntLoShift, Layout.VmcntLoBits);
+  return packBits(Vmcnt >> Layout.VmcntLoBits, Waitcnt, getVmcntBitShiftHi(),
+                  Layout.VmcntHiBits);
+}
+
+unsigned encodeExpcnt(const CounterLayout &Layout, unsigned Waitcnt,
+                      unsigned Expcnt) {
+  return packBits(Expcnt, Waitcnt, Layout.ExpcntShift, getExpcntBitWidth());
+}
+
+unsigned encodeLgkmcnt(const CounterLayout &Layout, unsigned Waitcnt,
+                       unsigned Lgkmcnt) {
+  return packBits(Lgkmcnt, Waitcnt, Layout.LgkmcntShift, Layout.LgkmcntBits);
+}
+
+unsigned encodeWaitcnt(const CounterLayout &Layout, unsigned Vmcnt,
+                       unsigned Expcnt, unsigned Lgkmcnt) {
+  unsigned Waitcnt = getWaitcntBitMask(Layout);
+  Waitcnt = encodeVmcnt(Layout, Waitcnt, Vmcnt);
+  Waitcnt = encodeExpcnt(Layout, Waitcnt, Expcnt);
+  Waitcnt = encodeLgkmcnt(Layout, Waitcnt, Lgkmcnt);
+  return Waitcnt;
+}
+
+static unsigned getCombinedCountBitMask(const CounterLayout &Layout,
+                                        bool IsStore) {
+  unsigned Dscnt = getBitMask(getDscntBitShift(), Layout.DscntBits);
+  if (IsStore) {
+    unsigned Storecnt =
+        getBitMask(Layout.LoadStorecntShift, Layout.StorecntBits);
+    return Dscnt | Storecnt;
+  }
+  unsigned Loadcnt = getBitMask(Layout.LoadStorecntShift, Layout.LoadcntBits);
+  return Dscnt | Loadcnt;
+}
+
+static unsigned encodeLoadcnt(const CounterLayout &Layout, unsigned Waitcnt,
+                              unsigned Loadcnt) {
+  return packBits(Loadcnt, Waitcnt, Layout.LoadStorecntShift,
+                  Layout.LoadcntBits);
+}
+
+static unsigned encodeStorecnt(const CounterLayout &Layout, unsigned Waitcnt,
+                               unsigned Storecnt) {
+  return packBits(Storecnt, Waitcnt, Layout.LoadStorecntShift,
+                  Layout.StorecntBits);
+}
+
+static unsigned encodeDscnt(const CounterLayout &Layout, unsigned Waitcnt,
+                            unsigned Dscnt) {
+  return packBits(Dscnt, Waitcnt, getDscntBitShift(), Layout.DscntBits);
+}
+
+unsigned encodeLoadcntDscnt(const CounterLayout &Layout, unsigned Loadcnt,
+                            unsigned Dscnt) {
+  unsigned Waitcnt = getCombinedCountBitMask(Layout, false);
+  Waitcnt = encodeLoadcnt(Layout, Waitcnt, Loadcnt);
+  Waitcnt = encodeDscnt(Layout, Waitcnt, Dscnt);
+  return Waitcnt;
+}
+
+unsigned encodeStorecntDscnt(const CounterLayout &Layout, unsigned Storecnt,
+                             unsigned Dscnt) {
+  unsigned Waitcnt = getCombinedCountBitMask(Layout, true);
+  Waitcnt = encodeStorecnt(Layout, Waitcnt, Storecnt);
+  Waitcnt = encodeDscnt(Layout, Waitcnt, Dscnt);
+  return Waitcnt;
+}
+
 //===----------------------------------------------------------------------===//
 // Custom Operand Values
 //===----------------------------------------------------------------------===//
@@ -1687,6 +1861,10 @@ unsigned getVaSdstBitMask() { return (1 << getVaSdstBitWidth()) - 1; }
 
 unsigned getVaSsrcBitMask() { return (1 << getVaSsrcBitWidth()) - 1; }
 
+unsigned getHoldCntBitMask(const CounterLayout &Layout) {
+  return (1 << Layout.HoldCntBits) - 1;
+}
+
 unsigned getVmVsrcBitMask() { return (1 << getVmVsrcBitWidth()) - 1; }
 
 unsigned getVaVccBitMask() { return (1 << getVaVccBitWidth()) - 1; }
@@ -1715,6 +1893,10 @@ unsigned decodeFieldVaVcc(unsigned Encoded) {
 
 unsigned decodeFieldVaSsrc(unsigned Encoded) {
   return unpackBits(Encoded, getVaSsrcBitShift(), getVaSsrcBitWidth());
+}
+
+unsigned decodeFieldHoldCnt(unsigned Encoded, const CounterLayout &Layout) {
+  return unpackBits(Encoded, getHoldCntBitShift(), Layout.HoldCntBits);
 }
 
 unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc) {
@@ -1769,6 +1951,11 @@ unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
 unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI) {
   unsigned Encoded = getDefaultDepCtrEncoding(STI);
   return encodeFieldVaSsrc(Encoded, VaSsrc);
+}
+
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const CounterLayout &Layout) {
+  return packBits(HoldCnt, Encoded, getHoldCntBitShift(), Layout.HoldCntBits);
 }
 
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI) {

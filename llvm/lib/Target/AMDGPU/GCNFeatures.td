@@ -460,17 +460,16 @@ class SubtargetFeatureDataCacheLineSize <int Value> : SubtargetFeature <
 
 def FeatureDataCacheLineSize128 : SubtargetFeatureDataCacheLineSize<128>;
 
-// A wait counter field's bit shift or width, read by TargetParser and the
-// backend. Absent means the SI layout value, which pseudo targets also use.
-// FieldName is a shared sink; non-bool so no per-feature getter is generated.
+// A wait counter field's bit shift or width, read by AMDGPU::getCounterLayout.
+// Absent means the SI layout value, which pseudo targets also use. FieldName is
+// a shared sink; non-bool so no per-feature getter is generated.
 class CounterFieldFeature<string name, string fieldName, int value>
     : SubtargetFeature<name # "-" # value, "CounterFieldSink", "1",
                        "Counter field " # fieldName # " is " # value> {
-  string CounterField = fieldName;
-  string CounterValue = !cast<string>(value);
   // Row of the backend's CounterFieldFeatures table.
   string FeatureEnum = NAME;
   string LayoutField = "&CounterLayout::" # fieldName;
+  bits<8> LayoutValue = value;
 }
 
 def FeatureVmcntLoShift10          : CounterFieldFeature<"vmcnt-lo-shift", "VmcntLoShift", 10>;

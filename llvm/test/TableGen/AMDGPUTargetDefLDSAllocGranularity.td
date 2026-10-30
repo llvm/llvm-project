@@ -37,7 +37,7 @@ def : AMDGPUProcessorModel<"gfx9-4-generic", NoSchedModel,
     [9, 4, 0]> {
   let CoveredGPUs = [GFX942, GFX950];
 }
-// CHECK: Triple::AMDGPUSubArch9_4, AMDGPUFeatureBitset({FEAT_LDS_ALLOC_GRANULARITY_1280, FEAT_LDS_ENCODING_GRANULARITY_1280}), {9, 4, 0}, [[#]], 10, 65536, 32, 0, {{.*}}},
+// CHECK: Triple::AMDGPUSubArch9_4, AMDGPUFeatureBitset({FEAT_LDS_ALLOC_GRANULARITY_1280, FEAT_LDS_ENCODING_GRANULARITY_1280}), {9, 4, 0}, [[#]], 10, 65536, 32, 0},
 
 // Allocation and encoding use different units on gfx10.3, including its generic.
 def GFX1030 : AMDGPUProcessorModel<"gfx1030", NoSchedModel,

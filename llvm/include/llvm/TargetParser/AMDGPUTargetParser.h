@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/TargetParser/AMDGPUCounterLayout.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 #include <optional>
@@ -266,10 +265,6 @@ constexpr unsigned getMinWavesPerEU() { return 1; }
 LLVM_ABI std::optional<unsigned> getBufferResourceNumRecordsWidth(GPUKind AK);
 LLVM_ABI std::optional<unsigned>
 getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch);
-
-/// \returns Wait counter field layout of \p AK; the SI layout if unknown.
-LLVM_ABI CounterLayout getCounterLayout(GPUKind AK);
-LLVM_ABI CounterLayout getCounterLayout(Triple::SubArchType SubArch);
 
 /// \returns Maximum number of waves per execution unit without any kind of
 /// limitation.
