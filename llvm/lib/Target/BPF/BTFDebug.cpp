@@ -850,6 +850,7 @@ void BTFDebug::visitBasicType(const DIBasicType *BTy, uint32_t &TypeId) {
         std::make_unique<BTFTypeFloat>(BTy->getSizeInBits(), BTy->getName());
     break;
   default:
+    TypeId = 0;
     return;
   }
 
@@ -863,8 +864,10 @@ void BTFDebug::visitSubroutineType(
     bool VoidReturn) {
   DITypeArray Elements = STy->getTypeArray();
   uint32_t VLen = Elements.size() - 1;
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    TypeId = 0;
     return;
+  }
 
   // Subprogram has a valid non-zero-length name, and the pointee of
   // a function pointer has an empty name. The subprogram type will
@@ -995,8 +998,10 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
       VLen++;
     }
   }
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    TypeId = 0;
     return;
+  }
 
   // Check whether we have any bitfield members or not
   bool HasBitField = false;
@@ -1089,8 +1094,10 @@ void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
 void BTFDebug::visitEnumType(const DICompositeType *CTy, uint32_t &TypeId) {
   DINodeArray Elements = CTy->getElements();
   uint32_t VLen = Elements.size();
-  if (VLen > BTF::MAX_VLEN)
+  if (VLen > BTF::MAX_VLEN) {
+    TypeId = 0;
     return;
+  }
 
   bool IsSigned = false;
   unsigned NumBits = 32;
@@ -1205,8 +1212,10 @@ void BTFDebug::visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
              Tag == dwarf::DW_TAG_restrict_type) {
     auto TypeEntry = std::make_unique<BTFTypeDerived>(DTy, Tag, false);
     TypeId = addType(std::move(TypeEntry), DTy);
-  } else if (Tag != dwarf::DW_TAG_member) {
-    return;
+  } else {
+    TypeId = 0;
+    if (Tag != dwarf::DW_TAG_member)
+      return;
   }
 
   // Visit base type of pointer, typedef, const, volatile, restrict or
