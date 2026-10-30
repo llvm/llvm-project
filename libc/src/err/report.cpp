@@ -13,12 +13,10 @@
 
 #include "src/err/report.h"
 
-#include "hdr/errno_macros.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/StringUtil/error_to_string.h"
 #include "src/__support/arg_list.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/printf_core/printf_main.h"
 #include "src/__support/printf_core/writer.h"
