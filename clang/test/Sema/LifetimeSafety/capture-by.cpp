@@ -257,11 +257,11 @@ struct S {
   void gets_captured_by(X &x) [[clang::lifetime_capture_by(x)]];
 };
 
-void use() {
+void test() {
   S{}.gets_captured_by(x); // expected-warning {{object whose reference is captured by 'x' will be destroyed at the end of the full-expression}} \
                   // cfg-warning {{temporary object does not live long enough}} \
                   // cfg-note {{temporary object is destroyed here}}
-  (void)x;        // cfg-note {{later used here}}
+  use(x);        // cfg-note {{later used here}}
   S s;            
   s.gets_captured_by(x);   // cfg-warning {{stack memory associated with local variable 's' escapes to the global variable 'x' which will dangle}}
 }
@@ -283,7 +283,7 @@ void test() {
     Obj local_obj;
     local_obj.register_into(c);   // cfg-warning {{local variable 'local_obj' does not live long enough}}
   }                               // cfg-note {{local variable 'local_obj' is destroyed here}}
-  (void)c.stored;                 // cfg-note {{later used here}}
+  use(c);                // cfg-note {{later used here}}
 }
 } // namespace method_decl_capture
 
@@ -303,7 +303,7 @@ void test() {
     s.gets_captured_by(x);   // cfg-warning {{local variable 's' does not live long enough}}
   }                          // cfg-note {{local variable 's' is destroyed here}}
   
-  (void)x;                   // cfg-note {{later used here}}
+  use(x);                   // cfg-note {{later used here}}
 }
 } // namespace method_redecl_capture
 
@@ -325,7 +325,7 @@ void test() {
     s.gets_captured_by(x);    // cfg-warning {{local variable 's' does not live long enough}}
   }                           // cfg-note {{local variable 's' is destroyed here}}
   
-  (void)x;                    // cfg-note {{later used here}}
+  use(x);                    // cfg-note {{later used here}}
 }
 
 } // template_method_redecl_capture
