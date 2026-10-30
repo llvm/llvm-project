@@ -28,6 +28,7 @@
 //   COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED
 //   COMMON_INTERCEPTOR_MMAP_IMPL
 //   COMMON_INTERCEPTOR_MUNMAP_IMPL
+//   COMMON_INTERCEPTOR_MREMAP_IMPL
 //   COMMON_INTERCEPTOR_COPY_STRING
 //   COMMON_INTERCEPTOR_STRNDUP_IMPL
 //   COMMON_INTERCEPTOR_STRERROR
@@ -338,6 +339,14 @@ extern const short *_tolower_tab_;
 #ifndef COMMON_INTERCEPTOR_MUNMAP_IMPL
 #define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz) \
   { return REAL(munmap)(addr, sz); }
+#endif
+
+#ifndef COMMON_INTERCEPTOR_MREMAP_IMPL
+#  define COMMON_INTERCEPTOR_MREMAP_IMPL(ctx, addr, old_sz, new_sz, flags, \
+                                         new_addr)                         \
+    {                                                                      \
+      return REAL(mremap)(addr, old_sz, new_sz, flags, new_addr);          \
+    }
 #endif
 
 #ifndef COMMON_INTERCEPTOR_COPY_STRING
@@ -7807,6 +7816,32 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags, int fd,
 #define INIT_MMAP64
 #endif
 
+#if SANITIZER_INTERCEPT_MREMAP
+INTERCEPTOR(void*, mremap, void* old_address, SIZE_T old_size, SIZE_T new_size,
+            int flags, ...) {
+  static const int kMremapFixed = 1 << 1;
+  static const int kMremapDontunmap = 1 << 2;
+  void* ctx;
+  void* new_address = nullptr;
+  if (flags & (kMremapFixed | kMremapDontunmap)) {
+    va_list ap;
+    va_start(ap, flags);
+    new_address = va_arg(ap, void*);
+    va_end(ap);
+  }
+  if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
+    return (void*)internal_mremap(old_address, old_size, new_size, flags,
+                                  new_address);
+  COMMON_INTERCEPTOR_ENTER(ctx, mremap, old_address, old_size, new_size, flags,
+                           new_address);
+  COMMON_INTERCEPTOR_MREMAP_IMPL(ctx, old_address, old_size, new_size, flags,
+                                 new_address);
+}
+#  define INIT_MREMAP COMMON_INTERCEPT_FUNCTION(mremap);
+#else
+#  define INIT_MREMAP
+#endif
+
 #if SANITIZER_INTERCEPT_DEVNAME
 INTERCEPTOR(char *, devname, u64 dev, u32 type) {
   void *ctx;
@@ -10487,6 +10522,7 @@ static void InitializeCommonInterceptors() {
 
   INIT_MMAP;
   INIT_MMAP64;
+  INIT_MREMAP;
   INIT_TEXTDOMAIN;
   INIT_STRLEN;
   INIT_STRNLEN;

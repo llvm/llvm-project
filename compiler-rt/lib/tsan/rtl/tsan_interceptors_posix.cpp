@@ -859,6 +859,47 @@ static int munmap_interceptor(ThreadState *thr, uptr pc, Munmap real_munmap,
   return res;
 }
 
+template <class Mremap>
+static void* mremap_interceptor(ThreadState* thr, uptr pc, Mremap real_mremap,
+                                void* old_address, SIZE_T old_size,
+                                SIZE_T new_size, int flags, void* new_address) {
+  const int MREMAP_FIXED = 1 << 1;
+  const int MREMAP_DONTUNMAP = 1 << 2;
+  if (!fix_mmap_addr(&new_address, new_size,
+                     (flags & MREMAP_FIXED) ? MAP_FIXED : 0))
+    return MAP_FAILED;
+  void* res = real_mremap(old_address, old_size, new_size, flags, new_address);
+  if (res == MAP_FAILED)
+    return res;
+  if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + new_size - 1)) {
+    Report(
+        "ThreadSanitizer: mremap at bad address: old_addr=%p old_size=%p "
+        "new_size=%p res=%p\n",
+        old_address, (void*)old_size, (void*)new_size, res);
+    Die();
+  }
+  const uptr page_size = GetPageSizeCached();
+  const uptr aligned_old_size = RoundUpTo(old_size, page_size);
+  const uptr aligned_new_size = RoundUpTo(new_size, page_size);
+  if (res == old_address) {
+    if (new_size > old_size) {
+      uptr old_end = RoundUp((uptr)res + old_size, kShadowCell);
+      uptr new_end = RoundUp((uptr)res + new_size, kShadowCell);
+      if (new_end > old_end)
+        MemoryRangeImitateWriteOrResetRange(thr, pc, old_end,
+                                            new_end - old_end);
+    } else if (aligned_new_size < aligned_old_size) {
+      UnmapShadow(thr, (uptr)res + aligned_new_size,
+                  aligned_old_size - aligned_new_size);
+    }
+  } else {
+    if (!(flags & MREMAP_DONTUNMAP) && aligned_old_size > 0)
+      UnmapShadow(thr, (uptr)old_address, aligned_old_size);
+    MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, new_size);
+  }
+  return res;
+}
+
 #if SANITIZER_LINUX
 TSAN_INTERCEPTOR(void*, memalign, uptr align, uptr sz) {
   SCOPED_INTERCEPTOR_RAW(memalign, align, sz);
@@ -2688,6 +2729,13 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 #define COMMON_INTERCEPTOR_MUNMAP_IMPL(ctx, addr, sz)           \
   do {                                                          \
     return munmap_interceptor(thr, pc, REAL(munmap), addr, sz); \
+  } while (false)
+
+#define COMMON_INTERCEPTOR_MREMAP_IMPL(ctx, addr, old_sz, new_sz, flags,   \
+                                       new_addr)                           \
+  do {                                                                     \
+    return mremap_interceptor(thr, pc, REAL(mremap), addr, old_sz, new_sz, \
+                              flags, new_addr);                            \
   } while (false)
 
 #if !SANITIZER_APPLE
