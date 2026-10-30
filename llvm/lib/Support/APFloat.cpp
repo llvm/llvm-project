@@ -3069,7 +3069,7 @@ APFloat::opStatus
 IEEEFloat::roundSignificandWithExponent(const integerPart *decSigParts,
                                         unsigned sigPartCount, int exp,
                                         roundingMode rounding_mode) {
-  fltSemantics calcSemantics = { "calc", 32767, -32767, 0, 0 };
+  fltSemantics calcSemantics = {"calc", 32767, -32767, 0, 0 };
   unsigned int power = exp >= 0 ? exp : -exp;
   unsigned int pow5PartCapacity = powerOfFivePartsForExponent(power);
   SmallVector<integerPart, NumPow5PartsOnStack> pow5Parts;
@@ -7123,25 +7123,41 @@ cmpResult HexFloat::compare(const HexFloat &rhs) const {
 }
 
 cmpResult HexFloat::compareAbsoluteValue(const HexFloat &rhs) const {
-  int compare = 0;
   assert(semantics == rhs.semantics);
-  compare = exponent - rhs.exponent;
 
-  /* If exponents are equal, do an unsigned bignum comparison of the
-     significands.  */
-  if (compare == 0) {
-    APInt LSig(getSignificand());
-    APInt RSig(rhs.getSignificand());
-    if (LSig.ugt(RSig))
-      compare = 1;
-    else if (LSig.ult(RSig))
-      compare = -1;
-  }
-
-  if (compare > 0)
-    return cmpGreaterThan;
-  else if (compare < 0)
+  // simple cases
+  if (isZero() && rhs.isZero())
+    return cmpEqual;
+  if (isZero())
     return cmpLessThan;
+  if (rhs.isZero())
+    return cmpGreaterThan;
+
+  // compare aritmetically
+  APInt LeftSig(getSignificand());
+  APInt RightSig(rhs.getSignificand());
+  int LeftExp = exponent;
+  int RightExp = rhs.exponent;
+
+  auto normalize = [](APInt &Sig, int &e) {
+    int NumLeadingZeroHexits = Sig.countl_zero() / 4;
+    if (NumLeadingZeroHexits > 0) {
+      Sig <<= (NumLeadingZeroHexits * 4);
+      e -= NumLeadingZeroHexits;
+    }
+  };
+
+  normalize(LeftSig, LeftExp);
+  normalize(RightSig, RightExp);
+
+  if (LeftExp < RightExp)
+    return cmpLessThan;
+  if (LeftExp > RightExp)
+    return cmpGreaterThan;
+  if (LeftSig.ult(RightSig))
+    return cmpLessThan;
+  if (LeftSig.ugt(RightSig))
+    return cmpGreaterThan;
   return cmpEqual;
 }
 
@@ -8002,11 +8018,9 @@ unsigned int HexFloat::convertToHexString(char *DST, unsigned int HexDigits,
 }
 
 bool HexFloat::isZero() const {
-  // in the encoded bit pattern for zero, exponent and signficant are zero
-  return exponent == -64 &&
-         APInt::tcIsZero(getSignificandParts(), getPartCount());
-  APInt significand(getSignificand());
-  return exponent == -64 && significand.isZero();
+  // A value is zero if the significand is zero,
+  // irrespective of sign or exponent
+  return APInt::tcIsZero(getSignificandParts(), getPartCount());
 }
 
 bool HexFloat::isNegative() const {
@@ -8015,11 +8029,17 @@ bool HexFloat::isNegative() const {
 }
 
 bool HexFloat::isDenormal() const {
-  // It seems that HexFloat allows arbitrary denormals,
-  // i.e., when the exponent is other than -64.
-  // We need, therefore, to look at the most significant hexit.
-  return APInt::tcMSB(getSignificandParts(), getPartCount()) <
-         (getNumPrecisionBits() - 4);
+  // Recall that HexFloat allows non-canonical represemtations.
+  // We check that the value cannot be represented as normal.
+  if (isZero())
+    return false;
+  int PositionOfMSB = APInt::tcMSB(getSignificandParts(), getPartCount());
+  int NumLeadingZeroBits = (getNumPrecisionBits() - 1) - PositionOfMSB;
+  int NumLeadingZeroHexits = NumLeadingZeroBits / 4;
+
+  // We are a denorm if shifting the significand left to make the top hexit
+  // non-zero would make the exponent less than -64
+  return (exponent - NumLeadingZeroHexits) < -64;
 }
 
 bool HexFloat::isSmallest() const {

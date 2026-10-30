@@ -5286,28 +5286,28 @@ TEST(APFloatTest, ComparisonsHexFloat) {
   enum { MBig, MOne, MZer, PZer, POne, PBig, NumVals };
   using Relation = void (*)(const APFloat &, const APFloat &);
   Relation LT = [](const APFloat &LHS, const APFloat &RHS) {
-    EXPECT_FALSE(LHS == RHS);
-    EXPECT_TRUE(LHS != RHS);
-    EXPECT_TRUE(LHS < RHS);
-    EXPECT_FALSE(LHS > RHS);
-    EXPECT_TRUE(LHS <= RHS);
-    EXPECT_FALSE(LHS >= RHS);
+    EXPECT_FALSE(LHS == RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";;
+    EXPECT_TRUE(LHS != RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS < RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS > RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS <= RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS >= RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
   };
   Relation EQ = [](const APFloat &LHS, const APFloat &RHS) {
-    EXPECT_TRUE(LHS == RHS);
-    EXPECT_FALSE(LHS != RHS);
-    EXPECT_FALSE(LHS < RHS);
-    EXPECT_FALSE(LHS > RHS);
-    EXPECT_TRUE(LHS <= RHS);
-    EXPECT_TRUE(LHS >= RHS);
+    EXPECT_TRUE(LHS == RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS != RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS < RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS > RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS <= RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS >= RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
   };
   Relation GT = [](const APFloat &LHS, const APFloat &RHS) {
-    EXPECT_FALSE(LHS == RHS);
-    EXPECT_TRUE(LHS != RHS);
-    EXPECT_FALSE(LHS < RHS);
-    EXPECT_TRUE(LHS > RHS);
-    EXPECT_FALSE(LHS <= RHS);
-    EXPECT_TRUE(LHS >= RHS);
+    EXPECT_FALSE(LHS == RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS != RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS < RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS > RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_FALSE(LHS <= RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
+    EXPECT_TRUE(LHS >= RHS) << "(LHS, RHS): (" << LHS << ", " << RHS << ")";
   };
   Relation Relations[NumVals][NumVals] = {
       //          -B  -1  -0  +0  +1  +B
