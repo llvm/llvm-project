@@ -38,12 +38,6 @@ struct __tgt_device_image {
   llvm::offloading::EntryTy *EntriesEnd; // End of table (non inclusive)
 };
 
-struct __tgt_device_info {
-  void *Context = nullptr;
-  void *Device = nullptr;
-  void *Platform = nullptr;
-};
-
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {

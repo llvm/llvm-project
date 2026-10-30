@@ -82,8 +82,15 @@ typedef struct omp_interop_val_t {
   omp_interop_val_t(intptr_t device_id, kmp_interop_type_t interop_type)
       : interop_type(interop_type), device_id(device_id) {}
   const char *err_str = nullptr;
-  __tgt_async_info *async_info = nullptr;
-  __tgt_device_info device_info;
+  /// Queue backing a targetsync interop, null for a plain target interop.
+  ol_queue_handle_t queue = nullptr;
+  /// Backend-native handle of \p queue, handed out as omp_ipr_targetsync.
+  void *targetsync = nullptr;
+  /// Backend-native handles handed out as omp_ipr_device,
+  /// omp_ipr_platform and omp_ipr_device_context.
+  void *device = nullptr;
+  void *platform = nullptr;
+  void *context = nullptr;
   const kmp_interop_type_t interop_type;
   const intptr_t device_id;
   omp_vendor_id_t vendor_id = omp_vendor_llvm;
@@ -94,7 +101,6 @@ typedef struct omp_interop_val_t {
   // Constants
   static constexpr int no_owner = -1; // This interop has no current owner
 
-  void *rtl_property = nullptr; // Plugin dependent information
   // For implicitly created Interop objects (e.g., from a dispatch construct)
   // who owns the object
   int owner_gtid = no_owner;
@@ -111,8 +117,6 @@ typedef struct omp_interop_val_t {
     clearCompletionCbs();
   }
 
-  llvm::Expected<DeviceTy &> getDevice() const;
-
   bool hasOwner() const { return owner_gtid != no_owner; }
 
   void setOwner(int gtid) { owner_gtid = gtid; }
@@ -124,10 +128,8 @@ typedef struct omp_interop_val_t {
   void markDirty() { clean = false; }
   bool isClean() const { return clean; }
 
-  int32_t flush(DeviceTy &Device);
-  int32_t sync_barrier(DeviceTy &Device);
-  int32_t async_barrier(DeviceTy &Device);
-  int32_t release(DeviceTy &Device);
+  int32_t sync_barrier();
+  int32_t release();
 
   void addCompletionCb(ompx_interop_cb_t *cb, void *data) {
     completion_cbs.push_back(omp_interop_cb_instance_t(cb, data));

@@ -87,3 +87,10 @@ TEST_P(olGetDeviceInfoSizeTest, SuccessNativeHandle) {
       olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NATIVE_HANDLE, &Size));
   ASSERT_EQ(Size, sizeof(void *));
 }
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessNativePlatformHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
+}
