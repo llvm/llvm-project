@@ -37,6 +37,7 @@
 #include "llvm/Support/LogicalResult.h"
 
 #include "CIRDialectBytecode.h"
+#include "CIROpDefinitions.h"
 
 using namespace mlir;
 using namespace cir;
@@ -100,10 +101,7 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 void cir::CIRDialect::initialize() {
   registerTypes();
   registerAttributes();
-  addOperations<
-#define GET_OP_LIST
-#include "clang/CIR/Dialect/IR/CIROps.cpp.inc"
-      >();
+  registerCIRDialectOperations(this);
   addInterfaces<CIROpAsmDialectInterface>();
   detail::addBytecodeInterface(this);
 }
@@ -256,33 +254,6 @@ static LogicalResult verifyOffloadContainer(mlir::Operation *op) {
       return failure();
   }
   return success();
-}
-
-bool cir::CIRDialect::isPureCIRType(mlir::Type ty) const {
-  assert(ty && "isPureCIRType requires a non-null type");
-  {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    auto it = pureCIRTypeCache.find(ty);
-    if (it != pureCIRTypeCache.end())
-      return it->second;
-  }
-  // Records gain members when completed, so a "pure" answer is only stable
-  // when the walk saw no incomplete record. "Impure" answers stay stable.
-  bool sawIncompleteRecord = false;
-  bool result = !ty.walk([&](mlir::Type t) {
-                     if (!t)
-                       return mlir::WalkResult::advance();
-                     if (auto rec = mlir::dyn_cast<cir::RecordType>(t))
-                       sawIncompleteRecord |= rec.isIncomplete();
-                     return mlir::isa<cir::CIRDialect>(t.getDialect())
-                                ? mlir::WalkResult::advance()
-                                : mlir::WalkResult::interrupt();
-                   }).wasInterrupted();
-  if (!result || !sawIncompleteRecord) {
-    std::lock_guard<std::mutex> lock(pureCIRTypeCacheMutex);
-    pureCIRTypeCache[ty] = result;
-  }
-  return result;
 }
 
 LogicalResult
@@ -513,8 +484,8 @@ void printInlineKindAttr(OpAsmPrinter &p, cir::InlineKindAttr inlineKindAttr) {
 // CIR Custom Parsers/Printers
 //===----------------------------------------------------------------------===//
 
-static mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
-                                                      mlir::Region &region) {
+mlir::ParseResult cir::parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
+                                                    mlir::Region &region) {
   auto regionLoc = parser.getCurrentLocation();
   if (parser.parseRegion(region))
     return failure();
@@ -523,20 +494,12 @@ static mlir::ParseResult parseOmittedTerminatorRegion(mlir::OpAsmParser &parser,
   return success();
 }
 
-static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
-                                         cir::ScopeOp &op,
-                                         mlir::Region &region) {
+void cir::printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
+                                       cir::ScopeOp &op, mlir::Region &region) {
   printer.printRegion(region,
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
 }
-
-mlir::OptionalParseResult
-parseGlobalMemorySpace(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr);
-
-void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp op,
-                            mlir::ptr::MemorySpaceAttrInterface attr);
 
 //===----------------------------------------------------------------------===//
 // AllocaOp
@@ -649,10 +612,9 @@ LogicalResult cir::DeleteArrayOp::verify() {
 // AssumeOp
 //===----------------------------------------------------------------------===//
 
-static void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
-                              cir::AssumeBundleKindAttr kindAttr,
-                              OperandRange bundleArgs,
-                              TypeRange bundleArgTypes) {
+void cir::printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
+                            cir::AssumeBundleKindAttr kindAttr,
+                            OperandRange bundleArgs, TypeRange bundleArgTypes) {
   cir::AssumeBundleKind kind = kindAttr.getValue();
   if (kind == cir::AssumeBundleKind::None)
     return;
@@ -668,7 +630,7 @@ static void printAssumeBundle(OpAsmPrinter &p, cir::AssumeOp op,
   p << ")";
 }
 
-static ParseResult parseAssumeBundle(
+ParseResult cir::parseAssumeBundle(
     OpAsmParser &p, cir::AssumeBundleKindAttr &bundleKindAttr,
     llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand, 4> &bundleArgs,
     llvm::SmallVector<mlir::Type, 1> &bundleArgTypes) {
@@ -834,7 +796,7 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
 
 MutableOperandRange
 cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
-  // The eh_token operand is not forwarded to the parent region.
+  // The eh_token operand is not modeled as forwarded to any successor.
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
@@ -1295,13 +1257,7 @@ OpFoldResult cir::CastOp::fold(FoldAdaptor adaptor) {
 
   if (getSrc().getType() == getType()) {
     switch (getKind()) {
-    case cir::CastKind::integral: {
-      llvm::SmallVector<mlir::OpFoldResult, 1> foldResults;
-      auto foldOrder = getSrc().getDefiningOp()->fold(foldResults);
-      if (foldOrder.succeeded() && mlir::isa<mlir::Attribute>(foldResults[0]))
-        return mlir::cast<mlir::Attribute>(foldResults[0]);
-      return {};
-    }
+    case cir::CastKind::integral:
     case cir::CastKind::bitcast:
     case cir::CastKind::address_space:
     case cir::CastKind::float_complex:
@@ -2102,31 +2058,31 @@ LogicalResult cir::CleanupScopeOp::verify() {
 
 void cir::CleanupScopeOp::getSuccessorRegions(
     mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  // Execution always starts in the body region.
+  // The cleanup can also run from the middle of the body, on an unwind out of
+  // a call or on a cir.return, cir.break, cir.continue or cir.goto. None of
+  // these is a branch point, so the cleanup region is a successor of the
+  // parent and of every body exit to stand in for them.
   if (point.isParent()) {
+    regions.reserve(regions.size() + 2);
     regions.emplace_back(&getBodyRegion());
+    regions.emplace_back(&getCleanupRegion());
     return;
   }
 
   mlir::Operation *term = point.getTerminatorPredecessorOrNull();
-  assert(term && "expected a terminator predecessor");
-
-  if (term->getParentRegion() == &getBodyRegion()) {
-    // cir.resume unwinds out of the body. Every other terminator, such as
-    // cir.yield or cir.co_return, is a normal exit.
-    cir::CleanupKindAttr kind = getCleanupKindAttr();
-    if (isa<cir::ResumeOp>(term) ? kind.isEH() : kind.isNormal()) {
-      regions.emplace_back(&getCleanupRegion());
-      return;
-    }
+  if (term->getParentRegion() == &getCleanupRegion()) {
+    regions.emplace_back(getOperation());
+    return;
   }
 
-  // Exiting the cleanup region, or a body exit that skips it, leaves the
-  // operation. An unwind out of the middle of the body is not a
-  // RegionBranchPoint, and neither are cir.return, cir.break, cir.continue or
-  // cir.goto, so a cleanup region reached only that way has no predecessor
-  // here.
-  regions.emplace_back(getOperation());
+  regions.emplace_back(&getCleanupRegion());
+
+  // cir.resume unwinds out of the body, and every other terminator is a
+  // normal exit. An exit that the cleanup kind does not cover can also leave
+  // the operation directly.
+  cir::CleanupKindAttr kind = getCleanupKindAttr();
+  if (isa<cir::ResumeOp>(term) ? !kind.isEH() : !kind.isNormal())
+    regions.emplace_back(getOperation());
 }
 
 LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
@@ -2252,7 +2208,7 @@ cir::IndirectBrOp::getSuccessorOperands(unsigned index) {
   return mlir::SuccessorOperands(getSuccOperandsMutable()[index]);
 }
 
-ParseResult parseIndirectBrOpSucessors(
+ParseResult cir::parseIndirectBrOpSucessors(
     OpAsmParser &parser, Type &flagType,
     SmallVectorImpl<Block *> &succOperandBlocks,
     SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &succOperands,
@@ -2284,10 +2240,10 @@ ParseResult parseIndirectBrOpSucessors(
   return success();
 }
 
-void printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
-                                Type flagType, SuccessorRange succs,
-                                OperandRangeRange succOperands,
-                                const TypeRangeRange &succOperandsTypes) {
+void cir::printIndirectBrOpSucessors(OpAsmPrinter &p, cir::IndirectBrOp op,
+                                     Type flagType, SuccessorRange succs,
+                                     OperandRangeRange succOperands,
+                                     const TypeRangeRange &succOperandsTypes) {
   p << "[";
   llvm::interleave(
       llvm::zip(succs, succOperands),
@@ -2421,7 +2377,7 @@ cir::SwitchFlatOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 
 /// <cases> ::= `[` (case (`,` case )* )? `]`
 /// <case>  ::= integer `:` bb-id (`(` ssa-use-and-type-list `)`)?
-static ParseResult parseSwitchFlatOpCases(
+ParseResult cir::parseSwitchFlatOpCases(
     OpAsmParser &parser, Type flagType, mlir::ArrayAttr &caseValues,
     SmallVectorImpl<Block *> &caseDestinations,
     SmallVectorImpl<llvm::SmallVector<OpAsmParser::UnresolvedOperand>>
@@ -2464,11 +2420,11 @@ static ParseResult parseSwitchFlatOpCases(
   return parser.parseRSquare();
 }
 
-static void printSwitchFlatOpCases(OpAsmPrinter &p, cir::SwitchFlatOp op,
-                                   Type flagType, mlir::ArrayAttr caseValues,
-                                   SuccessorRange caseDestinations,
-                                   OperandRangeRange caseOperands,
-                                   const TypeRangeRange &caseOperandTypes) {
+void cir::printSwitchFlatOpCases(OpAsmPrinter &p, cir::SwitchFlatOp op,
+                                 Type flagType, mlir::ArrayAttr caseValues,
+                                 SuccessorRange caseDestinations,
+                                 OperandRangeRange caseOperands,
+                                 const TypeRangeRange &caseOperandTypes) {
   p << '[';
   p.printNewline();
   if (!caseValues) {
@@ -2644,13 +2600,12 @@ static void printComdatName(OpAsmPrinter &p, StringAttr comdat) {
     p << "(\"" << comdat.getValue() << "\")";
 }
 
-static void printComdatName(OpAsmPrinter &p, cir::GlobalOp op,
-                            StringAttr comdat) {
-  printComdatName(p, comdat);
+void cir::printComdatName(OpAsmPrinter &p, cir::GlobalOp op,
+                          StringAttr comdat) {
+  ::printComdatName(p, comdat);
 }
 
-static ParseResult parseComdatName(OpAsmParser &parser,
-                                   StringAttr &comdatAttr) {
+ParseResult cir::parseComdatName(OpAsmParser &parser, StringAttr &comdatAttr) {
   if (parser.parseOptionalKeyword("comdat").failed())
     return success();
   std::string comdatKey;
@@ -2663,10 +2618,10 @@ static ParseResult parseComdatName(OpAsmParser &parser,
   return success();
 }
 
-static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
-                                             TypeAttr type, Attribute initAttr,
-                                             mlir::Region &ctorRegion,
-                                             mlir::Region &dtorRegion) {
+void cir::printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
+                                           TypeAttr type, Attribute initAttr,
+                                           mlir::Region &ctorRegion,
+                                           mlir::Region &dtorRegion) {
   auto printType = [&]() { p << ": " << type; };
   // Aliases are definitions but they have no initial value or ctor/dtor; the
   // assembly prints them like declarations (`: type`).
@@ -2694,11 +2649,11 @@ static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
   }
 }
 
-static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
-                                                    TypeAttr &typeAttr,
-                                                    Attribute &initialValueAttr,
-                                                    mlir::Region &ctorRegion,
-                                                    mlir::Region &dtorRegion) {
+ParseResult cir::parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
+                                                  TypeAttr &typeAttr,
+                                                  Attribute &initialValueAttr,
+                                                  mlir::Region &ctorRegion,
+                                                  mlir::Region &dtorRegion) {
   mlir::Type opTy;
   if (parser.parseOptionalEqual().failed()) {
     // Absence of equal means a declaration, so we need to parse the type.
@@ -2708,7 +2663,7 @@ static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
   } else {
     // Parse constant with initializer, examples:
     //  cir.global @y = 3.400000e+00 : f32
-    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+    //  cir.global @rgb = #cir.const_array<[...] : !cir.array<!s8i x 3>>
     if (parseConstantValue(parser, initialValueAttr).failed())
       return failure();
 
@@ -3305,7 +3260,7 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getComdatAttr()) {
     p << ' ';
-    printComdatName(p, getComdatAttr());
+    ::printComdatName(p, getComdatAttr());
   }
 
   if (getAlignment())
@@ -4041,8 +3996,8 @@ LogicalResult cir::CoroutineOp::verify() {
 // Prints the pointer type(s) for a `cir.copy`. `src` and `dst` share the same
 // pointee type but may differ in address space; a single type is printed when
 // they match, otherwise both are printed (`src` first).
-static void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
-                           mlir::Type srcType, mlir::Type dstType) {
+void cir::printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
+                         mlir::Type srcType, mlir::Type dstType) {
   printer.printType(srcType);
   if (srcType != dstType) {
     printer << ", ";
@@ -4050,9 +4005,9 @@ static void printCopyTypes(mlir::OpAsmPrinter &printer, mlir::Operation *,
   }
 }
 
-static mlir::ParseResult parseCopyTypes(mlir::OpAsmParser &parser,
-                                        mlir::Type &srcType,
-                                        mlir::Type &dstType) {
+mlir::ParseResult cir::parseCopyTypes(mlir::OpAsmParser &parser,
+                                      mlir::Type &srcType,
+                                      mlir::Type &dstType) {
   if (parser.parseType(srcType))
     return mlir::failure();
   if (parser.parseOptionalComma().succeeded()) {
@@ -5180,18 +5135,30 @@ LogicalResult cir::TypeInfoAttr::verify(
 void cir::TryOp::getSuccessorRegions(
     mlir::RegionBranchPoint point,
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
-  // The `try` and the `catchers` region branch back to the parent operation.
-  if (!point.isParent()) {
-    regions.emplace_back(getOperation());
-    return;
+  if (point.isParent()) {
+    regions.emplace_back(&getTryRegion());
+  } else {
+    // A handler exit leaves the operation.
+    mlir::Operation *term = point.getTerminatorPredecessorOrNull();
+    if (term->getParentRegion() != &getTryRegion()) {
+      regions.emplace_back(getOperation());
+      return;
+    }
+    // A cir.resume ending the try region unwinds into a handler, so it leaves
+    // the operation only when there is none. Every other exit can leave it.
+    if (!isa<cir::ResumeOp>(term) || getHandlerRegions().empty())
+      regions.emplace_back(getOperation());
   }
 
-  regions.push_back(mlir::RegionSuccessor(&getTryRegion()));
-
+  // Most handlers are entered by an unwind out of a call in the try region,
+  // which is not a branch point, so the handlers are successors of the parent
+  // and of every exit from the try region to stand in for it.
+  //
   // TODO(CIR): If we know a target function never throws a specific type, we
   // can remove the catch handler.
-  for (mlir::Region &handlerRegion : this->getHandlerRegions())
-    regions.push_back(mlir::RegionSuccessor(&handlerRegion));
+  regions.reserve(regions.size() + getHandlerRegions().size());
+  for (mlir::Region &handlerRegion : getHandlerRegions())
+    regions.emplace_back(&handlerRegion);
 }
 
 /// Verify that each cir.init_catch_param in \p handlerRegion, outside any
@@ -5344,10 +5311,10 @@ LogicalResult cir::TryOp::verifyRegions() {
   return success();
 }
 
-static void
-printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
-                       mlir::MutableArrayRef<mlir::Region> handlerRegions,
-                       mlir::ArrayAttr handlerTypes) {
+void cir::printTryHandlerRegions(
+    mlir::OpAsmPrinter &printer, cir::TryOp op,
+    mlir::MutableArrayRef<mlir::Region> handlerRegions,
+    mlir::ArrayAttr handlerTypes) {
   if (!handlerTypes)
     return;
 
@@ -5387,7 +5354,7 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
   }
 }
 
-static mlir::ParseResult parseTryHandlerRegions(
+mlir::ParseResult cir::parseTryHandlerRegions(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<std::unique_ptr<mlir::Region>> &handlerRegions,
     mlir::ArrayAttr &handlerTypes) {
@@ -5686,11 +5653,10 @@ LogicalResult cir::EhDispatchOp::verify() {
   return success();
 }
 
-static ParseResult
-parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
-                            SmallVectorImpl<Block *> &catchDestinations,
-                            Block *&defaultDestination,
-                            mlir::UnitAttr &defaultIsCatchAll) {
+ParseResult cir::parseEhDispatchDestinations(
+    OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
+    SmallVectorImpl<Block *> &catchDestinations, Block *&defaultDestination,
+    mlir::UnitAttr &defaultIsCatchAll) {
   // Parse: [ ... ]
   if (parser.parseLSquare())
     return failure();
@@ -5826,11 +5792,11 @@ parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
   return success();
 }
 
-static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
-                                        mlir::ArrayAttr catchTypes,
-                                        SuccessorRange catchDestinations,
-                                        Block *defaultDestination,
-                                        mlir::UnitAttr defaultIsCatchAll) {
+void cir::printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
+                                      mlir::ArrayAttr catchTypes,
+                                      SuccessorRange catchDestinations,
+                                      Block *defaultDestination,
+                                      mlir::UnitAttr defaultIsCatchAll) {
   p << " [";
   p.printNewline();
 
@@ -5884,10 +5850,3 @@ bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
   mlir::Type iterTy = operands[0];
   return iterTy == operands[1] && iterTy == operands[2] && iterTy == results[0];
 }
-
-//===----------------------------------------------------------------------===//
-// TableGen'd op method definitions
-//===----------------------------------------------------------------------===//
-
-#define GET_OP_CLASSES
-#include "clang/CIR/Dialect/IR/CIROps.cpp.inc"

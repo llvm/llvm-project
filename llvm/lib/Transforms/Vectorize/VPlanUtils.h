@@ -269,7 +269,9 @@ void pullOutPermutations(VPlan &Plan, Match_t Perm, Builder Build) {
 
 /// Lightweight SCEV-to-VPlan expander. Converts SCEV expressions into
 /// VPInstructions and live-ins. Canonical IVs and non-affine SCEVAddRecExprs
-/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later.
+/// are wrapped in a VPExpandSCEVRecipe to be expanded to IR later. Expansions
+/// are reused across calls to expand(), so the builder's insert point must
+/// only move to positions dominated by all earlier insert points.
 class VPSCEVExpander {
   VPBuilder &Builder;
   ScalarEvolution &SE;
@@ -279,6 +281,9 @@ class VPSCEVExpander {
   /// zero, matching SCEVExpander's SafeUDivMode.
   bool SafeUDivMode = false;
 
+  DenseMap<PointerIntPair<const SCEV *, 1, bool>, VPValue *>
+      InsertedExpressions;
+
   /// Try to find a loop-invariant IR value in the plan's entry block whose
   /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
   /// if none is found.
@@ -286,6 +291,8 @@ class VPSCEVExpander {
 
   /// Expand pointer-typed \p S as a ptradd of its pointer base and offset.
   VPValue *expandAsPtrAdd(const SCEVNAryExpr *S);
+
+  VPValue *expandImpl(const SCEV *S);
 
 public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL)

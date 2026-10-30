@@ -56,6 +56,7 @@ class GlobalValue;
 class InstCombiner;
 class OptimizationRemarkEmitter;
 class InterleavedAccessInfo;
+class ICmpInst;
 class IntrinsicInst;
 class LoadInst;
 class Loop;
@@ -871,6 +872,12 @@ public:
   /// against the immediate without having to materialize the immediate into a
   /// register.
   LLVM_ABI bool isLegalICmpImmediate(int64_t Imm) const;
+
+  /// Return true if replacing the relational loop exit comparison \p Cond
+  /// with an equality comparison against \p PostIncExitValue is profitable.
+  LLVM_ABI bool
+  preferLoopExitWithEqualityComparison(const ICmpInst &Cond,
+                                       const APInt &PostIncExitValue) const;
 
   /// Return true if the addressing mode represented by AM is legal for
   /// this target, for a load/store of the specified type.
@@ -2092,9 +2099,11 @@ public:
   /// profitable, e.g. because the operands can be folded into a target
   /// instruction during instruction selection. After calling the function
   /// \p Ops contains the Uses to sink ordered by dominance (dominating users
-  /// come first).
+  /// come first). \p LI, when available, lets targets account for loop
+  /// boundaries when deciding profitability.
   LLVM_ABI bool isProfitableToSinkOperands(Instruction *I,
-                                           SmallVectorImpl<Use *> &Ops) const;
+                                           SmallVectorImpl<Use *> &Ops,
+                                           const LoopInfo *LI = nullptr) const;
 
   /// Return true if it's significantly cheaper to shift a vector by a uniform
   /// scalar than by an amount which will vary across each lane. On x86 before
