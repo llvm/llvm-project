@@ -1779,6 +1779,13 @@ static bool canRenameMOP(const MachineOperand &MOP,
       return TRI->isSuperOrSubRegisterEq(
           MOP.getParent()->getOperand(0).getReg(), MOP.getReg());
     }
+
+    // Implicit uses of calls and instruction description are fixed and cannot
+    // be renamed.
+    const MachineInstr &MI = *MOP.getParent();
+    if (MOP.isImplicit() &&
+        (MI.isCall() || MI.getDesc().hasImplicitUseOfPhysReg(MOP.getReg())))
+      return false;
   }
   return MOP.isImplicit() ||
          (MOP.isRenamable() && !MOP.isEarlyClobber() && !MOP.isTied());
