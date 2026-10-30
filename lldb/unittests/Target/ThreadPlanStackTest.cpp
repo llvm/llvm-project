@@ -1,4 +1,4 @@
-//===-- ThreadPlanStackTest.cpp --------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,10 +8,12 @@
 
 #include "lldb/Target/ThreadPlanStack.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -20,7 +22,10 @@
 #include "gtest/gtest.h"
 
 #include <limits>
+#include <memory>
 #include <mutex>
+#include <utility>
+#include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -76,27 +81,21 @@ public:
 };
 
 class ThreadPlanStackMapTest : public testing::Test {
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+
 protected:
-  static void SetUpTestSuite() {
-    FileSystem::Initialize();
-    HostInfo::Initialize();
-    platform_linux::PlatformLinux::Initialize();
+  void SetUp() override {
     std::call_once(TestUtilities::g_debugger_initialize_flag,
                    [] { Debugger::Initialize(nullptr); });
-  }
-  static void TearDownTestSuite() {
-    platform_linux::PlatformLinux::Terminate();
-    HostInfo::Terminate();
-    FileSystem::Terminate();
-  }
-  void SetUp() override {
-    debugger = Debugger::CreateInstance();
-    ASSERT_TRUE(debugger);
-    ArchSpec arch(HostInfo::GetTargetTriple());
+    // A standalone test shard may not have a native host platform installed.
+    Platform::SetHostPlatform(nullptr);
+    ArchSpec arch("x86_64-pc-linux");
     PlatformSP platform =
         platform_linux::PlatformLinux::CreateInstance(true, &arch);
     ASSERT_TRUE(platform);
     Platform::SetHostPlatform(platform);
+    debugger = Debugger::CreateInstance();
+    ASSERT_TRUE(debugger);
     TargetSP target;
     ASSERT_TRUE(debugger->GetTargetList()
                     .CreateTarget(*debugger, "", arch, eLoadDependentsNo,
@@ -104,6 +103,12 @@ protected:
                     .Success());
     process = std::make_shared<TestProcess>(
         target, Listener::MakeListener("thread-plan-test"));
+  }
+
+  void TearDown() override {
+    process.reset();
+    if (debugger)
+      Debugger::Destroy(debugger);
   }
 
   ThreadSP AddThread(tid_t tid) {

@@ -274,14 +274,15 @@ TEST(ProtocolRequestsTest, CompileUnitsArguments) {
 
 TEST(ProtocolRequestsTest, CompileUnitsResponseBody) {
   CompileUnitsResponseBody body;
-  body.compileUnits = {{1, "main.cpp"}, {2, "util.cpp"}};
+  body.compileUnits = {{1, "main.cpp", "c++"}, {2, "util.cpp", std::nullopt}};
 
   // Check required keys.
   Expected<json::Value> expected = parse(R"({
     "compileUnits": [
       {
         "id": 1,
-        "compileUnitPath": "main.cpp"
+        "compileUnitPath": "main.cpp",
+        "language": "c++"
       },
       {
         "id": 2,

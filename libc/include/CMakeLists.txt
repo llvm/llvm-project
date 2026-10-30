@@ -745,6 +745,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_eventfd_macros
+    .llvm-libc-types.eventfd_t
 )
 
 add_header_macro(

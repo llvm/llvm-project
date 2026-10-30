@@ -105,7 +105,7 @@ linked device images that are ready to be wrapped and linked with host code to
 generate the final executable.
 
 ```console
-clang-sycl-linker --triple spirv64 --arch bmg_g21 input.bc
+clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
 ```
 
 ### Linking with Device Libraries

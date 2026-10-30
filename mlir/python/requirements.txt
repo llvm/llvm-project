@@ -1,7 +1,10 @@
 # BUILD dependencies
-nanobind>=2.9, <3.0
+nanobind>=2.9, <3.0; python_version<'3.15'
+nanobind>=2.13, <3.0; python_version>='3.15'
 PyYAML>=5.4.0, <=6.0.3
 typing_extensions>=4.12.2
 # RUN dependencies
-numpy>=2.1.0, <=2.5.4
-ml_dtypes>=0.5.0, <=0.6.0
+numpy>=2.1.0, <=2.5.4; python_version<'3.15'
+numpy>=2.5.0, <=2.5.4; python_version>='3.15'
+ml_dtypes>=0.5.0, <=0.6.0; python_version<'3.15'
+ml_dtypes==0.6.0; python_version>='3.15'

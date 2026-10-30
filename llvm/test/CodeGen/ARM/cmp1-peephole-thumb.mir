@@ -75,7 +75,7 @@ body:             |
     %2, $cpsr = tMUL %1, %0, 14, $noreg
     %3, $cpsr = tMOVi8 1, 14, $noreg
     %4, $cpsr = tMOVi8 0, 14, $noreg
-    tCMPi8 killed %2, 0, 14, $noreg, implicit-def $cpsr
+    tCMPi8 %2, 0, 14, $noreg, implicit-def $cpsr
     tBcc %bb.2.entry, 0, $cpsr
 
   bb.1.entry:
