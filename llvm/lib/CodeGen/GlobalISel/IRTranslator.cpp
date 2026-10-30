@@ -1030,8 +1030,17 @@ int IRTranslatorImpl::getOrCreateFrameIndex(const AllocaInst &AI) {
   TypeSize TySize = AI.getAllocationSize(*DL).value_or(TypeSize::getZero());
   uint64_t Size = TySize.getKnownMinValue();
 
-  // Always allocate at least one byte.
-  Size = std::max<uint64_t>(Size, 1u);
+  // Always allocate at least one byte. The frame object keeps a link to the
+  // alloca it was created for, and alias analysis queries in later passes
+  // describe the object by that alloca, so the alloca has to allocate as much
+  // memory as the frame object does.
+  if (Size == 0) {
+    Size = 1;
+    auto &MutableAI = const_cast<AllocaInst &>(AI);
+    MutableAI.setAllocatedType(Type::getInt8Ty(AI.getContext()));
+    MutableAI.setOperand(
+        0, ConstantInt::get(MutableAI.getArraySize()->getType(), 1));
+  }
 
   int &FI = MapEntry->second;
   FI = MF->getFrameInfo().CreateStackObject(Size, AI.getAlign(), false, &AI);
