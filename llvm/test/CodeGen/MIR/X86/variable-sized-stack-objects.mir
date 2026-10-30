@@ -18,6 +18,7 @@
 ...
 ---
 name:            test
+tracksRegLiveness: false
 frameInfo:
   stackSize:       24
   offsetAdjustment: -16

@@ -5,6 +5,7 @@
 # Also make sure that the landing pad still can be tail merged.
 ---
 name: foo
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: foo
   bb.0:

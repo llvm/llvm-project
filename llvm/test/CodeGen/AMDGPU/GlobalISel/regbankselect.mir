@@ -54,6 +54,7 @@
 ---
 name: load_constant
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -70,6 +71,7 @@ body: |
 ---
 name: load_constant_volatile
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -86,6 +88,7 @@ body: |
 ---
 name: load_global_uniform_invariant
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -102,6 +105,7 @@ body: |
 ---
 name: load_global_uniform_noclobber
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -119,6 +123,7 @@ body: |
 ---
 name: load_global_uniform_variant
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -136,6 +141,7 @@ body: |
 ---
 name: load_global_uniform_volatile_invariant
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -153,6 +159,7 @@ body: |
 ---
 name: load_global_uniform_atomic_invariant
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -170,6 +177,7 @@ body: |
 ---
 name: load_global_non_uniform
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -187,6 +195,7 @@ body: |
 ---
 name: load_constant_v4i16_from_8_align8
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

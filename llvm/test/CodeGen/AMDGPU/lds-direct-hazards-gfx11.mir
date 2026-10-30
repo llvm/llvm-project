@@ -3,6 +3,7 @@
 
 ---
 name:            lds_param_load_no_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_no_war
@@ -16,6 +17,7 @@ body:            |
 
 ---
 name:            lds_param_load_va_vdst0_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_va_vdst0_war
@@ -29,6 +31,7 @@ body:            |
 
 ---
 name:            lds_param_load_va_vdst0_war_salu
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_va_vdst0_war_salu
@@ -44,6 +47,7 @@ body:            |
 
 ---
 name:            lds_param_load_va_vdst1_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_va_vdst1_war
@@ -59,6 +63,7 @@ body:            |
 
 ---
 name:            lds_param_load_va_vdst10_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_va_vdst10_war
@@ -92,6 +97,7 @@ body:            |
 
 ---
 name:            lds_param_load_va_vdst10_waw
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_va_vdst10_waw
@@ -125,6 +131,7 @@ body:            |
 
 ---
 name:            lds_param_load_va_vdst20_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_va_vdst20_war
@@ -178,6 +185,7 @@ body:            |
 
 ---
 name:            lds_param_load_valu_war_trans
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_valu_war_trans
@@ -202,6 +210,7 @@ body:            |
 
 ---
 name:            lds_param_load_trans_war_valu
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_trans_war_valu
@@ -225,6 +234,7 @@ body:            |
 
 ---
 name:            lds_param_load_valu_war_vmem
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_valu_war_vmem
@@ -248,6 +258,7 @@ body:            |
 
 ---
 name:            lds_param_load_valu_war_lds
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_valu_war_lds
@@ -271,6 +282,7 @@ body:            |
 
 ---
 name:            lds_param_load_valu_war_ldsdir
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_valu_war_ldsdir
@@ -294,6 +306,7 @@ body:            |
 
 ---
 name:            lds_param_load_vmem_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war
@@ -308,6 +321,7 @@ body:            |
 
 ---
 name:            lds_param_load_vmem_war_valu
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war_valu
@@ -323,6 +337,7 @@ body:            |
 
 ---
 name:            lds_param_load_vmem_war_exp
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war_exp
@@ -338,6 +353,7 @@ body:            |
 
 ---
 name:            lds_param_load_vmem_war_waitcnt
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war_waitcnt
@@ -353,6 +369,7 @@ body:            |
 
 ---
 name:            lds_param_load_vmem_war_waitcnt_depctr
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war_waitcnt_depctr
@@ -368,6 +385,7 @@ body:            |
 
 ---
 name:            lds_param_load_vmem_war_waitcnt_depctr2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war_waitcnt_depctr2
@@ -384,6 +402,7 @@ body:            |
 
 ---
 name:            lds_direct_load_no_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_direct_load_no_war
@@ -397,6 +416,7 @@ body:            |
 
 ---
 name:            lds_direct_load_va_vdst0_war
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: lds_direct_load_va_vdst0_war

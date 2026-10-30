@@ -7,6 +7,7 @@
 # and resolve the tie with a COPY that is expected to be coalesced.
 ---
 name:            test_fmac_bundle
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -34,6 +35,7 @@ body:             |
 # This test is an example where conversion to three-address form is beneficial.
 ---
 name:            test_fmac_reuse_bundle
+tracksRegLiveness: false
 body:             |
   bb.0:
 

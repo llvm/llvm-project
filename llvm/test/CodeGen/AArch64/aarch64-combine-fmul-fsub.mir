@@ -5,6 +5,7 @@
 # RUN: llc -run-pass=machine-combiner -o - -mtriple=aarch64-unknown-linux -mcpu=thunderx3t110 -machine-combiner-verify-pattern-order=true %s | FileCheck --check-prefixes=PROFITABLE,ALL %s
 #
 name:            f1_2s
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -31,6 +32,7 @@ body:             |
 # PROFITABLE-NEXT: FMLAv2f32 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_4s
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -57,6 +59,7 @@ body:             |
 # PROFITABLE-NEXT: FMLAv4f32 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_2d
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -83,6 +86,7 @@ body:             |
 # PROFITABLE-NEXT: FMLAv2f64 [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_both_fmul_2s
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr64 }
   - { id: 1, class: fpr64 }
@@ -109,6 +113,7 @@ body:             |
 # ALL-NEXT: FMLSv2f32 %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_4s
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }
@@ -135,6 +140,7 @@ body:             |
 # ALL-NEXT: FMLSv4f32 %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_2d
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fpr128 }
   - { id: 1, class: fpr128 }

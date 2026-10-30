@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=aarch64 -run-pass=legalizer -global-isel-abort=1  %s -o - | FileCheck %s
 ---
 name:            test_scalar_mul_small
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_scalar_mul_small
@@ -23,6 +24,7 @@ body:             |
 ...
 ---
 name:            test_smul_overflow
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_smul_overflow
@@ -45,6 +47,7 @@ body:             |
 ...
 ---
 name:            test_umul_overflow
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_umul_overflow
@@ -66,6 +69,7 @@ body:             |
 ...
 ---
 name:            test_smul_overflow_s32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_smul_overflow_s32
@@ -95,6 +99,7 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s32
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_umul_overflow_s32
@@ -123,6 +128,7 @@ body:             |
 ...
 ---
 name:            test_umul_overflow_s24
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_umul_overflow_s24
@@ -163,6 +169,7 @@ body:             |
 ...
 ---
 name:            vector_mul_scalarize
+tracksRegLiveness: false
 liveins:
   - { reg: '$q0' }
   - { reg: '$q1' }
@@ -457,6 +464,7 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v16s16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_mul_v16s16
@@ -477,6 +485,7 @@ body:             |
 ...
 ---
 name:            test_vector_mul_v32s8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_vector_mul_v32s8

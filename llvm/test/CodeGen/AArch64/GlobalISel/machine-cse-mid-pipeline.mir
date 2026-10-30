@@ -5,6 +5,7 @@ name:            irtranslated
 legalized:       false
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: irtranslated
   ; CHECK:      %[[ONE:[0-9]+]]:_(i32) = G_CONSTANT i32 1
@@ -25,6 +26,7 @@ name:            regbankselected
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: regbankselected
   ; CHECK:      %[[ONE:[0-9]+]]:gpr(i32) = G_CONSTANT i32 1
@@ -45,6 +47,7 @@ name:            legalized
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: legalized
   ; CHECK:      %[[ONE:[0-9]+]]:_(i32) = G_CONSTANT i32 1
@@ -65,6 +68,7 @@ name:            legalized_sym
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: legalized_sym
   ; CHECK:      %[[ONE:[0-9]+]]:_(i32) = G_CONSTANT i32 1
@@ -86,6 +90,7 @@ alignment:       4
 legalized:       false
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: int_extensions
   ; CHECK:      %[[ONE:[0-9]+]]:_(i8) = G_CONSTANT i8 1
@@ -111,6 +116,7 @@ name:            generic
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: generic
   ; CHECK:      %[[SG:[0-9]+]]:_(i32) = G_ADD %{{[0-9]+}}, %{{[0-9]+}}
@@ -129,6 +135,7 @@ name:            generic_to_concrete_copy
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: generic_to_concrete_copy
   ; CHECK:      %[[S1:[0-9]+]]:gpr32(i32) = G_ADD %{{[0-9]+}}, %{{[0-9]+}}
@@ -147,6 +154,7 @@ name:            concrete_to_generic_copy
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: concrete_to_generic_copy
   ; CHECK:      %[[S1:[0-9]+]]:gpr32(i32) = ADDWrr %{{[0-9]+}}, %{{[0-9]+}}
@@ -165,6 +173,7 @@ name:            concrete
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: concrete
   ; CHECK:      %[[SC:[0-9]+]]:gpr32 = ADDWrr %{{[0-9]+}}, %{{[0-9]+}}
@@ -183,6 +192,7 @@ name:            variadic_defs_unmerge_vector
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: variadic_defs_unmerge_vector
   ; CHECK:      [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
@@ -217,6 +227,7 @@ name:            variadic_defs_unmerge_scalar
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: variadic_defs_unmerge_scalar
   ; CHECK:      [[COPY:%[0-9]+]]:_(i64) = COPY $d0
@@ -251,6 +262,7 @@ name:            variadic_defs_unmerge_scalar_asym
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: variadic_defs_unmerge_scalar_asym
   ; CHECK:      [[COPY:%[0-9]+]]:_(i64) = COPY $d0
@@ -282,6 +294,7 @@ name:            variadic_defs_unmerge_vector_constraints_mix
 legalized:       true
 regBankSelected: false
 selected:        false
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: variadic_defs_unmerge_vector_constraints_mix
   ; CHECK:      [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0

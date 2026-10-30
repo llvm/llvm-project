@@ -15,6 +15,7 @@
 name:            test_fptosi
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fptosi

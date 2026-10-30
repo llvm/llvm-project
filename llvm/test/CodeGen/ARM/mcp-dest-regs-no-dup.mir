@@ -2,6 +2,7 @@
 # RUN: -verify-machineinstrs -simplify-mir | FileCheck %s
 
 name:            h
+tracksRegLiveness: false
 body:             |
   bb.0:
 

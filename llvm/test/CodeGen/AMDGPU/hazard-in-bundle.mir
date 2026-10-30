@@ -12,6 +12,7 @@
 # GCN:          }
 ---
 name: break_smem_clause_max_look_ahead_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE implicit-def $sgpr6_sgpr7 {
@@ -33,6 +34,7 @@ body: |
 # GFX10:      V_CMP_EQ_F32
 ---
 name: hazard_smem_war_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
@@ -49,6 +51,7 @@ body: |
 # GFX9:      S_SENDMSG 3, implicit $exec, implicit $m0
 ---
 name: hazard_ignore_dbg_label_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE {
@@ -71,6 +74,7 @@ body: |
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
 ---
 name: vmem_vcc_hazard_in_bundle
+tracksRegLiveness: false
 body: |
   bb.0:
     BUNDLE {

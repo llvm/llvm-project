@@ -32,6 +32,7 @@
 
 ---
 name:            tbuffer_store1
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -51,6 +52,7 @@ body:             |
 
 ---
 name:            tbuffer_store2
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -70,6 +72,7 @@ body:             |
 
 ---
 name:            flat_store
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -83,6 +86,7 @@ body:             |
 
 ---
 name:            global_store
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -105,6 +109,7 @@ body:             |
 
 ---
 name:            buffer_store_format
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -124,6 +129,7 @@ body:             |
 
 ---
 name:            ds_write_b32
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -141,6 +147,7 @@ body:             |
 ...
 ---
 name:            global_store_dword
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -169,6 +176,7 @@ body:             |
 
 ---
 name:            multiple_basic_blocks1
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -214,6 +222,7 @@ body:             |
 ...
 ---
 name:            multiple_basic_blocks2
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -276,6 +285,7 @@ body:             |
 # One parent block has a VMEM store, release VGPRs
 ---
 name:            multiple_basic_blocks3
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -368,6 +378,7 @@ body:             |
 # not insert S_SENDMSG.
 ---
 name: multiple_basic_blocks4
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -406,6 +417,7 @@ body: |
 
 ---
 name:            recursive_loop
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -444,6 +456,7 @@ body:             |
 
 ---
 name:            recursive_loop_vmem
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -506,6 +519,7 @@ body:             |
 
 ---
 name:            image_store
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -525,6 +539,7 @@ body:             |
 
 ---
 name:            scratch_store
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -540,6 +555,7 @@ body:             |
 
 ---
 name:            buffer_atomic
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -559,6 +575,7 @@ body:             |
 
 ---
 name:            flat_atomic
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -573,6 +590,7 @@ body:             |
 
 ---
 name:            global_atomic
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -586,6 +604,7 @@ body:             |
 
 ---
 name:            image_atomic
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -599,6 +618,7 @@ body:             |
 
 ---
 name:            global_store_optnone
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -616,6 +636,7 @@ body:             |
 # Make sure we don't send DEALLOC_VGPRS after a call, since there might be
 # scratch stores still in progress.
 name:            with_calls
+tracksRegLiveness: false
 frameInfo:
   hasCalls:        true
 body:             |
@@ -634,6 +655,7 @@ body:             |
 # Make sure we don't send DEALLOC_VGPRS when there's a tail call, since the
 # only valid action after DEALLOC_VGPRS is to terminate the wave.
 name:            with_tail_calls
+tracksRegLiveness: false
 frameInfo:
   hasCalls:        true
 body:             |
@@ -651,6 +673,7 @@ body:             |
 # making it likely waveslot limited and not VGPR limited. For gfx11 that
 # is 96 registers.
 name:            waveslot_limited
+tracksRegLiveness: false
 frameInfo:
   hasCalls:        true
 body:             |
@@ -665,6 +688,7 @@ body:             |
 
 ---
 name:            tbuffer_without_mmo_may_hit_scratch
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -678,6 +702,7 @@ body:             |
 
 ---
 name:            buffer_without_mmo_may_hit_scratch
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

@@ -6,6 +6,7 @@
 # The NOPs should be hoisted from the loop body to the preheader
 ---
 name: test_simple_loop_hoist
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_simple_loop_hoist
   ; NOHOIST: bb.0:
@@ -53,6 +54,7 @@ body: |
 # Test 2: WMMA hazard INSIDE the loop; should NOT hoist
 ---
 name: test_internal_hazard_no_hoist
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_internal_hazard_no_hoist
   ; NOHOIST: bb.0:
@@ -101,6 +103,7 @@ body: |
 # Test 3: WMMA in loop but no hazard
 ---
 name: test_wmma_in_loop_no_conflict_hoist
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_wmma_in_loop_no_conflict_hoist
   ; NOHOIST: bb.0:
@@ -153,6 +156,7 @@ body: |
 # NOPs should be hoisted to the outermost preheader (bb.0)
 ---
 name: test_nested_loop_hoist_to_outermost
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_nested_loop_hoist_to_outermost
   ; NOHOIST: bb.0:
@@ -234,6 +238,7 @@ body: |
 # NOPs should be hoisted to L2's preheader (bb.1)
 ---
 name: test_triple_nested_hoist_to_intermediate
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_triple_nested_hoist_to_intermediate
   ; NOHOIST: bb.0:
@@ -354,6 +359,7 @@ body: |
 # Test 6: No preheader (multiple predecessors) - cannot hoist
 ---
 name: test_no_preheader_no_hoist
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_no_preheader_no_hoist
   ; NOHOIST: bb.0:
@@ -429,6 +435,7 @@ body: |
 # Test 7: Preheader without terminator
 ---
 name: test_fallthrough_preheader_hoist
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_fallthrough_preheader_hoist
   ; NOHOIST: bb.0:
@@ -473,6 +480,7 @@ body: |
 # Test 8: Not in a loop; should NOT hoist
 ---
 name: test_not_in_loop_no_hoist
+tracksRegLiveness: false
 body: |
   bb.0:
     ; NOHOIST-LABEL: name: test_not_in_loop_no_hoist
@@ -497,6 +505,7 @@ body: |
 # Test 9: VALU first, then WMMA in same loop (hazard via back-edge)
 ---
 name: test_valu_before_wmma_backedge_no_hoist
+tracksRegLiveness: false
 body: |
   ; NOHOIST-LABEL: name: test_valu_before_wmma_backedge_no_hoist
   ; NOHOIST: bb.0:

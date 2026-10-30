@@ -53,21 +53,21 @@ void runChecks(
     std::function<void(AArch64InstrInfo &, MachineFunction &)> Checks) {
   LLVMContext Context;
 
-  auto MIRString =
-    "--- |\n"
-    "  declare void @sizes()\n"
-    + InputIRSnippet.str() +
-    "...\n"
-    "---\n"
-    "name: sizes\n"
-    "jumpTable:\n"
-    "  kind:            block-address\n"
-    "  entries:\n"
-    "    - id:              0\n"
-    "      blocks:          [ '%bb.0' ]\n"
-    "body: |\n"
-    "  bb.0:\n"
-    + InputMIRSnippet.str();
+  auto MIRString = "--- |\n"
+                   "  declare void @sizes()\n" +
+                   InputIRSnippet.str() +
+                   "...\n"
+                   "---\n"
+                   "name: sizes\n"
+                   "tracksRegLiveness: false\n"
+                   "jumpTable:\n"
+                   "  kind:            block-address\n"
+                   "  entries:\n"
+                   "    - id:              0\n"
+                   "      blocks:          [ '%bb.0' ]\n"
+                   "body: |\n"
+                   "  bb.0:\n" +
+                   InputMIRSnippet.str();
 
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRString);
   std::unique_ptr<MIRParser> MParser =

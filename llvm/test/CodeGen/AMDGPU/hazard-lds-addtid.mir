@@ -26,6 +26,7 @@
 # GCN-NEXT: DS_READ_ADDTID_B32
 
 name: addtid
+tracksRegLiveness: false
 
 body: |
   bb.0:

@@ -21,6 +21,7 @@
 # CHECK-NEXT: NOP
 # CHECK-NEXT: LDSTUBArr
 name:            er-5-1
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |
@@ -43,6 +44,7 @@ body:             |
 # CHECK-NEXT: NOP
 # CHECK-NEXT: CASArr
 name:            er-5-2
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |
@@ -64,6 +66,7 @@ body:             |
 # CHECK-NEXT: NOP
 # CHECK-NEXT: CASArr
 name:            er-5-3
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |
@@ -75,6 +78,7 @@ body:             |
 # CHECK:      NOP
 # CHECK-NEXT: CASArr
 name:            er-5-4
+tracksRegLiveness: false
 registers:
   - { id: 0, class: intregs }
 body:             |

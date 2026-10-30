@@ -26,6 +26,7 @@
   !10 = !DILocation(line: 558, column: 7, scope: !12)
   !12 = distinct !DILexicalBlock(scope: !5, file: !6, line: 557, column: 50)
 name:            __foo_block_invoke
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     JCC_1 %bb.1, 5, implicit $eflags, debug-location !10

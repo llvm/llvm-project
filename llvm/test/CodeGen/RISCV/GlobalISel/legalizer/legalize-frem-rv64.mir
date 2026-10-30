@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=riscv64 -run-pass=legalizer -global-isel-abort=0 %s -o - | FileCheck %s
 ---
 name:            frem_f32
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10, $x11
@@ -31,6 +32,7 @@ body:             |
 ...
 ---
 name:            frem_f64
+tracksRegLiveness: false
 body:             |
   bb.1.entry:
     liveins: $x10, $x11
@@ -57,6 +59,7 @@ body:             |
 ...
 ---
 name:            frem_f16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 
@@ -98,6 +101,7 @@ body:             |
 ...
 ---
 name:            frem_v2f32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 

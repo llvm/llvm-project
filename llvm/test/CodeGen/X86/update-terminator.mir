@@ -44,6 +44,7 @@
 # CHECK: bb.3:
 # CHECK: bb.2:
 name:            f2
+tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
     successors: %bb.1(50), %bb.3(50)

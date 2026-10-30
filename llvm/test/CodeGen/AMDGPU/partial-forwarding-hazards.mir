@@ -4,6 +4,7 @@
 
 ---
 name:            partial_forwarding_1_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_1_hazard
@@ -29,6 +30,7 @@ body:            |
 
 ---
 name:            partial_forwarding_2_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_2_hazard
@@ -87,6 +89,7 @@ body:            |
 
 ---
 name:            partial_forwarding_3_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_3_hazard
@@ -130,6 +133,7 @@ body:            |
 
 ---
 name:            partial_forwarding_3_no_hazard_1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_3_no_hazard_1
@@ -161,6 +165,7 @@ body:            |
 
 ---
 name:            partial_forwarding_3_no_hazard_2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_3_no_hazard_2
@@ -192,6 +197,7 @@ body:            |
 
 ---
 name:            partial_forwarding_3_no_hazard_3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_3_no_hazard_3
@@ -223,6 +229,7 @@ body:            |
 
 ---
 name:            partial_forwarding_4_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_4_hazard
@@ -266,6 +273,7 @@ body:            |
 
 ---
 name:            partial_forwarding_4_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_4_no_hazard
@@ -297,6 +305,7 @@ body:            |
 
 ---
 name:            partial_forwarding_5_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: partial_forwarding_5_hazard
@@ -340,6 +349,7 @@ body:            |
 
 ---
 name:            partial_forwarding_5_no_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: partial_forwarding_5_no_hazard
@@ -371,6 +381,7 @@ body:            |
 
 ---
 name:            partial_forwarding_branching_1a
+tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: partial_forwarding_branching_1a
   ; GFX11: bb.0:
@@ -449,6 +460,7 @@ body:            |
 
 ---
 name:            partial_forwarding_branching_1b
+tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: partial_forwarding_branching_1b
   ; GFX11: bb.0:

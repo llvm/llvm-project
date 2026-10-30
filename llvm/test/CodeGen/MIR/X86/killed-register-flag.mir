@@ -19,6 +19,7 @@
 ...
 ---
 name:            foo
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     successors: %bb.1.less, %bb.2.exit

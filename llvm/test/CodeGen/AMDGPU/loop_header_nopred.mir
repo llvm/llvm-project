@@ -9,6 +9,7 @@
 
 ---
 name:            loop_header_nopred
+tracksRegLiveness: false
 body:             |
   ; GFX10-LABEL: name: loop_header_nopred
   ; GFX10: bb.0:

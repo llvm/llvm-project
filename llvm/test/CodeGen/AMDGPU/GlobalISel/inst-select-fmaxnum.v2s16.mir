@@ -9,6 +9,7 @@
 name: fmaxnum_v2f16_vv
 legalized: true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

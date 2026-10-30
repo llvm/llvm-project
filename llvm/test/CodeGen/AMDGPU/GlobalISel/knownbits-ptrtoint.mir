@@ -5,6 +5,7 @@
 ---
 ## We should see 128 unknown bits.
 name:            PtrToInt
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @PtrToInt
@@ -24,6 +25,7 @@ body:             |
 ---
 ## We should see 128 high zeroes followed by 128 unknown bits for extending ptrtoint.
 name:            PtrToIntExt
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @PtrToIntExt
@@ -43,6 +45,7 @@ body:             |
 ---
 ## We should see 48 unknown bits for truncating ptrtoint.
 name:            PtrToIntTrunc
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @PtrToIntTrunc
@@ -66,6 +69,7 @@ body:             |
 ## is lowered to a bitwise copy.
 ## We should see all zero high bits with 48 unknown bits.
 name:            PtrToIntTruncExplicitExt
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @PtrToIntTruncExplicitExt
@@ -90,6 +94,7 @@ body:             |
 ## Same test again but this time have the G_PTRTOINT do the truncation.
 ## We should see all zero high bits with 48 unknown bits.
 name:            PtrToIntTruncImplicitExt
+tracksRegLiveness: false
 body:             |
   bb.0:
   ; CHECK-LABEL: name: @PtrToIntTruncImplicitExt

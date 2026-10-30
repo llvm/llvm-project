@@ -5,6 +5,7 @@
 ---
 name: amdgpu_wave_address
 legalized: true
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: amdgpu_wave_address
@@ -18,6 +19,7 @@ body: |
 ---
 name: amdgpu_wave_address_v
 legalized: true
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: amdgpu_wave_address_v

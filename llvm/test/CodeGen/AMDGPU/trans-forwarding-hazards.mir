@@ -4,6 +4,7 @@
 
 ---
 name:            trans_use_1_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: trans_use_1_hazard
@@ -26,6 +27,7 @@ body:            |
 
 ---
 name:            trans_use_1_no_hazard_1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_use_1_no_hazard_1
@@ -43,6 +45,7 @@ body:            |
 
 ---
 name:            trans_use_2_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: trans_use_2_hazard
@@ -98,6 +101,7 @@ body:            |
 
 ---
 name:            trans_use_3_hazard
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: trans_use_3_hazard
@@ -132,6 +136,7 @@ body:            |
 
 ---
 name:            trans_use_3_no_hazard_1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_use_3_no_hazard_1
@@ -157,6 +162,7 @@ body:            |
 
 ---
 name:            trans_use_3_no_hazard_2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_use_3_no_hazard_2
@@ -184,6 +190,7 @@ body:            |
 
 ---
 name:            trans_use_3_no_hazard_3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: trans_use_3_no_hazard_3
@@ -201,6 +208,7 @@ body:            |
 
 ---
 name:            trans_use_4_one_depctr_1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: trans_use_4_one_depctr_1
@@ -226,6 +234,7 @@ body:            |
 
 ---
 name:            trans_use_4_one_depctr_2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: trans_use_4_one_depctr_2
@@ -251,6 +260,7 @@ body:            |
 
 ---
 name:            trans_use_4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: trans_use_4
@@ -276,6 +286,7 @@ body:            |
 
 ---
 name:            trans_use_branching_1a
+tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: trans_use_branching_1a
   ; GFX11: bb.0:
@@ -339,6 +350,7 @@ body:            |
 
 ---
 name:            trans_use_branching_1b
+tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: trans_use_branching_1b
   ; GFX11: bb.0:
@@ -396,6 +408,7 @@ body:            |
 
 ---
 name:            trans_use_branching_1c_no_hazard_1
+tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: trans_use_branching_1c_no_hazard_1
   ; GCN: bb.0:

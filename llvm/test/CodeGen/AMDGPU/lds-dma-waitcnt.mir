@@ -7,6 +7,7 @@
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
 name: buffer_load_dword_lds_ds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -24,6 +25,7 @@ body:             |
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
 name: buffer_load_dword_lds_vmcnt_1
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -41,6 +43,7 @@ body:             |
 # GCN-NEXT: FLAT_LOAD_DWORD
 ---
 name: buffer_load_dword_lds_flat_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -58,6 +61,7 @@ body:             |
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
 name: global_load_lds_dword_ds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -76,6 +80,7 @@ body:             |
 # GCN-NEXT: V_ADD_U32_e32
 ---
 name: ds_read_global_load_lds_use_ds_data
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -96,6 +101,7 @@ body:             |
 # GCN-NEXT: V_ADD_U32_e32
 ---
 name: ds_read_buffer_load_lds_use_ds_data
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -113,6 +119,7 @@ body:             |
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
 name: scratch_load_lds_dword_ds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -127,6 +134,7 @@ body:             |
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
 name: buffer_store_lds_dword_ds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -146,6 +154,7 @@ body:             |
 # GCN-NEXT: DS_READ_B32_gfx9
 ---
 name: series_of_buffer_load_dword_lds_ds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0

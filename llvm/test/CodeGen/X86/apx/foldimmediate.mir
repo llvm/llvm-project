@@ -6,6 +6,7 @@
 ---
 # Check that immediates can be folded into ALU instructions.
 name: foldImmediate
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gr32 }
   - { id: 1, class: gr32 }

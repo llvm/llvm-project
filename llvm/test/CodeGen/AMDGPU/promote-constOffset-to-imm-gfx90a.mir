@@ -12,6 +12,7 @@
 # GFX9: %{{[0-9]+}}:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[PTR0]], 0, 0
 
 name: diffoporder_add
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -65,6 +66,7 @@ body:             |
 # GFX9: [[GLOBAL_LOAD_DWORDX2_2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 0, 0,
 
 name: LowestInMiddle
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -118,6 +120,7 @@ body:             |
 # GFX9: [[GLOBAL_LOAD_DWORDX2_2:%[0-9]+]]:vreg_64_align2 = GLOBAL_LOAD_DWORDX2 [[REG_SEQUENCE2]], 0, 0
 
 name: NegativeDistance
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -163,6 +166,7 @@ body:             |
 
 # Tests for a successful compilation.
 name: assert_hit
+tracksRegLiveness: false
 body:             |
     bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -202,6 +206,7 @@ body:             |
 # GFX9: GLOBAL_STORE_DWORD %{{[0-9]+}}, %0.sub1, 0, 0,
 
 name: diffoporder_add_store
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 

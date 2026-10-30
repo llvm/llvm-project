@@ -9,6 +9,7 @@
 # CHECK:   - { id: 0, class: gpr, preferred-register: '', flags: [  ] }
 # CHECK:   - { id: 1, class: fpr, preferred-register: '', flags: [  ] }
 name: func
+tracksRegLiveness: false
 body: |
   bb.0:
     %0 : gpr(s64) = COPY $x9

@@ -29,6 +29,7 @@
 name:            frame_index
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr64sp, preferred-register: '', flags: [  ] }
@@ -53,6 +54,7 @@ body:             |
 name:            ptr_mask
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 # CHECK:  body:
 # CHECK: %2:gpr64sp = ANDXri %0, 8060
@@ -71,6 +73,7 @@ body:             |
 name:            global_local
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr }
 
@@ -87,6 +90,7 @@ body:             |
 name:            global_got
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr }
 
@@ -103,6 +107,7 @@ body:             |
 name:            icmp
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: gpr32, preferred-register: '', flags: [  ] }
@@ -157,6 +162,7 @@ body:             |
 name:            fcmp
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 # CHECK:      registers:
 # CHECK-NEXT:  - { id: 0, class: fpr32, preferred-register: '', flags: [  ] }

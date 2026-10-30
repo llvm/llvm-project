@@ -3,6 +3,7 @@
 
 ---
 name:            CTTZNoKnown8
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZNoKnown8
@@ -14,6 +15,7 @@ body:             |
 
 ---
 name:            CTTZNoKnown16
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZNoKnown16
@@ -25,6 +27,7 @@ body:             |
 
 ---
 name:            CTTZNoKnown32
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZNoKnown32
@@ -37,6 +40,7 @@ body:             |
 
 ---
 name:            CTTZHalfKnown8
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfKnown8
@@ -52,6 +56,7 @@ body:             |
 
 ---
 name:            CTTZHalfKnown16
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfKnown16
@@ -67,6 +72,7 @@ body:             |
 
 ---
 name:            CTTZHalfConst8Zero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst8Zero
@@ -78,6 +84,7 @@ body:             |
 
 ---
 name:            CTTZHalfConst16Zero
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst16Zero
@@ -89,6 +96,7 @@ body:             |
 
 ---
 name:            CTTZHalfConst8
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst8
@@ -100,6 +108,7 @@ body:             |
 
 ---
 name:            CTTZHalfConst16
+tracksRegLiveness: false
 body:             |
   bb.1:
   ; CHECK-LABEL: name: @CTTZHalfConst16

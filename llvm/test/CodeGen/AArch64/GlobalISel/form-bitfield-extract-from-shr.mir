@@ -6,6 +6,7 @@
 ---
 name:            apply_ashr_shl_to_sbfx
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_ashr_shl_to_sbfx
@@ -25,6 +26,7 @@ body:             |
 ---
 name:            apply_ashr_shl_to_sbfx_lower_bound
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_ashr_shl_to_sbfx_lower_bound
@@ -43,6 +45,7 @@ body:             |
 ---
 name:            apply_ashr_shl_to_sbfx_upper_bound
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_ashr_shl_to_sbfx_upper_bound
@@ -62,6 +65,7 @@ body:             |
 ---
 name:            apply_lshr_shl_to_ubfx
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_lshr_shl_to_ubfx
@@ -81,6 +85,7 @@ body:             |
 ---
 name:            apply_lshr_shl_to_ubfx_lower_bound
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_lshr_shl_to_ubfx_lower_bound
@@ -99,6 +104,7 @@ body:             |
 ---
 name:            apply_lshr_shl_to_ubfx_upper_bound
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: apply_lshr_shl_to_ubfx_upper_bound
@@ -118,6 +124,7 @@ body:             |
 ---
 name:            dont_apply_pos_out_of_bounds
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: dont_apply_pos_out_of_bounds
@@ -138,6 +145,7 @@ body:             |
 ---
 name:            dont_apply_no_constant
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: dont_apply_no_constant
@@ -158,6 +166,7 @@ body:             |
 ---
 name:            dont_apply_more_than_one_use
 legalized: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: dont_apply_more_than_one_use

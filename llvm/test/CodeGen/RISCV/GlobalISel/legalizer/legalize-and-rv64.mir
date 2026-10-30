@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            and_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i8
@@ -23,6 +24,7 @@ body:             |
 ...
 ---
 name:            and_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i15
@@ -43,6 +45,7 @@ body:             |
 ...
 ---
 name:            and_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i16
@@ -63,6 +66,7 @@ body:             |
 ...
 ---
 name:            and_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i32
@@ -83,6 +87,7 @@ body:             |
 ...
 ---
 name:            and_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i64
@@ -100,6 +105,7 @@ body:             |
 ...
 ---
 name:            and_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i72
@@ -130,6 +136,7 @@ body:             |
 ...
 ---
 name:            and_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i128
@@ -157,6 +164,7 @@ body:             |
 ...
 ---
 name:            and_i192
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: and_i192

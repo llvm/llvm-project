@@ -5,6 +5,7 @@
 # count.
 ---
 name:            no_break_s_mov_b64_multi_use_copy_inline_imm_extract
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -27,6 +28,7 @@ body:             |
 
 ---
 name:            no_break_v_mov_b64_multi_use_copy_inline_imm_extract
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -51,6 +53,7 @@ body:             |
 # this should fold despite multiple uses.
 ---
 name:            break_s_mov_b64_multi_use_copy_extract_use_is_inline_imm
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -73,6 +76,7 @@ body:             |
 
 ---
 name:            break_v_mov_b64_multi_use_copy_extract_use_is_inline_imm
+tracksRegLiveness: false
 body:             |
   bb.0:
 

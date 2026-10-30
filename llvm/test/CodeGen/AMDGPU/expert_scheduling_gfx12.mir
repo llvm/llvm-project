@@ -8,6 +8,7 @@
 # CHECK-LABEL: name: raw_exp
 
 name:            raw_exp
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: raw_exp
@@ -35,6 +36,7 @@ body:             |
 
 ---
 name:            raw_vmem
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
@@ -75,6 +77,7 @@ body:             |
 
 ---
 name:            war_lds
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1
@@ -112,6 +115,7 @@ body:             |
 
 ---
 name:            war_tex
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2
@@ -148,6 +152,7 @@ body:             |
 
 ---
 name:            war_valu
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
@@ -186,6 +191,7 @@ body:             |
 
 ---
 name:            war_vmem
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
@@ -225,6 +231,7 @@ body:             |
 
 ---
 name:            waw_vmem
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0
@@ -262,6 +269,7 @@ body:             |
 
 ---
 name: raw_valu_scratch
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: raw_valu_scratch
@@ -285,6 +293,7 @@ body: |
 ---
 # This pre-existing S_WAITCNT_DEPCTR should not be updated.
 name: valu_depctr_valu
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: valu_depctr_valu
@@ -303,6 +312,7 @@ body: |
 
 ---
 name: test_xdl_csmacc_ooo_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18
@@ -327,6 +337,7 @@ body: |
 
 ---
 name: test_dpmacc_csmacc_ooo_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
@@ -353,6 +364,7 @@ body: |
 # 64-bit VOPC instructions are DP-MACC. A later CS-MACC instruction can
 # complete before them, so overwriting their sources needs VA_VDST == 0.
 name: test_dpmacc_vopc64_csmacc_ooo_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr20
@@ -412,6 +424,7 @@ body: |
 
 ---
 name: test_trans_csmacc_ooo_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
@@ -436,6 +449,7 @@ body: |
 
 ---
 name: test_csmacc_csmacc_io_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
@@ -460,6 +474,7 @@ body: |
 
 ---
 name: test_dpmacc_dpmacc_io_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr18
@@ -484,6 +499,7 @@ body: |
 
 ---
 name: test_trans_trans_io_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr11, $vgpr18
@@ -508,6 +524,7 @@ body: |
 
 ---
 name: test_xdl_xdl_io_completion
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26
@@ -532,6 +549,7 @@ body: |
 
 ---
 name: test_war_vmvsrc_vmem_vmem_io
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1
@@ -565,6 +583,7 @@ body: |
 
 ---
 name: test_war_vmvsrc_flat_flat_io
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -598,6 +617,7 @@ body: |
 
 ---
 name: test_war_vmvsrc_lds_lds_io
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -631,6 +651,7 @@ body: |
 
 ---
 name: test_war_vmvsrc_vmem_lds_ooo
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1
@@ -663,6 +684,7 @@ body: |
 
 ---
 name: test_war_vmvsrc_flat_lds_ooo
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -695,6 +717,7 @@ body: |
 
 ---
 name: test_war_vmvsrc_flat_vmem_ooo
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $vgpr0, $vgpr1, $vgpr2
@@ -729,6 +752,7 @@ body: |
 # Ensure there is no unnecessary wait on vm_vsrc when load has already
 # completed.
 name: test_war_completed_vmem
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: test_war_completed_vmem
@@ -754,6 +778,7 @@ body: |
 # we need s_waitcnt_depctr to ensure the VALU has finished reading them.
 # This applies to all VALU instructions, not just WMMA/XDL.
 name: test_valu_src_war_hazard_ds_load
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr20
@@ -778,6 +803,7 @@ body: |
 # Test WAR hazard with regular VALU (not WMMA): when ds_load overwrites
 # a register that was just read by V_ADD, we need va_vdst wait.
 name: test_regular_valu_src_war_hazard
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr10

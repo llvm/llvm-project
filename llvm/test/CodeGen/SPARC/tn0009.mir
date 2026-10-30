@@ -7,6 +7,7 @@
 # CHECK-NEXT: NOP
 # CHECK-NEXT: STrr $o1, $g0, $o0
 name:            seqa
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     STrr $o1, $g0, $o0
@@ -18,6 +19,7 @@ body:             |
 # CHECK-NEXT: NOP
 # CHECK-NEXT: STDrr $i0, $g0, $i0_i1
 name:            seqb
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     STDrr $i0, $g0, $i0_i1

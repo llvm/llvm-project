@@ -4,6 +4,7 @@
 ...
 ---
 name: copy_zvlsseg_N2
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N2
@@ -42,6 +43,7 @@ body:             |
 ...
 ---
 name: copy_zvlsseg_N3
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N3
@@ -80,6 +82,7 @@ body:             |
 ...
 ---
 name: copy_zvlsseg_N4
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N4
@@ -121,6 +124,7 @@ body:             |
 ...
 ---
 name: copy_zvlsseg_N5
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N5
@@ -153,6 +157,7 @@ body:             |
 ...
 ---
 name: copy_zvlsseg_N6
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N6
@@ -187,6 +192,7 @@ body:             |
 ...
 ---
 name: copy_zvlsseg_N7
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N7
@@ -231,6 +237,7 @@ body:             |
 ...
 ---
 name: copy_zvlsseg_N8
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: copy_zvlsseg_N8

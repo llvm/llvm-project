@@ -3,6 +3,7 @@
 
 ---
 name:            vcmpx_vopc_write_exec_permlane16_swap_vop1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -18,6 +19,7 @@ body:             |
 
 ---
 name:            vcmpx_vop3_write_exec_permlane16_swap_vop1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -33,6 +35,7 @@ body:             |
 
 ---
 name:            vcmpx_vopc_write_exec_permlane16_swap_vop3
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -48,6 +51,7 @@ body:             |
 
 ---
 name:            vcmpx_vop3_write_exec_permlane16_swap_vop3
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -63,6 +67,7 @@ body:             |
 
 ---
 name:            vcmpx_vopc_write_exec_permlane32_swap_vop1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -78,6 +83,7 @@ body:             |
 
 ---
 name:            vcmpx_vop3_write_exec_permlane32_swap_vop1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -93,6 +99,7 @@ body:             |
 
 ---
 name:            vcmpx_vopc_write_exec_permlane32_swap_vop3
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -108,6 +115,7 @@ body:             |
 
 ---
 name:            vcmpx_vop3_write_exec_permlane32_swap_vop3
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -123,6 +131,7 @@ body:             |
 
 ---
 name:            vcmpx_vopc_write_exec_permlane16_swap_vop1__nowait
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -145,6 +154,7 @@ body:             |
 
 ---
 name:            vcmpx_vopc_write_exec_permlane16_swap_vop1__wait1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -166,6 +176,7 @@ body:             |
 
 ---
 name:            valu_write_vdst_read_permlane16_swap_0
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr1
@@ -181,6 +192,7 @@ body:             |
 
 ---
 name:            valu_write_vdst_read_permlane16_swap_1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -196,6 +208,7 @@ body:             |
 
 ---
 name:            valu_write_vdst_read_permlane32_swap_0
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr1
@@ -211,6 +224,7 @@ body:             |
 
 ---
 name:            valu_write_vdst_read_permlane32_swap_1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -227,6 +241,7 @@ body:             |
 ---
 # No hazard, write of other register
 name:            valu_write_vdst_read_permlane16_swap_0_otherreg
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr1
@@ -242,6 +257,7 @@ body:             |
 ---
 # Both permlane hazards at once.
 name:            valu_writes_vdst__vcmpx_write_exec__permlane32_swap
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3
@@ -259,6 +275,7 @@ body:             |
 
 ---
 name:            vcmpx_write_exec__valu_writes_vdst___permlane32_swap
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3
@@ -276,6 +293,7 @@ body:             |
 
 ---
 name:            vcmpx_write_exec__valu_writes_vdstx2___permlane32_swap
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3
@@ -296,6 +314,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_sr_fp8_bf16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -316,6 +335,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_sr_fp8_f16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -336,6 +356,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_sr_fp8_f32_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -359,6 +380,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp8_f32_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -382,6 +404,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp8_f16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -401,6 +424,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp8_bf16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -424,6 +448,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_sr_bf8_f16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -447,6 +472,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_sr_bf8_f32_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -470,6 +496,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_bf8_f32_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -493,6 +520,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_bf8_f16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -512,6 +540,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_bf8_bf16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -531,6 +560,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f32_neg_hazard_opsel0
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -553,6 +583,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f32_opsel3_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -576,6 +607,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f32_opsel0_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -598,6 +630,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f32_opsel3_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -620,6 +653,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_f16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -643,6 +677,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_bf16_opsel0_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -666,6 +701,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_bf16_opsel3_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -689,6 +725,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_bf16_opsel0_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -711,6 +748,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_bf16_opsel3_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -733,6 +771,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_f32_opsel0_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -756,6 +795,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_f32_opsel3_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -779,6 +819,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_f32_opsel0_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -801,6 +842,7 @@ body:             |
 
 ---
 name:            test_scalef32_sr_pk_fp4_f32_opsel3_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -823,6 +865,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f16_neg_opsel0_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -841,6 +884,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f16_opsel3_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -860,6 +904,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f16_opsel0_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -878,6 +923,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_f16_opsel3_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -896,6 +942,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_bf16_neg_opsel0_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -914,6 +961,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_bf16_opsel3_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -933,6 +981,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_bf16_opsel0_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -951,6 +1000,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_fp4_bf16_opsel3_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -969,6 +1019,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_hazard_skipping_over_meta_instr
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -994,6 +1045,7 @@ body:             |
 
 ---
 name:            test_cvt_f16_to_fp4_to_f16_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1013,6 +1065,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_f16_fp4_opsel0_neg_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1032,6 +1085,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_pk_f16_fp4_opsel3_neg_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1050,6 +1104,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_hazard_pseudo
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
@@ -1075,6 +1130,7 @@ body:             |
 
 ---
 name:            test_call_consuming_cvt_scalef32_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1103,6 +1159,7 @@ body:             |
 
 ---
 name:            test_cvt_scalef32_inlineasm_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -1122,6 +1179,7 @@ body:             |
 
 ---
 name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel0_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1144,6 +1202,7 @@ body:             |
 
 ---
 name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel3_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1166,6 +1225,7 @@ body:             |
 
 ---
 name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel0_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1186,6 +1246,7 @@ body:             |
 
 ---
 name:            test_cvt_scale_cvt_scalef32_sr_pk_fp4_f16_opsel3_neg_fp4_as_src_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -1207,6 +1268,7 @@ body:             |
 
 ---
 name:            test_cvt_scale_cvt_scale_waw_hazard
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3

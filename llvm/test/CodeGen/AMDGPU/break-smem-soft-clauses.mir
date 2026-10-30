@@ -6,6 +6,7 @@
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x1
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -18,6 +19,7 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x2
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -32,6 +34,7 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x3
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -48,6 +51,7 @@ body: |
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x4
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -66,6 +70,7 @@ body: |
 ---
 # Reuse of same input pointer is OK
 name: trivial_smem_clause_load_smrd4_x2_sameptr
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: trivial_smem_clause_load_smrd4_x2_sameptr
@@ -79,6 +84,7 @@ body: |
 ---
 # 32-bit load partially clobbers its own ptr reg
 name: smrd_load4_overwrite_ptr_lo
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -91,6 +97,7 @@ body: |
 ---
 # 32-bit load partially clobbers its own ptr reg
 name: smrd_load4_overwrite_ptr_hi
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -103,6 +110,7 @@ body: |
 ---
 # 64-bit load clobbers its own ptr reg
 name: smrd_load8_overwrite_ptr
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -117,6 +125,7 @@ body: |
 # breaks the clause.
 
 name: break_smem_clause_at_max_smem_clause_size_smrd_load4
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -167,6 +176,7 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd4_lo_ptr
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -182,6 +192,7 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd4_hi_ptr
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -196,6 +207,7 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd8_ptr
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -211,6 +223,7 @@ body: |
 ---
 
 name: break_smem_clause_simple_load_smrd16_ptr
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -225,6 +238,7 @@ body: |
 ---
 
 name: break_smem_clause_block_boundary_load_smrd8_ptr
+tracksRegLiveness: false
 
 body: |
   ; GCN-LABEL: name: break_smem_clause_block_boundary_load_smrd8_ptr
@@ -246,6 +260,7 @@ body: |
 # The load clobbers the pointer of the store, so it needs to break.
 
 name: break_smem_clause_store_load_into_ptr_smrd4
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -262,6 +277,7 @@ body: |
 # FIXME: Would it be better to s_nop and wait later?
 
 name: break_smem_clause_store_load_into_data_smrd4
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -276,6 +292,7 @@ body: |
 ---
 # Regular VALU instruction breaks clause, no nop needed
 name: valu_inst_breaks_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -292,6 +309,7 @@ body: |
 ---
 # Regular SALU instruction breaks clause, no nop needed
 name: salu_inst_breaks_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -307,6 +325,7 @@ body: |
 ...
 ---
 name: ds_inst_breaks_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -323,6 +342,7 @@ body: |
 ---
 
 name: flat_inst_breaks_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -339,6 +359,7 @@ body: |
 ---
 # FIXME: Should this be handled?
 name: implicit_use_breaks_smem_clause
+tracksRegLiveness: false
 
 body: |
   bb.0:

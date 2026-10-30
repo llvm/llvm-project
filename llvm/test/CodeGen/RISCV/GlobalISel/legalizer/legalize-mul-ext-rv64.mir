@@ -5,6 +5,7 @@
 # RUN: | FileCheck %s
 ---
 name:            mul_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i8
@@ -25,6 +26,7 @@ body:             |
 ...
 ---
 name:            mul_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i15
@@ -45,6 +47,7 @@ body:             |
 ...
 ---
 name:            mul_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i16
@@ -65,6 +68,7 @@ body:             |
 ...
 ---
 name:            mul_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i32
@@ -85,6 +89,7 @@ body:             |
 ...
 ---
 name:            mul_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i64
@@ -102,6 +107,7 @@ body:             |
 ...
 ---
 name:            mul_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i72
@@ -136,6 +142,7 @@ body:             |
 ...
 ---
 name:            mul_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i128
@@ -167,6 +174,7 @@ body:             |
 ...
 ---
 name:            mul_i192
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: mul_i192
@@ -224,6 +232,7 @@ body:             |
 ...
 ---
 name:            smulh_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: smulh_i32

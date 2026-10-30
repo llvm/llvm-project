@@ -3,6 +3,7 @@
 ...
 ---
 name:            test_andn_nf
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test ANDN with NF - should NOT compress to VEX
@@ -23,6 +24,7 @@ body:             |
 ...
 ---
 name:            test_bextr_nf
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test BEXTR with NF - should NOT compress to VEX
@@ -39,6 +41,7 @@ body:             |
 ...
 ---
 name:            test_blsi_nf
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test BLSI with NF - should NOT compress to VEX
@@ -55,6 +58,7 @@ body:             |
 ...
 ---
 name:            test_blsmsk_nf
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test BLSMSK with NF - should NOT compress to VEX
@@ -71,6 +75,7 @@ body:             |
 ...
 ---
 name:            test_blsr_nf
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test BLSR with NF - should NOT compress to VEX
@@ -87,6 +92,7 @@ body:             |
 ...
 ---
 name:            test_bzhi_nf
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test BZHI with NF - should NOT compress to VEX
@@ -104,6 +110,7 @@ body:             |
 ---
 name:            test_memory_forms_nf
 alignment:       16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; Test memory forms with NF - should NOT compress to VEX

@@ -4,6 +4,7 @@
 
 ---
 name: vop_vi
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vi
@@ -16,6 +17,7 @@ body: |
 ...
 ---
 name: vop_vi_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vi_incompatible_eew
@@ -28,6 +30,7 @@ body: |
 ...
 ---
 name: vop_vi_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vi_incompatible_emul
@@ -40,6 +43,7 @@ body: |
 ...
 ---
 name: vop_vv
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vv
@@ -52,6 +56,7 @@ body: |
 ...
 ---
 name: vop_vv_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vv_incompatible_eew
@@ -64,6 +69,7 @@ body: |
 ...
 ---
 name: vop_vv_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vv_incompatible_emul
@@ -76,6 +82,7 @@ body: |
 ...
 ---
 name: vwop_vv_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd
@@ -88,6 +95,7 @@ body: |
 ...
 ---
 name: vwop_vv_vd_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd_incompatible_eew
@@ -100,6 +108,7 @@ body: |
 ...
 ---
 name: vwop_vv_vd_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd_incompatible_emul
@@ -112,6 +121,7 @@ body: |
 ...
 ---
 name: vwop_vv_vd_passthru_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd_passthru_use
@@ -126,6 +136,7 @@ body: |
 ...
 ---
 name: vwop_vv_vd_passthru_use_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd_passthru_use_incompatible_eew
@@ -140,6 +151,7 @@ body: |
 ...
 ---
 name: vwop_vv_vd_passthru_use_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vd_passthru_use_incompatible_emul
@@ -154,6 +166,7 @@ body: |
 ...
 ---
 name: vwop_vv_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vs2
@@ -166,6 +179,7 @@ body: |
 ...
 ---
 name: vwop_vv_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vs2_incompatible_eew
@@ -178,6 +192,7 @@ body: |
 ...
 ---
 name: vwop_vv_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vs2_incompatible_emul
@@ -190,6 +205,7 @@ body: |
 ...
 ---
 name: vwop_vv_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vs1
@@ -202,6 +218,7 @@ body: |
 ...
 ---
 name: vwop_vv_vs1_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vs1_incompatible_eew
@@ -214,6 +231,7 @@ body: |
 ...
 ---
 name: vwop_vv_vs1_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_vv_vs1_incompatible_emul
@@ -226,6 +244,7 @@ body: |
 ...
 ---
 name: vwop_wv_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd
@@ -238,6 +257,7 @@ body: |
 ...
 ---
 name: vwop_wv_vd_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd_incompatible_eew
@@ -250,6 +270,7 @@ body: |
 ...
 ---
 name: vwop_wv_vd_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd_incompatible_emul
@@ -262,6 +283,7 @@ body: |
 ...
 ---
 name: vwop_wv_vd_passthru_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd_passthru_use
@@ -276,6 +298,7 @@ body: |
 ...
 ---
 name: vwop_wv_vd_passthru_use_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd_passthru_use_incompatible_eew
@@ -290,6 +313,7 @@ body: |
 ...
 ---
 name: vwop_wv_vd_passthru_use_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vd_passthru_use_incompatible_emul
@@ -304,6 +328,7 @@ body: |
 ...
 ---
 name: vwop_wv_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vs2
@@ -316,6 +341,7 @@ body: |
 ...
 ---
 name: vwop_wv_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vs2_incompatible_eew
@@ -328,6 +354,7 @@ body: |
 ...
 ---
 name: vwop_wv_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vs2_incompatible_emul
@@ -340,6 +367,7 @@ body: |
 ...
 ---
 name: vwop_wv_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vs1
@@ -352,6 +380,7 @@ body: |
 ...
 ---
 name: vwop_wv_vs1_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vs1_incompatible_eew
@@ -364,6 +393,7 @@ body: |
 ...
 ---
 name: vwop_wv_vs1_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwop_wv_vs1_incompatible_emul
@@ -376,6 +406,7 @@ body: |
 ...
 ---
 name: tied_vwop_wv_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: tied_vwop_wv_vs1
@@ -388,6 +419,7 @@ body: |
 ...
 ---
 name: tied_vwop_wv_vs1_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: tied_vwop_wv_vs1_incompatible_eew
@@ -400,6 +432,7 @@ body: |
 ...
 ---
 name: tied_vwop_wv_vs1_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: tied_vwop_wv_vs1_incompatible_emul
@@ -412,6 +445,7 @@ body: |
 ...
 ---
 name: vop_vf2_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf2_vd
@@ -424,6 +458,7 @@ body: |
 ...
 ---
 name: vop_vf2_vd_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf2_vd_incompatible_eew
@@ -436,6 +471,7 @@ body: |
 ...
 ---
 name: vop_vf2_vd_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf2_vd_incompatible_emul
@@ -448,6 +484,7 @@ body: |
 ...
 ---
 name: vop_vf2_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf2_vs2
@@ -460,6 +497,7 @@ body: |
 ...
 ---
 name: vop_vf2_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf2_vs2_incompatible_eew
@@ -472,6 +510,7 @@ body: |
 ...
 ---
 name: vop_vf2_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf2_vs2_incompatible_emul
@@ -484,6 +523,7 @@ body: |
 ...
 ---
 name: vop_vf4_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf4_vd
@@ -496,6 +536,7 @@ body: |
 ...
 ---
 name: vop_vf4_vd_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf4_vd_incompatible_eew
@@ -508,6 +549,7 @@ body: |
 ...
 ---
 name: vop_vf4_vd_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf4_vd_incompatible_emul
@@ -520,6 +562,7 @@ body: |
 ...
 ---
 name: vop_vf4_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf4_vs2
@@ -532,6 +575,7 @@ body: |
 ...
 ---
 name: vop_vf4_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf4_vs2_incompatible_eew
@@ -544,6 +588,7 @@ body: |
 ...
 ---
 name: vop_vf4_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf4_vs2_incompatible_emul
@@ -556,6 +601,7 @@ body: |
 ...
 ---
 name: vop_vf8_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf8_vd
@@ -568,6 +614,7 @@ body: |
 ...
 ---
 name: vop_vf8_vd_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf8_vd_incompatible_eew
@@ -580,6 +627,7 @@ body: |
 ...
 ---
 name: vop_vf8_vd_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf8_vd_incompatible_emul
@@ -592,6 +640,7 @@ body: |
 ...
 ---
 name: vop_vf8_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf8_vs2
@@ -604,6 +653,7 @@ body: |
 ...
 ---
 name: vop_vf8_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf8_vs2_incompatible_eew
@@ -616,6 +666,7 @@ body: |
 ...
 ---
 name: vop_vf8_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vop_vf8_vs2_incompatible_emul
@@ -628,6 +679,7 @@ body: |
 ...
 ---
 name: vnop_wv_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vd
@@ -640,6 +692,7 @@ body: |
 ...
 ---
 name: vnop_wv_vd_unsupported_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vd_unsupported_eew
@@ -652,6 +705,7 @@ body: |
 ...
 ---
 name: vnop_wv_vd_unsupported_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vd_unsupported_emul
@@ -664,6 +718,7 @@ body: |
 ...
 ---
 name: vnop_wv_vd_passthru_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vd_passthru_use
@@ -678,6 +733,7 @@ body: |
 ...
 ---
 name: vnop_wv_vd_passthru_use_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vd_passthru_use_incompatible_eew
@@ -692,6 +748,7 @@ body: |
 ...
 ---
 name: vnop_wv_vd_passthru_use_unsupported_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vd_passthru_use_unsupported_emul
@@ -706,6 +763,7 @@ body: |
 ...
 ---
 name: vnop_wv_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vs2
@@ -718,6 +776,7 @@ body: |
 ...
 ---
 name: vnop_wv_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vs2_incompatible_eew
@@ -730,6 +789,7 @@ body: |
 ...
 ---
 name: vnop_wv_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vs2_incompatible_emul
@@ -742,6 +802,7 @@ body: |
 ...
 ---
 name: vnop_wv_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vs1
@@ -754,6 +815,7 @@ body: |
 ...
 ---
 name: vnop_wv_vs1_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vs1_incompatible_eew
@@ -766,6 +828,7 @@ body: |
 ...
 ---
 name: vnop_wv_vs1_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vnop_wv_vs1_incompatible_emul
@@ -778,6 +841,7 @@ body: |
 ...
 ---
 name: vfnop_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfnop_vs2
@@ -790,6 +854,7 @@ body: |
 ...
 ---
 name: vfnop_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfnop_vs2_incompatible_eew
@@ -802,6 +867,7 @@ body: |
 ...
 ---
 name: vfnop_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfnop_vs2_incompatible_emul
@@ -814,6 +880,7 @@ body: |
 ...
 ---
 name: vseN_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vseN_v
@@ -824,6 +891,7 @@ body: |
 ...
 ---
 name: vseN_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vseN_v_incompatible_eew
@@ -834,6 +902,7 @@ body: |
 ...
 ---
 name: vseN_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vseN_v_incompatible_emul
@@ -844,6 +913,7 @@ body: |
 ...
 ---
 name: vsm_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsm_v
@@ -854,6 +924,7 @@ body: |
 ...
 ---
 name: vsm_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsm_v_incompatible_emul
@@ -864,6 +935,7 @@ body: |
 ...
 ---
 name: vleN_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vleN_v
@@ -876,6 +948,7 @@ body: |
 ...
 ---
 name: vleN_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vleN_v_incompatible_eew
@@ -888,6 +961,7 @@ body: |
 ...
 ---
 name: vleN_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vleN_v_incompatible_emul
@@ -900,6 +974,7 @@ body: |
 ...
 ---
 name: vlm_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vlm_v
@@ -912,6 +987,7 @@ body: |
 ...
 ---
 name: vlm_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vlm_v_incompatible_eew
@@ -924,6 +1000,7 @@ body: |
 ...
 ---
 name: vlm_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vlm_v_incompatible_emul
@@ -936,6 +1013,7 @@ body: |
 ...
 ---
 name: vsseN_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsseN_v
@@ -946,6 +1024,7 @@ body: |
 ...
 ---
 name: vsseN_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsseN_v_incompatible_eew
@@ -956,6 +1035,7 @@ body: |
 ...
 ---
 name: vsseN_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsseN_v_incompatible_emul
@@ -966,6 +1046,7 @@ body: |
 ...
 ---
 name: vsuxeiN_v_data
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsuxeiN_v_data
@@ -976,6 +1057,7 @@ body: |
 ...
 ---
 name: vsuxeiN_v_data_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsuxeiN_v_data_incompatible_eew
@@ -986,6 +1068,7 @@ body: |
 ...
 ---
 name: vsuxeiN_v_data_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsuxeiN_v_data_incompatible_emul
@@ -996,6 +1079,7 @@ body: |
 ...
 ---
 name: vsuxeiN_v_idx
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsuxeiN_v_idx
@@ -1006,6 +1090,7 @@ body: |
 ...
 ---
 name: vsuxeiN_v_idx_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsuxeiN_v_idx_incompatible_eew
@@ -1016,6 +1101,7 @@ body: |
 ...
 ---
 name: vsuxeiN_v_idx_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vsuxeiN_v_idx_incompatible_emul
@@ -1026,6 +1112,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_data
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_data
@@ -1038,6 +1125,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_incompatible_eew
@@ -1050,6 +1138,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_data_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_data_incompatible_emul
@@ -1062,6 +1151,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_idx
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_idx
@@ -1074,6 +1164,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_idx_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_idx_incompatible_eew
@@ -1086,6 +1177,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_idx_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_idx_incompatible_emul
@@ -1098,6 +1190,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_vd
@@ -1110,6 +1203,7 @@ body: |
 ...
 ---
 name: vluxeiN_v_vd_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_v_vd_incompatible_eew
@@ -1122,6 +1216,7 @@ body: |
 ...
 ---
 name: vluxeiN_vd_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vluxeiN_vd_incompatible_emul
@@ -1134,6 +1229,7 @@ body: |
 ...
 ---
 name: vmop_mm
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm
@@ -1146,6 +1242,7 @@ body: |
 ...
 ---
 name: vmop_mm_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm_incompatible_eew
@@ -1158,6 +1255,7 @@ body: |
 ...
 ---
 name: vmop_mm_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm_incompatible_emul
@@ -1170,6 +1268,7 @@ body: |
 ...
 ---
 name: vmop_mm_mask
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm_mask
@@ -1182,6 +1281,7 @@ body: |
 ...
 ---
 name: vmop_mm_mask_larger_emul_user
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm_mask_larger_emul_user
@@ -1194,6 +1294,7 @@ body: |
 ...
 ---
 name: vmop_mm_mask_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_mm_mask_incompatible_emul
@@ -1206,6 +1307,7 @@ body: |
 ...
 ---
 name: vmop_vv
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv
@@ -1218,6 +1320,7 @@ body: |
 ...
 ---
 name: vmop_vv_maskuser
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_maskuser
@@ -1230,6 +1333,7 @@ body: |
 ...
 ---
 name: vmop_vv_maskuser_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_maskuser_incompatible_eew
@@ -1242,6 +1346,7 @@ body: |
 ...
 ---
 name: vmop_vv_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_incompatible_emul
@@ -1254,6 +1359,7 @@ body: |
 ...
 ---
 name: vmop_vv_maskuser_incompaible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_maskuser_incompaible_emul
@@ -1266,6 +1372,7 @@ body: |
 ...
 ---
 name: vmop_vv_maskuser_larger_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_maskuser_larger_emul
@@ -1278,6 +1385,7 @@ body: |
 ...
 ---
 name: vmop_vv_consumer_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_consumer_incompatible_eew
@@ -1290,6 +1398,7 @@ body: |
 ...
 ---
 name: vmop_vv_consumer_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_consumer_incompatible_emul
@@ -1302,6 +1411,7 @@ body: |
 ...
 ---
 name: vmop_vv_passthru_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use
@@ -1316,6 +1426,7 @@ body: |
 ...
 ---
 name: vmop_vv_passthru_use_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use_incompatible_eew
@@ -1330,6 +1441,7 @@ body: |
 ...
 ---
 name: vmop_vv_passthru_use_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmop_vv_passthru_use_incompatible_emul
@@ -1344,6 +1456,7 @@ body: |
 ...
 ---
 name: vmerge_vim
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vim
@@ -1356,6 +1469,7 @@ body: |
 ...
 ---
 name: vmerge_vim_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vim_incompatible_eew
@@ -1368,6 +1482,7 @@ body: |
 ...
 ---
 name: vmerge_vim_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vim_incompatible_emul
@@ -1380,6 +1495,7 @@ body: |
 ...
 ---
 name: vmerge_vxm
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vxm
@@ -1392,6 +1508,7 @@ body: |
 ...
 ---
 name: vmerge_vxm_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vxm_incompatible_eew
@@ -1404,6 +1521,7 @@ body: |
 ...
 ---
 name: vmerge_vxm_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vxm_incompatible_emul
@@ -1416,6 +1534,7 @@ body: |
 ...
 ---
 name: vmerge_vvm
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vvm
@@ -1428,6 +1547,7 @@ body: |
 ...
 ---
 name: vmerge_vvm_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vvm_incompatible_eew
@@ -1440,6 +1560,7 @@ body: |
 ...
 ---
 name: vmerge_vvm_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmerge_vvm_incompatible_emul
@@ -1452,6 +1573,7 @@ body: |
 ...
 ---
 name: vmv_v_i
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_i
@@ -1464,6 +1586,7 @@ body: |
 ...
 ---
 name: vmv_v_i_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_i_incompatible_eew
@@ -1476,6 +1599,7 @@ body: |
 ...
 ---
 name: vmv_v_i_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_i_incompatible_emul
@@ -1488,6 +1612,7 @@ body: |
 ...
 ---
 name: vmv_v_x
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_x
@@ -1500,6 +1625,7 @@ body: |
 ...
 ---
 name: vmv_v_x_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_x_incompatible_eew
@@ -1512,6 +1638,7 @@ body: |
 ...
 ---
 name: vmv_v_x_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_x_incompatible_emul
@@ -1524,6 +1651,7 @@ body: |
 ...
 ---
 name: vmv_v_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_v
@@ -1536,6 +1664,7 @@ body: |
 ...
 ---
 name: vmv_v_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_v_incompatible_eew
@@ -1548,6 +1677,7 @@ body: |
 ...
 ---
 name: vmv_v_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmv_v_v_incompatible_emul
@@ -1560,6 +1690,7 @@ body: |
 ...
 ---
 name: viota_m_dest
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_dest
@@ -1572,6 +1703,7 @@ body: |
 ...
 ---
 name: viota_m_dest_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_dest_incompatible_eew
@@ -1584,6 +1716,7 @@ body: |
 ...
 ---
 name: viota_m_dest_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_dest_incompatible_emul
@@ -1596,6 +1729,7 @@ body: |
 ...
 ---
 name: viota_m_dest_passthru_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_dest_passthru_use
@@ -1610,6 +1744,7 @@ body: |
 ...
 ---
 name: viota_m_dest_passthru_use_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_dest_passthru_use_incompatible_eew
@@ -1624,6 +1759,7 @@ body: |
 ...
 ---
 name: viota_m_dest_passthru_use_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_dest_passthru_use_incompatible_emul
@@ -1638,6 +1774,7 @@ body: |
 ...
 ---
 name: viota_m_mask
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_mask
@@ -1650,6 +1787,7 @@ body: |
 ...
 ---
 name: viota_m_mask_scale_mask
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_mask_scale_mask
@@ -1662,6 +1800,7 @@ body: |
 ...
 ---
 name: viota_m_mask_incompatible_emul_from_sew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_mask_incompatible_emul_from_sew
@@ -1674,6 +1813,7 @@ body: |
 ...
 ---
 name: viota_m_mask_incompatible_emul_from_lmul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: viota_m_mask_incompatible_emul_from_lmul
@@ -1686,6 +1826,7 @@ body: |
 ...
 ---
 name: vred_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vs2
@@ -1698,6 +1839,7 @@ body: |
 ...
 ---
 name: vred_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vs1
@@ -1710,6 +1852,7 @@ body: |
 ...
 ---
 name: vred_vs1_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vs1_vs2
@@ -1722,6 +1865,7 @@ body: |
 ...
 ---
 name: vred_vs1_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vs1_vs2_incompatible_eew
@@ -1734,6 +1878,7 @@ body: |
 ...
 ---
 name: vred_vs1_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vs1_vs2_incompatible_emul
@@ -1746,6 +1891,7 @@ body: |
 ...
 ---
 name: vred_other_user_is_vl0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_other_user_is_vl0
@@ -1762,6 +1908,7 @@ body: |
 ...
 ---
 name: vred_both_vl0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_both_vl0
@@ -1778,6 +1925,7 @@ body: |
 ...
 ---
 name: vred_vl0_and_vlreg
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vl0_and_vlreg
@@ -1796,6 +1944,7 @@ body: |
 ...
 ---
 name: vred_vlreg_and_vl0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_vlreg_and_vl0
@@ -1814,6 +1963,7 @@ body: |
 ...
 ---
 name: vred_other_user_is_vl2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vred_other_user_is_vl2
@@ -1830,6 +1980,7 @@ body: |
 ...
 ---
 name: vwred_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_vs2
@@ -1842,6 +1993,7 @@ body: |
 ...
 ---
 name: vwred_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_vs1
@@ -1854,6 +2006,7 @@ body: |
 ...
 ---
 name: vwred_vs1_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_vs1_incompatible_eew
@@ -1866,6 +2019,7 @@ body: |
 ...
 ---
 name: vwred_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_vs2_incompatible_eew
@@ -1878,6 +2032,7 @@ body: |
 ...
 ---
 name: vwred_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_incompatible_emul
@@ -1890,6 +2045,7 @@ body: |
 ...
 ---
 name: vfred_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs2
@@ -1902,6 +2058,7 @@ body: |
 ...
 ---
 name: vfred_vs1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs1
@@ -1914,6 +2071,7 @@ body: |
 ...
 ---
 name: vfred_vs1_vs2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs1_vs2
@@ -1926,6 +2084,7 @@ body: |
 ...
 ---
 name: vfred_vs1_vs2_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs1_vs2_incompatible_eew
@@ -1938,6 +2097,7 @@ body: |
 ...
 ---
 name: vfred_vs1_vs2_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfred_vs1_vs2_incompatible_emul
@@ -1950,6 +2110,7 @@ body: |
 ...
 ---
 name: vwred_passthru_use
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_passthru_use
@@ -1964,6 +2125,7 @@ body: |
 ...
 ---
 name: vwred_passthru_use_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_passthru_use_incompatible_eew
@@ -1978,6 +2140,7 @@ body: |
 ...
 ---
 name: vwred_passthru_use_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vwred_passthru_use_incompatible_emul
@@ -1992,6 +2155,7 @@ body: |
 ...
 ---
 name: vfirst_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfirst_v
@@ -2002,6 +2166,7 @@ body: |
 ...
 ---
 name: vfirst_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfirst_v_incompatible_eew
@@ -2012,6 +2177,7 @@ body: |
 ...
 ---
 name: vfirst_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vfirst_v_incompatible_emul
@@ -2022,6 +2188,7 @@ body: |
 ...
 ---
 name: vcpop_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vcpop_v
@@ -2032,6 +2199,7 @@ body: |
 ...
 ---
 name: vcopop_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vcopop_v_incompatible_eew
@@ -2042,6 +2210,7 @@ body: |
 ...
 ---
 name: vcpop_v_incompaitble_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vcpop_v_incompaitble_emul
@@ -2052,6 +2221,7 @@ body: |
 ...
 ---
 name: vmclr_m
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmclr_m
@@ -2064,6 +2234,7 @@ body: |
 ...
 ---
 name: vmclr_m_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmclr_m_incompatible_eew
@@ -2076,6 +2247,7 @@ body: |
 ...
 ---
 name: vmclr_m_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmclr_m_incompatible_emul
@@ -2088,6 +2260,7 @@ body: |
 ...
 ---
 name: vmset_m
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmset_m
@@ -2100,6 +2273,7 @@ body: |
 ...
 ---
 name: vmset_m_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmset_m_incompatible_eew
@@ -2112,6 +2286,7 @@ body: |
 ...
 ---
 name: vmset_m_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vmset_m_incompatible_emul
@@ -2124,6 +2299,7 @@ body: |
 ...
 ---
 name: vrgatherei16_vv
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv
@@ -2136,6 +2312,7 @@ body: |
 ...
 ---
 name: vrgatherei16_vv_incompatible_data_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_data_eew
@@ -2148,6 +2325,7 @@ body: |
 ...
 ---
 name: vrgatherei16_vv_incompatible_index_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_index_eew
@@ -2160,6 +2338,7 @@ body: |
 ...
 ---
 name: vrgatherei16_vv_incompatible_dest_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_dest_emul
@@ -2172,6 +2351,7 @@ body: |
 ...
 ---
 name: vrgatherei16_vv_incompatible_source_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_source_emul
@@ -2184,6 +2364,7 @@ body: |
 ...
 ---
 name: vrgatherei16_vv_incompatible_index_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vrgatherei16_vv_incompatible_index_emul
@@ -2196,6 +2377,7 @@ body: |
 ...
 ---
 name: vsseg3e32_v
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2222,6 +2404,7 @@ body: |
 ...
 ---
 name: vsseg3e64_v_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2248,6 +2431,7 @@ body: |
 ...
 ---
 name: vsseg3e32_v_incompatible_emul
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2274,6 +2458,7 @@ body: |
 ...
 ---
 name: vsseg3e32_v_incompatible_insert_subreg
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -2289,6 +2474,7 @@ body: |
 ...
 ---
 name: vssseg3e32_v
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2315,6 +2501,7 @@ body: |
 ...
 ---
 name: vsuxseg3ei64_v
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2341,6 +2528,7 @@ body: |
 ...
 ---
 name: vsuxseg3ei64_v_incompatible_data_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2367,6 +2555,7 @@ body: |
 ...
 ---
 name: vsuxseg3ei32_v_index
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -2378,6 +2567,7 @@ body: |
 ...
 ---
 name: vsuxseg3ei32_v_incompatible_index_eew
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -2389,6 +2579,7 @@ body: |
 ...
 ---
 name: vsoxseg3ei64_v
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v8
@@ -2415,6 +2606,7 @@ body: |
 ...
 ---
 name: vsoxseg3ei32_v_index
+tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -2426,6 +2618,7 @@ body: |
 ...
 ---
 name:            vzip_vv_vd
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_vv_vd
@@ -2438,6 +2631,7 @@ body: |
 ...
 ---
 name:            vzip_vv_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_vv_incompatible_eew
@@ -2450,6 +2644,7 @@ body: |
 ...
 ---
 name:            vzip_mask_propagate
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_mask_propagate
@@ -2462,6 +2657,7 @@ body: |
 ...
 ---
 name:            vzip_src_propagate_odd_vl
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_src_propagate_odd_vl
@@ -2476,6 +2672,7 @@ body: |
 ...
 ---
 name:            vzip_src_propagate_fractional_lmul
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_src_propagate_fractional_lmul
@@ -2490,6 +2687,7 @@ body: |
 ...
 ---
 name:            vzip_src_propagate_register_vl
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_src_propagate_register_vl
@@ -2506,6 +2704,7 @@ body: |
 ...
 ---
 name:            vzip_src_propagate_vlmax
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_src_propagate_vlmax
@@ -2518,6 +2717,7 @@ body: |
     $v8m2 = COPY %2
 ---
 name:            vunzipe_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_v
@@ -2530,6 +2730,7 @@ body: |
 ...
 ---
 name:            vunzipo_v
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipo_v
@@ -2542,6 +2743,7 @@ body: |
 ...
 ---
 name:            vunzipe_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_incompatible_eew
@@ -2554,6 +2756,7 @@ body: |
 ...
 ---
 name:            vunzipe_src_propagate
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_src_propagate
@@ -2566,6 +2769,7 @@ body: |
 ...
 ---
 name:            vunzipo_src_propagate
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipo_src_propagate
@@ -2578,6 +2782,7 @@ body: |
 ...
 ---
 name:            vunzipe_src_propagate_register_vl
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_src_propagate_register_vl
@@ -2592,6 +2797,7 @@ body: |
 ...
 ---
 name:            vunzipe_src_propagate_immediate_too_large
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vunzipe_src_propagate_immediate_too_large
@@ -2604,6 +2810,7 @@ body: |
 ...
 ---
 name:            vpaire_vv
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vpaire_vv
@@ -2616,6 +2823,7 @@ body: |
 ...
 ---
 name:            vpairo_vv
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vpairo_vv
@@ -2628,6 +2836,7 @@ body: |
 ...
 ---
 name:            vpairo_vs2_src_propagate
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vpairo_vs2_src_propagate
@@ -2640,6 +2849,7 @@ body: |
 ...
 ---
 name:            vpaire_incompatible_eew
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vpaire_incompatible_eew

@@ -6,6 +6,7 @@
 name:            stackrestore_waveaddress_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX10-WAVE32-LABEL: name: stackrestore_waveaddress_sgpr
@@ -23,6 +24,7 @@ body: |
 name:            stackrestore_direct_sp_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr10
@@ -48,6 +50,7 @@ body: |
 name:            stackrestore_any_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr10

@@ -3,6 +3,7 @@
 
 ---
 name:            copy
+tracksRegLiveness: false
 isSSA:           false
 noVRegs:         true
 liveins:

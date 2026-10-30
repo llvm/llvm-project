@@ -5,6 +5,7 @@
 # Expected vmcnt(0) since the direct load is the only load.
 ---
 name: dma_then_fence
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: dma_then_fence
@@ -26,6 +27,7 @@ body:             |
 
 ---
 name: dma_then_global_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: dma_then_global_load
@@ -49,6 +51,7 @@ body:             |
 
 ---
 name: no_dma_just_fence
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: no_dma_just_fence
@@ -67,6 +70,7 @@ body:             |
 
 ---
 name: dma_then_system_fence
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: dma_then_system_fence
@@ -88,6 +92,7 @@ body:             |
 
 ---
 name: merge_with_prev_wait
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: merge_with_prev_wait
@@ -112,6 +117,7 @@ body:             |
 
 ---
 name: merge_with_next_wait
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: merge_with_next_wait

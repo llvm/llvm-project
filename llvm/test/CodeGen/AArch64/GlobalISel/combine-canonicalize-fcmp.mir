@@ -3,6 +3,7 @@
 
 ---
 name:            test_fcmp_canon
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_canon
@@ -17,6 +18,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_no_canon
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_no_canon
@@ -31,6 +33,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_no_canon_bv
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_no_canon_bv
@@ -53,6 +56,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_canon_bv
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_canon_bv
@@ -75,6 +79,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_canon_splat
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_canon_splat
@@ -95,6 +100,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_const
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_const
@@ -107,6 +113,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_const_other
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_const_other
@@ -119,6 +126,7 @@ body:             |
 ...
 ---
 name:            test_fcmp_no_same_semantics
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_fcmp_no_same_semantics

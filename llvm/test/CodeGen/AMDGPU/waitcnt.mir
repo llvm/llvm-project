@@ -87,6 +87,7 @@
 # GFX89: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 
 name: flat_zero_waitcnt
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -135,6 +136,7 @@ body: |
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_fallthrough_successor_no_end_block_wait
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -162,6 +164,7 @@ body: |
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
 name: single_branch_successor_not_next_block
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -327,6 +330,7 @@ body: |
 # CHECK-NEXT: V_NOP_e32
 
 name: subregs16bit
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -348,6 +352,7 @@ body: |
 
 
 name: waitcnt_backedge
+tracksRegLiveness: false
 body: |
   bb.0:
     renamable $sgpr4_sgpr5_sgpr6_sgpr7 = S_LOAD_DWORDX4_IMM renamable $sgpr2_sgpr3, 32, 0 :: (load (s128) from `ptr addrspace(4) poison`, addrspace 4)

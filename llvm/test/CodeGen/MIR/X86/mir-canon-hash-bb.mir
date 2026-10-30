@@ -14,6 +14,7 @@
 ...
 ---
 name:            _Z1fi
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }

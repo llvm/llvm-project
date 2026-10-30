@@ -9,6 +9,7 @@
 
 ---
 name:            test
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test

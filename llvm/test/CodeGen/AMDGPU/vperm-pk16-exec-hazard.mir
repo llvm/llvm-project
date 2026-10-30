@@ -26,6 +26,7 @@
 # OP32_1 / OP_CMACC (V_MOV_B32) is safe: no mitigation.
 ---
 name: perm_then_mov_safe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -52,6 +53,7 @@ body: |
 # A packed VOP3P op (OP32_1) is safe: no mitigation.
 ---
 name: perm_then_packed_safe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -78,6 +80,7 @@ body: |
 # A 16-bit op (OP_CMACC/OP16_1, V_ADD_F16) is safe: no mitigation.
 ---
 name: perm_then_op16_safe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -104,6 +107,7 @@ body: |
 # A scalar FMA-accumulate op (OP_CMACC, V_FMAC_F32) is safe: no mitigation.
 ---
 name: perm_then_cmacc_safe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -130,6 +134,7 @@ body: |
 # A lane/control op (OP32_1, V_READFIRSTLANE_B32) is safe: no mitigation.
 ---
 name: perm_then_lane_safe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -156,6 +161,7 @@ body: |
 # A genuine TRANS instruction (OP_32_T, V_RCP_F32) is safe: no mitigation.
 ---
 name: perm_then_trans_safe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -182,6 +188,7 @@ body: |
 # A multi-pass op (I32_MUL, V_MUL_LO_U32) is NOT safe: insert a V_NOP.
 ---
 name: perm_then_i32mul_nonsafe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -210,6 +217,7 @@ body: |
 # safe: insert a V_NOP.
 ---
 name: perm_then_qsad_nonsafe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -237,6 +245,7 @@ body: |
 # An F64 transcendental is NOT safe: insert a V_NOP.
 ---
 name: perm_then_f64_trans
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -265,6 +274,7 @@ body: |
 # a V_NOP.
 ---
 name: perm_then_pseudo_scalar_trans_nonsafe
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: false
   sgprForEXECCopy: '$sgpr0'
@@ -292,6 +302,7 @@ body: |
 # Entry function: defensive mitigation at the very start plus the per-perm one.
 ---
 name: perm_kernel_entry
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr0'
@@ -316,6 +327,7 @@ body: |
 # is still inserted. Minimal mitigation for the potentially cross-wave hazard.
 ---
 name: no_perm_kernel_entry
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr0'

@@ -5,6 +5,7 @@
 # artifact combining G_UNMERGE_VALUES instructions.
 ---
 name:            test_none_none
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_none_none
@@ -21,6 +22,7 @@ body:             |
 ...
 ---
 name:            test_gpr_none
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_gpr_none
@@ -37,6 +39,7 @@ body:             |
 ...
 ---
 name:            test_none_gpr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_none_gpr
@@ -55,6 +58,7 @@ body:             |
 ...
 ---
 name:            test_fpr_gpr
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_fpr_gpr

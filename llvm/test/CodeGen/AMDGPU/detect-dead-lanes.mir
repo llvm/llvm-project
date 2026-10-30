@@ -17,6 +17,7 @@
 # CHECK: S_NOP 0, implicit %4.sub1
 # CHECK: S_NOP 0, implicit undef %5.sub0
 name: test0
+tracksRegLiveness: false
 registers:
   - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_32_xm0 }
@@ -74,6 +75,7 @@ body: |
 # CHECK: %10:sgpr_128 = EXTRACT_SUBREG undef %0, %subreg.sub2_sub3
 # CHECK: S_NOP 0, implicit undef %10
 name: test1
+tracksRegLiveness: false
 registers:
   - { id: 0, class: sgpr_128 }
   - { id: 1, class: sgpr_128 }
@@ -152,6 +154,7 @@ body: |
 # CHECK: S_NOP 0, implicit %16.sub1
 
 name: test2
+tracksRegLiveness: false
 registers:
   - { id: 0, class: sreg_32_xm0 }
   - { id: 1, class: sreg_32_xm0 }

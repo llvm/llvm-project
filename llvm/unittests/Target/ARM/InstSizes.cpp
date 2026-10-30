@@ -31,6 +31,7 @@ void runChecks(
                    "...\n"
                    "---\n"
                    "name: sizes\n"
+                   "tracksRegLiveness: false\n"
                    "constants:\n"
                    "  - id:        0\n"
                    "    value:     i32 12345678\n"

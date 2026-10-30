@@ -5,6 +5,7 @@
 # GCN: $vgpr3_vgpr4 = COPY killed renamable $vgpr0_vgpr1
 ---
 name:            mcp_aligned_vgprs
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 
@@ -18,6 +19,7 @@ body:             |
 # GCN: $agpr3_agpr4 = COPY killed renamable $agpr0_agpr1
 ---
 name:            mcp_aligned_agprs
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 

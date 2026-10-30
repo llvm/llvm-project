@@ -6,6 +6,7 @@
 ...
 ---
 name: foo
+tracksRegLiveness: false
 body: |
   bb.0:
     JCC_1 %bb.3, 4, implicit $eflags

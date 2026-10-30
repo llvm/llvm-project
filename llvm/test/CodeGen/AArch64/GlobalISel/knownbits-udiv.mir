@@ -3,6 +3,7 @@
 
 ---
 name: Cst
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst
@@ -15,6 +16,7 @@ body: |
 ...
 ---
 name: PartialKnown
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown
@@ -31,6 +33,7 @@ body: |
 ...
 ---
 name: Exact
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Exact
@@ -43,6 +46,7 @@ body: |
 ...
 ---
 name: Unknown
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Unknown
@@ -55,6 +59,7 @@ body: |
 ...
 ---
 name: EvenDivisor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @EvenDivisor
@@ -71,6 +76,7 @@ body: |
 ...
 ---
 name: RangeKnownOnes
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @RangeKnownOnes

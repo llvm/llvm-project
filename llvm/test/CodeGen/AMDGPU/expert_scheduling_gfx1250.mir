@@ -3,6 +3,7 @@
 
 ---
 name: wmma_scale
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: wmma_scale

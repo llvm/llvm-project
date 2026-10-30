@@ -4,6 +4,7 @@
 
 ---
 name:   APlusBMinusCMinusB
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -27,6 +28,7 @@ body:             |
 ...
 ---
 name:   APlusBMinusCMinusB_nuw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -50,6 +52,7 @@ body:             |
 ...
 ---
 name:   AMinusBMinusCMinusC
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -73,6 +76,7 @@ body:             |
 ...
 ---
 name:   ZeroMinusAPlusB
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -97,6 +101,7 @@ body:             |
 ...
 ---
 name:   ZeroMinusAPlusB_multi_use
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -125,6 +130,7 @@ body:             |
 ...
 ---
 name:   APlusZeroMiunusB
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -149,6 +155,7 @@ body:             |
 ...
 ---
 name:   APlusBMinusB
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -170,6 +177,7 @@ body:             |
 ...
 ---
 name:   BMinusAPlusA
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -191,6 +199,7 @@ body:             |
 ...
 ---
 name:   AMinusBPlusCMinusA
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -216,6 +225,7 @@ body:             |
 ...
 ---
 name:   AMinusBPlusBMinusC
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -242,6 +252,7 @@ body:             |
 ...
 ---
 name:   APlusBMinusAplusC
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -267,6 +278,7 @@ body:             |
 ...
 ---
 name:   APlusBMinusCPlusA
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -292,6 +304,7 @@ body:             |
 ...
 ---
 name:   APlusBMinusCPlusA_BV
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -323,6 +336,7 @@ body:             |
 ...
 ---
 name:   APlusC1MinusC2
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -346,6 +360,7 @@ body:             |
 ...
 ---
 name:   C2MinusAPlusC1
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -369,6 +384,7 @@ body:             |
 ...
 ---
 name:   AMinusC1MinusC2
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -392,6 +408,7 @@ body:             |
 ...
 ---
 name:   C1Minus2MinusC2
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -416,6 +433,7 @@ body:             |
 ...
 ---
 name:   AMinusC2PlusC2
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -439,6 +457,7 @@ body:             |
 ...
 ---
 name:   AMinusBMinusC_oneUse
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -467,6 +486,7 @@ body:             |
 ...
 ---
 name:   AMinusBMinusC_multi
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -496,6 +516,7 @@ body:             |
 ...
 ---
 name:   AMinusBMinusC
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -522,6 +543,7 @@ body:             |
 ...
 ---
 name:   AMinusZeroMinusB
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -546,6 +568,7 @@ body:             |
 ...
 ---
 name:   AMinusZeroMinusB_BV
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1
@@ -570,6 +593,7 @@ body:             |
 ...
 ---
 name:   AMinusBMinusA
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -590,6 +614,7 @@ body:             |
 ...
 ---
 name:   AMinusBMinusA_BV
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $q0, $q1

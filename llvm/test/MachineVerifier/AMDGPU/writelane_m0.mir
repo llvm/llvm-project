@@ -10,6 +10,7 @@
 ---
 
 name: writelane_m0
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK: $vgpr0 = V_WRITELANE_B32 $sgpr0, $m0, $vgpr0

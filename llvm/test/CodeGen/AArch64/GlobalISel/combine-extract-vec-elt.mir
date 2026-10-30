@@ -253,6 +253,7 @@ body:             |
 ---
 name:            extract_from_idx_negative
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -277,6 +278,7 @@ body:             |
 ---
 name:            extract_from_vector_undef
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -301,6 +303,7 @@ body:             |
 ---
 name:            extract_from_index_undef
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -322,6 +325,7 @@ body:             |
 ---
 name:            extract_from_index_too_large
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -346,6 +350,7 @@ body:             |
 ---
 name:            extract_with_freeze
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -374,6 +379,7 @@ body:             |
 ---
 name:            extract_from_insert_symmetry
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -400,6 +406,7 @@ body:             |
 ---
 name:            extract_from_insert_with_different_consts
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -429,6 +436,7 @@ body:             |
 ---
 name:            extract_from_build_vector_non_const
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -460,6 +468,7 @@ body:             |
 ---
 name:            extract_from_build_vector_const
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -487,6 +496,7 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc_const2
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -516,6 +526,7 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc2
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -545,6 +556,7 @@ body:             |
 ---
 name:            extract_from_build_vector_trunc_const3
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }
@@ -570,6 +582,7 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_undef
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -589,6 +602,7 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_opaque
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -612,6 +626,7 @@ body:             |
 ...
 ---
 name:            extract_from_build_vector_shuffle_vector_const
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -634,6 +649,7 @@ body:             |
 ---
 name:            extract_from_build_vector_const_huge
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$x0' }
   - { reg: '$x1' }

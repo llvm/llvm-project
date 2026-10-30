@@ -18,6 +18,7 @@
 name:            xor_s32_gpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -46,6 +47,7 @@ body:             |
 name:            xor_s64_gpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -75,6 +77,7 @@ body:             |
 name:            xor_constant_n1_s32_gpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -102,6 +105,7 @@ body:             |
 name:            xor_constant_n1_s64_gpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -129,6 +133,7 @@ body:             |
 name:            xor_constant_n1_s32_gpr_2bb
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }

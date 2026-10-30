@@ -48,6 +48,7 @@ name:            test_fadd_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -79,6 +80,7 @@ name:            test_fadd_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -110,6 +112,7 @@ name:            test_fsub_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -141,6 +144,7 @@ name:            test_fsub_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -172,6 +176,7 @@ name:            test_fmul_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -203,6 +208,7 @@ name:            test_fmul_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -234,6 +240,7 @@ name:            test_fdiv_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -265,6 +272,7 @@ name:            test_fdiv_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -296,6 +304,7 @@ name:            test_fneg_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -323,6 +332,7 @@ name:            test_fneg_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -351,6 +361,7 @@ name:            test_fma_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -386,6 +397,7 @@ name:            test_fma_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -421,6 +433,7 @@ name:            test_fpext_s32_to_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -448,6 +461,7 @@ name:            test_fptrunc_s64_to_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: fprb }
@@ -475,6 +489,7 @@ name:            test_fptosi_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: gprb }
@@ -503,6 +518,7 @@ name:            test_fptosi_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: gprb }
@@ -531,6 +547,7 @@ name:            test_fptoui_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: gprb }
@@ -559,6 +576,7 @@ name:            test_fptoui_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: fprb }
   - { id: 1, class: gprb }
@@ -587,6 +605,7 @@ name:            test_sitofp_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -615,6 +634,7 @@ name:            test_sitofp_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -643,6 +663,7 @@ name:            test_uitofp_s32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -671,6 +692,7 @@ name:            test_uitofp_s64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -699,6 +721,7 @@ name:            test_load_f32
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -726,6 +749,7 @@ name:            test_load_f64
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -753,6 +777,7 @@ name:            test_stores
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: fprb }
@@ -831,6 +856,7 @@ name:            test_soft_fp_double
 legalized:       true
 regBankSelected: true
 selected:        false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gprb }
   - { id: 1, class: gprb }

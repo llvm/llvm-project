@@ -6,6 +6,7 @@
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            valu_write_vgpr_sgemm_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -17,6 +18,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            valu_write_agpr_sgemm_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -29,6 +31,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            valu_write_vgpr_dgemm_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
@@ -40,6 +43,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            accmov_write_agpr_sgemm_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = IMPLICIT_DEF
@@ -50,6 +54,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            sgemm_mfma_write_agpr_mfma_read_same_agpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -59,6 +64,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            sgemm_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -68,6 +74,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -78,6 +85,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_vgpr_mfma_read_same_vgpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -88,6 +96,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -98,6 +107,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr6, $vgpr7, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -108,6 +118,7 @@ body:             |
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_agpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -118,6 +129,7 @@ body:             |
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_vgpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -128,6 +140,7 @@ body:             |
 # GCN-NEXT: S_NOP 15
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_agpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_32X32X2F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -138,6 +151,7 @@ body:             |
 # GCN-NEXT: S_NOP 15
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_vgpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -148,6 +162,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -158,6 +173,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_vgpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -167,6 +183,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_sgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -176,6 +193,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_vgpr_sgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -186,6 +204,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_dgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr10, $vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -196,6 +215,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_vgpr_dgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -207,6 +227,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_vgpr_dgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -217,6 +238,7 @@ body:             |
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_agpr_mfma_read_partial
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -227,6 +249,7 @@ body:             |
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_vgpr_mfma_read_partial
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -237,6 +260,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -247,6 +271,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -258,6 +283,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_agpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -268,6 +294,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -278,6 +305,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_dmfma4x4_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -288,6 +316,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_dmfma16x16_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -298,6 +327,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_vgpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -308,6 +338,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -318,6 +349,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -328,6 +360,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_sgemm_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -338,6 +371,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_dgemm_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr4, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -348,6 +382,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -358,6 +393,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_vgpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -368,6 +404,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_vgpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -378,6 +415,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_vgpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -388,6 +426,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: BUFFER_STORE_DWORD
 name:            smfma4x4_write_vgpr_vm_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -398,6 +437,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            smfma4x4_write_vgpr_flat_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -408,6 +448,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: DS_WRITE_B32
 name:            smfma4x4_write_vgpr_lds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -418,6 +459,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: EXP_DONE
 name:            smfma4x4_write_vgpr_exp_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -428,6 +470,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            smfma16x16_write_vgpr_flat_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -439,6 +482,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            smfma32x32_write_vgpr_flat_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -449,6 +493,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_vgpr_flat_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -459,6 +504,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_vgpr_flat_read_full
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -470,6 +516,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_vgpr_flat_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -480,6 +527,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MOV_B32
 name:            smfma4x4_write_vgpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -490,6 +538,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_write_vgpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -501,6 +550,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_write_vgpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -511,6 +561,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MOV_B32
 name:            dmfma4x4_write_vgpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -521,6 +572,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -531,6 +583,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            smfma4x4_write_vgpr_accv_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -541,6 +594,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            smfma16x16_write_vgpr_accv_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -552,6 +606,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            smfma32x32_write_vgpr_accv_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -562,6 +617,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_DOT
 name:            smfma4x4_write_vgpr_dot_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -572,6 +628,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_DOT
 name:            dmfma4x4_write_vgpr_dot_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -582,6 +639,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_DOT
 name:            dmfma16x16_write_vgpr_dot_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -592,6 +650,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MOV_B32
 name:            smfma4x4_write_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr4, $vgpr0, $vgpr6_vgpr7_vgpr8_vgpr9, 0, 0, 0, implicit $mode, implicit $exec
@@ -602,6 +661,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_write_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -613,6 +673,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_write_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -623,6 +684,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_FMA_F16_e64
 name:            smfma4x4_write_vgpr_valu_f16_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -633,6 +695,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_FMA_F16_e64
 name:            smfma16x16_write_vgpr_valu_f16_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -644,6 +707,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_FMA_F16_e64
 name:            smfma32x32_write_vgpr_valu_f16_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -654,6 +718,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MOV_B32_sdwa
 name:            smfma4x4_write_vgpr_valu_sdwa_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -664,6 +729,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32_sdwa
 name:            smfma16x16_write_vgpr_valu_sdwa_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr16, $vgpr17, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -675,6 +741,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32_sdwa
 name:            smfma32x32_write_vgpr_valu_sdwa_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -685,6 +752,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MOV_B32
 name:            dmfma4x4_write_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -695,6 +763,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_write_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -705,6 +774,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            smfma4x4_write_vgpr_accv_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -715,6 +785,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_DOT
 name:            smfma4x4_write_vgpr_dot_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -725,6 +796,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MOV_B32
 name:            smfma4x4_read_srcc_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr9, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -735,6 +807,7 @@ body:             |
 # GCN-NEXT: S_NOP 6
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_read_srcc_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -745,6 +818,7 @@ body:             |
 # GCN-NEXT: S_NOP 14
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_read_srcc_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr0, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -754,6 +828,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            smfma4x4_read_srca_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr9, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -763,6 +838,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_read_srca_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -772,6 +848,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_read_srca_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -781,6 +858,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            smfma4x4_read_srcb_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5_vgpr6_vgpr7 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr8, $vgpr9, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -790,6 +868,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            smfma16x16_read_srcb_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_16X16X1F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -799,6 +878,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            smfma32x32_read_srcb_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17 = V_MFMA_F32_32X32X2F32_vgprcd_e64 $vgpr18, $vgpr19, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -808,6 +888,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            dmfma4x4_read_srcc_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4_vgpr5 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -817,6 +898,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MOV_B32
 name:            dmfma16x16_read_srcc_vgpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 = V_MFMA_F64_16X16X4F64_vgprcd_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -827,6 +909,7 @@ body:             |
 # GCN-NEXT: S_NOP 6
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            smfma16x16_read_srcc_vgpr_accv_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_16X16X1F32_e64 $agpr18, $agpr19, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -836,6 +919,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_FMA_F64_e64
 name:            sgemm_to_fma64
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -846,6 +930,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_FMA_F64_e64
 name:            dgemm_to_fma64
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -856,6 +941,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_FMAC_F64
 name:            dgemm_to_fmac64
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0_vgpr1 = V_MFMA_F64_4X4X4F64_vgprcd_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $vgpr0_vgpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -866,6 +952,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name: flat_store_data_agpr_overwritten
+tracksRegLiveness: false
 body: |
   bb.0:
     FLAT_STORE_DWORDX4 $vgpr4_vgpr5, $agpr0_agpr1_agpr2_agpr3, 0, 0, implicit $mode, implicit $exec, implicit $flat_scr
@@ -876,6 +963,7 @@ body: |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dot_write_vgpr_accv_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -885,6 +973,7 @@ body:             |
 # GCN:      V_MOV_B32
 # GCN-NEXT: V_DOT
 name:            valu_write_vgpr_dot_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 $vgpr1, implicit $exec
@@ -894,6 +983,7 @@ body:             |
 # GCN:      V_ACCVGPR_READ
 # GCN-NEXT: V_DOT
 name:            accv_write_vgpr_dot_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_ACCVGPR_READ_B32_e64 $agpr1, implicit $exec
@@ -903,6 +993,7 @@ body:             |
 # GCN:      V_DOT
 # GCN-NEXT: V_DOT
 name:            dot_write_vgpr_same_dot_read_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -913,6 +1004,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_DOT
 name:            dot_write_vgpr_different_dot_read_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -923,6 +1015,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_DOT
 name:            dot_write_vgpr_different_dot_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -933,6 +1026,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32_e32
 name:            dot_write_vgpr_different_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -943,6 +1037,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MOV_B32_e32
 name:            dot_write_vgpr_different_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -953,6 +1048,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_DOT
 name:            dot_write_vgpr_same_dot_read_srca
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -963,6 +1059,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_DOT
 name:            dot_write_vgpr_same_dot_read_srcb
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
@@ -973,6 +1070,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            vcmpx_write_exec_mfma
+tracksRegLiveness: false
 body:             |
   bb.0:
     implicit $exec, implicit $vcc = V_CMPX_EQ_I32_e32 $vgpr0, $vgpr1, implicit $exec
@@ -984,6 +1082,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_MFMA
 name:            valu_write_agpr_dgemm_mfma_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0 = V_ACCVGPR_WRITE_B32_e64 1, implicit $exec
@@ -994,6 +1093,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_read_same_agpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $agpr10_agpr11, $agpr10_agpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1004,6 +1104,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_agpr_mfma_read_same_agpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $vgpr0_vgpr1, $agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -1014,6 +1115,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1024,6 +1126,7 @@ body:             |
 # GCN-NEXT: S_NOP 3
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_agpr_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1033,6 +1136,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1043,6 +1147,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_dgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr10, $vgpr11, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -1053,6 +1158,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: V_MFMA
 name:            sgemm16x16_mfma_write_sgpr_dgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -1064,6 +1170,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: V_MFMA
 name:            sgemm32x32_mfma_write_agpr_dgemm_mfma_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr26, $vgpr27, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -1074,6 +1181,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_dmfma4x4_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -1084,6 +1192,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_dmfma16x16_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -1094,6 +1203,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_agpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1104,6 +1214,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -1114,6 +1225,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_agpr_sgemm_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1124,6 +1236,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_sgemm_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -1134,6 +1247,7 @@ body:             |
 # GCN-NEXT: S_NOP 4
 # GCN-NEXT: V_MFMA
 name:            sgemm4x4_mfma_write_agpr_dgemm_mfma_srca_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr4, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -1144,6 +1258,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_MFMA
 name:            dgemm4x4_mfma_write_agpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1154,6 +1269,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_MFMA
 name:            dgemm16x16_mfma_write_agpr_mfma_srcb_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -1164,6 +1280,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_agpr_flat_read_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1174,6 +1291,7 @@ body:             |
 # GCN-NEXT: S_NOP 8
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma4x4_write_agpr_flat_read_full
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1185,6 +1303,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dmfma16x16_write_agpr_flat_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1195,6 +1314,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            dmfma4x4_write_agpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1205,6 +1325,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_ACCVGPR_READ_B32_e64
 name:            dmfma16x16_write_agpr_valu_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1215,6 +1336,7 @@ body:             |
 # GCN-NEXT: S_NOP 5
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dmfma4x4_write_agpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1225,6 +1347,7 @@ body:             |
 # GCN-NEXT: S_NOP 10
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dmfma16x16_write_agpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1234,6 +1357,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dmfma4x4_read_srcc_agpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr4_agpr5 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1243,6 +1367,7 @@ body:             |
 # GCN:      V_MFMA
 # GCN-NEXT: V_ACCVGPR_WRITE_B32_e64
 name:            dmfma16x16_read_srcc_agpr_valu_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9 = V_MFMA_F64_16X16X4F64_e64 $vgpr10_vgpr11, $vgpr10_vgpr11, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7, 0, 0, 0, implicit $mode, implicit $exec
@@ -1253,6 +1378,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_FMA_F64_e64
 name:            dgemm_accvgr_to_fma64
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $vgpr0_vgpr1, $vgpr0_vgpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1263,6 +1389,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: V_FMAC_F64
 name:            dgemm_accvgr_to_fmac64
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1 = V_MFMA_F64_4X4X4F64_e64 $agpr0_agpr1, $agpr0_agpr1, $agpr0_agpr1, 0, 0, 0, implicit $mode, implicit $exec
@@ -1274,6 +1401,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: BUFFER_STORE_DWORD
 name:            dgemm_between_valu_write_buffer_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1287,6 +1415,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: BUFFER_LOAD_DWORD
 name:            dgemm_between_valu_write_buffer_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1300,6 +1429,7 @@ body:             |
 # GCN-NEXT: GLOBAL_STORE_DWORD
 
 name:            dgemm_between_valu_write_global_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1313,6 +1443,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: GLOBAL_LOAD_DWORD
 name:            dgemm_between_valu_write_global_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1326,6 +1457,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: DS_WRITE_B32
 name:            dgemm_between_valu_write_ds_write
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1338,6 +1470,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: DS_READ_B32_gfx9
 name:            dgemm_between_valu_write_ds_read
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1351,6 +1484,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: FLAT_STORE_DWORD
 name:            dgemm_between_valu_write_flat_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1365,6 +1499,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: FLAT_LOAD_DWORD
 name:            dgemm_between_valu_write_flat_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1378,6 +1513,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: SCRATCH_STORE_DWORD
 name:            dgemm_between_valu_write_scratch_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1390,6 +1526,7 @@ body:             |
 # GCN-NEXT: S_NOP 0
 # GCN-NEXT: SCRATCH_LOAD_DWORD
 name:            dgemm_between_valu_write_scratch_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1403,6 +1540,7 @@ body:             |
 # GCN-NEXT: S_NOP
 # GCN-NEXT: BUFFER_STORE_DWORD
 name:            dgemm_between_valu_write_buffer_store_fallthrough1
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1418,6 +1556,7 @@ body:             |
 # GCN-NEXT: S_NOP
 # GCN-NEXT: BUFFER_STORE_DWORD
 name:            dgemm_between_valu_write_buffer_store_fallthrough2
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1434,6 +1573,7 @@ body:             |
 # GCN-NEXT: S_NOP
 # GCN-NEXT: BUFFER_STORE_DWORD
 name:            dgemm_between_valu_write_buffer_store_fallthrough3
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
@@ -1448,6 +1588,7 @@ body:             |
 # GCN:      V_MFMA_F32_16X16X4F16
 # GCN-NEXT: V_MFMA_I32_16X16X4I8
 name:            xdl_8pass_mfma_write_agpr_different_xdl_mfma_read_same_agpr_as_srcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X4F16_e64 $vgpr0_vgpr1, $vgpr2_vgpr3, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -1460,6 +1601,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
 name:            smfma16x16_write_vgpr_valu_read_diamond_long_edge_first
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2
@@ -1484,6 +1626,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
 name:            smfma16x16_write_vgpr_valu_read_diamond_short_edge_first
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -1512,6 +1655,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
 name:            smfma16x16_valu_read_detour_longer_than_window
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2
@@ -1549,6 +1693,7 @@ body:             |
 # GCN-NEXT: S_NOP 14
 # GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32
 name:            smfma32x32_srcc_read_unrelated_mfma_producer_block_first
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1574,6 +1719,7 @@ body:             |
 # GCN-NEXT: S_NOP 14
 # GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32
 name:            smfma32x32_srcc_read_unrelated_mfma_decoy_block_first
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1600,6 +1746,7 @@ body:             |
 # GCN:      bb.3:
 # GCN-NEXT: early-clobber {{.*}} = V_MFMA_F32_32X32X2F32
 name:            smfma32x32_full_srcc_read_unrelated_mfma
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1628,6 +1775,7 @@ body:             |
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: $vgpr16 = V_MOV_B32
 name:            mfma_mixed_window_far_wide_near_narrow
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2, %bb.1
@@ -1666,6 +1814,7 @@ body:             |
 # GCN:      S_NOP 9
 # GCN-NEXT: $vgpr16 = V_MOV_B32
 name:            mfma_mixed_window_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -1698,6 +1847,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr40 = V_MOV_B32
 name:            smfma16x16_valu_read_two_terminators
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1722,6 +1872,7 @@ body:             |
 # GCN-NEXT: S_NOP 2
 # GCN-NEXT: $vgpr16 = V_MOV_B32
 name:            smfma32x32_valu_read_unexecuted_branch_on_one_edge
+tracksRegLiveness: false
 body: |
   bb.0:
     successors: %bb.1, %bb.3
@@ -1768,6 +1919,7 @@ body: |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32
 name:            smfma_srca_read_mixed_shapes
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1796,6 +1948,7 @@ body:             |
 # GCN-NEXT: S_NOP 6
 # GCN-NEXT: $agpr4_agpr5_agpr6_agpr7 = V_MFMA_F32_4X4X1F32
 name:            smfma_full_srcc_producer_does_not_hide_partial
+tracksRegLiveness: false
 body:             |
   bb.0:
     $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17, 0, 0, 0, implicit $mode, implicit $exec
@@ -1811,6 +1964,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_same_target_terminators
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -1830,6 +1984,7 @@ body:             |
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_first_conditional_target
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.3
@@ -1853,6 +2008,7 @@ body:             |
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_unconditional_target
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.2, %bb.3
@@ -1881,6 +2037,7 @@ body:             |
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: $vgpr0 = V_MOV_B32
 name:            smfma_valu_write_mixed_shapes
+tracksRegLiveness: false
 body: |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1906,6 +2063,7 @@ body: |
 # GCN-NEXT: S_NOP 13
 # GCN-NEXT: $vgpr0 = V_MOV_B32
 name:            smfma_srcc_read_valu_write_mixed_shapes
+tracksRegLiveness: false
 body: |
   bb.0:
     successors: %bb.1, %bb.2
@@ -1932,6 +2090,7 @@ body: |
 # GCN:      S_NOP 4
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_across_empty_fallthrough
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1, %bb.3
@@ -1962,6 +2121,7 @@ body:             |
 # GCN:      bb.24:
 # GCN-NEXT: $vgpr8 = V_MOV_B32
 name:            valu_read_across_long_branch_chain
+tracksRegLiveness: false
 body: |
   bb.0:
     successors: %bb.1
@@ -2074,6 +2234,7 @@ body: |
 # GCN:      S_NOP 10
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_many_equal_distance_arrivals
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1

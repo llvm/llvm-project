@@ -65,6 +65,7 @@
 
 ---
 name:            mask_hazard_getpc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_getpc1
@@ -81,6 +82,7 @@ body:            |
 
 ---
 name:            mask_hazard_getpc2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_getpc2
@@ -103,6 +105,7 @@ body:            |
 
 ---
 name:            mask_hazard_vcc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_vcc1
@@ -122,6 +125,7 @@ body:            |
 
 ---
 name:            mask_hazard_vcc2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_vcc2
@@ -141,6 +145,7 @@ body:            |
 
 ---
 name:            mask_hazard_cndmask_dpp1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_cndmask_dpp1
@@ -160,6 +165,7 @@ body:            |
 
 ---
 name:            mask_hazard_cndmask_dpp2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_cndmask_dpp2
@@ -179,6 +185,7 @@ body:            |
 
 ---
 name:            mask_hazard_cndmask_dpp3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_cndmask_dpp3
@@ -198,6 +205,7 @@ body:            |
 
 ---
 name:            mask_hazard_addc1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_addc1
@@ -217,6 +225,7 @@ body:            |
 
 ---
 name:            mask_hazard_addc2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_addc2
@@ -236,6 +245,7 @@ body:            |
 
 ---
 name:            mask_hazard_addc3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_addc3
@@ -255,6 +265,7 @@ body:            |
 
 ---
 name:            mask_hazard_addc4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_addc4
@@ -274,6 +285,7 @@ body:            |
 
 ---
 name:            mask_hazard_subb1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subb1
@@ -293,6 +305,7 @@ body:            |
 
 ---
 name:            mask_hazard_subb2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subb2
@@ -312,6 +325,7 @@ body:            |
 
 ---
 name:            mask_hazard_subb3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subb3
@@ -331,6 +345,7 @@ body:            |
 
 ---
 name:            mask_hazard_subb4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subb4
@@ -350,6 +365,7 @@ body:            |
 
 ---
 name:            mask_hazard_subbrev1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subbrev1
@@ -369,6 +385,7 @@ body:            |
 
 ---
 name:            mask_hazard_subbrev2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subbrev2
@@ -388,6 +405,7 @@ body:            |
 
 ---
 name:            mask_hazard_subbrev3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subbrev3
@@ -407,6 +425,7 @@ body:            |
 
 ---
 name:            mask_hazard_subbrev4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subbrev4
@@ -426,6 +445,7 @@ body:            |
 
 ---
 name:            mask_hazard_div_fmas_f32
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_div_fmas_f32
@@ -445,6 +465,7 @@ body:            |
 
 ---
 name:            mask_hazard_div_fmas_f64
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_div_fmas_f64
@@ -465,6 +486,7 @@ body:            |
 # Check low word overlap
 ---
 name:            mask_hazard_subreg1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subreg1
@@ -485,6 +507,7 @@ body:            |
 # Check high word overlap
 ---
 name:            mask_hazard_subreg2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subreg2
@@ -505,6 +528,7 @@ body:            |
 # Check multiple subreg overlap
 ---
 name:            mask_hazard_subreg3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_subreg3
@@ -528,6 +552,7 @@ body:            |
 # Check vcc_lo overlap
 ---
 name:            mask_hazard_subreg4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_subreg4
@@ -545,6 +570,7 @@ body:            |
 # Check vcc_hi overlap
 ---
 name:            mask_hazard_subreg5
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_subreg5
@@ -562,6 +588,7 @@ body:            |
 # S_WAITCNT does not mitigate hazard
 ---
 name:            mask_hazard_waitcnt
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_waitcnt
@@ -581,6 +608,7 @@ body:            |
 # Check implicit $exec
 ---
 name:            mask_hazard_gap1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_gap1
@@ -602,6 +630,7 @@ body:            |
 # Check implicit $mode
 ---
 name:            mask_hazard_gap2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_gap2
@@ -621,6 +650,7 @@ body:            |
 # Check explicit $exec
 ---
 name:            mask_hazard_gap3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_gap3
@@ -640,6 +670,7 @@ body:            |
 # Different SGPR write
 ---
 name:            mask_hazard_no_hazard1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_no_hazard1
@@ -654,6 +685,7 @@ body:            |
 # Different SGPR write with mask read overlap
 ---
 name:            mask_hazard_no_hazard2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_no_hazard2
@@ -668,6 +700,7 @@ body:            |
 # Overlapping VGPR write
 ---
 name:            mask_hazard_no_hazard3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_no_hazard3
@@ -681,6 +714,7 @@ body:            |
 
 ---
 name:            mask_hazard_cancel_hazard1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_cancel_hazard1
@@ -701,6 +735,7 @@ body:            |
 
 ---
 name:            mask_hazard_cancel_hazard2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_cancel_hazard2
@@ -719,6 +754,7 @@ body:            |
 
 ---
 name:            mask_hazard_cancel_hazard3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_cancel_hazard3
@@ -737,6 +773,7 @@ body:            |
 
 ---
 name:            mask_hazard_cancel_hazard4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_cancel_hazard4
@@ -757,6 +794,7 @@ body:            |
 
 ---
 name:            mask_hazard_partial_cancel1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_partial_cancel1
@@ -784,6 +822,7 @@ body:            |
 
 ---
 name:            mask_hazard_partial_cancel2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_partial_cancel2
@@ -810,6 +849,7 @@ body:            |
 
 ---
 name:            mask_hazard_partial_cancel3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_partial_cancel3
@@ -837,6 +877,7 @@ body:            |
 
 ---
 name:            mask_hazard_partial_cancel4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_partial_cancel4
@@ -864,6 +905,7 @@ body:            |
 
 ---
 name:            mask_hazard_valu_readlane1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_valu_readlane1
@@ -883,6 +925,7 @@ body:            |
 
 ---
 name:            mask_hazard_valu_readlane2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_valu_readlane2
@@ -902,6 +945,7 @@ body:            |
 
 ---
 name:            mask_hazard_valu_readlane3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_valu_readlane3
@@ -924,6 +968,7 @@ body:            |
 
 ---
 name:            mask_hazard_valu_readfirstlane
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_valu_readfirstlane
@@ -943,6 +988,7 @@ body:            |
 
 ---
 name:            mask_hazard_valu_vcmp_vcc
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_valu_vcmp_vcc
@@ -962,6 +1008,7 @@ body:            |
 
 ---
 name:            mask_hazard_valu_vcmp_sgpr
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_valu_vcmp_sgpr
@@ -981,6 +1028,7 @@ body:            |
 
 ---
 name:            mask_hazard_combine1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_combine1
@@ -1015,6 +1063,7 @@ body:            |
 
 ---
 name:            mask_hazard_combine2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_combine2
@@ -1049,6 +1098,7 @@ body:            |
 
 ---
 name:            mask_hazard_combine3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_combine3
@@ -1080,6 +1130,7 @@ body:            |
 
 ---
 name:            mask_hazard_combine4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_combine4
@@ -1115,6 +1166,7 @@ body:            |
 
 ---
 name:            mask_hazard_combine5
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_combine5
@@ -1150,6 +1202,7 @@ body:            |
 
 ---
 name:            mask_hazard_optimize1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_optimize1
@@ -1174,6 +1227,7 @@ body:            |
 
 ---
 name:            mask_hazard_optimize2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_optimize2
@@ -1213,6 +1267,7 @@ body:            |
 
 ---
 name:            mask_hazard_optimize3
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GFX11-LABEL: name: mask_hazard_optimize3
@@ -1272,6 +1327,7 @@ body:            |
 
 ---
 name:            mask_hazard_optimize_terminators
+tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: mask_hazard_optimize_terminators
   ; GFX11: bb.0:

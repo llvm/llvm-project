@@ -8,6 +8,7 @@
 # GCN-NEXT:    V_INTERP_P1_F32
 
 name:            hazard_buffer_store_v_interp
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     BUFFER_STORE_DWORDX4_OFFSET_exact killed $vgpr7_vgpr8_vgpr9_vgpr10, $sgpr4_sgpr5_sgpr6_sgpr7, 0, 96, 0, 0, implicit $exec

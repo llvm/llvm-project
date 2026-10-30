@@ -6,6 +6,7 @@
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_merged_v1v3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -25,6 +26,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
 
 name: image_load_merged_v1v3_reversed
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -44,6 +46,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
 
 name: image_load_merged_v2v2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -63,6 +66,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
 
 name: image_load_merged_v2v2_reversed
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -82,6 +86,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
 
 name: image_load_merged_v3v1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -101,6 +106,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
 
 name: image_load_merged_v3v1_reversed
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -118,6 +124,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V4 %5, %3, 15, 0, 0, 0, 0, 0, -1, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 
 name: image_load_divided_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -140,6 +147,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_divided_not_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -159,6 +167,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_dmask_overlapped_not_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -177,6 +186,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 0, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_dmask_zero_not_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -195,6 +205,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 11, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_dmask_not_disjoint_not_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -213,6 +224,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %6, %3, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_0
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -232,6 +244,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %6, %4, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -251,6 +264,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 0, 0, 0, -1, 1, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_10
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -269,6 +283,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 1, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -287,6 +302,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 1, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_4
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -305,6 +321,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 1, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_5
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -323,6 +340,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 1, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_6
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -341,6 +359,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_7
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -359,6 +378,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 0, 0, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -377,6 +397,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = IMAGE_LOAD_V3_V4 %5, %3, 7, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_not_merged_9
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -396,6 +417,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_mip_merged_v1v3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -415,6 +437,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_mip_pck_merged_v1v3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -434,6 +457,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_mip_pck_sgn_merged_v1v3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -453,6 +477,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_pck_merged_v1v3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -472,6 +497,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_load_pck_sgn_merged_v1v3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -490,6 +516,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V4 %5, %3, 7, 0, 0, 0, 1, 0, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_tfe_second_not_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -508,6 +535,7 @@ body:             |
 # GFX9: %{{[0-9]+}}:vreg_128 = IMAGE_LOAD_V4_V4 %5, %3, 7, 0, 0, 0, 0, 1, -1, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_load_lwe_second_not_merged
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     %0:sgpr_64 = COPY $sgpr0_sgpr1

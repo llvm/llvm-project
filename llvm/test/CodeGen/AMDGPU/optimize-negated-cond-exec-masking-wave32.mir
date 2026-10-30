@@ -7,6 +7,7 @@
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop2
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -29,6 +30,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -54,6 +56,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop2_redef_vcc1
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -80,6 +83,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_redef_cmp
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -102,6 +106,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_undef_vcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vcc_lo = S_AND_B32 $exec_lo, undef $vcc_lo, implicit-def dead $scc
@@ -121,6 +126,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_imp_vcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vcc_lo = IMPLICIT_DEF
@@ -143,6 +149,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop2_imp_vcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vcc_lo = IMPLICIT_DEF
@@ -168,6 +175,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_redef_sel
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -192,6 +200,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop2_used_sel
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -218,6 +227,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop2_used_vcc
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -244,6 +254,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_sel_wrong_subreg1
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -270,6 +281,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_sel_wrong_subreg2
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -294,6 +306,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_sel_right_subreg1
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -318,6 +331,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_sel_right_subreg2
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF
@@ -344,6 +358,7 @@ body:             |
 # GCN-NEXT: S_CBRANCH_VCCNZ %bb.2, implicit $vcc_lo
 ---
 name:            negated_cond_vop3_sel_subreg_overlap
+tracksRegLiveness: false
 body:             |
   bb.0:
     %0:sgpr_32 = IMPLICIT_DEF

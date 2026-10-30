@@ -3,6 +3,7 @@
 
 ---
 name:            zext_trunc_nuw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -18,6 +19,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nsw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -35,6 +37,7 @@ body:             |
 ...
 ---
 name:            zext_trunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -52,6 +55,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -78,6 +82,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -93,6 +98,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nuw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -109,6 +115,7 @@ body:             |
 ...
 ---
 name:            sext_trunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -125,6 +132,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_types_wrong
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -141,6 +149,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_nuw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -156,6 +165,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_nuw_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -184,6 +194,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -212,6 +223,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nsw_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -240,6 +252,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_vector2
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -268,6 +281,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_vector_wrong_type
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -290,6 +304,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_scalable_vector
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -308,6 +323,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_to_zext
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -324,6 +340,7 @@ body:             |
 ...
 ---
 name:            zext_trunc_nuw_to_trunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -340,6 +357,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_to_sext
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -356,6 +374,7 @@ body:             |
 ...
 ---
 name:            sext_trunc_nsw_to_trunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $w1

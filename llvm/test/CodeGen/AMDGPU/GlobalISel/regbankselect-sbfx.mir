@@ -8,6 +8,7 @@
 ---
 name:            test_sbfx_s32_vvv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -31,6 +32,7 @@ body: |
 ---
 name:            test_sbfx_s32_vii
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -56,6 +58,7 @@ body: |
 ---
 name:            test_sbfx_s32_vss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -83,6 +86,7 @@ body: |
 ---
 name:            test_sbfx_s64_vvv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -110,6 +114,7 @@ body: |
 ---
 name:            test_sbfx_s64_vss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -139,6 +144,7 @@ body: |
 ---
 name:            test_sbfx_s64_vii_small
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -170,6 +176,7 @@ body: |
 ---
 name:            test_sbfx_s64_vii_32
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -200,6 +207,7 @@ body: |
 ---
 name:            test_sbfx_s64_vii_big
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -230,6 +238,7 @@ body: |
 ---
 name:            test_sbfx_s64_svv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -260,6 +269,7 @@ body: |
 ---
 name:            test_sbfx_s32_svv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -284,6 +294,7 @@ body: |
 ---
 name:            test_sbfx_s32_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -315,6 +326,7 @@ body: |
 ---
 name:            test_sbfx_s32_sii
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -348,6 +360,7 @@ body: |
 ---
 name:            test_sbfx_s64_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:
@@ -379,6 +392,7 @@ body: |
 ---
 name:            test_sbfx_s64_sii
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0.entry:

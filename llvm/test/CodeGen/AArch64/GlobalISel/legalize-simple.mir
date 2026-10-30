@@ -2,6 +2,7 @@
 # RUN: llc -O0 -mtriple=aarch64 -run-pass=legalizer %s -o - | FileCheck %s
 ---
 name:            test_simple
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: test_simple
   ; CHECK: bb.0.entry:
@@ -96,6 +97,7 @@ body:             |
 ...
 ---
 name:            bitcast128
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0, $x1
@@ -119,6 +121,7 @@ body:             |
 ...
 ---
 name:            testExtOfCopyOfTrunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0
@@ -139,6 +142,7 @@ body:             |
 ...
 ---
 name:            testExtOfHintOfTrunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0
@@ -159,6 +163,7 @@ body:             |
 ...
 ---
 name:            testExtOfCopyAndHintOfTrunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0
@@ -180,6 +185,7 @@ body:             |
 ...
 ---
 name:            testExtOf2CopyOfTrunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0
@@ -201,6 +207,7 @@ body:             |
 ...
 ---
 name:            testUnmergeHintOfTrunc
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x0

@@ -3,6 +3,7 @@
 
 ---
 name:            test_icmp_canon
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_canon
@@ -17,6 +18,7 @@ body:             |
 ...
 ---
 name:            test_icmp_no_canon
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_no_canon
@@ -31,6 +33,7 @@ body:             |
 ...
 ---
 name:            test_icmp_canon_bv
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_canon_bv
@@ -53,6 +56,7 @@ body:             |
 ...
 ---
 name:            test_icmp_no_canon_bv_neither_const
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_no_canon_bv_neither_const
@@ -75,6 +79,7 @@ body:             |
 ...
 ---
 name:            test_icmp_canon_splat
+tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_icmp_canon_splat

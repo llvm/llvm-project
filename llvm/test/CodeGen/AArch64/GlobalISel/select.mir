@@ -30,6 +30,7 @@
 name:            frame_index
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 stack:
   - { id: 0, name: ptr0, offset: 0, size: 8, alignment: 8 }
 body:             |
@@ -47,6 +48,7 @@ body:             |
 name:            ptr_mask
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0
@@ -67,6 +69,7 @@ body:             |
 name:            global_local
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; IOS-LABEL: name: global_local
@@ -84,6 +87,7 @@ body:             |
 name:            global_got
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: global_got
@@ -97,6 +101,7 @@ body:             |
 name:            icmp
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $x0
@@ -142,6 +147,7 @@ body:             |
 name:            fcmp
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $w0, $x0

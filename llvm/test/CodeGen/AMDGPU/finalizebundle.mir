@@ -16,6 +16,7 @@
 
 ---
 name: test_overlap
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
@@ -32,6 +33,7 @@ body: |
 
 ---
 name: test_dead_redef
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0
@@ -50,6 +52,7 @@ body: |
 
 ---
 name: test_tied
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_tied
@@ -63,6 +66,7 @@ body: |
 
 ---
 name: test_mmo_merge1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_mmo_merge1
@@ -76,6 +80,7 @@ body: |
 
 ---
 name: test_mmo_merge2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_mmo_merge2
@@ -89,6 +94,7 @@ body: |
 
 ---
 name: test_mmo_drop
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_mmo_drop

@@ -6,6 +6,7 @@
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_fallthrough
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -23,6 +24,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_branch_to_next
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -40,6 +42,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_fallthrough_no_hazard_too_far
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -61,6 +64,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_fallthrough_no_hazard_nops
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -79,6 +83,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_branch_around
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2
@@ -104,6 +109,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_branch_backedge
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -123,6 +129,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_min_of_two
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.2
@@ -146,6 +153,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_self_loop
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.0
@@ -163,6 +171,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_min_of_two_self_loop1
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1
@@ -186,6 +195,7 @@ body:             |
 # GCN-NEXT: BUFFER_LOAD_DWORD_OFFEN
 ---
 name:            vmem_vcc_min_of_two_self_loop2
+tracksRegLiveness: false
 body:             |
   bb.0:
     successors: %bb.1

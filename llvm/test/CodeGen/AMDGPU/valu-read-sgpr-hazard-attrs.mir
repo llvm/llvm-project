@@ -20,6 +20,7 @@
 
 ---
 name:            hazard_calls
+tracksRegLiveness: false
 frameInfo:
   hasCalls: true
 body:            |
@@ -119,6 +120,7 @@ body:            |
 
 ---
 name:            hazard_callee1
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_callee1
@@ -132,6 +134,7 @@ body:            |
 
 ---
 name:            hazard_callee2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_callee2
@@ -152,6 +155,7 @@ body:            |
 
 ---
 name:            hazard_cull_vmem
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_vmem
@@ -175,6 +179,7 @@ body:            |
 
 ---
 name:            hazard_cull_vmem2
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_vmem2
@@ -204,6 +209,7 @@ body:            |
 
 ---
 name:            hazard_cull_sample
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_sample
@@ -227,6 +233,7 @@ body:            |
 
 ---
 name:            hazard_cull_bvh
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_bvh
@@ -250,6 +257,7 @@ body:            |
 
 ---
 name:            hazard_nocull_scratch
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_nocull_scratch
@@ -270,6 +278,7 @@ body:            |
 
 ---
 name:            hazard_cull_global
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_cull_global
@@ -293,6 +302,7 @@ body:            |
 
 ---
 name:            hazard_nocull_flat
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: hazard_nocull_flat

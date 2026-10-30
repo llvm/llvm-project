@@ -12,6 +12,7 @@
 # CHECK-LABEL: name: no-clobber-zr
 # CHECK: STPXi $xzr, $xzr, $x0, 0
 name: no-clobber-zr
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0,  $x1

@@ -25,6 +25,7 @@
 
 ---
 name:            test
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

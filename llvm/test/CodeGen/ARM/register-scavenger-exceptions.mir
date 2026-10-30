@@ -20,6 +20,7 @@
 # materialising a stack frame address when the function ends in throwing an
 # exception.
 name:            _Z3foov
+tracksRegLiveness: false
 stack:
   - { id: 0, name: V1, type: default, offset: 0, size: 5000, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

@@ -4,6 +4,7 @@
 
 ---
 name: valu_dep_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_1
@@ -16,6 +17,7 @@ body: |
 
 ---
 name: valu_dep_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_2
@@ -30,6 +32,7 @@ body: |
 
 ---
 name: valu_dep_3
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_3
@@ -46,6 +49,7 @@ body: |
 
 ---
 name: valu_dep_4
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_4
@@ -64,6 +68,7 @@ body: |
 
 ---
 name: trans32_dep_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: trans32_dep_1
@@ -76,6 +81,7 @@ body: |
 
 ---
 name: trans32_dep_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: trans32_dep_2
@@ -90,6 +96,7 @@ body: |
 
 ---
 name: trans32_dep_3
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: trans32_dep_3
@@ -106,6 +113,7 @@ body: |
 
 ---
 name: salu_cycle_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: salu_cycle_1
@@ -118,6 +126,7 @@ body: |
 
 ---
 name: valu_dep_1_same_trans32_dep_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_1_same_trans32_dep_1
@@ -132,6 +141,7 @@ body: |
 
 ---
 name: valu_dep_1_same_salu_cycle_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_1_same_salu_cycle_1
@@ -146,6 +156,7 @@ body: |
 
 ---
 name: valu_dep_1_next_valu_dep_1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_1_next_valu_dep_1
@@ -160,6 +171,7 @@ body: |
 
 ---
 name: valu_dep_2_next_valu_dep_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_2_next_valu_dep_2
@@ -176,6 +188,7 @@ body: |
 
 ---
 name: valu_dep_2_skip_valu_dep_2
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: valu_dep_2_skip_valu_dep_2

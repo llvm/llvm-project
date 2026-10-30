@@ -52,6 +52,7 @@
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_1_callsite_info
+tracksRegLiveness: false
 callSites:
   - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$x0' } }
@@ -75,6 +76,7 @@ body:             |
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_bl_pass_x0_arg
+tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $x0
@@ -95,6 +97,7 @@ body:             |
 # CHECK-NEXT:    RET undef $lr
 #
 name: test_bl_pass_x0_x1_x2_args
+tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $x0, $x1, $x2
@@ -115,6 +118,7 @@ body:             |
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_bl_pass_w0_w1_args
+tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $w0, $w1
@@ -136,6 +140,7 @@ body:             |
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_blr_pass_w0_w1_args
+tracksRegLiveness: false
 body:             |
     bb.0:
         liveins: $lr, $x8, $w0, $w1
@@ -178,6 +183,7 @@ body:             |
 # CHECK-NEXT:    RET undef $lr, implicit killed $w0
 #
 name: test_no_nop
+tracksRegLiveness: false
 callSites:
   - {bb: '%bb.0', offset: 0, fwdArgRegs:
     - { arg: 0, reg: '$x0' } }

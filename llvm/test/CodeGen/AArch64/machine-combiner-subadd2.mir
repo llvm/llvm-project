@@ -12,6 +12,7 @@
 # CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            test1
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32common }
   - { id: 1, class: gpr32 }
@@ -45,6 +46,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test2
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64common }
   - { id: 1, class: gpr64 }
@@ -78,6 +80,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBWrr %5, killed %6
 
 name:           test3
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32common }
   - { id: 1, class: gpr32 }
@@ -111,6 +114,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr64 = SUBXrr [[TMP]], %5
 
 name:            test4
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64common }
   - { id: 1, class: gpr64 }
@@ -144,6 +148,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBSWrr killed %3, killed %6, implicit-def $nzcv
 
 name:            test5
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32common }
   - { id: 1, class: gpr32 }
@@ -177,6 +182,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr64 = SUBXrr killed %3, killed %6
 
 name:            test6
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64common }
   - { id: 1, class: gpr64 }
@@ -210,6 +216,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBWrr killed %3, %6
 
 name:            test7
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32common }
   - { id: 1, class: gpr32 }
@@ -245,6 +252,7 @@ body:              |
 # CHECK-NEXT:  %4:gpr64common = SUBXrr [[SUBXrr]], %2
 
 name:            test8
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr64 }
   - { id: 1, class: gpr64 }
@@ -272,6 +280,7 @@ body:              |
 # CHECK-NEXT:  %7:gpr32 = SUBWrr [[TMP]], %5
 
 name:            wzr
+tracksRegLiveness: false
 registers:
   - { id: 0, class: gpr32common }
   - { id: 1, class: gpr32 }

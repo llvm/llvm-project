@@ -5,6 +5,7 @@
 
 ---
 name:            readlane
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -23,6 +24,7 @@ body:             |
 # Readlane with physical register as operand
 ---
 name:            readlane2
+tracksRegLiveness: false
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -63,6 +65,7 @@ body:             |
 ---
 name:            dyn_stackalloc_divergent_size
 legalized:       true
+tracksRegLiveness: false
 frameInfo:
   maxAlignment: 4
 stack:

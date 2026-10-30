@@ -57,6 +57,7 @@
 ...
 ---
 name:            l
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK: bb.0:

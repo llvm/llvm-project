@@ -5,6 +5,7 @@
 
 ---
 name:            undef_virtreg
+tracksRegLiveness: false
 body:             |
   bb.0:
 

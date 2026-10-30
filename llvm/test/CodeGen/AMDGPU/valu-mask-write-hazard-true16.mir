@@ -3,6 +3,7 @@
 
 ---
 name:            mask_hazard_cndmask_t16_dpp4
+tracksRegLiveness: false
 body:            |
   bb.0:
     ; GCN-LABEL: name: mask_hazard_cndmask_t16_dpp4

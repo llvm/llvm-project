@@ -74,6 +74,7 @@
 ---
 name:            f1
 alignment:       8
+tracksRegLiveness: false
 stack:
   - { id: 0, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
       stack-id: default, callee-saved-register: '$r31_64', callee-saved-restored: true, 

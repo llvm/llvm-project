@@ -4,6 +4,7 @@
 name:            ptr_add
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0
@@ -24,6 +25,7 @@ body:             |
 name:            ptr_add_no_constant
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0, $x1
@@ -44,6 +46,7 @@ body:             |
 name:            ptr_add_bad_imm
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0, $x1
@@ -65,6 +68,7 @@ body:             |
 name:            ptr_add_vec
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $q0, $q1
@@ -84,6 +88,7 @@ body:             |
 name:            ptr_add_neg_imm
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0
@@ -103,6 +108,7 @@ body:             |
 name:            ptr_add_arith_extended
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0
@@ -126,6 +132,7 @@ body:             |
 name:            ptr_add_negated_reg
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0:
       liveins: $x0, $x1

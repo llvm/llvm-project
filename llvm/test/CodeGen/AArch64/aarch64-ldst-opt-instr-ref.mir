@@ -73,6 +73,7 @@ name:            _ZNK4llvm9StringRef4sizeEv
 name:            _ZNK4llvm9StringRef4dataEv
 ...
 name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE
+tracksRegLiveness: false
 debugValueSubstitutions: []
 body:             |
   bb.0 (%ir-block.0):
@@ -82,6 +83,7 @@ body:             |
     DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_fragment, 64, 32), dbg-instr-ref(2, 0), debug-location !9
 ...
 name:            _ZNK4llvm7Pattern5matchENS_9StringRefERKNS_9SourceMgrE2
+tracksRegLiveness: false
 debugValueSubstitutions: []
 body:             |
   bb.0 (%ir-block.0):

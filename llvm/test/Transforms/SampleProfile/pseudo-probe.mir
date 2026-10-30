@@ -10,6 +10,7 @@
 # CHECK: PSEUDO_PROBE 6699318081062747564, 4, 0, 0
 
 name:            foo
+tracksRegLiveness: false
 body:             |
   bb.0:
     TEST32rr killed renamable $edi, renamable $edi, implicit-def $eflags

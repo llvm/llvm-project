@@ -7,6 +7,7 @@
 
 ---
 name: licm_reg_sequence
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: licm_reg_sequence
   ; CHECK: bb.0:
@@ -49,6 +50,7 @@ body: |
 # reason for these to be legal)?
 ---
 name: licm_reg_sequence_physreg_use
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: licm_reg_sequence_physreg_use
   ; CHECK: bb.0:
@@ -92,6 +94,7 @@ body: |
 
 ---
 name: licm_insert_subreg
+tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: licm_insert_subreg
   ; CHECK: bb.0:

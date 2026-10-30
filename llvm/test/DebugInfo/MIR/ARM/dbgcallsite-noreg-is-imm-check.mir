@@ -51,6 +51,7 @@
 ---
 name:            func1
 alignment:       4
+tracksRegLiveness: false
 callSites:
   - { bb: '%bb.0', offset: 11, fwdArgRegs:
       - { arg: 0, reg: '$r0' } }

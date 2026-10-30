@@ -7,6 +7,7 @@
 # GCN: BUFFER_STORE_DWORD_OFFEN
 ---
 name:            test
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
 

@@ -5,6 +5,7 @@
 
 ---
 name:            simple
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -23,6 +24,7 @@ body:             |
 
 ---
 name:            salu_in_between
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -43,6 +45,7 @@ body:             |
 
 ---
 name:            meta_in_between
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: meta_in_between
@@ -64,6 +67,7 @@ body:             |
 
 ---
 name:            valu_write_in_between
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -86,6 +90,7 @@ body:             |
 
 ---
 name:            valu_read_in_between
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -108,6 +113,7 @@ body:             |
 
 ---
 name:            changed_index
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -130,6 +136,7 @@ body:             |
 
 ---
 name:            implicitly_changed_index
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -152,6 +159,7 @@ body:             |
 
 ---
 name:            changed_m0
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -174,6 +182,7 @@ body:             |
 
 ---
 name:            implicitly_changed_m0
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -196,6 +205,7 @@ body:             |
 
 ---
 name:            same_imm_index
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -214,6 +224,7 @@ body:             |
 
 ---
 name:            different_imm_index
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -234,6 +245,7 @@ body:             |
 
 ---
 name:            different_gpr_index
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -254,6 +266,7 @@ body:             |
 
 ---
 name:            different_gpr_index_then_same_index
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -280,6 +293,7 @@ body:             |
 
 ---
 name:            use_m0_with_idx_off
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -300,6 +314,7 @@ body:             |
 
 ---
 name:            three_in_a_row
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -322,6 +337,7 @@ body:             |
 
 ---
 name:            different_gpr_index_then_two_same_indexes
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -346,6 +362,7 @@ body:             |
 
 ---
 name:            two_same_indexes_then_different
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -370,6 +387,7 @@ body:             |
 
 ---
 name:            indirect_mov
+tracksRegLiveness: false
 body:             |
   bb.0:
 
@@ -390,6 +408,7 @@ body:             |
 
 ---
 name:            simple_bundle
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: simple_bundle
@@ -415,6 +434,7 @@ body:             |
 
 ---
 name:            salu_in_between_bundle
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: salu_in_between_bundle
@@ -442,6 +462,7 @@ body:             |
 
 ---
 name:            valu_in_between_bundle
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: valu_in_between_bundle
@@ -471,6 +492,7 @@ body:             |
 
 ---
 name:            changed_index_bundle
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; GCN-LABEL: name: changed_index_bundle
@@ -500,6 +522,7 @@ body:             |
 
 ---
 name:            simple_cbranch_vccz
+tracksRegLiveness: false
 body:             |
   ; GCN-LABEL: name: simple_cbranch_vccz
   ; GCN: bb.0:
@@ -525,6 +548,7 @@ body:             |
 
 ---
 name:            simple_cbranch_execz
+tracksRegLiveness: false
 body:             |
   ; GCN-LABEL: name: simple_cbranch_execz
   ; GCN: bb.0:

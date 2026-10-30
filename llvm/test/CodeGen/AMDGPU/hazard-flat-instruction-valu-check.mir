@@ -4,6 +4,7 @@
 
 ---
 name:            test_flat_valu_hazard
+tracksRegLiveness: false
 noVRegs:         true
 body:             |
   bb.0:

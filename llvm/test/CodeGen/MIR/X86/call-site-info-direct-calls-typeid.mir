@@ -34,6 +34,7 @@
 ...
 ---
 name:            bar
+tracksRegLiveness: false
 callSites:
   - { bb: '%bb.0', offset: 0, fwdArgRegs: [] }
   - { bb: '%bb.0', offset: 1, fwdArgRegs: [] }
@@ -45,6 +46,7 @@ body:             |
 ...
 ---
 name:            foo
+tracksRegLiveness: false
 callSites:
   - { bb: '%bb.0', offset: 0, fwdArgRegs: [] }
 body:             |

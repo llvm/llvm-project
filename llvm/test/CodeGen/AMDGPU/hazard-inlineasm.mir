@@ -13,6 +13,7 @@
 
 ---
 name: hazard-inlineasm
+tracksRegLiveness: false
 
 body: |
   bb.0:

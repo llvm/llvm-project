@@ -3,6 +3,7 @@
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -passes=postmisched -o - %s | FileCheck %s
 ---
 name:            test_xnull_256
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_xnull_256

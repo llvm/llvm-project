@@ -304,6 +304,7 @@ TEST_F(MachineMetadataTest, isMetaInstruction) {
 ...
 ---
 name:            test0
+tracksRegLiveness: false
 machineFunctionInfo
 body:             |
   bb.0:

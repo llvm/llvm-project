@@ -17,6 +17,7 @@
 
 ---
 name:            test-wcg-attributes-noexpert
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test-wcg-attributes-noexpert
@@ -35,6 +36,7 @@ body:             |
 
 ---
 name:            test-wcg-attributes-expert
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test-wcg-attributes-expert

@@ -3,6 +3,7 @@
 
 ---
 name: Cst_UAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_UAvgFloor
@@ -15,6 +16,7 @@ body: |
 ...
 ---
 name: Cst_UAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_UAvgCeil
@@ -27,6 +29,7 @@ body: |
 ...
 ---
 name: CstNoOverflow_UAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstNoOverflow_UAvgFloor
@@ -39,6 +42,7 @@ body: |
 ...
 ---
 name: CstNoOverflow_UAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstNoOverflow_UAvgCeil
@@ -51,6 +55,7 @@ body: |
 ...
 ---
 name: Cst_SAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Cst_SAvgFloor
@@ -63,6 +68,7 @@ body: |
 ...
 ---
 name: CstNoOverflow_SAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstNoOverflow_SAvgFloor
@@ -75,6 +81,7 @@ body: |
 ...
 ---
 name: CstNoOverflow_SAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @CstNoOverflow_SAvgCeil
@@ -87,6 +94,7 @@ body: |
 ...
 ---
 name: PartialKnown_UAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @PartialKnown_UAvgFloor
@@ -103,6 +111,7 @@ body: |
 ...
 ---
 name: Vector_UAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Vector_UAvgFloor
@@ -119,6 +128,7 @@ body: |
 ...
 ---
 name: Unknown_SAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @Unknown_SAvgCeil
@@ -131,6 +141,7 @@ body: |
 ...
 ---
 name: SExtInReg_SAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SExtInReg_SAvgFloor
@@ -147,6 +158,7 @@ body: |
 ...
 ---
 name: SExtInReg_SAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SExtInReg_SAvgCeil
@@ -163,6 +175,7 @@ body: |
 ...
 ---
 name: SExtInRegMixed_SAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SExtInRegMixed_SAvgFloor
@@ -179,6 +192,7 @@ body: |
 ...
 ---
 name: SExtInRegMixed_SAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @SExtInRegMixed_SAvgCeil
@@ -195,6 +209,7 @@ body: |
 ...
 ---
 name: UnknownOperand_SAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @UnknownOperand_SAvgFloor
@@ -209,6 +224,7 @@ body: |
 ...
 ---
 name: UnknownOperand_SAvgCeil
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @UnknownOperand_SAvgCeil
@@ -223,6 +239,7 @@ body: |
 ...
 ---
 name: UnknownOperand_SAvgFloor_Mirror
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @UnknownOperand_SAvgFloor_Mirror
@@ -237,6 +254,7 @@ body: |
 ...
 ---
 name: AShr_SAvgFloor
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @AShr_SAvgFloor

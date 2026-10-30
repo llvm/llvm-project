@@ -445,6 +445,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the CodeGen infrastructure
 
+* `tracksRegLiveness` is now assumed true by default in all MIR functions. MIR
+  tests which wish to opt out of liveness tracking should set
+  `tracksRegLiveness: false` explicitly.
 * Fixed a crash
   ([#214750](https://github.com/llvm/llvm-project/issues/214750)) when
   compiling a function containing a static alloca of `(size_t)-1` bytes, whose

@@ -3,6 +3,7 @@
 ---
 # Extract subvector from constant vector - known bits propagate
 name: ExtractSubvector_Constant
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_Constant
@@ -30,6 +31,7 @@ body: |
 ---
 # Extract subvector with known zero high bits
 name: ExtractSubvector_KnownZero
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_KnownZero
@@ -47,6 +49,7 @@ body: |
 ---
 # Extract from non-zero index
 name: ExtractSubvector_HighIndex
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_HighIndex
@@ -74,6 +77,7 @@ body: |
 ---
 # Scalable vector - conservative known bits
 name: ExtractSubvector_Scalable
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_Scalable
@@ -93,6 +97,7 @@ body: |
 # computeNumSignBits: sign bits propagate through extract subvector
 # Tests both lower and upper half extraction
 name: ExtractSubvector_Sext
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_Sext
@@ -112,6 +117,7 @@ body: |
 ---
 # computeNumSignBits: unknown in lower half, extract upper half
 name: ExtractSubvector_Sext_HighIndex
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_Sext_HighIndex
@@ -129,6 +135,7 @@ body: |
 ---
 # computeNumSignBits: scalable vector conservative
 name: ExtractSubvector_Sext_Scalable
+tracksRegLiveness: false
 body: |
   bb.0:
   ; CHECK-LABEL: name: @ExtractSubvector_Sext_Scalable

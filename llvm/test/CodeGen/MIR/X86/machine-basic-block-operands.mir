@@ -33,6 +33,7 @@
 ---
 # CHECK: name: foo
 name:            foo
+tracksRegLiveness: false
 body: |
   ; CHECK: bb.0.entry
   bb.0.entry:
@@ -54,6 +55,7 @@ body: |
 ---
 # CHECK: name: bar
 name:            bar
+tracksRegLiveness: false
 body: |
   ; CHECK: bb.0.entry:
   bb.0.entry:

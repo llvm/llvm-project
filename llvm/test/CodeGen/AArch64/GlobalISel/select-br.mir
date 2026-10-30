@@ -14,6 +14,7 @@
 name:            unconditional_br
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 # CHECK:  body:
 # CHECK:   bb.0:
@@ -31,6 +32,7 @@ body:             |
 name:            conditional_br
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }
@@ -55,6 +57,7 @@ body:             |
 name:            indirect_br
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 registers:
   - { id: 0, class: gpr }

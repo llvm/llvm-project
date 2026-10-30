@@ -8,6 +8,7 @@
 ...
 ---
 name:            baz
+tracksRegLiveness: false
 body:             |
   bb.0:
 

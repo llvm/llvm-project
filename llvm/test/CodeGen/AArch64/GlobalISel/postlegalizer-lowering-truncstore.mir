@@ -4,6 +4,7 @@
 ---
 name:            truncstore_s8
 legalized:       true
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     liveins: $x0
@@ -21,6 +22,7 @@ body: |
 ---
 name:            truncstore_vector
 legalized:       true
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     liveins: $x0
@@ -39,6 +41,7 @@ body: |
 ---
 name:            truncstore_too_large
 legalized:       true
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     liveins: $x0

@@ -23,6 +23,7 @@
 ---
 # CHECK-LABEL: test0
 name: test0
+tracksRegLiveness: false
 liveins:
   - { reg: '$arguments' }
 body: |

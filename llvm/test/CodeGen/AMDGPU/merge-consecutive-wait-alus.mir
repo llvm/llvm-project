@@ -4,6 +4,7 @@
 
 ---
 name: merge_consecutive_wait_alus
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -20,6 +21,7 @@ body:             |
 ...
 ---
 name: merge_consecutive_wait_alus_two_bb
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: merge_consecutive_wait_alus_two_bb
   ; CHECK: bb.0:
@@ -47,6 +49,7 @@ body:             |
 ...
 ---
 name: meta_instructions
+tracksRegLiveness: false
 machineFunctionInfo:
 body: |
   bb.0:
@@ -63,6 +66,7 @@ body: |
 ...
 ---
 name: debug_instruction
+tracksRegLiveness: false
 machineFunctionInfo:
 body: |
   bb.0:

@@ -4,6 +4,7 @@
 ---
 name: class_ss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -24,6 +25,7 @@ body: |
 ---
 name: class_sv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -44,6 +46,7 @@ body: |
 ---
 name: class_vs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -63,6 +66,7 @@ body: |
 ---
 name: class_vv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

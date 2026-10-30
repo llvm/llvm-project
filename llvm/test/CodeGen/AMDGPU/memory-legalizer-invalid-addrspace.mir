@@ -5,6 +5,7 @@
 # GCN: error: <unknown>:0:0: in function invalid_load void (): Unsupported atomic address space
 
 name:            invalid_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -23,6 +24,7 @@ body:             |
 # GCN: error: <unknown>:0:0: in function invalid_store void (): Unsupported atomic address space
 
 name:            invalid_store
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -39,6 +41,7 @@ body:             |
 # GCN: error: <unknown>:0:0: in function invalid_cmpxchg void (): Unsupported atomic address space
 
 name:            invalid_cmpxchg
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -56,6 +59,7 @@ body:             |
 # GCN: error: <unknown>:0:0: in function invalid_rmw void (): Unsupported atomic address space
 
 name:            invalid_rmw
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1

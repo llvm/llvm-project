@@ -4,6 +4,7 @@
 ---
 name: fma_sss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -23,6 +24,7 @@ body: |
 ---
 name: fma_vss
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -44,6 +46,7 @@ body: |
 ---
 name: fma_svs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -65,6 +68,7 @@ body: |
 ---
 name: fma_ssv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -86,6 +90,7 @@ body: |
 ---
 name: fma_vvs
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -106,6 +111,7 @@ body: |
 ---
 name: fma_vsv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -126,6 +132,7 @@ body: |
 ---
 name: fma_svv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -146,6 +153,7 @@ body: |
 ---
 name: fma_vvv
 legalized: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

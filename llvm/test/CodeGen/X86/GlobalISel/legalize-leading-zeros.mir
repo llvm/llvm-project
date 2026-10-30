@@ -12,6 +12,7 @@ name:            test_ctlz35
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
 body:             |
@@ -66,6 +67,7 @@ name:            test_ctlz8
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -90,6 +92,7 @@ name:            test_ctlz64
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -128,6 +131,7 @@ name:            test_ctlz32
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }
@@ -148,6 +152,7 @@ name:            test_ctlz16
 alignment:       16
 legalized:       false
 regBankSelected: false
+tracksRegLiveness: false
 registers:
   - { id: 0, class: _, preferred-register: '' }
   - { id: 1, class: _, preferred-register: '' }

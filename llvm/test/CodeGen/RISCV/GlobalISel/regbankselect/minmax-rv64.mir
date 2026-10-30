@@ -6,6 +6,7 @@
 ---
 name:            smax_i64
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: smax_i64
@@ -24,6 +25,7 @@ body:             |
 ---
 name:            smin_i64
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: smin_i64
@@ -42,6 +44,7 @@ body:             |
 ---
 name:            umax_i64
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: umax_i64
@@ -60,6 +63,7 @@ body:             |
 ---
 name:            umin_i64
 legalized:       true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV64I-LABEL: name: umin_i64

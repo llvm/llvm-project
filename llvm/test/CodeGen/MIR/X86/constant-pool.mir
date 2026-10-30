@@ -52,6 +52,7 @@
 # CHECK-NEXT:   alignment: 4
 # CHECK-NEXT:   isTargetSpecific: false
 name:            test
+tracksRegLiveness: false
 constants:
   - id:          0
     value:       'double 3.250000e+00'
@@ -82,6 +83,7 @@ body: |
 # CHECK-NEXT:   alignment: 4
 # CHECK-NEXT:   isTargetSpecific: false
 name:            test2
+tracksRegLiveness: false
 constants:
   - id:          0
     value:       'double 3.250000e+00'
@@ -108,6 +110,7 @@ body: |
 # CHECK-NEXT:   alignment: 1
 # CHECK-NEXT:   isTargetSpecific: false
 name:            test3
+tracksRegLiveness: false
 constants:
   - id:          0
     value:       'double 3.250000e+00'
@@ -128,6 +131,7 @@ body: |
 ---
 # CHECK:  name:  test4
 name:            test4
+tracksRegLiveness: false
 constants:
   - id:          0
     value:       'double 3.250000e+00'

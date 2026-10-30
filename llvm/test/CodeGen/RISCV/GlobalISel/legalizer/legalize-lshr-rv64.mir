@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            lshr_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i8
@@ -26,6 +27,7 @@ body:             |
 ...
 ---
 name:            lshr_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i15
@@ -49,6 +51,7 @@ body:             |
 ...
 ---
 name:            lshr_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i16
@@ -72,6 +75,7 @@ body:             |
 ...
 ---
 name:            lshr_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i32
@@ -92,6 +96,7 @@ body:             |
 ...
 ---
 name:            lshr_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i64
@@ -109,6 +114,7 @@ body:             |
 ...
 ---
 name:            lshr_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i72
@@ -154,6 +160,7 @@ body:             |
 ...
 ---
 name:            lshr_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i128
@@ -192,6 +199,7 @@ body:             |
 ...
 ---
 name:            lshr_i192
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: lshr_i192
@@ -279,6 +287,7 @@ body:             |
 ...
 ---
 name:            lshr_i48
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10, $x11
@@ -306,6 +315,7 @@ body:             |
 ...
 ---
 name:            lshr_i32_i48
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10

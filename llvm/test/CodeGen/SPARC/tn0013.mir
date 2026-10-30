@@ -9,6 +9,7 @@
 # CHECK-NEXT: $f3 = FADDS $f1, $f2
 # CHECK-NEXT: $f0 = FDIVS $f4, $f5
 name:            er-8-1
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $f0 = FSQRTS $f0
@@ -24,6 +25,7 @@ body:             |
 # CHECK-NEXT: $f3 = FADDS $f1, $f2
 # CHECK-NEXT: $f0 = FSQRTS $f4
 name:            er-8-2
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $f0 = FDIVS $f0, $f0
@@ -35,6 +37,7 @@ body:             |
 ---
 # CHECK-NOT:  NOP
 name:            er-9
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $f0 = FSQRTS $f0
@@ -46,6 +49,7 @@ body:             |
 ---
 # CHECK-NOT:  NOP
 name:            er-10
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $f0 = FSQRTS $f0
@@ -60,6 +64,7 @@ body:             |
 # CHECK:      $f0 = FDIVS $f0, $f0
 # CHECK-NEXT: NOP
 name:            er-11
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     successors: %bb.3, %bb.1
@@ -83,6 +88,7 @@ body:             |
 # CHECK-NEXT: NOP
 # CHECK-NEXT: STri $i6, -84, $i2
 name:            er-8-3
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $f1 = FDIVS $f0, $f1

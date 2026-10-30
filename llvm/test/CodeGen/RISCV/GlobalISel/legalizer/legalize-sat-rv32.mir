@@ -6,6 +6,7 @@
 
 ---
 name:            uaddsat_i32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -43,6 +44,7 @@ body:             |
 ...
 ---
 name:            uaddsat_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -84,6 +86,7 @@ body:             |
 ...
 ---
 name:            saddsat_i32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -133,6 +136,7 @@ body:             |
 ...
 ---
 name:            saddsat_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -188,6 +192,7 @@ body:             |
 ...
 ---
 name:            usubsat_i32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -222,6 +227,7 @@ body:             |
 ...
 ---
 name:            usubsat_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -261,6 +267,7 @@ body:             |
 ...
 ---
 name:            ssubsat_i32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -310,6 +317,7 @@ body:             |
 ...
 ---
 name:            ssubsat_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -363,6 +371,7 @@ body:             |
 ...
 ---
 name:            uaddsat_i8
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -393,6 +402,7 @@ body:             |
 ...
 ---
 name:            sshlsat_i32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -422,6 +432,7 @@ body:             |
 ...
 ---
 name:            sshlsat_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -490,6 +501,7 @@ body:             |
 ...
 ---
 name:            ushlsat_i32
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11
@@ -515,6 +527,7 @@ body:             |
 ...
 ---
 name:            ushlsat_i64
+tracksRegLiveness: false
 body:             |
   bb.1:
     liveins: $x10, $x11

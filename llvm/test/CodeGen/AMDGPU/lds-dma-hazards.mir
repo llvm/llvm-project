@@ -6,6 +6,7 @@
 # GCN-NEXT: BUFFER_LOAD_DWORD_LDS_ADDR64
 ---
 name: buffer_load_dword_lds
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -18,6 +19,7 @@ body:             |
 # GCN-NEXT: BUFFER_STORE_LDS_DWORD
 ---
 name: buffer_store_lds_dword
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -30,6 +32,7 @@ body:             |
 # GCN-NEXT: GLOBAL_LOAD_LDS_DWORD
 ---
 name: global_load_lds_dword
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
@@ -42,6 +45,7 @@ body:             |
 # GCN-NEXT: SCRATCH_LOAD_LDS_DWORD
 ---
 name: scratch_load_lds_dword
+tracksRegLiveness: false
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0

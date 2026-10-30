@@ -371,6 +371,7 @@ body:             |
 
 ---
 name:            test_multi_use_load
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_load
@@ -390,6 +391,7 @@ body:             |
 
 ---
 name:            test_multi_use_zextload
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_zextload
@@ -409,6 +411,7 @@ body:             |
 
 ---
 name:            test_multi_use_sextload
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_sextload
@@ -430,6 +433,7 @@ body:             |
 
 ---
 name:            test_multi_use_load_large_mask
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_load_large_mask
@@ -451,6 +455,7 @@ body:             |
 
 ---
 name:            test_multi_use_sextload_large_mask
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_sextload_large_mask
@@ -472,6 +477,7 @@ body:             |
 
 ---
 name:            test_multi_use_load_small_mask
+tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_multi_use_load_small_mask

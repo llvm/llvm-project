@@ -4,6 +4,7 @@
 
 ---
 name:            test_inserts_nonpow2
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -27,6 +28,7 @@ body: |
 ...
 ---
 name:            test_inserts_s96
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -57,6 +59,7 @@ body: |
 ...
 ---
 name:            test_inserts_s65
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $x1, $x2
@@ -277,6 +280,7 @@ body: |
 ...
 ---
 name:            s1_s32_legal
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -298,6 +302,7 @@ body: |
 ...
 ---
 name:            s8_s32_legal
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $b0
@@ -317,6 +322,7 @@ body: |
 ...
 ---
 name:            s16_s32_legal
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $h0
@@ -336,6 +342,7 @@ body: |
 ...
 ---
 name:            s32_s64_legal
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $w0
@@ -355,6 +362,7 @@ body: |
 ...
 ---
 name:            s32_p0_legal
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x0, $w0
@@ -374,6 +382,7 @@ body: |
 ...
 ---
 name:            s32_s128
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $q0, $w0
@@ -395,6 +404,7 @@ body: |
 ...
 ---
 name:            s1_s128
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $q0, $w0
@@ -418,6 +428,7 @@ body: |
 ...
 ---
 name:            s4_s32
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $w0, $w1

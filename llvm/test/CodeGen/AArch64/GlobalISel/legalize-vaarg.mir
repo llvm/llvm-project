@@ -29,6 +29,7 @@
 
 ---
 name:            test_vaarg
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: test_vaarg

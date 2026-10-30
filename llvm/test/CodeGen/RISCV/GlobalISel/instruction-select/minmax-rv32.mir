@@ -7,6 +7,7 @@
 name:            smax_i32
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: smax_i32
@@ -26,6 +27,7 @@ body:             |
 name:            smin_i32
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: smin_i32
@@ -45,6 +47,7 @@ body:             |
 name:            umax_i32
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: umax_i32
@@ -64,6 +67,7 @@ body:             |
 name:            umin_i32
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; RV32I-LABEL: name: umin_i32

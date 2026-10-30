@@ -3,6 +3,7 @@
 # RUN: | FileCheck %s
 ---
 name:            ashr_i8
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i8
@@ -28,6 +29,7 @@ body:             |
 ...
 ---
 name:            ashr_i15
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i15
@@ -53,6 +55,7 @@ body:             |
 ...
 ---
 name:            ashr_i16
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i16
@@ -78,6 +81,7 @@ body:             |
 ...
 ---
 name:            ashr_i32
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i32
@@ -98,6 +102,7 @@ body:             |
 ...
 ---
 name:            ashr_i64
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i64
@@ -115,6 +120,7 @@ body:             |
 ...
 ---
 name:            ashr_i72
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i72
@@ -161,6 +167,7 @@ body:             |
 ...
 ---
 name:            ashr_i128
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i128
@@ -201,6 +208,7 @@ body:             |
 ...
 ---
 name:            ashr_i192
+tracksRegLiveness: false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: ashr_i192
@@ -292,6 +300,7 @@ body:             |
 ...
 ---
 name:            ashr_i48
+tracksRegLiveness: false
 body:             |
   bb.0:
     liveins: $x10, $x11

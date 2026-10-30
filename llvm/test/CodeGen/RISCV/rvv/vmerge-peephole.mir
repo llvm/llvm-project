@@ -6,6 +6,7 @@
 
 ---
 name: vle32
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -24,6 +25,7 @@ body: |
 ...
 ---
 name: vle32_no_passthru
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -42,6 +44,7 @@ body: |
 ...
 ---
 name: vle32_move_past_passthru
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -60,6 +63,7 @@ body: |
 ...
 ---
 name: vnclip_move_past_passthru
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -78,6 +82,7 @@ body: |
 ...
 ---
 name: vnclip_cant_move_past_passthru
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -99,6 +104,7 @@ body: |
 ...
 ---
 name: commute_vfmadd
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8, $v9, $v10
@@ -121,6 +127,7 @@ body: |
 ...
 ---
 name: true_copy
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -140,6 +147,7 @@ body: |
 ...
 ---
 name: copy_is_killed
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $v0, $v8, $v9
@@ -163,6 +171,7 @@ body: |
 ...
 ---
 name: copy_multiple_use
+tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x8, $v0, $v8
@@ -186,6 +195,7 @@ body: |
 ...
 ---
 name: true_copy_elimination
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: true_copy_elimination
   ; CHECK: bb.0:
@@ -216,6 +226,7 @@ body:             |
 ...
 ---
 name: increase_vl
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: increase_vl
@@ -232,6 +243,7 @@ body: |
 ---
 # Negative test: Shouldn't fold vmerge into the load because we may increase vl.
 name: increase_vl_load
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: increase_vl_load
@@ -249,6 +261,7 @@ body: |
 ---
 # VZIP uses a result-sized mask, so fold the vmerge into masked VZIP.
 name: vzip_mask_length
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: vzip_mask_length
@@ -262,6 +275,7 @@ body: |
 ...
 ---
 name: sink_past_false
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sink_past_false
@@ -275,6 +289,7 @@ body: |
 ...
 ---
 name: sink_past_avl
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sink_past_avl
@@ -288,6 +303,7 @@ body: |
 ...
 ---
 name: sink_past_avl_mask_false
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: sink_past_avl_mask_false

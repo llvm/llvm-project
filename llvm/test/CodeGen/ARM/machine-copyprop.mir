@@ -7,6 +7,7 @@
 # as clobbering the register.
 # The following two COPYs must not be removed
 name: func
+tracksRegLiveness: false
 body: |
   bb.0:
     ; CHECK-LABEL: name: func

@@ -5,6 +5,7 @@
 
 ---
 name: si-lower-control-flow
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GCN-LABEL: name: si-lower-control-flow
