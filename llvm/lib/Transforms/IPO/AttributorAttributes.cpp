@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -2523,11 +2524,19 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   const DataLayout &DL = A.getInfoCache().getDL();
   if (const auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->isBundleOperand(U)) {
-      if (RetainedKnowledge RK = getKnowledgeFromUse(
-              U, {Attribute::NonNull, Attribute::Dereferenceable})) {
-        IsNonNull |=
-            (RK.AttrKind == Attribute::NonNull || !NullPointerIsDefined);
-        return RK.ArgValue;
+      auto OBU = CB->getOperandBundleForOperand(U->getOperandNo());
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull:
+        IsNonNull = true;
+        break;
+      case BundleAttr::Dereferenceable: {
+        IsNonNull |= !NullPointerIsDefined;
+        Value *Count = getAssumeDereferenceableInfo(OBU).Count;
+        if (auto *CI = dyn_cast<ConstantInt>(Count))
+          return CI->getZExtValue();
+      } break;
+      default:
+        break;
       }
       return 0;
     }
