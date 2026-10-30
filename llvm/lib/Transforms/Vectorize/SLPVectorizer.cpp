@@ -23001,6 +23001,11 @@ public:
                count_if(E->UserTreeIndex.UserTE->Scalars,
                         [&](Value *V) { return V == EI; })) ||
           (NumParts != 1 && count(VL, EI) > 1) ||
+          // Other gather nodes may still use the extractelement.
+          any_of(R.ValueToGatherNodes.lookup(EI),
+                 [&](const TreeEntry *TE) {
+                   return TE != E && !R.DeletedNodes.contains(TE);
+                 }) ||
           any_of(EI->users(), [&](User *U) {
             ArrayRef<TreeEntry *> UTEs = R.getTreeEntries(U);
             return UTEs.empty() || UTEs.size() > 1 ||
