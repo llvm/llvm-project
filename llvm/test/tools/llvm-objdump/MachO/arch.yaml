@@ -1,0 +1,28 @@
+# RUN: yaml2obj %s -o %t.arm64 -DSUBTYPE=0x0
+# RUN: yaml2obj %s -o %t.arm64e_x1 -DSUBTYPE=0xC
+# RUN: llvm-lipo %t.arm64 %t.arm64e_x1 -create -output %t.fat
+
+# RUN: llvm-otool -arch arm64e.x1 -h %t.fat | FileCheck %s --check-prefix=X1
+# RUN: llvm-objdump --macho --arch=arm64e.x1 --private-header %t.fat \
+# RUN:     | FileCheck %s --check-prefix=X1V
+
+# X1:      Mach header
+# X1-NEXT: magic cputype cpusubtype caps filetype ncmds sizeofcmds flags
+# X1-NEXT: 0xfeedfacf 16777228 12
+# X1-NOT:  Mach header
+
+# RUN: llvm-otool -arch arm64e.x1 -hv %t.fat | FileCheck %s --check-prefix=X1V
+
+# X1V:     MH_MAGIC_64 ARM64 E.X1 0x00 OBJECT 0 0 0x00000000
+# X1V-NOT: MH_MAGIC_64
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x0100000C
+  cpusubtype:      [[SUBTYPE]]
+  filetype:        0x00000001
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x00000000
+  reserved:        0x00000000
