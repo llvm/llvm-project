@@ -187,8 +187,12 @@ bool IsNamedConstantDesignator(const Expr<SomeType> &);
 bool AnyNamedConstantActualArguments(const ActualArguments &);
 void FoldNamedConstantActualArguments(FoldingContext &, ActualArguments &);
 
+// \p calledThroughImplicitInterface tells that the procedure is called
+// through an implicit interface even though \p dummy is not null (e.g., when
+// the dummy characteristics were derived from the actual argument).
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *,
-    const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut);
+    const characteristics::DummyArgument *, FoldingContext &, bool forCopyOut,
+    bool calledThroughImplicitInterface = false);
 
 // Scan expressions and note uses of values of symbols.
 semantics::UnorderedSymbolSet CollectUsedSymbolValues(

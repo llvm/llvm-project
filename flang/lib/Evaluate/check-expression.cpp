@@ -1679,7 +1679,7 @@ void FoldNamedConstantActualArguments(
 
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
-    bool forCopyOut) {
+    bool forCopyOut, bool calledThroughImplicitInterface) {
   if (!actual) {
     return std::nullopt;
   }
@@ -1703,6 +1703,17 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     }
     if (forCopyOut) {
       return false;
+    }
+    // A conforming procedure never defines a dummy argument associated with
+    // a named constant.  Still, programs pass named constants through
+    // implicit interfaces to procedures that do define the dummy argument,
+    // and the dummy's characteristics are not known at such call sites:
+    // copy a whole named-constant array or a section of one into a
+    // temporary.  An array element is not copied: it may start a sequence
+    // association (F'2023 15.5.2.12), which a temporary holding only the
+    // element would break.
+    if ((calledThroughImplicitInterface || !dummyObj) && actual->Rank() > 0) {
+      return true;
     }
   }
   if (forCopyOut) {
