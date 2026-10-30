@@ -158,6 +158,9 @@ jobs:
             --cc "${RUNNER_TEMP}/llvm-install/bin/clang"                       \
             --use-make ninja                                                   \
             --use-lit lit                                                      \
+            --use-perf time                                                    \
+            --benchmarking-only                                                \
+            --threads 1                                                        \
             --report-format v5                                                 \
             --commit "${sha}"                                                  \
             "${ordinal_arg[@]}"                                                \
