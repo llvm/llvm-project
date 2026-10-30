@@ -4564,14 +4564,15 @@ private:
           // Remove extra deps for users, becoming non-immediate users of the
           // instruction. It may happen, if the chain of same copyable elements
           // appears in the tree. With the self-operand modeling (op(V, V)) the
-          // user node has the value on more than one operand column, so its
-          // copyable data releases the instruction's schedule data directly
-          // and must stay a counted user.
+          // user node may have the value on an operand column without copyable
+          // data, so its copyable data releases the instruction's schedule
+          // data directly and must stay a counted user.
           if (In == I) {
             unsigned NumCols = 0;
             for (unsigned OpIdx : seq<unsigned>(EI.UserTE->getNumOperands()))
-              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I;
-            if (NumCols <= 1) {
+              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I &&
+                         !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
+            if (NumCols == 0) {
               EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
               if (ScheduleCopyableData *UserCD =
                       getScheduleCopyableData(UserEI, In))
