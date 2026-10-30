@@ -1067,6 +1067,44 @@ bb:
   ret i32 %i11
 }
 
+define void @test_align_with_offset(ptr %p) {
+; BASIC-LABEL: define {{[^@]+}}@test_align_with_offset
+; BASIC-SAME: (ptr [[P:%.*]]) {
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; BASIC-NEXT:    store i64 0, ptr [[P]], align 8
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i1 true) ]
+; BASIC-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 1, i64 1) ]
+; BASIC-NEXT:    ret void
+;
+; WITH-AC-LABEL: define {{[^@]+}}@test_align_with_offset
+; WITH-AC-SAME: (ptr [[P:%.*]]) {
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; WITH-AC-NEXT:    store i64 0, ptr [[P]], align 8
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i1 true) ]
+; WITH-AC-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 1, i64 1) ]
+; WITH-AC-NEXT:    ret void
+;
+; CROSS-BLOCK-LABEL: define {{[^@]+}}@test_align_with_offset
+; CROSS-BLOCK-SAME: (ptr [[P:%.*]]) {
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; CROSS-BLOCK-NEXT:    store i64 0, ptr [[P]], align 8
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i1 true) ]
+; CROSS-BLOCK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 1, i64 1) ]
+; CROSS-BLOCK-NEXT:    ret void
+;
+; FULL-SIMPLIFY-LABEL: define {{[^@]+}}@test_align_with_offset
+; FULL-SIMPLIFY-SAME: (ptr [[P:%.*]]) {
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 8), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 8) ]
+; FULL-SIMPLIFY-NEXT:    store i64 0, ptr [[P]], align 8
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "noundef"(i1 true) ]
+; FULL-SIMPLIFY-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 1, i64 1) ]
+; FULL-SIMPLIFY-NEXT:    ret void
+;
+  store i64 0, ptr %p, align 8
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 1, i64 1) ]
+  ret void
+}
+
 attributes #0 = { cold nounwind willreturn }
 attributes #1 = { "no-jump-tables" }
 attributes #2 = { norecurse nounwind willreturn "less-precise-fpmad" "no-jump-tables" }
