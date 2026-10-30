@@ -109,13 +109,15 @@ exit:
   ret void
 }
 
+; This swaps *%a and *%b. Each load must stay above the store to its own
+; pointer, even when %a and %b do not alias.
 define void @independentldst(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @independentldst(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  bb76827:
-; CHECK-NEXT:    %"vl98792([[B]])" = load i32, ptr [[B]], align 4
-; CHECK-NEXT:    store i32 %"vl98792([[B]])", ptr [[A]], align 4
 ; CHECK-NEXT:    %"vl13896([[A]])" = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    %"vl98662([[B]])" = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    store i32 %"vl98662([[B]])", ptr [[A]], align 4
 ; CHECK-NEXT:    store i32 %"vl13896([[A]])", ptr [[B]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -145,14 +147,14 @@ define void @multiple_use_ld(ptr %a, ptr %b) {
   ret void
 }
 
-; This is an incorrect transformation. Moving the store above the load could
-; change the loaded value. To do this, the pointers would need to be `noalias`.
+; If %a and %b alias, the store to %b changes *%a, so the load of %a must stay
+; above it.
 define void @undef_st(ptr %a, ptr %b) {
 ; CHECK-LABEL: define void @undef_st(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
 ; CHECK-NEXT:  bb76827:
-; CHECK-NEXT:    store i32 undef, ptr [[B]], align 4
 ; CHECK-NEXT:    %"vl98662([[A]])" = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 undef, ptr [[B]], align 4
 ; CHECK-NEXT:    store i32 %"vl98662([[A]])", ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
