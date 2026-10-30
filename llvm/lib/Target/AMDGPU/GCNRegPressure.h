@@ -365,7 +365,8 @@ protected:
            MRI->isAllocatable(Reg);
   }
 
-  // Check if a register unit is live at a given slot index per LIS.
+  // Check if a register unit is live at a given slot index per LIS. The unit's
+  // live range is computed on demand if LIS has not cached it yet.
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
   // Construct physical register pressure from PhysLiveRegUnits.

@@ -527,9 +527,13 @@ LaneBitmask llvm::getLiveLaneMask(unsigned Reg, SlotIndex SI,
 }
 
 bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
-  const LiveRange *LR = LIS.getCachedRegUnit(Unit);
-  // If LIS has no reg-unit live range, be conservative and assume it is live.
-  return !LR || LR->liveAt(SI);
+  // Reserved units are not kept up to date, so only consult their cached range
+  // and conservatively assume they are live otherwise.
+  if (MRI->isReservedRegUnit(Unit)) {
+    const LiveRange *LR = LIS.getCachedRegUnit(Unit);
+    return !LR || LR->liveAt(SI);
+  }
+  return LIS.getRegUnit(Unit).liveAt(SI);
 }
 
 void GCNRPTracker::addUnitsAndIncPressure(MCRegister Reg,
