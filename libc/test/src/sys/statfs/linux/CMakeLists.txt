@@ -8,7 +8,6 @@ add_libc_test(
     statfs_test.cpp
   DEPENDS
     libc.hdr.sys_stat_macros
-    libc.src.errno.errno
     libc.src.sys.statfs.statfs
     libc.src.sys.stat.mkdirat
     libc.src.unistd.rmdir
@@ -24,7 +23,6 @@ add_libc_test(
     fstatfs_test.cpp
   DEPENDS
     libc.hdr.sys_stat_macros
-    libc.src.errno.errno
     libc.src.sys.statfs.fstatfs
     libc.src.sys.stat.mkdirat
     libc.src.unistd.rmdir

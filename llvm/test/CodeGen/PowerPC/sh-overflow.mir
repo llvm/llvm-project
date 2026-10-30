@@ -23,8 +23,8 @@ body:             |
 
     %0:gprc = COPY killed $r3
     %1:gprc = LI 0
-    %2:gprc = SRW killed %0, killed %1
-    $r3 = COPY killed %2
+    %2:gprc = SRW %0, %1
+    $r3 = COPY %2
     BLR implicit $lr, implicit $rm, implicit killed $r3
 
 ...
@@ -51,8 +51,8 @@ body:             |
 
     %0:g8rc = COPY killed $x3
     %1:gprc = LI 0
-    %2:g8rc = SRD killed %0, killed %1
-    $x3 = COPY killed %2
+    %2:g8rc = SRD %0, %1
+    $x3 = COPY %2
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
 
 ...

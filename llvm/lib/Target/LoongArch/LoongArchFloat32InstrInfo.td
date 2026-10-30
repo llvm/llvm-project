@@ -278,7 +278,7 @@ def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), (fsqrt FPR32:$fj))
           (FRSQRT_S FPR32:$fj)>;
 } // Predicates = [HasBasicF, IsLA64]
 let Predicates = [HasBasicF, IsLA32] in {
-def : Pat<(fdiv (loongarch_movgr2fr_w (i32 1065353216)), (fsqrt FPR32:$fj)),
+def : Pat<(fdiv (bitconvert (i32 1065353216)), (fsqrt FPR32:$fj)),
           (FRSQRT_S FPR32:$fj)>;
 } // Predicates = [HasBasicF, IsLA32]
 def : Pat<(fcanonicalize FPR32:$fj), (FMAX_S $fj, $fj)>;
@@ -399,7 +399,7 @@ def : Pat<(fdiv (loongarch_movgr2fr_w_la64 (i64 1065353216)), FPR32:$src),
           (FRECIP_S $src)>;
 } // Predicates = [HasBasicF, IsLA64]
 let Predicates = [HasBasicF, IsLA32] in {
-def : Pat<(fdiv (loongarch_movgr2fr_w (i32 1065353216)), FPR32:$src),
+def : Pat<(fdiv (bitconvert (i32 1065353216)), FPR32:$src),
           (FRECIP_S $src)>;
 } // Predicates = [HasBasicF, IsLA32]
 

@@ -6038,6 +6038,14 @@ SDValue DAGCombiner::visitABD(SDNode *N) {
       DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
     return DAG.getNode(ISD::ABDU, DL, VT, N1, N0);
 
+  // fold (abdu x, y) -> (sub x, y) iff x >= y (the sub doesn't wrap).
+  if (Opcode == ISD::ABDU) {
+    if (DAG.willNotOverflowSub(/*IsSigned=*/false, N0, N1))
+      return DAG.getNode(ISD::SUB, DL, VT, N0, N1);
+    if (DAG.willNotOverflowSub(/*IsSigned=*/false, N1, N0))
+      return DAG.getNode(ISD::SUB, DL, VT, N1, N0);
+  }
+
   // fold (abd? (?ext x), (?ext y)) -> (zext (abd? x, y))
   if (sd_match(N, m_BinOp(ISD::ABDU, m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) ||
       sd_match(N, m_BinOp(ISD::ABDS, m_SExt(m_Value(X)), m_SExt(m_Value(Y))))) {

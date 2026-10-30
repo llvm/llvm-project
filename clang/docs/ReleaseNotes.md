@@ -463,6 +463,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
 
+- Fixed thread safety attributes on a member of a nested struct or union, named
+  or anonymous, naming a member of the enclosing struct, such as
+  `struct Dst { unsigned len GUARDED_BY(lock); } dst;` after `Mutex lock;`.
+  The requirement is resolved on the enclosing object, `s->lock` for
+  `s->dst.len`, and is reported as `dst->Scratch::lock` when no enclosing
+  object is reachable.
+
 ### Improvements to Clang's diagnostics
 
 - Fixed missing `-Wuninitialized-explicit-init` warnings for C file-scope

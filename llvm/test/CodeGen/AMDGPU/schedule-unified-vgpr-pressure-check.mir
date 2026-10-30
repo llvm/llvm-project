@@ -1,0 +1,109 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=true -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=false -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+
+# Check the pressure limits used to accept the completed schedule. Live-ins
+# fix the region's peak pressure independently of candidate ordering.
+
+--- |
+  define amdgpu_kernel void @wide_budget() #0 { ret void }
+  define amdgpu_kernel void @vgpr_excess() #0 { ret void }
+  define amdgpu_kernel void @agpr_excess() #0 { ret void }
+  attributes #0 = { "amdgpu-flat-work-group-size"="64,64" }
+...
+
+# At occupancy 1, V=200 and A=100 fit the combined critical limit of 509,
+# even though the combined pressure exceeds the bank-clamped limit of 253.
+# CHECK-LABEL: wide_budget:%bb.1
+# CHECK: VGPRCriticalLimit = 253, UnifiedVGPRCriticalLimit = 509
+# CHECK: Pressure after scheduling: VGPRs: 200 AGPRs: 100
+# CHECK-NEXT: Region: {{[0-9]+}}.
+# CHECK-NEXT: Pressure in desired limits, done.
+---
+name: wide_budget
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy: 1
+body: |
+  bb.0:
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+    %v4:vreg_1024 = IMPLICIT_DEF
+    %v5:vreg_1024 = IMPLICIT_DEF
+    %v6:vreg_256 = IMPLICIT_DEF
+    %a0:areg_1024 = IMPLICIT_DEF
+    %a1:areg_1024 = IMPLICIT_DEF
+    %a2:areg_1024 = IMPLICIT_DEF
+    %a3:areg_128 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0, implicit %v0, implicit %v1, implicit %v2, implicit %v3, implicit %v4, implicit %v5, implicit %v6
+    S_NOP 1, implicit %a0, implicit %a1, implicit %a2, implicit %a3
+    S_ENDPGM 0
+...
+
+# V=260 and A=32 fit the combined budget, but the VGPR bank overflows.
+# Do not skip the spill and revert checks by accepting the schedule early.
+# CHECK-LABEL: vgpr_excess:%bb.1
+# CHECK: VGPRCriticalLimit = 253, UnifiedVGPRCriticalLimit = 509
+# CHECK: Pressure after scheduling: VGPRs: 260 AGPRs: 32
+# CHECK-NEXT: Region: {{[0-9]+}}.
+# CHECK-NEXT: Occupancy before scheduling: 1, after 1.
+---
+name: vgpr_excess
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy: 1
+body: |
+  bb.0:
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+    %v4:vreg_1024 = IMPLICIT_DEF
+    %v5:vreg_1024 = IMPLICIT_DEF
+    %v6:vreg_1024 = IMPLICIT_DEF
+    %v7:vreg_1024 = IMPLICIT_DEF
+    %v8:vreg_128 = IMPLICIT_DEF
+    %a0:areg_1024 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0, implicit %v0, implicit %v1, implicit %v2, implicit %v3, implicit %v4, implicit %v5, implicit %v6, implicit %v7, implicit %v8
+    S_NOP 1, implicit %a0
+    S_ENDPGM 0
+...
+
+# The same protection is needed when the AGPR bank overflows.
+# CHECK-LABEL: agpr_excess:%bb.1
+# CHECK: VGPRCriticalLimit = 253, UnifiedVGPRCriticalLimit = 509
+# CHECK: Pressure after scheduling: VGPRs: 32 AGPRs: 260
+# CHECK-NEXT: Region: {{[0-9]+}}.
+# CHECK-NEXT: Occupancy before scheduling: 1, after 1.
+---
+name: agpr_excess
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy: 1
+body: |
+  bb.0:
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %a0:areg_1024 = IMPLICIT_DEF
+    %a1:areg_1024 = IMPLICIT_DEF
+    %a2:areg_1024 = IMPLICIT_DEF
+    %a3:areg_1024 = IMPLICIT_DEF
+    %a4:areg_1024 = IMPLICIT_DEF
+    %a5:areg_1024 = IMPLICIT_DEF
+    %a6:areg_1024 = IMPLICIT_DEF
+    %a7:areg_1024 = IMPLICIT_DEF
+    %a8:areg_128 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+  bb.1:
+    S_NOP 0, implicit %v0
+    S_NOP 1, implicit %a0, implicit %a1, implicit %a2, implicit %a3, implicit %a4, implicit %a5, implicit %a6, implicit %a7, implicit %a8
+    S_ENDPGM 0
+...
