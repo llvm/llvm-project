@@ -689,3 +689,80 @@ let Predicates = [HasBMI2, HasEGPR] in {
   defm SHRX : ShiftX_Pats<srl, "_EVEX">;
   defm SHLX : ShiftX_Pats<shl, "_EVEX">;
 }
+
+// Patterns for X86ISD::SHR_FLAG - shift right with flags output.
+// Used when we need both the shifted result and the carry flag
+// (which contains the shifted-out bit). This is primarily used for
+// optimizing patterns like: (sub X, (and D, 1)) combined with (srl D, 1)
+// where the shift by 1 already puts the LSB into CF.
+
+// SHR_FLAG with immediate 1 - use the shift-by-1 instructions.
+let Predicates = [NoNDD] in {
+  def : Pat<(X86shr_flag GR8:$src, (i8 1)),
+            (SHR8r1 GR8:$src)>;
+  def : Pat<(X86shr_flag GR16:$src, (i8 1)),
+            (SHR16r1 GR16:$src)>;
+  def : Pat<(X86shr_flag GR32:$src, (i8 1)),
+            (SHR32r1 GR32:$src)>;
+  def : Pat<(X86shr_flag GR64:$src, (i8 1)),
+            (SHR64r1 GR64:$src)>;
+}
+
+let Predicates = [HasNDD, In64BitMode] in {
+  def : Pat<(X86shr_flag GR8:$src, (i8 1)),
+            (SHR8r1_ND GR8:$src)>;
+  def : Pat<(X86shr_flag GR16:$src, (i8 1)),
+            (SHR16r1_ND GR16:$src)>;
+  def : Pat<(X86shr_flag GR32:$src, (i8 1)),
+            (SHR32r1_ND GR32:$src)>;
+  def : Pat<(X86shr_flag GR64:$src, (i8 1)),
+            (SHR64r1_ND GR64:$src)>;
+}
+
+// SHR_FLAG with immediate > 1 - use the shift-by-immediate instructions.
+let Predicates = [NoNDD] in {
+  def : Pat<(X86shr_flag GR8:$src, (i8 timm:$amt)),
+            (SHR8ri GR8:$src, timm:$amt)>;
+  def : Pat<(X86shr_flag GR16:$src, (i8 timm:$amt)),
+            (SHR16ri GR16:$src, timm:$amt)>;
+  def : Pat<(X86shr_flag GR32:$src, (i8 timm:$amt)),
+            (SHR32ri GR32:$src, timm:$amt)>;
+  def : Pat<(X86shr_flag GR64:$src, (i8 timm:$amt)),
+            (SHR64ri GR64:$src, timm:$amt)>;
+}
+
+let Predicates = [HasNDD, In64BitMode] in {
+  def : Pat<(X86shr_flag GR8:$src, (i8 timm:$amt)),
+            (SHR8ri_ND GR8:$src, timm:$amt)>;
+  def : Pat<(X86shr_flag GR16:$src, (i8 timm:$amt)),
+            (SHR16ri_ND GR16:$src, timm:$amt)>;
+  def : Pat<(X86shr_flag GR32:$src, (i8 timm:$amt)),
+            (SHR32ri_ND GR32:$src, timm:$amt)>;
+  def : Pat<(X86shr_flag GR64:$src, (i8 timm:$amt)),
+            (SHR64ri_ND GR64:$src, timm:$amt)>;
+}
+
+// SHR_FLAG with CL register - use the shift-by-CL instructions.
+// Note: Currently unused since the optimization only handles shift-by-1,
+// but included for completeness.
+let Predicates = [NoNDD] in {
+  def : Pat<(X86shr_flag GR8:$src, CL),
+            (SHR8rCL GR8:$src)>;
+  def : Pat<(X86shr_flag GR16:$src, CL),
+            (SHR16rCL GR16:$src)>;
+  def : Pat<(X86shr_flag GR32:$src, CL),
+            (SHR32rCL GR32:$src)>;
+  def : Pat<(X86shr_flag GR64:$src, CL),
+            (SHR64rCL GR64:$src)>;
+}
+
+let Predicates = [HasNDD, In64BitMode] in {
+  def : Pat<(X86shr_flag GR8:$src, CL),
+            (SHR8rCL_ND GR8:$src)>;
+  def : Pat<(X86shr_flag GR16:$src, CL),
+            (SHR16rCL_ND GR16:$src)>;
+  def : Pat<(X86shr_flag GR32:$src, CL),
+            (SHR32rCL_ND GR32:$src)>;
+  def : Pat<(X86shr_flag GR64:$src, CL),
+            (SHR64rCL_ND GR64:$src)>;
+}
