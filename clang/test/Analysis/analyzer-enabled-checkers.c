@@ -56,6 +56,7 @@
 // CHECK-NEXT: unix.cstring.NotNullTerminated
 // CHECK-NEXT: unix.cstring.NullArg
 // CHECK-NEXT: unix.cstring.UninitializedRead
+// CHECK-NEXT: unix.fsetpos
 
 int main() {
   int i;
