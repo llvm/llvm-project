@@ -73,6 +73,11 @@ public:
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
 
+  /// Chain to this implementation from subclass overrides (so the
+  /// `DeadCodeAnalysis` dependency is preserved) and add any additional
+  /// dependencies of the concrete analysis.
+  void getDependentAnalyses(AnalysisDependencies &deps) const override;
+
   /// Initialize lattice anchor equivalence class from the provided top-level
   /// operation.
   ///
@@ -366,6 +371,11 @@ public:
   /// Initialize the analysis by visiting every program point whose execution
   /// may modify the program state; that is, every operation and block.
   LogicalResult initialize(Operation *top) override;
+
+  /// Chain to this implementation from subclass overrides (so the
+  /// `DeadCodeAnalysis` dependency is preserved) and add any additional
+  /// dependencies of the concrete analysis.
+  void getDependentAnalyses(AnalysisDependencies &deps) const override;
 
   /// Initialize lattice anchor equivalence class from the provided top-level
   /// operation.
