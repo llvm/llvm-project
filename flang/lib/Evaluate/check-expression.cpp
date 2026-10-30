@@ -1390,6 +1390,26 @@ std::optional<bool> IsContiguous(const ActualArgument &actual,
   } else if (const Symbol *assumedType{actual.GetAssumedTypeDummy()}) {
     result = IsContiguous(*assumedType, fc, namedConstantSectionsAreContiguous,
         firstDimensionStride1);
+  } else if (const auto *condArg{actual.GetConditionalArg()}) {
+    // Simply contiguous if and only if every consequent-arg is (F2023
+    // 15.5.2.3 p4). Any consequent-arg can be the one chosen at run time, so
+    // the argument is known to be discontiguous only if all of them are.
+    bool allContiguous{true};
+    bool allDiscontiguous{true};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (cons) { // .NIL. designates no object
+            auto contiguous{IsContiguous(cons->value(), fc,
+                namedConstantSectionsAreContiguous, firstDimensionStride1)};
+            allContiguous &= contiguous.value_or(false);
+            allDiscontiguous &= !contiguous.value_or(true);
+          }
+        });
+    if (allContiguous) {
+      result = true;
+    } else if (allDiscontiguous) {
+      result = false;
+    }
   }
   return result;
 }

@@ -1394,12 +1394,12 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   if (intrinsic) {
     // A conditional arg that survives the argument folding above has a
     // condition that isn't a compile-time constant, or belongs to KIND, whose
-    // arguments aren't folded. Either way, skip intrinsic folding unless every
-    // such argument corresponds to a type-only inquiry dummy. F2023 C1538
-    // (declared type and kind type parameters) and C1539 (rank) make every
-    // consequent-arg agree on what such an inquiry examines, so the first
-    // consequent-arg stands in for the whole argument in a copy of the
-    // reference.
+    // arguments aren't folded. Either way, skip intrinsic folding unless the
+    // intrinsic is IS_CONTIGUOUS or every such argument corresponds to a
+    // type-only inquiry dummy. F2023 C1538 (declared type and kind type
+    // parameters) and C1539 (rank) make every consequent-arg agree on what
+    // such an inquiry examines, so the first consequent-arg stands in for the
+    // whole argument in a copy of the reference.
     //
     // TODO:
     // For elemental/pure intrinsics, distribute the call over each
@@ -1415,6 +1415,9 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     std::optional<FunctionRef<T>> viaRepresentative;
     for (std::size_t j{0}; j < args.size(); ++j) {
       if (args[j] && args[j]->isConditionalArg()) {
+        if (intrinsic->name == "is_contiguous") {
+          continue; // IsContiguous() takes every consequent-arg into account
+        }
         const ActualArgument::ConditionalArg &condArg{
             DEREF(args[j]->GetConditionalArg())};
         // C1540 rules out .NIL. here in conforming code: no type-only inquiry

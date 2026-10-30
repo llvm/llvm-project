@@ -800,13 +800,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
-      std::optional<bool> knownContiguous;
-      if (auto *expr{args[0]->UnwrapExpr()}) {
-        knownContiguous = IsContiguous(*expr, context);
-      } else if (auto *assumedType{args[0]->GetAssumedTypeDummy()}) {
-        knownContiguous = IsContiguous(*assumedType, context);
-      }
-      if (knownContiguous) {
+      if (auto knownContiguous{IsContiguous(*args[0], context)}) {
         if (*knownContiguous) {
           if (auto source{args[0]->sourceLocation()}) {
             context.Warn(common::UsageWarning::ConstantIsContiguous, *source,
