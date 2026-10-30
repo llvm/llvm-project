@@ -207,6 +207,26 @@ struct FlattenInfo {
     if (!MatchedItCount)
       return false;
 
+    if (IsGEP) {
+      auto *OuterGEP = cast<GetElementPtrInst>(U);
+      auto *InnerGEP = cast<GetElementPtrInst>(OuterGEP->getOperand(0));
+
+      const DataLayout &DL = OuterGEP->getModule()->getDataLayout();
+
+      TypeSize InnerStep =
+          DL.getTypeAllocSize(InnerGEP->getSourceElementType());
+      TypeSize OuterStep =
+          DL.getTypeAllocSize(OuterGEP->getSourceElementType());
+
+      if (InnerStep != OuterStep) {
+        // Must be equal byte sizes or it is ubi
+        LLVM_DEBUG(dbgs() << "Steps are different : "
+                          << InnerStep << " "
+                          << OuterStep << "\n");
+        return false;
+      }
+    }
+
     LLVM_DEBUG(dbgs() << "Matched multiplication: "; MatchedMul->dump());
     LLVM_DEBUG(dbgs() << "Matched iteration count: "; MatchedItCount->dump());
 
