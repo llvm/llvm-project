@@ -23,19 +23,21 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct atomic_flag {
-  __cxx_atomic_impl<bool> __a_;
+  __cxx_atomic_impl<bool> __atomic_impl_;
 
-  bool test(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT { return __cxx_atomic_load(&__a_, __m); }
-  bool test(memory_order __m = memory_order_seq_cst) const _NOEXCEPT { return __cxx_atomic_load(&__a_, __m); }
+  bool test(memory_order __m = memory_order_seq_cst) const volatile _NOEXCEPT {
+    return __atomic_impl_.__atomic_load(__m);
+  }
+  bool test(memory_order __m = memory_order_seq_cst) const _NOEXCEPT { return __atomic_impl_.__atomic_load(__m); }
 
   bool test_and_set(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
-    return __cxx_atomic_exchange(&__a_, true, __m);
+    return __atomic_impl_.__atomic_exchange(true, __m);
   }
   bool test_and_set(memory_order __m = memory_order_seq_cst) _NOEXCEPT {
-    return __cxx_atomic_exchange(&__a_, true, __m);
+    return __atomic_impl_.__atomic_exchange(true, __m);
   }
-  void clear(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT { __cxx_atomic_store(&__a_, false, __m); }
-  void clear(memory_order __m = memory_order_seq_cst) _NOEXCEPT { __cxx_atomic_store(&__a_, false, __m); }
+  void clear(memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT { __atomic_impl_.__atomic_store(false, __m); }
+  void clear(memory_order __m = memory_order_seq_cst) _NOEXCEPT { __atomic_impl_.__atomic_store(false, __m); }
 
 #if _LIBCPP_STD_VER >= 20
   void wait(bool __v, memory_order __m = memory_order_seq_cst) const volatile noexcept {
@@ -49,12 +51,12 @@ struct atomic_flag {
 #endif
 
 #if _LIBCPP_STD_VER >= 20
-  constexpr atomic_flag() noexcept : __a_(false) {}
+  constexpr atomic_flag() noexcept : __atomic_impl_(false) {}
 #else
   atomic_flag() _NOEXCEPT = default;
 #endif
 
-  _LIBCPP_CONSTEXPR atomic_flag(bool __b) _NOEXCEPT : __a_(__b) {} // EXTENSION
+  _LIBCPP_CONSTEXPR atomic_flag(bool __b) _NOEXCEPT : __atomic_impl_(__b) {} // EXTENSION
 
   atomic_flag(const atomic_flag&)                     = delete;
   atomic_flag& operator=(const atomic_flag&)          = delete;
@@ -67,19 +69,19 @@ struct __atomic_waitable_traits<atomic_flag> {
   using __value_type _LIBCPP_NODEBUG = bool;
 
   static bool __atomic_load(const atomic_flag& __a, memory_order __order) {
-    return std::__cxx_atomic_load(&__a.__a_, __order);
+    return __a.__atomic_impl_.__atomic_load(__order);
   }
 
   static bool __atomic_load(const volatile atomic_flag& __a, memory_order __order) {
-    return std::__cxx_atomic_load(&__a.__a_, __order);
+    return __a.__atomic_impl_.__atomic_load(__order);
   }
 
   static const __cxx_atomic_impl<bool>* __atomic_contention_address(const atomic_flag& __a) {
-    return std::addressof(__a.__a_);
+    return std::addressof(__a.__atomic_impl_);
   }
 
   static const volatile __cxx_atomic_impl<bool>* __atomic_contention_address(const volatile atomic_flag& __a) {
-    return std::addressof(__a.__a_);
+    return std::addressof(__a.__atomic_impl_);
   }
 };
 #endif // _LIBCPP_STD_VER >= 20

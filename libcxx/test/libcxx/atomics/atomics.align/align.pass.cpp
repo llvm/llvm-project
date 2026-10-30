@@ -43,7 +43,7 @@ template <typename T>
 struct atomic_test : public std::__atomic_base<T> {
   atomic_test() {
     if (this->is_lock_free()) {
-      using AtomicImpl = decltype(this->__a_);
+      using AtomicImpl = decltype(this->__atomic_impl_);
       assert(alignof(AtomicImpl) >= sizeof(AtomicImpl) &&
              "expected natural alignment for lock-free type");
     }
