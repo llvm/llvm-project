@@ -19997,13 +19997,6 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
 
-    // Fix GFX950 v_pk_fma_f32 invalid op_sel by decomposing.
-    if (MI.getOpcode() == AMDGPU::V_PK_FMA_F32 &&
-        !TII->isLegalPkFMAF32OpSel(MI)) {
-      TII->decomposePkFMAF32(MI, MRI);
-      return;
-    }
-
     if (TII->isMAI(MI)) {
       // The ordinary src0, src1, src2 were legalized above.
       //

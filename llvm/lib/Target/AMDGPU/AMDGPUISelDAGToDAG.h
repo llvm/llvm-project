@@ -240,7 +240,11 @@ private:
                        SDValue &Omod) const;
 
   bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods,
-                       bool IsDOT = false) const;
+                       bool IsDOT = false, bool NoOpSel0 = false) const;
+  bool SelectVOP3PModsPkFmaOpSel0(SDValue In, SDValue &Src,
+                                  SDValue &SrcMods) const;
+  bool SelectVOP3PModsPkAddMulOpSel0(SDValue In, SDValue &Src,
+                                     SDValue &SrcMods) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const;
   bool SelectVOP3PModsF32(SDValue In, SDValue &Src, SDValue &SrcMods) const;
