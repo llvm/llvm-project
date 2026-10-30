@@ -147,13 +147,10 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           TypeSize AllocaSize = AI->getAllocationSize(MF->getDataLayout())
                                     .value_or(TypeSize::getZero());
           uint64_t TySize = AllocaSize.getKnownMinValue();
+          // Don't create zero-sized stack objects.
           if (TySize == 0) {
-            // Don't create zero-sized stack objects. The frame object keeps a
-            // link to the alloca it was created for, and alias analysis
-            // queries in later passes describe the object by that alloca, so
-            // the alloca has to allocate as much memory as the frame object
-            // does. Make it allocate the one byte the frame object gets.
             TySize = 1;
+            // The frame object links to original AllocaInst for alias analysis, so adjust that as well.
             auto *MutableAI = const_cast<AllocaInst *>(AI);
             MutableAI->setAllocatedType(Type::getInt8Ty(Fn->getContext()));
             MutableAI->setOperand(
