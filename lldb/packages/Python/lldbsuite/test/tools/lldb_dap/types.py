@@ -798,6 +798,9 @@ class StackFrame:
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
     compileUnitId: Optional[int] = None
+    languageSpecificData: Optional[Dict[str, Any]] = field(
+        metadata={"alias": "$__lldb_languageSpecificData"}, default=None
+    )
     presentationHint: Optional[StackFramePresentationHint] = None
 
 
