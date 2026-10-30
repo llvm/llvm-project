@@ -15,6 +15,7 @@
 #include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Attributes.h"
@@ -336,6 +337,22 @@ bool CallBase::isIndirectCall() const {
   if (isa<Function>(V) || isa<Constant>(V))
     return false;
   return !isInlineAsm();
+}
+
+bool CallBase::getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const {
+  const MDNode *MD = getMetadata(LLVMContext::MD_callees);
+  if (!MD || !all_of(MD->operands(), [](const MDOperand &Op) {
+        return mdconst::dyn_extract_or_null<Function>(Op);
+      }))
+    return false;
+
+  SmallPtrSet<Function *, 4> Seen;
+  for (const MDOperand &Op : MD->operands()) {
+    auto *Callee = mdconst::extract<Function>(Op);
+    if (Seen.insert(Callee).second)
+      Callees.push_back(Callee);
+  }
+  return true;
 }
 
 /// Tests if this call site must be tail call optimized. Only a CallInst can

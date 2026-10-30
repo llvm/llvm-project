@@ -3108,6 +3108,9 @@ void Verifier::verifyInlineAsmCall(const CallBase &Call) {
     Check(LabelNo == 0, "Label constraints can only be used with callbr",
           &Call);
   }
+
+  Check(!Call.hasMetadata(LLVMContext::MD_callees),
+        "!callees metadata is not allowed on inline asm calls", &Call);
 }
 
 /// Verify that statepoint intrinsic is well formed.

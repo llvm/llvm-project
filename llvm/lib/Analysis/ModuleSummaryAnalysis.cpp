@@ -495,14 +495,11 @@ static void computeFunctionSummary(
         // to CallGraphEdges to reflect the references from the metadata, and
         // to enable importing for subsequent indirect call promotion and
         // inlining.
-        if (auto *MD = I.getMetadata(LLVMContext::MD_callees)) {
-          for (const auto &Op : MD->operands()) {
-            Function *Callee = mdconst::extract_or_null<Function>(Op);
-            if (Callee)
-              CallGraphEdges[Index.getOrInsertValueInfo(Callee)]
-                  .setHasIndirectCall(true);
-          }
-        }
+        SmallVector<Function *, 4> Callees;
+        if (CB->getCalleesMetadata(Callees))
+          for (Function *Callee : Callees)
+            CallGraphEdges[Index.getOrInsertValueInfo(Callee)]
+                .setHasIndirectCall(true);
 
         CandidateProfileData =
             ICallAnalysis.getPromotionCandidatesForInstruction(

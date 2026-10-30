@@ -8,6 +8,17 @@
 ; RUN: llvm-dis -o - %t-nomd1 | FileCheck --check-prefix=CHECK-NOMD1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t-nomd2 | FileCheck --check-prefix=CHECK-NOMD2 --implicit-check-not=define %s
 
+; A list with a null operand must be ignored like an absent list, so its
+; function operand doesn't count either.
+; RUN: sed 's/_MD_/, !callees !{ptr @CallCandidate0, ptr null}/g' %s | \
+; RUN:   llvm-split -o %t-null -j 3 -mtriple amdgpu-amd-amdhsa
+; RUN: llvm-dis -o - %t-null0 | \
+; RUN:   FileCheck --check-prefix=CHECK-NOMD0 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t-null1 | \
+; RUN:   FileCheck --check-prefix=CHECK-NOMD1 --implicit-check-not=define %s
+; RUN: llvm-dis -o - %t-null2 | \
+; RUN:   FileCheck --check-prefix=CHECK-NOMD2 --implicit-check-not=define %s
+
 ; CHECK0: define internal void @HelperC
 ; CHECK0: define amdgpu_kernel void @C
 

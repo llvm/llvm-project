@@ -7909,10 +7909,23 @@ Example (assuming 64-bit pointers):
 
 #### '`callees`' Metadata
 
-`callees` metadata may be attached to indirect call sites. If `callees`
-metadata is attached to a call site, and any callee is not among the set of
-functions provided by the metadata, the behavior is undefined. The intent of
-this metadata is to facilitate optimizations such as indirect-call promotion.
+`callees` metadata may be attached to call sites. If `callees` metadata is
+attached to a call site, and any callee is not among the set of functions
+provided by the metadata, the behavior is undefined. The order and duplication
+of operands are not significant. Whether the called operand is a constant does
+not matter: a direct call to a function outside the set has undefined behavior,
+and if the direct target is in the set the metadata is redundant and may be
+dropped. The intent of this metadata is to facilitate optimizations such as
+indirect-call promotion.
+
+An empty node denotes an empty set, so executing the call has undefined
+behavior.
+
+If any operand does not refer to a `Function`, the entire attachment provides
+no information and must be ignored. This includes null operands left behind
+when a function referenced only through metadata is deleted. `callees`
+metadata is not allowed on inline assembly calls.
+
 For example, in the code below, the call instruction may only target the
 `add` or `sub` functions:
 
