@@ -1447,10 +1447,10 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
                                               HLSLAppliedSemanticAttr *Semantic,
                                               std::optional<unsigned> Index,
                                               SemanticSignatures &Signature,
-                                              bool OneElementPerRow) {
+                                              bool EnforceOneElementPerRow) {
   SemanticShape Shape =
       getSemanticShape(CGM.getContext(), getSemanticLeafType(Decl));
-  assert(!(OneElementPerRow && Shape.IsMatrix) &&
+  assert(!(EnforceOneElementPerRow && Shape.IsMatrix) &&
          "matrices cannot be split into one element per row");
 
   // DXIL pixel shader outputs are not indexable, and each render target must
@@ -1458,7 +1458,7 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
   // therefore split into one single-row element per render target.
   SemanticShape RowShape{{}, Shape.Cols, Shape.RowType};
   uint32_t FirstSigId = Signature.size();
-  if (!OneElementPerRow)
+  if (!EnforceOneElementPerRow)
     Signature.push_back(createSemanticSignatureElement(CGM, FirstSigId,
                                                        Semantic, Index, Shape));
 
@@ -1497,7 +1497,7 @@ void CGHLSLRuntime::emitDXILUserSemanticStore(llvm::IRBuilder<> &B,
 
     uint32_t SigId = FirstSigId;
     uint32_t SigRow = Row;
-    if (OneElementPerRow) {
+    if (EnforceOneElementPerRow) {
       SigId = Signature.size();
       SigRow = 0;
       Signature.push_back(createSemanticSignatureElement(
@@ -1844,7 +1844,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature,
-                                /*OneElementPerRow=*/true);
+                                /*EnforceOneElementPerRow=*/true);
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
