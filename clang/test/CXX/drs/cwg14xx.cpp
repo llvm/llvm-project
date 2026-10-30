@@ -141,7 +141,9 @@ int f() { return A::private_i; }
 
 template <typename>
 struct B {
-  int i = A::private_i;
+  int g() {
+    return A::private_i;
+  }
 };
 
 int (*p5)() = &f<int>;

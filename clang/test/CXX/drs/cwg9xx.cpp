@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98
 // RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
@@ -270,6 +270,43 @@ namespace C {
   //   expected-note@#cwg986-B-f {{candidate function}}
 }
 } // namespace cwg986
+
+namespace cwg987 { // cwg987: 2.7
+namespace N {
+  template <typename, typename>
+  struct S; // #cwg987-S
+
+  template <typename>
+  int f();  // #cwg987-f
+}
+
+template <>
+struct N::S<int, int> {};
+
+template <typename T>
+struct N::S<float, T> {};
+
+template <>
+int N::f<int>() { return 0; }
+
+S<int, int> s1;
+// expected-error@-1 {{no template named 'S'; did you mean 'N::S'?}}
+//   expected-note@#cwg987-S {{'N::S' declared here}}
+cwg987::S<int, int> s2;
+// expected-error@-1 {{no template named 'S' in namespace 'cwg987'; did you mean 'N::S'?}}
+//   expected-note@#cwg987-S {{'N::S' declared here}}
+
+int (*p1)() = &f<int>;
+// since-cxx11-error@-1 {{use of undeclared identifier 'f'}}
+// cxx98-error@-2 {{use of undeclared identifier 'f'; did you mean 'N::f'?}}
+//   cxx98-note@#cwg987-f {{'N::f' declared here}}
+int (*p2)() = &cwg987::f<int>;
+// since-cxx11-error@-1 {{no member named 'f' in namespace 'cwg987'}}
+// since-cxx11-error@-2 {{expected '(' for function-style cast or type construction}}
+// since-cxx11-error@-3 {{expected expression}}
+// cxx98-error@-4 {{no template named 'f' in namespace 'cwg987'; did you mean 'N::f'?}}
+//   cxx98-note@#cwg987-f {{'N::f' declared here}}
+} // namespace cwg987
 
 namespace cwg988 { // cwg988: 2.7
 #if __cplusplus >= 201103L

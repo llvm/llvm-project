@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
-// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
-// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-17
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-17
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,cxx11-17
 // RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 // RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
@@ -118,6 +118,21 @@ template B::B(int, double);
 } // namespace cwg1738
 
 // cwg1739: na
+
+namespace cwg1742 { // cwg1742: 13
+#if __cplusplus >= 201103L
+enum struct E {
+  one
+};
+using E::one;
+// cxx11-17-error@-1 {{using declaration naming a scoped enumerator is a C++20 extension}}
+struct S {
+  using E::one;
+  // cxx11-17-error@-1 {{using declaration naming a scoped enumerator is a C++20 extension}}
+  // cxx11-17-error@-2 {{using declaration in class refers into 'E', which is not a class}}
+};
+#endif
+} // namespace cwg1742
 
 // cwg1748 is in cwg1748.cpp
 
@@ -267,10 +282,10 @@ template auto GLL::operator()<int>(int a) const -> int;
 
 namespace cwg1795 { // cwg1975: 2.7
 namespace N {
-  struct S{}; // #cwg1795-S
+  struct S {}; // #cwg1795-S
 }
 namespace N {
-  struct S{};
+  struct S {};
   // expected-error@-1 {{redefinition of 'S'}}
   //   expected-note@#cwg1795-S {{previous definition is here}}
 }
