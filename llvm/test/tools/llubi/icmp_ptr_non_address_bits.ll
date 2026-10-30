@@ -12,8 +12,8 @@ define void @main() {
 }
 ; CHECK: Entering function: main
 ; CHECK-NEXT:   %p1 = inttoptr i64 4294967296 to ptr => ptr 0x100000000 [nullary]
-; CHECK-NEXT:   %c1 = icmp eq ptr %p1, null => F
+; CHECK-NEXT:   %c1 = icmp eq ptr %p1, null => T
 ; CHECK-NEXT:   %p2 = inttoptr i64 4294967295 to ptr => ptr 0xFFFFFFFF [nullary]
-; CHECK-NEXT:   %c2 = icmp samesign eq ptr %p2, null => F
+; CHECK-NEXT:   %c2 = icmp samesign eq ptr %p2, null => poison
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main
