@@ -367,10 +367,15 @@ entry:
 }
 
 define <1 x i64> @i64_zero_off2(<2 x i64> %arg1) {
-; CHECK-LABEL: i64_zero_off2:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi d0, #0000000000000000
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: i64_zero_off2:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GISEL-LABEL: i64_zero_off2:
+; CHECK-GISEL:       // %bb.0: // %entry
+; CHECK-GISEL-NEXT:    movi d0, #0000000000000000
+; CHECK-GISEL-NEXT:    ret
 entry:
   %shuffle = shufflevector <2 x i64> %arg1, <2 x i64> zeroinitializer, <1 x i32> <i32 2>
   ret <1 x i64> %shuffle
