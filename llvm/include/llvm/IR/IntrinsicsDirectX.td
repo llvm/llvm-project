@@ -601,4 +601,16 @@ let TargetPrefix = "dx" in {
                                llvm_i8_ty /*ColIndex*/, llvm_any_ty /*Value*/],
                               [IntrConvergent, ImmArg<ArgIndex<0>>,
                                ImmArg<ArgIndex<2>>]>;
+
+  def int_dx_start_vertex_location
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_start_instance_location
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_sample_index
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_view_id
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }

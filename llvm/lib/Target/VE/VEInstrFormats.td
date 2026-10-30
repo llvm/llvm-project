@@ -49,7 +49,7 @@ class InstVE<dag outs, dag ins, string asmstr, list<dag> pattern>
   /// from 0), and the index of VL of (VST $sy, $sz, $sx, $vm, $vl) is 4.  We
   /// define vector instructions hierarchically, so use VE_VLIndex which is
   /// defined by the type of instruction and VE_VLWithMask which is defined
-  /// whether the insturction use mask or not.
+  /// whether the instruction use mask or not.
   let TSFlags{0}   = VE_Vector;
   let TSFlags{1}   = VE_VLInUse;
   let TSFlags{4-2} = !add(VE_VLIndex, VE_VLWithMask);

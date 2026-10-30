@@ -26,6 +26,6 @@ callSites:
 body:             |
   bb.0.entry:
     %0:gr64 = MOV32ri64 4
-    CALL64r killed %0, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
+    CALL64r %0, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
     RET 0, $rax
 ...

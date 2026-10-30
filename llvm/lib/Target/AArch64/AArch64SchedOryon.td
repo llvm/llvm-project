@@ -845,13 +845,13 @@ def : InstRW<[ORYONWrite_3Cyc_I2],
 // here we just assume all signing and pauth instructions are 7 cycles
 // assume all are 7 cycles here
 
-// signing instrucitons
+// signing instructions
 def : InstRW<[ORYONWrite_7Cyc_I2], (instrs PACIA, PACIB,
                                             PACDA, PACDB,
                                             PACIZA, PACIZB,
                                             PACDZA, PACDZB,
                                             PACGA)>;
-// authentication instrucitons
+// authentication instructions
 def : InstRW<[ORYONWrite_7Cyc_I2], (instrs AUTIA, AUTIB,
                                             AUTDA, AUTDB,
                                             AUTIZA, AUTIZB,

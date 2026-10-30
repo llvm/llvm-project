@@ -57,15 +57,17 @@ bool RegAllocBase::VerifyEnabled = false;
 // Pin the vtable to this file.
 void RegAllocBase::anchor() {}
 
-void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
-                        LiveRegMatrix &mat) {
+void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+                        RegisterClassInfo &rci) {
   TRI = &vrm.getTargetRegInfo();
   MRI = &vrm.getRegInfo();
   VRM = &vrm;
   LIS = &lis;
   Matrix = &mat;
+  RegClassInfo = &rci;
   MRI->freezeReservedRegs();
-  RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo->updateReservedRegs(MRI->getReservedRegs());
   FailedVRegs.clear();
 }
 
@@ -216,8 +218,12 @@ void RegAllocBase::cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
 
       // Add the def to the PhysReg regunit ranges so it interferes with later
       // assignments. Ranges computed later will include the rewritten def.
+      MCRegister DefReg = PhysReg;
+      if (MO.getSubReg())
+        DefReg = TRI->getSubReg(PhysReg, MO.getSubReg());
+
       SlotIndex DefIdx = Idx.getRegSlot(MO.isEarlyClobber());
-      for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      for (MCRegUnit Unit : TRI->regunits(DefReg)) {
         LiveRange *LR = LIS->getCachedRegUnit(Unit);
         if (LR && !LR->liveAt(DefIdx))
           LR->createDeadDef(DefIdx, LIS->getVNInfoAllocator());
@@ -270,7 +276,7 @@ MCPhysReg RegAllocBase::getErrorAssignment(const TargetRegisterClass &RC,
   const Function &Fn = MF.getFunction();
   LLVMContext &Context = Fn.getContext();
 
-  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(&RC);
+  ArrayRef<MCPhysReg> AllocOrder = RegClassInfo->getOrder(&RC);
   if (AllocOrder.empty()) {
     // If the allocation order is empty, it likely means all registers in the
     // class are reserved. We still to need to pick something, so look at the

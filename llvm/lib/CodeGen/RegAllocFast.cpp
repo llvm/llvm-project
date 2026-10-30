@@ -202,7 +202,7 @@ private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
   const RegAllocFilterFunc ShouldAllocateRegisterImpl;
 
   /// Tied operands reach this pass unrewritten (TwoAddressInstructionPass was
@@ -365,7 +365,7 @@ private:
 public:
   bool ClearVirtRegs;
 
-  bool runOnMachineFunction(MachineFunction &MF);
+  bool runOnMachineFunction(MachineFunction &MF, RegisterClassInfo &RCI);
 
 private:
   void allocateBasicBlock(MachineBasicBlock &MBB);
@@ -458,12 +458,14 @@ public:
       : MachineFunctionPass(ID), Impl(F, ClearVirtRegs_) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    return Impl.runOnMachineFunction(MF);
+    return Impl.runOnMachineFunction(
+        MF, getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI());
   }
 
   StringRef getPassName() const override { return "Fast Register Allocator"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -488,8 +490,11 @@ public:
 
 char RegAllocFast::ID = 0;
 
-INITIALIZE_PASS(RegAllocFast, "regallocfast", "Fast Register Allocator", false,
-                false)
+INITIALIZE_PASS_BEGIN(RegAllocFast, "regallocfast", "Fast Register Allocator",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(RegAllocFast, "regallocfast", "Fast Register Allocator",
+                    false, false)
 
 bool RegAllocFastImpl::shouldAllocateRegister(const Register Reg) const {
   assert(Reg.isVirtual());
@@ -1058,7 +1063,7 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
 
   MCPhysReg BestReg = 0;
   unsigned BestCost = spillImpossible;
-  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo->getOrder(&RC);
   for (MCPhysReg PhysReg : AllocationOrder) {
     LLVM_DEBUG(dbgs() << "\tRegister: " << printReg(PhysReg, TRI) << ' ');
     if (isRegUsedInInstr(PhysReg, LookAtPhysRegUses)) {
@@ -1128,7 +1133,7 @@ void RegAllocFastImpl::allocVirtRegUndef(MachineOperand &MO) {
     PhysReg = LRI->PhysReg;
   } else {
     const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
-    ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+    ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo->getOrder(&RC);
     if (AllocationOrder.empty()) {
       // All registers in the class were reserved.
       //
@@ -1413,7 +1418,7 @@ MCPhysReg RegAllocFastImpl::getErrorAssignment(const LiveReg &LR,
   // If the allocation order was empty, all registers in the class were
   // probably reserved. Fall back to taking the first register in the class,
   // even if it's reserved.
-  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+  ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo->getOrder(&RC);
   if (AllocationOrder.empty()) {
     const Function &Fn = MF.getFunction();
     if (EmitError) {
@@ -1632,8 +1637,8 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
 
     // Identify regclass that are easy to use up completely just in this
     // instruction.
-    unsigned ClassSize0 = RegClassInfo.getOrder(&RC0).size();
-    unsigned ClassSize1 = RegClassInfo.getOrder(&RC1).size();
+    unsigned ClassSize0 = RegClassInfo->getOrder(&RC0).size();
+    unsigned ClassSize1 = RegClassInfo->getOrder(&RC1).size();
 
     bool SmallClass0 = ClassSize0 < RegClassDefCounts[RC0.getID()];
     bool SmallClass1 = ClassSize1 < RegClassDefCounts[RC1.getID()];
@@ -2660,7 +2665,8 @@ void RegAllocFastImpl::expandSubregPseudo(MachineInstr &MI) {
   MI.eraseFromParent();
 }
 
-bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
+bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF,
+                                            RegisterClassInfo &RCI) {
   LLVM_DEBUG(dbgs() << "********** FAST REGISTER ALLOCATION **********\n"
                     << "********** Function: " << MF.getName() << '\n');
   MRI = &MF.getRegInfo();
@@ -2668,8 +2674,10 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
   TRI = STI.getRegisterInfo();
   TII = STI.getInstrInfo();
   MFI = &MF.getFrameInfo();
+  RegClassInfo = &RCI;
   MRI->freezeReservedRegs();
-  RegClassInfo.runOnMachineFunction(MF);
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo->updateReservedRegs(MRI->getReservedRegs());
   unsigned NumRegUnits = TRI->getNumRegUnits();
   InstrGen = 0;
   UsedInInstr.assign(NumRegUnits, 0);
@@ -2710,10 +2718,11 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF) {
 }
 
 PreservedAnalyses RegAllocFastPass::run(MachineFunction &MF,
-                                        MachineFunctionAnalysisManager &) {
+                                        MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
   RegAllocFastImpl Impl(Opts.Filter, Opts.ClearVRegs);
-  bool Changed = Impl.runOnMachineFunction(MF);
+  bool Changed = Impl.runOnMachineFunction(
+      MF, MFAM.getResult<MachineRegisterClassAnalysis>(MF));
   if (!Changed)
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();

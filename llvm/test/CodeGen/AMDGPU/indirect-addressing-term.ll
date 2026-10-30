@@ -76,7 +76,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_MOV_B64 $exec
   ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GCN-NEXT:   renamable $sgpr0_sgpr1 = IMPLICIT_DEF
+  ; GCN-NEXT:   dead renamable $sgpr0_sgpr1 = IMPLICIT_DEF
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)

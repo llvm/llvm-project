@@ -51,7 +51,7 @@ public:
 
   lldb::ValueObjectSP GetSyntheticValue() override;
 
-  ConstString GetSyntheticTypeName() override;
+  std::string GetSyntheticTypeName() override;
 
   static void Initialize();
 
