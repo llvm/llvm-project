@@ -9,6 +9,7 @@
 #ifndef LLDB_UTILITY_ITERABLE_H
 #define LLDB_UTILITY_ITERABLE_H
 
+#include <mutex>
 #include <utility>
 
 #include <llvm/ADT/iterator.h>
@@ -33,26 +34,18 @@ struct ValueMapIterator
 
 template <typename MutexType, typename C,
           typename IteratorT = typename C::const_iterator>
-class LockingAdaptedIterable : public llvm::iterator_range<IteratorT> {
+class LockingAdaptedIterable : private std::unique_lock<MutexType>,
+                               public llvm::iterator_range<IteratorT> {
 public:
+  // The lock is the first base so that it is held before iterator_range reads
+  // the container's begin and end.
   LockingAdaptedIterable(const C &container, MutexType &mutex)
-      : llvm::iterator_range<IteratorT>(container), m_mutex(&mutex) {
-    m_mutex->lock();
-  }
+      : std::unique_lock<MutexType>(mutex),
+        llvm::iterator_range<IteratorT>(container) {}
 
-  LockingAdaptedIterable(LockingAdaptedIterable &&rhs)
-      : llvm::iterator_range<IteratorT>(rhs), m_mutex(rhs.m_mutex) {
-    rhs.m_mutex = nullptr;
-  }
-
-  ~LockingAdaptedIterable() {
-    if (m_mutex)
-      m_mutex->unlock();
-  }
+  LockingAdaptedIterable(LockingAdaptedIterable &&rhs) = default;
 
 private:
-  MutexType *m_mutex = nullptr;
-
   LockingAdaptedIterable(const LockingAdaptedIterable &) = delete;
   LockingAdaptedIterable &operator=(const LockingAdaptedIterable &) = delete;
 };

@@ -275,7 +275,8 @@ SEMANTIC_KIND(28, Barycentrics)
 SEMANTIC_KIND(29, ShadingRate)
 SEMANTIC_KIND(30, CullPrimitive)
 SEMANTIC_KIND(31, StartVertexLocation)
-SEMANTIC_KIND(32, Invalid)
+SEMANTIC_KIND(32, StartInstanceLocation)
+SEMANTIC_KIND(33, Invalid)
 
 #undef SEMANTIC_KIND
 #endif // SEMANTIC_KIND

@@ -3564,6 +3564,30 @@ findEnclosingParallelOp(fir::FirOpBuilder &builder) {
   return {};
 }
 
+static bool isNonDerivedNonPointer(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  const auto *type = ultimate.GetType();
+  return type && type->AsIntrinsic() && !semantics::IsAllocatable(ultimate) &&
+         !semantics::IsPointer(ultimate);
+}
+
+static bool isNonDerivedNonPointer(const mlir::Value &variable) {
+  return !fir::isAllocatableType(variable.getType()) &&
+         !fir::isa_derived(fir::getFortranElementType(variable.getType())) &&
+         !fir::isPointerType(variable.getType());
+}
+
+static bool isNonDerivedNonPointerItem(const semantics::Symbol &sym) {
+  const auto &ultimate = sym.GetUltimate();
+  if (const auto *common =
+          ultimate.detailsIf<semantics::CommonBlockDetails>()) {
+    return llvm::all_of(common->objects(), [](const auto &member) {
+      return isNonDerivedNonPointer(*member);
+    });
+  }
+  return isNonDerivedNonPointer(ultimate);
+}
+
 static mlir::omp::SectionsOp
 genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               semantics::SemanticsContext &semaCtx,
@@ -3657,6 +3681,23 @@ genSectionsOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   // SECTIONS construct.
   auto sectionsOp = mlir::omp::SectionsOp::create(builder, loc, clauseOps);
+  // TODO: sections still uses eager privatisation. Use clauseOps.privateVars
+  // once delayedPrivatization is turned on.
+  const auto &privateSyms = dsp.getAllSymbolsToPrivatize();
+  if (!privateSyms.empty() &&
+      llvm::all_of(privateSyms, [](const semantics::Symbol *sym) {
+        return isNonDerivedNonPointerItem(*sym);
+      }))
+    sectionsOp.setPrivateAssumeBoundedRecipeEffects(true);
+
+  if (!clauseOps.reductionVars.empty() &&
+      llvm::all_of(clauseOps.reductionVars, [lpAlloca](mlir::Value variable) {
+        // The generated conditional-lastprivate recipe only accesses the
+        // intrinsic value and index fields of its accumulator, despite its
+        // record type.
+        return variable == lpAlloca || isNonDerivedNonPointer(variable);
+      }))
+    sectionsOp.setReductionAssumeBoundedRecipeEffects(true);
 
   // Create entry block with reduction variables as arguments.
   ObjectEntryBlockArgs args;

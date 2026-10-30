@@ -50,7 +50,7 @@ body:             |
   ; CHECK-NEXT:   MOVUPSmr %stack.1, 1, $noreg, 48, $noreg, [[V_SET0_]] :: (store (s512) into %stack.1 + 48, align 4)
   ; CHECK-NEXT:   MOV8mi %stack.1, 1, $noreg, 0, $noreg, 1 :: (store (s512) into %stack.1, align 4)
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY killed [[COPY]]
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY [[COPY]]
   ; CHECK-NEXT:   %r0:gr16 = MOV16ri 64
   ; CHECK-NEXT:   %c0:gr16 = MOV16ri 16
   ; CHECK-NEXT:   PLDTILECFGV %stack.1, 1, $noreg, 0, $noreg, implicit-def dead $tmm0, implicit-def dead $tmm1, implicit-def dead $tmm2, implicit-def dead $tmm3, implicit-def dead $tmm4, implicit-def dead $tmm5, implicit-def dead $tmm6, implicit-def dead $tmm7 :: (load (s512) from %stack.1, align 4)
@@ -106,10 +106,10 @@ body:             |
     liveins: $edi
 
     %12:gr32 = COPY $edi
-    %13:gr32 = COPY killed %12
+    %13:gr32 = COPY %12
     %r0:gr16 = MOV16ri 64
     %c0:gr16 = MOV16ri 16
-    %t0:tile = PTILEZEROV killed %r0, killed %c0
+    %t0:tile = PTILEZEROV %r0, %c0
     CMP32ri8 %13, 0, implicit-def $eflags
     %16:gr8 = SETCCr 4, implicit $eflags
     TEST8ri %16, 1, implicit-def $eflags
@@ -118,7 +118,7 @@ body:             |
   bb.1:
     %17:gr16 = MOV16ri 64
     %18:gr16 = MOV16ri 16
-    %1:tile = PTILEZEROV killed %18, killed %17
+    %1:tile = PTILEZEROV %18, %17
     JMP_1 %bb.3
 
   bb.2:
