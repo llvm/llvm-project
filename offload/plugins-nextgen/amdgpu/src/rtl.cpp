@@ -79,19 +79,6 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
-#if defined(__GNUC__)
-#if defined(__i386__) || defined(__x86_64__)
-#include <x86intrin.h>
-#elif defined(__powerpc64__) || defined(__PPC64__)
-// PowerPC compatibility shim for x86 intrinsics
-#define NO_WARN_X86_INTRINSICS
-#include <x86intrin.h>
-#endif
-#endif
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
-#include "intrin.h"
-#endif
-
 using namespace llvm::offload::debug;
 using namespace error;
 
@@ -197,11 +184,10 @@ namespace plugin {
 
 namespace hsa_utils {
 
-/// Copied from HSA-runtime.
+/// Adapted from HSA-runtime.
 static void storeFence() {
-#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) ||           \
-    defined(__powerpc64__)
-  _mm_sfence();
+#if __has_builtin(__builtin_ia32_sfence)
+  __builtin_ia32_sfence();
 #elif __has_builtin(__builtin_arm_dmb)
   __builtin_arm_dmb(0x2); // oshst
 #elif defined(__riscv)
@@ -211,11 +197,10 @@ static void storeFence() {
 #endif
 }
 
-/// Copied from HSA-runtime.
+/// Adapted from HSA-runtime.
 static void memoryFence() {
-#if defined(_MSC_VER) || defined(__x86_64__) || defined(__i386__) ||           \
-    defined(__powerpc64__)
-  _mm_mfence();
+#if __has_builtin(__builtin_ia32_mfence)
+  __builtin_ia32_mfence();
 #elif __has_builtin(__builtin_arm_dsb)
   __builtin_arm_dsb(0xf); // sy
 #elif defined(__riscv)
