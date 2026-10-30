@@ -14990,6 +14990,12 @@ bool llvm::isBoolSGPR(SDValue V) {
   return false;
 }
 
+static bool isBoolSGPRExt(SDValue V) {
+  return (V.getOpcode() == ISD::SIGN_EXTEND ||
+          V.getOpcode() == ISD::ANY_EXTEND) &&
+         isBoolSGPR(V.getOperand(0));
+}
+
 // If a constant has all zeroes or all ones within each byte return it.
 // Otherwise return 0.
 static uint32_t getConstantPermuteMask(uint32_t C) {
@@ -15197,14 +15203,17 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
     }
   }
 
-  if (VT == MVT::i32 && (RHS.getOpcode() == ISD::SIGN_EXTEND ||
-                         LHS.getOpcode() == ISD::SIGN_EXTEND)) {
-    // and x, (sext cc from i1) => select cc, x, 0
-    if (RHS.getOpcode() != ISD::SIGN_EXTEND)
-      std::swap(LHS, RHS);
-    if (isBoolSGPR(RHS.getOperand(0)))
+  if (VT == MVT::i32) {
+    bool LHSIsBoolExt = isBoolSGPRExt(LHS);
+    bool RHSIsBoolExt = isBoolSGPRExt(RHS);
+    if (LHSIsBoolExt || RHSIsBoolExt) {
+      // and x, (sext/anyext cc from i1) => select cc, x, 0
+      // Any-extended bits can be chosen to match sign extension.
+      if (!RHSIsBoolExt)
+        std::swap(LHS, RHS);
       return DAG.getSelect(SDLoc(N), MVT::i32, RHS.getOperand(0), LHS,
                            DAG.getConstant(0, SDLoc(N), MVT::i32));
+    }
   }
 
   // and (op x, c1), (op y, c2) -> perm x, y, permute_mask(c1, c2)
@@ -15889,6 +15898,28 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+
+  if (VT == MVT::i32 && !DCI.isBeforeLegalize()) {
+    for (unsigned I : {1u, 0u}) {
+      SDValue Ext = N->getOperand(I);
+      // The select may need an e64 cndmask, so only fold when it eliminates
+      // the extension.
+      if (!Ext.hasOneUse() || !isBoolSGPRExt(Ext))
+        continue;
+      // A divergent select still needs to materialize a uniform condition.
+      // Sharing that condition can also require converting it back to SCC.
+      SDValue Cond = Ext.getOperand(0);
+      if (N->isDivergent() && !Cond->isDivergent() && !Cond.hasOneUse())
+        continue;
+
+      // or x, (sext/anyext cc from i1) => select cc, -1, x
+      // Any-extended bits can be chosen to match sign extension.
+      SDLoc DL(N);
+      return DAG.getSelect(DL, MVT::i32, Cond,
+                           DAG.getAllOnesConstant(DL, MVT::i32),
+                           N->getOperand(1 - I));
+    }
   }
 
   // or (perm x, y, c1), c2 -> perm x, y, permute_mask(c1, c2)
