@@ -1381,6 +1381,9 @@ def fminnum_nnan : PatFrag<(ops node:$Rn, node:$Rm),
 let RecomputePerFunction = 1 in {
   def ForCodeSize   : Predicate<"shouldOptForSize(MF)">;
   def NotForCodeSize   : Predicate<"!shouldOptForSize(MF)">;
+  def ForOptNone : Predicate<
+      "MF->getTarget().getOptLevel() == CodeGenOptLevel::None || " #
+      "MF->getFunction().hasOptNone()">;
   // Avoid generating STRQro if it is slow, unless we're optimizing for code size.
   def UseSTRQro : Predicate<"!Subtarget->isSTRQroSlow() || shouldOptForSize(MF)">;
 
@@ -4112,6 +4115,16 @@ defm LDRX : LoadUI<0b11, 0, 0b01, GPR64z, uimm12s8, "ldr",
 defm LDRW : LoadUI<0b10, 0, 0b01, GPR32z, uimm12s4, "ldr",
                    [(set GPR32z:$Rt,
                          (load (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)))]>;
+
+// Give direct frame-index loads higher priority at O0 to reduce GlobalISel
+// compile time by avoiding probes of more complex addressing modes.
+let Predicates = [ForOptNone], AddedComplexity = 30 in {
+def : Pat<(i64 (load frameindex:$fi)),
+          (LDRXui (to_tframeindex $fi), 0)>;
+def : Pat<(i32 (load frameindex:$fi)),
+          (LDRWui (to_tframeindex $fi), 0)>;
+}
+
 let Predicates = [HasFPARMv8] in {
 defm LDRB : LoadUI<0b00, 1, 0b01, FPR8Op, uimm12s1, "ldr",
                    [(set (i8 FPR8Op:$Rt),
@@ -5034,6 +5047,16 @@ defm STRX : StoreUIz<0b11, 0, 0b00, GPR64z, uimm12s8, "str",
 defm STRW : StoreUIz<0b10, 0, 0b00, GPR32z, uimm12s4, "str",
                     [(store GPR32z:$Rt,
                             (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))]>;
+
+// Give direct frame-index stores higher priority at O0 to reduce GlobalISel
+// compile time by avoiding probes of more complex addressing modes.
+let Predicates = [ForOptNone], AddedComplexity = 30 in {
+def : Pat<(store GPR64z:$Rt, frameindex:$fi),
+          (STRXui GPR64z:$Rt, (to_tframeindex $fi), 0)>;
+def : Pat<(store GPR32z:$Rt, frameindex:$fi),
+          (STRWui GPR32z:$Rt, (to_tframeindex $fi), 0)>;
+}
+
 let Predicates = [HasFPARMv8] in {
 defm STRB : StoreUI<0b00, 1, 0b00, FPR8Op, uimm12s1, "str",
                     [(store (i8 FPR8Op:$Rt),
