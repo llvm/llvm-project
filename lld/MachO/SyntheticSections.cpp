@@ -2551,15 +2551,20 @@ void ChainedFixupsSection::finalizeContents() {
   for (Location &loc : locations) {
     uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
-    if (offset % pageSize + target->wordSize > pageSize) {
-      std::string msg = loc.isec->getLocation(loc.offset) +
-                        ": fixup straddles page boundary; stop packing structs "
-                        "containing pointers or link with -no_fixup_chains";
+    auto report = [&](const Twine &problem) {
+      std::string msg = (loc.isec->getLocation(loc.offset) + ": " + problem +
+                         "; stop packing structs containing pointers or link "
+                         "with -no_fixup_chains")
+                            .str();
       std::string src = loc.isec->getSourceLocation(loc.offset);
       if (!src.empty())
         msg += "\n>>> defined at " + src;
       error(msg);
-    }
+    };
+    if (offset % pageSize + target->wordSize > pageSize)
+      report("fixup straddles page boundary");
+    if (offset % chainStride != 0)
+      report("fixup is not " + Twine(chainStride) + "-byte aligned");
     loc.offset = offset;
   }
 

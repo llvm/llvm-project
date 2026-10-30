@@ -1308,7 +1308,6 @@ void Writer::buildFixupChains() {
   TimeTraceScope timeScope("Build fixup chains");
 
   const uint64_t pageSize = target->getPageSize();
-  constexpr uint32_t stride = 4; // for DYLD_CHAINED_PTR_64
 
   for (size_t i = 0, count = loc.size(); i < count;) {
     const OutputSegment *oseg = loc[i].isec->parent->parent;
@@ -1319,24 +1318,17 @@ void Writer::buildFixupChains() {
     while (i < count && loc[i].isec->parent->parent == oseg &&
            (loc[i].offset / pageSize) == pageIdx) {
       uint64_t offset = loc[i].offset - loc[i - 1].offset;
-
-      auto fail = [&](Twine message) {
+      if (offset < target->wordSize) {
         error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
               ", offset " +
               Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
-              ": " + message);
-      };
-
-      if (offset < target->wordSize)
-        return fail("fixups overlap");
-      if (offset % stride != 0)
-        return fail(
-            "fixups are unaligned (offset " + Twine(offset) +
-            " is not a multiple of the stride). Re-link with -no_fixup_chains");
+              ": fixups overlap");
+        return;
+      }
 
       // The "next" field is in the same location for bind and rebase entries.
       reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / stride;
+          ->next = offset / ChainedFixupsSection::chainStride;
       ++i;
     }
   }
