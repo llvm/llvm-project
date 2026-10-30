@@ -3876,6 +3876,8 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
     // expression.
     if (EvaluatedDefined) {
       Diag(CurTok, diag::err_defined_in_pp_embed);
+      if (CurTok.isNot(EndTokenKind))
+        DiscardUntilEndOfDirective(CurTok);
       return std::nullopt;
     }
 

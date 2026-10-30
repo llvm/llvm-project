@@ -295,7 +295,7 @@ private: // Parser methods.
   bool ParseBodyItem(Record *CurRec);
 
   bool ParseTemplateArgList(Record *CurRec);
-  const Init *ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
+  bool ParseDeclaration(Record *CurRec, bool ParsingTemplateArgs);
   const VarInit *ParseForeachDeclaration(const Init *&ForeachListValue);
 
   ClassReference ParseClassReference(Record *CurRec, bool isDefm);

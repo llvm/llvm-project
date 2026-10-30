@@ -145,7 +145,7 @@ void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
   };
   options.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression E(m_data.GetAsLLVM(), m_data.GetAddressByteSize());
-  llvm::printDwarfExpression(&E, s->AsRawOstream(), options, nullptr);
+  llvm::printDwarfExpression(&E, s->AsRawOstream(), options);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }

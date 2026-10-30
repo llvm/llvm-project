@@ -16,6 +16,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include "gtest/gtest.h"
@@ -26,6 +27,13 @@
 #include <system_error>
 
 using namespace mlir;
+
+static struct LLVMInitializer {
+  LLVMInitializer() {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+  }
+} initializer;
 
 namespace {
 constexpr uintptr_t FourGiB = uintptr_t{4} << 30;

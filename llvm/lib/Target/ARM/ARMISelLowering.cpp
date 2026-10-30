@@ -369,10 +369,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     if (HasMVEFP) {
       setOperationAction(ISD::FMINNUM, VT, Legal);
       setOperationAction(ISD::FMAXNUM, VT, Legal);
-      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
-                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
-                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
-                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+      for (auto Op :
+           {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+            ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC, ISD::FRINT,
+            ISD::FFLOOR, ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
         setOperationAction(Op, VT, Legal);
       }
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
@@ -1355,10 +1355,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FMAXIMUM, MVT::v4f32, Legal);
 
     if (Subtarget->hasV8Ops()) {
-      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
-                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
-                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
-                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+      for (auto Op :
+           {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+            ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC, ISD::FRINT,
+            ISD::FFLOOR, ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
         setOperationAction(Op, MVT::v2f32, Legal);
         setOperationAction(Op, MVT::v4f32, Legal);
       }
@@ -1375,10 +1375,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
 
-      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
-                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
-                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
-                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+      for (auto Op :
+           {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+            ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC, ISD::FRINT,
+            ISD::FFLOOR, ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
         setOperationAction(Op, MVT::v4f16, Legal);
         setOperationAction(Op, MVT::v8f16, Legal);
       }
@@ -1719,7 +1719,7 @@ ARMTargetLowering::getEffectiveCallingConv(CallingConv::ID CC,
         return CallingConv::Fast;
       return CallingConv::ARM_APCS;
     } else if (Subtarget->hasFPRegs() && !Subtarget->isThumb1Only() &&
-               !isVarArg)
+               !Subtarget->useSoftFloat() && !isVarArg)
       return CallingConv::ARM_AAPCS_VFP;
     else
       return CallingConv::ARM_AAPCS;
@@ -2142,6 +2142,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   RegsToPassVector RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
+
+  // A musttail call in a variadic function must receive the caller's unnamed
+  // register arguments unchanged.  The forwarded set is disjoint from the named
+  // arguments handled below.
+  if (isVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
+    const auto &Forwards = AFI->getForwardedMustTailRegParms();
+    for (const ForwardedRegister &F : Forwards) {
+      SDValue Val = DAG.getCopyFromReg(Chain, dl, F.VReg, F.VT);
+      RegsToPass.push_back(std::make_pair(F.PReg, Val));
+    }
+  }
 
   // If we are doing a tail-call, any byval arguments will be written to stack
   // space which was used for incoming arguments. If any the values being used
@@ -4470,6 +4481,30 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "secure entry function must not be variadic", dl.getDebugLoc()));
+    }
+  }
+
+  // A variadic function that forwards through a musttail call needs its unnamed
+  // register arguments modelled as live, so the allocator does not use one as
+  // scratch.  This must run after the va_list save area above, which consumes
+  // the same registers, and is deliberately *not* predicated on hasVAStart():
+  // a forwarding thunk never calls va_start.
+  if (isVarArg && MFI.hasMustTailInVarArgFunc()) {
+    // getRemainingRegParmsForType() walks the assign function until an argument
+    // lands in memory, so the convention must have a stack fallback.  GHC and
+    // the Windows CFGuard check stub assign to registers only and would run off
+    // the end of their tables; neither supports variadic arguments anyway.
+    CallingConv::ID EffCC = getEffectiveCallingConv(CallConv, isVarArg);
+    if (EffCC != CallingConv::GHC && EffCC != CallingConv::CFGuard_Check) {
+      // Only the core registers can hold an unnamed argument:
+      // getEffectiveCallingConv() degrades every VFP convention to ARM_AAPCS
+      // when isVarArg is set.
+      SmallVector<MVT, 1> RegParmTypes;
+      RegParmTypes.push_back(MVT::i32);
+      SmallVectorImpl<ForwardedRegister> &Forwards =
+          AFI->getForwardedMustTailRegParms();
+      CCInfo.analyzeMustTailForwardedRegisters(
+          Forwards, RegParmTypes, CCAssignFnForCall(CallConv, isVarArg));
     }
   }
 
@@ -15299,6 +15334,8 @@ static SDValue PerformLegalizedVECTOR_DEINTERLEAVECombine(
   }
 
   LoadSDNode *BaseLoad = Loads[0];
+  if (Subtarget->hasMVEIntegerOps() && BaseLoad->getAlign() < EltBits / 8)
+    return SDValue();
   unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
   for (auto [Idx, Load] : enumerate(Loads)) {
     if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
@@ -15401,6 +15438,8 @@ PerformVECTOR_DEINTERLEAVECombine(SDNode *N,
   auto *Load = dyn_cast<LoadSDNode>(WideVec);
   if (!Load || !Load->hasNUsesOfValue(NumParts, 0) || !Load->isSimple() ||
       !ISD::isNormalLoad(Load) || !Load->getOffset().isUndef())
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && Load->getAlign() < EltBits / 8)
     return SDValue();
 
   static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::arm_neon_vld2,
@@ -16966,6 +17005,206 @@ static SDValue PerformExtractFpToIntStores(StoreSDNode *St, SelectionDAG &DAG) {
   return Store;
 }
 
+// Combine stores of all VECTOR_INTERLEAVE results into a structured store
+// (vstN) when they access consecutive memory. Running this after type
+// legalization let wider vector types to be split into legal types, so each
+// split can form a structured store.
+static SDValue PerformLegalizedInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
+    const ARMSubtarget *Subtarget) {
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes)
+    return SDValue();
+
+  if (!ISD::isNormalStore(ST) || !ST->isSimple() || !ST->getOffset().isUndef())
+    return SDValue();
+
+  SDValue StoredValue = ST->getValue();
+  SDNode *Interleave = StoredValue.getNode();
+  if (Interleave->getOpcode() != ISD::VECTOR_INTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = Interleave->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
+    return SDValue();
+
+  EVT SubVecTy = Interleave->getValueType(0);
+  if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
+      !SubVecTy.is128BitVector())
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && !SubVecTy.is128BitVector())
+    return SDValue();
+  unsigned EltBits = SubVecTy.getScalarSizeInBits();
+  if (EltBits != 8 && EltBits != 16 && EltBits != 32)
+    return SDValue();
+
+  SmallVector<StoreSDNode *, 4> Stores(NumParts, nullptr);
+  for (SDUse &Use : Interleave->uses()) {
+    unsigned ResNo = Use.getResNo();
+    auto *Store = dyn_cast<StoreSDNode>(Use.getUser());
+    if (Stores[ResNo] || !Store)
+      return SDValue();
+    Stores[ResNo] = Store;
+  }
+
+  if (llvm::is_contained(Stores, nullptr))
+    return SDValue();
+
+  StoreSDNode *BaseStore = Stores[0];
+  if (Subtarget->hasMVEIntegerOps() && BaseStore->getAlign() < EltBits / 8)
+    return SDValue();
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Store] : enumerate(Stores)) {
+    if (!DAG.areNonVolatileConsecutiveStores(Store, BaseStore, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::arm_neon_vst2,
+                                                 Intrinsic::arm_neon_vst3,
+                                                 Intrinsic::arm_neon_vst4};
+  SDLoc DL(Interleave);
+  SmallVector<SDValue, 8> Ops;
+
+  Ops.push_back(BaseStore->getChain());
+  Intrinsic::ID IID = 0;
+  if (Subtarget->hasNEON())
+    IID = NEONStores[NumParts - 2];
+  else
+    IID = NumParts == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
+
+  Ops.push_back(DAG.getTargetConstant(IID, DL, MVT::i64));
+
+  Ops.push_back(BaseStore->getBasePtr());
+  Ops.append(Interleave->op_begin(), Interleave->op_end());
+  Ops.push_back(DAG.getConstant(BaseStore->getAlign().value(), DL, MVT::i32));
+
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseStore->getMemOperand(), 0, NumParts * Bytes);
+  SDValue NewStore;
+  if (Subtarget->hasNEON()) {
+    NewStore = DAG.getMemIntrinsicNode(
+        ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
+  } else {
+    // MVE
+    for (unsigned Stage = 0; Stage < NumParts; Stage++) {
+      Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
+      NewStore = DAG.getMemIntrinsicNode(
+          ISD::INTRINSIC_VOID, DL, DAG.getVTList(MVT::Other), Ops, MemVT, MMO);
+      Ops.front() = NewStore;
+    }
+  }
+  for (StoreSDNode *Store : Stores) {
+    DAG.makeEquivalentMemoryOrdering(SDValue(Store, 0), NewStore);
+    if (Store != ST)
+      DCI.CombineTo(Store, NewStore);
+  }
+  return NewStore;
+}
+
+static bool
+isSequentialConcatOfVectorInterleave(SDNode *N, SmallVectorImpl<SDValue> &Ops) {
+  if (N->getOpcode() != ISD::CONCAT_VECTORS)
+    return false;
+
+  unsigned NumParts = N->getNumOperands();
+
+  // We should be concatenating each sequential result from a
+  // VECTOR_INTERLEAVE.
+  SDNode *InterleaveOp = N->getOperand(0).getNode();
+  if (InterleaveOp->getOpcode() != ISD::VECTOR_INTERLEAVE ||
+      InterleaveOp->getNumOperands() != NumParts)
+    return false;
+
+  for (unsigned I = 0; I < NumParts; I++)
+    if (N->getOperand(I) != SDValue(InterleaveOp, I))
+      return false;
+
+  Ops.append(InterleaveOp->op_begin(), InterleaveOp->op_end());
+  return true;
+}
+
+static SDValue PerformInterleavedStoreCombine(
+    StoreSDNode *ST, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG,
+    const ARMSubtarget *Subtarget) {
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
+    return SDValue();
+  if (SDValue Res =
+          PerformLegalizedInterleavedStoreCombine(ST, DCI, DAG, Subtarget))
+    return Res;
+
+  if (!DCI.isBeforeLegalize())
+    return SDValue();
+
+  if (!ISD::isNormalStore(ST) || !ST->isSimple() || !ST->getOffset().isUndef())
+    return SDValue();
+
+  SDValue WideValue = ST->getValue();
+  SmallVector<SDValue, 4> ValueInterleaveOps;
+  if (!isSequentialConcatOfVectorInterleave(WideValue.getNode(),
+                                            ValueInterleaveOps))
+    return SDValue();
+
+  if (!WideValue.hasOneUse())
+    return SDValue();
+
+  unsigned NumParts = ValueInterleaveOps.size();
+  if (NumParts != 2 && NumParts != 3 && NumParts != 4)
+    return SDValue();
+
+  if (NumParts == 3 && Subtarget->hasMVEIntegerOps())
+    return SDValue();
+
+  EVT SubVecTy = ValueInterleaveOps[0].getValueType();
+  if (Subtarget->hasNEON() && !SubVecTy.is64BitVector() &&
+      !SubVecTy.is128BitVector())
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && !SubVecTy.is128BitVector())
+    return SDValue();
+  unsigned EltBits = SubVecTy.getScalarSizeInBits();
+  if (EltBits != 8 && EltBits != 16 && EltBits != 32)
+    return SDValue();
+  if (Subtarget->hasMVEIntegerOps() && ST->getAlign() < EltBits / 8)
+    return SDValue();
+  static constexpr Intrinsic::ID NEONStores[] = {Intrinsic::arm_neon_vst2,
+                                                 Intrinsic::arm_neon_vst3,
+                                                 Intrinsic::arm_neon_vst4};
+  SDLoc DL(ST);
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(ST->getChain());
+  Intrinsic::ID IID = 0;
+  if (Subtarget->hasNEON())
+    IID = NEONStores[NumParts - 2];
+  else
+    IID = NumParts == 2 ? Intrinsic::arm_mve_vst2q : Intrinsic::arm_mve_vst4q;
+
+  Ops.push_back(DAG.getTargetConstant(IID, DL, MVT::i64));
+
+  Ops.push_back(ST->getBasePtr());
+  Ops.append(ValueInterleaveOps);
+
+  Ops.push_back(DAG.getConstant(ST->getAlign().value(), DL, MVT::i32));
+  if (Subtarget->hasNEON())
+    return DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                   DAG.getVTList(MVT::Other), Ops,
+                                   ST->getMemoryVT(), ST->getMemOperand());
+  // MVE
+  SDValue NewStore;
+  for (unsigned Stage = 0; Stage < NumParts; Stage++) {
+    Ops.back() = DAG.getConstant(Stage, DL, MVT::i32);
+    NewStore = DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID, DL,
+                                       DAG.getVTList(MVT::Other), Ops,
+                                       ST->getMemoryVT(), ST->getMemOperand());
+    Ops.front() = NewStore;
+  }
+  return NewStore;
+}
+
 /// PerformSTORECombine - Target-specific dag combine xforms for
 /// ISD::STORE.
 static SDValue PerformSTORECombine(SDNode *N,
@@ -16976,6 +17215,9 @@ static SDValue PerformSTORECombine(SDNode *N,
     return SDValue();
   SDValue StVal = St->getValue();
   EVT VT = StVal.getValueType();
+  if (SDValue Store =
+          PerformInterleavedStoreCombine(St, DCI, DCI.DAG, Subtarget))
+    return Store;
 
   if (Subtarget->hasNEON())
     if (SDValue Store = PerformTruncatingStoreCombine(St, DCI.DAG))
@@ -21226,6 +21468,14 @@ ARMTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
   if (VT == MVT::f64 && Subtarget->hasFP64())
     return ARM_AM::getFP64Imm(Imm) != -1 ? FPImmAction::Legal
                                          : FPImmAction::ConstantPool;
+  return FPImmAction::ConstantPool;
+}
+
+TargetLowering::FPImmAction
+ARMTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                  bool ForCodeSize) const {
+  if (Subtarget->useSoftFloat() || !Subtarget->hasVFP2Base())
+    return FPImmAction::Bitcast;
   return FPImmAction::ConstantPool;
 }
 

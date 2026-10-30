@@ -52,7 +52,7 @@ using namespace llvm;
 #define DEBUG_TYPE "x86-fence-nontemporal-stores"
 
 static bool isNonTemporalStore(const Instruction &I) {
-  return I.mayWriteToMemory() && I.hasMetadata(LLVMContext::MD_nontemporal);
+  return I.hasMetadata(LLVMContext::MD_nontemporal) && I.mayWriteToMemory();
 }
 
 /// Returns true if I is a hardware fence that serializes write-combining

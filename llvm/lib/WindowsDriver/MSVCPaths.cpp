@@ -35,11 +35,6 @@
 #define NOMINMAX
 #endif
 #include <windows.h>
-#endif
-
-#ifdef _MSC_VER
-// Don't support SetupApi on MinGW.
-#define USE_MSVC_SETUP_API
 
 // Make sure this comes before MSVCSetupApi.h
 #include <comdef.h>
@@ -52,6 +47,24 @@
 #include "llvm/WindowsDriver/MSVCSetupApi.h"
 #ifdef __clang__
 #pragma clang diagnostic pop
+#endif
+#ifdef __MINGW32__
+// mingw-w64 emulates __uuidof, which takes the IIDs from __CRT_UUID_DECL
+// rather than from the DECLSPEC_UUID in MSVCSetupApi.h.
+__CRT_UUID_DECL(ISetupInstance, 0xB41463C3, 0x8866, 0x43B5, 0xBC, 0x33, 0x2B,
+                0x06, 0x76, 0xF7, 0xF4, 0x2E)
+__CRT_UUID_DECL(ISetupInstance2, 0x89143C9A, 0x05AF, 0x49B0, 0xB7, 0x17, 0x72,
+                0xE2, 0x18, 0xA2, 0x18, 0x5C)
+__CRT_UUID_DECL(IEnumSetupInstances, 0x6380BCFF, 0x41D3, 0x4B2E, 0x8B, 0x2E,
+                0xBF, 0x8A, 0x68, 0x10, 0xC8, 0x48)
+__CRT_UUID_DECL(ISetupConfiguration, 0x42843719, 0xDB4C, 0x46C2, 0x8E, 0x7C,
+                0x64, 0xF1, 0x81, 0x6E, 0xFD, 0x5B)
+__CRT_UUID_DECL(ISetupConfiguration2, 0x26AAB78C, 0x4A60, 0x49D6, 0xAF, 0x3B,
+                0x3C, 0x35, 0xBC, 0x93, 0x36, 0x5D)
+__CRT_UUID_DECL(ISetupHelper, 0x42B21B78, 0x6192, 0x463E, 0x87, 0xBF, 0xD5,
+                0x77, 0x83, 0x8F, 0x1D, 0x5C)
+__CRT_UUID_DECL(SetupConfiguration, 0x177F0C4A, 0x1CD3, 0x4DE7, 0xA3, 0x2C,
+                0x71, 0xDB, 0xBB, 0x9F, 0xA3, 0x6D)
 #endif
 _COM_SMARTPTR_TYPEDEF(ISetupConfiguration, __uuidof(ISetupConfiguration));
 _COM_SMARTPTR_TYPEDEF(ISetupConfiguration2, __uuidof(ISetupConfiguration2));
@@ -636,7 +649,7 @@ bool llvm::findVCToolChainViaEnvironment(vfs::FileSystem &VFS,
 bool llvm::findVCToolChainViaSetupConfig(
     vfs::FileSystem &VFS, std::optional<StringRef> VCToolsVersion,
     std::string &Path, ToolsetLayout &VSLayout) {
-#if !defined(USE_MSVC_SETUP_API)
+#ifndef _WIN32
   return false;
 #else
   // FIXME: This really should be done once in the top-level program's main

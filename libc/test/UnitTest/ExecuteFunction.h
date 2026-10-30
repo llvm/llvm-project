@@ -37,7 +37,7 @@ struct ProcessStatus {
   int get_fatal_signal();
 };
 
-ProcessStatus invoke_in_subprocess(cpp::function<void(void)> func,
+ProcessStatus invoke_in_subprocess(cpp::function_ref<void(void)> func,
                                    int timeout_ms = ProcessStatus::TIMEOUT);
 
 const char *signal_as_string(int signum);
