@@ -3,8 +3,8 @@
 
 // RUN: %libomptarget-compile-generic -O3 -fopenmp-assume-threads-oversubscription -fopenmp-assume-teams-oversubscription
 // RUN: env LIBOMPTARGET_INFO=16 OMP_NUM_TEAMS=16 OMP_TEAMS_THREAD_LIMIT=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
-// REQUIRES: gpu
-// XFAIL: intelgpu
+// RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=DEFAULT
+// REQUIRES: amdgpu
 
 #include <stdio.h>
 
@@ -18,6 +18,7 @@ static int check_errors(int *array) {
 
 int main(void) {
   int array[1024];
+  static int big[1000000];
   int errors = 0;
   int red;
 
@@ -127,6 +128,14 @@ int main(void) {
   if (grid_stride_last != 1023)
     ++errors;
 
+  // No-loop kernel
+#pragma omp target teams distribute parallel for
+  for (int i = 0; i < 1000000; ++i)
+    big[i] = i + 1;
+  for (int i = 0; i < 1000000; ++i)
+    if (big[i] != i + 1)
+      ++errors;
+
   printf("number of errors: %d\n", errors);
   return 0;
 }
@@ -151,4 +160,21 @@ int main(void) {
 // CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
 // CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-Grid-Stride-Loop mode
 // CHECK:  info: #Args: 3 Teams x Thrds:    3x  16 {{.*}}
+// CHECK:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// CHECK:  info: #Args: 2 Teams x Thrds: {{ *}}[[#TEAMS:]]x{{ *}}[[#THRDS:]]
+// CHECK-SAME: Tripcount: [[#min(mul(TEAMS,THRDS),1000000)]]
 // CHECK:  number of errors: 0
+
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-Grid-Stride-Loop mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds:    3x{{ *[0-9]+}}
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds: {{ *[0-9]+}}x  64
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds:    1x{{ *[0-9]+}}
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} Generic-SPMD mode
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+// DEFAULT:  omptarget device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
+// DEFAULT:  info: #Args: 2 Teams x Thrds: {{ *}}[[#TEAMS:]]x{{ *}}[[#THRDS:]]
+// DEFAULT-SAME: Tripcount: [[#min(mul(TEAMS,THRDS),1000000)]]
+// DEFAULT:  number of errors: 0
