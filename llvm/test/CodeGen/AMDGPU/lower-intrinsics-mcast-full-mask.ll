@@ -11,10 +11,20 @@
 
 ; The early timeout bit (21) and the data size field (bits [17:16]) are kept.
 define void @tensor_load_to_lds_const_desc_full_mask(<4 x i32> %d0) {
-; CHECK-LABEL: define void @tensor_load_to_lds_const_desc_full_mask(
-; CHECK-SAME: <4 x i32> [[D0:%.*]]) {
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> <i32 2293759, i32 16777216, i32 65536, i32 16777216, i32 1, i32 256, i32 0, i32 0>, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @tensor_load_to_lds_const_desc_full_mask(
+; BUG-SAME: <4 x i32> [[D0:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 2293759
+; BUG-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> <i32 2293759, i32 16777216, i32 65536, i32 16777216, i32 1, i32 256, i32 0, i32 0>, i32 [[TMP4]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_load_to_lds_const_desc_full_mask(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]]) {
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> <i32 2293759, i32 16777216, i32 65536, i32 16777216, i32 1, i32 256, i32 0, i32 0>, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    ret void
 ;
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> <i32 2293759, i32 16777216, i32 65536, i32 16777216, i32 1, i32 256, i32 0, i32 0>, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
   ret void
@@ -31,21 +41,49 @@ define void @tensor_load_to_lds_const_desc_partial_mask(<4 x i32> %d0) {
 }
 
 define void @tensor_load_to_lds_dynamic_desc(<4 x i32> %d0, <8 x i32> %d1) {
-; CHECK-LABEL: define void @tensor_load_to_lds_dynamic_desc(
-; CHECK-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]]) {
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @tensor_load_to_lds_dynamic_desc(
+; BUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[D1]], i64 0
+; BUG-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], [[TMP4]]
+; BUG-NEXT:    [[TMP6:%.*]] = and i32 [[TMP4]], 65535
+; BUG-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP6]], 65535
+; BUG-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], i32 [[TMP5]], i32 [[TMP4]]
+; BUG-NEXT:    [[TMP9:%.*]] = insertelement <8 x i32> [[D1]], i32 [[TMP8]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP9]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_load_to_lds_dynamic_desc(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]]) {
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    ret void
 ;
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
   ret void
 }
 
 define void @tensor_load_to_lds_inserted_dynamic_mask(<4 x i32> %d0, <8 x i32> %d1, i32 %mask) {
-; CHECK-LABEL: define void @tensor_load_to_lds_inserted_dynamic_mask(
-; CHECK-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[MASK:%.*]]) {
-; CHECK-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @tensor_load_to_lds_inserted_dynamic_mask(
+; BUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[MASK:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[MASK]]
+; BUG-NEXT:    [[TMP5:%.*]] = and i32 [[MASK]], 65535
+; BUG-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 65535
+; BUG-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP4]], i32 [[MASK]]
+; BUG-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[D1_MASK]], i32 [[TMP7]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP8]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_load_to_lds_inserted_dynamic_mask(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[MASK:%.*]]) {
+; NOBUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    ret void
 ;
   %d1.mask = insertelement <8 x i32> %d1, i32 %mask, i64 0
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1.mask, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -53,11 +91,22 @@ define void @tensor_load_to_lds_inserted_dynamic_mask(<4 x i32> %d0, <8 x i32> %
 }
 
 define void @tensor_load_to_lds_inserted_full_mask(<4 x i32> %d0, <8 x i32> %d1) {
-; CHECK-LABEL: define void @tensor_load_to_lds_inserted_full_mask(
-; CHECK-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]]) {
-; CHECK-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @tensor_load_to_lds_inserted_full_mask(
+; BUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[D1_MASK]], i32 [[TMP4]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_load_to_lds_inserted_full_mask(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]]) {
+; NOBUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    ret void
 ;
   %d1.mask = insertelement <8 x i32> %d1, i32 65535, i64 0
   call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> %d0, <8 x i32> %d1.mask, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
@@ -93,12 +142,24 @@ define void @tensor_load_to_lds_known_partial_mask(<4 x i32> %d0, <8 x i32> %d1,
 
 ; A runtime mask with all 16 workgroup bits known set needs no runtime check.
 define void @tensor_load_to_lds_known_full_mask(<4 x i32> %d0, <8 x i32> %d1, i32 %x) {
-; CHECK-LABEL: define void @tensor_load_to_lds_known_full_mask(
-; CHECK-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[MASK:%.*]] = or i32 [[X]], 65535
-; CHECK-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @tensor_load_to_lds_known_full_mask(
+; BUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[X:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[MASK:%.*]] = or i32 [[X]], 65535
+; BUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[MASK]]
+; BUG-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> [[D1_MASK]], i32 [[TMP4]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP5]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_load_to_lds_known_full_mask(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[X:%.*]]) {
+; NOBUG-NEXT:    [[MASK:%.*]] = or i32 [[X]], 65535
+; NOBUG-NEXT:    [[D1_MASK:%.*]] = insertelement <8 x i32> [[D1]], i32 [[MASK]], i64 0
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_MASK]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    ret void
 ;
   %mask = or i32 %x, 65535
   %d1.mask = insertelement <8 x i32> %d1, i32 %mask, i64 0
@@ -121,11 +182,21 @@ define void @tensor_store_from_lds_full_mask(<4 x i32> %d0, <8 x i32> %d1) {
 
 ; The cluster load mask is the last operand.
 define void @cluster_load_b32_full_mask(ptr addrspace(1) %p, ptr addrspace(1) %out) {
-; CHECK-LABEL: define void @cluster_load_b32_full_mask(
-; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 65535)
-; CHECK-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @cluster_load_b32_full_mask(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 [[TMP4]])
+; BUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_b32_full_mask(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]]) {
+; NOBUG-NEXT:    [[V:%.*]] = call i32 @llvm.amdgcn.cluster.load.b32.i32(ptr addrspace(1) [[P]], i32 0, i32 65535)
+; NOBUG-NEXT:    store i32 [[V]], ptr addrspace(1) [[OUT]], align 4
+; NOBUG-NEXT:    ret void
 ;
   %v = call i32 @llvm.amdgcn.cluster.load.b32.i32.p1(ptr addrspace(1) %p, i32 0, i32 65535)
   store i32 %v, ptr addrspace(1) %out
@@ -133,11 +204,24 @@ define void @cluster_load_b32_full_mask(ptr addrspace(1) %p, ptr addrspace(1) %o
 }
 
 define void @cluster_load_b64_dynamic_mask(ptr addrspace(1) %p, ptr addrspace(1) %out, i32 %mask) {
-; CHECK-LABEL: define void @cluster_load_b64_dynamic_mask(
-; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]], i32 [[MASK:%.*]]) {
-; CHECK-NEXT:    [[V:%.*]] = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) [[P]], i32 0, i32 [[MASK]])
-; CHECK-NEXT:    store <2 x i32> [[V]], ptr addrspace(1) [[OUT]], align 8
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @cluster_load_b64_dynamic_mask(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]], i32 [[MASK:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], [[MASK]]
+; BUG-NEXT:    [[TMP5:%.*]] = and i32 [[MASK]], 65535
+; BUG-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 65535
+; BUG-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP4]], i32 [[MASK]]
+; BUG-NEXT:    [[V:%.*]] = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) [[P]], i32 0, i32 [[TMP7]])
+; BUG-NEXT:    store <2 x i32> [[V]], ptr addrspace(1) [[OUT]], align 8
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_b64_dynamic_mask(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(1) [[OUT:%.*]], i32 [[MASK:%.*]]) {
+; NOBUG-NEXT:    [[V:%.*]] = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32(ptr addrspace(1) [[P]], i32 0, i32 [[MASK]])
+; NOBUG-NEXT:    store <2 x i32> [[V]], ptr addrspace(1) [[OUT]], align 8
+; NOBUG-NEXT:    ret void
 ;
   %v = call <2 x i32> @llvm.amdgcn.cluster.load.b64.v2i32.p1(ptr addrspace(1) %p, i32 0, i32 %mask)
   store <2 x i32> %v, ptr addrspace(1) %out
@@ -159,10 +243,19 @@ define void @cluster_load_b128_known_partial_mask(ptr addrspace(1) %p, ptr addrs
 }
 
 define void @cluster_load_async_to_lds_b32_full_mask(ptr addrspace(1) %p, ptr addrspace(3) %lds) {
-; CHECK-LABEL: define void @cluster_load_async_to_lds_b32_full_mask(
-; CHECK-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(3) [[LDS:%.*]]) {
-; CHECK-NEXT:    call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) [[P]], ptr addrspace(3) [[LDS]], i32 0, i32 0, i32 65535)
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @cluster_load_async_to_lds_b32_full_mask(
+; BUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(3) [[LDS:%.*]]) {
+; BUG-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
+; BUG-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) [[P]], ptr addrspace(3) [[LDS]], i32 0, i32 0, i32 [[TMP4]])
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @cluster_load_async_to_lds_b32_full_mask(
+; NOBUG-SAME: ptr addrspace(1) [[P:%.*]], ptr addrspace(3) [[LDS:%.*]]) {
+; NOBUG-NEXT:    call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) [[P]], ptr addrspace(3) [[LDS]], i32 0, i32 0, i32 65535)
+; NOBUG-NEXT:    ret void
 ;
   call void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1) %p, ptr addrspace(3) %lds, i32 0, i32 0, i32 65535)
   ret void
@@ -181,22 +274,53 @@ define void @cluster_load_async_to_lds_b8_partial_mask(ptr addrspace(1) %p, ptr 
 ; The clamp mask is computed in the entry block after the allocas, not in the
 ; loop.
 define void @tensor_loads_in_loop(<4 x i32> %d0, <8 x i32> %d1, i32 %n) {
-; CHECK-LABEL: define void @tensor_loads_in_loop(
-; CHECK-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
-; CHECK-NEXT:    [[D1_FULL:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_FULL]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
-; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    store volatile i32 [[I]], ptr addrspace(5) [[TMP]], align 4
-; CHECK-NEXT:    ret void
+; BUG-LABEL: define void @tensor_loads_in_loop(
+; BUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[N:%.*]]) {
+; BUG-NEXT:  [[ENTRY:.*]]:
+; BUG-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
+; BUG-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
+; BUG-NEXT:    [[TMP11:%.*]] = select i1 [[TMP1]], i32 -65536, i32 -2
+; BUG-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.cluster.workgroup.flat.id()
+; BUG-NEXT:    [[TMP13:%.*]] = icmp eq i32 [[TMP12]], 0
+; BUG-NEXT:    [[TMP2:%.*]] = select i1 [[TMP13]], i32 -65536, i32 -2
+; BUG-NEXT:    [[D1_FULL:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
+; BUG-NEXT:    br label %[[LOOP:.*]]
+; BUG:       [[LOOP]]:
+; BUG-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; BUG-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[D1]], i64 0
+; BUG-NEXT:    [[TMP4:%.*]] = and i32 [[TMP2]], [[TMP3]]
+; BUG-NEXT:    [[TMP5:%.*]] = and i32 [[TMP3]], 65535
+; BUG-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[TMP5]], 65535
+; BUG-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], i32 [[TMP4]], i32 [[TMP3]]
+; BUG-NEXT:    [[TMP8:%.*]] = insertelement <8 x i32> [[D1]], i32 [[TMP7]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP8]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    [[TMP9:%.*]] = and i32 [[TMP11]], 65535
+; BUG-NEXT:    [[TMP10:%.*]] = insertelement <8 x i32> [[D1_FULL]], i32 [[TMP9]], i64 0
+; BUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[TMP10]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; BUG-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; BUG-NEXT:    [[COND:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; BUG-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; BUG:       [[EXIT]]:
+; BUG-NEXT:    store volatile i32 [[I]], ptr addrspace(5) [[TMP]], align 4
+; BUG-NEXT:    ret void
+;
+; NOBUG-LABEL: define void @tensor_loads_in_loop(
+; NOBUG-SAME: <4 x i32> [[D0:%.*]], <8 x i32> [[D1:%.*]], i32 [[N:%.*]]) {
+; NOBUG-NEXT:  [[ENTRY:.*]]:
+; NOBUG-NEXT:    [[TMP:%.*]] = alloca i32, align 4, addrspace(5)
+; NOBUG-NEXT:    [[D1_FULL:%.*]] = insertelement <8 x i32> [[D1]], i32 65535, i64 0
+; NOBUG-NEXT:    br label %[[LOOP:.*]]
+; NOBUG:       [[LOOP]]:
+; NOBUG-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    call void @llvm.amdgcn.tensor.load.to.lds(<4 x i32> [[D0]], <8 x i32> [[D1_FULL]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer, <8 x i32> zeroinitializer, i32 0)
+; NOBUG-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; NOBUG-NEXT:    [[COND:%.*]] = icmp ult i32 [[I_NEXT]], [[N]]
+; NOBUG-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; NOBUG:       [[EXIT]]:
+; NOBUG-NEXT:    store volatile i32 [[I]], ptr addrspace(5) [[TMP]], align 4
+; NOBUG-NEXT:    ret void
 ;
 entry:
   %tmp = alloca i32, align 4, addrspace(5)
@@ -223,6 +347,3 @@ declare void @llvm.amdgcn.cluster.load.async.to.lds.b8(ptr addrspace(1), ptr add
 declare void @llvm.amdgcn.cluster.load.async.to.lds.b32(ptr addrspace(1), ptr addrspace(3), i32, i32, i32)
 declare void @llvm.amdgcn.tensor.load.to.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
 declare void @llvm.amdgcn.tensor.store.from.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; BUG: {{.*}}
-; NOBUG: {{.*}}

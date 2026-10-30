@@ -15,8 +15,10 @@ define amdgpu_ps void @tensor_load_to_lds_full_mask(<4 x i32> inreg %d0, <8 x i3
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_mov_b32 s4, 0xffff
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1250-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s4, 0, 0xfffe
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
 ; GFX1250-NEXT:    s_endpgm
 ;
@@ -42,13 +44,20 @@ define amdgpu_ps void @tensor_load_to_lds_dynamic_mask_loop(<4 x i32> inreg %d0,
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_mov_b32 s13, 0
+; GFX1250-NEXT:    s_mov_b32 s13, s4
+; GFX1250-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
+; GFX1250-NEXT:    s_mov_b32 s14, 0
+; GFX1250-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 s4, 0xffff0000, -2
+; GFX1250-NEXT:    s_and_b32 s16, s13, 0xffff
+; GFX1250-NEXT:    s_and_b32 s15, s4, s13
 ; GFX1250-NEXT:  .LBB1_1: ; %loop
 ; GFX1250-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX1250-NEXT:    s_cmp_eq_u32 s16, 0xffff
+; GFX1250-NEXT:    s_cselect_b32 s4, s15, s13
+; GFX1250-NEXT:    s_add_co_i32 s14, s14, 1
 ; GFX1250-NEXT:    tensor_load_to_lds s[0:3], s[4:11]
-; GFX1250-NEXT:    s_add_co_i32 s13, s13, 1
-; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-NEXT:    s_cmp_lt_u32 s13, s12
+; GFX1250-NEXT:    s_cmp_lt_u32 s14, s12
 ; GFX1250-NEXT:    s_wait_tensorcnt 0x0
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GFX1250-NEXT:  ; %bb.2: ; %exit
@@ -94,8 +103,10 @@ define amdgpu_ps void @cluster_load_b32_full_mask(ptr addrspace(1) inreg %p, ptr
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; GFX1250-NEXT:    s_getreg_b32 s4, hwreg(HW_REG_IB_STS2, 21, 4)
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
-; GFX1250-NEXT:    s_mov_b32 m0, 0xffff
+; GFX1250-NEXT:    s_cmp_eq_u32 s4, 0
+; GFX1250-NEXT:    s_cselect_b32 m0, 0, 0xfffe
 ; GFX1250-NEXT:    cluster_load_b32 v1, v0, s[0:1]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v0, v1, s[2:3]
