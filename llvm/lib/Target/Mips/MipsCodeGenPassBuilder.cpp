@@ -57,7 +57,7 @@ Error MipsCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 }
 
 void MipsCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add MipsOptimizerPICCallPass
+  addMachineFunctionPass(MipsOptimizePICCallPass(), PMW);
 }
 
 void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {

@@ -54,6 +54,7 @@
 ; MIPS-NEXT:     machine-sink
 ; MIPS-NEXT:     peephole-opt
 ; MIPS-NEXT:     dead-mi-elimination
+; MIPS-NEXT:     mips-optimize-pic-call
 ; MIPS-NEXT:     detect-dead-lanes
 ; MIPS-NEXT:     init-undef
 ; MIPS-NEXT:     process-implicit-defs
@@ -144,6 +145,7 @@
 ; MIPS-OS16-NEXT:     machine-sink
 ; MIPS-OS16-NEXT:     peephole-opt
 ; MIPS-OS16-NEXT:     dead-mi-elimination
+; MIPS-OS16-NEXT:     mips-optimize-pic-call
 ; MIPS-OS16-NEXT:     detect-dead-lanes
 ; MIPS-OS16-NEXT:     init-undef
 ; MIPS-OS16-NEXT:     process-implicit-defs
@@ -233,6 +235,7 @@
 ; MIPS-MFIX4300-NEXT:     machine-sink
 ; MIPS-MFIX4300-NEXT:     peephole-opt
 ; MIPS-MFIX4300-NEXT:     dead-mi-elimination
+; MIPS-MFIX4300-NEXT:     mips-optimize-pic-call
 ; MIPS-MFIX4300-NEXT:     detect-dead-lanes
 ; MIPS-MFIX4300-NEXT:     init-undef
 ; MIPS-MFIX4300-NEXT:     process-implicit-defs
