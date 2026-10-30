@@ -60,6 +60,7 @@
 #include "SILowerWWMCopies.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIMachineScheduler.h"
+#include "SIMaterializeWMMAScale.h"
 #include "SIOptimizeExecMasking.h"
 #include "SIOptimizeExecMaskingPreRA.h"
 #include "SIOptimizeVGPRLiveRange.h"
@@ -702,6 +703,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
+  initializeSIMaterializeWMMAScaleLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
   initializeSIOptimizeVGPRLiveRangeLegacyPass(*PR);
   initializeAMDGPUNextUseAnalysisLegacyPassPass(*PR);
@@ -1772,6 +1774,7 @@ void GCNPassConfig::addMachineSSAOptimization() {
   }
   addPass(&DeadMachineInstructionElimID);
   addPass(createSIShrinkInstructionsLegacyPass());
+  addPass(createSIMaterializeWMMAScaleLegacyPass());
 }
 
 bool GCNPassConfig::addILPOpts() {
@@ -2609,6 +2612,7 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addMachineFunctionPass(DeadMachineInstructionElimPass(), PMW);
   addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
+  addMachineFunctionPass(SIMaterializeWMMAScalePass(), PMW);
 }
 
 Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {

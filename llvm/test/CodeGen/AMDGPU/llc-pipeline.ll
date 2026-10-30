@@ -337,6 +337,7 @@
 ; GCN-O1-NEXT:        SI Load Store Optimizer
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
+; GCN-O1-NEXT:        SI Materialize WMMA Scale
 ; GCN-O1-NEXT:        Register Usage Information Propagation
 ; GCN-O1-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O1-NEXT:        Detect Dead Lanes
@@ -661,6 +662,7 @@
 ; GCN-O1-OPTS-NEXT:        SI Fold Operands
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
+; GCN-O1-OPTS-NEXT:        SI Materialize WMMA Scale
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
 ; GCN-O1-OPTS-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
@@ -989,6 +991,7 @@
 ; GCN-O2-NEXT:        SI Fold Operands
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
+; GCN-O2-NEXT:        SI Materialize WMMA Scale
 ; GCN-O2-NEXT:        Register Usage Information Propagation
 ; GCN-O2-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O2-NEXT:        Detect Dead Lanes
@@ -1333,6 +1336,7 @@
 ; GCN-O3-NEXT:        SI Fold Operands
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
+; GCN-O3-NEXT:        SI Materialize WMMA Scale
 ; GCN-O3-NEXT:        Register Usage Information Propagation
 ; GCN-O3-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O3-NEXT:        Detect Dead Lanes
