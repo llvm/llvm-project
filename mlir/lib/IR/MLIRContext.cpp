@@ -182,8 +182,10 @@ public:
   /// An allocator used for AbstractAttribute and AbstractType objects.
   llvm::BumpPtrAllocator abstractDialectSymbolAllocator;
 
-  /// This is a mapping from operation name to the operation info describing it.
-  llvm::StringMap<std::unique_ptr<OperationName::Impl>> operations;
+  /// This is a mapping from unregistered operation name to the operation info
+  /// describing it.
+  llvm::StringMap<std::unique_ptr<OperationName::Impl>>
+      unregisteredOperationsByName;
 
   /// A vector of operation info specifically for registered operations.
   llvm::DenseMap<TypeID, RegisteredOperationName> registeredOperations;
@@ -272,7 +274,8 @@ public:
 
   /// Bundled state dynamically allocated when in a transient scope.
   struct TransientScopeState {
-    /// Set of operation names in `operations` at snapshot time.
+    /// Set of operation names in `unregisteredOperationsByName` at snapshot
+    /// time.
     llvm::DenseSet<StringRef> baseOperations;
 
     /// Number of entries in `dialectReferencingStrAttrs` per dialect at
@@ -706,10 +709,10 @@ void MLIRContext::beginTransientScope() {
   ctxImpl.affineUniquer.beginTransientScope();
   ctxImpl.distinctAttributeAllocator.beginTransientScope();
 
-  // Record base operations in operations map.
+  // Record base unregistered operations.
   {
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
-    for (const auto &entry : ctxImpl.operations)
+    for (const auto &entry : ctxImpl.unregisteredOperationsByName)
       ctxImpl.transientState->baseOperations.insert(entry.first());
   }
 
@@ -736,13 +739,11 @@ void MLIRContext::endTransientScope() {
   {
     llvm::sys::SmartScopedWriter<true> contextLock(ctxImpl.operationInfoMutex);
     SmallVector<StringRef> opsToErase;
-    for (const auto &entry : ctxImpl.operations) {
-      if (!entry.second->isRegistered() &&
-          !ctxImpl.transientState->baseOperations.contains(entry.first()))
+    for (const auto &entry : ctxImpl.unregisteredOperationsByName)
+      if (!ctxImpl.transientState->baseOperations.contains(entry.first()))
         opsToErase.push_back(entry.first());
-    }
     for (StringRef op : opsToErase)
-      ctxImpl.operations.erase(op);
+      ctxImpl.unregisteredOperationsByName.erase(op);
   }
 
   // Restore dialect referencing string attributes before destroying the
@@ -929,8 +930,8 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   bool isMultithreadingEnabled = context->isMultithreadingEnabled();
   if (isMultithreadingEnabled) {
     llvm::sys::SmartScopedReader<true> contextLock(ctxImpl.operationInfoMutex);
-    auto it = ctxImpl.operations.find(name);
-    if (it != ctxImpl.operations.end()) {
+    auto it = ctxImpl.unregisteredOperationsByName.find(name);
+    if (it != ctxImpl.unregisteredOperationsByName.end()) {
       impl = it->second.get();
       return;
     }
@@ -939,7 +940,7 @@ OperationName::OperationName(StringRef name, MLIRContext *context) {
   // Acquire a writer-lock so that we can safely create the new instance.
   ScopedWriterLock lock(ctxImpl.operationInfoMutex, isMultithreadingEnabled);
 
-  auto it = ctxImpl.operations.try_emplace(name);
+  auto it = ctxImpl.unregisteredOperationsByName.try_emplace(name);
   if (it.second) {
     auto nameAttr = StringAttr::get(context, name);
     it.first->second = std::make_unique<UnregisteredOpModel>(
