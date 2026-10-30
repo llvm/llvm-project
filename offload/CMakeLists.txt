@@ -18,7 +18,7 @@ set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
 
 option(BUILD_LIBOMPTARGET "Build the OpenMP offloading runtime library libomptarget." ON)
 option(BUILD_LIBACCTARGET "Build the OpenACC offloading runtime library libacctarget." ON)
-# offload is not supported on Windows.
+# libomptarget and libacctarget are not supported on Windows.
 if(MSVC)
   set(BUILD_LIBOMPTARGET OFF CACHE BOOL "" FORCE)
   set(BUILD_LIBACCTARGET OFF CACHE BOOL "" FORCE)

@@ -17,7 +17,7 @@
 #include <mutex>
 
 namespace llvm::acc::target {
-extern PluginManager *PM = nullptr;
+PluginManager *PM = nullptr;
 } // namespace llvm::acc::target
 
 using namespace llvm::acc::target;
@@ -30,7 +30,7 @@ static int32_t InitRefCount = 0;
 
 void initAccRuntime() {
   std::scoped_lock<std::mutex> Lock(getInitMutex());
-  assert(InitRefCount >= 0);
+  assert(InitRefCount >= 0 && "Ref count cannot be negative.");
 
   if (InitRefCount++ == 0) {
     ODBG(ADT_Init) << "Init OpenACC runtime";
@@ -44,7 +44,7 @@ void initAccRuntime() {
 void deinitAccRuntime() {
   std::scoped_lock<std::mutex> Lock(getInitMutex());
   assert(PM && "OpenACC runtime not initialized");
-  assert(InitRefCount > 0);
+  assert(InitRefCount > 0 && "Ref count cannot be negative.");
 
   if (--InitRefCount == 0) {
     ODBG(ADT_Init) << "Deinit OpenACC runtime";
