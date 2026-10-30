@@ -558,6 +558,7 @@ def IsMemberPointer : UnaryTrait {
 
 def IsConst : UnaryTrait {
   let Spelling = "__is_const";
+  let StdName = "is_const";
 }
 
 def IsVolatile : UnaryTrait {

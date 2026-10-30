@@ -73,6 +73,13 @@ struct is_abstract {
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct is_const {
+  static constexpr bool value = __is_const(T);
+};
+template <typename T>
+constexpr bool is_const_v = __is_const(T);
+
 #endif
 
 #ifdef STD2
@@ -167,6 +174,15 @@ using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = __is_abstract(T);
 
+template <typename T>
+struct __details_is_const {
+  static constexpr bool value = __is_const(T);
+};
+template <typename T>
+using is_const = __details_is_const<T>;
+template <typename T>
+constexpr bool is_const_v = __is_const(T);
+
 #endif
 
 
@@ -251,6 +267,13 @@ template <typename T>
 using is_abstract = __details_is_abstract<T>;
 template <typename T>
 constexpr bool is_abstract_v = is_abstract<T>::value;
+
+template <typename T>
+struct __details_is_const : bool_constant<__is_const(T)> {};
+template <typename T>
+using is_const = __details_is_const<T>;
+template <typename T>
+constexpr bool is_const_v = is_const<T>::value;
 
 #endif
 }
@@ -374,6 +397,35 @@ static_assert(std::is_abstract_v<int&>);
 // expected-note@-1 {{because it is a reference type}} \
 // expected-note@-1 {{because it is not a struct or class type}}
 
+static_assert(!std::is_const<int>::value);
+
+static_assert(std::is_const<void()>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<void ()>::value'}} \
+// expected-note@-1 {{'void ()' is not const}} \
+// expected-note@-1 {{because it is a function type}}
+
+static_assert(std::is_const_v<void()>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<void ()>'}} \
+// expected-note@-1 {{'void ()' is not const}} \
+// expected-note@-1 {{because it is a function type}}
+
+static_assert(std::is_const<int &>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<int &>::value'}} \
+// expected-note@-1 {{'int &' is not const}} \
+// expected-note@-1 {{because it is a reference type}}
+
+static_assert(std::is_const_v<int &>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<int &>'}} \
+// expected-note@-1 {{'int &' is not const}} \
+// expected-note@-1 {{because it is a reference type}}
+
+static_assert(std::is_const_v<int>);
+// expected-error@-1 {{static assertion failed due to requirement 'std::is_const_v<int>'}} \
+// expected-note@-1 {{'int' is not const}}
+
+static_assert(std::is_const<int>::value);
+// expected-error-re@-1 {{static assertion failed due to requirement 'std::{{.*}}is_const<int>::value'}} \
+// expected-note@-1 {{'int' is not const}}
 
 namespace test_namespace {
     using namespace std;
@@ -473,6 +525,36 @@ namespace test_namespace {
     // expected-note@-1 {{'int &' is not abstract}} \
     // expected-note@-1 {{because it is a reference type}} \
     // expected-note@-1 {{because it is not a struct or class type}}
+
+    static_assert(!is_const<int>::value);
+
+    static_assert(is_const<void()>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_const<void ()>::value'}} \
+    // expected-note@-1 {{'void ()' is not const}} \
+    // expected-note@-1 {{because it is a function type}} \
+
+    static_assert(is_const_v<void ()>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_const_v<void ()>'}} \
+    // expected-note@-1 {{'void ()' is not const}} \
+    // expected-note@-1 {{because it is a function type}}
+
+    static_assert(is_const<int &>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_const<int &>::value'}} \
+    // expected-note@-1 {{'int &' is not const}} \
+    // expected-note@-1 {{because it is a reference type}}
+
+    static_assert(is_const_v<int &>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_const_v<int &>'}} \
+    // expected-note@-1 {{'int &' is not const}} \
+    // expected-note@-1 {{because it is a reference type}}
+
+    static_assert(is_const<int>::value);
+    // expected-error-re@-1 {{static assertion failed due to requirement '{{.*}}is_const<int>::value'}} \
+    // expected-note@-1 {{'int' is not const}}
+
+    static_assert(is_const_v<int>);
+    // expected-error@-1 {{static assertion failed due to requirement 'is_const_v<int>'}} \
+    // expected-note@-1 {{'int' is not const}}
 }
 
 

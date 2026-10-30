@@ -1858,7 +1858,8 @@ def note_unsatisfied_trait
            "%StandardLayout{standard-layout}|"
            "%Aggregate{aggregate}|"
            "%Final{final}|"
-           "%Abstract{abstract}"
+           "%Abstract{abstract}|"
+           "%Const{const}"
            "}1">;
 
 def note_unsatisfied_trait_reason
