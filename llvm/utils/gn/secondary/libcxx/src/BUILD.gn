@@ -234,6 +234,9 @@ if (libcxx_enable_filesystem) {
 if (false) {
   cxx_sources += [ "pstl/libdispatch.cpp" ]
 }
+if (false) {
+  cxx_sources += [ "pstl/statpart.cpp" ]
+}
 
 if (libcxx_enable_shared) {
   shared_library("cxx_shared") {
