@@ -17,10 +17,14 @@
 
 #include "benchmark/benchmark.h"
 #include "make_string.h"
+#include "test_iterators.h"
 #include "test_macros.h"
 
 constexpr size_t small_size = 5;
 constexpr size_t large_size = 30;
+
+template <template <class...> class>
+struct template_identity {};
 
 std::string rename(std::string str, std::string_view replacement) {
   while (true) {
@@ -349,6 +353,35 @@ int main(int argc, char** argv) {
           [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
     bench("std::basic_string::append(const value_type*) (transparent)",
           std::bind_front(bench_impl, std::false_type{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+  }
+
+  {
+    static auto bench_impl = []<template <class...> class Iter, class CharT>(
+                                 template_identity<Iter>, std::type_identity<CharT>, benchmark::State& state) {
+      using str = std::basic_string<CharT>;
+      str src(state.range(), 'a');
+
+      str strings[4096];
+      while (state.KeepRunningBatch(std::size(strings))) {
+        state.PauseTiming();
+        for (auto& string : strings)
+          str().swap(string); // Make sure the strings are in the default constructed state
+        state.ResumeTiming();
+        benchmark::DoNotOptimize(strings);
+
+        for (auto& string : strings) {
+          benchmark::DoNotOptimize(src);
+          string.append(Iter<CharT*>(src.data()), Iter<CharT*>(src.data() + src.size()));
+        }
+      }
+    };
+
+    bench("std::basic_string::append(input-iter, input-iter)",
+          std::bind_front(bench_impl, template_identity<cpp17_input_iterator>{}),
+          [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
+    bench("std::basic_string::append(forward-iter, forward-iter)",
+          std::bind_front(bench_impl, template_identity<forward_iterator>{}),
           [](auto bm) { bm->Arg(small_size)->Arg(large_size); });
   }
 
