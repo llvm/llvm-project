@@ -9055,7 +9055,7 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
   //   tr = mul ta, tb
   // to:
   //   tr = VMULW{EV/OD}[U/US] t0, t1
-  auto getExtType = [](unsigned Op0, unsigned Op1) -> unsigned {
+  auto getExtType = [](unsigned Op0, unsigned Op1) -> int {
     if (Op0 == ISD::SIGN_EXTEND && Op1 == ISD::SIGN_EXTEND)
       return 0;
     if (Op0 == ISD::ZERO_EXTEND && Op1 == ISD::ZERO_EXTEND)
@@ -9067,7 +9067,7 @@ static SDValue performMULCombine(SDNode *N, SelectionDAG &DAG,
     return -1;
   };
 
-  unsigned ExtType = getExtType(N0.getOpcode(), N1.getOpcode());
+  int ExtType = getExtType(N0.getOpcode(), N1.getOpcode());
   if (ExtType < 0)
     return SDValue();
 
