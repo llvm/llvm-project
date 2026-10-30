@@ -43,6 +43,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
 using namespace sema;
@@ -672,6 +673,131 @@ void Sema::NoteOverflowCheckedOps(Expr *E) {
     Handler->setReferenced();
 }
 
+namespace {
+/// Walks a function body, including nested lambda and block bodies, and
+/// diagnoses overflow-checked operations with no visible overflow handler.
+class OverflowHandlerDiagnoser {
+  Sema &S;
+  const IdentifierInfo *Name;
+  /// Handlers visible in the current function body, innermost last. The first
+  /// entry is the function-level handler and may be null.
+  SmallVector<LabelDecl *, 4> Handlers;
+  /// Matches the %select in warn_overflow_behavior_unreachable_handler.
+  enum NestedBodyKind { NB_Lambda, NB_Block };
+  /// Innermost handler of an enclosing function, when walking a nested body.
+  const LabelDecl *EnclosingHandler = nullptr;
+  NestedBodyKind NestedKind = NB_Lambda;
+  /// Set while walking the operands of a diagnosed operation, so that one
+  /// expression yields one warning.
+  bool InDiagnosedOp = false;
+
+public:
+  OverflowHandlerDiagnoser(Sema &S)
+      : S(S), Name(getOverflowHandlerName(S.Context)) {}
+
+  void visitBody(const Decl *D, const Stmt *Body) {
+    Handlers.push_back(findFunctionOverflowHandler(S.Context, D));
+    visit(Body);
+    Handlers.pop_back();
+  }
+
+private:
+  void visitNestedBody(const Decl *D, const Stmt *Body, NestedBodyKind Kind) {
+    const LabelDecl *Outer = Handlers.back();
+    SaveAndRestore SaveHandlers(Handlers, {});
+    SaveAndRestore SaveEnclosing(EnclosingHandler,
+                                 Outer ? Outer : EnclosingHandler);
+    SaveAndRestore SaveKind(NestedKind, Kind);
+    SaveAndRestore SaveInDiagnosedOp(InDiagnosedOp, false);
+    visitBody(D, Body);
+  }
+
+  void visit(const Stmt *St) {
+    if (!St)
+      return;
+
+    bool Diagnosed = false;
+    if (const auto *E = dyn_cast<Expr>(St);
+        E && !InDiagnosedOp && !Handlers.back() &&
+        isOverflowHandlerCheckedOp(S.Context, E)) {
+      Diagnosed = true;
+      if (EnclosingHandler) {
+        S.Diag(E->getExprLoc(),
+               diag::warn_overflow_behavior_unreachable_handler)
+            << NestedKind << EnclosingHandler->getName();
+        S.Diag(EnclosingHandler->getLocation(),
+               diag::note_overflow_behavior_enclosing_handler);
+      } else {
+        S.Diag(E->getExprLoc(), diag::warn_overflow_behavior_no_handler)
+            << Name->getName();
+      }
+    }
+
+    if (const auto *LE = dyn_cast<LambdaExpr>(St)) {
+      for (const Expr *Init : LE->capture_inits())
+        visit(Init);
+      visitNestedBody(LE->getCallOperator(), LE->getBody(), NB_Lambda);
+      return;
+    }
+    if (const auto *BE = dyn_cast<BlockExpr>(St)) {
+      visitNestedBody(BE->getBlockDecl(), BE->getBody(), NB_Block);
+      return;
+    }
+
+    // Variable length array sizes and the initializers of static locals
+    // trap regardless of the handler.
+    if (const auto *DS = dyn_cast<DeclStmt>(St)) {
+      llvm::SmallPtrSet<const Stmt *, 4> HandledInits;
+      for (const Decl *D : DS->decls())
+        if (const auto *VD = dyn_cast<VarDecl>(D);
+            VD && VD->getInit() && !initializerIgnoresOverflowHandler(VD))
+          HandledInits.insert(VD->getInit());
+      for (const Stmt *Child : DS->children()) {
+        std::optional<OverflowHandlerScope> NoHandler;
+        if (!HandledInits.contains(Child))
+          NoHandler.emplace(Handlers, nullptr);
+        visit(Child);
+      }
+      return;
+    }
+
+    // A handler introduced inside a diagnosed operation (by a statement
+    // expression or the builtin) is a fresh context.
+    OverflowHandlerScope HandlerScope(Handlers, S.Context, St);
+    SaveAndRestore SaveInDiagnosedOp(
+        InDiagnosedOp, (InDiagnosedOp || Diagnosed) && !HandlerScope.pushed());
+    for (const Stmt *Child : St->children()) {
+      if (isOverflowHandlerUnevaluatedChild(S.Context, St, Child))
+        continue;
+      std::optional<OverflowHandlerScope> NoHandler;
+      if (childIgnoresOverflowHandler(St, Child))
+        NoHandler.emplace(Handlers, nullptr);
+      visit(Child);
+    }
+  }
+};
+} // namespace
+
+void Sema::DiagnoseOverflowHandlers(Decl *D, Stmt *Body) {
+  FunctionScopeInfo *FSI = getCurFunction();
+  if (!FSI || !Body || !getLangOpts().OverflowBehaviorTypes)
+    return;
+  // Templates are diagnosed per instantiation.
+  if (D->isTemplated())
+    return;
+  // A nested lambda or block is diagnosed with its enclosing function, whose
+  // handler labels are not all known yet.
+  if (FunctionScopes.size() > 1)
+    return;
+  // Walk the body only if something can be diagnosed: a handler that nested
+  // bodies cannot reach, or any unhandled operation when that warning is on.
+  if (!FSI->HasOverflowHandler &&
+      Diags.isIgnored(diag::warn_overflow_behavior_no_handler,
+                      D->getLocation()))
+    return;
+  OverflowHandlerDiagnoser(*this).visitBody(D, Body);
+}
+
 StmtResult
 Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
                      SourceLocation ColonLoc, Stmt *SubStmt) {
@@ -707,7 +833,9 @@ Sema::ActOnLabelStmt(SourceLocation IdentLoc, LabelDecl *TheDecl,
   if (getLangOpts().OverflowBehaviorTypes &&
       TheDecl->getIdentifier() == getOverflowHandlerName(Context)) {
     setFunctionHasBranchIntoScope();
-    if (getCurFunction()->HasOverflowCheckedOp)
+    FunctionScopeInfo *FSI = getCurFunction();
+    FSI->HasOverflowHandler = true;
+    if (FSI->HasOverflowCheckedOp)
       TheDecl->setReferenced();
   }
 

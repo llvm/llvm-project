@@ -17340,6 +17340,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       if (FSI->NeedsScopeChecking() && !PP.isCodeCompletionEnabled())
         DiagnoseInvalidJumps(Body);
 
+      DiagnoseOverflowHandlers(dcl, Body);
+
       if (CXXDestructorDecl *Destructor = dyn_cast<CXXDestructorDecl>(dcl)) {
         if (!Destructor->getParent()->isDependentType())
           CheckDestructor(Destructor);

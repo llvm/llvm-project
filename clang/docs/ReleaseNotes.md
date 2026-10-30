@@ -341,7 +341,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   is in scope. A GNU local label (`__label__ __overflow;`) overrides it for a
   block, and the new `__builtin_overflow_goto(expr, label)` redirects the
   checks inside `expr` to `label`. Jumps into protected scopes are diagnosed
-  as for `goto`. See [OverflowBehaviorTypes](OverflowBehaviorTypes.md).
+  as for `goto`. New warnings: `-Woverflow-behavior-no-handler` (off by
+  default), `-Woverflow-behavior-unreachable-handler`, and
+  `-Woverflow-behavior-goto-no-effect`. See
+  [OverflowBehaviorTypes](OverflowBehaviorTypes.md).
 
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 

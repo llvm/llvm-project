@@ -1921,6 +1921,10 @@ def FortifySource : DiagGroup<"fortify-source", [FormatOverflow, FormatTruncatio
 
 def OverflowBehaviorAttributeIgnored
     : DiagGroup<"overflow-behavior-attribute-ignored">;
+def OverflowBehaviorGotoNoEffect : DiagGroup<"overflow-behavior-goto-no-effect">;
+def OverflowBehaviorNoHandler : DiagGroup<"overflow-behavior-no-handler">;
+def OverflowBehaviorUnreachableHandler
+    : DiagGroup<"overflow-behavior-unreachable-handler">;
 
 def MaxTokens : DiagGroup<"max-tokens"> {
   code Documentation = [{

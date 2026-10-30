@@ -135,6 +135,10 @@ public:
   /// behavior type check, which may branch to an overflow handler label.
   bool HasOverflowCheckedOp : 1;
 
+  /// Whether this function defines an overflow handler label or uses
+  /// __builtin_overflow_goto.
+  bool HasOverflowHandler : 1;
+
   /// True if current scope is for OpenMP declare reduction combiner.
   bool HasOMPDeclareReductionCombiner : 1;
 
@@ -398,12 +402,13 @@ public:
       : Kind(SK_Function), HasBranchProtectedScope(false),
         HasBranchIntoScope(false), HasIndirectGoto(false), HasMustTail(false),
         HasDroppedStmt(false), HasOverflowCheckedOp(false),
-        HasOMPDeclareReductionCombiner(false), HasFallthroughStmt(false),
-        UsesFPIntrin(false), HasPotentialAvailabilityViolations(false),
-        ObjCShouldCallSuper(false), ObjCIsDesignatedInit(false),
-        ObjCWarnForNoDesignatedInitChain(false), ObjCIsSecondaryInit(false),
-        ObjCWarnForNoInitDelegation(false), NeedsCoroutineSuspends(true),
-        FoundImmediateEscalatingExpression(false), ErrorTrap(Diag) {}
+        HasOverflowHandler(false), HasOMPDeclareReductionCombiner(false),
+        HasFallthroughStmt(false), UsesFPIntrin(false),
+        HasPotentialAvailabilityViolations(false), ObjCShouldCallSuper(false),
+        ObjCIsDesignatedInit(false), ObjCWarnForNoDesignatedInitChain(false),
+        ObjCIsSecondaryInit(false), ObjCWarnForNoInitDelegation(false),
+        NeedsCoroutineSuspends(true), FoundImmediateEscalatingExpression(false),
+        ErrorTrap(Diag) {}
 
   virtual ~FunctionScopeInfo();
 

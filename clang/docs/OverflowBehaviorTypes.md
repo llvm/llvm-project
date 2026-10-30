@@ -866,6 +866,17 @@ too_big:
 `__has_builtin(__builtin_overflow_goto)` is true only when overflow behavior
 types are enabled.
 
+Related warnings:
+
+- `-Woverflow-behavior-no-handler` (off by default) reports each expression
+  whose checks trap because no handler is visible. Enable it as an error to
+  require a handler for all `trap` arithmetic.
+- `-Woverflow-behavior-unreachable-handler` (on by default) reports checks in
+  a lambda or block that trap even though the enclosing function has a
+  handler, which they cannot reach.
+- `-Woverflow-behavior-goto-no-effect` (on by default) reports a
+  `__builtin_overflow_goto` whose operand performs no checked operation.
+
 When overflow behavior types are disabled, a handler label is never used and
 `-Wunused-label` reports it. Mark the label `__attribute__((unused))` in code
 that must build either way.

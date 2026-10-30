@@ -30,6 +30,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
@@ -16942,7 +16943,16 @@ ExprResult Sema::ActOnOverflowGotoExpr(SourceLocation BuiltinLoc, Expr *E,
   // cannot be left, such as a constructor initializer, so check every use.
   setFunctionHasBranchIntoScope();
   setFunctionHasBranchProtectedScope();
+  if (FunctionScopeInfo *FSI = getCurFunction())
+    FSI->HasOverflowHandler = true;
   TheDecl->markUsed(Context);
+
+  // Diagnose a builtin that redirects nothing. Dependent operands are not
+  // diagnosed, here or per instantiation.
+  if (getLangOpts().OverflowBehaviorTypes && !E->isInstantiationDependent() &&
+      !inTemplateInstantiation() &&
+      !containsOverflowHandlerCheckedOp(Context, E))
+    Diag(BuiltinLoc, diag::warn_overflow_goto_no_effect) << E->getSourceRange();
 
   return new (Context)
       OverflowGotoExpr(E, TheDecl, BuiltinLoc, LabelLoc, RParenLoc);
