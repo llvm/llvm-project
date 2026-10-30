@@ -1358,6 +1358,8 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ UNROLL [n]
 // !DIR$ PREFETCH designator[, designator]...
 // !DIR$ IVDEP
+// !DIR$ ALIGN(n) [::] name-list
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
@@ -1398,6 +1400,13 @@ constexpr auto inlinealwaysDir{
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
 constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
+// !DIR$ ALIGN(n) [::] name-list              (native spelling)
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list   (Intel-compatible spelling)
+constexpr auto alignNames{maybe("::"_tok) >> nonemptyList(name)};
+constexpr auto align{"ALIGN" >> construct<CompilerDirective::Align>(
+                                    parenthesized(digitString64), alignNames)};
+constexpr auto attributesAlign{"ATTRIBUTES ALIGN" >>
+    construct<CompilerDirective::Align>(":"_tok >> digitString64, alignNames)};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1416,6 +1425,8 @@ TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
                 construct<CompilerDirective>(inlineDir) ||
                 construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
+                construct<CompilerDirective>(align) ||
+                construct<CompilerDirective>(attributesAlign) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /
