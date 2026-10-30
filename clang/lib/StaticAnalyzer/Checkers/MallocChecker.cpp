@@ -3786,15 +3786,15 @@ bool MallocChecker::ignoreDirectEscapeTo(const CallEvent *Call,
     return true;
   }
 
-  // At this point the only thing left to handle is straight function calls.
-  const FunctionDecl *FD = cast<SimpleFunctionCall>(Call)->getDecl();
-  if (!FD)
-    return false;
-
   // If it's one of the allocation functions we can reason about, we model
   // its behavior explicitly.
   if (isMemCall(*Call))
     return true;
+
+  // At this point the only thing left to handle is straight function calls.
+  const FunctionDecl *FD = cast<SimpleFunctionCall>(Call)->getDecl();
+  if (!FD)
+    return false;
 
   // If it's not a system call, assume it frees memory.
   if (!Call->isInSystemHeader())
