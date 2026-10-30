@@ -1076,6 +1076,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
                     Capability::Geometry,
+                    Capability::MultiViewport,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
@@ -1153,6 +1154,15 @@ static void addCoreInSPIRV13Capability(SPIRV::RequirementHandler &Reqs,
   Reqs.addExtension(Ext);
 }
 
+// Returns true if the decorated target of \p MI is an Output variable.
+static bool isDecoratingOutputVariable(const MachineInstr &MI) {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const MachineInstr *Def = MRI.getVRegDef(MI.getOperand(0).getReg());
+  return Def && Def->getOpcode() == SPIRV::OpVariable &&
+         static_cast<SPIRV::StorageClass::StorageClass>(
+             Def->getOperand(2).getImm()) == SPIRV::StorageClass::Output;
+}
+
 // Add the required capabilities from a decoration instruction (including
 // BuiltIns).
 static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
@@ -1190,6 +1200,25 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
     case SPIRV::BuiltIn::ViewIndex:
       addCoreInSPIRV13Capability(Reqs, ST, SPIRV::Capability::MultiView,
                                  SPIRV::Extension::SPV_KHR_multiview);
+      break;
+    case SPIRV::BuiltIn::ViewportIndex:
+      // Writing this from a vertex shader requires
+      // SPV_EXT_shader_viewport_index_layer, as in DXC. Reading it in a
+      // fragment shader uses the base capability.
+      if (isDecoratingOutputVariable(MI)) {
+        if (!ST.canUseExtension(
+                SPIRV::Extension::SPV_EXT_shader_viewport_index_layer))
+          report_fatal_error(
+              "Writing ViewportIndex requires the following SPIR-V "
+              "extension: SPV_EXT_shader_viewport_index_layer",
+              false);
+        Reqs.addCapability(SPIRV::Capability::ShaderViewportIndexLayerEXT);
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_shader_viewport_index_layer);
+        break;
+      }
+      Reqs.addRequirements(getSymbolicOperandRequirements(
+          SPIRV::OperandCategory::BuiltInOperand, BuiltIn, ST, Reqs));
       break;
     default:
       Reqs.addRequirements(getSymbolicOperandRequirements(

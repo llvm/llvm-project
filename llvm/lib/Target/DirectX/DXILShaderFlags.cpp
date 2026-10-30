@@ -462,6 +462,14 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         CSF.StencilRef |= llvm::any_of(Sig->Outputs, [](const auto &E) {
           return E.SemanticKind == dxbc::PSV::SemanticKind::StencilRef;
         });
+        // Only the pixel shader reads the index as an input, which does not
+        // require the feature.
+        if (Sig->Stage == Triple::Vertex)
+          CSF.ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer |=
+              llvm::any_of(Sig->Outputs, [](const auto &E) {
+                return E.SemanticKind ==
+                       dxbc::PSV::SemanticKind::ViewPortArrayIndex;
+              });
         // Unallocated elements do not occupy signature registers. Their type
         // requirements come from the instructions that access them.
         auto HasLowPrecision = [](const auto &Elements) {

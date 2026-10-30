@@ -178,6 +178,14 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Vertex, IOType::In, SemanticInterpretation::NotAllocated}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::ViewPortArrayIndex: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Vertex, IOType::In, SemanticInterpretation::Arbitrary},
+        {Triple::Vertex, IOType::Out, SemanticInterpretation::SV},
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SV},
+    };
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::StencilRef: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked}};
