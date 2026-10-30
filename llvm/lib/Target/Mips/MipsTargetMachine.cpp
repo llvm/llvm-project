@@ -217,14 +217,14 @@ void MipsPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
   addPass(createAtomicExpandLegacyPass());
   if (getMipsTargetMachine().getCLOpts().os16)
-    addPass(createMipsOs16Pass());
+    addPass(createMipsOs16LegacyPass());
   addPass(createMips16HardFloatPass());
 }
 // Install an instruction selector pass using
 // the ISelDag to gen Mips code.
 bool MipsPassConfig::addInstSelector() {
-  addPass(createMips16ISelDag(getMipsTargetMachine(), getOptLevel()));
-  addPass(createMipsSEISelDag(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMips16ISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
+  addPass(createMipsSEISelDAGLegacyPass(getMipsTargetMachine(), getOptLevel()));
   return false;
 }
 
