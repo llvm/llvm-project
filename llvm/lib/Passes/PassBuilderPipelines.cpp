@@ -728,13 +728,15 @@ void PassBuilder::addRequiredLTOPreLinkPasses(ModulePassManager &MPM) {
 
 void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
                                       OptimizationLevel Level,
-                                      ThinOrFullLTOPhase LTOPhase) {
+                                      ThinOrFullLTOPhase LTOPhase,
+                                      bool IgnoreProfile) {
   assert(Level != OptimizationLevel::O0 && "Not expecting O0 here!");
   if (Opts.disable_preinline)
     return;
   InlineParams IP;
 
   IP.DefaultThreshold = Opts.preinline_threshold;
+  IP.IgnoreProfile = IgnoreProfile;
 
   // FIXME: The hint threshold has the same value used by the regular inliner
   // when not optimzing for size. This should probably be lowered after
@@ -1156,9 +1158,19 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
       isPGOInstrumentColdFunctionOnly(Context.getLibraryOptions()) &&
       IsPGOPreLink && !Opts.instrument_cold_function_only_path.empty();
 
+  // When a memory profile is used together with a sample profile, the
+  // pre-inliner runs after the sample profile has been loaded. By default make
+  // it ignore the sample profile, so that the inlining seen by MemProfUsePass
+  // doesn't depend on the sample profile. Otherwise, a different sample profile
+  // than the one used to build the memory-profiled binary can cause additional
+  // inlining (e.g. of newly hot callees) that leads to memprof matching
+  // failures. This matches the IR PGO pipeline, where the pre-inliner runs
+  // before the profile is annotated.
+  const bool PreInlinerIgnoreProfile =
+      IsMemprofUse && HasSampleProfile && Opts.memprof_preinline_ignore_profile;
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
       IsCtxProfUse || IsColdFuncOnlyInstrGen)
-    addPreInlinerPasses(MPM, Level, Phase);
+    addPreInlinerPasses(MPM, Level, Phase, PreInlinerIgnoreProfile);
 
   // Add all the requested passes for instrumentation PGO, if requested.
   if (IsPGOInstrGen || IsPGOInstrUse) {
