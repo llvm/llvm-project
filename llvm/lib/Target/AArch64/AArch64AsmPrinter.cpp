@@ -3588,8 +3588,9 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
     return;
 
-  case AArch64::EMITBKEY: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+  case AArch64::EMITBKEY:
+  case AArch64::EMITNONHINTED: {
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3597,12 +3598,16 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (getFunctionCFISectionType(*MF) == CFISection::None)
       return;
 
-    OutStreamer->emitCFIBKeyFrame();
+    if (MI->getOpcode() == AArch64::EMITBKEY)
+      OutStreamer->emitCFIBKeyFrame();
+    else
+      OutStreamer->emitCFINonHintPAuthFrame();
+
     return;
   }
 
   case AArch64::EMITMTETAGGED: {
-    ExceptionHandling ExceptionHandlingType = MAI.getExceptionHandlingType();
+    ExceptionHandling ExceptionHandlingType = getModuleExceptionModel();
     if (ExceptionHandlingType != ExceptionHandling::DwarfCFI &&
         ExceptionHandlingType != ExceptionHandling::ARM)
       return;
@@ -3972,6 +3977,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::HWASAN_CHECK_MEMACCESS_FIXEDSHADOW:
   case AArch64::HWASAN_CHECK_MEMACCESS_SHORTGRANULES_FIXEDSHADOW:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
+    return;
+
+  case AArch64::SEH_EndC:
+    TS->emitARM64WinCFIEndC();
     return;
 
   case AArch64::SEH_StackAlloc:

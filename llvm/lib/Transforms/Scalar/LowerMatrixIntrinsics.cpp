@@ -2936,8 +2936,7 @@ PreservedAnalyses LowerMatrixIntrinsicsPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   LowerMatrixIntrinsics LMT(Opts, F, TTI, Minimal ? nullptr : &AM);
   if (LMT.Visit()) {
     PreservedAnalyses PA;

@@ -27,7 +27,8 @@ def ExynosM4Model : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SVEUnsupported.F,
                                                     PAUnsupported.F,
                                                     SMEUnsupported.F,
-                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO]);
+                                                    [HasMTE, HasCSSC, HasMOPS, HasMOPS_GO,
+                                                     HasFPv2]);
 }
 
 //===----------------------------------------------------------------------===//

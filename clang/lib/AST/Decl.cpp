@@ -2406,7 +2406,7 @@ Expr *VarDecl::getInit() {
 }
 
 Stmt **VarDecl::getInitAddress() {
-  if (auto *ES = Init.dyn_cast<EvaluatedStmt *>())
+  if (auto *ES = dyn_cast<EvaluatedStmt *>(Init))
     return ES->Value.getAddressOfPointer(getASTContext().getExternalSource());
 
   return Init.getAddrOfPtr1();
@@ -4273,7 +4273,7 @@ void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
 
 FunctionDecl *FunctionDecl::getInstantiatedFromDecl() const {
   return dyn_cast_if_present<FunctionDecl>(
-      TemplateOrSpecialization.dyn_cast<NamedDecl *>());
+      dyn_cast<NamedDecl *>(TemplateOrSpecialization));
 }
 
 bool FunctionDecl::isImplicitlyInstantiable() const {

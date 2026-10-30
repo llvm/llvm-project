@@ -243,6 +243,10 @@ def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
 def HasSVE_LRCPC     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_LRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_LRCPC), "sve-lrcpc">;
+def HasSMEF16F8F16   : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF16F8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF16F8F16), "sme-f16f8f16">;
+def HasFPv2          : Predicate<"Subtarget->hasFPv2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFPv2), "fpv2">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -321,6 +325,11 @@ def HasNonStreamingSVE2p2_or_SME2p2
                 "(Subtarget->isSVEorStreamingSVEAvailable() && Subtarget->hasSME2p2())">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
+
+def HasNonStreamingMatMulFP64_or_SVE_PERM256
+    : Predicate<"(Subtarget->isSVEorStreamingSVEAvailable()  && Subtarget->hasSVE_PERM256()) || (Subtarget->isSVEAvailable() && Subtarget->hasMatMulFP64())">,
+                AssemblerPredicateWithAll<(any_of FeatureMatMulFP64, FeatureSVE_PERM256),
+                "f64mm or sve-perm256">;
 
 def HasSMEF16F16_or_SMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
@@ -2121,6 +2130,7 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
   // duplicated.
   let isNotDuplicable = 1;
 }
+
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
@@ -2130,6 +2140,13 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
 // AArch64InstrInfo::createPauthEpilogueInstr method that adds an implicit-def
 // operand as needed.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+// Like PAUTH_EPILOGUE, but for use before the epilogue proper, where it
+// authenticates the return address in LR, which the epilogue then leaves alone.
+// The SP the return address was signed with must already be in X16, and the
+// signed return address in X17 if the authentication sequence works on that
+// (see AArch64PAuth::authenticatesLRViaX17), or else in LR.
+def PAUTH_EPILOGUE_ENTRY_SP : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
 // These pointer authentication instructions require armv8.3a
@@ -3792,6 +3809,11 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // Pseudo instruction to tell the streamer to emit a 'G' character into the
 // augmentation string.
 def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
+
+// Pseudo instruction to tell the streamer to emit an 'N' character into the
+// augmentation string, indicating that non hint-space FEAT_PAuth_LR
+// instructions are used for signing/authenticating the return address.
+def EMITNONHINTED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
@@ -5952,6 +5974,15 @@ defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
 
+let Predicates = [HasFPv2] in {
+defm FMAXINM   : TwoOperandFPData<0b1010, "fmaxinm">;
+defm FMAXMG    : TwoOperandFPData<0b1100, "fmaxmg">;
+defm FMAXMGINM : TwoOperandFPData<0b1110, "fmaxmginm">;
+defm FMININM   : TwoOperandFPData<0b1011, "fmininm">;
+defm FMINMG    : TwoOperandFPData<0b1101, "fminmg">;
+defm FMINMGINM : TwoOperandFPData<0b1111, "fminmginm">;
+}
+
 multiclass FMULScalarFromIndexedLane0Patterns<string inst,
                                               string inst_f16_suffix,
                                               string inst_f32_suffix,
@@ -6067,6 +6098,11 @@ def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, (fneg FPR64:$Ra))),
 defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
 defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
 
+let Predicates = [HasFPv2] in {
+defm FCMTL   : FPTotalOrderComparison<0, "fcmtl">;
+defm FCMTLMG : FPTotalOrderComparison<1, "fcmtlmg">;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.
 //===----------------------------------------------------------------------===//
@@ -6101,6 +6137,10 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
+let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
 let isPseudo = 1 in {
   def SEH_StackAlloc : Pseudo<(outs), (ins i32imm:$size), []>, Sched<[]>;
   def SEH_SaveFPLR : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
