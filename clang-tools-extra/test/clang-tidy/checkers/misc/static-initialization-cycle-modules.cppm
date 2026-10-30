@@ -1,8 +1,3 @@
-// Regression test for https://github.com/llvm/llvm-project/pull/237067:
-// the parent map must contain the lambda body even when the closure type's
-// call operator is a declaration without a body (merged from another module),
-// otherwise this check hits llvm_unreachable.
-//
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
