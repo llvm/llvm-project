@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 
@@ -207,6 +208,8 @@ inline void printDynamicIndexList(
 ///       2. `values` is empty.
 ///       3. `scalableFlags` is filled with `[false, true, false]`.
 ///
+/// Overloads that do not return scalable flags reject scalable indices.
+///
 ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
@@ -219,8 +222,13 @@ inline ParseResult parseDynamicIndexList(
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
   DenseBoolArrayAttr scalableFlags;
-  return parseDynamicIndexList(parser, values, integers, scalableFlags,
-                               valueTypes, delimiter);
+  if (failed(parseDynamicIndexList(parser, values, integers, scalableFlags,
+                                   valueTypes, delimiter)))
+    return failure();
+  if (llvm::is_contained(scalableFlags.asArrayRef(), true))
+    return parser.emitError(parser.getNameLoc())
+           << "scalable indices are not supported";
+  return success();
 }
 
 /// Verify that a the `values` has as many elements as the number of entries in

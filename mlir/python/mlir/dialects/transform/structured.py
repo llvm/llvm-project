@@ -675,7 +675,7 @@ class TileUsingForallOp(TileUsingForallOp):
         target: Union[Operation, Value, OpView],
         *,
         num_threads: Optional[MixedValues] = None,
-        tile_sizes: MixedValues = None,
+        tile_sizes: Optional[Union[MixedValues, DynamicIndexList]] = None,
         mapping=None,
         loc=None,
         ip=None,
@@ -688,7 +688,7 @@ class TileUsingForallOp(TileUsingForallOp):
         target: Union[Operation, Value, OpView],
         *,
         num_threads: Optional[MixedValues] = None,
-        tile_sizes: MixedValues = None,
+        tile_sizes: Optional[Union[MixedValues, DynamicIndexList]] = None,
         mapping=None,
         loc=None,
         ip=None,
@@ -704,7 +704,7 @@ class TileUsingForallOp(TileUsingForallOp):
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
         num_threads: MixedValues = None,
-        tile_sizes: MixedValues = None,
+        tile_sizes: Optional[Union[MixedValues, DynamicIndexList]] = None,
         mapping=None,
         loc=None,
         ip=None,
@@ -734,11 +734,23 @@ class TileUsingForallOp(TileUsingForallOp):
         ) = _dispatch_mixed_values(num_threads)
 
         # Unpack mixed tile_sizes.
-        (
-            dynamic_tile_sizes,
-            packed_tile_sizes,
-            tile_sizes_attr,
-        ) = _dispatch_mixed_values(tile_sizes)
+        packed_tile_sizes = None
+        if not isinstance(tile_sizes, (Operation, Value, OpView)) and any(
+            isinstance(v, Sequence) and not isinstance(v, (str, bytes, ArrayAttr))
+            for v in (tile_sizes or [])
+        ):
+            (
+                dynamic_tile_sizes,
+                tile_sizes_attr,
+                scalable_sizes,
+            ) = _dispatch_dynamic_index_list(tile_sizes)
+        else:
+            (
+                dynamic_tile_sizes,
+                packed_tile_sizes,
+                tile_sizes_attr,
+            ) = _dispatch_mixed_values(tile_sizes)
+            scalable_sizes = []
 
         super().__init__(
             loops_type,
@@ -747,6 +759,7 @@ class TileUsingForallOp(TileUsingForallOp):
             tile_sizes=dynamic_tile_sizes,
             packed_tile_sizes=packed_tile_sizes,
             static_tile_sizes=tile_sizes_attr,
+            scalable_sizes=scalable_sizes,
             num_threads=dynamic_num_threads,
             packed_num_threads=packed_num_threads,
             static_num_threads=num_threads_attr,

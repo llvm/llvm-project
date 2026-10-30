@@ -2417,6 +2417,11 @@ def TileUsingForallOp :
     Static zero tile sizes indicate that the dimension is not tiled and can be
     thought of as tiling by the full size of data.
 
+    A static tile size enclosed in brackets is scalable: `[8]` denotes
+    `8 * vector.vscale`. Scalable tile sizes are supported only by `tile_sizes`,
+    not by `num_threads` or packed tile size handles. A scalable zero tile size
+    also leaves the dimension untiled.
+
     It is the user's responsibility to ensure that `num_threads/tile_sizes` is
     a valid tiling specification (i.e. that only tiles parallel dimensions,
     e.g. in the Linalg case). If the dimension is not parallelizable, a warning
@@ -2473,6 +2478,7 @@ def TileUsingForallOp :
                    Optional<TransformAnyParamTypeOrAnyHandle>:$packed_tile_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
+                   DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs TransformHandleTypeInterface:$tiled_op,
                       TransformHandleTypeInterface:$forall_op);
@@ -2482,12 +2488,14 @@ def TileUsingForallOp :
                    "ArrayRef<int64_t>":$staticTileSizes,
                    CArg<"::mlir::transform::TileSizesSpec",
                         "::mlir::transform::TileSizesSpec()">,
-                   CArg<"ArrayAttr", "{}">:$mapping)>,
+                   CArg<"ArrayAttr", "{}">:$mapping,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:$scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
                    CArg<"::mlir::transform::TileSizesSpec",
                         "::mlir::transform::TileSizesSpec()">,
-                   CArg<"ArrayAttr", "{}">:$mapping)>,
+                   CArg<"ArrayAttr", "{}">:$mapping,
+                   CArg<"std::optional<ArrayRef<bool>>", "std::nullopt">:$scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticNumThreads,
                    CArg<"::mlir::transform::NumThreadsSpec",
@@ -2507,7 +2515,8 @@ def TileUsingForallOp :
                                                        $static_num_threads) |
          `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
                                                        $tile_sizes,
-                                                       $static_tile_sizes))
+                                                       $static_tile_sizes,
+                                                       $scalable_sizes))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
     `:` functional-type(operands, results)
   }];
