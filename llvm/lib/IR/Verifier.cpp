@@ -7351,6 +7351,9 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     // range of [1, 65536], which value analyses rely on.
     Check(Call.getType()->isIntegerTy(32) || Call.getType()->isIntegerTy(64),
           "llvm.riscv.vsetvli/vsetvlimax result must be i32 or i64", &Call);
+    // The i64 overload is wider than XLEN on RV32 and can't be lowered.
+    Check(!TT.isRISCV32() || Call.getType()->isIntegerTy(32),
+          "llvm.riscv.vsetvli/vsetvlimax result must be i32 on riscv32", &Call);
 
     // VSEW and VLMUL select the vtype and must encode a valid SEW/LMUL pair.
     bool HasAVL = ID == Intrinsic::riscv_vsetvli;
