@@ -143,6 +143,7 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
   SetEventName(eBroadcastBitThreadShouldExit, "thread-should-exit");
   SetEventName(eBroadcastBitResetPrompt, "reset-prompt");
   SetEventName(eBroadcastBitQuitCommandReceived, "quit");
+  SetEventName(eBroadcastBitReadyForInput, "ready-for-input");
   SetSynchronous(synchronous_execution);
   CheckInWithManager();
   m_collection_sp->Initialize(g_interpreter_properties_def);

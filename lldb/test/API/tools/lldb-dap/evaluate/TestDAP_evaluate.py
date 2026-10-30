@@ -413,3 +413,57 @@ class TestDAP_evaluate(DAPTestCaseBase):
     def test_clipboard_evaluate_expressions(self):
         # Tests expression evaluations that are triggered when value copied in editor.
         self.run_evaluate_expressions("clipboard", enableAutoVariableSummaries=False)
+
+    @skipIfWindows
+    def test_multiline_repl_commands(self):
+        session = self.build_and_create_session()
+        source = "main.cpp"
+        program = self.getBuildArtifact("a.out")
+        breakpoint_lines = [
+            line_number(source, "// breakpoint 1"),
+            line_number(source, "// breakpoint 2"),
+        ]
+        with session.configure(LaunchArgs(program)) as cfg:
+            bp1, bp2 = session.resolve_source_breakpoints(source, breakpoint_lines)
+
+        stop_event = session.verify_stopped_on_breakpoint(bp1, after=cfg.process_event)
+
+        # Enter interactive Python interpreter via `script`.
+        event_before_script = session.last_event()
+        session.evaluate("script", context="repl")
+        session.collect_console(until=">>> ", after=event_before_script)
+
+        session.evaluate("x = 40", context="repl")
+        event_before_loop = session.last_event()
+        session.evaluate("for i in range(3):", context="repl")
+        session.collect_console(until="... ", after=event_before_loop)
+        session.evaluate("    x += i", context="repl")
+        session.evaluate("", context="repl")
+
+        event_before_print = session.last_event()
+        session.evaluate("print('python_sum =', x)", context="repl")
+        session.collect_console(until="python_sum = 43", after=event_before_print)
+
+        # Exit the interactive Python interpreter.
+        session.evaluate("quit()", context="repl")
+
+        # Verify normal variable evaluation works after leaving `script`.
+        frame = session.top_frame_from(stop_event)
+        body = frame.evaluate("var1", context="repl")
+        session.verify_evaluate(body, matches="20", type="int")
+
+        # Enter multiline `breakpoint command add` mode and finish with `DONE`.
+        session.evaluate(f"breakpoint command add {bp2}", context="repl")
+        session.evaluate("frame variable var2", context="repl")
+        session.evaluate("DONE", context="repl")
+
+        body = session.evaluate(f"breakpoint command list {bp2}", context="repl")
+        session.verify_evaluate(
+            body, matches=r"(?s).*frame variable var2.*", has_mem_ref=False
+        )
+
+        event_before_continue = session.last_event()
+        session.continue_to_breakpoint(bp2)
+        session.collect_console(until="(int) var2 = 2", after=event_before_continue)
+
+        session.continue_to_exit()
