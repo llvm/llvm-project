@@ -9,6 +9,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
 endif()
 add_subdirectory(Utility)
 add_subdirectory(minidump)
+add_subdirectory(wasm)
 
 add_lldb_unittest(ProcessTests
   ProcessEventDataTest.cpp
