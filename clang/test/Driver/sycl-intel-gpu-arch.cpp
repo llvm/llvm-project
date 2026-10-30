@@ -54,3 +54,52 @@
 // RUN:   -nocudalib --offload-arch=xe-pvc -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-CUDA %s
 // CHK-CUDA: error: unsupported CUDA gpu architecture: xe-pvc
+
+/// On a SPIR-V target, a SYCL device must be an Intel GPU or CPU, or "generic".
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pcv -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH %s
+// CHK-BAD-ARCH: error: unsupported SYCL gpu architecture: xe-pcv
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=bmg_g21 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-OLD %s
+// CHK-BAD-ARCH-OLD: error: unsupported SYCL gpu architecture: bmg_g21
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_12.60. -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-NUM %s
+// CHK-BAD-ARCH-NUM: error: unsupported SYCL gpu architecture: xe_12.60.
+/// A numeric name names no device unless the list has its GPU IP version.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=xe_40.11.0 -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-UNLISTED %s
+// CHK-BAD-ARCH-UNLISTED: error: unsupported {{SYCL|offload}} gpu architecture: xe_40.11.0
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc:garbage -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-ARCH-SUFFIX %s
+// CHK-BAD-ARCH-SUFFIX: error: unsupported SYCL gpu architecture: xe-pvc:garbage
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=generic:foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-GENERIC %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-arch=generic:foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-GENERIC %s
+// CHK-BAD-GENERIC: error: unsupported {{SYCL|offload}} gpu architecture: generic:foo
+/// As for CUDA and HIP, --no-offload-arch is checked too when the target is
+/// given.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=xe-pvc \
+// RUN:   --no-offload-arch=foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-BAD-NO-ARCH %s
+// CHK-BAD-NO-ARCH: error: unsupported SYCL gpu architecture: foo
+/// Only a plain SPIR-V target is checked.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-intel --offload-arch=foo -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
+// CHK-NOT-CHECKED-NOT: error:
+// RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
+// RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
+// CHK-GOOD-ARCH: offload, "device-sycl (spirv64-unknown-unknown:graniterapids)"
