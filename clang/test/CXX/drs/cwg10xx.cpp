@@ -48,7 +48,7 @@ namespace cwg1004 { // cwg1004: 5
 } // namespace cwg1004
 
 namespace cwg1012 { // cwg1012: 2.7
-static void f() {}
+static int f;
 } // namespace cwg1012
 
 namespace cwg1042 { // cwg1042: 3.5
