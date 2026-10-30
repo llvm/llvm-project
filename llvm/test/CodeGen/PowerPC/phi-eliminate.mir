@@ -239,8 +239,8 @@ body:             |
 
     %6:g8rc = COPY killed $x4
     %5:g8rc = COPY killed $x3
-    %9:gprc = COPY killed %6.sub_32
-    %8:gprc = COPY killed %5.sub_32
+    %9:gprc = COPY %6.sub_32
+    %8:gprc = COPY %5.sub_32
     MTCTR8loop undef %10:g8rc, implicit-def dead $ctr8
     %14:gprc_and_gprc_nor0 = LI 55
     %15:gprc_and_gprc_nor0 = LI 48
@@ -256,11 +256,11 @@ body:             |
     successors: %bb.3(0x40000000), %bb.4(0x40000000)
 
     %20:gprc = nsw MULLW %19, %9
-    %21:gprc = SUBF killed %20, killed %8
+    %21:gprc = SUBF %20, %8
     %22:crrc = CMPLWI %21, 10
-    %23:gprc = ISEL %15, %14, killed %22.sub_lt
-    %24:gprc = ADD4 killed %23, killed %21
-    %25:g8rc_and_g8rc_nox0 = STBU killed %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
+    %23:gprc = ISEL %15, %14, %22.sub_lt
+    %24:gprc = ADD4 %23, %21
+    %25:g8rc_and_g8rc_nox0 = STBU %24, -1, undef %0:g8rc_and_g8rc_nox0 :: (store (s8) into %ir.7)
     %26:gprc = DIVW %19, %9
     BDZ8 %bb.4, implicit-def $ctr8, implicit $ctr8
     B %bb.3
@@ -272,15 +272,15 @@ body:             |
     %36:gprc = PHI %19, %bb.2, %35, %bb.3
     %37:gprc = PHI %26, %bb.2, %28, %bb.3
     %38:g8rc_and_g8rc_nox0 = PHI %25, %bb.2, %34, %bb.3
-    %27:g8rc_and_g8rc_nox0 = COPY killed %38
+    %27:g8rc_and_g8rc_nox0 = COPY %38
     %56:gprc = COPY %35
     %28:gprc = DIVW %56, %9
-    %29:gprc = nsw MULLW killed %37, %9
-    %30:gprc = SUBF killed %29, killed %36
+    %29:gprc = nsw MULLW %37, %9
+    %30:gprc = SUBF %29, %36
     %31:crrc = CMPLWI %30, 10
-    %32:gprc = ISEL %15, %14, killed %31.sub_lt
-    %33:gprc = ADD4 killed %32, killed %30
-    %34:g8rc_and_g8rc_nox0 = STBU killed %33, -1, killed %27 :: (store unknown-size into %ir.7, align 1)
+    %32:gprc = ISEL %15, %14, %31.sub_lt
+    %33:gprc = ADD4 %32, %30
+    %34:g8rc_and_g8rc_nox0 = STBU %33, -1, %27 :: (store unknown-size into %ir.7, align 1)
     BDNZ8 %bb.3, implicit-def $ctr8, implicit $ctr8
     B %bb.4
 
@@ -290,7 +290,7 @@ body:             |
     %41:gprc = PHI %19, %bb.2, %56, %bb.3
     %43:gprc = PHI %26, %bb.2, %28, %bb.3
     %44:g8rc_and_g8rc_nox0 = PHI %25, %bb.2, %34, %bb.3
-    %39:g8rc = COPY killed %44
+    %39:g8rc = COPY %44
 
   bb.5:
     successors: %bb.6(0x80000000)
@@ -298,12 +298,12 @@ body:             |
     %53:gprc = PHI %8, %bb.1, %41, %bb.4
     %54:g8rc_and_g8rc_nox0 = PHI undef %0:g8rc_and_g8rc_nox0, %bb.1, %39, %bb.4
     %55:gprc = PHI %19, %bb.1, %43, %bb.4
-    %45:gprc = nsw MULLW killed %55, killed %9
-    %46:gprc = SUBF killed %45, killed %53
+    %45:gprc = nsw MULLW %55, %9
+    %46:gprc = SUBF %45, %53
     %47:crrc = CMPLWI %46, 10
-    %48:gprc = ISEL killed %15, killed %14, killed %47.sub_lt
-    %49:gprc = ADD4 killed %48, killed %46
-    dead %50:g8rc_and_g8rc_nox0 = STBU killed %49, -1, killed %54 :: (store unknown-size into %ir.7, align 1)
+    %48:gprc = ISEL %15, %14, %47.sub_lt
+    %49:gprc = ADD4 %48, %46
+    dead %50:g8rc_and_g8rc_nox0 = STBU %49, -1, %54 :: (store unknown-size into %ir.7, align 1)
     B %bb.6
 
   bb.6 (%ir-block.16):

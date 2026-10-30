@@ -2,33 +2,33 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s --check-prefixes=X86
 ; RUN: llc < %s -mtriple=x86_64-- | FileCheck %s --check-prefixes=X64
 
-; FIXME: Incorrect constant bitcasting of irregular types
+; Constant bitcasting of irregular types
 define void @PR235665(ptr %p0) {
 ; X86-LABEL: PR235665:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl $2088533246, 28(%eax) # imm = 0x7C7C7CFE
-; X86-NEXT:    movl $1044266623, 24(%eax) # imm = 0x3E3E3E7F
-; X86-NEXT:    movl $522133311, 20(%eax) # imm = 0x1F1F1F3F
-; X86-NEXT:    movl $-1886416993, 16(%eax) # imm = 0x8F8F8F9F
-; X86-NEXT:    movl $-943208497, 12(%eax) # imm = 0xC7C7C7CF
-; X86-NEXT:    movl $-471604249, 8(%eax) # imm = 0xE3E3E3E7
-; X86-NEXT:    movl $-235802125, 4(%eax) # imm = 0xF1F1F1F3
+; X86-NEXT:    movl $-117900936, 28(%eax) # imm = 0xF8F8F978
+; X86-NEXT:    movl $-117901000, 24(%eax) # imm = 0xF8F8F938
+; X86-NEXT:    movl $-117901032, 20(%eax) # imm = 0xF8F8F918
+; X86-NEXT:    movl $-117901048, 16(%eax) # imm = 0xF8F8F908
+; X86-NEXT:    movl $-117901056, 12(%eax) # imm = 0xF8F8F900
+; X86-NEXT:    movl $-117901060, 8(%eax) # imm = 0xF8F8F8FC
+; X86-NEXT:    movl $-117901062, 4(%eax) # imm = 0xF8F8F8FA
 ; X86-NEXT:    movl $-117901063, (%eax) # imm = 0xF8F8F8F9
-; X86-NEXT:    movb $-4, 32(%eax)
+; X86-NEXT:    movb $-8, 32(%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR235665:
 ; X64:       # %bb.0:
-; X64-NEXT:    movabsq $8970181989222989439, %rax # imm = 0x7C7C7CFE3E3E3E7F
+; X64-NEXT:    movabsq $-506380660110722760, %rax # imm = 0xF8F8F978F8F8F938
 ; X64-NEXT:    movq %rax, 24(%rdi)
-; X64-NEXT:    movabsq $2242545497305747359, %rax # imm = 0x1F1F1F3F8F8F8F9F
+; X64-NEXT:    movabsq $-506381072427583224, %rax # imm = 0xF8F8F918F8F8F908
 ; X64-NEXT:    movq %rax, 16(%rdi)
-; X64-NEXT:    movabsq $-4051049644100951065, %rax # imm = 0xC7C7C7CFE3E3E3E7
+; X64-NEXT:    movabsq $-506381175506798340, %rax # imm = 0xF8F8F900F8F8F8FC
 ; X64-NEXT:    movq %rax, 8(%rdi)
-; X64-NEXT:    movabsq $-1012762411025237767, %rax # imm = 0xF1F1F1F3F8F8F8F9
+; X64-NEXT:    movabsq $-506381201276602119, %rax # imm = 0xF8F8F8FAF8F8F8F9
 ; X64-NEXT:    movq %rax, (%rdi)
-; X64-NEXT:    movb $-4, 32(%rdi)
+; X64-NEXT:    movb $-8, 32(%rdi)
 ; X64-NEXT:    retq
   %t3 = bitcast <33 x i8> splat (i8 7) to <8 x i33>
   %t4 = sub <8 x i33> zeroinitializer, %t3
