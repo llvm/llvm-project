@@ -66,8 +66,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "affinity", {Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_task_iteration}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited}}, "affinity", {Directive::OMPD_target_data, Directive::OMPD_task, Directive::OMPD_task_iteration}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator}, {}}},
       }
     ),
   },
@@ -326,8 +326,8 @@
     descriptor::Clause(
       "default-variant",
       {
-        {Version(50), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "default-variant", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "default-variant", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
       }
     ),
   },
@@ -354,8 +354,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "depend", {Directive::OMPD_depobj, Directive::OMPD_ordered_standalone, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependModifierSet1}}},
         {Version(51), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable}}, "depend", {Directive::OMPD_depobj, Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_ordered_standalone, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DependenceType, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependModifierSet1}}},
         {Version(52), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable}}, "depend", {Directive::OMPD_depobj, Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::Iterator, Modifier::TaskDependenceType}, {}}},
-        {Version(60), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {}}},
-        {Version(61), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskSynchronizing, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependListType, ModifierSet::DependModifierSet1}}},
+        {Version(60), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {}}},
+        {Version(61), {{{Property::Compatible, Property::DispatchRequirement, Property::Free, Property::Optional, Property::Repeatable, Property::TaskInherited, Property::TaskSynchronizing, Property::TaskgraphAltering}}, "depend", {Directive::OMPD_dispatch, Directive::OMPD_interop, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskwait}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier, Modifier::Iterator, Modifier::TaskDependenceType}, {ModifierSet::DependListType, ModifierSet::DependModifierSet1}}},
       }
     ),
   },
@@ -661,8 +661,8 @@
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable, Property::TargetConsistent}}, "if", {Directive::OMPD_cancel, Directive::OMPD_parallel, Directive::OMPD_simd, Directive::OMPD_target, Directive::OMPD_target_data, Directive::OMPD_target_enter_data, Directive::OMPD_target_exit_data, Directive::OMPD_target_update, Directive::OMPD_task, Directive::OMPD_task_iteration, Directive::OMPD_taskgraph, Directive::OMPD_taskloop, Directive::OMPD_teams}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -765,6 +765,7 @@
     descriptor::Clause(
       "initializer",
       {
+        {Version(45), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
         {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Unique}}, "initializer", {Directive::OMPD_declare_reduction}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
@@ -1135,9 +1136,9 @@
     descriptor::Clause(
       "otherwise",
       {
-        {Version(52), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Optional, Property::Ultimate, Property::Unique}}, "otherwise", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -1653,11 +1654,11 @@
     descriptor::Clause(
       "when",
       {
-        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
-        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
-        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
+        {Version(50), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(51), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(52), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector}, {}}},
+        {Version(60), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
+        {Version(61), {{{Property::Compatible, Property::Free, Property::Optional, Property::Repeatable}}, "when", {Directive::OMPD_begin_metadirective, Directive::OMPD_metadirective}, SourceLanguage::C | SourceLanguage::Fortran, {Modifier::ContextSelector, Modifier::DirectiveNameModifier}, {}}},
       }
     ),
   },
@@ -1808,6 +1809,19 @@
         {Version(52), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
         {Version(60), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
         {Version(61), {{{Property::Required}}, {Clause::OMPC_map, Clause::OMPC_use_device_addr, Clause::OMPC_use_device_ptr}, {Directive::OMPD_target_data}}},
+      }
+    ),
+  },
+  {
+    ClauseSet::DeclareMapperClauseSet1,
+    descriptor::ClauseSet(
+      "declare_mapper_clause_set_1",
+      {
+        {Version(50), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(51), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(52), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(60), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
+        {Version(61), {{{Property::Required}}, {Clause::OMPC_map}, {Directive::OMPD_declare_mapper}}},
       }
     ),
   },
@@ -2069,6 +2083,19 @@
     ),
   },
   {
+    Directive::OMPD_begin_metadirective,
+    descriptor::Directive(
+      "begin_metadirective",
+      {
+        {Version(50), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(51), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_default_variant, Clause::OMPC_when}, {}}},
+        {Version(52), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(60), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+        {Version(61), {{{Property::Pure}}, "begin metadirective", Association::Delimited, Category::Meta, {Clause::OMPC_otherwise, Clause::OMPC_when}, {}}},
+      }
+    ),
+  },
+  {
     Directive::OMPD_cancel,
     descriptor::Directive(
       "cancel",
@@ -2125,11 +2152,11 @@
     descriptor::Directive(
       "declare_mapper",
       {
-        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
-        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {}}},
+        {Version(50), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(51), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(52), {{{Property::Pure}}, "declare mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(60), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
+        {Version(61), {{{Property::Pure}}, "declare_mapper", Association::Unassociated, Category::Declarative, {Clause::OMPC_map}, {ClauseSet::DeclareMapperClauseSet1}}},
       }
     ),
   },
@@ -2138,7 +2165,7 @@
     descriptor::Directive(
       "declare_reduction",
       {
-        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {}, {}}},
+        {Version(45), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(50), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(51), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
         {Version(52), {{{Property::Pure}}, "declare reduction", Association::Unassociated, Category::Declarative, {Clause::OMPC_initializer}, {}}},
@@ -2639,6 +2666,16 @@
         {Version(52), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_shared, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
         {Version(60), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_replayable, Clause::OMPC_shared, Clause::OMPC_threadset, Clause::OMPC_transparent, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
         {Version(61), {{{Property::ExplicitTaskGenerating, Property::ImplicitAcquireFlush, Property::ImplicitAcquireFlushAtEntry, Property::ImplicitAcquireFlushAtExit, Property::ImplicitFlush, Property::ImplicitReleaseFlush, Property::ImplicitReleaseFlushAtEntry, Property::ImplicitReleaseFlushAtExit, Property::ParallelismGenerating, Property::TaskGenerating, Property::TaskSchedulingPoint, Property::TaskSchedulingPointAfterTaskGeneration, Property::TaskSchedulingPointAtEntry, Property::TaskSchedulingPointAtExit, Property::TaskSynchronizing, Property::TeamsNestable, Property::ThreadLimiting}}, "task", Association::Block, Category::Executable, {Clause::OMPC_affinity, Clause::OMPC_allocate, Clause::OMPC_default, Clause::OMPC_depend, Clause::OMPC_detach, Clause::OMPC_final, Clause::OMPC_firstprivate, Clause::OMPC_if, Clause::OMPC_in_reduction, Clause::OMPC_mergeable, Clause::OMPC_priority, Clause::OMPC_private, Clause::OMPC_replayable, Clause::OMPC_shared, Clause::OMPC_threadset, Clause::OMPC_transparent, Clause::OMPC_untied}, {ClauseSet::TaskClauseSet1}}},
+      }
+    ),
+  },
+  {
+    Directive::OMPD_task_iteration,
+    descriptor::Directive(
+      "task_iteration",
+      {
+        {Version(60), {{{}}, "task_iteration", Association::Unassociated, Category::Subsidiary, {Clause::OMPC_affinity, Clause::OMPC_depend, Clause::OMPC_if}, {}}},
+        {Version(61), {{{Property::TaskSynchronizing}}, "task_iteration", Association::Unassociated, Category::Subsidiary, {Clause::OMPC_affinity, Clause::OMPC_depend, Clause::OMPC_if}, {}}},
       }
     ),
   },

@@ -591,7 +591,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
     r.offset = relInfo.r_address;
     if (relInfo.r_extern) {
       r.referent = symbols[relInfo.r_symbolnum];
-      r.addend = isSubtrahend ? 0 : totalAddend;
+      r.setAddend(isSubtrahend ? 0 : totalAddend);
     } else {
       assert(!isSubtrahend);
       const SectionHeader &referentSecHead =
@@ -613,7 +613,7 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       }
       r.referent = findContainingSubsection(*sections[relInfo.r_symbolnum - 1],
                                             &referentOffset);
-      r.addend = referentOffset;
+      r.setAddend(referentOffset);
     }
 
     // Find the subsection that this relocation belongs to.
@@ -649,13 +649,13 @@ void ObjFile::parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
       p.offset = r.offset;
       if (minuendInfo.r_extern) {
         p.referent = symbols[minuendInfo.r_symbolnum];
-        p.addend = totalAddend;
+        p.setAddend(totalAddend);
       } else {
         uint64_t referentOffset =
             totalAddend - sectionHeaders[minuendInfo.r_symbolnum - 1].addr;
         p.referent = findContainingSubsection(
             *sections[minuendInfo.r_symbolnum - 1], &referentOffset);
-        p.addend = referentOffset;
+        p.setAddend(referentOffset);
       }
       subsec->relocs.push_back(p);
     }
@@ -1261,7 +1261,7 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
         ++it;
         continue;
       }
-      uint64_t add = r.addend;
+      uint64_t add = r.getAddend();
       if (auto *sym = cast_or_null<Defined>(dyn_cast<Symbol *>(r.referent))) {
         // Check whether the symbol defined in this file is the prevailing one.
         // Skip if it is e.g. a weak def that didn't prevail.
@@ -1464,12 +1464,13 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
   if (!pcSym) {
     auto *targetIsec =
         cast<ConcatInputSection>(cast<InputSection *>(minuend.referent));
-    target = findSymbolAtOffset(targetIsec, minuend.addend);
+    target = findSymbolAtOffset(targetIsec, minuend.getAddend());
   }
   if (Invert)
     std::swap(pcSym, target);
   if (pcSym->isec() == isec) {
-    if (pcSym->value - (Invert ? -1 : 1) * minuend.addend != subtrahend.offset)
+    if (pcSym->value - (Invert ? -1 : 1) * minuend.getAddend() !=
+        subtrahend.offset)
       fatal("invalid FDE relocation in __eh_frame");
   } else {
     // Ensure the pcReloc points to a symbol within the current EH frame.
@@ -1481,7 +1482,7 @@ targetSymFromCanonicalSubtractor(const InputSection *isec,
     Relocation &pcReloc = Invert ? minuend : subtrahend;
     pcReloc.referent = isec->symbols[0];
     assert(isec->symbols[0]->value == 0);
-    minuend.addend = pcReloc.offset * (Invert ? 1LL : -1LL);
+    minuend.setAddend(pcReloc.offset * (Invert ? 1LL : -1LL));
   }
   return target;
 }

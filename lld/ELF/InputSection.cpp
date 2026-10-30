@@ -61,10 +61,11 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
                   entsize),
       bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
-  // In order to reduce memory allocation, we assume that mergeable
-  // sections are smaller than 4 GiB, which is not an unreasonable
-  // assumption as of 2017.
-  if (sectionKind == SectionBase::Merge && content().size() > UINT32_MAX)
+  // In order to reduce memory allocation, we assume that mergeable and
+  // .eh_frame sections are smaller than 4 GiB.
+  if ((sectionKind == SectionBase::Merge ||
+       sectionKind == SectionBase::EHFrame) &&
+      content().size() > UINT32_MAX)
     ErrAlways(getCtx()) << this << ": section too large";
 
   // The ELF spec states that a value of 0 means the section has
@@ -1419,7 +1420,18 @@ template <class ELFT> void EhInputSection::split() {
     unsigned firstRel = -1;
     if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
-    (id == 0 ? cies : fdes).emplace_back(off, this, size, firstRel);
+    if (id == 0) {
+      cies.emplace_back(off, size, firstRel, -1);
+    } else {
+      auto cieOff = off + 4 - id;
+      auto it = partition_point(
+          cies, [=](const EhSectionPiece &p) { return p.inputOff < cieOff; });
+      if (it == cies.end() || it->inputOff != cieOff) {
+        msg = "invalid CIE reference";
+        break;
+      }
+      fdes.emplace_back(off, size, firstRel, it - cies.begin());
+    }
     d = d.slice(size);
   }
   if (msg)
@@ -1545,9 +1557,12 @@ SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
   // For non-string fixed-size records, piece index = offset / entsize.
   if (!(flags & SHF_STRINGS))
     return pieces[offset / entsize];
-  return partition_point(
-      pieces,
-      [=](const SectionPiece &p) { return p.inputOff <= offset; })[-1];
+  // Find the last piece whose inputOff <= offset. Prefer a conditional move
+  // to a mispredicated branch.
+  SectionPiece *p = pieces.data();
+  for (size_t n = pieces.size(); n > 1; n -= n / 2)
+    p = LLVM_UNPREDICTABLE(p[n / 2].inputOff <= offset) ? p + n / 2 : p;
+  return *p;
 }
 
 // Return the offset in an output section for a given input offset.

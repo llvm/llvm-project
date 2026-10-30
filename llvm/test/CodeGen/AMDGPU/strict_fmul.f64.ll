@@ -290,12 +290,12 @@ define amdgpu_ps <2 x float> @s_constained_fmul_f64_fpexcept_strict(double inreg
 ;
 ; GFX11-SDAG-LABEL: s_constained_fmul_f64_fpexcept_strict:
 ; GFX11-SDAG:       ; %bb.0:
-; GFX11-SDAG-NEXT:    v_mul_f64 v[0:1], s[2:3], s[4:5]
+; GFX11-SDAG-NEXT:    v_mul_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-GISEL-LABEL: s_constained_fmul_f64_fpexcept_strict:
 ; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], s[2:3], s[4:5]
+; GFX11-GISEL-NEXT:    v_mul_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
@@ -303,14 +303,15 @@ define amdgpu_ps <2 x float> @s_constained_fmul_f64_fpexcept_strict(double inreg
 ;
 ; GFX12-SDAG-LABEL: s_constained_fmul_f64_fpexcept_strict:
 ; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    v_mul_f64_e64 v[0:1], s[2:3], s[4:5]
+; GFX12-SDAG-NEXT:    v_mul_f64_e64 v[0:1], s[0:1], s[2:3]
 ; GFX12-SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-LABEL: s_constained_fmul_f64_fpexcept_strict:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    v_mul_f64_e64 v[0:1], s[2:3], s[4:5]
+; GFX12-GISEL-NEXT:    v_mul_f64_e64 v[0:1], s[0:1], s[2:3]
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-GISEL-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call double @llvm.experimental.constrained.fmul.f64(double %x, double %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
