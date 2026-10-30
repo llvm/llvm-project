@@ -87,7 +87,15 @@ class AFPR128<bits<16> Enc, string n, list<Register> subregs>
   let SubRegIndices = [sub_64];
 }
 
-// Accumulator Registers
+// 64-bit HI/LO views inherit the names and aliases of their 32-bit halves.
+class Mips64LOHIReg<MipsReg reg32>
+  : MipsRegWithSubRegs<reg32.HWEncoding, reg32.AsmName, [reg32]> {
+  let SubRegIndices = [sub_32];
+  let RegAltNameIndices = reg32.RegAltNameIndices;
+  let AltNames = reg32.AltNames;
+}
+
+// Accumulator registers pair LO and HI registers of the same width.
 class ACCReg<bits<16> Enc, string n, list<Register> subregs>
   : MipsRegWithSubRegs<Enc, n, subregs> {
   let SubRegIndices = [sub_lo, sub_hi];
@@ -211,9 +219,9 @@ let Namespace = "Mips" in {
   def LO2 : MipsReg<2, "ac2">, DwarfRegNum<[179]>;
   def LO3 : MipsReg<3, "ac3">, DwarfRegNum<[181]>;
 
-  let SubRegIndices = [sub_32] in {
-  def HI0_64  : RegisterWithSubRegs<"hi", [HI0]>;
-  def LO0_64  : RegisterWithSubRegs<"lo", [LO0]>;
+  foreach I = 0-3 in {
+    def HI#I#_64 : Mips64LOHIReg<!cast<MipsReg>("HI"#I)>;
+    def LO#I#_64 : Mips64LOHIReg<!cast<MipsReg>("LO"#I)>;
   }
 
   // FP control registers.
@@ -250,12 +258,15 @@ let Namespace = "Mips" in {
   foreach I = {4-28, 30-31} in
   def HWR#I : MipsReg<I, ""#I>;
 
-  // Accum registers
-  foreach I = 0-3 in
-  def AC#I : ACCReg<I, "ac"#I,
-                    [!cast<Register>("LO"#I), !cast<Register>("HI"#I)]>;
-
-  def AC0_64 : ACCReg<0, "ac0", [LO0_64, HI0_64]>;
+  // 64-bit accumulators use 32-bit halves; 128-bit views use 64-bit halves.
+  foreach I = 0-3 in {
+    def AC#I : ACCReg<I, "ac"#I,
+                     [!cast<Register>("LO"#I),
+                      !cast<Register>("HI"#I)]>;
+    def AC#I#_64 : ACCReg<I, "ac"#I,
+                        [!cast<Register>("LO"#I#"_64"),
+                         !cast<Register>("HI"#I#"_64")]>;
+  }
 
   // DSP-ASE control register fields.
   def DSPPos : Register<"">;
@@ -473,23 +484,25 @@ def LO32DSP : RegisterClass<"Mips", [i32], 32, (sequence "LO%u", 0, 3)>;
 def HI32DSP : RegisterClass<"Mips", [i32], 32, (sequence "HI%u", 0, 3)>;
 def LO64 : RegisterClass<"Mips", [i64], 64, (add LO0_64)>;
 def HI64 : RegisterClass<"Mips", [i64], 64, (add HI0_64)>;
+def LO64DSP : RegisterClass<"Mips", [i64], 64, (sequence "LO%u_64", 0, 3)>;
+def HI64DSP : RegisterClass<"Mips", [i64], 64, (sequence "HI%u_64", 0, 3)>;
 
 // Hardware registers
 def HWRegs : RegisterClass<"Mips", [i32], 32, (sequence "HWR%u", 0, 31)>,
              Unallocatable;
 
 // Accumulator Registers
-def ACC64 : RegisterClass<"Mips", [untyped], 64, (add AC0)> {
-  let Size = 64;
+class ACCRegisterClass<int width, dag registers>
+  : RegisterClass<"Mips", [untyped], width, registers> {
+  let Size = width;
 }
 
-def ACC128 : RegisterClass<"Mips", [untyped], 128, (add AC0_64)> {
-  let Size = 128;
-}
+// Ordinary instructions use AC0; DSP instructions can select AC0-AC3.
+def ACC64 : ACCRegisterClass<64, (add AC0)>;
+def ACC128 : ACCRegisterClass<128, (add AC0_64)>;
 
-def ACC64DSP : RegisterClass<"Mips", [untyped], 64, (sequence "AC%u", 0, 3)> {
-  let Size = 64;
-}
+def ACC64DSP : ACCRegisterClass<64, (sequence "AC%u", 0, 3)>;
+def ACC128DSP : ACCRegisterClass<128, (sequence "AC%u_64", 0, 3)>;
 
 def DSPCC : RegisterClass<"Mips", [v4i8, v2i16], 32, (add DSPCCond)>;
 
