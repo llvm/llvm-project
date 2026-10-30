@@ -1308,7 +1308,6 @@ void Writer::buildFixupChains() {
   TimeTraceScope timeScope("Build fixup chains");
 
   const uint64_t pageSize = target->getPageSize();
-  constexpr uint32_t stride = ChainedFixupsSection::stride;
 
   for (size_t i = 0, count = loc.size(); i < count;) {
     const OutputSegment *oseg = loc[i].isec->parent->parent;
@@ -1329,12 +1328,10 @@ void Writer::buildFixupChains() {
 
       if (offset < target->wordSize)
         return fail("fixups overlap");
-      assert(offset % stride == 0 &&
-             "ChainedFixupsSection::finalizeContents rejects unaligned fixups");
 
       // The "next" field is in the same location for bind and rebase entries.
       reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / stride;
+          ->next = offset / ChainedFixupsSection::chainStride;
       ++i;
     }
   }

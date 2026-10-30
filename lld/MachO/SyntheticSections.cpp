@@ -2563,8 +2563,8 @@ void ChainedFixupsSection::finalizeContents() {
     };
     if (offset % pageSize + target->wordSize > pageSize)
       report("fixup straddles page boundary");
-    else if (offset % stride != 0)
-      report("fixup is not " + Twine(stride) + "-byte aligned");
+    if (offset % chainStride != 0)
+      report("fixup is not " + Twine(chainStride) + "-byte aligned");
     loc.offset = offset;
   }
 
