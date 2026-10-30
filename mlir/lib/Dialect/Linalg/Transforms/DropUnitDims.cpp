@@ -494,6 +494,60 @@ linalg::dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
           concatAffineMaps(newIndexingMaps, rewriter.getContext())))
     return failure();
 
+  AffineMap newShapesToLoopsMap = inversePermutation(
+      concatAffineMaps(newIndexingMaps, rewriter.getContext()));
+
+  if (!newShapesToLoopsMap) {
+    return failure();
+  }
+
+  // Compute the loop ranges that the replacement is expected to retain.
+  SmallVector<int64_t> expectedLoopRanges;
+  SmallVector<int64_t> originalLoopRanges = op.getStaticLoopRanges();
+
+  expectedLoopRanges.reserve(originalLoopRanges.size() - unitDims.size());
+  for (auto [index, range] : llvm::enumerate(originalLoopRanges)) {
+    if (!unitDims.count(index)) {
+      expectedLoopRanges.push_back(range);
+    }
+  }
+  // Flatten the shapes that the replacement operation will see.
+  SmallVector<int64_t> flattenedTargetShapes;
+  for (const auto &targetShape : targetShapes)
+    llvm::append_range(flattenedTargetShapes, targetShape);
+  // Infer the loop ranges from the replacement maps and replacement shapes.
+  SmallVector<int64_t> actualNewRanges =
+      newShapesToLoopsMap.compose(flattenedTargetShapes);
+  // Dropping unit loops must not change any retained loop range.
+  // Exact comparison also rejects static-to-dynamic and dynamic-to-static
+  // changes. Two dynamic values both appear as ShapedType::kDynamic.
+  if (expectedLoopRanges != actualNewRanges) {
+    return rewriter.notifyMatchFailure(
+        op, "dropping unit dimensions changes retained loop ranges");
+  }
+  // The inverse map uses only the first bare occurrence of each loop.
+  // Check all bare occurrences so that a later operand cannot disagree.
+  for (auto [operandIndex, indexingMap] : llvm::enumerate(newIndexingMaps)) {
+    ArrayRef<int64_t> operandShape = targetShapes[operandIndex];
+    assert(indexingMap.getNumResults() == operandShape.size() &&
+           "indexing map and operand shape rank must match");
+    for (auto [resultIndex, expr] : llvm::enumerate(indexingMap.getResults())) {
+      auto dimExpr = dyn_cast<AffineDimExpr>(expr);
+      if (!dimExpr)
+        continue;
+      int64_t loopRange = expectedLoopRanges[dimExpr.getPosition()];
+      int64_t dimensionSize = operandShape[resultIndex];
+      // For a bare dimension expression, the operand dimension represents
+      // that loop directly. Reject statically known disagreements.
+      if (!ShapedType::isDynamic(loopRange) &&
+          !ShapedType::isDynamic(dimensionSize) && loopRange != dimensionSize) {
+        return rewriter.notifyMatchFailure(
+            op, "replacement indexing maps are incompatible with operand "
+                "shapes");
+      }
+    }
+  }
+
   Location loc = op.getLoc();
   // 4. For each of the operands, collapse the operand to convert
   //    from original shape to shape in the modified operation if needed,
