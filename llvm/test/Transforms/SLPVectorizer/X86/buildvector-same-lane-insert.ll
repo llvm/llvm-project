@@ -80,7 +80,8 @@ define <5 x i32> @undef_base_lane(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[X2:%.*]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <4 x i32> [[TMP4]], <i32 1, i32 2, i32 4, i32 3>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> undef, <5 x i32> <i32 0, i32 1, i32 2, i32 4, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 0, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP5]], <4 x i32> poison, <5 x i32> <i32 poison, i32 1, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <5 x i32> [[TMP6]], <5 x i32> [[TMP8]], <5 x i32> <i32 0, i32 6, i32 2, i32 3, i32 4>
 ; CHECK-NEXT:    ret <5 x i32> [[TMP7]]
 ;
   %b0 = add nsw i32 %x0, 1
