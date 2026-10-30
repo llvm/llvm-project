@@ -7,9 +7,12 @@
 # RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.bit51.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESERVED
 # RUN: yaml2obj -D CONTENT=00000000341205C0 %s -o %t.bit62.o
 # RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.bit62.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESERVED
+# RUN: yaml2obj -D CONTENT=0000000034120D00 %s -o %t.both.o
+# RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.both.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=AUTH,RESERVED
 
 ## Invalid embedded signing schemas must not become unsigned pointers or have
 ## their reserved bits silently discarded.
+## A schema with both problems gets both errors.
 # AUTH: error: AUTHENTICATED_POINTER relocation requires bit 63 to be set at offset 0 of __DATA,__data in
 # RESERVED: error: AUTHENTICATED_POINTER relocation requires bits 51..62 to be zero at offset 0 of __DATA,__data in
 

@@ -1329,6 +1329,7 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
 }
 
 static uint16_t getChainedFixupsPointerFormat() {
+  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
   if (config->arch() != AK_arm64e)
     return DYLD_CHAINED_PTR_64;
   // Like ld64, keep the original format if -no_fixup_chains was given.

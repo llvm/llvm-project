@@ -554,7 +554,7 @@ static bool validateRelocationInfo(InputFile *file, const SectionHeader &sec,
         read64le(file->mb.getBufferStart() + sec.offset + rel.r_address));
     if (!ptr.auth)
       error(message("requires bit 63 to be set"));
-    else if (ptr.reserved)
+    if (ptr.reserved)
       error(message("requires bits 51..62 to be zero"));
   }
   return valid;
