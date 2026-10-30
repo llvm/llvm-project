@@ -22,6 +22,7 @@
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <limits>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -50,6 +51,13 @@ static cl::opt<std::string> PerfDataFilename(
     cl::cat(ProfGenCategory));
 static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
                      cl::aliasopt(PerfDataFilename));
+
+// Select reader-side relocation; generated profile addresses stay in the
+// binary's address space for the existing profile generators.
+static cl::opt<bool> PerProcessMappings(
+    "per-process-mappings",
+    cl::desc("Resolve perf samples using per-process executable mappings."),
+    cl::cat(ProfGenCategory));
 
 static cl::opt<std::string> UnsymbolizedProfFilename(
     "unsymbolized-profile", cl::value_desc("unsymbolized profile"),
@@ -140,7 +148,23 @@ static void validateCommandLine() {
     CheckFileExists(HasUnsymbolizedProfile, UnsymbolizedProfFilename);
     CheckFileExists(HasSampleProfile, SampleProfFilename);
     CheckFileExists(HasEtm, ETMPath);
+    // Per-process relocation needs the mmap/task records in perf input.
+    if (PerProcessMappings && !HasPerfData && !HasPerfScript)
+      exitWithError(
+          "--per-process-mappings requires --perfdata or --perfscript");
   }
+
+  if (PerProcessMappings && ShowDisassemblyOnly)
+    exitWithError("--per-process-mappings cannot be used together with "
+                  "--show-disassembly-only");
+  // The separate data-access reader still uses the global binary load base.
+  // Combining it with per-process code addresses could misattribute samples.
+  if (PerProcessMappings && !DataAccessProfileFilename.empty())
+    exitWithError(
+        "--data-access-perftrace cannot be used with --per-process-mappings");
+  if (PerProcessMappings && ProcessId > std::numeric_limits<int32_t>::max())
+    exitWithError(
+        "--pid must be between 0 and 2147483647 with --per-process-mappings");
 
   if (!llvm::sys::fs::exists(BinaryPath)) {
     std::string Msg = "Input binary(" + BinaryPath + ") doesn't exist.";
@@ -158,6 +182,7 @@ static void validateCommandLine() {
 
 static InputFile getInputFile() {
   InputFile File;
+  File.UseProcessMappings = PerProcessMappings;
   if (PerfDataFilename.getNumOccurrences()) {
     File.InputFilePath = PerfDataFilename;
     File.Format = InputFormat::PerfData;

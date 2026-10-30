@@ -1,0 +1,160 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/valid.perfscript --skip-symbolization --output=%t/valid.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=VALID --input-file=%t/valid.raw
+
+; A missing sample timestamp is rejected before checking for branches.
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat-no-branches.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+; Timestamped IP samples and callchain frames alone are not LBR input. Require
+; an actual branch record during detection instead of accepting an empty profile
+; or deferring rejection until the hybrid unwinder has been selected.
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat-time-no-branches.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=NO-LBR
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/hybrid-no-branches.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=NO-LBR
+
+; A mapped sample needs an explicit nonnegative int32 PID. Do not treat the
+; timestamp as a PID or accept an identifier that wraps the ownership key.
+; RUN: sed 's/^100 1.000001:/1.000001:/' %t/valid.perfscript > %t/missing-pid.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/missing-pid.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=PID
+; RUN: sed 's/^100 1.000001:/-1 1.000001:/' %t/valid.perfscript > %t/negative-pid.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/negative-pid.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=PID
+; RUN: sed 's/^100 1.000001:/2147483648 1.000001:/' %t/valid.perfscript > %t/large-pid.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/large-pid.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=PID
+
+; Every mapped sample requires a finite timestamp after its PID, even when the
+; branch stack is otherwise valid. Task events also require time so that initial
+; snapshots cannot be mistaken for live forks.
+; RUN: sed 's/^100 1.000001:/100/' %t/valid.perfscript > %t/no-time.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/no-time.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+; RUN: sed 's/1.000001:/nan:/' %t/valid.perfscript > %t/time.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/time.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/task-no-time.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=TASK
+
+; Validate task membership keys and mapping bounds before retaining a mapping.
+; RUN: sed 's/MMAP2 100\/100:/MMAP2 100\/2147483648:/' %t/valid.perfscript > %t/tid.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/tid.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=MMAP
+; RUN: sed 's/0x500000(0x1000)/0xfffffffffffff800(0x1000)/' %t/valid.perfscript > %t/wrap.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/wrap.perfscript --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=MMAP
+
+; A selected PID must not fall back to an unrelated process's mapping.
+; RUN: not llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfscript=%t/valid.perfscript \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=NO-MMAP
+; RUN: not llvm-profgen --per-process-mappings --pid=2147483648 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfscript=%t/valid.perfscript \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=PID-OPTION
+; RUN: not llvm-profgen --per-process-mappings --pid=4294967295 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfscript=%t/valid.perfscript \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=PID-OPTION
+; The signed-reader bound is opt-in. The old unsigned option and fallback to
+; preferred addresses remain unchanged when process mapping is disabled.
+; RUN: llvm-profgen --pid=2147483648 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --skip-symbolization --output=%t/legacy.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=VALID --input-file=%t/legacy.raw
+; RUN: llvm-profgen --per-process-mappings=false --pid=4294967295 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfscript=%t/legacy.perfscript \
+; RUN:   --skip-symbolization --output=%t/disabled.raw
+; RUN: cmp %t/legacy.raw %t/disabled.raw
+; RUN: sed -e 's/100\/100:/0\/0:/' -e 's/^100 /0 /' %t/valid.perfscript > %t/pid-zero.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=0 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/pid-zero.perfscript --skip-symbolization --output=%t/zero.raw
+; RUN: cmp %t/valid.raw %t/zero.raw
+; RUN: sed -e 's/100\/100:/2147483647\/2147483647:/' -e 's/^100 /2147483647 /' %t/valid.perfscript > %t/pid-max.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=2147483647 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/pid-max.perfscript --skip-symbolization --output=%t/max.raw
+; RUN: cmp %t/valid.raw %t/max.raw
+; RUN: not llvm-profgen --per-process-mappings --pid=-1 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfscript=%t/valid.perfscript \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=NEGATIVE-PID-OPTION
+; RUN: not llvm-profgen --pid=-1 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --perfscript=%t/valid.perfscript \
+; RUN:   --output=%t/invalid 2>&1 | FileCheck %s --check-prefix=NEGATIVE-PID-OPTION
+
+; Mapping applies only to runtime input, not raw profiles. The data-access
+; reader still uses global mappings and must not be combined with this mode.
+; RUN: not llvm-profgen --per-process-mappings --show-disassembly-only \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=DISASSEMBLY
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/valid.raw --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=RAW-OPTION
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/valid.perfscript --data-access-perftrace=%s --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=DATA-ACCESS
+; The perf.data route must reject the combination before invoking perf. The
+; input only needs to exist, and the empty PATH prevents any real perf lookup.
+; RUN: not env PATH= llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfdata=%s --data-access-perftrace=%s --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=DATA-ACCESS
+
+; VALID-NOT:  {{.}}
+; VALID:      1
+; VALID-NEXT: 5b0-5c8:1
+; VALID-NEXT: 2
+; VALID-NEXT: 5c8->5dc:1
+; VALID-NEXT: 62f->5b0:1
+; VALID-NOT:  {{.}}
+
+; NO-LBR: Invalid perf script input!
+; PID: Invalid perf script sample PID
+; TIME: llvm-profgen: error: Invalid perf script sample timestamp
+; TASK: Invalid perf script task event
+; MMAP: Invalid perf script mmap event
+; NO-MMAP: Invalid perf script input: no usable mmap
+; PID-OPTION: --pid must be between 0 and 2147483647 with --per-process-mappings
+; NEGATIVE-PID-OPTION: '-1' value invalid for uint argument!
+; RAW-OPTION: --per-process-mappings requires --perfdata or --perfscript
+; DISASSEMBLY: --per-process-mappings cannot be used together with --show-disassembly-only
+; DATA-ACCESS: --data-access-perftrace cannot be used with --per-process-mappings
+
+;--- valid.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 1.000001:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- legacy.perfscript
+PERF_RECORD_MMAP2 100/100: [0x400000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+4005dc 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0
+
+;--- flat-no-branches.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 5005dc
+
+;--- flat-time-no-branches.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 1.000001:           5005dc
+
+;--- hybrid-no-branches.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 1.000001:
+          5005dc
+          500634
+          500684
+
+;--- task-no-time.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 PERF_RECORD_FORK(200:200):(100:100)
+100 1.000001:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0

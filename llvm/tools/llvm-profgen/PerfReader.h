@@ -19,6 +19,9 @@
 #include <cstdint>
 #include <fstream>
 #include <map>
+#include <optional>
+#include <unordered_map>
+#include <unordered_set>
 
 namespace llvm {
 
@@ -79,6 +82,8 @@ struct InputFile {
   std::string InputFilePath;
   InputFormat Format = InputFormat::UnknownFormat;
   PerfContent Content = PerfContent::UnknownContent;
+  // Keep the address-resolution mode when perf.data becomes temporary text.
+  bool UseProcessMappings = false;
 };
 
 // The parsed LBR sample entry.
@@ -586,25 +591,33 @@ protected:
 class PerfScriptReader : public PerfReaderBase {
 public:
   PerfScriptReader(ProfiledBinary *B, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfReaderBase(B, PerfTrace), PIDFilter(PID) {};
+                   std::optional<int32_t> PID, bool UseProcessMappings = false)
+      : PerfReaderBase(B, PerfTrace), PIDFilter(PID),
+        UseProcessMappings(UseProcessMappings) {};
 
   // Entry of the reader to parse multiple perf traces
   void parsePerfTraces() override;
 
   // Parse a single line of a PERF_RECORD_MMAP event looking for a
   // mapping between the binary name and its memory layout.
+  // With RequireProcessMappingInfo, reject malformed records and populate MMap
+  // even for other binaries, whose mappings can replace the target's addresses.
+  // The return value reports only whether the binary name matches.
   // TODO: Move this static method from PerScriptReader (subclass) to
   // PerfReaderBase (superclass).
   static bool extractMMapEventForBinary(ProfiledBinary *Binary, StringRef Line,
-                                        MMapEvent &MMap);
+                                        MMapEvent &MMap,
+                                        bool RequireProcessMappingInfo = false);
 
   // Generate perf script from perf data
   static InputFile convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
                                           InputFile &File,
                                           std::optional<int32_t> PIDFilter);
-  // Extract perf script type by peaking at the input
-  static PerfContent checkPerfScriptType(StringRef FileName);
+  // Select the reader type using samples and their mapping/task metadata.
+  static PerfContent
+  checkPerfScriptType(ProfiledBinary *Binary, StringRef FileName,
+                      bool UseProcessMappings = false,
+                      std::optional<int32_t> PIDFilter = std::nullopt);
 
   // Cleanup installers for temporary files created by perf script command.
   // Those files will be automatically removed when running destructor or
@@ -612,17 +625,33 @@ public:
   static SmallVector<CleanupInstaller, 2> TempFileCleanups;
 
 protected:
+  // A runtime interval in one address space. For a target interval,
+  // RuntimeAddress + N corresponds to CanonicalAddress + N in the binary.
+  struct ExecutableMapping {
+    uint64_t RuntimeAddress = 0;
+    uint64_t Size = 0;
+    uint64_t CanonicalAddress = 0;
+    // False marks a replacement interval that blocks an older target mapping.
+    bool IsTarget = false;
+  };
+
   // Check whether a given line is LBR sample
   static bool isLBRSample(StringRef Line, bool CheckLineStart);
   // Check whether a given line is MMAP event
   static bool isMMapEvent(StringRef Line);
   // Update base address based on mmap events
   void updateBinaryAddress(const MMapEvent &Event);
-  // Parse mmap event and update binary address
+  // Apply an mmap to its address space's history, including replacement by
+  // a DSO other than the binary being profiled.
+  void updateExecutableMapping(const MMapEvent &Event, bool IsTarget);
+  // Return a binary address only if the most recent covering map is a target.
+  std::optional<uint64_t> resolveMappedAddress(uint64_t Address,
+                                               int32_t PID) const;
+  // Parse an mmap and update the binary load base or per-process mappings.
   void parseMMapEvent(TraceStream &TraceIt);
   // Parse perf events/samples and do aggregation
   void parseAndAggregateTrace();
-  // Parse either an MMAP event or a perf sample
+  // Parse mmap/task metadata or a sample, preserving input order.
   void parseEventOrSample(TraceStream &TraceIt);
   // Warn if the relevant mmap event is missing.
   void warnIfMissingMMap();
@@ -634,10 +663,16 @@ protected:
   void warnIfBranchTargetMismatch();
   // Extract call stack from the perf trace lines
   bool extractCallstack(TraceStream &TraceIt,
-                        SmallVectorImpl<uint64_t> &CallStack);
-  // Extract LBR stack from one perf trace line
+                        SmallVectorImpl<uint64_t> &CallStack,
+                        std::optional<int32_t> PID = std::nullopt);
+  // Extract an LBR stack, consuming any mapped header and unused frames.
   bool extractLBRStack(TraceStream &TraceIt,
-                       SmallVectorImpl<LBREntry> &LBRStack);
+                       SmallVectorImpl<LBREntry> &LBRStack,
+                       std::optional<int32_t> PID = std::nullopt);
+  // Return true on malformed input, retaining preceding usable entries.
+  // The caller handles diagnostics and trace advancement.
+  bool parseLBRLine(StringRef Line, SmallVectorImpl<LBREntry> &LBRStack,
+                    std::optional<int32_t> PID) const;
   uint64_t parseAggregatedCount(TraceStream &TraceIt);
   // Parse one sample from multiple perf lines, override this for different
   // sample type
@@ -658,6 +693,19 @@ protected:
   std::set<uint64_t> InvalidReturnAddresses;
   // PID for the process of interest
   std::optional<int32_t> PIDFilter;
+  // Both flat and hybrid readers resolve addresses before sharing the existing
+  // range counting, unwinding and profile-generation paths.
+  bool UseProcessMappings;
+  // Append in event order and search backwards. Kernel mappings use key -1
+  // because they are shared across the task PIDs carried by kernel samples.
+  std::unordered_map<int32_t, SmallVector<ExecutableMapping, 2>> MappingsByPID;
+  // Track known live threads so one worker's exit does not clear its process.
+  std::unordered_map<int32_t, std::unordered_set<int32_t>> ThreadsByPID;
+  // A live process birth or exec establishes a complete thread inventory.
+  // Unannounced threads withdraw completeness without removing mappings.
+  std::unordered_set<int32_t> CompleteThreadPIDs;
+  // Remember usable mappings even after an exec or exit removes their state.
+  bool HadUsableMapping = false;
 };
 
 /*
@@ -669,8 +717,8 @@ protected:
 class LBRPerfReader : public PerfScriptReader {
 public:
   LBRPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID) {};
+                std::optional<int32_t> PID, bool UseProcessMappings = false)
+      : PerfScriptReader(Binary, PerfTrace, PID, UseProcessMappings) {};
   // Parse the LBR only sample.
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
 };
@@ -687,8 +735,8 @@ public:
 class HybridPerfReader : public PerfScriptReader {
 public:
   HybridPerfReader(ProfiledBinary *Binary, StringRef PerfTrace,
-                   std::optional<int32_t> PID)
-      : PerfScriptReader(Binary, PerfTrace, PID) {};
+                   std::optional<int32_t> PID, bool UseProcessMappings = false)
+      : PerfScriptReader(Binary, PerfTrace, PID, UseProcessMappings) {};
   // Parse the hybrid sample including the call and LBR line
   void parseSample(TraceStream &TraceIt, uint64_t Count) override;
   void generateUnsymbolizedProfile() override;

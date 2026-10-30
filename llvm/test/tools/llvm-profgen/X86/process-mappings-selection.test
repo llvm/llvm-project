@@ -1,0 +1,273 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+; RUN: cat %t/mappings %t/flat > %t/flat.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat.perfscript --skip-symbolization --output=%t/flat.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT --input-file=%t/flat.raw
+; RUN: llvm-profgen --per-process-mappings --show-mmap-events --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat.perfscript --skip-symbolization --output=%t/show.raw | FileCheck %s --check-prefix=MMAP
+; RUN: cmp %t/flat.raw %t/show.raw
+
+; An unrelated binary's callchain must not select hybrid processing, in either
+; sample order. Either branch endpoint can make an LBR relevant to the target.
+; RUN: cat %t/mappings %t/other-callchain %t/flat > %t/other-first.perfscript
+; RUN: cat %t/flat.perfscript %t/other-callchain > %t/other-last.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-first.perfscript --skip-symbolization --output=%t/other-first.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/other-last.perfscript --skip-symbolization --output=%t/other-last.raw
+; RUN: cmp %t/flat.raw %t/other-first.raw
+; RUN: cmp %t/flat.raw %t/other-last.raw
+
+; The same PID can sample unrelated code while also mapping the target.
+; RUN: cat %t/mappings %t/same-pid-other-callchain %t/flat > %t/same-pid.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/same-pid.perfscript --skip-symbolization --output=%t/same-pid.raw
+; RUN: cmp %t/flat.raw %t/same-pid.raw
+
+; An inherited mapping qualifies the child's target callchain. Exec, exit and
+; replacement remove that eligibility before the stale addresses are sampled.
+; RUN: cat %t/mappings %t/fork %t/child-callchain > %t/inherited.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/inherited.perfscript --skip-symbolization --output=%t/inherited.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=CS --input-file=%t/inherited.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/inherited.perfscript --skip-symbolization --output=%t/child.raw
+; RUN: cmp %t/inherited.raw %t/child.raw
+; RUN: cat %t/mappings %t/fork %t/exec %t/child-callchain %t/flat > %t/exec.perfscript
+; RUN: cat %t/mappings %t/fork %t/exit %t/child-callchain %t/flat > %t/exit.perfscript
+; RUN: cat %t/mappings %t/fork %t/replace %t/child-callchain %t/flat > %t/replace.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/exec.perfscript --skip-symbolization --output=%t/exec.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/exit.perfscript --skip-symbolization --output=%t/exit.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/replace.perfscript --skip-symbolization --output=%t/replace.raw
+; RUN: cmp %t/flat.raw %t/exec.raw
+; RUN: cmp %t/flat.raw %t/exit.raw
+; RUN: cmp %t/flat.raw %t/replace.raw
+
+; Read-only replacement also removes the child's callchain eligibility,
+; preserving the valid flat sample in either sample order.
+; RUN: sed 's/r-xp/r--p/' %t/replace > %t/readonly
+; RUN: cat %t/mappings %t/fork %t/readonly %t/child-callchain %t/flat > %t/readonly-first.perfscript
+; RUN: cat %t/mappings %t/fork %t/readonly %t/flat %t/child-callchain > %t/readonly-last.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/readonly-first.perfscript --skip-symbolization --output=%t/readonly-first.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/readonly-last.perfscript --skip-symbolization --output=%t/readonly-last.raw
+; RUN: cmp %t/flat.raw %t/readonly-first.raw
+; RUN: cmp %t/flat.raw %t/readonly-last.raw
+
+; A valid parent callchain selects hybrid processing and contributes once.
+; RUN: sed 's/^    200 /    100 /' %t/child-callchain > %t/parent-callchain
+; RUN: cat %t/mappings %t/fork %t/readonly %t/child-callchain %t/parent-callchain > %t/readonly-cs.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/readonly-cs.perfscript --skip-symbolization --output=%t/readonly-cs.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=CS --input-file=%t/readonly-cs.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/readonly-cs.perfscript --format=text --output=%t/readonly-cs.prof \
+; RUN:   --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/readonly-cs.raw --format=text --output=%t/readonly-cs-replay.prof \
+; RUN:   --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
+; RUN: cmp %t/readonly-cs.prof %t/readonly-cs-replay.prof
+
+; External sampled frames can still accompany useful target branch history.
+; The existing unwinder recovers the target context from those branch records.
+; RUN: cat %t/mappings %t/external-frames > %t/external.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/external.perfscript --skip-symbolization --output=%t/external.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=EXTERNAL --input-file=%t/external.raw
+
+; Failed resolution must not become instruction 1. This binary has a real nop
+; at 1 and a self-branch at 2, while its runtime mapping starts at 0x500000.
+; RUN: yaml2obj %t/low-code.yaml -o %t/low-code
+; RUN: cat %t/low-mapping %t/low-unresolved > %t/low-unresolved.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-unresolved.perfscript --skip-symbolization --output=%t/low-unresolved.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=LOW-EMPTY --input-file=%t/low-unresolved.raw
+; RUN: cat %t/low-mapping %t/low-flat > %t/low-flat.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-flat.perfscript --skip-symbolization --output=%t/low-flat.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=LOW-FLAT --input-file=%t/low-flat.raw
+; RUN: cat %t/low-mapping %t/low-unresolved %t/low-flat > %t/low-mixed.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-mixed.perfscript --skip-symbolization --output=%t/low-mixed.raw
+; RUN: cmp %t/low-flat.raw %t/low-mixed.raw
+
+; An unresolved callchain must not select Hybrid and lose the valid flat edge,
+; in either sample order, even though the external sentinel is also code.
+; RUN: cat %t/low-mapping %t/low-other-callchain %t/low-flat > %t/low-other-first.perfscript
+; RUN: cat %t/low-flat.perfscript %t/low-other-callchain > %t/low-other-last.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-other-first.perfscript --skip-symbolization --output=%t/low-other-first.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-other-last.perfscript --skip-symbolization --output=%t/low-other-last.raw
+; RUN: cmp %t/low-flat.raw %t/low-other-first.raw
+; RUN: cmp %t/low-flat.raw %t/low-other-last.raw
+
+; Preserve incoming and outgoing edges. A genuinely resolved instruction 1
+; must also keep its existing 1->1 representation, not be rejected by value.
+; RUN: cat %t/low-mapping %t/low-one-sided > %t/low-one-sided.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-one-sided.perfscript --skip-symbolization --output=%t/low-one-sided.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=LOW-SIDES --input-file=%t/low-one-sided.raw
+
+; A usable outgoing branch still selects Hybrid. Unresolved frames must enter
+; external-frame handling; equal empty profiles alone cannot establish that.
+; RUN: sed 's@0x700002/0x700002@0x500008/0x700100@' %t/low-other-callchain > %t/low-external-frames
+; RUN: cat %t/low-mapping %t/low-external-frames > %t/low-external.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%t/low-code --use-offset=0 \
+; RUN:   --perfscript=%t/low-external.perfscript --skip-symbolization --output=%t/low-external.raw \
+; RUN:   2> %t/low-external.err
+; RUN: FileCheck %s --check-prefix=LOW-EXTERNAL --input-file=%t/low-external.err
+
+; FLAT-NOT:  {{.}}
+; FLAT:      1
+; FLAT-NEXT: 5b0-5c8:1
+; FLAT-NEXT: 2
+; FLAT-NEXT: 5c8->5dc:1
+; FLAT-NEXT: 62f->5b0:1
+; FLAT-NOT:  {{.}}
+
+; MMAP-COUNT-3: Mmap: Binary
+; MMAP-NOT: Mmap: Binary
+
+; CS-NOT:  {{.}}
+; CS:      [main:1 @ foo]
+; CS-NEXT:   0
+; CS-NEXT:   1
+; CS-NEXT:   62f->5b0:1
+; CS-NEXT: [main:1 @ foo:3 @ bar]
+; CS-NEXT:   1
+; CS-NEXT:   5b0-5c8:1
+; CS-NEXT:   1
+; CS-NEXT:   5c8->5dc:1
+; CS-NOT:  {{.}}
+
+; EXTERNAL-NOT:  {{.}}
+; EXTERNAL:      [bar]
+; EXTERNAL-NEXT:   1
+; EXTERNAL-NEXT:   5b0-5c8:1
+; EXTERNAL-NEXT:   1
+; EXTERNAL-NEXT:   5c8->5dc:1
+; EXTERNAL-NEXT: [foo]
+; EXTERNAL-NEXT:   0
+; EXTERNAL-NEXT:   1
+; EXTERNAL-NEXT:   62f->5b0:1
+; EXTERNAL-NOT:  {{.}}
+
+; LOW-EMPTY-NOT:  {{.}}
+; LOW-EMPTY:      0
+; LOW-EMPTY-NEXT: 0
+; LOW-EMPTY-NOT:  {{.}}
+
+; LOW-FLAT-NOT:  {{.}}
+; LOW-FLAT:      0
+; LOW-FLAT-NEXT: 1
+; LOW-FLAT-NEXT: 2->2:1
+; LOW-FLAT-NOT:  {{.}}
+
+; LOW-SIDES-NOT:  {{.}}
+; LOW-SIDES:      0
+; LOW-SIDES-NEXT: 3
+; LOW-SIDES-NEXT: 1->1:1
+; LOW-SIDES-NEXT: 1->2:1
+; LOW-SIDES-NEXT: 8->1:1
+; LOW-SIDES-NOT:  {{.}}
+
+; LOW-EXTERNAL: 100.00%(1/1) of samples have leaf external frame in call stack.
+; LOW-EXTERNAL-NOT: leaf external frame in call stack.
+
+;--- mappings
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001: PERF_RECORD_MMAP2 100/100: [0x700000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/unrelated.so
+    200 1.000002: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/unrelated.so
+;--- flat
+    100 3.000000: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+;--- other-callchain
+    200 3.000000:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+;--- same-pid-other-callchain
+    100 3.000000:
+          7005dc
+          700634
+          700684
+ 0x7005c8/0x7005dc/P/-/-/0 0x70062f/0x7005b0/P/-/-/0
+;--- fork
+    100 2.000000: PERF_RECORD_FORK(200:200):(100:100)
+;--- child-callchain
+    200 3.000000:
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+;--- exec
+    200 2.000001: PERF_RECORD_COMM exec: unrelated:200/200
+;--- exit
+    200 2.000001: PERF_RECORD_EXIT(200:200):(100:100)
+;--- replace
+    200 2.000001: PERF_RECORD_MMAP2 200/200: [0x500000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/unrelated.so
+;--- external-frames
+    100 3.000000:
+          7005dc
+          700634
+          700684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- low-mapping
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/low-code
+;--- low-unresolved
+    100 3.000000: 700002 0x700002/0x700002/P/-/-/0
+;--- low-flat
+    100 3.000000: 500002 0x500002/0x500002/P/-/-/0
+;--- low-other-callchain
+    100 3.000000:
+          700106
+          700209
+          700310
+ 0x700002/0x700002/P/-/-/0
+;--- low-one-sided
+    100 3.000000: 500002 0x700002/0x500002/P/-/-/0
+    100 3.000001: 700100 0x500008/0x700100/P/-/-/0
+    100 3.000002: 500001 0x700002/0x500001/P/-/-/0
+
+;--- low-code.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_X86_64
+  Entry: 0x1
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1
+    Offset: 0x1001
+    AddressAlign: 1
+    Content: '90EBFE90909090C3' # nop; jmp 2; nop; nop; nop; nop; ret
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0x1000
+    VAddr: 0
+    FileSize: 0x9
+    MemSize: 0x9
+    Align: 0x1000
+    FirstSec: .text
+    LastSec: .text
+Symbols:
+  - Name: low_code
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x1
+    Size: 0x8

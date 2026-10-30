@@ -53,7 +53,8 @@ case "$4" in
     printf '%s\n' '70000000100c 0x70000000100c/0x700000001000/P/-/-/0 0x700000001000/0x700000001008/P/-/-/0'
     ;;
   ip,brstack)
-    if [ "$#" -ne 8 ] || [ "$7" != "--pid" ] || [ "$8" != "1" ]; then
+    if [ "$#" -ne 9 ] || [ "$7" != "--pid" ] || [ "$8" != "1" ] || \
+       [ "$9" != "--no-inline" ]; then
       echo "unexpected sample arguments: $*" >&2
       exit 2
     fi

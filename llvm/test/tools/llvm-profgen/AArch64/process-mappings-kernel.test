@@ -1,0 +1,132 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/binary
+
+## Kernel mappings use PID -1, but branch samples belong to the sampled task.
+## Both task PIDs share the mapping; --pid filters samples. The kernel mapping
+## starts at the executable segment, whose file offset is nonzero.
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/kernel.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/all.raw
+# RUN: FileCheck %s --match-full-lines -D#COUNT=2 --input-file=%t/all.raw
+# RUN: llvm-profgen --per-process-mappings --kernel --pid=100 --binary=%t/binary \
+# RUN:   --perfscript=%t/kernel.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/selected.raw
+# RUN: FileCheck %s --match-full-lines -D#COUNT=1 --input-file=%t/selected.raw
+
+## Perf can synthesise kernel MMAP2 events with zero protection flags.
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/mmap2.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/mmap2.raw
+# RUN: cmp %t/all.raw %t/mmap2.raw
+
+## Foreign owners must not mask the host mapping, even at the same addresses.
+## Cover the default guest (0) and a positive guest ID in both mmap formats.
+# RUN: sed '1r %t/foreign-mmap' %t/kernel.perfscript > %t/foreign.perfscript
+# RUN: sed 's/ 0\/0:/ 4210\/0:/' %t/foreign.perfscript > %t/guest.perfscript
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/foreign.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/foreign.raw
+# RUN: cmp %t/all.raw %t/foreign.raw
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/guest.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/guest.raw
+# RUN: cmp %t/all.raw %t/guest.raw
+# RUN: sed '1r %t/foreign-mmap2' %t/mmap2.perfscript > %t/foreign2.perfscript
+# RUN: sed 's/ 0\/0:/ 4210\/0:/' %t/foreign2.perfscript > %t/guest2.perfscript
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/foreign2.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/foreign2.raw
+# RUN: cmp %t/all.raw %t/foreign2.raw
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/guest2.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/guest2.raw
+# RUN: cmp %t/all.raw %t/guest2.raw
+
+## A sampled idle task is still a host task, not mmap owner 0.
+# RUN: llvm-profgen --per-process-mappings --kernel --pid=100 --binary=%t/binary \
+# RUN:   --perfscript=%t/foreign.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/foreign-selected.raw
+# RUN: FileCheck %s --match-full-lines -D#COUNT=1 --input-file=%t/foreign-selected.raw
+# RUN: llvm-profgen --per-process-mappings --kernel --pid=0 --binary=%t/binary \
+# RUN:   --perfscript=%t/foreign.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/idle.raw
+# RUN: FileCheck %s --match-full-lines -D#COUNT=1 --input-file=%t/idle.raw
+
+## A disjoint foreign map is harmless; an overlapping host-owned replacement
+## after the first sample must hide the old mapping for the second sample.
+# RUN: sed '/guest/s/81000000/82000000/g' %t/foreign.perfscript > %t/disjoint.perfscript
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/disjoint.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/disjoint.raw
+# RUN: cmp %t/all.raw %t/disjoint.raw
+# RUN: sed 's/ 0\/0:/ -1\/0:/' %t/foreign-mmap > %t/replacement-mmap
+# RUN: sed '2r %t/replacement-mmap' %t/kernel.perfscript > %t/replacement.perfscript
+# RUN: llvm-profgen --per-process-mappings --kernel --binary=%t/binary \
+# RUN:   --perfscript=%t/replacement.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/replacement.raw
+# RUN: FileCheck %s --match-full-lines -D#COUNT=1 --input-file=%t/replacement.raw
+
+# CHECK-NOT:  {{.}}
+# CHECK:      0
+# CHECK-NEXT: 1
+# CHECK-NEXT: 401004->401000:[[#COUNT]]
+# CHECK-NOT:  {{.}}
+
+#--- kernel.perfscript
+PERF_RECORD_MMAP -1/0: [0xffffffff81000000(0x1000) @ 0xffffffff81000000]: x [kernel.kallsyms]_text
+100 1.000001: ffffffff81000000 0xffffffff81000004/0xffffffff81000000/P/-/-/0
+0 1.000002: ffffffff81000000 0xffffffff81000004/0xffffffff81000000/P/-/-/0
+
+#--- mmap2.perfscript
+PERF_RECORD_MMAP2 -1/0: [0xffffffff81000000(0x1000) @ 0xffffffff81000000 <0123456789abcdef0123456789abcdef01234567>]: ---p [kernel.kallsyms]_text
+100 1.000001: ffffffff81000000 0xffffffff81000004/0xffffffff81000000/P/-/-/0
+0 1.000002: ffffffff81000000 0xffffffff81000004/0xffffffff81000000/P/-/-/0
+
+#--- foreign-mmap
+PERF_RECORD_MMAP 0/0: [0xffffffff81000000(0x1000) @ 0xffffffff81000000]: x [guest.kernel.kallsyms]_text
+
+#--- foreign-mmap2
+PERF_RECORD_MMAP2 0/0: [0xffffffff81000000(0x1000) @ 0xffffffff81000000 <0123456789abcdef0123456789abcdef01234567>]: ---p [guest.kernel.kallsyms]_text
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_DYN
+  Machine: EM_AARCH64
+  Entry: 0x401000
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x401000
+    Offset: 0x1000
+    AddressAlign: 4
+    Content: '1F2003D5C0035FD6' # nop; ret
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_R ]
+    Offset: 0
+    VAddr: 0x400000
+    FileSize: 0x1000
+    MemSize: 0x1000
+    Align: 0x1000
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_X ]
+    Offset: 0x1000
+    VAddr: 0x401000
+    FileSize: 8
+    MemSize: 8
+    Align: 0x1000
+    FirstSec: .text
+    LastSec: .text
+Symbols:
+  - Name: kernel_entry
+    Type: STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value: 0x401000
+    Size: 8

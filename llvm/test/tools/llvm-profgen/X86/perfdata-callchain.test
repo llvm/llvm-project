@@ -1,0 +1,88 @@
+# REQUIRES: system-linux, x86-registered-target
+
+# RUN: split-file %s %t
+# RUN: touch %t/perf.data
+# RUN: chmod +x %t/perf
+# RUN: env PATH="%t%{pathsep}%{PATH}" llvm-profgen \
+# RUN:   --binary=%S/Inputs/inline-noprobe2.perfbin --perfdata=%t/perf.data \
+# RUN:   --skip-symbolization --use-offset=0 --output=%t/raw
+# RUN: diff -u %t/expected.raw %t/raw
+# RUN: env PATH="%t%{pathsep}%{PATH}" llvm-profgen \
+# RUN:   --binary=%S/Inputs/inline-noprobe2.perfbin --perfdata=%t/perf.data \
+# RUN:   --format=text --profile-summary-cold-count=0 --csspgo-preinliner=0 \
+# RUN:   --gen-cs-nested-profile=0 --output=%t/direct
+# RUN: FileCheck %s --check-prefixes=PROFILE,DIRECT --input-file=%t/direct
+# RUN: llvm-profgen --binary=%S/Inputs/inline-noprobe2.perfbin \
+# RUN:   --unsymbolized-profile=%t/raw --use-offset=0 --format=text \
+# RUN:   --profile-summary-cold-count=0 --csspgo-preinliner=0 \
+# RUN:   --gen-cs-nested-profile=0 --output=%t/replayed
+# RUN: FileCheck %s --check-prefix=PROFILE --input-file=%t/replayed
+
+## The physical stack is main -> quick_sort -> partition_pivot_last. The sampled
+## instruction is inside swap, which was inlined into partition_pivot_last.
+## By default perf repeats the leaf address to describe that inline call. If
+## treated as a physical return address, it truncates the stack before the real
+## callers. Request physical frames and reconstruct swap's context from DWARF.
+## All runtime addresses are relocated by 0x100000 from the existing fixture.
+
+## Raw profiles preserve the contexts and counts checked below. The existing
+## raw format does not preserve ContextWasInlined, so check that flag directly.
+# PROFILE:      [main:8 @ quick_sort:2 @ partition_pivot_last]:14:0
+# PROFILE-NEXT:  3.1: 2
+# PROFILE-NEXT:  3.3: 2
+# PROFILE-NEXT:  4: 2
+# PROFILE-NEXT:  5: 4 swap:2
+# PROFILE-NEXT: [main:8 @ quick_sort:2 @ partition_pivot_last:5 @ swap]:4:0
+# PROFILE-NEXT:  1: 2
+# PROFILE-NEXT:  2: 2
+# PROFILE-NEXT:  3: 2
+# DIRECT-NEXT:   !Attributes: 1
+# PROFILE:      [main]:2:0
+# PROFILE-NEXT:  8: 2 quick_sort:2
+# PROFILE-NEXT: [main:8 @ quick_sort]:2:0
+# PROFILE-NEXT:  2: 2 partition_pivot_last:2
+
+#--- perf
+#!/bin/sh
+
+if [ "$1" != "script" ] || [ "$2" != "--show-mmap-events" ] || \
+   [ "$3" != "-F" ]; then
+  echo "unexpected perf arguments: $*" >&2
+  exit 2
+fi
+printf '%s\n' 'PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:00 1 0]: r-xp /tmp/inline-noprobe2.perfbin'
+case "$4" in
+  comm,pid)
+    ;;
+  ip,brstack)
+    expand_inline=true
+    for arg in "$@"; do
+      if [ "$arg" = "--no-inline" ]; then
+        expand_inline=false
+      fi
+    done
+    printf '\n'
+    if [ "$expand_inline" = true ]; then
+      printf '%s\n' '  5006f2 (inlined)'
+    fi
+    printf '%s\n' '  5006f2' '  5007a8' '  500834'
+    printf '%s\n' ' 0x5006ca/0x5006ec/P/-/-/0 0x500700/0x5006b0/P/-/-/0 0x5006ca/0x5006ec/P/-/-/0'
+    ;;
+  *)
+    echo "unexpected perf fields: $4" >&2
+    exit 2
+    ;;
+esac
+
+#--- expected.raw
+[main:8 @ quick_sort:2 @ partition_pivot_last]
+  2
+  4006b0-4006ca:1
+  4006ec-4006ef:1
+  1
+  4006ca->4006ec:2
+[main:8 @ quick_sort:2 @ partition_pivot_last:5 @ swap]
+  1
+  4006f2-400700:1
+  1
+  400700->4006b0:1

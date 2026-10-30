@@ -1,0 +1,152 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+; RUN: cat %t/mappings %t/flat > %t/flat.perfscript
+; RUN: cat %t/mappings %t/hybrid > %t/hybrid.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat.perfscript --skip-symbolization --output=%t/flat.raw 2> %t/flat.err
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT --input-file=%t/flat.raw
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/hybrid.perfscript --skip-symbolization --output=%t/hybrid.raw 2> %t/hybrid.err
+; RUN: FileCheck %s --match-full-lines --check-prefix=CS -D#COUNT=1 --input-file=%t/hybrid.raw
+
+; Mapped samples never accept legacy aggregate counts, even after detection has
+; already accepted a Hybrid sample. With no PID filter, the wrapper must leave
+; the standalone decimal line for header validation, not weight the next sample.
+; RUN: cat %t/mappings %t/hybrid %t/hybrid > %t/two-hybrid.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/two-hybrid.perfscript --skip-symbolization --output=%t/two-hybrid.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=CS -D#COUNT=2 --input-file=%t/two-hybrid.raw
+; RUN: cat %t/mappings %t/hybrid %t/late-count %t/hybrid > %t/late-count.perfscript
+; RUN: not llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/late-count.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+
+; A malformed suffix retains the preceding branches and stops before the final
+; valid token. Content detection must still recognise the retained CS sample.
+; RUN: sed 's@0x50062f/0x5005b0/P/-/-/0@& 0xinvalid/0x5005dc/P/-/-/0 0x5005c8/0x5005dc/P/-/-/0@' %t/flat > %t/flat-tail
+; RUN: sed 's@0x50062f/0x5005b0/P/-/-/0@& 0xinvalid/0x5005dc/P/-/-/0 0x5005c8/0x5005dc/P/-/-/0@' %t/hybrid > %t/hybrid-tail
+; RUN: cat %t/mappings %t/flat-tail > %t/flat-tail.perfscript
+; RUN: cat %t/mappings %t/hybrid-tail > %t/hybrid-tail.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat-tail.perfscript --skip-symbolization --output=%t/flat-tail.raw 2> %t/flat-tail.err
+; RUN: cmp %t/flat.raw %t/flat-tail.raw
+; RUN: FileCheck %s --check-prefix=FLAT-TAIL --implicit-check-not="Invalid address in LBR record" --input-file=%t/flat-tail.err
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/hybrid-tail.perfscript --skip-symbolization --output=%t/hybrid-tail.raw 2> %t/hybrid-tail.err
+; RUN: cmp %t/hybrid.raw %t/hybrid-tail.raw
+; RUN: FileCheck %s --check-prefix=CS-TAIL -D#LINE=6 --implicit-check-not="Invalid address in LBR record" --input-file=%t/hybrid-tail.err
+
+; A final branch record without a newline retains its counts and diagnostic.
+; RUN: %python -c "from pathlib import Path; p=Path(r'%t/hybrid-tail.perfscript'); Path(r'%t/no-newline.perfscript').write_bytes(p.read_bytes().rstrip(b'\n'))"
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/no-newline.perfscript --skip-symbolization --output=%t/no-newline.raw 2> %t/no-newline.err
+; RUN: cmp %t/hybrid-tail.raw %t/no-newline.raw
+; RUN: cmp %t/hybrid-tail.err %t/no-newline.err
+
+; Excluded malformed samples must neither choose Hybrid nor emit warnings.
+; Give the excluded PID a target mapping so selection cannot rely on an
+; unresolved address accidentally masking a missing PID check.
+; RUN: sed 's/^    100 /    200 /; s@MMAP2 100/100:@MMAP2 200/200:@' %t/mappings > %t/other-mapping
+; RUN: sed 's/^    100 /    200 /' %t/hybrid-tail > %t/other-hybrid
+; RUN: sed 's/^    100 /    200 /' %t/flat-tail > %t/other-flat
+; RUN: cat %t/mappings %t/other-mapping %t/other-hybrid %t/flat > %t/selected-flat.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/selected-flat.perfscript --skip-symbolization --output=%t/selected-flat.raw 2> %t/selected-flat.err
+; RUN: cmp %t/flat.raw %t/selected-flat.raw
+; RUN: cmp %t/flat.err %t/selected-flat.err
+; RUN: cat %t/mappings %t/other-mapping %t/hybrid %t/other-flat > %t/selected-hybrid.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/selected-hybrid.perfscript --skip-symbolization --output=%t/selected-hybrid.raw 2> %t/selected-hybrid.err
+; RUN: cmp %t/hybrid.raw %t/selected-hybrid.raw
+; RUN: cmp %t/hybrid.err %t/selected-hybrid.err
+
+; Header timestamps are required even for excluded samples after Hybrid
+; detection. Skipping a malformed branch tail must not bypass header validation.
+; RUN: sed 's/^    200 3.000000: /    200 /' %t/selected-hybrid.perfscript > %t/excluded-no-time.perfscript
+; RUN: not llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/excluded-no-time.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+
+; A trailing space is part of a filename. Detection must use the same original
+; mmap text as actual parsing when deciding whether a callchain is relevant.
+; RUN: sed 's/0x500000/0x600000/; s/$/ /' %t/mappings > %t/other-name
+; RUN: sed 's/500/600/g' %t/hybrid > %t/other-image
+; RUN: cat %t/mappings %t/other-name %t/other-image %t/flat > %t/filename.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/filename.perfscript --skip-symbolization --output=%t/filename.raw
+; RUN: cmp %t/flat.raw %t/filename.raw
+
+; No usable branch precedes this corruption: a later target branch must not
+; select Hybrid and cause the following valid flat observation to be dropped.
+; RUN: sed 's@^ 0x@ 0x700000/0x700004/P/-/-/0 0xinvalid/0x5005dc/P/-/-/0 0x@' %t/hybrid > %t/bad-prefix
+; RUN: cat %t/mappings %t/bad-prefix %t/flat > %t/bad-prefix.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/bad-prefix.perfscript --skip-symbolization --output=%t/bad-prefix.raw 2> %t/bad-prefix.err
+; RUN: cmp %t/flat.raw %t/bad-prefix.raw
+; RUN: FileCheck %s --check-prefix=BAD-PREFIX --implicit-check-not="Invalid address in LBR record" --input-file=%t/bad-prefix.err
+
+; A malformed leading IP warns with the full PID/time header, then leaves the
+; next sample available to be read normally.
+; RUN: sed 's/: 5005dc /: invalid /' %t/flat > %t/bad-ip
+; RUN: cat %t/mappings %t/bad-ip %t/flat > %t/bad-ip.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/bad-ip.perfscript --skip-symbolization --output=%t/bad-ip.raw 2> %t/bad-ip.err
+; RUN: cmp %t/flat.raw %t/bad-ip.raw
+; RUN: FileCheck %s --check-prefix=BAD-IP --implicit-check-not="Invalid address in LBR record" --input-file=%t/bad-ip.err
+
+; The same shared decoder preserves legacy branch-prefix recovery.
+; RUN: sed 's/^    100 /sample 100 /' %t/mappings > %t/legacy-mapping
+; RUN: sed 's/^    100 3.000000: //' %t/flat > %t/legacy-flat
+; RUN: sed 's/^    100 3.000000: //' %t/flat-tail > %t/legacy-tail
+; RUN: cat %t/legacy-mapping %t/legacy-flat > %t/legacy-flat.perfscript
+; RUN: cat %t/legacy-mapping %t/legacy-tail > %t/legacy-tail.perfscript
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy-flat.perfscript --skip-symbolization --output=%t/legacy-flat.raw
+; RUN: cmp %t/flat.raw %t/legacy-flat.raw
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy-tail.perfscript --skip-symbolization --output=%t/legacy-tail.raw 2> %t/legacy-tail.err
+; RUN: cmp %t/legacy-flat.raw %t/legacy-tail.raw
+; RUN: FileCheck %s --check-prefix=LEGACY-TAIL --implicit-check-not="Invalid address in LBR record" --input-file=%t/legacy-tail.err
+
+; FLAT-NOT:  {{.}}
+; FLAT:      1
+; FLAT-NEXT: 5b0-5c8:1
+; FLAT-NEXT: 2
+; FLAT-NEXT: 5c8->5dc:1
+; FLAT-NEXT: 62f->5b0:1
+; FLAT-NOT:  {{.}}
+
+; CS-NOT:  {{.}}
+; CS:      [main:1 @ foo]
+; CS-NEXT:   0
+; CS-NEXT:   1
+; CS-NEXT:   62f->5b0:[[#COUNT]]
+; CS-NEXT: [main:1 @ foo:3 @ bar]
+; CS-NEXT:   1
+; CS-NEXT:   5b0-5c8:[[#COUNT]]
+; CS-NEXT:   1
+; CS-NEXT:   5c8->5dc:[[#COUNT]]
+; CS-NOT:  {{.}}
+
+; TIME: llvm-profgen: error: Invalid perf script sample timestamp
+
+; FLAT-TAIL: Invalid address in LBR record at line 2: 100 3.000000: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0 0xinvalid/0x5005dc/P/-/-/0 0x5005c8/0x5005dc/P/-/-/0
+; CS-TAIL: Invalid address in LBR record at line [[#LINE]]: 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0 0xinvalid/0x5005dc/P/-/-/0 0x5005c8/0x5005dc/P/-/-/0
+; BAD-PREFIX: Invalid address in LBR record at line 6: 0x700000/0x700004/P/-/-/0 0xinvalid/0x5005dc/P/-/-/0
+; BAD-IP: Invalid address in LBR record at line 2: 100 3.000000: invalid 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+; LEGACY-TAIL: Invalid address in LBR record at line 2: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0 0xinvalid/0x5005dc/P/-/-/0 0x5005c8/0x5005dc/P/-/-/0
+
+;--- mappings
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+;--- flat
+    100 3.000000: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+;--- hybrid
+    100 3.000000:
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+;--- late-count
+100

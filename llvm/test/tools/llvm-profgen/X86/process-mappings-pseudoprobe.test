@@ -1,0 +1,77 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+
+; Process mapping precedes virtual unwinding and pseudo-probe lookup. The
+; relocated sample must retain the legacy calling contexts and probe counts.
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --skip-symbolization --output=%t/legacy.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/mapped.perfscript --skip-symbolization --output=%t/mapped.raw
+; RUN: cmp %t/legacy.raw %t/mapped.raw
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/legacy.prof
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/mapped.perfscript --format=text --profile-summary-cold-count=0 \
+; RUN:   --csspgo-preinliner=0 --gen-cs-nested-profile=0 --output=%t/mapped.prof
+; RUN: cmp %t/legacy.prof %t/mapped.prof
+; RUN: FileCheck %s --match-full-lines --input-file=%t/mapped.prof
+
+; When all callchains are empty, flat probe generation gives the same counts as
+; ignoring the legacy stack. Raw replay retains those probe counts too.
+; RUN: llvm-profgen --ignore-stack-samples --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --skip-symbolization --output=%t/flat.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/empty-stack.perfscript --skip-symbolization --output=%t/empty.raw
+; RUN: cmp %t/flat.raw %t/empty.raw
+; RUN: llvm-profgen --ignore-stack-samples --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --format=text --profile-summary-cold-count=0 --output=%t/flat.prof
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --perfscript=%t/empty-stack.perfscript --format=text --profile-summary-cold-count=0 --output=%t/empty.prof
+; RUN: cmp %t/flat.prof %t/empty.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=EMPTY --input-file=%t/empty.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/empty.raw --format=text --profile-summary-cold-count=0 --output=%t/replay.prof
+; RUN: cmp %t/empty.prof %t/replay.prof
+
+; CHECK-LABEL: [main:2 @ foo]:3:0
+; CHECK-NOT:   {{^[^ ]}}
+; CHECK:       8: 1 bar:1
+; CHECK-NOT:   {{^[^ ]}}
+; CHECK:       !CFGChecksum: 563088904013236
+; CHECK-LABEL: [main:2 @ foo:8 @ bar]:2:1
+; CHECK-NEXT:  1: 1
+; CHECK-NEXT:  4: 1
+; CHECK-NEXT:  !CFGChecksum: 72617220756
+
+; EMPTY-LABEL: bar:2:1
+; EMPTY-NEXT:  1: 1
+; EMPTY-NEXT:  4: 1
+; EMPTY-NEXT:  !CFGChecksum: 72617220756
+; EMPTY-LABEL: foo:2:0
+; EMPTY-NOT:   {{^[^ ]}}
+; EMPTY:       8: 1 bar:1
+; EMPTY-NOT:   {{^[^ ]}}
+; EMPTY:       !CFGChecksum: 563088904013236
+
+;--- legacy.perfscript
+PERF_RECORD_MMAP2 100/100: [0x301000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-pseudoprobe.perfbin
+          30179e
+          3017f9
+    7f83e84e7793
+ 0x3017cf/0x30179e/P/-/-/0 0x30177f/0x3017c4/P/-/-/0 0x3017bf/0x301760/P/-/-/0
+
+;--- mapped.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x501000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-pseudoprobe.perfbin
+100 1.000001:
+          50179e
+          5017f9
+    7f83e84e7793
+ 0x5017cf/0x50179e/P/-/-/0 0x50177f/0x5017c4/P/-/-/0 0x5017bf/0x501760/P/-/-/0
+
+;--- empty-stack.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x501000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-pseudoprobe.perfbin
+100 1.000001:
+ 0x5017cf/0x50179e/P/-/-/0 0x50177f/0x5017c4/P/-/-/0 0x5017bf/0x501760/P/-/-/0
