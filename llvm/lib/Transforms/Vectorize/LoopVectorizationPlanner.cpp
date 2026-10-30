@@ -119,14 +119,18 @@ bool VFSelectionContext::supportsScalableVectors() const {
          VectorizerParams::VectorizationFactor.isScalable();
 }
 
-bool VFSelectionContext::useMaxBandwidth(bool IsScalable) const {
-  TargetTransformInfo::VectorKind VectorKind =
-      IsScalable ? TargetTransformInfo::VectorKind::Scalable
-                 : TargetTransformInfo::VectorKind::FixedWidth;
-  return valueOr(Opts.vectorizer_maximize_bandwidth,
-                 TTI.shouldMaximizeVectorBandwidth(VectorKind) ||
-                     (Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
-                      Legal->hasVectorCallVariants()));
+bool VFSelectionContext::useMaxBandwidth(VectorKind Kind,
+                                         Type *ElementTy) const {
+  // Check if the target supports max-bandwidth for any element type. If so,
+  // if a specific element type is unsupported, avoid maximizing it for vector
+  // calls.
+  bool TargetHasMaxBW = TTI.shouldMaximizeVectorBandwidth(Kind);
+  return valueOr(
+      Opts.vectorizer_maximize_bandwidth,
+      (TargetHasMaxBW && TTI.shouldMaximizeVectorBandwidth(Kind, ElementTy)) ||
+          (!TargetHasMaxBW &&
+           Opts.vectorizer_maximize_bandwidth_for_vector_calls &&
+           Legal->hasVectorCallVariants()));
 }
 
 bool VFSelectionContext::shouldConsiderRegPressureForVF(ElementCount VF) const {
@@ -482,10 +486,7 @@ VFSelectionContext::getTypeWidthsForVFSelection() const {
     MinWidth = std::min<unsigned>(MinWidth, TySize);
     MaxWidth = std::max<unsigned>(MaxWidth, TySize);
 
-    // Note: -vectorizer-maximize-bandwidth overrides the target preference.
-    if (!valueOr(Opts.vectorizer_maximize_bandwidth,
-                 TTI.shouldMaximizeVectorBandwidth(
-                     TargetTransformInfo::VectorKind::FixedOrScalable, T)))
+    if (!useMaxBandwidth(VectorKind::FixedOrScalable, T))
       return;
 
     MinWidthForMaxBandwidth =
