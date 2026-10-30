@@ -41,5 +41,106 @@ typedef enum
   _ARM64_BARRIER_OSHLD = 0x1
 } _ARM64INTR_BARRIER_TYPE;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+unsigned __int8 __ldar8(const volatile unsigned __int8 *);
+unsigned __int16 __ldar16(const volatile unsigned __int16 *);
+unsigned __int32 __ldar32(const volatile unsigned __int32 *);
+unsigned __int64 __ldar64(const volatile unsigned __int64 *);
+
+unsigned __int8 __ldapr8(const volatile unsigned __int8 *);
+unsigned __int16 __ldapr16(const volatile unsigned __int16 *);
+unsigned __int32 __ldapr32(const volatile unsigned __int32 *);
+unsigned __int64 __ldapr64(const volatile unsigned __int64 *);
+
+void __stlr8(unsigned __int8 volatile *, unsigned __int8);
+void __stlr16(unsigned __int16 volatile *, unsigned __int16);
+void __stlr32(unsigned __int32 volatile *, unsigned __int32);
+void __stlr64(unsigned __int64 volatile *, unsigned __int64);
+
+unsigned __int8 __ldxr8(const volatile unsigned __int8 *);
+unsigned __int16 __ldxr16(const volatile unsigned __int16 *);
+unsigned __int32 __ldxr32(const volatile unsigned __int32 *);
+unsigned __int64 __ldxr64(const volatile unsigned __int64 *);
+
+unsigned __int8 __ldaxr8(const volatile unsigned __int8 *);
+unsigned __int16 __ldaxr16(const volatile unsigned __int16 *);
+unsigned __int32 __ldaxr32(const volatile unsigned __int32 *);
+unsigned __int64 __ldaxr64(const volatile unsigned __int64 *);
+
+unsigned __int8 __stxr8(volatile unsigned __int8 *, unsigned __int8);
+unsigned __int8 __stxr16(volatile unsigned __int16 *, unsigned __int16);
+unsigned __int8 __stxr32(volatile unsigned __int32 *, unsigned __int32);
+unsigned __int8 __stxr64(volatile unsigned __int64 *, unsigned __int64);
+
+unsigned __int8 __stlxr8(volatile unsigned __int8 *, unsigned __int8);
+unsigned __int8 __stlxr16(volatile unsigned __int16 *, unsigned __int16);
+unsigned __int8 __stlxr32(volatile unsigned __int32 *, unsigned __int32);
+unsigned __int8 __stlxr64(volatile unsigned __int64 *, unsigned __int64);
+
+void __clrex(unsigned __int8);
+
+unsigned __int8 __cas8(unsigned __int8 volatile *, unsigned __int8,
+                       unsigned __int8);
+unsigned __int16 __cas16(unsigned __int16 volatile *, unsigned __int16,
+                         unsigned __int16);
+unsigned __int32 __cas32(unsigned __int32 volatile *, unsigned __int32,
+                         unsigned __int32);
+unsigned __int64 __cas64(unsigned __int64 volatile *, unsigned __int64,
+                         unsigned __int64);
+
+unsigned __int8 __casa8(unsigned __int8 volatile *, unsigned __int8,
+                        unsigned __int8);
+unsigned __int16 __casa16(unsigned __int16 volatile *, unsigned __int16,
+                          unsigned __int16);
+unsigned __int32 __casa32(unsigned __int32 volatile *, unsigned __int32,
+                          unsigned __int32);
+unsigned __int64 __casa64(unsigned __int64 volatile *, unsigned __int64,
+                          unsigned __int64);
+
+unsigned __int8 __casl8(unsigned __int8 volatile *, unsigned __int8,
+                        unsigned __int8);
+unsigned __int16 __casl16(unsigned __int16 volatile *, unsigned __int16,
+                          unsigned __int16);
+unsigned __int32 __casl32(unsigned __int32 volatile *, unsigned __int32,
+                          unsigned __int32);
+unsigned __int64 __casl64(unsigned __int64 volatile *, unsigned __int64,
+                          unsigned __int64);
+
+unsigned __int8 __casal8(unsigned __int8 volatile *, unsigned __int8,
+                         unsigned __int8);
+unsigned __int16 __casal16(unsigned __int16 volatile *, unsigned __int16,
+                           unsigned __int16);
+unsigned __int32 __casal32(unsigned __int32 volatile *, unsigned __int32,
+                           unsigned __int32);
+unsigned __int64 __casal64(unsigned __int64 volatile *, unsigned __int64,
+                           unsigned __int64);
+
+unsigned __int8 __swp8(unsigned __int8 volatile *, unsigned __int8);
+unsigned __int16 __swp16(unsigned __int16 volatile *, unsigned __int16);
+unsigned __int32 __swp32(unsigned __int32 volatile *, unsigned __int32);
+unsigned __int64 __swp64(unsigned __int64 volatile *, unsigned __int64);
+
+unsigned __int8 __swpa8(unsigned __int8 volatile *, unsigned __int8);
+unsigned __int16 __swpa16(unsigned __int16 volatile *, unsigned __int16);
+unsigned __int32 __swpa32(unsigned __int32 volatile *, unsigned __int32);
+unsigned __int64 __swpa64(unsigned __int64 volatile *, unsigned __int64);
+
+unsigned __int8 __swpl8(unsigned __int8 volatile *, unsigned __int8);
+unsigned __int16 __swpl16(unsigned __int16 volatile *, unsigned __int16);
+unsigned __int32 __swpl32(unsigned __int32 volatile *, unsigned __int32);
+unsigned __int64 __swpl64(unsigned __int64 volatile *, unsigned __int64);
+
+unsigned __int8 __swpal8(unsigned __int8 volatile *, unsigned __int8);
+unsigned __int16 __swpal16(unsigned __int16 volatile *, unsigned __int16);
+unsigned __int32 __swpal32(unsigned __int32 volatile *, unsigned __int32);
+unsigned __int64 __swpal64(unsigned __int64 volatile *, unsigned __int64);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* __ARM64INTR_H */
 #endif /* _MSC_VER */
