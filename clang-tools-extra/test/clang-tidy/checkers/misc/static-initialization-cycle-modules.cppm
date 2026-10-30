@@ -1,16 +1,13 @@
-// The check walks the body of a lambda that is part of a variable template
-// specialization instantiated in a module. Building the parent map must not
-// skip that body: the lambda body is reached through the call operator of the
-// closure type, and when the closure type is merged with one from another
-// module, the call operator the closure class refers to can be a declaration
-// without a body, with the definition living on another declaration of the
-// same entity.
+// Regression test for https://github.com/llvm/llvm-project/pull/237067:
+// the parent map must contain the lambda body even when the closure type's
+// call operator is a declaration without a body (merged from another module),
+// otherwise this check hits llvm_unreachable.
 //
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file %s %t
-// RUN: %clang -std=c++20 -x c++-module -I%t -fmodule-output=%t/mod_a.pcm -c %t/mod_a.cppm -o %t/mod_a.o
-// RUN: %clang -std=c++20 -x c++-module -I%t -fmodule-output=%t/mod_b.pcm -c %t/mod_b.cppm -o %t/mod_b.o
+// RUN: %clang -std=c++20 -I%t --precompile %t/mod_a.cppm -o %t/mod_a.pcm
+// RUN: %clang -std=c++20 -I%t --precompile %t/mod_b.cppm -o %t/mod_b.pcm
 // RUN: clang-tidy -checks='-*,misc-static-initialization-cycle' %t/main.cppm -- \
 // RUN:   -std=c++20 -x c++-module -fmodule-file=mod_a=%t/mod_a.pcm \
 // RUN:   -fmodule-file=mod_b=%t/mod_b.pcm

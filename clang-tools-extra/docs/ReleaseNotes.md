@@ -283,10 +283,6 @@ infrastructure are described first, followed by tool-specific sections.
   nested expressions involving different macros or a mix of macro and
   non-macro operands.
 
-- Fixed a crash in {doc}`misc-static-initialization-cycle
-  <clang-tidy/checks/misc/static-initialization-cycle>` when checking a lambda
-  body from a closure type that was merged across modules.
-
 - Fixed false positive in {doc}`modernize-make-unique
   <clang-tidy/checks/modernize/make-unique>` in presence of private, protected
   or deleted destructor.
