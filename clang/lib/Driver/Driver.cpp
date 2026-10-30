@@ -4115,14 +4115,8 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   // GPU detection runs and its diagnostics are emitted only once.
   std::optional<llvm::SmallVector<BoundArch>> &Cached =
       C.getCachedOffloadArchs(&TC, Kind);
-  if (!Cached) {
+  if (!Cached)
     Cached = computeOffloadArchs(C, Args, Kind, TC);
-    // The names may point into toolchain args that a crash reproducer frees,
-    // so copy them into storage that lives as long as the compilation.
-    for (BoundArch &BA : *Cached)
-      if (!BA.empty())
-        BA.ArchName = C.getArgs().MakeArgStringRef(BA.ArchName);
-  }
   return *Cached;
 }
 
