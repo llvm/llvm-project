@@ -845,6 +845,10 @@ void writeChainedRebase(uint8_t *buf, uint64_t targetVA,
 void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
                        const AuthInfo *auth = nullptr);
 
+// Whether -no_fixup_chains can avoid a fixup that chained fixups can't encode.
+// It can't on arm64e, which always uses chained fixups.
+bool canDisableChainedFixups();
+
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
   MachHeaderSection *header = nullptr;

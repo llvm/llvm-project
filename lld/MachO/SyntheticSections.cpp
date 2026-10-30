@@ -500,6 +500,8 @@ void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
     writeChainedRebase(buf, sym->getVA() + addend, auth);
 }
 
+bool macho::canDisableChainedFixups() { return config->arch() != AK_arm64e; }
+
 void GotSection::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
     for (const auto &[i, entry] : llvm::enumerate(entries))
@@ -2713,9 +2715,11 @@ void ChainedFixupsSection::finalizeContents() {
     uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
     if (offset % pageSize + target->wordSize > pageSize) {
-      std::string msg = loc.isec->getLocation(loc.offset) +
-                        ": fixup straddles page boundary; stop packing structs "
-                        "containing pointers or link with -no_fixup_chains";
+      std::string msg =
+          loc.isec->getLocation(loc.offset) +
+          ": fixup straddles page boundary; stop packing structs "
+          "containing pointers" +
+          (canDisableChainedFixups() ? " or link with -no_fixup_chains" : "");
       std::string src = loc.isec->getSourceLocation(loc.offset);
       if (!src.empty())
         msg += "\n>>> defined at " + src;
@@ -2743,8 +2747,8 @@ void ChainedFixupsSection::finalizeContents() {
       uint64_t pageIdx = locations[i].offset / pageSize;
       if (pageIdx >= UINT16_MAX) {
         fatal("page index in " + locations[i].isec->getSegName() + "," +
-              locations[i].isec->getName() + " too large for chained fixups; " +
-              "use -no_fixup_chains");
+              locations[i].isec->getName() + " too large for chained fixups" +
+              (canDisableChainedFixups() ? "; use -no_fixup_chains" : ""));
       }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);
