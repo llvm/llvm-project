@@ -2185,6 +2185,13 @@ Verifier::visitModuleFlag(const MDNode *Op,
     return;
   }
 
+  if (Name == "debugger-tuning") {
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value && !Value->getString().empty(),
+          "debugger-tuning metadata requires a non-empty string argument", Op);
+    return;
+  }
+
   if (Name == "Linker Options") {
     // If the llvm.linker.options named metadata exists, we assume that the
     // bitcode reader has upgraded the module flag. Otherwise the flag might

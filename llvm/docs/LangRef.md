@@ -9779,6 +9779,21 @@ models is rejected. For example:
 !0 = !{i32 1, !"exception-model", !"sjlj"}
 ```
 
+### Debugger Tuning Module Flags Metadata
+
+This module flag names the debugger that the module's debug info should be
+tuned for, which may affect the choice of DWARF extensions and accelerator
+tables that are emitted. The value is an `MDString` and is typically one of
+`"gdb"`, `"lldb"`, `"sce"`, or `"dbx"`.
+
+When the flag is absent, the tuning implied by the target triple is
+used.
+
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"debugger-tuning", !"lldb"}
+```
+
 ### Long Double Type Module Flags Metadata
 
 Describe the floating-point format used by libm for `long double`. The

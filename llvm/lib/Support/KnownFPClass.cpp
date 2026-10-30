@@ -76,15 +76,15 @@ KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
 }
 
 bool KnownFPClass::isKnownNeverLogicalZero(DenormalMode Mode) const {
-  return applyInputDenormalMode(*this, Mode).isKnownNeverZero();
+  return applyInputDenormalMode(*this, Mode).isKnownNever(fcZero);
 }
 
 bool KnownFPClass::isKnownNeverLogicalNegZero(DenormalMode Mode) const {
-  return applyInputDenormalMode(*this, Mode).isKnownNeverNegZero();
+  return applyInputDenormalMode(*this, Mode).isKnownNever(fcNegZero);
 }
 
 bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
-  return applyInputDenormalMode(*this, Mode).isKnownNeverPosZero();
+  return applyInputDenormalMode(*this, Mode).isKnownNever(fcPosZero);
 }
 
 KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
@@ -613,8 +613,8 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
 
   // 0 * +/-inf => NaN
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
-      (KnownRHS.isKnownNeverInfinity() || KnownLHS.isKnownNeverZero()) &&
-      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverZero()))
+      (KnownRHS.isKnownNeverInfinity() || KnownLHS.isKnownNever(fcZero)) &&
+      (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNever(fcZero)))
     Known.knownNot(fcNan);
 
   return applyOutputDenormalMode(Known, Mode);
@@ -662,7 +662,7 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS_,
   // Only 0/0, Inf/Inf produce NaN.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
       (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
-      (KnownLHS.isKnownNeverZero() || KnownRHS.isKnownNeverZero())) {
+      (KnownLHS.isKnownNever(fcZero) || KnownRHS.isKnownNever(fcZero))) {
     Known.knownNot(fcNan);
   }
 
@@ -985,7 +985,7 @@ KnownFPClass KnownFPClass::tanh(const KnownFPClass &KnownSrc) {
     Known.knownNot(fcNegSubnormal | fcNegNormal);
 
     // -0.0 is preserved: tanh(-0.0) = -0.0.
-    if (KnownSrc.isKnownNeverNegZero())
+    if (KnownSrc.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
   }
 
@@ -1378,9 +1378,9 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc_,
       Known.knownNot(fcPosSubnormal);
     if (KnownSrc.isKnownNeverNegSubnormal())
       Known.knownNot(fcNegSubnormal);
-    if (KnownSrc.isKnownNeverPosZero())
+    if (KnownSrc.isKnownNever(fcPosZero))
       Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNeverNegZero())
+    if (KnownSrc.isKnownNever(fcNegZero))
       Known.knownNot(fcNegZero);
   }
 
