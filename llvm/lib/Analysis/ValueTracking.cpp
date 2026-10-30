@@ -2044,6 +2044,35 @@ static void computeKnownBitsFromOperator(const Operator *I,
     if (P->getNumIncomingValues() == 0)
       break;
 
+    // Handle a pointer induction variable, whose step is a getelementptr:
+    //   %p    = phi ptr [ %start, %preheader ], [ %next, %latch ]
+    //   %next = getelementptr <ty>, ptr %p, <indices>
+    // Every value %p takes is %start plus a whole number of steps, and
+    // tz(a + b) >= min(tz(a), tz(b)), so the trailing zeros of %p - and hence
+    // its alignment - are at least the smaller of those of %start and of the
+    // step. matchSimpleRecurrence() above only matches a BinaryOperator step,
+    // so it does not cover pointer IVs; without this the alignment of a
+    // loop-carried pointer is only known where an llvm.assume happens to
+    // anchor it, and is lost as soon as that assume is folded away.
+    if (Known.isUnknown() && I->getType()->isPointerTy() &&
+        P->getNumIncomingValues() == 2) {
+      for (unsigned Idx = 0; Idx != 2; ++Idx) {
+        auto *Step = dyn_cast<GEPOperator>(P->getIncomingValue(Idx));
+        if (!Step || Step->getPointerOperand() != P)
+          continue;
+        // Evaluate the start value on its own incoming edge.
+        SimplifyQuery RecQ = Q.getWithoutCondContext();
+        RecQ.CtxI = P->getIncomingBlock(1 - Idx)->getTerminator();
+        Known2 = KnownBits(BitWidth);
+        computeKnownBits(P->getIncomingValue(1 - Idx), DemandedElts, Known2,
+                         RecQ, Depth + 1);
+        Known.Zero.setLowBits(
+            std::min(Known2.countMinTrailingZeros(),
+                     Log2(Step->getMaxPreservedAlignment(Q.DL))));
+        break;
+      }
+    }
+
     // Otherwise take the unions of the known bit sets of the operands,
     // taking conservative care to avoid excessive recursion.
     if (Depth < MaxAnalysisRecursionDepth - 1 && Known.isUnknown()) {
