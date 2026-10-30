@@ -346,8 +346,6 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // Emit call-site-param debug info for GDB and LLDB, if the target supports
   // the debug entry values feature. It can also be enabled explicitly.
   EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues(DebuggerTuning);
-  if (DebuggerTuning == DebuggerKind::Default)
-    DebuggerTuning = TT.getDefaultDebuggerTuning();
 
   if (DwarfInlinedStrings == Default)
     UseInlineStrings = tuneForDBX();
