@@ -687,7 +687,7 @@ define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize
 ; CHECK-LABEL: define nofpclass(nan nzero sub) float @ret_nofpclass_nan_nzero_sub__canonicalize_only_nsub__ieee_dapz(
 ; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %nsub = call float @returns_nsub()
   %canon = call float @llvm.canonicalize.f32(float %nsub)
@@ -699,8 +699,7 @@ define nofpclass(nan sub) float @ret_nofpclass_nan_sub__canonicalize_only_pzero_
 ; CHECK-LABEL: define nofpclass(nan sub) float @ret_nofpclass_nan_sub__canonicalize_only_pzero_psub__dynamic_ieee(
 ; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    [[PZERO_PSUB:%.*]] = call float @returns_pzero_psub()
-; CHECK-NEXT:    [[CANON:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[PZERO_PSUB]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %pzero.psub = call float @returns_pzero_psub()
   %canon = call float @llvm.canonicalize.f32(float %pzero.psub)

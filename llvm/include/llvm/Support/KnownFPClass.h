@@ -431,7 +431,7 @@ public:
 
   /// Apply the canonicalize intrinsic to this value.
   LLVM_ABI static KnownFPClass
-  canonicalize(const KnownFPClass &Src,
+  canonicalize(const KnownFPClass &Src, const fltSemantics &Flt,
                DenormalMode DenormMode = DenormalMode::getDynamic());
 
   /// Report known values for a bitcast into a float with provided semantics.

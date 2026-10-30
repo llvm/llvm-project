@@ -166,53 +166,31 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
 }
 
 KnownFPClass KnownFPClass::canonicalize(const KnownFPClass &KnownSrc,
-                                        DenormalMode DenormMode) {
+                                        const fltSemantics &Flt,
+                                        DenormalMode Mode) {
   KnownFPClass Known;
 
-  // Canonicalize may flush denormals to zero, so we have to consider the
-  // denormal mode to preserve known-not-0 knowledge.
-  Known.setKnownFPClasses(KnownSrc.getKnownFPClasses() | fcZero | fcQNan);
+  // TODO: implement for x86_fp80
+  if (!APFloat::isIEEELikeFP(Flt))
+    return Known;
 
-  // Stronger version of propagateNaN
-  // Canonicalize is guaranteed to quiet signaling nans.
+  // Do not copy the sign-bit from NaN.
+  Known = KnownSrc | fcNan;
+
+  // Canonicalize is guaranteed to quiet signaling NaN.
+  Known.knownNot(fcSNan);
   if (KnownSrc.isKnownNeverNaN())
     Known.knownNot(fcNan);
-  else
-    Known.knownNot(fcSNan);
 
-  // FIXME: Missing check of IEEE like types.
-
-  // If the parent function flushes denormals, the canonical output cannot be a
-  // denormal.
-  if (DenormMode == DenormalMode::getIEEE()) {
-    if (KnownSrc.isKnownNever(fcPosZero))
-      Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNever(fcNegZero))
-      Known.knownNot(fcNegZero);
-    return Known;
-  }
-
-  if (DenormMode.inputsAreZero() || DenormMode.outputsAreZero())
+  // Canonicalize guarantees input flushing.
+  Known = applyInputDenormalMode(Known, Mode);
+  if (Mode.inputsAreZero())
     Known.knownNot(fcSubnormal);
 
-  if (DenormMode == DenormalMode::getPreserveSign()) {
-    if (KnownSrc.isKnownNever(fcPosZero | fcPosSubnormal))
-      Known.knownNot(fcPosZero);
-    if (KnownSrc.isKnownNever(fcNegZero | fcNegSubnormal))
-      Known.knownNot(fcNegZero);
-    return Known;
-  }
-
-  if (DenormMode.Input == DenormalMode::PositiveZero ||
-      (DenormMode.Output == DenormalMode::PositiveZero &&
-       DenormMode.Input == DenormalMode::IEEE)) {
-    // -0.0 is not a subnormal and should not be flushed.
-    if (KnownSrc.isKnownNever(fcNegZero))
-      Known.knownNot(fcNegZero);
-
-    if (KnownSrc.isKnownNever(fcPosZero | fcSubnormal))
-      Known.knownNot(fcPosZero);
-  }
+  // Canonicalize guarantees output flushing.
+  Known = applyOutputDenormalMode(Known, Mode);
+  if (Mode.outputsAreZero())
+    Known.knownNot(fcSubnormal);
 
   return Known;
 }
