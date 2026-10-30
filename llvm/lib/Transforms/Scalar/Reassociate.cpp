@@ -33,11 +33,14 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -2239,6 +2242,34 @@ Instruction *ReassociatePass::canonicalizeNegFPConstantsForOp(Instruction *I,
       assert(C->isNegative() && "Expected negative FP constant");
       Negatible->setOperand(1, ConstantFP::get(Negatible->getType(), abs(*C)));
       MadeChange = true;
+    }
+    // The def's value has changed sign; wrap each debug value referencing it
+    // with `DW_OP_neg` so the variable keeps reporting its source-level value.
+    SmallVector<DbgVariableRecord *, 1> DPUsers;
+    findDbgUsers(Negatible, DPUsers);
+    SmallVector<uint64_t, 1> NegOps{dwarf::DW_OP_neg};
+    for (DbgVariableRecord *DVR : DPUsers) {
+      // Preserve address descriptions without adding DW_OP_stack_value.
+      const bool StackValue = !DVR->isAddressOfVariable();
+      DIExpression *OldExpr = DVR->getExpression();
+      DIExpression *NewExpr = OldExpr;
+      for (unsigned Idx = 0, N = DVR->getNumVariableLocationOps(); Idx < N;
+           ++Idx) {
+        if (DVR->getVariableLocationOp(Idx) != Negatible)
+          continue;
+        // An arg list can have no DW_OP_LLVM_arg operations. In that case,
+        // appendOpsToArg would treat it as a non-variadic expression and
+        // prepend ops (or assert for a nonzero index). Leave unused args alone.
+        if (DVR->hasArgList() && none_of(NewExpr->expr_ops(), [Idx](auto Op) {
+              auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
+              return Arg && Arg.getIndex() == Idx;
+            }))
+          continue;
+        NewExpr =
+            DIExpression::appendOpsToArg(NewExpr, NegOps, Idx, StackValue);
+      }
+      if (NewExpr != OldExpr)
+        DVR->setExpression(NewExpr);
     }
   }
   assert(MadeChange == true && "Negative constant candidate was not changed");
