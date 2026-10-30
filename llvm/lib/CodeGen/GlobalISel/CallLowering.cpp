@@ -150,6 +150,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, const CallBase &CB,
   Info.CanLowerReturn = canLowerReturn(MF, CallConv, SplitArgs, IsVarArg);
 
   Info.IsConvergent = CB.isConvergent();
+  Info.NoMerge = CB.hasFnAttr(Attribute::NoMerge);
 
   if (!Info.CanLowerReturn) {
     // Callee requires sret demotion.

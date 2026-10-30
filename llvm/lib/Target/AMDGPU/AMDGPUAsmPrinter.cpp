@@ -118,6 +118,9 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
                                    std::unique_ptr<MCStreamer> Streamer)
     : AsmPrinter(TM, std::move(Streamer)) {
   assert(OutStreamer && "AsmPrinter constructed without streamer");
+  // AMDGPU describes a pointer's address space with its own attribute rather
+  // than DW_AT_address_class.
+  TypeAddressSpaceAttribute = dwarf::DW_AT_LLVM_address_space;
   GetResourceUsage = [this](MachineFunction &MF)
       -> const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo * {
     if (auto *ResourceUsageW =
@@ -157,7 +160,7 @@ void AMDGPUAsmPrinter::initTargetStreamer(Module &M) {
   if (TT.getOS() != Triple::AMDHSA && TT.getOS() != Triple::AMDPAL)
     return;
 
-  getTargetStreamer()->EmitDirectiveAMDGCNTarget();
+  getTargetStreamer()->emitDirectiveAMDGCNTargetOnce();
 
   if (TT.getOS() == Triple::AMDHSA) {
     getTargetStreamer()->EmitDirectiveAMDHSACodeObjectVersion(
@@ -832,10 +835,7 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  if (STM.isWave32() &&
-      STM.getFeatureBits().test(AMDGPU::FeatureSupportsWave32) &&
-      STM.getFeatureBits().test(AMDGPU::FeatureSupportsWave64)) {
+  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
   }
@@ -1548,7 +1548,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                 amdhsa::COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT_SHIFT, Ctx);
 
   ProgInfo.Occupancy = createOccupancy(
-      STM.computeOccupancy(F, ProgInfo.LDSSize).second,
+      STM.getOccupancyWithWorkGroupSizes(MF).second,
       ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
       MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 

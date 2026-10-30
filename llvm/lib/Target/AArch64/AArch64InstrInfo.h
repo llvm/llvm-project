@@ -47,12 +47,14 @@ enum AArch64MachineCombinerPattern : unsigned {
   MULSUBW_OP2,
   MULADDWI_OP1,
   MULSUBWI_OP1,
+  MULADDWS_OP1,
   MULADDX_OP1,
   MULADDX_OP2,
   MULSUBX_OP1,
   MULSUBX_OP2,
   MULADDXI_OP1,
   MULSUBXI_OP1,
+  MULADDXS_OP1,
   // NEON integers vectors
   MULADDv8i8_OP1,
   MULADDv8i8_OP2,
@@ -335,8 +337,7 @@ public:
   bool getMemOperandWithOffsetWidth(const MachineInstr &MI,
                                     const MachineOperand *&BaseOp,
                                     int64_t &Offset, bool &OffsetIsScalable,
-                                    TypeSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    TypeSize &Width) const;
 
   /// Return the immediate offset of the base register in a load/store \p LdSt.
   MachineOperand &getMemOpBaseRegImmOfsOffsetOperand(MachineInstr &LdSt) const;
@@ -437,8 +438,8 @@ public:
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       Register, Register, Register, int &, int &,
-                       int &) const override;
+                       Register, Register, Register,
+                       SelectExpansion &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,

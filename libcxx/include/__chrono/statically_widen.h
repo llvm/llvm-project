@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <__fmt_char_type _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr const _CharT* __statically_widen(const char* __str, const wchar_t* __wstr) {
+constexpr const _CharT* __statically_widen(const char* __str, const wchar_t* __wstr) {
   if constexpr (same_as<_CharT, char>)
     return __str;
   else
@@ -39,7 +39,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr const _CharT* __statically_widen(const char* __s
 // fails for the CI build "No wide characters". This seems like a bug.
 // TODO FMT investigate why this is needed.
 template <__fmt_char_type _CharT>
-_LIBCPP_HIDE_FROM_ABI constexpr const _CharT* __statically_widen(const char* __str) {
+constexpr const _CharT* __statically_widen(const char* __str) {
   return __str;
 }
 #    define _LIBCPP_STATICALLY_WIDEN(_CharT, __str) ::std::__statically_widen<_CharT>(__str)

@@ -76,8 +76,6 @@ private:
   bool IsPixelShader;
   ScanOptions ScanImpl;
 
-  Value *buildReduction(IRBuilder<> &B, AtomicRMWInst::BinOp Op, Value *V,
-                        Value *const Identity) const;
   Value *buildScan(IRBuilder<> &B, AtomicRMWInst::BinOp Op, Value *V,
                    Value *const Identity) const;
   Value *buildShiftRight(IRBuilder<> &B, Value *V, Value *const Identity) const;
@@ -404,58 +402,13 @@ static Value *buildNonAtomicBinOp(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
   return B.CreateSelect(Cond, LHS, RHS);
 }
 
-// Use the builder to create a reduction of V across the wavefront, with all
-// lanes active, returning the same result in all lanes.
-Value *AMDGPUAtomicOptimizerImpl::buildReduction(IRBuilder<> &B,
-                                                 AtomicRMWInst::BinOp Op,
-                                                 Value *V,
-                                                 Value *const Identity) const {
-  Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
-
-  // Reduce within each row of 16 lanes.
-  for (unsigned Idx = 0; Idx < 4; Idx++) {
-    V = buildNonAtomicBinOp(
-        B, Op, V,
-        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, AtomicTy,
-                          {Identity, V, B.getInt32(DPP::ROW_XMASK0 | 1 << Idx),
-                           B.getInt32(0xf), B.getInt32(0xf), B.getFalse()}));
-  }
-
-  // Reduce within each pair of rows (i.e. 32 lanes).
-  assert(ST.hasPermlane16Insts());
-  Value *Permlanex16Call =
-      B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlanex16,
-                        {PoisonValue::get(AtomicTy), V, B.getInt32(0),
-                         B.getInt32(0), B.getFalse(), B.getFalse()});
-  V = buildNonAtomicBinOp(B, Op, V, Permlanex16Call);
-  if (ST.isWave32()) {
-    return V;
-  }
-
-  if (ST.hasPermLane64()) {
-    // Reduce across the upper and lower 32 lanes.
-    Value *Permlane64Call =
-        B.CreateIntrinsic(AtomicTy, Intrinsic::amdgcn_permlane64, V);
-    return buildNonAtomicBinOp(B, Op, V, Permlane64Call);
-  }
-
-  // Pick an arbitrary lane from 0..31 and an arbitrary lane from 32..63 and
-  // combine them with a scalar operation.
-  Function *ReadLane = Intrinsic::getOrInsertDeclaration(
-      M, Intrinsic::amdgcn_readlane, AtomicTy);
-  Value *Lane0 = B.CreateCall(ReadLane, {V, B.getInt32(0)});
-  Value *Lane32 = B.CreateCall(ReadLane, {V, B.getInt32(32)});
-  return buildNonAtomicBinOp(B, Op, Lane0, Lane32);
-}
-
 // Use the builder to create an inclusive scan of V across the wavefront, with
 // all lanes active.
 Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
                                             AtomicRMWInst::BinOp Op, Value *V,
                                             Value *Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::amdgcn_update_dpp, AtomicTy);
 
@@ -515,7 +468,7 @@ Value *AMDGPUAtomicOptimizerImpl::buildScan(IRBuilder<> &B,
 Value *AMDGPUAtomicOptimizerImpl::buildShiftRight(IRBuilder<> &B, Value *V,
                                                   Value *Identity) const {
   Type *AtomicTy = V->getType();
-  Module *M = B.GetInsertBlock()->getModule();
+  Module *M = B.getModule();
   Function *UpdateDPP = Intrinsic::getOrInsertDeclaration(
       M, Intrinsic::amdgcn_update_dpp, AtomicTy);
   if (ST.hasDPPWavefrontShifts()) {
@@ -567,7 +520,6 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   auto *Ty = I.getType();
   auto *WaveTy = B.getIntNTy(ST.getWavefrontSize());
   auto *EntryBB = I.getParent();
-  auto NeedResult = !I.use_empty();
 
   auto *Ballot =
       B.CreateIntrinsic(Intrinsic::amdgcn_ballot, WaveTy, B.getTrue());
@@ -577,11 +529,8 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   // Phi nodes for Accumulator, Scan results destination, and Active Lanes
   auto *Accumulator = B.CreatePHI(Ty, 2, "Accumulator");
   Accumulator->addIncoming(Identity, EntryBB);
-  PHINode *OldValuePhi = nullptr;
-  if (NeedResult) {
-    OldValuePhi = B.CreatePHI(Ty, 2, "OldValuePhi");
-    OldValuePhi->addIncoming(PoisonValue::get(Ty), EntryBB);
-  }
+  auto *OldValuePhi = B.CreatePHI(Ty, 2, "OldValuePhi");
+  OldValuePhi->addIncoming(PoisonValue::get(Ty), EntryBB);
   auto *ActiveBits = B.CreatePHI(WaveTy, 2, "ActiveBits");
   ActiveBits->addIncoming(Ballot, EntryBB);
 
@@ -595,14 +544,11 @@ std::pair<Value *, Value *> AMDGPUAtomicOptimizerImpl::buildScanIteratively(
   Value *LaneValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_readlane,
                                        {V, LaneIdxInt});
 
-  // Perform writelane if intermediate scan results are required later in the
-  // kernel computations
-  Value *OldValue = nullptr;
-  if (NeedResult) {
-    OldValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_writelane,
-                                 {Accumulator, LaneIdxInt, OldValuePhi});
-    OldValuePhi->addIncoming(OldValue, ComputeLoop);
-  }
+  // Perform writelane because intermediate scan results are required later in
+  // the kernel computations
+  Value *OldValue = B.CreateIntrinsic(V->getType(), Intrinsic::amdgcn_writelane,
+                                      {Accumulator, LaneIdxInt, OldValuePhi});
+  OldValuePhi->addIncoming(OldValue, ComputeLoop);
 
   // Accumulate the results
   auto *NewAccumulator = buildNonAtomicBinOp(B, Op, Accumulator, LaneValue);
@@ -813,22 +759,14 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       // so that they can correctly contribute to the final result.
       NewV =
           B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
-      if (!NeedResult && ST.hasPermlane16Insts()) {
-        // On GFX10 the permlanex16 instruction helps us build a reduction
-        // without too many readlanes and writelanes, which are generally bad
-        // for performance.
-        NewV = buildReduction(B, ScanOp, NewV, Identity);
-      } else {
-        NewV = buildScan(B, ScanOp, NewV, Identity);
-        if (NeedResult)
-          ExclScan = buildShiftRight(B, NewV, Identity);
-        // Read the value from the last lane, which has accumulated the values
-        // of each active lane in the wavefront. This will be our new value
-        // which we will provide to the atomic operation.
-        Value *const LastLaneIdx = B.getInt32(ST.getWavefrontSize() - 1);
-        NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
-                                 {NewV, LastLaneIdx});
-      }
+      NewV = buildScan(B, ScanOp, NewV, Identity);
+      ExclScan = buildShiftRight(B, NewV, Identity);
+      // Read the value from the last lane, which has accumulated the values
+      // of each active lane in the wavefront. This will be our new value
+      // which we will provide to the atomic operation.
+      Value *const LastLaneIdx = B.getInt32(ST.getWavefrontSize() - 1);
+      NewV = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readlane,
+                               {NewV, LastLaneIdx});
       // Finally mark the readlanes in the WWM section.
       NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
     } else if (ScanImpl == ScanOptions::Iterative) {
@@ -867,7 +805,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
   // ComputeEnd block. We also need to set up predecessor to next block when
   // single lane done updating the final reduced value.
   BasicBlock *Predecessor = nullptr;
-  if (NeedResult && ValDivergent && ScanImpl == ScanOptions::Iterative) {
+  if (!UseWaveReductionIntrinsic && ScanImpl == ScanOptions::Iterative) {
     // Move terminator from I's block to ComputeEnd block.
     //
     // OriginalBB is known to have a branch as terminator because

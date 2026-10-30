@@ -491,7 +491,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     llvm::transform(ArrayRef<unsigned>}] # overloadedOperandsCpp # [{,
                     std::back_inserter(overloadedTypes),
                     [&args](unsigned index) { return args[index]->getType(); });
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::Function *callee =
       llvm::Intrinsic::getOrInsertDeclaration(module,
         llvm::Intrinsic::experimental_constrained_}] #
@@ -1105,7 +1105,7 @@ def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr", [
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertDeclare(moduleTranslation.lookupValue(opInst.getOperand(0)),
                      llvm::cast<llvm::DILocalVariable>(
@@ -1131,7 +1131,7 @@ def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertDbgValue(
         moduleTranslation.lookupValue(opInst.getOperand(0)),
@@ -1153,7 +1153,7 @@ def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
     llvm::DILocalScope *scope = getLocalScopeFromLoc(builder, opInst.getLoc(),
                                                      moduleTranslation);
 
-    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::Module *module = builder.getModule();
     llvm::DIBuilder debugInfoBuilder(*module);
     debugInfoBuilder.insertLabel(
         llvm::cast<llvm::DILabel>(moduleTranslation.translateDebugInfo($label)),
@@ -1717,6 +1717,10 @@ def LLVM_UBSanTrap : LLVM_ZeroResultIntrOp<"ubsantrap",
   let assemblyFormat = "`failureKind` `=` $failureKind attr-dict";
 }
 
+//
+// Vector intrinsics.
+//
+
 /// Create a call to vscale intrinsic.
 def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
@@ -1811,6 +1815,7 @@ def LLVM_vector_extract
   }];
 }
 
+/// Interleave2
 def LLVM_vector_interleave2
     : LLVM_OneResultIntrOp<"vector.interleave2",
         /*overloadedResults=*/[0], /*overloadedOperands=*/[],
@@ -1825,11 +1830,22 @@ def LLVM_vector_interleave2
         ]>,
         Arguments<(ins LLVM_AnyVector:$vec1, LLVM_AnyVector:$vec2)>;
 
+/// Deinterleave2
 def LLVM_vector_deinterleave2
     : LLVM_OneResultIntrOp<"vector.deinterleave2",
         /*overloadedResults=*/[], /*overloadedOperands=*/[0],
         /*traits=*/[Pure]>,
         Arguments<(ins LLVM_AnyVector:$vec)>;
+
+/// Repeat
+def LLVM_vector_repeat
+    : LLVM_OneResultIntrOp<"vector.repeat",
+        /*overloadedResults=*/[0], /*overloadedOperands=*/[0],
+        /*traits=*/[Pure]>,
+        Arguments<(ins LLVM_AnyVector:$vec)> {
+  let assemblyFormat = "`(` operands `)` attr-dict `:` "
+                       "functional-type(operands, results)";
+}
 
 //
 // LLVM Vector Predication operations.

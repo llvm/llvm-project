@@ -111,14 +111,12 @@ public:
 
   void emitPPA1(PPA1Info &Info);
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                           const MCSymbol *Lo) = 0;
+                                           const MCSymbol *Lo);
 };
 
 class SystemZTargetGOFFStreamer : public SystemZTargetzOSStreamer {
 public:
   SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetzOSStreamer(S) {}
-  const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                   const MCSymbol *Lo) override;
 };
 
 class SystemZTargetHLASMStreamer : public SystemZTargetzOSStreamer {

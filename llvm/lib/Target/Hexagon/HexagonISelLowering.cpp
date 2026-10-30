@@ -231,8 +231,6 @@ HexagonTargetLowering::CanLowerReturn(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
-  if (MF.getSubtarget<HexagonSubtarget>().useHVXOps())
-    return CCInfo.CheckReturn(Outs, RetCC_Hexagon_HVX);
   return CCInfo.CheckReturn(Outs, RetCC_Hexagon);
 }
 
@@ -253,10 +251,7 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
 
   // Analyze return values of ISD::RET
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon_HVX);
-  else
-    CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
+  CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
 
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -396,10 +391,7 @@ SDValue HexagonTargetLowering::LowerCallResult(
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon_HVX);
-  else
-    CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon);
+  CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -467,9 +459,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
-  else if (DisableArgsMinAlignment)
+  if (DisableArgsMinAlignment)
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
@@ -857,9 +847,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);
-  else if (DisableArgsMinAlignment)
+  if (DisableArgsMinAlignment)
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
@@ -1939,7 +1927,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1ull << llvm::countr_zero(Addr)) : NeedAlign;
+      Addr != 0 ? Align::fromLog2(llvm::countr_zero(Addr)) : NeedAlign;
   if (HaveAlign >= NeedAlign)
     return true;
 
@@ -3709,12 +3697,11 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool ForCodeSize) const {
-  return true;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+HexagonTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool ForCodeSize) const {
+  return FPImmAction::Legal;
 }
 
 /// Returns true if it is beneficial to convert a load of a constant

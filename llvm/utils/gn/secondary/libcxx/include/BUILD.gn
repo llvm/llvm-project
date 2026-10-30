@@ -48,10 +48,14 @@ if (current_toolchain == default_toolchain) {
       "_LIBCPP_PSTL_BACKEND_STD_THREAD=1",
     ]
     if (libcxx_abi_namespace != "") {
-      values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
+      abi_namespace = libcxx_abi_namespace
     } else {
-      values += [ "_LIBCPP_ABI_NAMESPACE=__" + libcxx_abi_version ]
+      abi_namespace = "__$libcxx_abi_version"
     }
+    values += [
+      "_LIBCPP_ABI_NAMESPACE=$abi_namespace",
+      "_LIBCPP_ABI_NAMESPACE_LEN=" + len(abi_namespace),
+    ]
     if (libcxx_enable_time_zone_database) {
       values += [ "_LIBCPP_HAS_TIME_ZONE_DATABASE=1" ]
     } else {
@@ -1018,6 +1022,8 @@ if (current_toolchain == default_toolchain) {
       "__exception/nested_exception.h",
       "__exception/operations.h",
       "__exception/terminate.h",
+      "__execution/execution_policies.h",
+      "__execution/is_execution_policy.h",
       "__expected/bad_expected_access.h",
       "__expected/expected.h",
       "__expected/unexpect.h",
@@ -1304,7 +1310,6 @@ if (current_toolchain == default_toolchain) {
       "__mutex/tag_types.h",
       "__mutex/unique_lock.h",
       "__new/align_val_t.h",
-      "__new/allocate.h",
       "__new/destroying_delete_t.h",
       "__new/exceptions.h",
       "__new/global_new_delete.h",
@@ -1479,6 +1484,7 @@ if (current_toolchain == default_toolchain) {
       "__system_error/system_error.h",
       "__system_error/throw_system_error.h",
       "__thread/formatter.h",
+      "__thread/hardware_concurrency.h",
       "__thread/id.h",
       "__thread/jthread.h",
       "__thread/poll_with_backoff.h",
@@ -1545,7 +1551,6 @@ if (current_toolchain == default_toolchain) {
       "__type_traits/is_empty.h",
       "__type_traits/is_enum.h",
       "__type_traits/is_equality_comparable.h",
-      "__type_traits/is_execution_policy.h",
       "__type_traits/is_final.h",
       "__type_traits/is_floating_point.h",
       "__type_traits/is_function.h",
@@ -1701,6 +1706,7 @@ if (current_toolchain == default_toolchain) {
       "cuchar",
       "cwchar",
       "cwctype",
+      "debugging",
       "deque",
       "errno.h",
       "exception",

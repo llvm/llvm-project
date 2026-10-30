@@ -224,11 +224,10 @@ unsigned MCSchedModel::getBypassDelayCycles(const MCSubtargetInfo &STI,
 /// Return the buffer size of the resource. If a positive scale factor
 /// is provided and the original buffer size is > 1, the size is scaled
 /// accordingly.
-int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
+int MCSchedModel::getResourceBufferSize(
+    unsigned ProcResourceIdx, float ReservationStationScaleFactor) const {
   int BufferSize = getProcResource(ProcResourceIdx)->BufferSize;
 
-  float ReservationStationScaleFactor =
-      MCCLOptions::Global.sched_model_reservation_station_scale_factor;
   // Skip scaling when factor is 1 (the default).
   // Use native float comparison to avoid overhead on the hot fast
   // path, as 1.0f is exactly representable
@@ -260,4 +259,9 @@ int MCSchedModel::getResourceBufferSize(unsigned ProcResourceIdx) const {
     return BufferSize;
 
   return Scaled;
+}
+
+float MCSchedModel::getReservationStationScaleFactor(
+    const MCTargetOptions &Options) {
+  return getMCCLOptions(Options).sched_model_reservation_station_scale_factor;
 }

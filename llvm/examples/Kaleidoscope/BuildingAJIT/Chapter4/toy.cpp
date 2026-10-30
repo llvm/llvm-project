@@ -1096,6 +1096,7 @@ static void InitializeModule() {
   // Open a new context and module.
   TheContext = std::make_unique<LLVMContext>();
   TheModule = std::make_unique<Module>("my cool jit", *TheContext);
+  TheModule->setTargetTriple(TheJIT->getTargetTriple());
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
   // Create a new builder for the module.

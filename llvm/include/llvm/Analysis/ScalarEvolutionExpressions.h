@@ -536,10 +536,6 @@ public:
     }
   }
 
-  SCEVTypes getEquivalentNonSequentialSCEVType() const {
-    return getEquivalentNonSequentialSCEVType(getSCEVType());
-  }
-
   static bool classof(const SCEV *S) {
     return isSequentialMinMaxType(S->getSCEVType());
   }
@@ -575,10 +571,13 @@ class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
   /// instances owned by a ScalarEvolution.
   SCEVUnknown *Next;
 
+  /// Deterministic ID used for ordering SCEVUnknowns by their creation time.
+  unsigned OrderID;
+
   SCEVUnknown(const FoldingSetNodeIDRef ID, Value *V, ScalarEvolution *se,
-              SCEVUnknown *next)
-      : SCEV(ID, scUnknown, 1, V->getType()), CallbackVH(V), SE(se),
-        Next(next) {}
+              SCEVUnknown *next, unsigned OrderID)
+      : SCEV(ID, scUnknown, 1, V->getType()), CallbackVH(V), SE(se), Next(next),
+        OrderID(OrderID) {}
 
   // Implement CallbackVH.
   void deleted() override;
@@ -586,6 +585,8 @@ class LLVM_ABI SCEVUnknown final : public SCEV, private CallbackVH {
 
 public:
   Value *getValue() const { return getValPtr(); }
+
+  unsigned getOrderID() const { return OrderID; }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scUnknown; }
@@ -968,39 +969,6 @@ public:
 
 private:
   ValueToSCEVMapTy &Map;
-};
-
-using LoopToScevMapT = DenseMap<const Loop *, const SCEV *>;
-
-/// The SCEVLoopAddRecRewriter takes a scalar evolution expression and applies
-/// the Map (Loop -> SCEV) to all AddRecExprs.
-class SCEVLoopAddRecRewriter
-    : public SCEVRewriteVisitor<SCEVLoopAddRecRewriter> {
-public:
-  SCEVLoopAddRecRewriter(ScalarEvolution &SE, LoopToScevMapT &M)
-      : SCEVRewriteVisitor(SE), Map(M) {}
-
-  static const SCEV *rewrite(const SCEV *Scev, LoopToScevMapT &Map,
-                             ScalarEvolution &SE) {
-    SCEVLoopAddRecRewriter Rewriter(SE, Map);
-    return Rewriter.visit(Scev);
-  }
-
-  const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
-    SmallVector<SCEVUse, 2> Operands;
-    for (SCEVUse Op : Expr->operands())
-      Operands.push_back(visit(Op));
-
-    const Loop *L = Expr->getLoop();
-    auto It = Map.find(L);
-    if (It == Map.end())
-      return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
-
-    return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
-  }
-
-private:
-  LoopToScevMapT &Map;
 };
 
 template <typename SCEVPtrT>

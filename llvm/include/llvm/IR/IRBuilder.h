@@ -59,12 +59,10 @@ class Use;
 /// IRBuilder and needs to be inserted.
 ///
 /// By default, this inserts the instruction at the insertion point.
-class LLVM_ABI IRBuilderDefaultInserter {
+class IRBuilderDefaultInserter {
 public:
-  virtual ~IRBuilderDefaultInserter();
-
-  virtual void InsertHelper(Instruction *I, const Twine &Name,
-                            BasicBlock::iterator InsertPt) const {
+  void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock::iterator InsertPt) const {
     if (InsertPt.isValid())
       I->insertInto(InsertPt.getNodeParent(), InsertPt);
     I->setName(Name);
@@ -73,17 +71,15 @@ public:
 
 /// Provides an 'InsertHelper' that calls a user-provided callback after
 /// performing the default insertion.
-class LLVM_ABI IRBuilderCallbackInserter : public IRBuilderDefaultInserter {
+class IRBuilderCallbackInserter : public IRBuilderDefaultInserter {
   std::function<void(Instruction *)> Callback;
 
 public:
-  ~IRBuilderCallbackInserter() override;
-
   IRBuilderCallbackInserter(std::function<void(Instruction *)> Callback)
       : Callback(std::move(Callback)) {}
 
   void InsertHelper(Instruction *I, const Twine &Name,
-                    BasicBlock::iterator InsertPt) const override {
+                    BasicBlock::iterator InsertPt) const {
     IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     Callback(I);
   }
@@ -118,13 +114,13 @@ class IRBuilderBase {
   DebugLoc StoredDL;
 
 protected:
-  // TODO: Remove this in favor of InsertPt.getNodeParent(), so they cannot
-  // go out of sync.
-  BasicBlock *BB;
+  using InsertFn = void (*)(const IRBuilderBase &, Instruction *, const Twine &,
+                            BasicBlock::iterator);
+
   BasicBlock::iterator InsertPt;
   LLVMContext &Context;
   const IRBuilderFolder &Folder;
-  const IRBuilderDefaultInserter &Inserter;
+  InsertFn InsertCB;
 
   MDNode *DefaultFPMathTag = nullptr;
   FastMathFlags FMF;
@@ -135,17 +131,21 @@ protected:
 
   ArrayRef<OperandBundleDef> DefaultOperandBundles;
 
-public:
   IRBuilderBase(LLVMContext &context, const IRBuilderFolder &Folder,
-                const IRBuilderDefaultInserter &Inserter)
-      : Context(context), Folder(Folder), Inserter(Inserter) {
+                InsertFn InsertCB)
+      : Context(context), Folder(Folder), InsertCB(InsertCB) {
     ClearInsertionPoint();
   }
+
+public:
+  // IRBuilderBase contains references to IRBuilder members and is not safe
+  // to copy.
+  IRBuilderBase(const IRBuilderBase &) = delete;
 
   /// Insert and return the specified instruction.
   template<typename InstTy>
   InstTy *Insert(InstTy *I, const Twine &Name = "") const {
-    Inserter.InsertHelper(I, Name, InsertPt);
+    InsertCB(*this, I, Name, InsertPt);
     SetInstDebugLocation(I);
     return I;
   }
@@ -168,36 +168,38 @@ public:
 
   /// Clear the insertion point: created instructions will not be
   /// inserted into a block.
-  void ClearInsertionPoint() {
-    BB = nullptr;
-    InsertPt = BasicBlock::iterator();
-  }
+  void ClearInsertionPoint() { InsertPt = BasicBlock::iterator(); }
 
-  BasicBlock *GetInsertBlock() const { return BB; }
+  BasicBlock *GetInsertBlock() const {
+    return InsertPt.isValid() ? InsertPt.getNodeParent() : nullptr;
+  }
   BasicBlock::iterator GetInsertPoint() const { return InsertPt; }
   LLVMContext &getContext() const { return Context; }
 
   /// Get data layout. Requires that an insertion point is set and connected
   /// to a module.
   const DataLayout &getDataLayout() const {
-    assert(BB && "Must have insertion point to get data layout");
-    return BB->getDataLayout();
+    assert(InsertPt.isValid() &&
+           "Must have insertion point to get data layout");
+    return InsertPt.getNodeParent()->getDataLayout();
+  }
+
+  /// Get the module. Requires that an insertion point is set and connected
+  /// to a module.
+  Module *getModule() const {
+    assert(InsertPt.isValid() && "Must have insertion point to get module");
+    return InsertPt.getNodeParent()->getModule();
   }
 
   /// This specifies that created instructions should be appended to the
   /// end of the specified block.
-  void SetInsertPoint(BasicBlock *TheBB) {
-    BB = TheBB;
-    InsertPt = BB->end();
-  }
+  void SetInsertPoint(BasicBlock *TheBB) { InsertPt = TheBB->end(); }
 
   /// This specifies that created instructions should be inserted before
   /// the specified instruction.
   void SetInsertPoint(Instruction *I) {
-    BB = I->getParent();
     InsertPt = I->getIterator();
-    assert(InsertPt != BB->end() && "Can't read debug loc from end()");
-    SetCurrentDebugLocation(I->getStableDebugLoc());
+    SetCurrentDebugLocation(I->getDebugLoc());
   }
 
   /// This specifies that created instructions should be inserted at the
@@ -210,18 +212,16 @@ public:
   /// This specifies that created instructions should be inserted at
   /// the specified point.
   void SetInsertPoint(BasicBlock::iterator IP) {
-    BB = IP.getNodeParent();
     InsertPt = IP;
-    if (IP != BB->end())
-      SetCurrentDebugLocation(IP->getStableDebugLoc());
+    if (IP != IP.getNodeParent()->end())
+      SetCurrentDebugLocation(IP->getDebugLoc());
   }
 
   /// This specifies that created instructions should inserted at the beginning
   /// end of the specified function, but after already existing static alloca
   /// instructions that are at the start.
   void SetInsertPointPastAllocas(Function *F) {
-    BB = &F->getEntryBlock();
-    InsertPt = BB->getFirstNonPHIOrDbgOrAlloca();
+    InsertPt = F->getEntryBlock().getFirstNonPHIOrAlloca();
   }
 
   /// Set location information used by debugging information.
@@ -327,6 +327,7 @@ public:
   }
 
   void setConstrainedFPFunctionAttr() {
+    BasicBlock *BB = GetInsertBlock();
     assert(BB && "Must have a basic block to set any function attributes!");
 
     Function *F = BB->getParent();
@@ -1892,7 +1893,7 @@ public:
   }
 
   CallInst *CreateStructuredAlloca(Type *BaseType, const Twine &Name = "") {
-    const DataLayout &DL = BB->getDataLayout();
+    const DataLayout &DL = getDataLayout();
     PointerType *PtrTy = DL.getAllocaPtrType(Context);
     auto *Output = CreateIntrinsicWithoutFolding(Intrinsic::structured_alloca,
                                                  {PtrTy}, {}, {}, Name);
@@ -2910,75 +2911,84 @@ private:
   FolderTy Folder;
   InserterTy Inserter;
 
+  static void CallInsertHelper(const IRBuilderBase &IRB, Instruction *I,
+                               const Twine &Name,
+                               BasicBlock::iterator InsertPt) {
+    static_cast<const IRBuilder *>(&IRB)->Inserter.InsertHelper(I, Name,
+                                                                InsertPt);
+  }
+
 public:
-  // TODO: Deprecate ctors accepting LLVMContext.
+  [[deprecated("Use the overload taking Module instead")]]
   IRBuilder(LLVMContext &C, FolderTy Folder, InserterTy Inserter)
-      : IRBuilderBase(C, this->Folder, this->Inserter), Folder(Folder),
+      : IRBuilderBase(C, this->Folder, CallInsertHelper), Folder(Folder),
         Inserter(Inserter) {}
 
+  [[deprecated("Use the overload taking Module instead")]]
   IRBuilder(LLVMContext &C, FolderTy Folder)
-      : IRBuilderBase(C, this->Folder, this->Inserter), Folder(Folder) {}
+      : IRBuilderBase(C, this->Folder, CallInsertHelper), Folder(Folder) {}
 
+  [[deprecated("Use the overload taking Module instead")]]
   explicit IRBuilder(LLVMContext &C)
-      : IRBuilderBase(C, this->Folder, this->Inserter) {}
+      : IRBuilderBase(C, this->Folder, CallInsertHelper) {}
 
   IRBuilder(Module &M, FolderTy Folder, InserterTy Inserter)
-      : IRBuilderBase(M.getContext(), this->Folder, this->Inserter),
+      : IRBuilderBase(M.getContext(), this->Folder, CallInsertHelper),
         Folder(Folder), Inserter(Inserter) {}
 
   IRBuilder(Module &M, FolderTy Folder)
-      : IRBuilderBase(M.getContext(), this->Folder, this->Inserter),
+      : IRBuilderBase(M.getContext(), this->Folder, CallInsertHelper),
         Folder(Folder) {}
 
   explicit IRBuilder(Module &M)
-      : IRBuilderBase(M.getContext(), this->Folder, this->Inserter) {}
+      : IRBuilderBase(M.getContext(), this->Folder, CallInsertHelper) {}
 
   explicit IRBuilder(BasicBlock *TheBB, FolderTy Folder)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
+      : IRBuilderBase(TheBB->getContext(), this->Folder, CallInsertHelper),
         Folder(Folder) {
     SetInsertPoint(TheBB);
   }
 
   explicit IRBuilder(BasicBlock *TheBB)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
+      : IRBuilderBase(TheBB->getContext(), this->Folder, CallInsertHelper) {
     SetInsertPoint(TheBB);
   }
 
   explicit IRBuilder(Instruction *IP)
-      : IRBuilderBase(IP->getContext(), this->Folder, this->Inserter) {
+      : IRBuilderBase(IP->getContext(), this->Folder, CallInsertHelper) {
     SetInsertPoint(IP);
   }
 
   [[deprecated("Use the overload without BasicBlock argument instead")]]
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP, FolderTy Folder)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter),
+      : IRBuilderBase(TheBB->getContext(), this->Folder, CallInsertHelper),
         Folder(Folder) {
     SetInsertPoint(IP);
   }
 
   [[deprecated("Use the overload without BasicBlock argument instead")]]
   IRBuilder(BasicBlock *TheBB, BasicBlock::iterator IP)
-      : IRBuilderBase(TheBB->getContext(), this->Folder, this->Inserter) {
+      : IRBuilderBase(TheBB->getContext(), this->Folder, CallInsertHelper) {
     SetInsertPoint(IP);
   }
 
   IRBuilder(BasicBlock::iterator IP, FolderTy Folder, InserterTy Inserter)
       : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
-                      this->Inserter),
+                      CallInsertHelper),
         Folder(Folder), Inserter(Inserter) {
     SetInsertPoint(IP);
   }
 
   IRBuilder(BasicBlock::iterator IP, FolderTy Folder)
       : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
-                      this->Inserter),
+                      CallInsertHelper),
         Folder(Folder) {
     SetInsertPoint(IP);
   }
 
   explicit IRBuilder(BasicBlock::iterator IP)
       : IRBuilderBase(IP.getNodeParent()->getContext(), this->Folder,
-                      this->Inserter) {
+                      CallInsertHelper) {
     SetInsertPoint(IP);
   }
 
@@ -3013,8 +3023,8 @@ template <typename FolderTy>
 IRBuilder(BasicBlock::iterator, FolderTy) -> IRBuilder<FolderTy>;
 IRBuilder(BasicBlock::iterator) -> IRBuilder<>;
 
-// Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(IRBuilder<>, LLVMBuilderRef)
+/// Unwrap C API builder reference.
+LLVM_ABI IRBuilder<> *unwrap(LLVMBuilderRef Ref);
 
 } // end namespace llvm
 

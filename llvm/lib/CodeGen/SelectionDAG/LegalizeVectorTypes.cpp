@@ -85,6 +85,31 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ATOMIC_LOAD:
     R = ScalarizeVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N));
     break;
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+  case ISD::ATOMIC_LOAD_FADD:
+  case ISD::ATOMIC_LOAD_FSUB:
+  case ISD::ATOMIC_LOAD_FMIN:
+  case ISD::ATOMIC_LOAD_FMAX:
+  case ISD::ATOMIC_LOAD_FMINIMUM:
+  case ISD::ATOMIC_LOAD_FMAXIMUM:
+  case ISD::ATOMIC_LOAD_FMINIMUMNUM:
+  case ISD::ATOMIC_LOAD_FMAXIMUMNUM:
+  case ISD::ATOMIC_LOAD_UINC_WRAP:
+  case ISD::ATOMIC_LOAD_UDEC_WRAP:
+  case ISD::ATOMIC_LOAD_USUB_COND:
+  case ISD::ATOMIC_LOAD_USUB_SAT:
+    R = ScalarizeVecRes_ATOMIC_RMW(cast<AtomicSDNode>(N));
+    break;
   case ISD::LOAD:           R = ScalarizeVecRes_LOAD(cast<LoadSDNode>(N));break;
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
   case ISD::VECTOR_DEINTERLEAVE:
@@ -279,6 +304,12 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::UDIVFIXSAT:
     R = ScalarizeVecRes_FIX(N);
     break;
+  case ISD::PARTIAL_REDUCE_FMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
+    R = ScalarizeVecRes_PartialReduction(N);
+    break;
   }
 
   // If R is null, the sub-method took care of registering the result.
@@ -350,6 +381,25 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_FIX(SDNode *N) {
   SDValue Op2 = N->getOperand(2);
   return DAG.getNode(N->getOpcode(), SDLoc(N), Op0.getValueType(), Op0, Op1,
                      Op2, N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_PartialReduction(SDNode *N) {
+  SDValue Acc = GetScalarizedVector(N->getOperand(0));
+  SDValue L = N->getOperand(1);
+  SDValue R = N->getOperand(2);
+  EVT ResVT = Acc.getValueType();
+  EVT InVT = L.getValueType();
+  bool IsFP = ResVT.isFloatingPoint();
+  SDLoc DL(N);
+
+  // Make sure we're not trying an extending partial reduction in this path.
+  assert(InVT.getScalarType() == ResVT && "Extending operands unsupported");
+
+  SDValue Mul = DAG.getNode(IsFP ? ISD::FMUL : ISD::MUL, DL, InVT, L, R);
+  SDValue In = DAG.getNode(IsFP ? ISD::VECREDUCE_FADD : ISD::VECREDUCE_ADD, DL,
+                           ResVT, Mul);
+
+  return DAG.getNode(IsFP ? ISD::FADD : ISD::ADD, DL, ResVT, Acc, In);
 }
 
 SDValue
@@ -589,6 +639,16 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_ATOMIC_LOAD(AtomicSDNode *N) {
 
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
+  ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
+  return Result;
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_ATOMIC_RMW(AtomicSDNode *N) {
+  SDValue Result = DAG.getAtomic(
+      N->getOpcode(), SDLoc(N), N->getMemoryVT().getVectorElementType(),
+      N->getChain(), N->getBasePtr(), GetScalarizedVector(N->getVal()),
+      N->getMemOperand());
+
   ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
   return Result;
 }
@@ -965,6 +1025,12 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::ATOMIC_STORE:
     Res = ScalarizeVecOp_ATOMIC_STORE(cast<AtomicSDNode>(N));
     break;
+  case ISD::MLOAD:
+    Res = ScalarizeVecOp_MLOAD(cast<MaskedLoadSDNode>(N), OpNo);
+    break;
+  case ISD::MSTORE:
+    Res = ScalarizeVecOp_MSTORE(cast<MaskedStoreSDNode>(N), OpNo);
+    break;
   case ISD::STRICT_FP_ROUND:
     Res = ScalarizeVecOp_STRICT_FP_ROUND(N, OpNo);
     break;
@@ -1245,6 +1311,38 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_ATOMIC_STORE(AtomicSDNode *N) {
                        ScalarVal, N->getBasePtr(), N->getMemOperand());
 }
 
+/// If the mask is a vector that needs to be scalarized, it must be <1 x i1>.
+/// Promote it to a target boolean instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_MLOAD(MaskedLoadSDNode *N,
+                                               unsigned OpNo) {
+  assert(OpNo == 3 && "Can only scalarize the mask operand!");
+  EVT DataVT = N->getValueType(0);
+  SDValue Mask = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
+  SmallVector<SDValue, 4> NewOps(N->ops());
+  NewOps[OpNo] = Mask;
+  SDNode *Res = DAG.UpdateNodeOperands(N, NewOps);
+  if (Res == N)
+    return SDValue(Res, 0);
+
+  // Update triggered CSE, do our own replacement since caller can't.
+  ReplaceValueWith(SDValue(N, 0), SDValue(Res, 0));
+  ReplaceValueWith(SDValue(N, 1), SDValue(Res, 1));
+  return SDValue();
+}
+
+/// If the mask is a vector that needs to be scalarized, it must be <1 x i1>.
+/// Promote it to a target boolean instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_MSTORE(MaskedStoreSDNode *N,
+                                                unsigned OpNo) {
+  assert(!N->isCompressingStore() && "CompressingStore not expected");
+  if (OpNo != 4)
+    reportFatalInternalError("Scalarization of MSTORE data is not supported");
+  EVT DataVT = N->getValue().getValueType();
+  SmallVector<SDValue, 4> NewOps(N->ops());
+  NewOps[OpNo] = PromoteTargetBoolean(N->getOperand(OpNo), DataVT);
+  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
 /// If the value to round is a vector that needs to be scalarized, it must be
 /// <1 x ty>. Convert the element instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
@@ -1418,6 +1516,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
   case ISD::LOOP_DEPENDENCE_WAR_MASK:
     SplitVecRes_LOOP_DEPENDENCE_MASK(N, Lo, Hi);
+    break;
+  case ISD::MASK_BEFOREFIRST:
+    SplitVecRes_MASK_BEFOREFIRST(N, Lo, Hi);
     break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
@@ -1932,6 +2033,22 @@ void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
                    /*LaneOffset=*/DAG.getConstant(LaneOffset, DL, MVT::i64));
 }
 
+void DAGTypeLegalizer::SplitVecRes_MASK_BEFOREFIRST(SDNode *N, SDValue &Lo,
+                                                    SDValue &Hi) {
+  SDLoc DL(N);
+  SDValue InLo, InHi;
+  GetSplitVector(N->getOperand(0), InLo, InHi);
+  EVT VT = InLo.getValueType();
+  Lo = DAG.getNode(ISD::MASK_BEFOREFIRST, DL, VT, InLo);
+
+  // hi = AnyLoActive ? all-zeros : (mask_beforefirst hi)
+  SDValue AnyLoActive = DAG.getNode(ISD::VECREDUCE_OR, DL, MVT::i1, InLo);
+  SDValue Cond = DAG.getBoolExtOrTrunc(AnyLoActive, DL,
+                                       getSetCCResultType(MVT::i1), MVT::i1);
+  Hi = DAG.getNode(ISD::SELECT, DL, VT, Cond, DAG.getConstant(0, DL, VT),
+                   DAG.getNode(ISD::MASK_BEFOREFIRST, DL, VT, InHi));
+}
+
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
                                                 SDValue &Hi) {
   EVT LoVT, HiVT;
@@ -2206,8 +2323,11 @@ void DAGTypeLegalizer::SplitVecRes_StrictFPOp(SDNode *N, SDValue &Lo,
 }
 
 SDValue DAGTypeLegalizer::UnrollVectorOp_StrictFP(SDNode *N, unsigned ResNE) {
-  SDValue Chain = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  if (VT.isScalableVector())
+    report_fatal_error("Cannot unroll scalable vector strict-fp operation!");
+
+  SDValue Chain = N->getOperand(0);
   unsigned NE = VT.getVectorNumElements();
   EVT EltVT = VT.getVectorElementType();
   SDLoc dl(N);
@@ -5429,6 +5549,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::AVGFLOORU:
   case ISD::AVGCEILS:
   case ISD::AVGCEILU:
+  case ISD::AVGSUBFLOORS:
+  case ISD::AVGSUBFLOORU:
   // Vector-predicated binary op widening. Note that -- unlike the
   // unpredicated versions -- we don't have to worry about trapping on
   // operations like UDIV, FADD, etc., as we pass on the original vector
@@ -5591,6 +5713,7 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::ARITH_FENCE:
   case ISD::FCANONICALIZE:
   case ISD::AssertNoFPClass:
+  case ISD::MASK_BEFOREFIRST:
     Res = WidenVecRes_Unary(N);
     break;
   case ISD::FMA:

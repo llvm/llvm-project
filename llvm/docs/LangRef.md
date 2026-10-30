@@ -432,13 +432,10 @@ added in the future:
     on the hot path and definitely executed a lot. Furthermore `preserve_mostcc`
     doesn't prevent the inliner from inlining the function call.
 
-    This calling convention will be used by a future version of the Objective-C
-    runtime and should therefore still be considered experimental at this time.
-    Although this convention was created to optimize certain runtime calls to
-    the Objective-C runtime, it is not limited to this runtime and might be used
-    by other runtimes in the future too. The current implementation only
-    supports X86-64, but the intention is to support more architectures in the
-    future.
+    This convention was created to optimize certain runtime calls to the
+    Objective-C runtime, but it is not limited to that runtime; it is also used
+    by other runtimes and libraries, such as the Swift runtime and the Linux
+    kernel.
 
 "`preserve_allcc`" - The `PreserveAll` calling convention
 :   This calling convention attempts to make the code in the caller even less
@@ -1943,6 +1940,8 @@ Currently, only the following parameter attributes are defined:
 
     This attribute cannot be applied to return values.
 
+(attr_range)=
+
 `range(<ty> <a>, <b>)`
 :   This attribute expresses the possible range of the parameter or return value.
     If the value is not in the specified range, it is converted to poison.
@@ -2349,7 +2348,8 @@ define void @f() "no-sse" { ... }
       accessed by any other means. # is a number between 0 and 1 inclusive.
       Note: The following target_mem locations are implemented in AArch64.
       target_mem0 represents SME ZT0 state, target_mem1 represents SME ZA
-      state.
+      state. In X86, target_mem0 represents the AMX tile registers and tile
+      configuration.
 
     - The default access kind (specified without a location prefix) applies to
       all locations that haven't been specified explicitly, including those that
@@ -2745,6 +2745,14 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `sanitize_alloc_token`
 :   This attribute indicates that implicit allocation token instrumentation
     is enabled for this function.
+
+(attr_speculative_load_oracle)=
+
+`"oracle-function"`
+:   This attribute indicates that the function is an oracle function of
+    '`llvm.speculative.load`'. A function with this attribute must have local
+    linkage, and it may only be used as the oracle argument of
+    '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -3326,6 +3334,10 @@ The following attributes are currently accepted:
 :   This indicates that no pointer {ref}`based <pointeraliasing>` on one of its
     arguments can alias any pointer based on the other.
 
+`"range"(iN %val, iN %lower_bound, iN %upper_bound)`
+:   Equivalent to {ref}`range(iN %lower_bound, %upper_bound) <attr_range>` on
+    `%val`.
+
 For example:
 
 ```llvm
@@ -3780,8 +3792,8 @@ can also be created by means not recognized by LLVM, e.g., by directly calling
 `mmap`. Those allocated objects are allowed to grow to the right (i.e.,
 keeping the same base address, but increasing their size) while maintaining the
 validity of existing pointers, as long as they always satisfy the properties
-described above. Currently, allocated objects are not permitted to grow to the
-left or to shrink, nor can they have holes.
+described above. Allocated objects are not permitted to grow to the left or to
+shrink, nor can they have holes.
 
 (objectlifetime)=
 
@@ -9515,6 +9527,23 @@ An example of module flags:
    contain a flag with the ID `!"foo"` that has the value '1' after linking is
    performed.
 
+### Microsoft Hotpatch Module Flag
+
+The `ms-hotpatch` module flag records whether the module was compiled with
+Microsoft hotpatch support. Its value is an `i32` integer, either 0 or 1. A value
+of 1 requests that the `HotPatch` bit be set in the CodeView `S_COMPILE3` record.
+The flag does not itself make function entries hotpatchable; that is controlled
+by the `"patchable-function"` function attribute.
+
+The flag uses the **Min** merge behavior, so linking modules preserves a value
+of 1 only if every module has the flag set to 1. If any module has a value of 0
+or lacks the flag, the merged value is 0.
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ms-hotpatch", i32 1}
+```
+
 ### Synthesized Functions Module Flags Metadata
 
 These metadata specify the default attributes synthesized functions should have.
@@ -9748,6 +9777,21 @@ models is rejected. For example:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"exception-model", !"sjlj"}
+```
+
+### Debugger Tuning Module Flags Metadata
+
+This module flag names the debugger that the module's debug info should be
+tuned for, which may affect the choice of DWARF extensions and accelerator
+tables that are emitted. The value is an `MDString` and is typically one of
+`"gdb"`, `"lldb"`, `"sce"`, or `"dbx"`.
+
+When the flag is absent, the tuning implied by the target triple is
+used.
+
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"debugger-tuning", !"lldb"}
 ```
 
 ### Long Double Type Module Flags Metadata
@@ -14293,9 +14337,10 @@ the `va_arg` macro in C.
 ##### Arguments:
 
 This instruction takes a `va_list*` value and the type of the
-argument. It returns a value of the specified argument type and
-increments the `va_list` to point to the next argument. The actual
-type of `va_list` is target specific.
+argument, which must not be an {ref}`aggregate <t_aggregate>` type. It
+returns a value of the specified argument type and increments the
+`va_list` to point to the next argument. The actual type of `va_list` is
+target specific.
 
 ##### Semantics:
 
@@ -14315,8 +14360,7 @@ function.
 See the {ref}`variable argument processing <int_varargs>` section.
 
 Note that the code generator does not yet fully support `va_arg` on many
-targets. Also, it does not currently support `va_arg` with aggregate
-types on any target.
+targets.
 
 (i_landingpad)=
 
@@ -17828,7 +17872,7 @@ are perfectly preserved.
 LLVM supports three pairs of floating-point min/max intrinsics, which differ
 in their handling of {ref}`NaN values <floatnan>`:
 
- * `llvm.minimum` and `llvm.maximum`: Return NaN if one the arguments is
+ * `llvm.minimum` and `llvm.maximum`: Return NaN if one of the arguments is
    NaN.
  * `llvm.minimumnum` and `llvm.maximumnum`: Return the other argument if
    one of the arguments is NaN.
@@ -17842,7 +17886,8 @@ specified, the order is non-deterministic: If the two inputs are zeros with
 opposite sign, either input may be returned.
 
 The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
-as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
+as follows (up to divergences permitted by the usual
+{ref}`NaN rules <floatnan>`):
 
 ```{list-table}
 :header-rows: 1
@@ -17894,9 +17939,9 @@ type.
 ##### Semantics:
 
 If both operands are qNaNs, returns a {ref}`NaN <floatnan>`. If one operand is
-qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the lesser of the two arguments. -0.0 is considered to be less
-than +0.0 for this intrinsic.
+qNaN and the other operand is a number, returns the number. If both operands
+are numbers, returns the lesser of the two arguments. -0.0 is considered to be
+less than +0.0 for this intrinsic.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -17954,9 +17999,9 @@ type.
 ##### Semantics:
 
 If both operands are qNaNs, returns a {ref}`NaN <floatnan>`. If one operand is
-qNaN and another operand is a number, returns the number. If both operands are
-numbers, returns the greater of the two arguments. -0.0 is considered to be
-less than +0.0 for this intrinsic.
+qNaN and the other operand is a number, returns the number. If both operands
+are numbers, returns the greater of the two arguments. -0.0 is considered to
+be less than +0.0 for this intrinsic.
 
 If an operand is a signaling NaN, then the intrinsic will non-deterministically
 either:
@@ -18020,7 +18065,7 @@ This intrinsic follows the semantics of `fminimum` in C23 and `minimum` in
 IEEE 754-2019, except for signaling NaN inputs, which follow
 {ref}`LLVM's usual signaling NaN behavior <floatnan>` instead.
 
-If the `nsz` flag is specified, `llvm.maximum` with one +0.0 and one
+If the `nsz` flag is specified, `llvm.minimum` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
 `nsz` semantics, if both operands have the same sign, the result must also
 have the same sign.
@@ -18100,9 +18145,9 @@ type.
 ##### Semantics:
 
 If both operands are NaNs (including sNaN), returns a {ref}`NaN <floatnan>`. If
-one operand is NaN (including sNaN) and another operand is a number,
-return the number.  Otherwise returns the lesser of the two
-arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
+one operand is NaN (including sNaN) and the other operand is a number, returns
+the number. Otherwise returns the lesser of the two arguments. -0.0 is
+considered to be less than +0.0 for this intrinsic.
 
 If the `nsz` flag is specified, `llvm.minimumnum` with one +0.0 and one
 -0.0 operand may non-deterministically return either operand. Contrary to normal
@@ -18149,7 +18194,7 @@ type.
 
 If both operands are NaNs (including sNaN), returns a
 {ref}`NaN <floatnan>`. If one operand is NaN (including sNaN) and
-another operand is a number, return the number.  Otherwise returns the
+the other operand is a number, returns the number. Otherwise returns the
 greater of the two arguments. -0.0 is considered to be less than +0.0
 for this intrinsic.
 
@@ -21503,6 +21548,40 @@ call @llvm.masked.store.v4i32.p0(<4 x i32> %vecA, ptr align 4 %ptrA, <4 x i1> %l
 ; completion of the store.
 ```
 
+#### '`llvm.mask.beforefirst.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic.
+
+```llvm
+declare <4 x i1> @llvm.mask.beforefirst.v4i1(<4 x i1> %mask)
+declare <vscale x 8 x i1> @llvm.mask.beforefirst.nxv8i1(<vscale x 8 x i1> %mask)
+```
+
+##### Overview:
+
+Given a vector mask, returns a new mask with all elements before the first active element in the input set to 1, and every element afterwards set to 0.
+
+##### Arguments:
+
+Takes one argument which must be an i1 vector, and returns a vector of the same type.
+
+##### Semantics:
+
+When the input is all zeroes, the result is all ones.
+
+If any element in the input vector is poison, the result is poison.
+
+##### Examples:
+
+```llvm
+@llvm.mask.beforefirst(<0,0,1,1>); ==> <1,1,0,0>
+@llvm.mask.beforefirst(<0,0,0,0>); ==> <1,1,1,1>
+@llvm.mask.beforefirst(<0,1,0,1>); ==> <1,0,0,0>
+@llvm.mask.beforefirst(<1,0,0,1>); ==> <0,0,0,0>
+```
+
 ### Experimental Vector Intrinsics
 
 #### '`llvm.experimental.cttz.elts`' Intrinsic
@@ -23216,7 +23295,7 @@ To ignore the start value, the neutral value can be used.
 ##### Examples:
 
 ```llvm
-%r = call float @llvm.vp.reduce.fmax.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+%r = call float @llvm.vp.reduce.fmax.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
 ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
 ; are treated as though %mask were false for those lanes.
 
@@ -23339,7 +23418,7 @@ To ignore the start value, the neutral value can be used.
 ##### Examples:
 
 ```llvm
-%r = call float @llvm.vp.reduce.fmaximum.v4f32(float %float, <4 x float> %a, <4 x i1> %mask, i32 %evl)
+%r = call float @llvm.vp.reduce.fmaximum.v4f32(float %start, <4 x float> %a, <4 x i1> %mask, i32 %evl)
 ; %r is equivalent to %also.r, where lanes greater than or equal to %evl
 ; are treated as though %mask were false for those lanes.
 
@@ -24367,6 +24446,8 @@ directly. In the **oracle form**, the third argument must be a direct
 reference to a non-variadic function returning `i64` that is `nounwind`,
 `nosync` and `willreturn` and may only read memory through its arguments;
 the remaining arguments are forwarded to it, and its return value is `N`.
+The oracle function must have the
+{ref}`"oracle-function" <attr_speculative_load_oracle>` attribute.
 
 ##### Semantics:
 
@@ -26083,7 +26164,7 @@ The third argument specifies the exception behavior as described above.
 
 ##### Semantics:
 
-This function follows semantics specified in the draft of IEEE 754-2019.
+This function follows semantics specified in IEEE 754-2019.
 
 
 #### '`llvm.experimental.constrained.minimum`' Intrinsic
@@ -26110,7 +26191,7 @@ The third argument specifies the exception behavior as described above.
 
 ##### Semantics:
 
-This function follows semantics specified in the draft of IEEE 754-2019.
+This function follows semantics specified in IEEE 754-2019.
 
 
 #### '`llvm.experimental.constrained.ceil`' Intrinsic
@@ -26853,7 +26934,7 @@ The '`llvm.ubsantrap`' intrinsic.
 
 ##### Arguments:
 
-An integer describing the kind of failure detected.
+An unsigned integer describing the kind of failure detected.
 
 ##### Semantics:
 

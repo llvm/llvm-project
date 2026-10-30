@@ -145,16 +145,13 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::DefaultSave);
   disable_.set(LanguageFeature::SaveMainProgram);
   disable_.set(LanguageFeature::RelaxedCLocChecks);
-  // F2023 ENUMERATION TYPE: experimental.  Semantics are implemented, but
-  // FIR lowering is not, so the feature is off by default and must be
-  // explicitly enabled (for testing) with -fenumeration-type.
-  disable_.set(LanguageFeature::EnumerationType);
   // These features, if enabled, conflict with valid standard usage,
   // so there are disabled here by default.
   disable_.set(LanguageFeature::BackslashEscapes);
   disable_.set(LanguageFeature::LogicalAbbreviations);
   disable_.set(LanguageFeature::XOROperator);
   disable_.set(LanguageFeature::OldStyleParameter);
+  disable_.set(LanguageFeature::ImplicitModulePrefix);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   disable_.set(LanguageFeature::Coarray);

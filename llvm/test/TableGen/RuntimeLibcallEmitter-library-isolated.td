@@ -29,12 +29,12 @@ def SPIRVLibc : LibcallLibrary<"libc", (add memcpy, memset), isSPIRV> {
   let Isolated = true;
 }
 
-def X86SystemLibrary : SystemRuntimeLibrary<isX86, (add Libc)>;
-def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
+def X86SystemLibrary : SystemRuntimeLibrary<isX86, ["libc"]>;
+def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, ["libc"]>;
 
 // The merged libc function carries the full core.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK-NEXT:   {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_malloc, // malloc
@@ -51,7 +51,7 @@ def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 
 // The isolated SPIRV libc is its own function with only memset/memcpy, no malloc.
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_SPIRVLibc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_SPIRVLibc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
 // CHECK-NEXT:   if (TT.isSPIRV()) {
 // CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
 // CHECK-NEXT:         RTLIB::impl_memcpy, // memcpy
@@ -65,10 +65,30 @@ def SPIRVSystemLibrary : SystemRuntimeLibrary<isSPIRV, (add SPIRVLibc)>;
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
-// The SPIRV target dispatches to the isolated function, but the availability
-// guard still uses the real "libc" linker name.
+// The SPIRV system defaults to "libc", and the libc case selects the
+// isolated function by its predicate.
 
-// CHECK-LABEL: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(
-// CHECK: if (TT.isSPIRV()) {
-// CHECK: if (isLibraryAvailable("libc"))
-// CHECK-NEXT: setAvailableLibFuncs_SPIRVLibc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat);
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.isSPIRV()) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::x86_64) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }
+
+// CHECK-LABEL: bool llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibraryLibcalls(
+// CHECK:   case RTLIB::RuntimeLibrary::libc:
+// CHECK-NEXT:     if (TT.isSPIRV()) {
+// CHECK-NEXT:       setAvailableLibFuncs_SPIRVLibc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
+// CHECK-NEXT:       return true;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     setAvailableLibFuncs_libc(TT, ExceptionModel, FloatABI, ABIName, LongDoubleFormat, DefaultCC);
+// CHECK-NEXT:     return true;

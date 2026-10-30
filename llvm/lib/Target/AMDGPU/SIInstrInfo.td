@@ -270,7 +270,7 @@ class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
 >;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
-  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
+  SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>
 >;
 
 def SIpc_add_rel_offset64 : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET64",
@@ -465,18 +465,6 @@ def atomic_load_nonext_16_glue : PatFrag<(ops node:$ptr),
   let MemoryVT = i16;
 }
 
-def atomic_load_nonext_32_glue : PatFrag<(ops node:$ptr),
-  (atomic_load_nonext_glue node:$ptr)> {
-  let IsAtomic = 1;
-  let MemoryVT = i32;
-}
-
-def atomic_load_nonext_64_glue : PatFrag<(ops node:$ptr),
-  (atomic_load_nonext_glue node:$ptr)> {
-  let IsAtomic = 1;
-  let MemoryVT = i64;
-}
-
 def atomic_load_zext_8_glue : PatFrag<(ops node:$ptr),
   (atomic_load_zext_glue node:$ptr)> {
   let IsAtomic = 1;
@@ -587,12 +575,10 @@ def load_align16_#as#_m0 : PatFrag<(ops node:$ptr),
 }
 
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+def atomic_load_#as#_m0 : PatFrag<(ops node:$ptr),
+                                  (atomic_load_nonext_glue node:$ptr)>;
 def atomic_load_nonext_16_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_nonext_16_glue node:$ptr)>;
-def atomic_load_nonext_32_#as#_m0 : PatFrag<(ops node:$ptr),
-                                      (atomic_load_nonext_32_glue node:$ptr)>;
-def atomic_load_nonext_64_#as#_m0 : PatFrag<(ops node:$ptr),
-                                       (atomic_load_nonext_64_glue node:$ptr)>;
 
 def atomic_load_zext_8_#as#_m0 : PatFrag<(ops node:$ptr),
                                       (atomic_load_zext_8_glue node:$ptr)>;
@@ -705,6 +691,13 @@ def store_align_less_than_4_#as#_m0 : PatFrag <(ops node:$value, node:$ptr),
 }
 }
 
+def atomic_store_glue : PatFrag <
+  (ops node:$ptr, node:$value),
+  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
+  let IsAtomic = 1;
+  let IsTruncStore = 0;
+}
+
 def atomic_store_8_glue : PatFrag <
   (ops node:$ptr, node:$value),
   (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
@@ -719,30 +712,14 @@ def atomic_store_16_glue : PatFrag <
   let MemoryVT = i16;
 }
 
-def atomic_store_32_glue : PatFrag <
-  (ops node:$ptr, node:$value),
-  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
-  let IsAtomic = 1;
-  let MemoryVT = i32;
-}
-
-def atomic_store_64_glue : PatFrag <
-  (ops node:$ptr, node:$value),
-  (AMDGPUatomic_st_glue node:$ptr, node:$value)> {
-  let IsAtomic = 1;
-  let MemoryVT = i64;
-}
-
 foreach as = [ "local", "region" ] in
 let IsAtomic = 1, AddressSpaces = !cast<AddressSpaceList>("StoreAddress_"#as).AddrSpaces in {
+def atomic_store_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
+                                   (atomic_store_glue node:$val, node:$ptr)>;
 def atomic_store_8_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
                                      (atomic_store_8_glue node:$val, node:$ptr)>;
 def atomic_store_16_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
                                       (atomic_store_16_glue node:$val, node:$ptr)>;
-def atomic_store_32_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                      (atomic_store_32_glue node:$val, node:$ptr)>;
-def atomic_store_64_#as#_m0 : PatFrag<(ops node:$val, node:$ptr),
-                                      (atomic_store_64_glue node:$val, node:$ptr)>;
 } // End let IsAtomic = 1, AddressSpaces = StoreAddress_#as.AddrSpaces
 
 
@@ -946,23 +923,6 @@ def cond_as_i32imm: SDNodeXForm<cond, [{
   return CurDAG->getTargetConstant(N->get(), SDLoc(N), MVT::i32);
 }]>;
 
-// Copied from the AArch64 backend:
-def bitcast_fpimm_to_i16 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i16);
-}]>;
-
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-// Copied from the AArch64 backend:
-def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
 def as_hw_round_mode : SDNodeXForm<timm, [{
   // "round.towardzero" -> TowardZero 0        -> FP_ROUND_ROUND_TO_ZERO 3
   // "round.tonearest"  -> NearestTiesToEven 1 -> FP_ROUND_ROUND_TO_NEAREST 0
@@ -1106,7 +1066,7 @@ def extract_cpol : SDNodeXForm<timm, [{
       N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12),
-      SDLoc(N), MVT::i8);
+      SDLoc(N), MVT::i16);
 }]>;
 
 def extract_swz : SDNodeXForm<timm, [{
@@ -1121,7 +1081,7 @@ def extract_cpol_set_glc : SDNodeXForm<timm, [{
   const uint32_t cpol = N->getZExtValue() & (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX12
                                ? AMDGPU::CPol::ALL
                                : AMDGPU::CPol::ALL_pregfx12);
-  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i8);
+  return CurDAG->getTargetConstant(cpol | AMDGPU::CPol::GLC, SDLoc(N), MVT::i16);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -2923,6 +2883,10 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableClamp = 0> {
 
   field bit IsPacked = Src0VT.isVector;
   field bit HasOpSel = IsPacked;
+  // The instruction has no op_sel_hi field, so encode those bits as 0. Note
+  // that some VOP3P instructions may reuse the op_sel_hi bits for other
+  // purposes (for example, IsDOT), and thus should not be forced to 0.
+  field bit HasNoOpSelHi = 0;
   field bit HasOMod = !if(IsVOP3P, 0, DstVT.isFP);
   field bit HasSDWAOMod = DstVT.isFP;
 
@@ -3680,6 +3644,12 @@ def lo16_to_vgpr32 : OutPatFrag<(ops node:$op),
 
 def hi16_to_vgpr32 : OutPatFrag<(ops node:$op),
   (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $op, hi16)>;
+
+def vgpr32_lo16 : OutPatFrag<(ops node:$op),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $op, VGPR_32)), lo16)>;
+
+def vgpr32_hi16 : OutPatFrag<(ops node:$op),
+  (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $op, VGPR_32)), hi16)>;
 
 // Direct lookup table for VOPDXY eligibility, indexed by the packed
 // (VOPDOp << 5) | (Subtarget << 1) | VOPD3 key.

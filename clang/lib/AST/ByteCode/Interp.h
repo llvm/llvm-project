@@ -64,11 +64,6 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckSubobject(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                     CheckSubobjectKind CSK);
 
-/// Checks if the dowcast using the given offset is possible with the given
-/// pointer.
-bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                   uint32_t Offset);
-
 /// Checks if a pointer points to const storage.
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -105,8 +100,7 @@ bool CheckDynamicMemoryAllocation(InterpState &S, CodePtr OpPC);
 
 /// Check the source of the pointer passed to delete/delete[] has actually
 /// been heap allocated by us.
-bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Expr *Source,
-                       const Pointer &Ptr);
+bool CheckDeleteSource(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Sets the given integral value to the pointer, which is of
 /// a std::{weak,partial,strong}_ordering type.
@@ -1349,7 +1343,7 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     std::optional<size_t> A = LHS.computeOffsetForComparison(S.getASTContext());
     std::optional<size_t> B = RHS.computeOffsetForComparison(S.getASTContext());
     if (!A || !B)
-      return Invalid(S, OpPC);
+      return false;
 
     S.Stk.push<BoolT>(BoolT::from(Fn(Compare(*A, *B))));
     return true;
@@ -2106,8 +2100,8 @@ bool GetPtrFieldPop(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBase(InterpState &S, CodePtr OpPC, uint32_t Off);
 bool GetPtrBasePop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK);
 
-bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, uint32_t Off, bool NullOK,
-                      const Type *TargetType);
+bool GetPtrDerivedPop(InterpState &S, CodePtr OpPC, bool NullOK,
+                      const Type *TargetType, const Type *FinalType);
 
 inline bool GetPtrThisField(InterpState &S, CodePtr OpPC, uint32_t Off) {
   if (S.checkingPotentialConstantExpression() && S.Current->isBottomFrame())
@@ -2857,11 +2851,6 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC, uint32_t ElemSize) {
     return handleOverflow(S, OpPC, R64);
 
   S.Stk.push<T>(T::from(R64));
-  return true;
-}
-
-inline bool InitScope(InterpState &S, uint32_t I) {
-  S.Current->initScope(I);
   return true;
 }
 
@@ -3718,6 +3707,13 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_stmt_expr_unsupported)
       << S.Current->getRange(OpPC);
+  return false;
+}
+
+inline bool InvalidTargetLabel(InterpState &S, CodePtr OpPC, bool IsContinue) {
+  S.FFDiag(S.Current->getLocation(OpPC),
+           diag::note_break_continue_label_outside_context)
+      << S.Current->getRange(OpPC) << IsContinue;
   return false;
 }
 

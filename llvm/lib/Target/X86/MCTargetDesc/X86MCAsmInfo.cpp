@@ -59,7 +59,7 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
   if (is64Bit)
     CodePointerSize = CalleeSaveStackSlotSize = 8;
 
-  AssemblerDialect = X86MCOptions::Global.asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   if (!is64Bit)
     Data64bitsDirective = nullptr;       // we can't emit a 64-bit unit
@@ -72,10 +72,7 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T,
   CommentString = "##";
 
   SupportsDebugInformation = true;
-  UseDataRegionDirectives = X86MCOptions::Global.mark_data_regions;
-
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
+  UseDataRegionDirectives = X86_MC::getCLOpts(Options).mark_data_regions;
 
   // old assembler lacks some directives
   // FIXME: this should really be a check on the assembler characteristics
@@ -111,13 +108,10 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T,
   // OTOH, stack slot size is always 8 for x86-64, even with the x32 ABI.
   CalleeSaveStackSlotSize = is64Bit ? 8 : 4;
 
-  AssemblerDialect = X86MCOptions::Global.asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   // Debug Information
   SupportsDebugInformation = true;
-
-  // Exceptions handling
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 
   initializeAtSpecifiers(atSpecifiers);
 }
@@ -148,9 +142,7 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple,
     WinEHEncodingType = WinEH::EncodingType::X86;
   }
 
-  ExceptionsType = ExceptionHandling::WinEH;
-
-  AssemblerDialect = X86MCOptions::Global.asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   AllowAtInName = true;
 
@@ -182,12 +174,9 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple,
     InternalSymbolPrefix = ".L";
     CodePointerSize = 8;
     WinEHEncodingType = WinEH::EncodingType::Itanium;
-    ExceptionsType = ExceptionHandling::WinEH;
-  } else {
-    ExceptionsType = ExceptionHandling::DwarfCFI;
   }
 
-  AssemblerDialect = X86MCOptions::Global.asm_syntax;
+  AssemblerDialect = X86_MC::getCLOpts(Options).asm_syntax;
 
   AllowAtInName = true;
 

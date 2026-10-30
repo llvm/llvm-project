@@ -157,37 +157,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::i128, Promote);
   AddPromotedToType(ISD::LOAD, MVT::i128, MVT::v4i32);
 
-  // TODO: Would be better to consume as directly legal
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::f32, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f32, MVT::i32);
-
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::f64, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f64, MVT::i64);
-
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::f16, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::f16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::bf16, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::bf16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_LOAD, MVT::v2f32, Promote);
-  AddPromotedToType(ISD::ATOMIC_LOAD, MVT::v2f32, MVT::i64);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::f32, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f32, MVT::i32);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::f64, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f64, MVT::i64);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::f16, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::f16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::bf16, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::bf16, MVT::i16);
-
-  setOperationAction(ISD::ATOMIC_STORE, MVT::v2f32, Promote);
-  AddPromotedToType(ISD::ATOMIC_STORE, MVT::v2f32, MVT::i64);
-
   // There are no 64-bit extloads. These should be done as a 32-bit extload and
   // an extension to 64-bit.
   for (MVT VT : MVT::integer_valuetypes())
@@ -493,9 +462,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, VT, Expand);
 
     setOperationAction({ISD::BSWAP, ISD::CTTZ, ISD::CTLZ}, VT, Expand);
-
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
-                       Expand);
   }
 
   // The hardware supports 32-bit FSHR, but not FSHL.
@@ -814,9 +780,11 @@ bool AMDGPUTargetLowering::isSelectSupported(SelectSupportKind SelType) const {
 
 // The backend supports 32 and 64 bit floating point immediates.
 // FIXME: Why are we reporting vectors of FP immediates as legal?
-bool AMDGPUTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return isTypeLegal(VT.getScalarType());
+TargetLowering::FPImmAction
+AMDGPUTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return isTypeLegal(VT.getScalarType()) ? FPImmAction::Legal
+                                         : FPImmAction::ConstantPool;
 }
 
 // We don't want to shrink f64 / f32 constants.
@@ -1818,14 +1786,6 @@ AMDGPUTargetLowering::split64BitValue(SDValue Op, SelectionDAG &DAG) const {
   return std::pair(Lo, Hi);
 }
 
-SDValue AMDGPUTargetLowering::getLoHalf64(SDValue Op, SelectionDAG &DAG) const {
-  SDLoc SL(Op);
-
-  SDValue Vec = DAG.getNode(ISD::BITCAST, SL, MVT::v2i32, Op);
-  const SDValue Zero = DAG.getConstant(0, SL, MVT::i32);
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, MVT::i32, Vec, Zero);
-}
-
 SDValue AMDGPUTargetLowering::getHiHalf64(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
 
@@ -2673,24 +2633,6 @@ bool AMDGPUTargetLowering::needsDenormHandlingF32(const SelectionDAG &DAG,
                  .Input != DenormalMode::PreserveSign;
 }
 
-SDValue AMDGPUTargetLowering::getIsLtSmallestNormal(SelectionDAG &DAG,
-                                                    SDValue Src,
-                                                    SDNodeFlags Flags) const {
-  SDLoc SL(Src);
-  EVT VT = Src.getValueType();
-  const fltSemantics &Semantics = VT.getFltSemantics();
-  SDValue SmallestNormal =
-      DAG.getConstantFP(APFloat::getSmallestNormalized(Semantics), SL, VT);
-
-  // Want to scale denormals up, but negatives and 0 work just as well on the
-  // scaled path.
-  SDValue IsLtSmallestNormal = DAG.getSetCC(
-      SL, getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT), Src,
-      SmallestNormal, ISD::SETOLT);
-
-  return IsLtSmallestNormal;
-}
-
 SDValue AMDGPUTargetLowering::getIsFinite(SelectionDAG &DAG, SDValue Src,
                                           SDNodeFlags Flags) const {
   SDLoc SL(Src);
@@ -2877,10 +2819,6 @@ SDValue AMDGPUTargetLowering::LowerFLOGCommon(SDValue Op,
   }
 
   return R;
-}
-
-SDValue AMDGPUTargetLowering::LowerFLOG10(SDValue Op, SelectionDAG &DAG) const {
-  return LowerFLOGCommon(Op, DAG);
 }
 
 // Do f32 fast math expansion for flog2 or flog10. This is accurate enough for a
@@ -5220,12 +5158,6 @@ AMDGPUTargetLowering::getConstantNegateCost(const ConstantFPSDNode *C) const {
 bool AMDGPUTargetLowering::isConstantCostlierToNegate(SDValue N) const {
   if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
     return getConstantNegateCost(C) == NegatibleCost::Expensive;
-  return false;
-}
-
-bool AMDGPUTargetLowering::isConstantCheaperToNegate(SDValue N) const {
-  if (const ConstantFPSDNode *C = isConstOrConstSplatFP(N))
-    return getConstantNegateCost(C) == NegatibleCost::Cheaper;
   return false;
 }
 

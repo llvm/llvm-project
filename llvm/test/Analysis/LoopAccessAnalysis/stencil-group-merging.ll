@@ -3239,8 +3239,8 @@ define void @corner_sum_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2in,
 ; CHECK-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; CHECK-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: ((-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a) High: ((8 * (1 smax %n)) + (-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a))
-; CHECK-NEXT:            Member: {((-4611686018427387904 * (1 smax %s3in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; CHECK-NEXT:          (Low: ((-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a) High: ((8 * (1 smax %n)) + (-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a))
+; CHECK-NEXT:            Member: {((-4611686018427387904 * (1 smax %s1in)) + (-4611686018427387904 * (1 smax %s2in)) + (-4611686018427387904 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: ((1 smax %s1in) + %a) High: ((8 * (1 smax %n)) + (1 smax %s1in) + %a))
 ; CHECK-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
@@ -3335,8 +3335,8 @@ define void @corner_sum_no_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2
 ; MERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; MERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; MERGE-NEXT:        Group GRP1:
-; MERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a) High: (((8 * (1 smax %n)) + (1 smax %s1in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s3in) + %a)))
-; MERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; MERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a) High: (((8 * (1 smax %n)) + (1 smax %s1in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s2in) + %a) umax ((8 * (1 smax %n)) + (1 smax %s3in) + %a)))
+; MERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((-1 * (1 smax %s1in))<nsw> + %a),+,8}<nw><%loop>
 ; MERGE-NEXT:            Member: {((1 smax %s2in) + %a),+,8}<nw><%loop>
@@ -3397,8 +3397,8 @@ define void @corner_sum_no_overflow(ptr %a, ptr %out, i64 %n, i64 %s1in, i64 %s2
 ; NOMERGE-NEXT:          (Low: %out High: ((8 * (1 smax %n)) + %out))
 ; NOMERGE-NEXT:            Member: {%out,+,8}<nuw><%loop>
 ; NOMERGE-NEXT:        Group GRP1:
-; NOMERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a) High: ((8 * (1 smax %n)) + (-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a))
-; NOMERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s3in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s1in)) + %a),+,8}<nw><%loop>
+; NOMERGE-NEXT:          (Low: ((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a) High: ((8 * (1 smax %n)) + (-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a))
+; NOMERGE-NEXT:            Member: {((-1152921504606846976 * (1 smax %s1in)) + (-1152921504606846976 * (1 smax %s2in)) + (-1152921504606846976 * (1 smax %s3in)) + %a),+,8}<nw><%loop>
 ; NOMERGE-NEXT:        Group GRP2:
 ; NOMERGE-NEXT:          (Low: ((1 smax %s1in) + %a) High: ((8 * (1 smax %n)) + (1 smax %s1in) + %a))
 ; NOMERGE-NEXT:            Member: {((1 smax %s1in) + %a),+,8}<nw><%loop>

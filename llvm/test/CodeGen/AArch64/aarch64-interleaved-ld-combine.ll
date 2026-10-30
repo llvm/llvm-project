@@ -896,31 +896,17 @@ define void @aarch64_ilc_idx_ld2_intrinsic(ptr %ptr, i64 %idx) {
 ; CHECK-NEXT:    store <4 x float> [[M4_7]], ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_idx_ld2_intrinsic:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    lsl x8, x1, #2
-; AS-IAENABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    add x8, x8, #16
-; AS-IAENABLED-NEXT:    add x10, x0, x9
-; AS-IAENABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IAENABLED-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
-; AS-IAENABLED-NEXT:    str q0, [x0, x9]
-; AS-IAENABLED-NEXT:    str q1, [x0, x8]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_idx_ld2_intrinsic:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    lsl x8, x1, #2
-; AS-IADISABLED-NEXT:    and x9, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    add x8, x8, #16
-; AS-IADISABLED-NEXT:    add x9, x0, x9
-; AS-IADISABLED-NEXT:    and x8, x8, #0xfffffffffffffff0
-; AS-IADISABLED-NEXT:    ldp q1, q0, [x9]
-; AS-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    str q2, [x9]
-; AS-IADISABLED-NEXT:    str q0, [x0, x8]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_idx_ld2_intrinsic:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    lsl x8, x1, #2
+; AS-NEXT:    and x9, x8, #0xfffffffffffffff0
+; AS-NEXT:    add x8, x8, #16
+; AS-NEXT:    add x10, x0, x9
+; AS-NEXT:    and x8, x8, #0xfffffffffffffff0
+; AS-NEXT:    ld2 { v0.4s, v1.4s }, [x10]
+; AS-NEXT:    str q0, [x0, x9]
+; AS-NEXT:    str q1, [x0, x8]
+; AS-NEXT:    ret
 entry:
   %idx1 = lshr i64 %idx, 2
   %a1 = add i64 %idx, 4
@@ -1009,30 +995,17 @@ define void @aarch64_ilc_i32_idx_intrinsic(ptr %ptr, i32 %idx) {
 ; CHECK-NEXT:    store <4 x float> [[M4_7]], ptr [[GEP2]], align 16
 ; CHECK-NEXT:    ret void
 ;
-; AS-IAENABLED-LABEL: aarch64_ilc_i32_idx_intrinsic:
-; AS-IAENABLED:       // %bb.0: // %entry
-; AS-IAENABLED-NEXT:    lsr w8, w1, #2
-; AS-IAENABLED-NEXT:    ubfiz x8, x8, #4, #32
-; AS-IAENABLED-NEXT:    add x9, x0, x8
-; AS-IAENABLED-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
-; AS-IAENABLED-NEXT:    add w9, w1, #4
-; AS-IAENABLED-NEXT:    lsr w9, w9, #2
-; AS-IAENABLED-NEXT:    str q0, [x0, x8]
-; AS-IAENABLED-NEXT:    str q1, [x0, w9, uxtw #4]
-; AS-IAENABLED-NEXT:    ret
-;
-; AS-IADISABLED-LABEL: aarch64_ilc_i32_idx_intrinsic:
-; AS-IADISABLED:       // %bb.0: // %entry
-; AS-IADISABLED-NEXT:    lsr w8, w1, #2
-; AS-IADISABLED-NEXT:    add w9, w1, #4
-; AS-IADISABLED-NEXT:    lsr w9, w9, #2
-; AS-IADISABLED-NEXT:    add x8, x0, w8, uxtw #4
-; AS-IADISABLED-NEXT:    ldp q1, q0, [x8]
-; AS-IADISABLED-NEXT:    uzp1 v2.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    uzp2 v0.4s, v1.4s, v0.4s
-; AS-IADISABLED-NEXT:    str q2, [x8]
-; AS-IADISABLED-NEXT:    str q0, [x0, w9, uxtw #4]
-; AS-IADISABLED-NEXT:    ret
+; AS-LABEL: aarch64_ilc_i32_idx_intrinsic:
+; AS:       // %bb.0: // %entry
+; AS-NEXT:    lsr w8, w1, #2
+; AS-NEXT:    ubfiz x8, x8, #4, #32
+; AS-NEXT:    add x9, x0, x8
+; AS-NEXT:    ld2 { v0.4s, v1.4s }, [x9]
+; AS-NEXT:    add w9, w1, #4
+; AS-NEXT:    lsr w9, w9, #2
+; AS-NEXT:    str q0, [x0, x8]
+; AS-NEXT:    str q1, [x0, w9, uxtw #4]
+; AS-NEXT:    ret
 entry:
   %idx1 = lshr i32 %idx, 2
   %a1 = add i32 %idx, 4

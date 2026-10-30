@@ -55,6 +55,7 @@ class NamedDecl;
 class ObjCPropertyRefExpr;
 class OpaqueValueExpr;
 class ParmVarDecl;
+class SemaProxy;
 class StringLiteral;
 class TargetInfo;
 class ValueDecl;
@@ -681,6 +682,13 @@ public:
   bool EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
                         bool InConstantContext = false) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression, and fold the resulting rvalue constant into Result. If the
+  /// expression is a glvalue, an lvalue-to-rvalue conversion will be applied.
+  bool EvaluateAsMandatedConstantRValue(EvalResult &Result,
+                                        const ASTContext &Ctx,
+                                        SemaProxy &SProxy) const;
+
   /// EvaluateAsBooleanCondition - Return true if this is a constant
   /// which we can fold and convert to a boolean condition using
   /// any crazy technique that we want to, even if the expression has
@@ -757,6 +765,13 @@ public:
                              EvalResult &Result,
                              bool IsConstantInitializer) const;
 
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantInitializer(EvalResult &Result,
+                                             const ASTContext &Ctx,
+                                             SemaProxy &SProxy,
+                                             const VarDecl *VD) const;
+
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an
   /// unevaluated context. Returns true if the expression could be folded to a
@@ -779,12 +794,22 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of an object with static storage duration. The object
+    /// is not destroyed, and undefined behavior is folded through like
+    /// isConstantInitializer allows.
+    Initializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does
   /// not check the syntactic constraints for C and C++98 constant expressions.
   bool EvaluateAsConstantExpr(
       EvalResult &Result, const ASTContext &Ctx,
+      ConstantExprKind Kind = ConstantExprKind::Normal) const;
+
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantExpr(
+      EvalResult &Result, const ASTContext &Ctx, SemaProxy &SProxy,
       ConstantExprKind Kind = ConstantExprKind::Normal) const;
 
   /// If the current Expr is a pointer, this will try to statically
@@ -806,11 +831,11 @@ public:
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SProxy, EvalResult &Status) const;
 
   bool EvaluateCharRangeAsString(APValue &Result, const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SProxy, EvalResult &Status) const;
 
   /// If the current Expr can be evaluated to a pointer to a null-terminated
   /// constant string, return the constant string (without the terminating
@@ -1095,8 +1120,8 @@ public:
 /// Describes the kind of result that can be tail-allocated.
 enum class ConstantResultStorageKind { None, Int64, APValue };
 
-/// ConstantExpr - An expression that occurs in a constant context and
-/// optionally the result of evaluating the expression.
+/// An expression that occurs in a constant context and
+/// the result of evaluating the expression.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
@@ -5392,6 +5417,17 @@ public:
       if (auto *EE = dyn_cast<EmbedExpr>(cast<Expr>(IE)->IgnoreParenImpCasts()))
         Sum += EE->getDataElementCount() - 1;
     return Sum;
+  }
+
+  bool hasZeroInits() const { return InitExprs.empty(); }
+
+  /// Whether getNumInitsWithEmbedExpanded() is 1, without walking the list.
+  bool hasOneInit() const {
+    if (InitExprs.size() != 1)
+      return false;
+    auto *EE =
+        dyn_cast<EmbedExpr>(cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
+    return !EE || EE->getDataElementCount() == 1;
   }
 
   /// Retrieve the set of initializers.

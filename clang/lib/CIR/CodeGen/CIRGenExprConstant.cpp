@@ -367,17 +367,13 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
     const ASTRecordLayout &astLayout =
         emitter.cgm.getASTContext().getASTRecordLayout(cxxrd);
     if (astLayout.hasOwnVFPtr()) {
-      mlir::Value addrPtr = emitter.cgm.getCXXABI().getVTableAddressPoint(
-          BaseSubobject(cxxrd, offsetInDerived),
-          cast<CXXRecordDecl>(vtableBaseTy));
       assert(!cir::MissingFeatures::addressPointerAuthInfo());
-      auto apOp = addrPtr.getDefiningOp<cir::VTableAddrPointOp>();
-      mlir::ArrayAttr indices = builder.getArrayAttr(
-          {builder.getI32IntegerAttr(apOp.getAddressPoint().getIndex()),
-           builder.getI32IntegerAttr(apOp.getAddressPoint().getOffset())});
-      elements[0] =
-          cir::GlobalViewAttr::get(cir::VPtrType::get(builder.getContext()),
-                                   apOp.getNameAttr(), indices);
+      cir::GlobalViewAttr vptr =
+          emitter.cgm.getCXXABI().getVTableAddressPointAttr(
+              BaseSubobject(cxxrd, offsetInDerived),
+              cast<CXXRecordDecl>(vtableBaseTy));
+      assert(vptr && "failed to get vtable address point");
+      elements[0] = vptr;
     }
 
     unsigned baseNo = 0;

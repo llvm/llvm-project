@@ -77,8 +77,7 @@ public:
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
-                                    int64_t &Offset, LocationSize &Width,
-                                    const TargetRegisterInfo *TRI) const;
+                                    int64_t &Offset, LocationSize &Width) const;
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;

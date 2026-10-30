@@ -81,6 +81,54 @@ def AnyRefOfConstantSizeAggregateType : TypeConstraint<
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
 
+def fir_AssertOp : fir_Op<"assert", [
+    AttrSizedOperandSegments,
+    TypesMatchWith<"result types match guarded operand types", "guarded",
+                   "results", "$_self">,
+    MemoryEffects<[MemWrite<FortranRuntimeResource>]>]> {
+  let summary = "check a condition and guard values used by subsequent operations";
+  let description = [{
+    If `condition` is true, each result equals the corresponding `guarded`
+    operand. Otherwise, execution terminates through the Fortran runtime,
+    reporting `message` at the operation's source location. The message may
+    contain `%lld` directives, one for each integer or index operand
+    in `values`, and `%%` for a literal percent sign. Diagnostic values are
+    interpreted as signed integers and must have type `i8`, `i16`, `i32`,
+    `i64`, or `index`. Boolean values must be explicitly extended to one of
+    these types, choosing signed or unsigned interpretation at the producer.
+
+    Consumers of the results depend on the check. The operation is deliberately
+    not speculatable or a view: looking through it in a rewrite would discard
+    that dependence. Analyses may inspect the guarded operands. Its write to
+    a non-addressable runtime resource preserves checks without obstructing
+    memory optimizations.
+
+    Guard array bases and scalar operands used by the protected computation.
+    FIR users of shape and slice metadata may require direct constructor
+    operands; guard the underlying extents or indices before constructing that
+    metadata instead.
+  }];
+  let arguments = (ins I1:$condition, fir_RuntimeCheckKindAttr:$kind,
+                       StrAttr:$message,
+                       Variadic<AnyTypeOf<[I8, I16, I32, I64, Index],
+                           "8-, 16-, 32-, or 64-bit signless integer or index">>:$values,
+                       Variadic<AnyType>:$guarded);
+  let results = (outs Variadic<AnyType>:$results);
+  let assemblyFormat = [{
+    $condition `,` enum($kind) `,` $message
+    (`values` `(` $values^ `:` type($values) `)`)?
+    (`guard` `(` $guarded^ `:` type($guarded) `)`)? attr-dict
+  }];
+  let builders = [OpBuilder<(ins "mlir::Value":$condition,
+      "fir::RuntimeCheckKind":$kind, "llvm::StringRef":$message,
+      "mlir::ValueRange":$values, "mlir::ValueRange":$guarded), [{
+    build($_builder, $_state, guarded.getTypes(), condition, kind, message,
+          values, guarded);
+  }]>];
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
 def fir_AllocaOp : fir_Op<"alloca", [
   AttrSizedOperandSegments,
   DeclareOpInterfaceMethods<PromotableAllocationOpInterface>
@@ -157,6 +205,11 @@ def fir_AllocaOp : fir_Op<"alloca", [
 
     The pinned attribute is used to flag fir.alloca operation in a specific
     region and avoid them being hoisted in an alloca hoisting pass.
+
+    The optional alignment attribute requests a minimum byte alignment for
+    the allocation, as `fir.allocmem` and `fir.global` do. It must be a
+    positive power of two. Code generation never lowers the alignment below
+    the ABI alignment of the allocated type.
   }];
 
   let arguments = (ins
@@ -165,7 +218,8 @@ def fir_AllocaOp : fir_Op<"alloca", [
     OptionalAttr<StrAttr>:$bindc_name,
     UnitAttr:$pinned,
     Variadic<AnyIntegerType>:$typeparams,
-    Variadic<AnyIntegerType>:$shape
+    Variadic<AnyIntegerType>:$shape,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let results =
@@ -1660,7 +1714,7 @@ def fir_CoordinateOp
       "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
   let extraClassDeclaration = [{
-    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    constexpr static int32_t kDynamicIndex = Fortran::common::numeric_limits<int32_t>::min();
     CoordinateIndicesAdaptor getIndices();
 
     // FortranObjectViewOpInterface methods:

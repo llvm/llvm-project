@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mcpu=bdver1 | FileCheck %s
 
 ; clang -Oz -c test1.cpp -emit-llvm -S -o
-; Verify that we generate shld insruction when we are optimizing for size,
+; Verify that we generate shld instruction when we are optimizing for size,
 ; even for X86_64 processors that are known to have poor latency double
 ; precision shift instructions.
 ; uint64_t lshift10(uint64_t a, uint64_t b)
@@ -28,7 +28,7 @@ attributes #0 = { minsize nounwind readnone uwtable "less-precise-fpmad"="false"
 
 
 ; clang -Os -c test2.cpp -emit-llvm -S
-; Verify that we generate shld insruction when we are optimizing for size,
+; Verify that we generate shld instruction when we are optimizing for size,
 ; even for X86_64 processors that are known to have poor latency double
 ; precision shift instructions.
 ; uint64_t lshift11(uint64_t a, uint64_t b)
@@ -66,7 +66,7 @@ entry:
 attributes #1 = { nounwind optsize readnone uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 
 ; clang -O2 -c test2.cpp -emit-llvm -S
-; Verify that we do not generate shld insruction when we are not optimizing
+; Verify that we do not generate shld instruction when we are not optimizing
 ; for size for X86_64 processors that are known to have poor latency double
 ; precision shift instructions.
 ; uint64_t lshift12(uint64_t a, uint64_t b)

@@ -691,6 +691,15 @@ TEST_F(TargetDeclTest, PackIndexing) {
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc",
                "template <typename> class ...X");
+
+  Code = R"cpp(
+    // Indexed type template parameter pack
+    template <typename... X>
+    void foo() {
+      [[X]]...[0] x;
+    }
+  )cpp";
+  EXPECT_DECLS("TemplateTypeParmTypeLoc", "typename ...X");
 }
 
 TEST_F(TargetDeclTest, PackIndexedConcept) {
@@ -782,7 +791,10 @@ TEST_F(TargetDeclTest, RewrittenBinaryOperator) {
     bool x = (Foo(1) [[!=]] Foo(2));
   )cpp";
   EXPECT_DECLS("CXXRewrittenBinaryOperator",
-               {"bool operator==(const Foo &) const noexcept = default"});
+               {"std::strong_ordering operator<=>(const Foo &) const = default",
+                Rel::TemplatePattern},
+               {"bool operator==(const Foo &) const noexcept = default",
+                Rel::TemplateInstantiation});
 }
 
 TEST_F(TargetDeclTest, FunctionTemplate) {

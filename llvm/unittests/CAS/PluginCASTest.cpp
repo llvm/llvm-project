@@ -118,6 +118,39 @@ TEST(PluginCASTest, isMaterialized) {
   }
 }
 
+TEST(PluginCASTest, parseInvalidID) {
+  unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
+  std::pair<std::string, std::string> PluginOpts[] = {
+      {"first-prefix", "first~"}, {"second-prefix", "second~"}};
+
+  std::optional<
+      std::pair<std::shared_ptr<ObjectStore>, std::shared_ptr<ActionCache>>>
+      DBs;
+  ASSERT_THAT_ERROR(
+      createPluginCASDatabases(getCASPluginPath(), Temp.path(), PluginOpts)
+          .moveInto(DBs),
+      Succeeded());
+  std::shared_ptr<ObjectStore> CAS = DBs->first;
+
+  std::optional<CASID> ID;
+  ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID), Succeeded());
+  std::string PrintedID = ID->toString();
+  ASSERT_TRUE(StringRef(PrintedID).starts_with("first~second~"));
+
+  std::optional<CASID> ParsedID;
+  ASSERT_THAT_ERROR(CAS->parseID(PrintedID).moveInto(ParsedID), Succeeded());
+  EXPECT_EQ(ID, ParsedID);
+
+  // Missing or mismatched prefixes are reported as errors.
+  StringRef Digest = StringRef(PrintedID).drop_front(strlen("first~second~"));
+  EXPECT_THAT_EXPECTED(CAS->parseID(Digest), Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(("first~" + Digest).str()), Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(("second~" + Digest).str()), Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(("second~first~" + Digest).str()),
+                       Failed());
+  EXPECT_THAT_EXPECTED(CAS->parseID(""), Failed());
+}
+
 TEST(PluginCASTest, validate) {
   unittest::TempDir Temp("plugin-cas", /*Unique=*/true);
 

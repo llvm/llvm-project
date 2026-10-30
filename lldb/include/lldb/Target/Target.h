@@ -14,6 +14,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "lldb/Breakpoint/BreakpointList.h"
@@ -35,6 +36,7 @@
 #include "lldb/Target/Statistics.h"
 #include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/TargetAPIMutex.h"
+#include "lldb/Target/TargetGroupList.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -47,6 +49,7 @@
 #include "lldb/lldb-public.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 
 namespace lldb_private {
 
@@ -770,12 +773,18 @@ public:
   ///     will handle / summarize the failures in a custom way and
   ///     don't use these messages.
   ///
+  /// \param[in] invoke_symbol_locators
+  ///     Whether to search beyond the Target's modules, the shared module list
+  ///     and the locate module callback, i.e. with the platform and the symbol
+  ///     locators. A caller that has already searched passes false.
+  ///
   /// \return
   ///     An empty ModuleSP will be returned if no matching file
   ///     was found.  If error_ptr was non-nullptr, an error message
   ///     will likely be provided.
   lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
-                                   Status *error_ptr = nullptr);
+                                   Status *error_ptr = nullptr,
+                                   bool invoke_symbol_locators = true);
 
   // Settings accessors
 
@@ -1054,8 +1063,9 @@ public:
     virtual ~BreakpointResolverOverride() {}
     virtual lldb::BreakpointResolverSP
     CheckForOverride(Target &target, lldb::BreakpointResolverSP initial_sp) = 0;
-    // Return whether constructing this resolver was successful.
-    virtual llvm::Error Validate() = 0;
+    // Returns an error describing why this override can't be used, for
+    // example because its script class doesn't exist.
+    virtual llvm::Error HasErrors() = 0;
     const std::string &GetDescription() { return m_desc; }
     uint64_t GetTypeMask() { return m_type_mask; }
     std::string DescribeTypeMask();
@@ -2067,7 +2077,30 @@ public:
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
 
+  /// Return the target groups this target belongs to.
+  std::vector<lldb::TargetGroupSP> GetTargetGroups() const;
+
+  /// Return the first target group that can be cast to GroupT.
+  template <typename GroupT>
+  std::shared_ptr<GroupT> GetFirstTargetGroupOfType() const {
+    static_assert(std::is_base_of_v<TargetGroup, GroupT>,
+                  "GroupT must derive from TargetGroup");
+    for (const lldb::TargetGroupSP &group_sp : GetTargetGroups()) {
+      if (GroupT *group = llvm::dyn_cast<GroupT>(group_sp.get()))
+        return std::shared_ptr<GroupT>(group_sp, group);
+    }
+    return {};
+  }
+
 protected:
+  friend class TargetGroup;
+  friend class TargetGroupList;
+
+  /// Called only by TargetGroup::AddTarget to record group membership.
+  void AddTargetGroup(const lldb::TargetGroupSP &group_sp);
+  /// Called only by TargetGroup::RemoveTarget to remove group membership.
+  void RemoveTargetGroup(const TargetGroup *group);
+
   /// The mutex the calling thread must serialize on for its current policy, or
   /// nullptr when that policy bypasses the API mutex entirely.
   std::recursive_mutex *GetAPIMutexForCurrentPolicy();
@@ -2185,6 +2218,9 @@ protected:
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;
+
+  /// Every target group this target belongs to.
+  TargetGroupList m_target_groups;
 
   lldb::RegisterTypeBuilderSP m_register_type_builder_sp;
 

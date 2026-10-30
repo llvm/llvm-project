@@ -12,9 +12,7 @@ define amdgpu_cs void @extract_hi16_i16_add(i32 %x, i32 %y, ptr addrspace(1) %ou
 ;
 ; GFX12-FAKE16-LABEL: extract_hi16_i16_add:
 ; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v1
+; GFX12-FAKE16-NEXT:    v_add_nc_u16 v0, v0, v1 op_sel:[1,0,0]
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm
 ;
@@ -137,9 +135,8 @@ define amdgpu_cs void @no_extract_hi16_multi_use_shift(i32 %x, i32 %y, ptr addrs
 ;
 ; GFX12-FAKE16-LABEL: no_extract_hi16_multi_use_shift:
 ; GFX12-FAKE16:       ; %bb.0:
+; GFX12-FAKE16-NEXT:    v_add_nc_u16 v1, v0, v1 op_sel:[1,0,0]
 ; GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_add_nc_u16 v1, v0, v1
 ; GFX12-FAKE16-NEXT:    global_store_b16 v[2:3], v1, off
 ; GFX12-FAKE16-NEXT:    global_store_b32 v[4:5], v0, off
 ; GFX12-FAKE16-NEXT:    s_endpgm

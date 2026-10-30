@@ -161,8 +161,8 @@ removeIdenticalIndexPair(StableFunctionMap::StableFunctionEntries &SFS) {
       SF->IndexOperandHashMap->erase(Pair);
 }
 
-static bool isProfitable(const StableFunctionMap::StableFunctionEntries &SFS) {
-  const CGDataOptions &Opts = CGDataOptions::Global;
+static bool isProfitable(const CGDataOptions &Opts,
+                         const StableFunctionMap::StableFunctionEntries &SFS) {
   unsigned StableFunctionCount = SFS.size();
   if (StableFunctionCount < Opts.global_merging_min_merges)
     return false;
@@ -203,7 +203,9 @@ static bool isProfitable(const StableFunctionMap::StableFunctionEntries &SFS) {
   return Result;
 }
 
-void StableFunctionMap::finalize(bool SkipTrim) {
+void StableFunctionMap::finalize(
+    const cl::LibraryOptionsContext &LibraryOptions, bool SkipTrim) {
+  const CGDataOptions &Opts = LibraryOptions.get<CGDataOptions>();
   deserializeLazyLoadingEntries();
   SmallVector<HashFuncsMapType::iterator> ToDelete;
   for (auto It = HashToFuncs.begin(); It != HashToFuncs.end(); ++It) {
@@ -252,7 +254,7 @@ void StableFunctionMap::finalize(bool SkipTrim) {
     // stable functions.
     removeIdenticalIndexPair(SFS);
 
-    if (!isProfitable(SFS))
+    if (!isProfitable(Opts, SFS))
       ToDelete.push_back(It);
   }
   for (auto It : ToDelete)

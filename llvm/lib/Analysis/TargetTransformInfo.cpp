@@ -29,10 +29,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "tti"
 
-static cl::opt<bool> EnableReduxCost("costmodel-reduxcost", cl::init(false),
-                                     cl::Hidden,
-                                     cl::desc("Recognize reduction patterns."));
-
 static cl::opt<unsigned> CacheLineSize(
     "cache-line-size", cl::init(0), cl::Hidden,
     cl::desc("Use this to override the target cache line size when "
@@ -179,11 +175,7 @@ bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
       continue;
 
     // Make sure this blocks ends with a conditional branch.
-    Instruction *TI = BB->getTerminator();
-    if (!TI)
-      continue;
-
-    if (CondBrInst *BI = dyn_cast<CondBrInst>(TI))
+    if (CondBrInst *BI = dyn_cast<CondBrInst>(BB->getTerminator()))
       ExitBranch = BI;
     else
       continue;
@@ -436,6 +428,11 @@ bool TargetTransformInfo::isLegalICmpImmediate(int64_t Imm) const {
   return TTIImpl->isLegalICmpImmediate(Imm);
 }
 
+bool TargetTransformInfo::preferLoopExitWithEqualityComparison(
+    const ICmpInst &Cond, const APInt &PostIncExitValue) const {
+  return TTIImpl->preferLoopExitWithEqualityComparison(Cond, PostIncExitValue);
+}
+
 bool TargetTransformInfo::isLegalAddressingMode(Type *Ty, GlobalValue *BaseGV,
                                                 int64_t BaseOffset,
                                                 bool HasBaseReg, int64_t Scale,
@@ -520,8 +517,8 @@ bool TargetTransformInfo::isLegalMaskedGather(Type *DataType,
 
 bool TargetTransformInfo::isLegalAltInstr(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask) const {
-  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask);
+    const SmallBitVector &OpcodeMask, ArrayRef<const Value *> Scalars) const {
+  return TTIImpl->isLegalAltInstr(VecTy, Opcode0, Opcode1, OpcodeMask, Scalars);
 }
 
 bool TargetTransformInfo::isLegalMaskedScatter(Type *DataType,
@@ -769,10 +766,6 @@ TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
 
 bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
-}
-
-bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
-  return TTIImpl->haveFastClmul(Ty);
 }
 
 bool TargetTransformInfo::isExpensiveToSpeculativelyExecute(
@@ -1082,7 +1075,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     ArrayRef<const Value *> Args, const Instruction *CtxI,
     const TargetLibraryInfo *TLibInfo) const {
 
-  // Use call cost for frem intructions that have platform specific vector math
+  // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
   // ReplaceWithVecLib pass.
   if (TLibInfo && Opcode == Instruction::FRem) {
@@ -1102,9 +1095,10 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
 
 InstructionCost TargetTransformInfo::getAltInstrCost(
     VectorType *VecTy, unsigned Opcode0, unsigned Opcode1,
-    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind) const {
-  InstructionCost Cost =
-      TTIImpl->getAltInstrCost(VecTy, Opcode0, Opcode1, OpcodeMask, CostKind);
+    const SmallBitVector &OpcodeMask, TTI::TargetCostKind CostKind,
+    ArrayRef<const Value *> Scalars) const {
+  InstructionCost Cost = TTIImpl->getAltInstrCost(
+      VecTy, Opcode0, Opcode1, OpcodeMask, CostKind, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
@@ -1627,12 +1621,6 @@ bool TargetTransformInfo::isProfitableToSinkOperands(
 
 bool TargetTransformInfo::isVectorShiftByScalarCheap(Type *Ty) const {
   return TTIImpl->isVectorShiftByScalarCheap(Ty);
-}
-
-unsigned
-TargetTransformInfo::getNumBytesToPadGlobalArray(unsigned Size,
-                                                 Type *ArrayType) const {
-  return TTIImpl->getNumBytesToPadGlobalArray(Size, ArrayType);
 }
 
 void TargetTransformInfo::collectKernelLaunchBounds(

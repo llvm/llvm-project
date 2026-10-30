@@ -19,7 +19,7 @@
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu11.7-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12-amd-amdhsa -mattr=+wavefrontsize32 < %s | FileCheck -check-prefix=W32 %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12-amd-amdhsa -mattr=+wavefrontsize64 < %s | FileCheck -check-prefix=W64 %s
-; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck -check-prefix=W32ONLY %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck -check-prefix=W32 %s
 
 ; Checks 10.1, 10.3, 11, 11.7 and 12 generic targets allow cumode/wave64.
 
@@ -30,10 +30,6 @@
 
 ; W64:      .amdhsa_wavefront_size32 0
 ; W32:      .amdhsa_wavefront_size32 1
-
-; W32ONLY:      .amdhsa_kernel wavefrontsize
-; W32ONLY-NOT:  .amdhsa_wavefront_size32
-; W32ONLY:      .end_amdhsa_kernel
 
 define amdgpu_kernel void @wavefrontsize() {
 entry:

@@ -181,11 +181,13 @@ subroutine s6()
 
   do concurrent (i = 1:10)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
+!ERROR: Impure procedure 'move_alloc' may not be referenced in DO CONCURRENT
     call move_alloc(ca, cb)
   end do
 
   do concurrent (i = 1:10)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
+!ERROR: Impure procedure 'move_alloc' may not be referenced in DO CONCURRENT
     call move_alloc(pvar%type1_field%coarray_type0_field, qvar%type1_field%coarray_type0_field)
   end do
 end subroutine s6

@@ -114,11 +114,22 @@ endfunction()
 #     add_bitcode_entrypoint_library(
 #       target_name
 #       base_target_name
-#       DEPENDS <list of add_entrypoint_object targets>
+#       OUTPUT_NAME <output file name>
 #     )
 function(add_bitcode_entrypoint_library target_name base_target_name)
+  cmake_parse_arguments(
+    "ARG"
+    ""
+    "OUTPUT_NAME"
+    ""
+    ${ARGN}
+  )
+  if(NOT ARG_OUTPUT_NAME)
+    message(FATAL_ERROR "'add_bitcode_entrypoint_library' target requires an "
+      "OUTPUT_NAME.")
+  endif()
   llvm_link_bitcode(${target_name}
-    OUTPUT ${LIBC_LIBRARY_DIR}/${target_name}.bc
+    OUTPUT ${LIBC_LIBRARY_DIR}/${ARG_OUTPUT_NAME}
     INPUTS $<TARGET_FILE:${base_target_name}>
     DEPENDS ${base_target_name}
   )

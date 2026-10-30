@@ -15,6 +15,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
@@ -323,8 +324,8 @@ public:
             if (isPtrOriginSafe(MCE->getImplicitObjectArgument()))
               return true;
           }
-          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin,
-                                SinkType))
+          if (Model->isSafeExpr(ArgOrigin, PtrIsLifetimeBoundToOrigin, SinkType,
+                                /*SinkMayEscape=*/false))
             return true;
           if (Origin && !*Origin)
             *Origin = ArgOrigin;
@@ -574,8 +575,8 @@ public:
 class UnborrowedCallArgsChecker final : public RawPtrRefCallArgsChecker {
 public:
   UnborrowedCallArgsChecker()
-      : RawPtrRefCallArgsChecker("Loan on a CanBorrow object not guarded by "
-                                 "a Borrow",
+      : RawPtrRefCallArgsChecker("Unborrowed call argument for a raw "
+                                 "pointer/reference parameter",
                                  makeBorrowSafetyModel()) {}
 };
 

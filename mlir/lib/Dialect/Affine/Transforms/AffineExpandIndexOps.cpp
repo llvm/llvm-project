@@ -228,7 +228,7 @@ struct LowerDelinearizeIndexOps
 };
 
 struct LowerLinearizeIndexOps final : OpRewritePattern<AffineLinearizeIndexOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(AffineLinearizeIndexOp op,
                                 PatternRewriter &rewriter) const override {
     return affine::lowerAffineLinearizeIndexOp(rewriter, op);

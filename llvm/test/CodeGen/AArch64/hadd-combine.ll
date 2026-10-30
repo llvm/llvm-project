@@ -1522,11 +1522,10 @@ define <8 x i8> @dontcrashonnvcasts() {
 ;
 ; CHECK-GI-LABEL: dontcrashonnvcasts:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-GI-NEXT:    adrp x8, .LCPI91_0
+; CHECK-GI-NEXT:    movi d0, #0x000000ff000000
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-GI-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI91_0]
-; CHECK-GI-NEXT:    urhadd v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    urhadd v0.8b, v0.8b, v1.8b
 ; CHECK-GI-NEXT:    uzp1 v0.8b, v0.8b, v2.8b
 ; CHECK-GI-NEXT:    ret
   %vrhadd_v.i = tail call <8 x i8> @llvm.aarch64.neon.urhadd.v8i8(<8 x i8> <i8 0, i8 0, i8 0, i8 -1, i8 0, i8 0, i8 0, i8 0>, <8 x i8> zeroinitializer)

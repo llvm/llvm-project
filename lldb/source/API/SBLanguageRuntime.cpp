@@ -9,6 +9,7 @@
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -56,13 +57,15 @@ bool SBLanguageRuntime::SupportsExceptionBreakpointsOnCatch(
 const char *
 SBLanguageRuntime::GetThrowKeywordForLanguage(lldb::LanguageType language) {
   if (Language *lang_plugin = Language::FindPlugin(language))
-    return ConstString(lang_plugin->GetThrowKeyword()).AsCString(nullptr);
+    return StringPool::GetSystemPool().InternNonEmpty(
+        lang_plugin->GetThrowKeyword());
   return nullptr;
 }
 
 const char *
 SBLanguageRuntime::GetCatchKeywordForLanguage(lldb::LanguageType language) {
   if (Language *lang_plugin = Language::FindPlugin(language))
-    return ConstString(lang_plugin->GetCatchKeyword()).AsCString(nullptr);
+    return StringPool::GetSystemPool().InternNonEmpty(
+        lang_plugin->GetCatchKeyword());
   return nullptr;
 }

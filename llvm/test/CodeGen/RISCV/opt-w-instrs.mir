@@ -182,8 +182,8 @@ body:             |
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; CHECK-NEXT:   [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 0
   ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI 11
-  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI killed [[LUI]], -1756
-  ; CHECK-NEXT:   BEQ killed [[ADDIW]], [[ADDI]], %bb.2
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -1756
+  ; CHECK-NEXT:   BEQ [[ADDIW]], [[ADDI]], %bb.2
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -203,8 +203,8 @@ body:             |
     %2:gpr = COPY $x10
     %4:gpr = ADDIW %2, 0
     %5:gpr = LUI 11
-    %3:gpr = ADDI killed %5, -1756
-    BEQ killed %4, %3, %bb.2
+    %3:gpr = ADDI %5, -1756
+    BEQ %4, %3, %bb.2
     PseudoBR %bb.1
 
   bb.1:
@@ -234,7 +234,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   [[LWU:%[0-9]+]]:gpr = LWU $x0, 0 :: (load (s32) from `ptr null`)
   ; CHECK-NEXT:   [[AND:%[0-9]+]]:gpr = AND [[LWU]], [[ADDI]]
-  ; CHECK-NEXT:   [[ADDIW:%[0-9]+]]:gpr = ADDIW killed [[AND]], 0
+  ; CHECK-NEXT:   [[ADDIW:%[0-9]+]]:gpr = ADDIW [[AND]], 0
   ; CHECK-NEXT:   $x10 = COPY [[ADDIW]]
   ; CHECK-NEXT:   PseudoRET implicit $x10
   ; CHECK-NEXT: {{  $}}
@@ -253,7 +253,7 @@ body:             |
   bb.1:
     %1:gpr = LWU $x0, 0 :: (load (s32) from `ptr null`)
     %15:gpr = AND %1, %14
-    %16:gpr = ADDIW killed %15, 0
+    %16:gpr = ADDIW %15, 0
 
     $x10 = COPY %16
     PseudoRET implicit $x10
@@ -295,4 +295,27 @@ body:             |
     %5:gpr = ADDIW %4, 0
     $x10 = COPY %5
     PseudoRET implicit $x10
+...
+---
+# BEXT only uses log2(XLEN) low bits of its index, so sext.w is redundant.
+name:            bext_index
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11
+
+    ; CHECK-LABEL: name: bext_index
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
+    ; CHECK-NEXT: [[BEXT:%[0-9]+]]:gpr = BEXT [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[BEXT]]
+    ; CHECK-NEXT: PseudoRET
+    %0:gpr = COPY $x10
+    %1:gpr = COPY $x11
+    %2:gpr = ADDIW %1, 0
+    %3:gpr = BEXT %0, %2
+    $x10 = COPY %3
+    PseudoRET
 ...
