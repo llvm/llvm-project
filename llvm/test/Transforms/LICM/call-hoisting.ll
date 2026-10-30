@@ -308,6 +308,45 @@ exit:
   ret i32 %val
 }
 
+declare void @capture(ptr)
+
+define i32 @unrelated_read_captured_after_loop(ptr %pp) {
+; CHECK-LABEL: define i32 @unrelated_read_captured_after_loop(
+; CHECK-SAME: ptr [[PP:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[LOC:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[OTHERLOC:%.*]] = load ptr, ptr [[PP]], align 8
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[OTHERLOC_GEP:%.*]] = getelementptr i32, ptr [[OTHERLOC]], i32 [[IV]]
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @load(ptr [[OTHERLOC_GEP]])
+; CHECK-NEXT:    call void @store(i32 0, ptr [[LOC]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[IV]], 200
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[VAL_LCSSA:%.*]] = phi i32 [ [[VAL]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @capture(ptr [[LOC]])
+; CHECK-NEXT:    ret i32 [[VAL_LCSSA]]
+;
+entry:
+  %loc = alloca i32
+  %otherloc = load ptr, ptr %pp
+  br label %loop
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %loop]
+  %otherloc.gep = getelementptr i32, ptr %otherloc, i32 %iv
+  %val = call i32 @load(ptr %otherloc.gep)
+  call void @store(i32 0, ptr %loc)
+  %iv.next = add i32 %iv, 1
+  %cmp = icmp slt i32 %iv, 200
+  br i1 %cmp, label %loop, label %exit
+exit:
+  call void @capture(ptr %loc)
+  ret i32 %val
+}
+
 define void @neg_lv_value(ptr %loc) {
 ; CHECK-LABEL: define void @neg_lv_value(
 ; CHECK-SAME: ptr [[LOC:%.*]]) {
