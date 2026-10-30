@@ -194,6 +194,25 @@
 #else
 #define RT_NOINLINE_ATTR
 #endif
+/*
+ * RT_FORCE_INLINE_ATTR marks a function that must be inlined into its
+ * caller even where the compiler's own cost heuristics would decline,
+ * because the caller's surrounding code depends on being able to see
+ * through the call. It is placed at the definition, and it implies
+ * "inline".
+ */
+#if defined(_MSC_VER) && !defined(__clang__)
+#define RT_FORCE_INLINE_ATTR __forceinline
+#elif defined(__has_attribute)
+#if __has_attribute(always_inline)
+#define RT_FORCE_INLINE_ATTR inline __attribute__((always_inline))
+#else
+#define RT_FORCE_INLINE_ATTR inline
+#endif
+#else
+#define RT_FORCE_INLINE_ATTR inline
+#endif
+
 #if (defined(__CUDACC__) || defined(__CUDA__)) && defined(__CUDA_ARCH__)
 #define RT_DEVICE_NOINLINE RT_NOINLINE_ATTR
 #define RT_DEVICE_NOINLINE_HOST_INLINE

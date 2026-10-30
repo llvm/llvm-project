@@ -18,6 +18,20 @@
 
 using namespace mlir;
 
+detail::InterfaceMap::InterfaceMap(InterfaceMap &&) = default;
+
+detail::InterfaceMap &detail::InterfaceMap::operator=(InterfaceMap &&rhs) {
+  for (auto &it : interfaces)
+    free(it.second);
+  interfaces = std::move(rhs.interfaces);
+  return *this;
+}
+
+detail::InterfaceMap::~InterfaceMap() {
+  for (auto &it : interfaces)
+    free(it.second);
+}
+
 void detail::InterfaceMap::insert(TypeID interfaceId, void *conceptImpl) {
   // Insert directly into the right position to keep the interfaces sorted.
   auto *it =

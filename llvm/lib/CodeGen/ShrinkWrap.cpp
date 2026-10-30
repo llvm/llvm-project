@@ -311,12 +311,13 @@ bool ShrinkWrapImpl::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
   ///
   auto IsKnownNonStackPtr = [](MachineMemOperand *Op) {
     if (Op->getValue()) {
-      const Value *UO = getUnderlyingObject(Op->getValue());
-      if (!UO)
-        return false;
-      if (auto *Arg = dyn_cast<Argument>(UO))
-        return !Arg->hasPassPointeeByValueCopyAttr();
-      return isa<GlobalValue>(UO);
+      SmallVector<const Value *, 2> Objs;
+      getUnderlyingObjects(Op->getValue(), Objs);
+      return !Objs.empty() && all_of(Objs, [](const Value *UO) {
+        if (auto *Arg = dyn_cast<Argument>(UO))
+          return !Arg->hasPassPointeeByValueCopyAttr();
+        return isa<GlobalValue>(UO);
+      });
     }
     if (const PseudoSourceValue *PSV = Op->getPseudoValue())
       return PSV->isJumpTable() || PSV->isConstantPool();
@@ -1044,7 +1045,7 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
     return TFI->enableShrinkWrapping(MF) &&
            // Windows with CFI has some limitations that make it impossible
            // to use shrink-wrapping.
-           !MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
+           !MF.usesWindowsUnwindInfo() &&
            // Sanitizers look at the value of the stack at the location
            // of the crash. Since a crash can happen anywhere, the
            // frame must be lowered before anything else happen for the

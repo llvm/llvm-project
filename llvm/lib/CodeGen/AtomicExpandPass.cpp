@@ -20,6 +20,8 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -44,6 +46,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
@@ -106,6 +109,7 @@ private:
   bool tryExpandAtomicStore(StoreInst *SI);
   void expandAtomicStoreToXChg(StoreInst *SI);
   bool tryExpandAtomicRMW(AtomicRMWInst *AI);
+  void expandElementwiseAtomicRMW(AtomicRMWInst *AI);
   void expandAtomicSubToAdd(AtomicRMWInst *AI);
   AtomicRMWInst *convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI);
   Value *
@@ -184,7 +188,7 @@ struct ReplacementIRBuilder
       : IRBuilder(
             I->getIterator(), InstSimplifyFolder(DL),
             IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
-    if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
+    if (I->getFunction()->hasFnAttribute(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
@@ -259,6 +263,9 @@ static void copyMetadataForAtomic(Instruction &Dest,
       else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
         Dest.setMetadata(ID, N);
 
+      if (ID == Ctx.getMDKindID("amdgpu.cfs"))
+        Dest.setMetadata(ID, N);
+
       // Losing atomic.ignore.denormal.mode, but it doesn't matter for current
       // uses.
       break;
@@ -271,7 +278,7 @@ static bool atomicSizeSupported(const TargetLowering *TLI, Inst *I) {
   unsigned Size = getAtomicOpSize(I);
   Align Alignment = I->getAlign();
   unsigned MaxSize = TLI->getMaxAtomicSizeInBitsSupported() / 8;
-  return Alignment >= Size && Size <= MaxSize;
+  return Size <= MaxSize && TLI->isAtomicAlignmentSupported(Alignment, Size);
 }
 
 template <typename Inst>
@@ -281,7 +288,7 @@ static void writeUnsupportedAtomicSizeReason(const TargetLowering *TLI, Inst *I,
   Align Alignment = I->getAlign();
   bool NeedSeparator = false;
 
-  if (Alignment < Size) {
+  if (!TLI->isAtomicAlignmentSupported(Alignment, Size)) {
     OS << "instruction alignment " << Alignment.value()
        << " is smaller than the required " << Size
        << "-byte alignment for this atomic operation";
@@ -394,8 +401,9 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
 
-    MadeChange |= tryInsertFencesForAtomic(
-        LI, isAcquireOrStronger(LI->getOrdering()), AtomicOrdering::Monotonic);
+    MadeChange |=
+        tryInsertFencesForAtomic(LI, isAcquireOrStronger(LI->getOrdering()),
+                                 TLI->atomicOperationOrderAfterFenceSplit(LI));
 
     MadeChange |= tryExpandAtomicLoad(LI);
     return MadeChange;
@@ -417,30 +425,39 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
       MadeChange = true;
     }
 
-    MadeChange |= tryInsertFencesForAtomic(
-        SI, isReleaseOrStronger(SI->getOrdering()), AtomicOrdering::Monotonic);
+    MadeChange |=
+        tryInsertFencesForAtomic(SI, isReleaseOrStronger(SI->getOrdering()),
+                                 TLI->atomicOperationOrderAfterFenceSplit(SI));
 
     MadeChange |= tryExpandAtomicStore(SI);
     return MadeChange;
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
+    bool IsElementwiseExpand =
+        RMWI->isElementwise() &&
+        TLI->shouldExpandAtomicRMWInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::Expand;
+
     if (!atomicSizeSupported(TLI, RMWI)) {
-      expandAtomicRMWToLibcall(RMWI);
-      return true;
+      // Elementwise expansion may split an atomicrmw into smaller, supported
+      // atomic sizes.
+      if (!IsElementwiseExpand) {
+        expandAtomicRMWToLibcall(RMWI);
+        return true;
+      }
     }
 
     bool MadeChange = false;
-    if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
-        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+    if (!IsElementwiseExpand &&
+        TLI->shouldCastAtomicRMWIInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
       MadeChange = true;
     }
 
     MadeChange |= tryInsertFencesForAtomic(
-        RMWI,
-        isReleaseOrStronger(RMWI->getOrdering()) ||
-            isAcquireOrStronger(RMWI->getOrdering()),
+        RMWI, isStrongerThanMonotonic(RMWI->getOrdering()),
         TLI->atomicOperationOrderAfterFenceSplit(RMWI));
 
     // There are two different ways of expanding RMW instructions:
@@ -646,6 +663,92 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   RMWI->replaceAllUsesWith(NewRVal);
   RMWI->eraseFromParent();
   return NewRMWI;
+}
+
+/// Generic Expand handling for elementwise vector atomicrmw instructions.
+/// Halve an `atomicrmw elementwise <N x T>` and feed each half back through the
+/// normal atomic expansion pipeline. The target's shouldExpandAtomicRMWInIR()
+/// is re-queried at the halved width and may return any expansion kind there
+/// (e.g. None to preserve as a native vector atomic, Expand to keep halving,
+/// CmpXChg to emit one wide cmpxchg loop at the halved width). Two cases:
+///   N == 1: collapse directly to one scalar atomicrmw T
+///   N  > 1: split into two atomicrmw elementwise <N/2 x T> (low at Ptr, high
+///           at gep inbounds <N/2 x T>, Ptr, 1); reassemble via a
+///           shufflevector.
+/// Note that halving works because the vectors must always be a power of two.
+///
+/// Each new atomicrmw inherits the original ordering/syncscope/volatility and
+/// metadata, and is fed back through processAtomicInstr() so further expansion
+/// fires per-half.
+void AtomicExpandImpl::expandElementwiseAtomicRMW(AtomicRMWInst *AI) {
+  assert(AI->isElementwise());
+  auto *VecTy = cast<FixedVectorType>(AI->getType());
+  Type *LaneTy = VecTy->getElementType();
+  const unsigned NumLanes = VecTy->getNumElements();
+  Value *Ptr = AI->getPointerOperand();
+  Value *Val = AI->getValOperand();
+
+  ReplacementIRBuilder Builder(AI, *DL);
+  IntegerType *IdxTy =
+      DL->getIndexType(AI->getContext(), AI->getPointerAddressSpace());
+
+  auto CreateRMWInstruction = [&](Value *HalfPtr, Value *HalfVal, Align A,
+                                  bool Elementwise) -> AtomicRMWInst * {
+    auto *NewAI =
+        Builder.CreateAtomicRMW(AI->getOperation(), HalfPtr, HalfVal, A,
+                                AI->getOrdering(), AI->getSyncScopeID());
+    NewAI->setVolatile(AI->isVolatile());
+    NewAI->setElementwise(Elementwise);
+    copyMetadataForAtomic(*NewAI, *AI);
+    return NewAI;
+  };
+
+  Constant *IdxZero = ConstantInt::get(IdxTy, 0);
+  Constant *IdxOne = ConstantInt::get(IdxTy, 1);
+
+  // N == 1: collapse to a single scalar atomicrmw T and wrap the result back
+  // into a <1 x T> vector.
+  if (NumLanes == 1) {
+    Value *LaneVal = Builder.CreateExtractElement(Val, IdxZero, "lane.val");
+    AtomicRMWInst *LaneRMW = CreateRMWInstruction(Ptr, LaneVal, AI->getAlign(),
+                                                  /*Elementwise=*/false);
+    Value *Result = Builder.CreateInsertElement(PoisonValue::get(VecTy),
+                                                LaneRMW, IdxZero, "lane.old");
+    AI->replaceAllUsesWith(Result);
+    AI->eraseFromParent();
+    processAtomicInstr(LaneRMW);
+    return;
+  }
+
+  // N > 1: split into two <N/2 x T> elementwise atomicrmws and recurse via
+  // processAtomicInstr().
+  assert(isPowerOf2_32(NumLanes) &&
+         "elementwise atomicrmw vector length must be a power of two");
+  const unsigned HalfLanes = NumLanes / 2;
+  auto *HalfVecTy = FixedVectorType::get(LaneTy, HalfLanes);
+  const uint64_t HalfBytes = DL->getTypeStoreSize(HalfVecTy).getFixedValue();
+
+  Value *LoVal = Builder.CreateShuffleVector(
+      Val, createSequentialMask(0, HalfLanes, 0), "lo.val");
+  Value *HiVal = Builder.CreateShuffleVector(
+      Val, createSequentialMask(HalfLanes, HalfLanes, 0), "hi.val");
+
+  Value *HiPtr = Builder.CreateInBoundsGEP(HalfVecTy, Ptr, IdxOne, "hi.ptr");
+  Align LoAlign = AI->getAlign();
+  Align HiAlign = commonAlignment(LoAlign, HalfBytes);
+
+  AtomicRMWInst *LoRMW =
+      CreateRMWInstruction(Ptr, LoVal, LoAlign, /*Elementwise=*/true);
+  AtomicRMWInst *HiRMW =
+      CreateRMWInstruction(HiPtr, HiVal, HiAlign, /*Elementwise=*/true);
+
+  Value *Result = concatenateVectors(Builder, {LoRMW, HiRMW});
+  Result->setName("old");
+
+  AI->replaceAllUsesWith(Result);
+  AI->eraseFromParent();
+  processAtomicInstr(LoRMW);
+  processAtomicInstr(HiRMW);
 }
 
 bool AtomicExpandImpl::tryExpandAtomicLoad(LoadInst *LI) {
@@ -910,6 +1013,10 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     return true;
   }
   case TargetLoweringBase::AtomicExpansionKind::Expand:
+    if (AI->isElementwise()) {
+      expandElementwiseAtomicRMW(AI);
+      return true;
+    }
     expandAtomicSubToAdd(AI);
     return true;
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
@@ -1571,7 +1678,11 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
 
   // There's no overhead for sinking the release barrier in a weak cmpxchg, so
   // do it even on minsize.
-  bool UseUnconditionalReleaseBarrier = F->hasMinSize() && !CI->isWeak();
+  // A fence between the LL and SC may clear the reservation on some targets.
+  // Strong cmpxchg retries, but weak cmpxchg cannot recover.
+  bool UseUnconditionalReleaseBarrier =
+      (F->hasMinSize() && !CI->isWeak()) ||
+      (CI->isWeak() && TLI->fenceClearsLoadLinkedReservation());
 
   // Given: cmpxchg some_op iN* %addr, iN %desired, iN %new success_ord fail_ord
   //
@@ -2160,16 +2271,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 
-  // TODO: the "order" argument type is "int", not int32. So
-  // getInt32Ty may be wrong if the arch uses e.g. 16-bit ints.
+  // TODO: Take the signature from RuntimeLibcallsInfo
+  IntegerType *OrderingTy =
+      Type::getIntNTy(Ctx, LibcallLowering->getRuntimeLibcallsInfo().getIntSize(
+                               M->getTargetTriple()));
   assert(Ordering != AtomicOrdering::NotAtomic && "expect atomic MO");
-  Constant *OrderingVal =
-      ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering));
+  Constant *OrderingVal = ConstantInt::get(OrderingTy, (int)toCABI(Ordering));
   Constant *Ordering2Val = nullptr;
   if (CASExpected) {
     assert(Ordering2 != AtomicOrdering::NotAtomic && "expect atomic MO");
-    Ordering2Val =
-        ConstantInt::get(Type::getInt32Ty(Ctx), (int)toCABI(Ordering2));
+    Ordering2Val = ConstantInt::get(OrderingTy, (int)toCABI(Ordering2));
   }
   bool HasResult = I->getType() != Type::getVoidTy(Ctx);
 
@@ -2287,14 +2398,23 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
     Args.push_back(AllocaResult);
   }
 
+  // The ordering arguments are C ints, which may need to be extended.
+  // FIXME: Once runtime libcall attribute derivation is centralized in
+  // RuntimeLibcalls, TargetLibraryInfo should not be used here.
+  Attribute::AttrKind OrderingExt =
+      TargetLibraryInfo::getExtAttrForI32Param(M->getTargetTriple());
+
   // 'ordering' ('success_order' for cas) argument.
   Args.push_back(OrderingVal);
+  Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
 
   // 'failure_order' argument, if present.
-  if (Ordering2Val)
+  if (Ordering2Val) {
     Args.push_back(Ordering2Val);
+    Attr = Attr.maybeAddParamAttribute(Ctx, Args.size() - 1, OrderingExt);
+  }
 
-  // Now, the return type.
+  // Now, the return type.  FIXME: Properly add extension attributes.
   if (CASExpected) {
     ResultTy = Type::getInt1Ty(Ctx);
     Attr = Attr.addRetAttribute(Ctx, Attribute::ZExt);

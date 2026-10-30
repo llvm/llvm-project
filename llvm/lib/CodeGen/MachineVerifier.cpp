@@ -68,7 +68,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
-#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -162,6 +161,11 @@ struct MachineVerifier {
   RegSet regsLive;
   RegVector regsDefined, regsDead, regsKilled;
   RegMaskVector regMasks;
+
+  // Live physical register defs of the current instruction, and the operand
+  // indices of its dead physical register defs.
+  SmallVector<MCRegister, 4> LivePhysDefs;
+  SmallVector<unsigned, 4> DeadPhysDefOps;
 
   SlotIndex lastIndex;
 
@@ -311,6 +315,7 @@ struct MachineVerifier {
 
   void visitMachineInstrBefore(const MachineInstr *MI);
   void visitMachineOperand(const MachineOperand *MO, unsigned MONum);
+  void visitMachineInstrAfter(const MachineInstr *MI);
   void visitMachineBundleAfter(const MachineInstr *MI);
   void visitMachineBasicBlockAfter(const MachineBasicBlock *MBB);
   void visitMachineFunctionAfter();
@@ -553,6 +558,7 @@ bool MachineVerifier::verify(const MachineFunction &MF) {
 
         visitMachineOperand(&Op, I);
       }
+      visitMachineInstrAfter(&MI);
 
       // Was this the last bundled instruction?
       InBundle = MI.isBundledWithSucc();
@@ -777,12 +783,10 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
-  const MCAsmInfo &AsmInfo = TM->getMCAsmInfo();
   const BasicBlock *BB = MBB->getBasicBlock();
   const Function &F = MF->getFunction();
   if (LandingPadSuccs.size() > 1 &&
-      !(AsmInfo.getExceptionHandlingType() == ExceptionHandling::SjLj && BB &&
-        isa<SwitchInst>(BB->getTerminator())) &&
+      !(BB && isa<SwitchInst>(BB->getTerminator())) &&
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     report("MBB has more than one landing pad successor", MBB);
 
@@ -1990,8 +1994,8 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
 
-    if (!DstTy.isScalableVector()) {
-      report("Destination type must be a scalable vector", MI);
+    if (!DstTy.isVector()) {
+      report("Destination type must be a vector", MI);
       break;
     }
 
@@ -2324,6 +2328,25 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   default:
     break;
   }
+}
+
+void MachineVerifier::visitMachineInstrAfter(const MachineInstr *MI) {
+  // A dead def is contradictory if the same instruction has a live def of the
+  // same register. Overlapping dead and live defs of different registers
+  // describe a partially used def.
+  if (!LivePhysDefs.empty()) {
+    for (unsigned MONum : DeadPhysDefOps) {
+      const MachineOperand &MO = MI->getOperand(MONum);
+      if (is_contained(LivePhysDefs, MO.getReg().asMCReg())) {
+        report("Dead def has a live def of the same register on the same "
+               "instruction",
+               &MO, MONum);
+      }
+    }
+  }
+
+  LivePhysDefs.clear();
+  DeadPhysDefOps.clear();
 }
 
 void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
@@ -3172,6 +3195,13 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
       addRegWithSubRegs(regsDead, Reg);
     else
       addRegWithSubRegs(regsDefined, Reg);
+
+    if (Reg.isPhysical()) {
+      if (MO->isDead())
+        DeadPhysDefOps.push_back(MONum);
+      else
+        LivePhysDefs.push_back(Reg.asMCReg());
+    }
 
     // Verify SSA form.
     if (MRI->isSSA() && Reg.isVirtual()) {

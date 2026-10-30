@@ -4,6 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v3 | FileCheck %s --check-prefixes=AVX,AVX2
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx512f | FileCheck %s --check-prefixes=AVX,AVX512F
 ; RUN: llc < %s -mtriple=x86_64-- -mcpu=x86-64-v4 | FileCheck %s --check-prefixes=AVX,AVX512
+; RUN: llc < %s -mtriple=i686--   -mcpu=x86-64    | FileCheck %s --check-prefixes=X86
 
 define <16 x i8> @smulh_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; SSE-LABEL: smulh_v16i8:
@@ -55,6 +56,24 @@ define <16 x i8> @smulh_v16i8(<16 x i8> %a0, <16 x i8> %a1) nounwind {
 ; AVX512-NEXT:    vpmovwb %ymm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
+;
+; X86-LABEL: smulh_v16i8:
+; X86:       # %bb.0:
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pxor %xmm0, %xmm0
+; X86-NEXT:    pxor %xmm3, %xmm3
+; X86-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm1[8],xmm3[9],xmm1[9],xmm3[10],xmm1[10],xmm3[11],xmm1[11],xmm3[12],xmm1[12],xmm3[13],xmm1[13],xmm3[14],xmm1[14],xmm3[15],xmm1[15]
+; X86-NEXT:    pxor %xmm4, %xmm4
+; X86-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; X86-NEXT:    pmulhw %xmm3, %xmm4
+; X86-NEXT:    psrlw $8, %xmm4
+; X86-NEXT:    pxor %xmm3, %xmm3
+; X86-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3],xmm3[4],xmm1[4],xmm3[5],xmm1[5],xmm3[6],xmm1[6],xmm3[7],xmm1[7]
+; X86-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; X86-NEXT:    pmulhw %xmm3, %xmm0
+; X86-NEXT:    psrlw $8, %xmm0
+; X86-NEXT:    packuswb %xmm4, %xmm0
+; X86-NEXT:    retl
   %res = call <16 x i8> @llvm.smulh.v16i8(<16 x i8> %a0, <16 x i8> %a1)
   ret <16 x i8> %res
 }
@@ -69,6 +88,11 @@ define <8 x i16> @smulh_v8i16(<8 x i16> %a0, <8 x i16> %a1) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
+;
+; X86-LABEL: smulh_v8i16:
+; X86:       # %bb.0:
+; X86-NEXT:    pmulhw %xmm1, %xmm0
+; X86-NEXT:    retl
   %res = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %a0, <8 x i16> %a1)
   ret <8 x i16> %res
 }
@@ -132,6 +156,25 @@ define <4 x i32> @smulh_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm0 = [1,5,3,7]
 ; AVX512-NEXT:    vpermi2d %xmm1, %xmm2, %xmm0
 ; AVX512-NEXT:    retq
+;
+; X86-LABEL: smulh_v4i32:
+; X86:       # %bb.0:
+; X86-NEXT:    pxor %xmm2, %xmm2
+; X86-NEXT:    pxor %xmm3, %xmm3
+; X86-NEXT:    pcmpgtd %xmm1, %xmm3
+; X86-NEXT:    pand %xmm0, %xmm3
+; X86-NEXT:    pcmpgtd %xmm0, %xmm2
+; X86-NEXT:    pand %xmm1, %xmm2
+; X86-NEXT:    paddd %xmm3, %xmm2
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; X86-NEXT:    pmuludq %xmm1, %xmm0
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; X86-NEXT:    pmuludq %xmm3, %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; X86-NEXT:    psubd %xmm2, %xmm0
+; X86-NEXT:    retl
   %res = call <4 x i32> @llvm.smulh.v4i32(<4 x i32> %a0, <4 x i32> %a1)
   ret <4 x i32> %res
 }
@@ -178,6 +221,61 @@ define <2 x i64> @smulh_v2i64(<2 x i64> %a0, <2 x i64> %a1) nounwind {
 ; AVX-NEXT:    vmovq %rdx, %xmm0
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; AVX-NEXT:    retq
+;
+; X86-LABEL: smulh_v2i64:
+; X86:       # %bb.0:
+; X86-NEXT:    subl $32, %esp
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    movdqu %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-NEXT:    movdqa %xmm0, %xmm6
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,3,2,3]
+; X86-NEXT:    movdqa %xmm2, %xmm4
+; X86-NEXT:    psrad $31, %xmm4
+; X86-NEXT:    pshufd {{.*#+}} xmm3 = xmm4[1,3,2,3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
+; X86-NEXT:    movdqa %xmm0, %xmm3
+; X86-NEXT:    pmuludq %xmm1, %xmm3
+; X86-NEXT:    movdqu %xmm3, (%esp) # 16-byte Spill
+; X86-NEXT:    psrlq $32, %xmm4
+; X86-NEXT:    movdqa %xmm4, %xmm3
+; X86-NEXT:    pmuludq %xmm1, %xmm3
+; X86-NEXT:    pmuludq %xmm1, %xmm2
+; X86-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[1,3,2,3]
+; X86-NEXT:    psrad $31, %xmm1
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[1,3,2,3]
+; X86-NEXT:    punpckldq {{.*#+}} xmm7 = xmm7[0],xmm5[0],xmm7[1],xmm5[1]
+; X86-NEXT:    movdqu {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
+; X86-NEXT:    pmuludq %xmm7, %xmm5
+; X86-NEXT:    psrlq $32, %xmm1
+; X86-NEXT:    pmuludq %xmm1, %xmm6
+; X86-NEXT:    psllq $32, %xmm6
+; X86-NEXT:    paddq %xmm5, %xmm6
+; X86-NEXT:    psllq $32, %xmm3
+; X86-NEXT:    movdqu (%esp), %xmm5 # 16-byte Reload
+; X86-NEXT:    paddq %xmm5, %xmm3
+; X86-NEXT:    psrlq $32, %xmm2
+; X86-NEXT:    paddq %xmm3, %xmm2
+; X86-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[1,3,2,3]
+; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm2
+; X86-NEXT:    paddq %xmm6, %xmm2
+; X86-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; X86-NEXT:    movdqa %xmm2, %xmm3
+; X86-NEXT:    psrad $31, %xmm3
+; X86-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1]
+; X86-NEXT:    movdqa %xmm5, %xmm3
+; X86-NEXT:    psrad $31, %xmm3
+; X86-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; X86-NEXT:    paddq %xmm2, %xmm5
+; X86-NEXT:    movdqa %xmm0, %xmm2
+; X86-NEXT:    pmuludq %xmm7, %xmm2
+; X86-NEXT:    pmuludq %xmm7, %xmm4
+; X86-NEXT:    pmuludq %xmm1, %xmm0
+; X86-NEXT:    paddq %xmm4, %xmm0
+; X86-NEXT:    psllq $32, %xmm0
+; X86-NEXT:    paddq %xmm2, %xmm0
+; X86-NEXT:    paddq %xmm5, %xmm0
+; X86-NEXT:    addl $32, %esp
+; X86-NEXT:    retl
   %res = call <2 x i64> @llvm.smulh.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   ret <2 x i64> %res
 }

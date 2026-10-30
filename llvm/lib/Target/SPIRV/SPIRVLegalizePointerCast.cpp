@@ -236,12 +236,14 @@ class SPIRVLegalizePointerCastImpl {
       Value *Handle = ResourcePtr->getOperand(0);
       Value *BaseOffset = ResourcePtr->getOperand(1);
       Value *NewOffset;
-      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset))
+      if (auto *CI = dyn_cast<ConstantInt>(BaseOffset)) {
         NewOffset =
             ConstantInt::get(CI->getType(), CI->getZExtValue() + ByteOffset);
-      else
+      } else {
         NewOffset = B.CreateAdd(
             BaseOffset, ConstantInt::get(BaseOffset->getType(), ByteOffset));
+        buildAssignType(B, NewOffset->getType(), NewOffset);
+      }
       SmallVector<OperandBundleDef> OpBundles;
       ResourcePtr->getOperandBundlesAsDefs(OpBundles);
       CallInst *ResourcePtrAtOffset = B.CreateCall(
@@ -698,7 +700,6 @@ class SPIRVLegalizePointerCastImpl {
       Src =
           B.CreateIntrinsic(Intrinsic::spv_bitcast, {DstType, SrcType}, {Src});
       buildAssignType(B, DstType, Src);
-      SrcType = DstType;
 
       StoreInst *SI = B.CreateStore(Src, Dst);
       SI->setAlignment(Alignment);

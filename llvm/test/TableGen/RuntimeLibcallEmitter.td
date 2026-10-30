@@ -58,15 +58,19 @@ def isBlahArch : RuntimeLibcallAvailability<(all_of IsBlahArch)>;
 def hasCompilerRT : RuntimeLibcallAvailability<(all_of HasCompilerRT)>;
 
 
-def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch,
-  (add LibmLibcalls, calloc, CompilerRTLibcalls)>;
+def SimpleLibc : LibcallLibrary<"libc",
+  (add LibmLibcalls, calloc, CompilerRTLibcalls), isSimpleArch>;
+def SimpleLibrary : SystemRuntimeLibrary<isSimpleArch, ["libc"]>;
 
 
 def LibraryWithConditionalFunc : LibcallImpls<(add sqrtl_f128, bzero, AvailableIf<___memset, isBarOS>)>;
 
-def FooLibrary : SystemRuntimeLibrary<isFooArch, (add LibraryWithConditionalFunc)>;
+def FooLibc : LibcallLibrary<"libc", (add LibraryWithConditionalFunc), isFooArch>;
+def FooLibrary : SystemRuntimeLibrary<isFooArch, ["libc"]>;
 
-def BuzzLibrary : SystemRuntimeLibrary<isBuzzArch, (add sqrtl_f80, CompilerRTLibcalls)>;
+def BuzzLibc : LibcallLibrary<"libc", (add sqrtl_f80, CompilerRTLibcalls),
+                           isBuzzArch>;
+def BuzzLibrary : SystemRuntimeLibrary<isBuzzArch, ["libc"]>;
 
 
 
@@ -75,7 +79,10 @@ def LibraryWithConditionalSet : LibcallImpls<(add sqrtl_f128, bzero,
 
 
 
-def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithConditionalSet, AvailableIf<___memset, isBarOS>)>;
+def BlahLibc : LibcallLibrary<"libc",
+  (add calloc, LibraryWithConditionalSet, AvailableIf<___memset, isBarOS>),
+  isBlahArch>;
+def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 
 
 
@@ -118,14 +125,22 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  Floating,
 // CHECK-NEXT:  Flt,
 // CHECK-NEXT:  Int,
+// CHECK-NEXT:  Int8,
 // CHECK-NEXT:  Int16,
 // CHECK-NEXT:  Int32,
 // CHECK-NEXT:  Int64,
+// CHECK-NEXT:  Int128,
 // CHECK-NEXT:  IntPlus,
 // CHECK-NEXT:  IntX,
 // CHECK-NEXT:  LDbl,
 // CHECK-NEXT:  LLong,
 // CHECK-NEXT:  Long,
+// CHECK-NEXT:  NXV2F64,
+// CHECK-NEXT:  NXV2I1,
+// CHECK-NEXT:  NXV2I32,
+// CHECK-NEXT:  NXV4F32,
+// CHECK-NEXT:  NXV4I1,
+// CHECK-NEXT:  NXV4I32,
 // CHECK-NEXT:  Ptr,
 // CHECK-NEXT:  SSizeT,
 // CHECK-NEXT:  Same,
@@ -139,8 +154,24 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:  UIntX,
 // CHECK-NEXT:  ULLong,
 // CHECK-NEXT:  ULong,
+// CHECK-NEXT:  V2F32,
+// CHECK-NEXT:  V2F64,
+// CHECK-NEXT:  V2I32,
+// CHECK-NEXT:  V4F32,
+// CHECK-NEXT:  V4F64,
+// CHECK-NEXT:  V4I32,
+// CHECK-NEXT:  V8F32,
+// CHECK-NEXT:  V8F64,
+// CHECK-NEXT:  V8I32,
+// CHECK-NEXT:  V16F32,
+// CHECK-NEXT:  V16I32,
 // CHECK-NEXT:  Void,
 // CHECK-NEXT:};
+// CHECK-EMPTY:
+// CHECK-NEXT: enum class RuntimeLibrary : unsigned char {
+// CHECK-NEXT:   UnknownLibrary = 0,
+// CHECK-NEXT:   libc,
+// CHECK-NEXT: };
 // CHECK-NEXT: } // End namespace RTLIB
 // CHECK-NEXT: } // End namespace llvm
 // CHECK-EMPTY:
@@ -252,130 +283,143 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, (add calloc, LibraryWithCondi
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT:const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
-// CHECK-NEXT:  13, // BZERO
-// CHECK-NEXT:  17, // CALLOC
-// CHECK-NEXT:  8, // MEMCPY
-// CHECK-NEXT:  3, // MEMSET
-// CHECK-NEXT:  2, // SHL_I32
-// CHECK-NEXT:  2, // SQRT_F80
-// CHECK-NEXT:  0, // SQRT_F128
-// CHECK-NEXT:  2, // SRL_I64
+// CHECK-NEXT:  2, // RTLIB::Unsupported
+// CHECK-NEXT:  8, // RTLIB::impl____memcpy
+// CHECK-NEXT:  3, // RTLIB::impl____memset
+// CHECK-NEXT:  2, // RTLIB::impl___ashlsi3
+// CHECK-NEXT:  2, // RTLIB::impl___lshrdi3
+// CHECK-NEXT:  13, // RTLIB::impl_bzero
+// CHECK-NEXT:  17, // RTLIB::impl_calloc
+// CHECK-NEXT:  0, // RTLIB::impl_sqrtl_f128
+// CHECK-NEXT:  2, // RTLIB::impl_sqrtl_f80
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT:#endif // GET_INIT_RUNTIME_LIBCALL_SIGNATURES
 
-// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat) {
-// CHECK-EMPTY:
-// CHECK-NEXT: if (TT.getArch() == Triple::blah) {
-// CHECK-NEXT:     static constexpr LibcallImplBitset SystemAvailableImpls({
-// CHECK-NEXT:       0x000000000000e0
-// CHECK-NEXT:     });
-// CHECK-NEXT:     AvailableLibcallImpls = SystemAvailableImpls;
-// CHECK-EMPTY:
-// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl_bzero, // bzero
-// CHECK-NEXT:        RTLIB::impl_calloc, // calloc
-// CHECK-NEXT:        RTLIB::impl_sqrtl_f128, // sqrtl
-// CHECK-NEXT:    };
-// CHECK-EMPTY:
-// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
-// CHECK-NEXT:      setAvailable(Impl);
-// CHECK-NEXT:    }
-// CHECK-EMPTY:
-// CHECK-NEXT:    if (TT.hasCompilerRT()) {
-// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_hasCompilerRT[] = {
-// CHECK-NEXT:          RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:          RTLIB::impl___lshrdi3, // __lshrdi3
-// CHECK-NEXT:      };
-// CHECK-EMPTY:
-// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_hasCompilerRT) {
-// CHECK-NEXT:        setAvailable(Impl);
-// CHECK-NEXT:      }
-// CHECK-EMPTY:
-// CHECK-NEXT:    }
-// CHECK-EMPTY:
-// CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
-// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_isBarOS[] = {
-// CHECK-NEXT:          RTLIB::impl____memset, // ___memset
-// CHECK-NEXT:      };
-// CHECK-EMPTY:
-// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_isBarOS) {
-// CHECK-NEXT:        setAvailable(Impl);
-// CHECK-NEXT:      }
-// CHECK-EMPTY:
-// CHECK-NEXT:    }
-// CHECK-EMPTY:
-// CHECK-NEXT:   return;
+// CHECK:      RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getUnmaskedVectorLibcall(RTLIB::Libcall LC) {
+// CHECK-NEXT:   switch (LC) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
+// CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-EMPTY:
-// CHECK-NEXT: if (TT.getArch() == Triple::buzz) {
-// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
-// CHECK-NEXT:      0x00000000000118
-// CHECK-NEXT:    });
-// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
-// CHECK-EMPTY:
-// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:        RTLIB::impl_sqrtl_f80, // sqrtl
-// CHECK-NEXT:        RTLIB::impl___lshrdi3, // __lshrdi3
-// CHECK-NEXT:    };
-// CHECK-EMPTY:
-// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
-// CHECK-NEXT:      setAvailable(Impl);
-// CHECK-NEXT:    }
-// CHECK-EMPTY:
-// CHECK-NEXT:   return;
+// CHECK-NEXT: RTLIB::Libcall RTLIB::RuntimeLibcallsInfo::getMaskedVectorLibcall(RTLIB::Libcall LC) {
+// CHECK-NEXT:   switch (LC) {
+// CHECK-NEXT:   default:
+// CHECK-NEXT:     return RTLIB::UNKNOWN_LIBCALL;
+// CHECK-NEXT:   }
 // CHECK-NEXT: }
+
+// CHECK: void llvm::RTLIB::RuntimeLibcallsInfo::setAvailableLibFuncs_libc(const llvm::Triple &TT, ExceptionHandling ExceptionModel, FloatABI::ABIType FloatABI, StringRef ABIName, LongDoubleFormat LongDoubleFormat, CallingConv::ID DefaultCC) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl_bzero, // bzero
+// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f128, // sqrtl
+// CHECK-NEXT:     };
 // CHECK-EMPTY:
-// CHECK-NEXT: if (TT.getArch() == Triple::foo) {
-// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
-// CHECK-NEXT:      0x000000000000a0
-// CHECK-NEXT:    });
-// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
 // CHECK-EMPTY:
-// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl_bzero, // bzero
-// CHECK-NEXT:        RTLIB::impl_sqrtl_f128, // sqrtl
-// CHECK-NEXT:    };
+// CHECK-NEXT:     if (TT.hasCompilerRT()) {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_hasCompilerRT[] = {
+// CHECK-NEXT:           RTLIB::impl___ashlsi3, // __ashlsi3
+// CHECK-NEXT:           RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:       };
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
-// CHECK-NEXT:      setAvailable(Impl);
-// CHECK-NEXT:    }
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_hasCompilerRT) {
+// CHECK-NEXT:         setAvailable(Impl);
+// CHECK-NEXT:       }
 // CHECK-EMPTY:
-// CHECK-NEXT:    if (TT.getOS() == Triple::bar) {
-// CHECK-NEXT:      static const RTLIB::LibcallImpl LibraryCalls_isBarOS[] = {
-// CHECK-NEXT:          RTLIB::impl____memset, // ___memset
-// CHECK-NEXT:      };
+// CHECK-NEXT:     }
 // CHECK-EMPTY:
-// CHECK-NEXT:      for (const RTLIB::LibcallImpl Impl : LibraryCalls_isBarOS) {
-// CHECK-NEXT:        setAvailable(Impl);
-// CHECK-NEXT:      }
+// CHECK-NEXT:     if (TT.getOS() == Triple::bar) {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_isBarOS[] = {
+// CHECK-NEXT:           RTLIB::impl____memset, // ___memset
+// CHECK-NEXT:       };
 // CHECK-EMPTY:
-// CHECK-NEXT:    }
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_isBarOS) {
+// CHECK-NEXT:         setAvailable(Impl);
+// CHECK-NEXT:       }
 // CHECK-EMPTY:
-// CHECK-NEXT:    return;
-// CHECK-NEXT:  }
+// CHECK-NEXT:     }
 // CHECK-EMPTY:
-// CHECK-NEXT: if (TT.getArch() == Triple::simple) {
-// CHECK-NEXT:    static constexpr LibcallImplBitset SystemAvailableImpls({
-// CHECK-NEXT:      0x00000000000158
-// CHECK-NEXT:    });
-// CHECK-NEXT:    AvailableLibcallImpls = SystemAvailableImpls;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
+// CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
+// CHECK-NEXT:     };
 // CHECK-EMPTY:
-// CHECK-NEXT:    static const RTLIB::LibcallImpl LibraryCalls[] = {
-// CHECK-NEXT:        RTLIB::impl_calloc, // calloc
-// CHECK-NEXT:        RTLIB::impl___ashlsi3, // __ashlsi3
-// CHECK-NEXT:        RTLIB::impl_sqrtl_f80, // sqrtl
-// CHECK-NEXT:        RTLIB::impl___lshrdi3, // __lshrdi3
-// CHECK-NEXT:    };
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
 // CHECK-EMPTY:
-// CHECK-NEXT:    for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
-// CHECK-NEXT:      setAvailable(Impl);
-// CHECK-NEXT:    }
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::foo) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl_bzero, // bzero
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f128, // sqrtl
+// CHECK-NEXT:     };
 // CHECK-EMPTY:
-// CHECK-NEXT:   return;
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:     if (TT.getOS() == Triple::bar) {
+// CHECK-NEXT:       static const RTLIB::LibcallImpl LibraryCalls_isBarOS[] = {
+// CHECK-NEXT:           RTLIB::impl____memset, // ___memset
+// CHECK-NEXT:       };
+// CHECK-EMPTY:
+// CHECK-NEXT:       for (const RTLIB::LibcallImpl Impl : LibraryCalls_isBarOS) {
+// CHECK-NEXT:         setAvailable(Impl);
+// CHECK-NEXT:       }
+// CHECK-EMPTY:
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
+// CHECK-NEXT:     static const RTLIB::LibcallImpl LibraryCalls[] = {
+// CHECK-NEXT:         RTLIB::impl___ashlsi3, // __ashlsi3
+// CHECK-NEXT:         RTLIB::impl___lshrdi3, // __lshrdi3
+// CHECK-NEXT:         RTLIB::impl_calloc, // calloc
+// CHECK-NEXT:         RTLIB::impl_sqrtl_f80, // sqrtl
+// CHECK-NEXT:     };
+// CHECK-EMPTY:
+// CHECK-NEXT:     for (const RTLIB::LibcallImpl Impl : LibraryCalls) {
+// CHECK-NEXT:       setAvailable(Impl);
+// CHECK-NEXT:     }
+// CHECK-EMPTY:
+// CHECK-NEXT:   }
 // CHECK-NEXT: }
-// CHECK-NEXT:  LLVM_DEBUG(dbgs() << "no system runtime library applied to target \'" << TT.str() << "\'\n");
+
+// CHECK-LABEL: ArrayRef<RTLIB::RuntimeLibrary> llvm::RTLIB::RuntimeLibcallsInfo::getDefaultRuntimeLibraries(const llvm::Triple &TT) {
+// CHECK-NEXT:   if (TT.getArch() == Triple::blah) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::buzz) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::foo) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   if (TT.getArch() == Triple::simple) {
+// CHECK-NEXT:     static constexpr RTLIB::RuntimeLibrary Libs[] = {
+// CHECK-NEXT:       RTLIB::RuntimeLibrary::libc,
+// CHECK-NEXT:     };
+// CHECK-NEXT:     return Libs;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
 // CHECK-NEXT: }
-// CHECK-EMPTY:
 // CHECK: #endif

@@ -269,6 +269,13 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsMetaTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsMeta.td"],
+    includes = ["include"],
+    deps = [":BuiltinsBaseTdFiles"],
+)
+
+td_library(
     name = "BuiltinsAArch64BaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsAArch64Base.td"],
     includes = ["include"],
@@ -349,6 +356,14 @@ gentbl_cc_library(
         ":BuiltinsAMDGPUDocsTdFiles",
         ":BuiltinsBaseTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "basic_builtins_avr_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsAVR.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsAVR.td",
+    deps = [":BuiltinsBaseTdFiles"],
 )
 
 gentbl_cc_library(
@@ -476,7 +491,10 @@ gentbl_cc_library(
     tbl_outs = {"include/clang/Basic/Builtins.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/Builtins.td",
-    deps = [":BuiltinsBaseTdFiles"],
+    deps = [
+        ":BuiltinsBaseTdFiles",
+        ":BuiltinsMetaTdFiles",
+    ],
 )
 
 gentbl_cc_library(
@@ -663,6 +681,7 @@ td_library(
     includes = ["include"],
     deps = [
         "//mlir:BuiltinDialectTdFiles",
+        "//mlir:BytecodeTdFiles",
         "//mlir:ControlFlowInterfacesTdFiles",
         "//mlir:FunctionInterfacesTdFiles",
         "//mlir:InferTypeOpInterfaceTdFiles",
@@ -700,6 +719,19 @@ gentbl_cc_library(
     },
     tblgen = "//mlir:mlir-tblgen",
     td_file = "include/clang/CIR/Dialect/IR/CIROps.td",
+    deps = [":CIRTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MLIRCIRDialectBytecodeIncGen",
+    tbl_outs = {
+        "include/clang/CIR/Dialect/IR/CIRDialectBytecode.cpp.inc": [
+            "-gen-bytecode",
+            "-bytecode-dialect=CIR",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "include/clang/CIR/Dialect/IR/CIRDialectBytecode.td",
     deps = [":CIRTdFiles"],
 )
 
@@ -922,6 +954,7 @@ cc_library(
         ":basic_builtins_aarch64_gen",
         ":basic_builtins_amdgpu_gen",
         ":basic_builtins_arm_gen",
+        ":basic_builtins_avr_gen",
         ":basic_builtins_bpf_gen",
         ":basic_builtins_directx_gen",
         ":basic_builtins_gen",
@@ -1822,6 +1855,7 @@ cc_library(
     srcs = glob(
         [
             "lib/Driver/*.cpp",
+            "lib/Driver/*.h",
             "lib/Driver/ToolChains/*.cpp",
             "lib/Driver/ToolChains/*.h",
             "lib/Driver/ToolChains/Arch/*.cpp",
@@ -1977,6 +2011,7 @@ builtin_headers = glob(
     "lib/Headers/cuda_wrappers/algorithm",
     "lib/Headers/cuda_wrappers/complex",
     "lib/Headers/cuda_wrappers/new",
+    "lib/Headers/meta",
     "lib/Headers/module.modulemap",
     "lib/Headers/openmp_wrappers/cmath",
     "lib/Headers/openmp_wrappers/complex",
@@ -3075,7 +3110,10 @@ cc_library(
 cc_library(
     name = "cir_dialect",
     srcs = glob(
-        ["lib/CIR/Dialect/IR/*.cpp"],
+        [
+            "lib/CIR/Dialect/IR/*.cpp",
+            "lib/CIR/Dialect/IR/*.h",
+        ],
         exclude = ["lib/CIR/Dialect/IR/CIRMemorySlot.cpp"],
     ),
     hdrs = glob([
@@ -3084,6 +3122,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
+        ":MLIRCIRDialectBytecodeIncGen",
         ":MLIRCIREnumsGen",
         ":MLIRCIRLoopOpInterfaceIncGen",
         ":MLIRCIROpInterfacesIncGen",
@@ -3149,6 +3188,7 @@ cc_library(
         ":cir_dialect",
         ":cir_openacc_support",
         ":cir_openmp_support",
+        "//mlir:ArithDialect",
         "//mlir:DLTIDialect",
         "//mlir:IR",
         "//mlir:LLVMDialect",
@@ -3186,6 +3226,7 @@ cc_library(
         ":cir_dialect",
         ":cir_headers",
         ":cir_interfaces",
+        "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//mlir:ABI",
@@ -3363,6 +3404,7 @@ cc_library(
         ":cir_transforms",
         "//llvm:Core",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//mlir:BuiltinToLLVMIRTranslation",
         "//mlir:DLTIDialect",
         "//mlir:DataLayoutInterfaces",

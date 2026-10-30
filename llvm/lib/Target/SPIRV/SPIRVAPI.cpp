@@ -11,7 +11,6 @@
 #include "SPIRVTargetMachine.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -22,7 +21,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
@@ -113,10 +111,6 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
-  std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
-      new MachineModuleInfoWrapperPass(Target.get()));
-  Target->getObjFileLowering()->Initialize(MMIWP->getMMI().getContext(),
-                                           *Target);
 
   SmallString<4096> OutBuffer;
   raw_svector_ostream OutStream(OutBuffer);

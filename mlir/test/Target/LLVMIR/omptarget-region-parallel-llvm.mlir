@@ -41,7 +41,7 @@ module attributes {omp.is_target_device = false} {
 // CHECK: call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @{{.*}}, i32 1, ptr @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]]..omp_par, ptr %[[STRUCTARG]])
 
 
-// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]]..omp_par(ptr noalias %tid.addr, ptr noalias %zero.addr, ptr %[[STRUCTARG2:.*]]) #0 {
+// CHECK: define internal void @__omp_offloading_[[DEV]]_[[FIL]]_omp_target_region__l[[LINE]]..omp_par(ptr noalias %tid.addr, ptr noalias %zero.addr, ptr noalias nofreeobj %[[STRUCTARG2:.*]]) #0 {
 // CHECK: %[[GEP4:.*]] = getelementptr { ptr, ptr, ptr }, ptr %[[STRUCTARG2]], i32 0, i32 0
 // CHECK: %[[LOADGEP1:.*]] = load ptr, ptr %[[GEP4]], align 8
 // CHECK: %[[GEP5:.*]] = getelementptr { ptr, ptr, ptr }, ptr %0, i32 0, i32 1

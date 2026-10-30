@@ -242,8 +242,6 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
-  bool isWin64Prologue(const MachineFunction &MF) const;
-
   bool needsDwarfCFI(const MachineFunction &MF) const;
 
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;

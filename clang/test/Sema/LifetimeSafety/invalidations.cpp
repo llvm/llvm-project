@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wno-dangling -verify %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -164,7 +164,7 @@ void NoIteratorInvalidationInAWhileLoopErase(std::unordered_map<int, int> mp) {
 void IteratorInvalidationInAForeachLoop(std::vector<int> v) {
   for (int& x : v) { // expected-warning {{parameter 'v' is later invalidated}} \
                      // expected-note {{later used here}} \
-                     // expected-note {{result of call to 'end' aliases the storage of parameter 'v'}}
+                     // expected-note {{result of call to 'begin' aliases the storage of parameter 'v'}}
     if (x % 2 == 0) {
       v.erase(std::find(v.begin(), v.end(), 1)); // expected-note {{parameter 'v' is invalidated here}}
     }
@@ -556,7 +556,7 @@ void IteratorFromPointerToContainerIsInvalidated() {
 void ChangingRegionOwnedByContainerIsOk() {
   std::vector<std::string> subdirs;
   for (std::string& path : subdirs) // expected-warning {{local variable 'subdirs' is later invalidated}} expected-note {{later used here}} \
-                                    // expected-note {{result of call to 'end' aliases the storage of local variable 'subdirs'}}
+                                    // expected-note {{result of call to 'begin' aliases the storage of local variable 'subdirs'}}
     path = std::string();           // expected-note {{local variable 'subdirs' is invalidated here}}
 }
 
@@ -992,3 +992,20 @@ void invalid_after_ternary_reset(bool flag) {
 }
 
 } // namespace unique_ptr_invalidation
+
+namespace CapturedByThis {
+struct S {
+  void store(const std::string &s [[clang::lifetime_capture_by_this]]);
+
+  void InvalidatedParam(std::string &s) { // expected-warning {{parameter 's' is later invalidated}}
+    store(s);
+    s.clear(); // expected-note {{parameter 's' is invalidated here}}
+  }            // expected-note {{later used here}}
+
+  void InvalidatedLocal() {
+    std::string s;
+    store(s);  // expected-warning {{local variable 's' is later invalidated}}
+    s.clear(); // expected-note {{local variable 's' is invalidated here}}
+  }            // expected-note {{later used here}}
+};
+} // namespace CapturedByThis

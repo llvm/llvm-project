@@ -19,7 +19,3 @@ define i16 @test_dynamic_area_too_small() {
   %res = call i16 @llvm.get.dynamic.area.offset.i16()
   ret i16 %res
 }
-
-; CHECK: intrinsic return type (overload type 0) expected any integer type, but got <2 x i32>
-; CHECK-NEXT: declare <2 x i32> @llvm.get.dynamic.area.offset.v2i32()
-declare <2 x i32> @llvm.get.dynamic.area.offset.v2i32()

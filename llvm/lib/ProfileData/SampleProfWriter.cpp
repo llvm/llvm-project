@@ -176,6 +176,45 @@ std::error_code SampleProfileWriter::write(const SampleProfileMap &ProfileMap) {
   return sampleprof_error::success;
 }
 
+SmallVector<SecHdrTableEntry, 8>
+SampleProfileWriterExtBinaryBase::getExtBinaryHdrLayout(SectionLayout SL) {
+  // Note that SecFuncOffsetTable section is written after SecLBRProfile in the
+  // profile, but is put before SecLBRProfile in SectionHdrLayout. This is
+  // because sample reader follows the order in SectionHdrLayout to read each
+  // section. To read function profiles on demand, sample reader need to get the
+  // offset of each function profile first.
+  switch (SL) {
+  case DefaultLayout:
+    return {
+        {SecProfSummary, 0, 0, 0, 0},  {SecNameTable, 0, 0, 0, 0},
+        {SecCSNameTable, 0, 0, 0, 0},  {SecFuncOffsetTable, 0, 0, 0, 0},
+        {SecLBRProfile, 0, 0, 0, 0},   {SecProfileSymbolList, 0, 0, 0, 0},
+        {SecFuncMetadata, 0, 0, 0, 0}, {SecDataAccessProfile, 0, 0, 0, 0},
+    };
+  case CtxSplitLayout:
+    return {
+        {SecProfSummary, 0, 0, 0, 0},
+        {SecNameTable, 0, 0, 0, 0},
+        // profile with inlined functions
+        // for next two sections
+        {SecFuncOffsetTable, 0, 0, 0, 0},
+        {SecLBRProfile, 0, 0, 0, 0},
+        // profile without inlined functions
+        // for next two sections
+        {SecFuncOffsetTable, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat),
+         0, 0, 0},
+        {SecLBRProfile, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat), 0,
+         0, 0},
+        {SecProfileSymbolList, 0, 0, 0, 0},
+        {SecFuncMetadata, 0, 0, 0, 0},
+        {SecDataAccessProfile, 0, 0, 0, 0},
+    };
+  case NumOfLayout:
+    break;
+  }
+  llvm_unreachable("Unsupported layout");
+}
+
 /// Return the current position and prepare to use it as the start
 /// position of a section given the section type \p Type and its position
 /// \p LayoutIdx in SectionHdrLayout.
@@ -756,7 +795,7 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
   SampleProfileMap NestedProfileMap, FlatProfileMap;
   splitProfileMapToTwo(ProfileMap, NestedProfileMap, FlatProfileMap);
 
-  // Flat SecFlag is pre-set in ExtBinaryHdrLayoutTable; findUnwrittenEntry
+  // Flat SecFlag is pre-set in getExtBinaryHdrLayout; findUnwrittenEntry
   // picks the matching unwritten ProfSection / FuncOffsetSection slot.
   const std::pair<SecType, const SampleProfileMap &> Sections[] = {
       {SecProfSummary, ProfileMap},       {SecNameTable, ProfileMap},

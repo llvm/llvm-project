@@ -994,21 +994,21 @@ std::vector<ArchSpec> PlatformDarwinKernel::GetSupportedArchitectures(
 }
 
 void PlatformDarwinKernel::CalculateTrapHandlerSymbolNames() {
-  m_trap_handlers.push_back(ConstString("trap_from_kernel"));
-  m_trap_handlers.push_back(ConstString("hndl_machine_check"));
-  m_trap_handlers.push_back(ConstString("hndl_double_fault"));
-  m_trap_handlers.push_back(ConstString("hndl_allintrs"));
-  m_trap_handlers.push_back(ConstString("hndl_alltraps"));
-  m_trap_handlers.push_back(ConstString("interrupt"));
-  m_trap_handlers.push_back(ConstString("fleh_prefabt"));
-  m_trap_handlers.push_back(ConstString("ExceptionVectorsBase"));
-  m_trap_handlers.push_back(ConstString("ExceptionVectorsTable"));
-  m_trap_handlers.push_back(ConstString("fleh_undef"));
-  m_trap_handlers.push_back(ConstString("fleh_dataabt"));
-  m_trap_handlers.push_back(ConstString("fleh_irq"));
-  m_trap_handlers.push_back(ConstString("fleh_decirq"));
-  m_trap_handlers.push_back(ConstString("fleh_fiq_generic"));
-  m_trap_handlers.push_back(ConstString("fleh_dec"));
+  m_trap_handlers.push_back("trap_from_kernel");
+  m_trap_handlers.push_back("hndl_machine_check");
+  m_trap_handlers.push_back("hndl_double_fault");
+  m_trap_handlers.push_back("hndl_allintrs");
+  m_trap_handlers.push_back("hndl_alltraps");
+  m_trap_handlers.push_back("interrupt");
+  m_trap_handlers.push_back("fleh_prefabt");
+  m_trap_handlers.push_back("ExceptionVectorsBase");
+  m_trap_handlers.push_back("ExceptionVectorsTable");
+  m_trap_handlers.push_back("fleh_undef");
+  m_trap_handlers.push_back("fleh_dataabt");
+  m_trap_handlers.push_back("fleh_irq");
+  m_trap_handlers.push_back("fleh_decirq");
+  m_trap_handlers.push_back("fleh_fiq_generic");
+  m_trap_handlers.push_back("fleh_dec");
 }
 
 #endif // __APPLE__

@@ -27,7 +27,7 @@ elseif(LLVM_LIBC_FULL_BUILD)
   list(APPEND libc_archive_names c m mvec)
   list(APPEND libc_archive_targets libc libm libmvec)
   list(APPEND libc_archive_entrypoint_lists
-       TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
+    TARGET_LIBC_ENTRYPOINTS TARGET_LIBM_ENTRYPOINTS TARGET_LIBMVEC_ENTRYPOINTS)
 else()
   list(APPEND libc_archive_names llvmlibc)
   list(APPEND libc_archive_targets libc)
@@ -66,13 +66,7 @@ foreach(archive IN ZIP_LISTS
     add_bitcode_entrypoint_library(
       ${archive_1}bitcode
       ${archive_1}
-      DEPENDS
-        ${${archive_2}}
-    )
-    set_target_properties(
-      ${archive_1}bitcode
-      PROPERTIES
-        OUTPUT_NAME ${archive_1}.bc
+      OUTPUT_NAME ${archive_1}.bc
     )
     list(APPEND added_bitcode_targets ${archive_1}bitcode)
   endif()
@@ -107,7 +101,6 @@ install(
 foreach(file ${added_bitcode_targets})
   install(FILES $<TARGET_PROPERTY:${file},TARGET_FILE>
     DESTINATION ${LIBC_INSTALL_LIBRARY_DIR}
-    RENAME $<TARGET_PROPERTY:${file},OUTPUT_NAME>
     COMPONENT libc
   )
 endforeach()

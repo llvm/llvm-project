@@ -16,8 +16,8 @@ __attribute__((noinline)) void log_it(const char *fmt, int v) {
 int main(void) {
   log_it("value=%y\n", 42);
   // CHECK: WARNING: unexpected format specifier in printf interceptor: %y
-  // CHECK: {{ }}log_it
-  // CHECK: {{ }}main
+  // CHECK: {{ \.?}}log_it
+  // CHECK: {{ \.?}}main
   printf("done\n");
   // CHECK: done
   return 0;

@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/is_integer.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -89,7 +90,7 @@ LIBC_INLINE float lgammaf(float x) {
   }
 
   // Negative integers and lgamma(1) = lgamma(2) = 0.
-  if (LIBC_UNLIKELY(is_integer(x))) {
+  if (LIBC_UNLIKELY(fputil::is_integer(x))) {
     if (xbits.is_neg()) {
       fputil::raise_except_if_required(FE_DIVBYZERO);
       fputil::set_errno_if_required(ERANGE);

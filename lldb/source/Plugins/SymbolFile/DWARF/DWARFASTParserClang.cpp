@@ -1748,6 +1748,20 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
   unique_typename = ConstString(qualified_name);
 }
 
+/// The ASTImporter copies attributes only when a decl is first imported, so
+/// this must run before the decl is imported into an expression context.
+static void ApplyObjCRuntimeName(const DWARFDIE &die, CompilerType type) {
+  clang::ObjCInterfaceDecl *decl =
+      TypeSystemClang::GetAsObjCInterfaceDecl(type);
+  if (!decl)
+    return;
+  if (const char *runtime_name =
+          DWARFASTParser::GetAnnotation(die, "objc_runtime_name")
+              .GetAttributeValueAsString(DW_AT_const_value, nullptr))
+    decl->addAttr(clang::ObjCRuntimeNameAttr::CreateImplicit(
+        decl->getASTContext(), runtime_name));
+}
+
 TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
     const SymbolContext &sc, const DWARFDIE &die,
     const ParsedDWARFTypeAttributes &attrs) {
@@ -1905,6 +1919,7 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
     clang_type = m_ast.CreateRecordType(
         containing_decl_ctx, GetOwningClangModule(die), attrs.name.GetCString(),
         tag_decl_kind, attrs.class_language, metadata, attrs.exports_symbols);
+    ApplyObjCRuntimeName(die, clang_type);
   }
 
   TypeSP type_sp = dwarf->MakeType(

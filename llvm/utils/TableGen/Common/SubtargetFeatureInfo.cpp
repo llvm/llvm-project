@@ -222,7 +222,7 @@ bool llvm::getRequiredFeatures(
       continue;
     }
     const RecordVal *V = R->getValue("AssemblerCondDag");
-    if (!V || !V->getValue() || !isa<DagInit>(V->getValue())) {
+    if (!V || !isa<DagInit>(V->getValue())) {
       // Ignore this predicate for semantic analysis, as it has no subtarget
       // features.
       AllPredicatesParsed = false;
@@ -230,17 +230,20 @@ bool llvm::getRequiredFeatures(
     }
     const DagInit *D = cast<DagInit>(V->getValue());
     std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
+    if (CombineType != "any_of" && CombineType != "all_of" &&
+        CombineType != "none_of")
       PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
     if (D->getNumArgs() == 0)
       PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
     bool IsOr = CombineType == "any_of";
+    bool IsNone = CombineType == "none_of";
     std::set<SubtargetFeatureLiteral> AnyOfSet;
 
     for (auto *Arg : D->getArgs()) {
-      bool IsNot = false;
+      bool IsNot = IsNone;
       if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
+        std::string NotOp = NotArg->getOperator()->getAsString();
+        if (IsNone || (NotOp != "not" && NotOp != "none_of") ||
             NotArg->getNumArgs() != 1)
           PrintFatalError(R->getLoc(), "Invalid AssemblerCondDag!");
         Arg = NotArg->getArg(0);

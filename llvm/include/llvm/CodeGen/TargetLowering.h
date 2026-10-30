@@ -360,13 +360,21 @@ public:
           IsPreallocated(false), IsReturned(false), IsSwiftSelf(false),
           IsSwiftAsync(false), IsSwiftError(false), IsCFGuardTarget(false) {}
 
-    explicit ArgListEntry(Value *Val, SDValue Node = SDValue())
-        : ArgListEntry(Val, Node, Val->getType()) {}
+    explicit ArgListEntry(Value *Val, SDValue Node = SDValue(),
+                          Attribute::AttrKind ExtAttr = Attribute::None)
+        : ArgListEntry(Val, Node, Val->getType()) {
+      setExtAttribute(ExtAttr);
+    }
 
-    ArgListEntry(SDValue Node, Type *Ty) : ArgListEntry(nullptr, Node, Ty) {}
+    ArgListEntry(SDValue Node, Type *Ty,
+                 Attribute::AttrKind ExtAttr = Attribute::None)
+        : ArgListEntry(nullptr, Node, Ty) {
+      setExtAttribute(ExtAttr);
+    }
 
     LLVM_ABI void setAttributes(const CallBase *Call, unsigned ArgIdx);
     LLVM_ABI void setAttributes(const AttributeList &Attrs, unsigned ArgIdx);
+    LLVM_ABI void setExtAttribute(Attribute::AttrKind Attr);
   };
   using ArgListTy = std::vector<ArgListEntry>;
 
@@ -1014,11 +1022,11 @@ public:
   virtual EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                                  EVT VT) const;
 
-  /// Return the ValueType for comparison libcalls. Comparison libcalls include
-  /// floating point comparison calls, and Ordered/Unordered check calls on
-  /// floating point numbers.
-  virtual MVT::SimpleValueType getCmpLibcallReturnType() const {
-    return MVT::i32; // return the default value
+  /// Return the integer type returned by comparison libcalls. Comparison
+  /// libcalls include floating point comparison calls, and Ordered/Unordered
+  /// check calls on floating point numbers.
+  virtual IntegerType *getCmpLibcallReturnType(LLVMContext &Ctx) const {
+    return Type::getInt32Ty(Ctx);
   }
 
   /// For targets without i1 registers, this gives the nature of the high-bits
@@ -1289,12 +1297,28 @@ public:
                                   const CallBase &I, MachineFunction &MF,
                                   unsigned Intrinsic) const {}
 
-  /// Returns true if the target can instruction select the specified FP
-  /// immediate natively. If false, the legalizer will materialize the FP
-  /// immediate as a load from a constant pool.
-  virtual bool isFPImmLegal(const APFloat & /*Imm*/, EVT /*VT*/,
-                            bool ForCodeSize = false) const {
-    return false;
+  /// How the legalizer should materialize a floating-point immediate.
+  enum class FPImmAction {
+    /// The target can instruction select the immediate natively.
+    Legal,
+    /// Build the immediate as a bitcast of an integer constant with the same
+    /// bits.
+    Bitcast,
+    /// Load the immediate from the constant pool.
+    ConstantPool,
+  };
+
+  /// Returns how the legalizer should materialize the specified FP immediate.
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, EVT /*VT*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
+  /// Returns true if the specified FP immediate can be materialized without a
+  /// load from the constant pool.
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize = false) const {
+    return getFPImmAction(Imm, VT, ForCodeSize) != FPImmAction::ConstantPool;
   }
 
   /// Targets can use this to indicate that they only support *some*
@@ -1762,6 +1786,10 @@ public:
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
            Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
+    // If the inputs aren't simple (e.g. non-power-of-two element type), just
+    // expand.
+    if (!AccVT.isSimple() || !InputVT.isSimple())
+      return Expand;
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -2321,6 +2349,11 @@ public:
     return false;
   }
 
+  /// Whether a fence between the load-linked and the store-conditional can
+  /// clear the reservation. If true, AtomicExpandPass places the release fence
+  /// of a weak cmpxchg before the load-linked. Defaults to false.
+  virtual bool fenceClearsLoadLinkedReservation() const { return false; }
+
   /// Whether AtomicExpandPass should automatically insert a seq_cst trailing
   /// fence without reducing the ordering for this atomic store. Defaults to
   /// false.
@@ -2539,9 +2572,12 @@ public:
   }
 
   /// Returns how the IR-level AtomicExpand pass should expand the given
-  /// AtomicRMW, if at all. Default is to never expand.
+  /// AtomicRMW, if at all. By default, elementwise operations are expanded and
+  /// floating-point operations use are expanded to a compare-exchange loop.
   virtual AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+    if (RMW->isElementwise())
+      return AtomicExpansionKind::Expand;
     if (RMW->isFloatingPointOperation())
       return AtomicExpansionKind::CmpXChg;
     if (RMW->getType()->isVectorTy())
@@ -3199,6 +3235,8 @@ public:
     case ISD::UREM:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
+    case ISD::AVGSUBFLOORS:
+    case ISD::AVGSUBFLOORU:
     case ISD::FSUB:
     case ISD::FDIV:
     case ISD::FREM:
@@ -3347,6 +3385,10 @@ public:
   virtual bool
   optimizeExtendOrTruncateConversion(Instruction *I, Loop *L,
                                      const TargetTransformInfo &TTI) const {
+    return false;
+  }
+
+  virtual bool optimizeVectorCrossLaneOperation(Instruction *I, Loop *L) const {
     return false;
   }
 
@@ -5748,6 +5790,13 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand MODF node into fractional and integer parts.
+  /// \param N Node to expand
+  /// \param Results Vector to store the resulting fractional and integer parts
+  /// \returns true if the node has been expanded, false if it has not
+  bool expandMODF(SDNode *N, SelectionDAG &DAG,
+                  SmallVectorImpl<SDValue> &Results) const;
+
   /// Expand parallel bit extract (compress).
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
@@ -5891,6 +5940,11 @@ public:
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVectorFindLastActive(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand GET_ACTIVE_LANE_MASK nodes
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandGetActiveLaneMask(SDNode *N, SelectionDAG &DAG) const;
 
   /// Expand LOOP_DEPENDENCE_MASK nodes
   /// \param N Node to expand
@@ -6069,6 +6123,14 @@ public:
   /// Method for building the DAG expansion of ISD::VECTOR_SPLICE. This
   /// method accepts vectors as its arguments.
   SDValue expandVectorSplice(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_INTERLEAVE without introducing wider vector types.
+  void expandVectorInterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                              SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_DEINTERLEAVE without introducing wider vector types.
+  void expandVectorDeinterleave(SDNode *Node, SmallVectorImpl<SDValue> &Results,
+                                SelectionDAG &DAG) const;
 
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.

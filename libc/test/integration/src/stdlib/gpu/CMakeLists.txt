@@ -1,12 +1,11 @@
-add_custom_target(stdlib-gpu-integration-tests)
-add_dependencies(libc-integration-tests stdlib-gpu-integration-tests)
+add_libc_testsuite(libc-stdlib-gpu-integration-tests PARENT libc-stdlib-integration-tests)
 
 # TODO: Test on NVPTX, requires CUDA VMEM API.
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_integration_test(
     malloc
     SUITE
-      stdlib-gpu-integration-tests
+      libc-stdlib-gpu-integration-tests
     SRCS
       malloc.cpp
     DEPENDS
@@ -20,7 +19,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_integration_test(
     realloc
     SUITE
-      stdlib-gpu-integration-tests
+      libc-stdlib-gpu-integration-tests
     SRCS
       realloc.cpp
     DEPENDS
@@ -35,7 +34,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_integration_test(
     aligned_alloc
     SUITE
-      stdlib-gpu-integration-tests
+      libc-stdlib-gpu-integration-tests
     SRCS
       aligned_alloc.cpp
     DEPENDS
@@ -50,7 +49,7 @@ if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_integration_test(
     malloc_stress
     SUITE
-      stdlib-gpu-integration-tests
+      libc-stdlib-gpu-integration-tests
     SRCS
       malloc_stress.cpp
     DEPENDS

@@ -81,10 +81,9 @@ public:
   getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
 
   /// Map a clause-level intrinsic operator to the parser-level one, so callers
-  /// can build the operator's mangled reduction name
-  /// (MangledIntrinsicOperatorReductionName) that semantics stores a
-  /// user-defined intrinsic-operator reduction under. Only the operators a user
-  /// reduction may use are handled.
+  /// can build the operator's mangled reduction name (MakeNameFromOperator)
+  /// that semantics stores a user-defined intrinsic-operator reduction under.
+  /// Only the operators a user reduction may use are handled.
   static parser::DefinedOperator::IntrinsicOperator
   toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
 

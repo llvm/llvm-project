@@ -1693,7 +1693,7 @@ void SIWholeQuadMode::lowerInitExec(MachineInstr &MI) {
                    .addReg(CountReg)
                    .addImm(0);
   auto CmpMI = BuildMI(*MBB, FirstMI, DL, TII->get(AMDGPU::S_CMP_EQ_U32))
-                   .addReg(CountReg, RegState::Kill)
+                   .addReg(CountReg)
                    .addImm(WavefrontSize);
   auto CmovMI =
       BuildMI(*MBB, FirstMI, DL, TII->get(LMC.CMovOpc), LMC.ExecReg).addImm(-1);
