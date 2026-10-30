@@ -26849,6 +26849,26 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
   DenseMap<std::pair<Value *, Type *>, Value *> VectorCasts;
   SmallDenseSet<Value *, 4> ScalarsWithNullptrUser;
   SmallDenseSet<ExtractElementInst *, 4> IgnoredExtracts;
+  // The copyable lanes are equal to their scalars. The vector is reused only
+  // if its other lanes are extracted too.
+  SmallPtrSet<const TreeEntry *, 4> ExtractedEntries;
+  for (const ExternalUser &EU : ExternalUses)
+    ExtractedEntries.insert(&EU.E);
+  SmallDenseMap<Value *, const TreeEntry *> CopyableToEntry;
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (TE->State != TreeEntry::Vectorize || !TE->hasCopyableElements() ||
+        !ExtractedEntries.contains(TE.get()) || !TE->UserTreeIndex ||
+        !TE->UserTreeIndex.UserTE->hasState() ||
+        DeletedNodes.contains(TE.get()) ||
+        TransformedToGatherNodes.contains(TE.get()) ||
+        !isa_and_nonnull<Instruction>(TE->VectorizedValue) ||
+        TE->VectorizedValue->getType()->getScalarType() !=
+            TE->Scalars.front()->getType())
+      continue;
+    for (Value *V : TE->Scalars)
+      if (TE->isCopyableElement(V))
+        CopyableToEntry.try_emplace(V, TE.get());
+  }
   // Extract all of the elements with the external uses.
   for (const auto &ExternalUse : ExternalUses) {
     Value *Scalar = ExternalUse.Scalar;
@@ -27186,8 +27206,26 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
           }
         }
       } else {
-        Builder.SetInsertPoint(cast<Instruction>(User));
-        Value *NewInst = ExtractAndExtendIfNeeded(Vec);
+        auto *UserI = cast<Instruction>(User);
+        Builder.SetInsertPoint(UserI);
+        Value *NewInst = nullptr;
+        // A user, isomorphic to the user of the node with the copyable scalar,
+        // extracts it from that node, so other trees may reuse the vector.
+        if (const TreeEntry *CE = CopyableToEntry.lookup(Scalar)) {
+          const EdgeInfo &EI = CE->UserTreeIndex;
+          auto *CEVec = cast<Instruction>(CE->VectorizedValue);
+          if (UserI->getOpcode() == EI.UserTE->getOpcode() &&
+              EI.EdgeIdx < UserI->getNumOperands() &&
+              UserI->getOperand(EI.EdgeIdx) == Scalar &&
+              DT->dominates(CEVec, UserI)) {
+            NewInst = Builder.CreateExtractElement(
+                CEVec, CE->findLaneForValue(Scalar));
+            GatherShuffleExtractSeq.insert(cast<Instruction>(NewInst));
+            CSEBlocks.insert(UserI->getParent());
+          }
+        }
+        if (!NewInst)
+          NewInst = ExtractAndExtendIfNeeded(Vec);
         if (isa<StructType>(Scalar->getType()) &&
             isa_and_nonnull<ExtractValueInst>(User) &&
             !isa<StructType>(NewInst->getType())) {
