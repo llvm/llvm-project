@@ -2451,9 +2451,10 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
 /// true, sink any common code from the predecessors to BB.
 static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
                                            DomTreeUpdater *DTU) {
-  // We support two situations:
+  // We support three situations:
   //   (1) all incoming arcs are unconditional
   //   (2) there are non-unconditional incoming arcs
+  //   (3) only the two arms of an inner diamond have common code
   //
   // (2) is very common in switch defaults and
   // else-if patterns;
@@ -2492,17 +2493,69 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
   //         \     /
   //         [ end ]
   //
+  // (3) If the unconditional arcs don't all end in the same operation, we keep
+  // only the two arms of an inner diamond that do, and handle them as in (2):
+  //
+  //   if (a) { g(); return; }
+  //   if (b) f(1); else f(2);
+  //
+  //       [if]                          [if]
+  //      /    \                        /    \
+  //   [g()]   [if]                  [g()]   [if]
+  //     |     /  \          ==>       |     /  \
+  //     |  [then] [else]              |  [then] [else]
+  //      \    |    /                  |     \    /
+  //       [   end   ]                 |  [sink.split]
+  //                                    \     /
+  //                                     [ end ]
+  //
+  auto SameLastInst = [](BasicBlock *A, BasicBlock *B) {
+    Instruction *IA = A->getTerminator()->getPrevNode();
+    Instruction *IB = B->getTerminator()->getPrevNode();
+    return IA && IB && IA->isSameOperationAs(IB);
+  };
   SmallVector<BasicBlock*,4> UnconditionalPreds;
   bool HaveNonUnconditionalPredecessors = false;
+  bool AllEndInSameOp = true;
   for (auto *PredBB : predecessors(BB)) {
     auto *PredBr = dyn_cast<UncondBrInst>(PredBB->getTerminator());
-    if (PredBr)
+    if (PredBr) {
+      AllEndInSameOp =
+          AllEndInSameOp && (UnconditionalPreds.empty() ||
+                             SameLastInst(UnconditionalPreds[0], PredBB));
       UnconditionalPreds.push_back(PredBB);
-    else
+    } else {
       HaveNonUnconditionalPredecessors = true;
+    }
   }
   if (UnconditionalPreds.size() < 2)
     return false;
+
+  // See (3) above: if the unconditional arcs don't all end in the same
+  // operation, look for an inner diamond whose two arms do.
+  // TODO: If nothing can be sunk from the first such diamond, try the next one
+  // instead of giving up.
+  if (!AllEndInSameOp) {
+    for (BasicBlock *ThenBlock : UnconditionalPreds) {
+      BasicBlock *IfBlock = ThenBlock->getSinglePredecessor();
+      auto *IfBranch =
+          IfBlock ? dyn_cast<CondBrInst>(IfBlock->getTerminator()) : nullptr;
+
+      if (!IfBranch || IfBranch->getSuccessor(0) != ThenBlock)
+        continue;
+      // CondBrInst is a terminator defined to have two successors exactly,
+      // implying IfBlock has two successors.
+      BasicBlock *ElseBlock = IfBranch->getSuccessor(1);
+      auto *OtherBr = dyn_cast<UncondBrInst>(ElseBlock->getTerminator());
+      if (OtherBr && OtherBr->getSuccessor() == BB &&
+          ElseBlock->getSinglePredecessor() == IfBlock &&
+          SameLastInst(ThenBlock, ElseBlock)) {
+        UnconditionalPreds = {ThenBlock, ElseBlock};
+        HaveNonUnconditionalPredecessors = true;
+        break;
+      }
+    }
+  }
 
   // We take a two-step approach to tail sinking. First we scan from the end of
   // each block upwards in lockstep. If the n'th instruction from the end of each
