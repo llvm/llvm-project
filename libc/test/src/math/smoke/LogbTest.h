@@ -24,11 +24,20 @@ public:
   typedef T (*LogbFunc)(T);
 
   void testSpecialNumbers(LogbFunc func) {
-    ASSERT_FP_EQ(aNaN, func(aNaN));
-    ASSERT_FP_EQ(inf, func(inf));
-    ASSERT_FP_EQ(inf, func(neg_inf));
-    ASSERT_FP_EQ(neg_inf, func(zero));
-    ASSERT_FP_EQ(neg_inf, func(neg_zero));
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(aNaN), 0);
+    EXPECT_MATH_ERRNO(0);
+    T snan_result = zero;
+    EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, snan_result = func(sNaN), FE_INVALID);
+    EXPECT_FALSE(FPBits(snan_result).is_signaling_nan());
+    EXPECT_MATH_ERRNO(0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(inf), 0);
+    EXPECT_MATH_ERRNO(0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(inf, func(neg_inf), 0);
+    EXPECT_MATH_ERRNO(0);
+    EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(zero), FE_DIVBYZERO);
+    EXPECT_MATH_ERRNO(ERANGE);
+    EXPECT_FP_EQ_WITH_EXCEPTION(neg_inf, func(neg_zero), FE_DIVBYZERO);
+    EXPECT_MATH_ERRNO(ERANGE);
   }
 
   void testPowersOfTwo(LogbFunc func) {

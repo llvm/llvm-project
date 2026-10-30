@@ -135,13 +135,17 @@ template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 LIBC_INLINE constexpr T logb(T x) {
   FPBits<T> bits(x);
   if (LIBC_UNLIKELY(bits.is_zero() || bits.is_inf_or_nan())) {
-    if (bits.is_nan())
+    if (bits.is_nan()) {
+      if (bits.is_signaling_nan()) {
+        raise_except_if_required(FE_INVALID);
+        return FPBits<T>::quiet_nan().get_val();
+      }
       return x;
-
-    raise_except_if_required(FE_DIVBYZERO);
+    }
 
     if (bits.is_zero()) {
       set_errno_if_required(ERANGE);
+      raise_except_if_required(FE_DIVBYZERO);
       return FPBits<T>::inf(Sign::NEG).get_val();
     }
     // bits is inf.
@@ -254,12 +258,11 @@ LIBC_INLINE constexpr T nextupdown(T x) {
   constexpr Sign sign = IsDown ? Sign::NEG : Sign::POS;
 
   FPBits<T> xbits(x);
-  if (xbits.is_nan() || xbits == FPBits<T>::max_normal(sign) ||
-      xbits == FPBits<T>::inf(sign))
+  if (xbits.is_nan() || xbits == FPBits<T>::inf(sign))
     return x;
 
   using StorageType = typename FPBits<T>::StorageType;
-  if (x != T(0)) {
+  if (!xbits.is_zero()) {
     if (xbits.sign() == sign) {
       xbits = FPBits<T>(StorageType(xbits.uintval() + 1));
     } else {
