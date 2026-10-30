@@ -3570,7 +3570,7 @@ static SmallVector<VPBasicBlock *> blocksWithStores(VPBasicBlock *HeaderVPBB) {
 bool VPlanTransforms::handleUncountableEarlyExits(
     VPlan &Plan, OptimizationRemarkEmitter *ORE, Loop *TheLoop,
     PredicatedScalarEvolution &PSE, DominatorTree &DT, AssumptionCache *AC,
-    UncountableExitStyle Style) {
+    UncountableExitStyle &Style) {
   VPDominatorTree VPDT(Plan);
 
   auto *MiddleVPBB = VPBlockUtils::getPlainCFGMiddleBlock(Plan);
