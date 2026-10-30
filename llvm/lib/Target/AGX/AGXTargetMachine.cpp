@@ -36,7 +36,10 @@
 #include "llvm/Transforms/IPO/AlwaysInliner.h"
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Scalar/NaryReassociate.h"
+#include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -228,6 +231,57 @@ TargetPassConfig *AGXTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new AGXPassConfig(*this, PM);
 }
 
+static cl::opt<unsigned> AGXStraightLineSRMaxInstructions(
+    "agx-straight-line-sr-max-instructions", cl::init(200000), cl::Hidden,
+    cl::desc("Straight-line strength reduction and n-ary reassociation only "
+             "for functions of at most this many instructions (0: all)"));
+
+namespace {
+/// Straight-line strength reduction, n-ary reassociation and the CSE after
+/// them, on functions of at most AGXStraightLineSRMaxInstructions
+/// instructions. Their scalar evolution of a kernel with millions of
+/// instructions (Blender Cycles' shade_shadow, everything inlined) took
+/// gigabytes, for address arithmetic sharing meant for unrolled tiles.
+class AGXStraightLineSRPass : public FunctionPass {
+  TargetMachine *TM;
+  unsigned Level;
+
+public:
+  static char ID;
+  AGXStraightLineSRPass(TargetMachine *TM, unsigned Level)
+      : FunctionPass(ID), TM(TM), Level(Level) {}
+  StringRef getPassName() const override {
+    return "AGX straight-line strength reduction (size limited)";
+  }
+  bool runOnFunction(Function &F) override {
+    if (skipFunction(F) || (AGXStraightLineSRMaxInstructions &&
+                            F.getInstructionCount() >
+                                AGXStraightLineSRMaxInstructions))
+      return false;
+    PassBuilder PB(TM);
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+    FunctionPassManager FPM;
+    FPM.addPass(StraightLineStrengthReducePass());
+    FPM.addPass(EarlyCSEPass());
+    FPM.addPass(NaryReassociatePass());
+    if (Level > 1)
+      FPM.addPass(GVNPass());
+    else
+      FPM.addPass(EarlyCSEPass());
+    return !FPM.run(F, FAM).areAllPreserved();
+  }
+};
+char AGXStraightLineSRPass::ID = 0;
+} // namespace
+
 static cl::opt<unsigned> AGXStraightLineSR(
     "agx-straight-line-sr", cl::init(1), cl::Hidden,
     cl::desc("Straight-line strength reduction and n-ary reassociation of "
@@ -278,13 +332,8 @@ void AGXPassConfig::addIRPasses() {
     // plus a difference, and sums reassociated so common parts are computed
     // once, as NVPTX does (straight-line strength reduction and n-ary
     // reassociation).
-    if (AGXStraightLineSR) {
-      addPass(createStraightLineStrengthReducePass());
-      addPass(createEarlyCSEPass());
-      addPass(createNaryReassociatePass());
-      addPass(AGXStraightLineSR > 1 ? createGVNPass()
-                                    : createEarlyCSEPass());
-    }
+    if (AGXStraightLineSR)
+      addPass(new AGXStraightLineSRPass(TM, AGXStraightLineSR));
     // Loads that all-pairs loops skip for one element issue together.
     addPass(createAGXHoistGuardedLoadsPass());
     addPass(createAGXThreadgroupAddressesPass());
