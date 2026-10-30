@@ -1390,6 +1390,28 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
                                  getDstMCReg(OuterMostReloadCopy)))
           return;
 
+        // Folding changes the values that the intermediate registers of the
+        // chain hold between the outermost spill and the outermost reload.
+        // Debug values in that range that read one of them would describe a
+        // different value, so make them undefined.
+        SmallVector<MCRegister, 4> ChangedRegs;
+        for (const MachineInstr *Spill : drop_end(SC))
+          ChangedRegs.push_back(
+              getDstMCReg(*isCopyInstr(*Spill, *TII, UseCopyInstr)));
+        for (MachineInstr &DbgMI :
+             make_range(MachineBasicBlock::iterator(SC.back()),
+                        MachineBasicBlock::iterator(RC.back()))) {
+          if (!DbgMI.isDebugValue())
+            continue;
+          if (any_of(DbgMI.debug_operands(), [&](const MachineOperand &MO) {
+                return MO.isReg() && MO.getReg() &&
+                       any_of(ChangedRegs, [&](MCRegister Reg) {
+                         return TRI->regsOverlap(MO.getReg(), Reg);
+                       });
+              }))
+            DbgMI.setDebugValueUndef();
+        }
+
         SpillageChainsLength += SC.size() + RC.size();
         NumSpillageChains += 1;
         UpdateReg(SC[0], InnerMostSpillCopy.Destination,
@@ -1449,6 +1471,12 @@ void MachineCopyPropagation::eliminateSpillageCopies(MachineBasicBlock &MBB) {
   };
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+    // Debug values must not affect which chains are folded. The ones that read
+    // a register whose value changes are made undefined by
+    // TryFoldSpillageCopies.
+    if (MI.isDebugValue())
+      continue;
+
     std::optional<DestSourcePair> CopyOperands =
         isCopyInstr(MI, *TII, UseCopyInstr);
 
