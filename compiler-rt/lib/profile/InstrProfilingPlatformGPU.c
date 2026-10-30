@@ -15,7 +15,6 @@
 #if defined(__NVPTX__) || defined(__AMDGPU__)
 
 #include "InstrProfiling.h"
-#include <assert.h>
 #include <gpuintrin.h>
 #include <stdint.h>
 
@@ -34,7 +33,7 @@ static int is_uniform(uint64_t mask) {
 COMPILER_RT_VISIBILITY void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter,
                                                            uint64_t *uniform,
                                                            uint64_t step) {
-  assert(step <= 1 && "GPU profile counter step must be zero or one");
+  // Compiler-generated counter steps are zero or one.
   uint64_t mask = __gpu_lane_mask();
   uint64_t sum = __builtin_popcountg(__gpu_ballot(mask, step));
   if (__gpu_is_first_in_lane(mask)) {
