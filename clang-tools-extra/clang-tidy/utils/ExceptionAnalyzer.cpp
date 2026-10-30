@@ -10,6 +10,30 @@
 
 namespace clang::tidy::utils {
 
+struct ExceptionAnalyzer::AnalysisContext {
+  llvm::DenseMap<const FunctionDecl *, ExceptionInfo> Completed;
+  unsigned RecursionGeneration = 0;
+};
+
+ExceptionAnalyzer::ExceptionInfo
+ExceptionAnalyzer::ExceptionInfo::withCallerStack(
+    const FunctionDecl *Root, const CallStack &Caller,
+    SourceLocation CallLoc) const {
+  ExceptionInfo Result = *this;
+  for (auto &Exception : Result.ThrownExceptions) {
+    CallStack Rebased = Caller;
+    bool WithinRoot = false;
+    for (const auto &Frame : Exception.second.Stack) {
+      WithinRoot |= Frame.first == Root;
+      if (WithinRoot)
+        Rebased.insert(
+            {Frame.first, Frame.first == Root ? CallLoc : Frame.second});
+    }
+    Exception.second.Stack = std::move(Rebased);
+  }
+  return Result;
+}
+
 void ExceptionAnalyzer::ExceptionInfo::registerException(
     const Type *ExceptionType, const ThrowInfo &ThrowInfo) {
   Behaviour = State::Throwing;
@@ -470,20 +494,38 @@ void ExceptionAnalyzer::ExceptionInfo::reevaluateBehaviour() {
 }
 ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     const FunctionDecl *Func, const ExceptionInfo::Throwables &Caught,
-    CallStack &CallStack, SourceLocation CallLoc) {
-  if (!Func || CallStack.contains(Func) ||
-      (!CallStack.empty() && !canThrow(Func)))
+    CallStack &CallStack, SourceLocation CallLoc, AnalysisContext &Analysis) {
+  if (!Func || (!CallStack.empty() && !canThrow(Func)))
     return ExceptionInfo::createNonThrowing();
+  if (CallStack.contains(Func)) {
+    ++Analysis.RecursionGeneration;
+    return ExceptionInfo::createNonThrowing();
+  }
+
+  // A caught exception and a recursive back edge depend on the current path.
+  // Reuse only complete analyses without either dependency.
+  if (Caught.empty()) {
+    const auto Cached = Analysis.Completed.find(Func);
+    if (Cached != Analysis.Completed.end())
+      return Cached->second.withCallerStack(Func, CallStack, CallLoc);
+  }
+  const unsigned Generation = Analysis.RecursionGeneration;
+  const auto Finish = [&](ExceptionInfo Result) {
+    if (Caught.empty() && Generation == Analysis.RecursionGeneration)
+      Analysis.Completed.try_emplace(
+          Func, Result.withCallerStack(Func, {}, Func->getLocation()));
+    return Result;
+  };
 
   if (const Stmt *Body = Func->getBody()) {
     CallStack.insert({Func, CallLoc});
-    ExceptionInfo Result = throwsException(Body, Caught, CallStack);
+    ExceptionInfo Result = throwsException(Body, Caught, CallStack, Analysis);
 
     // For a constructor, we also have to check the initializers.
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Func)) {
       for (const CXXCtorInitializer *Init : Ctor->inits()) {
         const ExceptionInfo Excs =
-            throwsException(Init->getInit(), Caught, CallStack);
+            throwsException(Init->getInit(), Caught, CallStack, Analysis);
         Result.merge(Excs);
       }
     }
@@ -496,7 +538,7 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     }
 
     CallStack.erase(Func);
-    return Result;
+    return Finish(Result);
   }
 
   // Functions without a visible body can still be known non-throwing from their
@@ -526,15 +568,14 @@ ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
     CallStack.erase(Func);
   }
 
-  return Result;
+  return Finish(Result);
 }
 
 /// Analyzes a single statement on it's throwing behaviour. This is in principle
 /// possible except some 'Unknown' functions are called.
-ExceptionAnalyzer::ExceptionInfo
-ExceptionAnalyzer::throwsException(const Stmt *St,
-                                   const ExceptionInfo::Throwables &Caught,
-                                   CallStack &CallStack) {
+ExceptionAnalyzer::ExceptionInfo ExceptionAnalyzer::throwsException(
+    const Stmt *St, const ExceptionInfo::Throwables &Caught,
+    CallStack &CallStack, AnalysisContext &Analysis) {
   auto Results = ExceptionInfo::createNonThrowing();
   if (!St)
     return Results;
@@ -558,14 +599,15 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     }
   } else if (const auto *Try = dyn_cast<CXXTryStmt>(St)) {
     ExceptionInfo Uncaught =
-        throwsException(Try->getTryBlock(), Caught, CallStack);
+        throwsException(Try->getTryBlock(), Caught, CallStack, Analysis);
     for (unsigned I = 0; I < Try->getNumHandlers(); ++I) {
       const CXXCatchStmt *Catch = Try->getHandler(I);
 
       // Everything is caught through 'catch(...)'.
       if (!Catch->getExceptionDecl()) {
-        const ExceptionInfo Rethrown = throwsException(
-            Catch->getHandlerBlock(), Uncaught.getExceptions(), CallStack);
+        const ExceptionInfo Rethrown =
+            throwsException(Catch->getHandlerBlock(), Uncaught.getExceptions(),
+                            CallStack, Analysis);
         Results.merge(Rethrown);
         Uncaught.clear();
       } else {
@@ -585,8 +627,9 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
             Uncaught.filterByCatch(CaughtType,
                                    Catch->getExceptionDecl()->getASTContext());
         if (!FilteredExceptions.empty()) {
-          const ExceptionInfo Rethrown = throwsException(
-              Catch->getHandlerBlock(), FilteredExceptions, CallStack);
+          const ExceptionInfo Rethrown =
+              throwsException(Catch->getHandlerBlock(), FilteredExceptions,
+                              CallStack, Analysis);
           Results.merge(Rethrown);
         }
       }
@@ -594,38 +637,42 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     Results.merge(Uncaught);
   } else if (const auto *DefaultInit = dyn_cast<CXXDefaultInitExpr>(St)) {
     const ExceptionInfo Excs =
-        throwsException(DefaultInit->getExpr(), Caught, CallStack);
+        throwsException(DefaultInit->getExpr(), Caught, CallStack, Analysis);
     Results.merge(Excs);
   } else if (const auto *Coro = dyn_cast<CoroutineBodyStmt>(St)) {
     for (const Stmt *Child : Coro->childrenExclBody()) {
       if (Child != Coro->getExceptionHandler()) {
-        const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+        const ExceptionInfo Excs =
+            throwsException(Child, Caught, CallStack, Analysis);
         Results.merge(Excs);
       }
     }
     const ExceptionInfo Excs =
-        throwsException(Coro->getBody(), Caught, CallStack);
+        throwsException(Coro->getBody(), Caught, CallStack, Analysis);
     Results.merge(throwsException(Coro->getExceptionHandler(),
-                                  Excs.getExceptions(), CallStack));
+                                  Excs.getExceptions(), CallStack, Analysis));
     for (const auto &Exception : Excs.getExceptions()) {
       const Type *ExcType = Exception.getFirst();
       if (!ExcType)
         continue;
       if (const CXXRecordDecl *ThrowableRec = ExcType->getAsCXXRecordDecl()) {
-        const ExceptionInfo DestructorExcs = throwsException(
-            ThrowableRec->getDestructor(), Caught, CallStack, SourceLocation{});
+        const ExceptionInfo DestructorExcs =
+            throwsException(ThrowableRec->getDestructor(), Caught, CallStack,
+                            SourceLocation{}, Analysis);
         Results.merge(DestructorExcs);
       }
     }
   } else if (const auto *Lambda = dyn_cast<LambdaExpr>(St)) {
     for (const Stmt *Init : Lambda->capture_inits()) {
-      const ExceptionInfo Excs = throwsException(Init, Caught, CallStack);
+      const ExceptionInfo Excs =
+          throwsException(Init, Caught, CallStack, Analysis);
       Results.merge(Excs);
     }
   } else {
     // Check whether any of this node's subexpressions throws.
     for (const Stmt *Child : St->children()) {
-      const ExceptionInfo Excs = throwsException(Child, Caught, CallStack);
+      const ExceptionInfo Excs =
+          throwsException(Child, Caught, CallStack, Analysis);
       Results.merge(Excs);
     }
 
@@ -633,14 +680,14 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
     // whether the call itself throws.
     if (const auto *Call = dyn_cast<CallExpr>(St)) {
       if (const FunctionDecl *Func = Call->getDirectCallee()) {
-        const ExceptionInfo Excs =
-            throwsException(Func, Caught, CallStack, Call->getBeginLoc());
+        const ExceptionInfo Excs = throwsException(
+            Func, Caught, CallStack, Call->getBeginLoc(), Analysis);
         Results.merge(Excs);
       }
     } else if (const auto *Construct = dyn_cast<CXXConstructExpr>(St)) {
       const ExceptionInfo Excs =
           throwsException(Construct->getConstructor(), Caught, CallStack,
-                          Construct->getBeginLoc());
+                          Construct->getBeginLoc(), Analysis);
       Results.merge(Excs);
     }
   }
@@ -655,8 +702,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
   const auto CacheEntry = FunctionCache.find(Func);
   if (CacheEntry == FunctionCache.end()) {
     CallStack CallStack;
+    AnalysisContext Analysis;
     ExceptionList = throwsException(Func, ExceptionInfo::Throwables(),
-                                    CallStack, Func->getLocation());
+                                    CallStack, Func->getLocation(), Analysis);
 
     // Cache the result of the analysis. This is done prior to filtering
     // because it is best to keep as much information as possible.
@@ -673,7 +721,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
 ExceptionAnalyzer::ExceptionInfo
 ExceptionAnalyzer::analyzeImpl(const Stmt *Stmt) {
   CallStack CallStack;
-  return throwsException(Stmt, ExceptionInfo::Throwables(), CallStack);
+  AnalysisContext Analysis;
+  return throwsException(Stmt, ExceptionInfo::Throwables(), CallStack,
+                         Analysis);
 }
 
 template <typename T>

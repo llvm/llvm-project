@@ -105,6 +105,11 @@ public:
     /// corresponding entity.
     const Throwables &getExceptions() const { return ThrownExceptions; }
 
+    /// Rebase a completed function's diagnostic frames onto a new caller.
+    ExceptionInfo withCallerStack(const FunctionDecl *Root,
+                                  const CallStack &Caller,
+                                  SourceLocation CallLoc) const;
+
     /// Signal if the there is any 'Unknown' element within the scope of
     /// the related entity. This might be relevant if the entity is 'Throwing'
     /// and to ensure that no other exception then 'getExceptionTypes' can
@@ -159,12 +164,16 @@ public:
   ExceptionInfo analyze(const Stmt *Stmt);
 
 private:
+  struct AnalysisContext;
+
   ExceptionInfo throwsException(const FunctionDecl *Func,
                                 const ExceptionInfo::Throwables &Caught,
-                                CallStack &CallStack, SourceLocation CallLoc);
+                                CallStack &CallStack, SourceLocation CallLoc,
+                                AnalysisContext &Analysis);
   ExceptionInfo throwsException(const Stmt *St,
                                 const ExceptionInfo::Throwables &Caught,
-                                CallStack &CallStack);
+                                CallStack &CallStack,
+                                AnalysisContext &Analysis);
   ExceptionInfo analyzeImpl(const FunctionDecl *Func);
   ExceptionInfo analyzeImpl(const Stmt *Stmt);
 
