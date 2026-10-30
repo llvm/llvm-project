@@ -3163,6 +3163,31 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    // m(uitofp X, uitofp Y) -> uitofp (umin/umax(X, Y))
+    // m(sitofp X, sitofp Y) -> sitofp (smin/smax(X, Y))
+    if (match(Arg0, m_IToFP(m_Value(X))) && match(Arg1, m_IToFP(m_Value(Y))) &&
+        cast<Instruction>(Arg0)->getOpcode() ==
+            cast<Instruction>(Arg1)->getOpcode() &&
+        (Arg0->hasOneUse() || Arg1->hasOneUse()) &&
+        X->getType() == Y->getType()) {
+      bool IsSigned = isa<SIToFPInst>(Arg0);
+      bool IsMax = IID == Intrinsic::maxnum || IID == Intrinsic::maximum ||
+                   IID == Intrinsic::maximumnum;
+      Intrinsic::ID IntIID =
+          IsMax ? (IsSigned ? Intrinsic::smax : Intrinsic::umax)
+                : (IsSigned ? Intrinsic::smin : Intrinsic::umin);
+      Value *NewInt = Builder.CreateBinaryIntrinsic(IntIID, X, Y);
+      auto *NewCast =
+          CastInst::Create(IsSigned ? Instruction::SIToFP : Instruction::UIToFP,
+                           NewInt, II->getType());
+      // umax/umin of two nneg values is nneg. Both flags are required: nneg is
+      // not a known bit of the integer, so visitUIToFP cannot recover it later.
+      if (!IsSigned && cast<Instruction>(Arg0)->hasNonNeg() &&
+          cast<Instruction>(Arg1)->hasNonNeg())
+        NewCast->setNonNeg();
+      return NewCast;
+    }
+
     // max X, -X --> fabs X
     // min X, -X --> -(fabs X)
     // TODO: Remove one-use limitation? That is obviously better for max,
