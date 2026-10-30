@@ -59,13 +59,15 @@ private:
   const unsigned CommentStringLiterals : 1;
   const unsigned CommentTypedInitLists : 1;
   const unsigned CommentUserDefinedLiterals : 1;
+  const std::vector<StringRef> NullPtrMacros;
+  const std::vector<StringRef> BoolLiteralMacros;
   llvm::Regex IdentRE;
 
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,
                      SourceLocation ArgBeginLoc, SourceLocation CloseLoc,
                      llvm::ArrayRef<const Expr *> Args);
 
-  CommentKind shouldAddComment(const Expr *Arg, const SourceManager &SM) const;
+  CommentKind shouldAddComment(const Expr *Arg, const ASTContext &Ctx) const;
 };
 
 } // namespace clang::tidy::bugprone

@@ -65,8 +65,8 @@ foo(/*Dims=*/{});
 
 ```{option} CommentBoolLiterals
 When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the boolean literal argument.
-Default is `false`.
+`/*ParameterName=*/` right before the boolean literal argument and the macros
+in {option}`BoolLiteralMacros`. Default is `false`.
 ```
 
 Before:
@@ -153,8 +153,8 @@ foo(/*MeaningOfLife=*/42);
 
 ```{option} CommentNullPtrs
 When `true`, the check will add argument comments in the format
-`/*ParameterName=*/` right before the nullptr literal argument.
-Default is `false`.
+`/*ParameterName=*/` right before the nullptr literal argument and the macros
+in {option}`NullPtrMacros`. Default is `false`.
 ```
 
 Before:
@@ -279,4 +279,17 @@ void foo(double Distance);
 double operator"" _km(long double);
 
 foo(/*Distance=*/402.0_km);
+```
+
+```{option} NullPtrMacros
+A semicolon-separated list of macros that {option}`CommentNullPtrs` treats like
+`nullptr`. The check only matches an argument that is exactly one of these
+macros. Default is `NULL`.
+```
+
+```{option} BoolLiteralMacros
+A semicolon-separated list of macros that {option}`CommentBoolLiterals` treats
+like boolean literals. The check only matches an argument that is exactly one
+of these macros. Default is `true;false`, which covers `<stdbool.h>` in C
+before C23 and in GNU C++98.
 ```
