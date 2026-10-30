@@ -1677,8 +1677,8 @@ void transform::ForeachOp::getEffects(
        llvm::zip(getTargetsMutable(), getBody().front().getArguments())) {
     BlockArgument blockArgument = blockArg;
     if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
-          return isHandleConsumed(blockArgument,
-                                  cast<TransformOpInterface>(&op));
+          auto transformOp = dyn_cast<TransformOpInterface>(&op);
+          return transformOp && isHandleConsumed(blockArgument, transformOp);
         })) {
       consumesHandle(target, effects);
     } else {
@@ -1687,11 +1687,13 @@ void transform::ForeachOp::getEffects(
   }
 
   if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
-        return doesModifyPayload(cast<TransformOpInterface>(&op));
+        auto transformOp = dyn_cast<TransformOpInterface>(&op);
+        return transformOp && doesModifyPayload(transformOp);
       })) {
     modifiesPayload(effects);
   } else if (any_of(getBody().front().without_terminator(), [&](Operation &op) {
-               return doesReadPayload(cast<TransformOpInterface>(&op));
+               auto transformOp = dyn_cast<TransformOpInterface>(&op);
+               return transformOp && doesReadPayload(transformOp);
              })) {
     onlyReadsPayload(effects);
   }
@@ -1752,6 +1754,16 @@ LogicalResult transform::ForeachOp::verify() {
     if (resultOpt.value().getType() != yieldOperandOpt.value().getType())
       return emitOpError("expects co-indexed results and yield "
                          "operands to have the same op/value/param type");
+  }
+
+  for (Operation &child : getBody().front().without_terminator()) {
+    if (!isa<TransformOpInterface>(child)) {
+      InFlightDiagnostic diag =
+          emitOpError()
+          << "expected children ops to implement TransformOpInterface";
+      diag.attachNote(child.getLoc()) << "op without interface";
+      return diag;
+    }
   }
 
   return success();

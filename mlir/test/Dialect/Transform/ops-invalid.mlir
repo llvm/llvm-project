@@ -339,6 +339,21 @@ transform.sequence failures(propagate) {
 
 // -----
 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected children ops to implement TransformOpInterface}}
+    transform.foreach %arg0 : !transform.any_op {
+    ^bb0(%arg1: !transform.any_op):
+      // expected-note @below {{op without interface}}
+      %c0 = arith.constant 0 : i32
+      transform.yield
+    }
+    transform.yield
+  }
+}
+
+// -----
+
 transform.sequence failures(suppress) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error @below {{TransformOpInterface requires memory effects on operands to be specified}}
@@ -496,7 +511,7 @@ module {
 module attributes { transform.with_named_sequence} {
   transform.sequence failures(suppress) {
   ^bb0(%arg0: !transform.any_op):
-    // expected-error @below {{op symbol's parent must have the SymbolTable trai}}
+    // expected-error @below {{op symbol's parent must have the SymbolTable trait}}
     transform.named_sequence @nested() {
       transform.yield
     }
