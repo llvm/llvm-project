@@ -149,15 +149,15 @@ static void printObjCStubsEntries(raw_fd_ostream &os,
        << sym->getName() << '\n';
 }
 
-static void printNonLazyPointerSection(raw_fd_ostream &os, GotSection *osec) {
+// For printing the entries of the __got and __auth_got sections.
+static void printNonLazyPointer(raw_fd_ostream &os, uint64_t va,
+                                const Symbol *sym) {
   // ld64 considers stubs to belong to particular files, but considers GOT
   // entries to be linker-synthesized. Not sure why they made that decision, but
   // I think we can follow suit unless there's demand for better symbol-to-file
   // associations.
-  for (const Symbol *sym : osec->getEntries())
-    os << format("0x%08llX\t0x%08zX\t[  0] non-lazy-pointer-to-local: %s\n",
-                 osec->addr + sym->gotIndex * target->wordSize,
-                 target->wordSize, sym->getName().str().data());
+  os << format("0x%08llX\t0x%08zX\t[  0] non-lazy-pointer-to-local: %s\n", va,
+               target->wordSize, sym->getName().str().data());
 }
 
 static uint64_t getSymSizeForMap(Defined *sym) {
@@ -273,7 +273,12 @@ void macho::writeMapFile() {
         os << format("0x%08llX\t0x%08llX\t[  0] helper helper\n", osec->addr,
                      osec->getSize());
       } else if (osec == in.got) {
-        printNonLazyPointerSection(os, in.got);
+        for (const Symbol *sym : in.got->getEntries())
+          printNonLazyPointer(
+              os, in.got->addr + sym->gotIndex * target->wordSize, sym);
+      } else if (in.authGot && osec == in.authGot) {
+        for (const Symbol *sym : in.authGot->getEntries())
+          printNonLazyPointer(os, in.authGot->getVA(sym), sym);
       } else if (osec == in.objcMethList) {
         printIsecArrSyms(in.objcMethList->getInputs());
       }
