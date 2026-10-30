@@ -3177,6 +3177,17 @@ static bool IsExternalProcedureDefinition(const Symbol &symbol) {
           (IsExternal(symbol) || symbol.GetBindName()));
 }
 
+// An external procedure is a global entity (19.2 p1) no matter where it is
+// declared: by an interface body, an EXTERNAL statement or attribute, a
+// procedure declaration statement, or an implicit reference (whose symbol
+// lives in the global scope).  Dummy procedures and procedure pointers are
+// local entities whose targets are only known at run time, and generic
+// interfaces are local identifiers, so none of them define a global name.
+static bool IsExternalProcedureDeclaration(const Symbol &symbol) {
+  return (symbol.has<ProcEntityDetails>() || symbol.has<SubprogramDetails>()) &&
+      IsExternal(symbol);
+}
+
 static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
   if (const auto *module{symbol.detailsIf<ModuleDetails>()}) {
     if (!module->isSubmodule() && !symbol.owner().IsIntrinsicModules()) {
@@ -3184,11 +3195,14 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
     }
   } else if (IsBlockData(symbol)) {
     return symbol.name().ToString();
+  } else if (&symbol != &symbol.GetUltimate()) {
+    // A use- or host-associated name is not a declaration of a global
+    // entity; the entity is checked where it is declared.
   } else {
     const std::string *bindC{symbol.GetBindName()};
     if (symbol.has<CommonBlockDetails>() ||
         IsExternalProcedureDefinition(symbol) ||
-        (symbol.owner().IsGlobal() && IsExternal(symbol))) {
+        IsExternalProcedureDeclaration(symbol)) {
       return bindC ? *bindC : symbol.name().ToString();
     } else if (bindC &&
         (symbol.has<ObjectEntityDetails>() || IsModuleProcedure(symbol))) {
@@ -3225,12 +3239,20 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
         Warn(common::LanguageFeature::BenignNameClash, symbol.name(),
             "Global name '%s' conflicts with a module"_port_en_US,
             pair.first->first);
-      } else if (auto *msg{messages_.Say(symbol.name(),
-                     "Two entities have the same global name '%s'"_err_en_US,
-                     pair.first->first)}) {
-        msg->Attach(other.name(), "Conflicting declaration"_en_US);
-        context_.SetError(symbol);
-        context_.SetError(other);
+      } else {
+        // Report the error at the declaration in the source being compiled
+        // when the conflicting declaration comes from a module file.
+        bool swap{FindModuleFileContaining(symbol.owner()) &&
+            !FindModuleFileContaining(other.owner())};
+        const Symbol &at{swap ? other : symbol};
+        const Symbol &attached{swap ? symbol : other};
+        if (auto *msg{messages_.Say(at.name(),
+                "Two entities have the same global name '%s'"_err_en_US,
+                pair.first->first)}) {
+          msg->Attach(attached.name(), "Conflicting declaration"_en_US);
+          context_.SetError(symbol);
+          context_.SetError(other);
+        }
       }
     }
   }
