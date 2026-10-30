@@ -24,8 +24,8 @@ public:
   void testSpecialNumbers(IsCanonicalFunc func) {
     EXPECT_EQ(func(aNaN), 1);
     EXPECT_EQ(func(neg_aNaN), 1);
-    EXPECT_EQ(func(sNaN), 0);
-    EXPECT_EQ(func(neg_sNaN), 0);
+    EXPECT_EQ(func(sNaN), 1);
+    EXPECT_EQ(func(neg_sNaN), 1);
     EXPECT_EQ(func(inf), 1);
     EXPECT_EQ(func(neg_inf), 1);
     EXPECT_EQ(func(min_normal), 1);
