@@ -2196,6 +2196,7 @@ public:
     AK_DebugComment,
     AK_BuildMI,
     AK_BuildConstantMI,
+    AK_BuildFConstantMI,
     AK_EraseInst,
     AK_ReplaceReg,
     AK_ConstraintOpsToDef,
@@ -2320,6 +2321,25 @@ public:
 
   static bool classof(const MatchAction *A) {
     return A->getKind() == AK_BuildConstantMI;
+  }
+
+  void emitActionOpcodes(MatchTable &Table) const override;
+};
+
+/// Generates code to create an FP constant that defines a TempReg.
+/// \p Val is the bit pattern of the TempReg's scalar FP type, truncated to
+/// that width. A non-zero \p Val is a fatal error at runtime if that type is
+/// wider than 64 bits, or is s16, which could be either half or bfloat.
+class BuildFConstantAction : public MatchAction {
+  unsigned TempRegID;
+  int64_t Val;
+
+public:
+  BuildFConstantAction(unsigned TempRegID, int64_t Val)
+      : MatchAction(AK_BuildFConstantMI), TempRegID(TempRegID), Val(Val) {}
+
+  static bool classof(const MatchAction *A) {
+    return A->getKind() == AK_BuildFConstantMI;
   }
 
   void emitActionOpcodes(MatchTable &Table) const override;
