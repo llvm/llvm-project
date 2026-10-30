@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Address.h"
+#include "CIRGenCleanup.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
@@ -2121,7 +2122,22 @@ LValue CIRGenFunction::emitMaterializeTemporaryExpr(
       emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
     }
   } else {
-    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    mlir::Location loc = getLoc(m->getSourceRange());
+    if (cir::AllocaOp alloca = object.getUnderlyingAllocaOp()) {
+      if (emitLifetimeStartOp(loc, alloca.getResult())) {
+        Address lifetimeAddr(alloca.getResult(), object.getAlignment());
+        switch (m->getStorageDuration()) {
+        case SD_FullExpression:
+          pushFullExprLifetimeEnd(lifetimeAddr);
+          break;
+        case SD_Automatic:
+          pushLifetimeEndAfterFullExpr(lifetimeAddr, m->getExtendingDecl());
+          break;
+        default:
+          llvm_unreachable("alloca-backed temporary has unexpected duration");
+        }
+      }
+    }
     emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
   }
   pushTemporaryCleanup(*this, m, e, object);
@@ -3262,7 +3278,7 @@ CIRGenFunction::emitConditionalBlocks(const AbstractConditionalOperator *e,
       resultLV = branchGenFunc(*this, expr);
       resultPtr = resultLV ? resultLV->getPointer() : mlir::Value();
       eval.endEvaluation();
-      branchCleanups.forceCleanup({&resultPtr});
+      branchCleanups.forceCleanup({&resultPtr}, /*deferLifetimeExtended=*/true);
     }
 
     // A branch that produced no result is a throw-expression; its region is

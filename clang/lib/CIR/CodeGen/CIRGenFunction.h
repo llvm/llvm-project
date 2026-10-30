@@ -130,19 +130,18 @@ public:
 
   class CapturedCleanups;
 
-  /// A cleanup whose destructor call is not emitted where the cleanup is
-  /// registered. Used by the lifetime-extended cleanup stack, whose entries
-  /// are later promoted onto the EH scope stack, and by the deferred
+  /// A cleanup that is not emitted where it is registered. Used by the
+  /// lifetime-extended cleanup stack, whose entries are later promoted onto
+  /// the EH scope stack, and by the deferred
   /// conditional cleanup stack, whose entries are emitted directly into a
   /// conditional scope's cleanup region.
   ///
   /// A valid \c activeFlag means the cleanup is conditional. The flag tracks
-  /// at run time whether the object has been constructed, and guards the
-  /// destructor call.
+  /// at run time whether the branch activated the cleanup.
   ///
-  /// Currently only DestroyObject cleanups use this. When other cleanup types
-  /// are needed (e.g., CallLifetimeEnd), this struct can be extended with a
-  /// std::variant of cleanup data types.
+  /// LifetimeMarker entries represent CallLifetimeEnd: addr is the raw alloca
+  /// address, and type and destroyer are unused. Other entries represent
+  /// DestroyObject and carry its type and destroyer.
   struct PendingCleanupEntry {
     CleanupKind kind;
     Address addr;
@@ -1313,6 +1312,18 @@ public:
   /// Defined in CIRGenDecl.cpp where the concrete cleanup types are visible.
   void pushPendingCleanupToEHStack(const PendingCleanupEntry &entry);
 
+  /// Emit a deferred cleanup at the current insertion point.
+  void emitPendingCleanup(const PendingCleanupEntry &entry);
+
+  /// Register a storage lifetime end at the end of the current full-expression,
+  /// deferring it with an active flag when inside a conditional branch.
+  void pushFullExprLifetimeEnd(Address addr);
+
+  /// Register a storage lifetime end for the enclosing scope, after the current
+  /// full-expression has finished.
+  void pushLifetimeEndAfterFullExpr(Address addr,
+                                    const ValueDecl *extendingDecl);
+
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
   /// against the possibility that we're currently inside a
   /// conditionally-evaluated expression.
@@ -1400,7 +1411,10 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
+    /// Conditional arms leave lifetime-extended entries pending until the
+    /// enclosing full expression ends.
+    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {},
+                      bool deferLifetimeExtended = false) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
 
@@ -1446,9 +1460,15 @@ public:
       // by either forceDeactivate's or popCleanupBlocks's pops (both only
       // pop cir.cleanup.scope ops); they already dominate the post-scope
       // insertion point on their own.
-      if (didSpillAny) {
-        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize());
+      ArrayRef<mlir::Value *> valuesToPop =
+          didSpillAny ? ArrayRef<mlir::Value *>() : valuesToReload;
+      if (deferLifetimeExtended)
+        cgf.popCleanupBlocks(cleanupStackDepth, valuesToPop);
+      else
+        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize(),
+                             valuesToPop);
 
+      if (didSpillAny) {
         // Reload the spilled values now that all cleanup popping (and
         // promotion of any lifetime-extended cleanups onto the EH stack) is
         // done.
@@ -1457,9 +1477,6 @@ public:
             continue;
           *valPtr = cgf.builder.createLoad(valPtr->getLoc(), addr);
         }
-      } else {
-        cgf.popCleanupBlocks(cleanupStackDepth, oldLifetimeExtendedSize(),
-                             valuesToReload);
       }
 
       performCleanup = false;
@@ -1968,19 +1985,33 @@ public:
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
 
+  /// The temporaries that a variable's initializer lifetime-extends.
+  struct ExtendedTemporaries {
+    /// The types of those with a destructor.
+    SmallVector<QualType, 2> withDestructor;
+    /// Whether any temporary is extended, including trivially destructible
+    /// ones.
+    bool any = false;
+  };
+
   /// Emit a loop's condition-variable declaration. This needs special handling
   /// so that we can manage per-iteration cleanups for the loop condition.
-  /// \p extendedTemporaries are the types of the temporaries with a destructor
-  /// that its initializer lifetime-extends (see
-  /// getLifetimeExtendedTemporariesWithDestructor).
+  /// \p temps are the temporaries that its initializer lifetime-extends (see
+  /// getLifetimeExtendedTemporaries).
   void emitLoopConditionVariable(const clang::VarDecl &d,
                                  CapturedCleanups &condCleanup,
-                                 llvm::ArrayRef<QualType> extendedTemporaries);
+                                 const ExtendedTemporaries &temps);
 
-  /// The types of the temporaries with a destructor that the initializer of
-  /// the variable \p d, which has automatic storage duration, lifetime-extends.
-  static llvm::SmallVector<QualType, 2>
-  getLifetimeExtendedTemporariesWithDestructor(const clang::VarDecl &d);
+  /// Whether the extended temporaries \p t get lifetime-end cleanups. This
+  /// must match the check in emitLifetimeStartOp.
+  bool extendedTemporariesNeedLifetimeEnd(const ExtendedTemporaries &t) const {
+    return shouldEmitLifetimeMarkers && t.any;
+  }
+
+  /// The temporaries that the initializer of the variable \p d, which has
+  /// automatic storage duration, lifetime-extends.
+  static ExtendedTemporaries
+  getLifetimeExtendedTemporaries(const clang::VarDecl &d);
 
   /// Emit the initializer for an allocated variable.  If this call is not
   /// associated with the call to emitAutoVarAlloca (as the address of the
