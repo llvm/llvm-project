@@ -2254,23 +2254,24 @@ Instruction *ReassociatePass::canonicalizeNegFPConstantsForOp(Instruction *I,
     findDbgUsers(Negatible, DPUsers);
     SmallVector<uint64_t, 1> NegOps{dwarf::DW_OP_neg};
     for (DbgVariableRecord *DVR : DPUsers) {
-      // A `#dbg_declare` describes an address, not the changed value.
-      if (DVR->isAddressOfVariable())
-        continue;
+      // Preserve address descriptions without adding DW_OP_stack_value.
+      const bool StackValue = !DVR->isAddressOfVariable();
       DIExpression *OldExpr = DVR->getExpression();
       DIExpression *NewExpr = OldExpr;
       for (unsigned Idx = 0, N = DVR->getNumVariableLocationOps(); Idx < N;
            ++Idx) {
         if (DVR->getVariableLocationOp(Idx) != Negatible)
           continue;
-        // Ignore `DIArgList` operands without a corresponding `DW_OP_LLVM_arg`.
+        // An arg list can have no DW_OP_LLVM_arg operations. In that case,
+        // appendOpsToArg would treat it as a non-variadic expression and
+        // prepend ops (or assert for a nonzero index). Leave unused args alone.
         if (DVR->hasArgList() && none_of(NewExpr->expr_ops(), [Idx](auto Op) {
               auto Arg = dyn_cast<DIExpression::ArgOp>(Op);
               return Arg && Arg.getIndex() == Idx;
             }))
           continue;
-        NewExpr = DIExpression::appendOpsToArg(NewExpr, NegOps, Idx,
-                                               /*StackValue=*/true);
+        NewExpr =
+            DIExpression::appendOpsToArg(NewExpr, NegOps, Idx, StackValue);
       }
       if (NewExpr != OldExpr)
         DVR->setExpression(NewExpr);
