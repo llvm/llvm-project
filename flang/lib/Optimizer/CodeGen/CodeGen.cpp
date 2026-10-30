@@ -3904,6 +3904,325 @@ static inline bool attributeTypeIsCompatible(mlir::MLIRContext *ctx,
 }
 #endif
 
+namespace {
+/// A member of a struct/tuple `fir.global` initializer that has been folded to
+/// a single constant attribute, ready to be materialized as one
+/// `llvm.mlir.constant` and inserted into the aggregate.
+struct FoldedGlobalMember {
+  int64_t index;            // position of the member in the struct
+  mlir::Type llvmType;      // lowered LLVM type of the member
+  mlir::TypedAttr constant; // the folded constant (dense array or scalar)
+};
+
+/// Result of folding a `fir.global` initializer body. On success exactly one
+/// form is populated: a scalar array folds to `arrayInit`; a struct/tuple of
+/// scalar arrays/scalars folds to `structMembers`.
+struct FoldedInitializer {
+  mlir::DenseElementsAttr arrayInit;                   // scalar array form
+  llvm::SmallVector<FoldedGlobalMember> structMembers; // struct/tuple form
+};
+} // namespace
+
+static llvm::FailureOr<FoldedInitializer>
+foldConstantInitializer(mlir::Value val, mlir::Type llvmType,
+                        bool requireExplicitInit = true);
+
+// Fold a scalar element value being inserted into a typed attribute of the
+// LLVM element type `llvmEleTy`. Handles the fir.convert introduced for logical
+// values, normalizing them to a canonical 0/1 exactly like ConvertOpConversion
+// does. Returns a null attribute if the value is not a foldable scalar
+// constant.
+static mlir::TypedAttr foldElement(mlir::Value val, mlir::Type llvmEleTy) {
+  auto convertOp = val.getDefiningOp<fir::ConvertOp>();
+  mlir::Value src = convertOp ? convertOp.getValue() : val;
+  auto cst = src.getDefiningOp<mlir::arith::ConstantOp>();
+  if (!cst)
+    return {};
+  mlir::TypedAttr valueAttr = cst.getValue();
+  if (valueAttr.getType() == llvmEleTy)
+    return valueAttr;
+  // Only an integer<->logical fir.convert is folded here: it normalizes the
+  // operand to a canonical 0/1 (see ConvertOpConversion).
+  auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
+  auto intType = mlir::dyn_cast<mlir::IntegerType>(llvmEleTy);
+  if (!intAttr || !intType || !convertOp ||
+      (!mlir::isa<fir::LogicalType>(convertOp.getType()) &&
+       !mlir::isa<fir::LogicalType>(convertOp.getValue().getType())))
+    return {};
+  return mlir::IntegerAttr::get(intType, intAttr.getValue().isZero() ? 0 : 1);
+}
+
+/// Fold a scalar array value or a scalar value being inserted into a struct
+/// member into a single typed constant attribute. Returns a null attribute if
+/// the value is not foldable.
+static mlir::TypedAttr foldStructMemberConstant(mlir::Value val,
+                                                mlir::Type llvmMemberType) {
+  // Scalar array member: fold to a DenseElementsAttr. A struct member is
+  // folded even when it is entirely zero/undef, so that a data-bearing sibling
+  // member still takes the fast path (the whole struct is folded or none of
+  // it).
+  if (mlir::isa<mlir::LLVM::LLVMArrayType>(llvmMemberType)) {
+    llvm::FailureOr<FoldedInitializer> folded =
+        foldConstantInitializer(val, llvmMemberType,
+                                /*requireExplicitInit=*/false);
+    if (llvm::succeeded(folded))
+      return folded->arrayInit;
+    return {};
+  }
+  // Scalar member: fold to a scalar constant, looking through the fir.convert
+  // introduced for logical values (normalizing them to a canonical 0/1).
+  if (mlir::isa<mlir::IntegerType, mlir::FloatType>(llvmMemberType))
+    return foldElement(val, llvmMemberType);
+  return {};
+}
+
+/// Build the zero constant for a struct/tuple member that a `fir.zero_bits`
+/// root leaves implicitly zero-initialized (e.g. an uninitialized COMMON block
+/// variable). A scalar member yields a zero scalar attribute; a scalar array
+/// member yields a zero-splat `DenseElementsAttr` over a tensor whose shape
+/// matches the nested `llvm.array` layout. Returns a null attribute for member
+/// types that are not foldable (aggregate/descriptor elements).
+static mlir::TypedAttr makeZeroMemberConstant(mlir::Type llvmMemberType) {
+  if (mlir::isa<mlir::IntegerType, mlir::FloatType>(llvmMemberType))
+    return mlir::Builder(llvmMemberType.getContext())
+        .getZeroAttr(llvmMemberType);
+  if (mlir::isa<mlir::LLVM::LLVMArrayType>(llvmMemberType)) {
+    llvm::SmallVector<int64_t> shape;
+    mlir::Type eleTy = llvmMemberType;
+    while (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(eleTy)) {
+      shape.push_back(arrTy.getNumElements());
+      eleTy = arrTy.getElementType();
+    }
+    if (!mlir::isa<mlir::IntegerType, mlir::FloatType>(eleTy))
+      return {};
+    auto tensorTy = mlir::RankedTensorType::get(shape, eleTy);
+    return mlir::DenseElementsAttr::get(
+        tensorTy, mlir::Builder(eleTy.getContext()).getZeroAttr(eleTy));
+  }
+  return {};
+}
+
+/// Fold the initializer body of a `fir.global` into constant attributes,
+/// walking the region once from `fir.has_value` back to its
+/// `fir.undefined`/`fir.zero_bits` root. A scalar array folds to a single
+/// `DenseElementsAttr`; a struct/tuple of scalar arrays/scalars (COMMON blocks)
+/// folds to a per-member list. This avoids the O(N^2) materialize-and-refold of
+/// the long `llvm.insertvalue` chain the fallback emits for large, partially
+/// initialized arrays. Only integer/float scalar elements are handled; anything
+/// else (pointers, `fir.box`, derived types) returns failure so the caller uses
+/// the regular lowering. `requireExplicitInit` leaves a bare zero/undef as-is.
+static llvm::FailureOr<FoldedInitializer>
+foldConstantInitializer(mlir::Value val, mlir::Type llvmType,
+                        bool requireExplicitInit) {
+  // Struct/tuple form (COMMON blocks): fold each member into its own constant
+  // attribute. The caller emits a small region that materializes each member
+  // with one `llvm.mlir.constant` and inserts it into the aggregate: a single
+  // struct-level `llvm.mlir.constant` cannot represent a struct containing an
+  // array.
+  if (auto structTy = mlir::dyn_cast<mlir::LLVM::LLVMStructType>(llvmType)) {
+    if (structTy.isOpaque())
+      return llvm::failure();
+    llvm::ArrayRef<mlir::Type> body = structTy.getBody();
+    if (body.empty())
+      return llvm::failure();
+
+    // Walk the struct-level fir.insert_value chain once, back to the root
+    // fir.undefined. Each insert sets one member by its integer field index.
+    llvm::SmallVector<mlir::TypedAttr> members(body.size(), mlir::TypedAttr{});
+    mlir::Value cur = val;
+    while (true) {
+      mlir::Operation *op = cur.getDefiningOp();
+      if (!op)
+        return llvm::failure();
+      if (mlir::isa<fir::UndefOp>(op))
+        break;
+      if (mlir::isa<fir::ZeroOp>(op)) {
+        // A fir.zero_bits root zero-initializes every member not set by an
+        // insert above (e.g. an uninitialized COMMON block variable). Without
+        // this, such a struct falls back to the slow per-operation lowering.
+        for (auto [i, memberTy] : llvm::enumerate(body)) {
+          if (!members[i]) {
+            members[i] = makeZeroMemberConstant(memberTy);
+            if (!members[i])
+              return llvm::failure();
+          }
+        }
+        break;
+      }
+      auto insert = mlir::dyn_cast<fir::InsertValueOp>(op);
+      if (!insert)
+        return llvm::failure();
+      // A struct field is addressed by a single integer index.
+      if (insert.getCoor().size() != 1)
+        return llvm::failure();
+      auto idxAttr = mlir::dyn_cast<mlir::IntegerAttr>(insert.getCoor()[0]);
+      if (!idxAttr)
+        return llvm::failure();
+      int64_t field = idxAttr.getInt();
+      if (field < 0 || field >= static_cast<int64_t>(body.size()))
+        return llvm::failure();
+      // Walking backward: the first value seen for a field wins.
+      if (!members[field]) {
+        mlir::TypedAttr memberAttr =
+            foldStructMemberConstant(insert.getVal(), body[field]);
+        if (!memberAttr)
+          return llvm::failure();
+        members[field] = memberAttr;
+      }
+      cur = insert.getAdt();
+    }
+
+    // Every member must have a constant by now: those set by an insert, plus
+    // any zero-defaulted above for a fir.zero_bits root. A member still unset
+    // here came from a fir.undefined root, which has no default, so the struct
+    // is left to the regular lowering.
+    llvm::SmallVector<FoldedGlobalMember> folded;
+    for (auto [i, memberAttr] : llvm::enumerate(members)) {
+      if (!memberAttr)
+        return llvm::failure();
+      folded.push_back({static_cast<int64_t>(i), body[i], memberAttr});
+    }
+    return FoldedInitializer{/*arrayInit=*/nullptr, std::move(folded)};
+  }
+
+  // Scalar array form: fold the whole array to a single dense constant.
+  auto seqTy = mlir::dyn_cast<fir::SequenceType>(val.getType());
+  if (!seqTy || seqTy.hasDynamicExtents())
+    return llvm::failure();
+  llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
+  if (firShape.empty())
+    return llvm::failure();
+
+  // The element must lower to a scalar integer or floating point type for the
+  // whole array to be representable with a DenseElementsAttr. Peel exactly one
+  // llvm.array level per Fortran dimension so aggregate elements (character,
+  // complex, derived types, descriptors) are rejected.
+  mlir::Type llvmEleTy = llvmType;
+  for (size_t i = 0, rank = firShape.size(); i < rank; ++i) {
+    auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmEleTy);
+    if (!arrTy)
+      return llvm::failure();
+    llvmEleTy = arrTy.getElementType();
+  }
+  if (!mlir::isa<mlir::IntegerType, mlir::FloatType>(llvmEleTy))
+    return llvm::failure();
+
+  // Total number of scalar elements and the per-dimension strides for a
+  // column-major flattening (first Fortran dimension varies fastest). This
+  // matches the coordinate order of fir.insert_value/fir.insert_on_range and
+  // makes an insert_on_range map to a contiguous [start, end] flat range.
+  int64_t total = 1;
+  llvm::SmallVector<int64_t> strides(firShape.size());
+  for (size_t i = 0; i < firShape.size(); ++i) {
+    if (firShape[i] < 0)
+      return llvm::failure();
+    strides[i] = total;
+    total *= firShape[i];
+  }
+  if (total == 0)
+    return llvm::failure();
+
+  auto flatIndex = [&](llvm::ArrayRef<int64_t> coord) -> int64_t {
+    int64_t idx = 0;
+    for (size_t i = 0; i < coord.size(); ++i)
+      idx += coord[i] * strides[i];
+    return idx;
+  };
+
+  // Element attribute for each flat index. A null entry means "not yet set".
+  std::vector<mlir::Attribute> elements(total, mlir::Attribute{});
+  mlir::Attribute defaultValue; // value for elements never explicitly set
+
+  // Walk the initializer chain once, from the array value back to the root.
+  bool sawExplicitInit = false;
+  mlir::Value cur = val;
+  while (true) {
+    mlir::Operation *op = cur.getDefiningOp();
+    if (!op)
+      return llvm::failure();
+    if (mlir::isa<fir::UndefOp>(op))
+      break; // undefined root: every element must be set explicitly.
+    if (mlir::isa<fir::ZeroOp>(op)) {
+      defaultValue =
+          mlir::Builder(llvmEleTy.getContext()).getZeroAttr(llvmEleTy);
+      break;
+    }
+    if (auto insert = mlir::dyn_cast<fir::InsertValueOp>(op)) {
+      llvm::SmallVector<int64_t> coord;
+      for (mlir::Attribute a : insert.getCoor()) {
+        auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(a);
+        if (!intAttr) // a named field: not a plain scalar array element.
+          return llvm::failure();
+        coord.push_back(intAttr.getInt());
+      }
+      if (coord.size() != firShape.size())
+        return llvm::failure();
+      mlir::TypedAttr eleAttr = foldElement(insert.getVal(), llvmEleTy);
+      if (!eleAttr)
+        return llvm::failure();
+      int64_t idx = flatIndex(coord);
+      if (idx < 0 || idx >= total)
+        return llvm::failure();
+      // Walking backward: the first value seen for an index wins (it is the
+      // last insert in program order).
+      if (!elements[idx])
+        elements[idx] = eleAttr;
+      sawExplicitInit = true;
+      cur = insert.getAdt();
+      continue;
+    }
+    if (auto range = mlir::dyn_cast<fir::InsertOnRangeOp>(op)) {
+      mlir::TypedAttr eleAttr = foldElement(range.getVal(), llvmEleTy);
+      if (!eleAttr)
+        return llvm::failure();
+      // coor holds [lb0, ub0, lb1, ub1, ...] in Fortran dimension order.
+      auto bounds = range.getCoor().getValues<int64_t>();
+      if (bounds.size() != 2 * firShape.size())
+        return llvm::failure();
+      llvm::SmallVector<int64_t> lb, ub;
+      for (size_t i = 0; i < firShape.size(); ++i) {
+        lb.push_back(bounds[2 * i]);
+        ub.push_back(bounds[2 * i + 1]);
+      }
+      int64_t start = flatIndex(lb);
+      int64_t end = flatIndex(ub);
+      if (start < 0 || end >= total || start > end)
+        return llvm::failure();
+      for (int64_t i = start; i <= end; ++i)
+        if (!elements[i])
+          elements[i] = eleAttr;
+      sawExplicitInit = true;
+      cur = range.getSeq();
+      continue;
+    }
+    // Any other producer (embox, address_of, aggregate insert, ...) cannot be
+    // folded to a scalar array constant.
+    return llvm::failure();
+  }
+
+  // A bare zero/undef array with no explicit element initialization has no
+  // insertvalue chain to collapse: leave it to the regular lowering.
+  if (requireExplicitInit && !sawExplicitInit)
+    return llvm::failure();
+
+  // Fill any element that was not explicitly initialized.
+  for (mlir::Attribute &a : elements)
+    if (!a) {
+      if (!defaultValue) // undefined element with no zero default.
+        return llvm::failure();
+      a = defaultValue;
+    }
+
+  // Build a DenseElementsAttr over a tensor shape matching the row-major LLVM
+  // array layout (the reverse of the Fortran dimension order). The element
+  // vector is already in that row-major order (first Fortran dimension
+  // fastest).
+  llvm::SmallVector<int64_t> tensorShape(firShape.rbegin(), firShape.rend());
+  auto tensorTy = mlir::RankedTensorType::get(tensorShape, llvmEleTy);
+  return FoldedInitializer{mlir::DenseElementsAttr::get(tensorTy, elements),
+                           {}};
+}
+
 /// Lower `fir.global` operation to `llvm.global` operation.
 /// `fir.insert_on_range` operations are replaced with constant dense attribute
 /// if they are applied on the full range.
@@ -3935,6 +4254,30 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
           global, "global type cannot be converted to an LLVM type");
     auto loc = global.getLoc();
     mlir::Attribute initAttr = global.getInitVal().value_or(mlir::Attribute());
+    // Try to fold the initializer body into constant attributes so a compact
+    // llvm.mlir.global can be emitted, avoiding the O(N^2) materialization and
+    // folding of long insertvalue chains for large, partially initialized
+    // arrays. Two forms are handled:
+    //  - a top-level scalar array: a bodyless global with a dense init;
+    //  - a struct/tuple of scalar arrays/scalars (COMMON blocks): a region
+    //    that materializes each member with a single llvm.mlir.constant.
+    bool foldedInit = false;
+    llvm::SmallVector<FoldedGlobalMember> foldedMembers;
+    if (!initAttr && !global.getRegion().empty()) {
+      if (auto hasValue = mlir::dyn_cast<fir::HasValueOp>(
+              global.getRegion().front().getTerminator())) {
+        llvm::FailureOr<FoldedInitializer> folded =
+            foldConstantInitializer(hasValue.getResval(), tyAttr);
+        if (llvm::succeeded(folded)) {
+          if (folded->arrayInit) {
+            initAttr = folded->arrayInit;
+            foldedInit = true;
+          } else {
+            foldedMembers = std::move(folded->structMembers);
+          }
+        }
+      }
+    }
     assert(attributeTypeIsCompatible(global.getContext(), initAttr, tyAttr));
     auto linkage = convertLinkage(global.getLinkage());
     auto isConst = global.getConstant().has_value();
@@ -3987,47 +4330,44 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
     g->setDiscardableAttrs(global->getDiscardableAttrDictionary());
 
     auto &gr = g.getInitializerRegion();
-    rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
-    if (!gr.empty()) {
-      // Replace insert_on_range with a constant dense attribute if the
-      // initialization is on the full range.
-      auto insertOnRangeOps = gr.front().getOps<fir::InsertOnRangeOp>();
-      for (auto insertOp : insertOnRangeOps) {
-        if (!insertOp.isFullRange())
-          continue;
-        // The dense attribute must use the converted element type of the
-        // array, not the type of whatever constant feeds the insertion.
-        mlir::Type elementType = convertType(insertOp.getType().getEleTy());
-        mlir::Value val = insertOp.getVal();
-        // Logical constants reach the insertion through a `fir.convert`.
-        auto convertOp = val.getDefiningOp<fir::ConvertOp>();
-        if (convertOp)
-          val = convertOp.getValue();
-        auto constant = val.getDefiningOp<mlir::arith::ConstantOp>();
-        if (!constant)
-          continue;
-        mlir::TypedAttr valueAttr = constant.getValue();
-        if (valueAttr.getType() != elementType) {
-          // Looking through the `fir.convert` leaves the constant with the
-          // source type. Only an integer<->logical conversion is folded here:
-          // it normalizes any integer operand to a canonical 0/1, see
-          // ConvertOpConversion. Any other mismatching conversion is left to
-          // the regular lowering.
-          auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(valueAttr);
-          auto intType = mlir::dyn_cast<mlir::IntegerType>(elementType);
-          if (!intAttr || !intType || !convertOp ||
-              (!mlir::isa<fir::LogicalType>(convertOp.getType()) &&
-               !mlir::isa<fir::LogicalType>(convertOp.getValue().getType())))
+    if (!foldedMembers.empty()) {
+      // Materialize the folded struct/tuple members: one llvm.mlir.constant per
+      // member inserted into an undef aggregate, then returned. A single
+      // struct-level llvm.mlir.constant cannot represent a struct containing an
+      // array, so the aggregate is assembled with llvm.insertvalue.
+      mlir::Block *block = rewriter.createBlock(&gr);
+      rewriter.setInsertionPointToStart(block);
+      mlir::Value agg = mlir::LLVM::UndefOp::create(rewriter, loc, tyAttr);
+      for (const FoldedGlobalMember &member : foldedMembers) {
+        mlir::Value cst = mlir::LLVM::ConstantOp::create(
+            rewriter, loc, member.llvmType, member.constant);
+        agg = mlir::LLVM::InsertValueOp::create(rewriter, loc, agg, cst,
+                                                member.index);
+      }
+      mlir::LLVM::ReturnOp::create(rewriter, loc, agg);
+    } else if (!foldedInit) {
+      rewriter.inlineRegionBefore(global.getRegion(), gr, gr.end());
+      if (!gr.empty()) {
+        // Replace insert_on_range with a constant dense attribute if the
+        // initialization is on the full range.
+        auto insertOnRangeOps = gr.front().getOps<fir::InsertOnRangeOp>();
+        for (auto insertOp : insertOnRangeOps) {
+          if (!insertOp.isFullRange())
             continue;
-          valueAttr = mlir::IntegerAttr::get(
-              intType, intAttr.getValue().isZero() ? 0 : 1);
+          // The dense attribute must use the converted element type of the
+          // array, not the type of whatever constant feeds the insertion.
+          mlir::Type elementType = convertType(insertOp.getType().getEleTy());
+          mlir::TypedAttr valueAttr =
+              foldElement(insertOp.getVal(), elementType);
+          if (!valueAttr)
+            continue;
+          auto vecType =
+              mlir::VectorType::get(insertOp.getType().getShape(), elementType);
+          auto denseAttr = mlir::DenseElementsAttr::get(vecType, valueAttr);
+          rewriter.setInsertionPointAfter(insertOp);
+          rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+              insertOp, convertType(insertOp.getType()), denseAttr);
         }
-        auto vecType =
-            mlir::VectorType::get(insertOp.getType().getShape(), elementType);
-        auto denseAttr = mlir::DenseElementsAttr::get(vecType, valueAttr);
-        rewriter.setInsertionPointAfter(insertOp);
-        rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
-            insertOp, convertType(insertOp.getType()), denseAttr);
       }
     }
 
