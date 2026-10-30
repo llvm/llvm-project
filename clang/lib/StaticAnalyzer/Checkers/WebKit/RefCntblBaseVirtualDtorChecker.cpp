@@ -199,8 +199,8 @@ public:
           if (!C)
             continue;
 
-          bool isExempt = T.getAsString() == "NoVirtualDestructorBase" &&
-                          safeGetName(C->getParent()) == "WTF";
+          bool isExempt = safeGetName(C->getParent()) == "WTF" &&
+                          T.getAsString() == "NoVirtualDestructorBase";
           if (isExempt || ExemptDecls.contains(C)) {
             ExemptDecls.insert(RD);
             continue;

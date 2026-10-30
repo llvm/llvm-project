@@ -97,7 +97,8 @@ inline const DeviceInfoProp PropUint32{
     OL_DEVICE_INFO_NUM_LANES,
     OL_DEVICE_INFO_DRIVER_ID,
     OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE,
-    OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS};
+    OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS,
+    OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS};
 
 inline const DeviceInfoProperties Uint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), PropUint32);
@@ -111,7 +112,8 @@ inline const DeviceInfoProperties Uint64Properties =
 // Devices are allowed to report zero for these, so they can only be checked
 // for support.
 inline const DeviceInfoProp PropUint64MayBeZero{
-    OL_DEVICE_INFO_HARDWARE_PARALLELISM, OL_DEVICE_INFO_TIMESTAMP_FREQUENCY};
+    OL_DEVICE_INFO_HARDWARE_PARALLELISM, OL_DEVICE_INFO_TIMESTAMP_FREQUENCY,
+    OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE};
 inline const DeviceInfoProperties Uint64MayBeZeroProperties =
     createPropertiesWithSizeContainer(sizeof(uint64_t), PropUint64MayBeZero);
 
