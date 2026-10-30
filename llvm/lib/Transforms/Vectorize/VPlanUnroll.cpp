@@ -488,6 +488,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
+    auto *ALM = dyn_cast<VPActiveLaneMaskPHIRecipe>(&R);
+    if (ALM && match(ALM->getBackedgeValue(),
+                     m_VPInstruction<VPInstruction::WideActiveLaneMask>())) {
+      addUniformForAllParts(ALM);
+      continue;
+    }
+
     if (match(&R,
               m_CombineOr(m_VPInstruction<VPInstruction::WideVectorLoad>(),
                           m_VPInstruction<VPInstruction::WideVectorStore>()))) {
