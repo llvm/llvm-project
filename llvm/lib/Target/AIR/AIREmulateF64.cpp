@@ -1887,7 +1887,12 @@ void EmulateF64::emulate(Function &F, StringRef Key) {
 
 void EmulateF64::linkSoftF64() {
   SMDiagnostic Err;
+  // Textual IR has named values, which a context that discards names (a
+  // release build's, as ZLUDA's) cannot read: names are kept while it is read.
+  bool Discards = Ctx.shouldDiscardValueNames();
+  Ctx.setDiscardValueNames(false);
   std::unique_ptr<Module> Lib = parseAssemblyString(AIRSoftF64IR, Err, Ctx);
+  Ctx.setDiscardValueNames(Discards);
   if (!Lib) {
     error(nullptr, "soft-f64 library: " + Err.getMessage());
     return;

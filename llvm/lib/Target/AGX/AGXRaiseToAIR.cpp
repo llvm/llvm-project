@@ -763,8 +763,13 @@ void RaiseToAIR::raiseFunction(Function &F) {
 
 bool RaiseToAIR::linkSoftF64() {
   SMDiagnostic Err;
+  // (names kept while the textual IR is read: a release build's context
+  // discards them, and textual IR cannot be read without)
+  bool Discards = Ctx.shouldDiscardValueNames();
+  Ctx.setDiscardValueNames(false);
   std::unique_ptr<Module> Lib =
       parseAssemblyString(AIRSoftF64IR, Err, Ctx);
+  Ctx.setDiscardValueNames(Discards);
   if (!Lib) {
     error(nullptr, "soft-f64 library: " + Err.getMessage());
     return false;
