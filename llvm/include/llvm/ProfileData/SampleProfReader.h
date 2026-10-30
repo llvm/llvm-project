@@ -1200,6 +1200,10 @@ protected:
   /// The set containing the functions to use when compiling a module.
   DenseSet<StringRef> FuncsToUse;
 
+  /// Name table entries matching functions in the current module. This avoids
+  /// building a whole-profile string index for module-scoped queries.
+  mutable std::optional<DenseSet<StringRef>> ModuleNameTableEntries;
+
 public:
   SampleProfileReaderExtBinaryBase(std::unique_ptr<MemoryBuffer> B,
                                    LLVMContext &C, SampleProfileFormat Format)
@@ -1226,6 +1230,9 @@ public:
   /// Collect functions with definitions in Module M. Return true if
   /// the reader has been given a module.
   bool collectFuncsFromModule() override;
+
+  using SampleProfileReaderBinary::contains;
+  bool contains(StringRef Key) const override;
 
   std::unique_ptr<ProfileSymbolList> getProfileSymbolList() override {
     return std::move(ProfSymList);
