@@ -3674,10 +3674,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       return GEPNoWrapFlags::none();
     };
 
-    // Try to replace ADD + GEP with GEP + GEP.
+    // Try to replace ADD + GEP with GEP + GEP. Before loop vectorization, relax
+    // the single-use requirement when the addend is a constant.
     Value *Idx1, *Idx2;
-    if (match(GEP.getOperand(1),
-              m_OneUse(m_AddLike(m_Value(Idx1), m_Value(Idx2))))) {
+    if (match(GEP.getOperand(1), m_AddLike(m_Value(Idx1), m_Value(Idx2))) &&
+        (GEP.getOperand(1)->hasOneUse() ||
+         (!PostLoopVectorizer && match(Idx2, m_ConstantInt())))) {
       //   %idx = add i64 %idx1, %idx2
       //   %gep = getelementptr i32, ptr %ptr, i64 %idx
       // as:
@@ -6330,6 +6332,7 @@ static bool combineInstructionsOverFunction(
 
     InstCombinerImpl IC(Worklist, F, AA, AC, TLI, TTI, DT, ORE, BFI, BPI, PSI,
                         DL, RPOT, CLOpts);
+    IC.PostLoopVectorizer = Opts.PostLoopVectorizer;
     bool MadeChangeInThisIteration = IC.prepareWorklist(F);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
@@ -6367,6 +6370,8 @@ void InstCombinePass::printPipeline(
   OS << '<';
   OS << "max-iterations=" << Options.MaxIterations << ";";
   OS << (Options.VerifyFixpoint ? "" : "no-") << "verify-fixpoint";
+  if (Options.PostLoopVectorizer)
+    OS << ";post-loop-vectorizer";
   OS << '>';
 }
 
