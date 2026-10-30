@@ -47,14 +47,10 @@ define void @vmulwev_q_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwev.q.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_d:
@@ -121,14 +117,10 @@ define void @vmulwod_q_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwod.q.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_d:
@@ -216,14 +208,10 @@ define void @vmulwev_q_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwev.q.du $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_du:
@@ -311,14 +299,10 @@ define void @vmulwod_q_du(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwod.q.du $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_du:
@@ -385,14 +369,10 @@ define void @vmulwev_q_du_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwev.q.du.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_du_d:
@@ -459,14 +439,10 @@ define void @vmulwod_q_du_d(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwod.q.du.d $vr0, $vr0, $vr1
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_du_d:
@@ -533,14 +509,10 @@ define void @vmulwev_q_du_d_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwev.q.du.d $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwev_q_du_d_1:
@@ -607,14 +579,10 @@ define void @vmulwod_q_du_d_1(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    vld $vr0, $a1, 0
 ; LA32-NEXT:    vld $vr1, $a2, 0
 ; LA32-NEXT:    vmulwod.q.du.d $vr0, $vr1, $vr0
-; LA32-NEXT:    vpickve2gr.w $a1, $vr0, 0
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 1
-; LA32-NEXT:    vpickve2gr.w $a3, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a4, $vr0, 3
-; LA32-NEXT:    st.w $a4, $a0, 12
-; LA32-NEXT:    st.w $a3, $a0, 8
-; LA32-NEXT:    st.w $a2, $a0, 4
-; LA32-NEXT:    st.w $a1, $a0, 0
+; LA32-NEXT:    vstelm.w $vr0, $a0, 12, 3
+; LA32-NEXT:    vstelm.w $vr0, $a0, 8, 2
+; LA32-NEXT:    vstelm.w $vr0, $a0, 4, 1
+; LA32-NEXT:    vstelm.w $vr0, $a0, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vmulwod_q_du_d_1:
