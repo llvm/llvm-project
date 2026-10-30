@@ -727,22 +727,42 @@ def memopf128 : PatFrag<(ops node:$ptr), (f128 (load node:$ptr)), [{
 }]>;
 
 def sextloadi16i8  : PatFrag<(ops node:$ptr), (i16 (sextloadi8 node:$ptr))>;
-def sextloadi32i8  : PatFrag<(ops node:$ptr), (i32 (sextloadi8 node:$ptr))>;
-def sextloadi32i16 : PatFrag<(ops node:$ptr), (i32 (sextloadi16 node:$ptr))>;
-def sextloadi64i8  : PatFrag<(ops node:$ptr), (i64 (sextloadi8 node:$ptr))>;
-def sextloadi64i16 : PatFrag<(ops node:$ptr), (i64 (sextloadi16 node:$ptr))>;
-def sextloadi64i32 : PatFrag<(ops node:$ptr), (i64 (sextloadi32 node:$ptr))>;
+def sextloadi32i8  : PatFrags<(ops node:$ptr),
+                              [(i32 (sextloadi8 node:$ptr)),
+                               (i32 (atomic_load_sext_8 node:$ptr))]>;
+def sextloadi32i16 : PatFrags<(ops node:$ptr),
+                              [(i32 (sextloadi16 node:$ptr)),
+                               (i32 (atomic_load_sext_16 node:$ptr))]>;
+def sextloadi64i8  : PatFrags<(ops node:$ptr),
+                              [(i64 (sextloadi8 node:$ptr)),
+                               (i64 (atomic_load_sext_8 node:$ptr))]>;
+def sextloadi64i16 : PatFrags<(ops node:$ptr),
+                              [(i64 (sextloadi16 node:$ptr)),
+                               (i64 (atomic_load_sext_16 node:$ptr))]>;
+def sextloadi64i32 : PatFrags<(ops node:$ptr),
+                              [(i64 (sextloadi32 node:$ptr)),
+                               (i64 (atomic_load_sext_32 node:$ptr))]>;
 
 def zextloadi8i1   : PatFrag<(ops node:$ptr), (i8  (zextloadi1 node:$ptr))>;
 def zextloadi16i1  : PatFrag<(ops node:$ptr), (i16 (zextloadi1 node:$ptr))>;
 def zextloadi32i1  : PatFrag<(ops node:$ptr), (i32 (zextloadi1 node:$ptr))>;
 def zextloadi16i8  : PatFrag<(ops node:$ptr), (i16 (zextloadi8 node:$ptr))>;
-def zextloadi32i8  : PatFrag<(ops node:$ptr), (i32 (zextloadi8 node:$ptr))>;
-def zextloadi32i16 : PatFrag<(ops node:$ptr), (i32 (zextloadi16 node:$ptr))>;
+def zextloadi32i8  : PatFrags<(ops node:$ptr),
+                              [(i32 (zextloadi8 node:$ptr)),
+                               (i32 (atomic_load_azext_8 node:$ptr))]>;
+def zextloadi32i16 : PatFrags<(ops node:$ptr),
+                              [(i32 (zextloadi16 node:$ptr)),
+                               (i32 (atomic_load_azext_16 node:$ptr))]>;
 def zextloadi64i1  : PatFrag<(ops node:$ptr), (i64 (zextloadi1 node:$ptr))>;
-def zextloadi64i8  : PatFrag<(ops node:$ptr), (i64 (zextloadi8 node:$ptr))>;
-def zextloadi64i16 : PatFrag<(ops node:$ptr), (i64 (zextloadi16 node:$ptr))>;
-def zextloadi64i32 : PatFrag<(ops node:$ptr), (i64 (zextloadi32 node:$ptr))>;
+def zextloadi64i8  : PatFrags<(ops node:$ptr),
+                              [(i64 (zextloadi8 node:$ptr)),
+                               (i64 (atomic_load_azext_8 node:$ptr))]>;
+def zextloadi64i16 : PatFrags<(ops node:$ptr),
+                              [(i64 (zextloadi16 node:$ptr)),
+                               (i64 (atomic_load_azext_16 node:$ptr))]>;
+def zextloadi64i32 : PatFrags<(ops node:$ptr),
+                              [(i64 (zextloadi32 node:$ptr)),
+                               (i64 (atomic_load_azext_32 node:$ptr))]>;
 
 def extloadi8i1    : PatFrag<(ops node:$ptr), (i8  (extloadi1 node:$ptr))>;
 def extloadi16i1   : PatFrag<(ops node:$ptr), (i16 (extloadi1 node:$ptr))>;
