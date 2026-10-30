@@ -2075,8 +2075,8 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
-    auto *RdxResult = findSingletonUser<VPInstruction::ComputeReductionResult>(
-        BackedgeSelect);
+    auto *RdxResult =
+        findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeSelect);
     assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
@@ -2358,7 +2358,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
-    auto *Cmp = findSingletonUser<VPRecipeWithIRFlags>(
+    auto *Cmp = findSingleUser<VPRecipeWithIRFlags>(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB)));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
@@ -2376,7 +2376,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findSingletonUser<VPInstruction::ComputeReductionResult>(
+        findSingleUser<VPInstruction::ComputeReductionResult>(
             MinOrMaxBackedgeR);
     assert(MinOrMaxResult &&
            "MinOrMaxResult must be a user of MinOrMaxBackedgeR");
@@ -2405,7 +2405,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan,
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
     VPInstruction *FindIVResult =
-        findSingletonUser<VPInstruction::ComputeReductionResult>(
+        findSingleUser<VPInstruction::ComputeReductionResult>(
             FindIVPhiR->getBackedgeValue());
     assert(FindIVResult &&
            "must be able to retrieve the FindIVResult VPInstruction");

@@ -5895,11 +5895,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend =
-              VPlanPatternMatch::findSingletonUser<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findSingleUser<VPBlendRecipe>(Val))
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findSingletonUser<VPReductionPHIRecipe>(Val);
+          VPlanPatternMatch::findSingleUser<VPReductionPHIRecipe>(Val);
       assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
@@ -6555,7 +6554,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect = findSingletonUser<VPSingleDefRecipe>(
+      auto *AnyOfSelect = findSingleUser<VPSingleDefRecipe>(
           PhiR,
           m_Select(m_Unless(m_Specific(HeaderMask)), m_VPValue(), m_VPValue()));
       VPValue *Start = PhiR->getStartValue();

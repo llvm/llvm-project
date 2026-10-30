@@ -46,7 +46,7 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     return;
 
   auto *WideCanIV =
-      findSingletonUser<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
+      findSingleUser<VPWidenCanonicalIVRecipe>(LoopRegion->getCanonicalIV());
   if (!WideCanIV)
     return;
 

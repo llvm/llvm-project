@@ -848,15 +848,15 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
   if (auto *Res =
-          findSingletonUser<VPInstruction::ComputeReductionResult>(BackedgeVal))
+          findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  auto *SelR = findSingletonUser<VPSingleDefRecipe>(
+  auto *SelR = findSingleUser<VPSingleDefRecipe>(
       BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return findSingletonUser<VPInstruction::ComputeReductionResult>(SelR);
+  return findSingleUser<VPInstruction::ComputeReductionResult>(SelR);
 }
 
 bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {

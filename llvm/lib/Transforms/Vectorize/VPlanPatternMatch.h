@@ -1243,7 +1243,7 @@ inline auto m_VPPhi(const Op0_t &Op0, const Op1_t &Op1) {
 /// Return the sole user of \p V matching pattern \p P, casting it to \p
 /// RecipeTy, or nullptr.
 template <typename RecipeTy, typename MatchT>
-RecipeTy *findSingletonUser(VPValue *V, const MatchT &P) {
+RecipeTy *findSingleUser(VPValue *V, const MatchT &P) {
   return find_singleton<RecipeTy>(V->users(), [&P](VPUser *U, bool) {
     return match(U, P) ? cast<RecipeTy>(U) : nullptr;
   });
@@ -1251,13 +1251,13 @@ RecipeTy *findSingletonUser(VPValue *V, const MatchT &P) {
 
 /// Return the sole user of \p V that is a VPInstruction with \p Opcode, or
 /// nullptr.
-template <unsigned Opcode> VPInstruction *findSingletonUser(VPValue *V) {
-  return findSingletonUser<VPInstruction>(V, m_VPInstruction<Opcode>());
+template <unsigned Opcode> VPInstruction *findSingleUser(VPValue *V) {
+  return findSingleUser<VPInstruction>(V, m_VPInstruction<Opcode>());
 }
 
 /// Return the sole user of \p V that is a \p RecipeTy, or nullptr.
-template <typename RecipeTy> RecipeTy *findSingletonUser(VPValue *V) {
-  return findSingletonUser<RecipeTy>(V, m_Isa<RecipeTy>());
+template <typename RecipeTy> RecipeTy *findSingleUser(VPValue *V) {
+  return findSingleUser<RecipeTy>(V, m_Isa<RecipeTy>());
 }
 } // namespace llvm::VPlanPatternMatch
 
