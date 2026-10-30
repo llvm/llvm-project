@@ -154,6 +154,14 @@ def TunePreferWInst
     : SubtargetFeature<"prefer-w-inst", "PreferWInst", "true",
                        "Prefer instructions with W suffix">;
 
+def TuneLA464
+    : SubtargetFeature<"tune-la464", "HasTuneLA464", "true",
+                       "Tune for LA464 microarchitecture">;
+def HasTuneLA464
+    : Predicate<"Subtarget->hasTuneLA464()">;
+def HasNoTuneLA464
+    : Predicate<"!Subtarget->hasTuneLA464()">;
+
 //===----------------------------------------------------------------------===//
 // Schedule, Registers, instruction descriptions ...
 //===----------------------------------------------------------------------===//
@@ -195,7 +203,8 @@ def : ProcessorModel<"la464", LA464Model, [Feature64Bit,
                                              FeatureUAL,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,
-                                             FeatureExtLBT]>;
+                                             FeatureExtLBT],
+                                          [TuneLA464]>;
 
 def : ProcessorModel<"la664", LA664Model, [Feature64Bit,
                                              FeatureUAL,

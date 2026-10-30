@@ -1947,6 +1947,12 @@ def PseudoVMSKEQZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
 def PseudoVMSKNEZ_B : Pseudo<(outs GPR:$rd), (ins LSX128:$vj)>;
 } // usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+// LA464 has very slow MOVCF2GR, and going through MOVCF2FR+MOVFR2GR seems to work
+// around this anomaly.
+def PseudoMOVCF2GRViaFR : Pseudo<(outs GPR:$rd), (ins CFR:$cj), []>;
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+
 } // Predicates = [HasExtLSX]
 
 multiclass PatVr<SDPatternOperator OpNode, string Inst> {
@@ -3048,8 +3054,7 @@ def : Pat<(loongarch_vmsknez (v16i8 LSX128:$vj)), (PseudoVMSKNEZ_B LSX128:$vj)>;
 // branch consumes it directly and only a materialization needs MOVCF2GR.
 multiclass PatVecCond<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
                       RegisterClass RC> {
-  def : Pat<(GRLenVT (OpNode (VT RC:$vj))),
-            (MOVCF2GR (VSet RC:$vj))>;
+  def : Pat<(GRLenVT (OpNode (VT RC:$vj))), (MOVCF2GR (VSet RC:$vj))>;
   def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
                             SETNE, bb:$imm21),
             (BCNEZ (VSet RC:$vj), bb:$imm21)>;
@@ -3058,6 +3063,21 @@ multiclass PatVecCond<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
             (BCEQZ (VSet RC:$vj), bb:$imm21)>;
 }
 
+multiclass PatVecCondViaFR<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
+                          RegisterClass RC> {
+  def : Pat<(GRLenVT (OpNode (VT RC:$vj))),
+            (PseudoMOVCF2GRViaFR (VSet RC:$vj))>;
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETNE, bb:$imm21),
+            (BCNEZ (VSet RC:$vj), bb:$imm21)>;
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETEQ, bb:$imm21),
+            (BCEQZ (VSet RC:$vj), bb:$imm21)>;
+}
+
+} // Predicates = [HasExtLSX]
+
+let Predicates = [HasExtLSX, HasNoTuneLA464] in {
 // Whole-vector zero tests.
 foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
 defm : PatVecCond<loongarch_vanynonzero, VSETNEZ_V, vt, LSX128>;
@@ -3074,8 +3094,25 @@ defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
 defm : PatVecCond<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
 defm : PatVecCond<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
 defm : PatVecCond<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
+} // Predicates = [HasExtLSX, HasNoTuneLA464]
 
-} // Predicates = [HasExtLSX]
+let Predicates = [HasExtLSX, HasTuneLA464] in {
+foreach vt = [v16i8, v8i16, v4i32, v2i64] in {
+defm : PatVecCondViaFR<loongarch_vanynonzero, VSETNEZ_V, vt, LSX128>;
+defm : PatVecCondViaFR<loongarch_vallzero, VSETEQZ_V, vt, LSX128>;
+}
+
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_B, v16i8, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_H, v8i16, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_W, v4i32, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_zero, VSETANYEQZ_D, v2i64, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_B, v16i8, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_H, v8i16, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
+defm : PatVecCondViaFR<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
+defm : PatVecCondViaFR<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
+defm : PatVecCondViaFR<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
+} // Predicates = [HasExtLSX, HasTuneLA464]
 
 /// Intrinsic pattern
 

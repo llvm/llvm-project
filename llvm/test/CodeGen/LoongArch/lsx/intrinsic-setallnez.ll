@@ -15,7 +15,8 @@ define i32 @lsx_bnz_b(<16 x i8> %va) nounwind {
 ; LA64-LA464-LABEL: lsx_bnz_b:
 ; LA64-LA464:       # %bb.0: # %entry
 ; LA64-LA464-NEXT:    vsetallnez.b $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a0, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-LA464-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lsx.bnz.b(<16 x i8> %va)
@@ -34,7 +35,8 @@ define i32 @lsx_bnz_h(<8 x i16> %va) nounwind {
 ; LA64-LA464-LABEL: lsx_bnz_h:
 ; LA64-LA464:       # %bb.0: # %entry
 ; LA64-LA464-NEXT:    vsetallnez.h $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a0, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-LA464-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lsx.bnz.h(<8 x i16> %va)
@@ -53,7 +55,8 @@ define i32 @lsx_bnz_w(<4 x i32> %va) nounwind {
 ; LA64-LA464-LABEL: lsx_bnz_w:
 ; LA64-LA464:       # %bb.0: # %entry
 ; LA64-LA464-NEXT:    vsetallnez.w $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a0, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-LA464-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lsx.bnz.w(<4 x i32> %va)
@@ -72,7 +75,8 @@ define i32 @lsx_bnz_d(<2 x i64> %va) nounwind {
 ; LA64-LA464-LABEL: lsx_bnz_d:
 ; LA64-LA464:       # %bb.0: # %entry
 ; LA64-LA464-NEXT:    vsetallnez.d $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a0, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-LA464-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lsx.bnz.d(<2 x i64> %va)

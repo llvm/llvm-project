@@ -15,7 +15,8 @@ define i32 @lsx_bz_v(<16 x i8> %va) nounwind {
 ; LA64-LA464-LABEL: lsx_bz_v:
 ; LA64-LA464:       # %bb.0: # %entry
 ; LA64-LA464-NEXT:    vseteqz.v $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a0, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-LA464-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lsx.bz.v(<16 x i8> %va)
@@ -34,7 +35,8 @@ define i32 @lsx_bnz_v(<16 x i8> %va) nounwind {
 ; LA64-LA464-LABEL: lsx_bnz_v:
 ; LA64-LA464:       # %bb.0: # %entry
 ; LA64-LA464-NEXT:    vsetnez.v $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a0, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-LA464-NEXT:    ret
 entry:
   %res = call i32 @llvm.loongarch.lsx.bnz.v(<16 x i8> %va)

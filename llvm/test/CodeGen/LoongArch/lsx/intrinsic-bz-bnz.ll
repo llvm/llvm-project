@@ -801,7 +801,8 @@ define i32 @bz_h_multiuse(<8 x i16> %v, ptr %p) {
 ; LA64-LA464-LABEL: bz_h_multiuse:
 ; LA64-LA464:       # %bb.0:
 ; LA64-LA464-NEXT:    vsetanyeqz.h $fcc0, $vr0
-; LA64-LA464-NEXT:    movcf2gr $a1, $fcc0
+; LA64-LA464-NEXT:    movcf2fr $fa0, $fcc0
+; LA64-LA464-NEXT:    movfr2gr.s $a1, $fa0
 ; LA64-LA464-NEXT:    st.w $a1, $a0, 0
 ; LA64-LA464-NEXT:    bceqz $fcc0, .LBB20_2
 ; LA64-LA464-NEXT:  # %bb.1: # %t
