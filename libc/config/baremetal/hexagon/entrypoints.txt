@@ -381,6 +381,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ceill
     libc.src.math.copysign
     libc.src.math.copysignf
+    libc.src.math.copysignf80
     libc.src.math.copysignl
     libc.src.math.cos
     libc.src.math.cosf
@@ -406,6 +407,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
+    libc.src.math.fabsf80
     libc.src.math.fabsl
     libc.src.math.fadd
     libc.src.math.faddl
@@ -425,6 +427,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaf
     libc.src.math.fmax
     libc.src.math.fmaxf
+    libc.src.math.fmaxf80
     libc.src.math.fmaximum
     libc.src.math.fmaximum_mag
     libc.src.math.fmaximum_mag_num
@@ -436,10 +439,12 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmaximum_numf
     libc.src.math.fmaximum_numl
     libc.src.math.fmaximumf
+    libc.src.math.fmaximumf80
     libc.src.math.fmaximuml
     libc.src.math.fmaxl
     libc.src.math.fmin
     libc.src.math.fminf
+    libc.src.math.fminf80
     libc.src.math.fminimum
     libc.src.math.fminimum_mag
     libc.src.math.fminimum_mag_num
@@ -451,6 +456,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminimum_numf
     libc.src.math.fminimum_numl
     libc.src.math.fminimumf
+    libc.src.math.fminimumf80
     libc.src.math.fminimuml
     libc.src.math.fminl
     libc.src.math.fmod

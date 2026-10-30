@@ -40,7 +40,7 @@ class NeonVectorOfLength<int length, Type elementType> : ShapedContainerType<
   "::mlir::VectorType">;
 
 //===----------------------------------------------------------------------===//
-// ArmNeon op definitions
+// ArmNeon Op classes
 //===----------------------------------------------------------------------===//
 
 // ArmNeon dialect op that corresponds (and is convertible to) an LLVM IR
@@ -72,6 +72,15 @@ class ArmNeon_OverloadedOperandsWithOneResultIntrOp<string mnemonic,
                                                     list<Trait> traits = []>
   : ArmNeon_IntrOp<mnemonic, [0], overloadedOperands, 1, traits>;
 
+class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
+    : Op</*dialect=*/ArmNeon_Dialect,
+         /*opName=*/"2d." # mnemonic,
+         /*traits=*/traits>;
+
+//===----------------------------------------------------------------------===//
+// SMullOp
+//===----------------------------------------------------------------------===//
+
 def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
        Pure,
        AllTypesMatch<["a", "b"]>,
@@ -101,6 +110,10 @@ def SMullOp : ArmNeon_OverloadedOneResultIntrOp<"smull", [
     "$a `,` $b attr-dict `:` type($a) `to` type($res)";
 }
 
+//===----------------------------------------------------------------------===//
+// SdotOp
+//===----------------------------------------------------------------------===//
+
 def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
       Pure,
       AllTypesMatch<["b", "c"]>,
@@ -128,6 +141,10 @@ def SdotOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"sdot",[1], [
   let assemblyFormat =
     "$a `,` $b `,` $c attr-dict `:` type($b) `,` type($c) `to` type($res)";
   }
+
+//===----------------------------------------------------------------------===//
+// SmmlaOp
+//===----------------------------------------------------------------------===//
 
 def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
                 Pure,
@@ -159,6 +176,10 @@ def SmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"smmla",[1], [
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
+//===----------------------------------------------------------------------===//
+// UmmlaOp
+//===----------------------------------------------------------------------===//
+
 def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
                 Pure,
                 AllTypesMatch<["src1", "src2"]>,
@@ -189,6 +210,10 @@ def UmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"ummla",[1], [
   let assemblyFormat =
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
+
+//===----------------------------------------------------------------------===//
+// UsmmlaOp
+//===----------------------------------------------------------------------===//
 
 def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
                 Pure,
@@ -222,6 +247,10 @@ def UsmmlaOp : ArmNeon_OverloadedOperandsWithOneResultIntrOp<"usmmla",[1], [
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
+//===----------------------------------------------------------------------===//
+// BfmmlaOp
+//===----------------------------------------------------------------------===//
+
 def BfmmlaOp : ArmNeon_IntrOp<"bfmmla", [], [], 1, [
                  Pure,
                  AllTypesMatch<["src1", "src2"]>,
@@ -250,10 +279,9 @@ def BfmmlaOp : ArmNeon_IntrOp<"bfmmla", [], [], 1, [
     "$acc `,` $src1 `,` $src2 attr-dict `:` type($src1) `to` type($res)";
 }
 
-class ArmNeon_2dOp<string mnemonic, list<Trait> traits = []>
-    : Op</*dialect=*/ArmNeon_Dialect,
-         /*opName=*/"2d." # mnemonic,
-         /*traits=*/traits>;
+//===----------------------------------------------------------------------===//
+// Sdot2dOp
+//===----------------------------------------------------------------------===//
 
 def Sdot2dOp : ArmNeon_2dOp<"sdot", [
       Pure,

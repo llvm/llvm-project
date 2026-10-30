@@ -95,8 +95,8 @@ body:             |
     %4:gr64= COPY $rsi
     %2:gr64 = COPY $rdi
     DBG_VALUE_LIST !14, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), %2, %stack.0, debug-location !17
-    %3:gr64 = COPY killed %2
-    %5:gr64 = COPY killed %4
+    %3:gr64 = COPY %2
+    %5:gr64 = COPY %4
 
     ; Force allocation into $rax and $rbx
     INLINEASM &"", 1, 12, implicit-def dead $rcx, 12, implicit-def dead $rdx, 12, implicit-def dead $rsi, 12, implicit-def dead $rdi, 12, implicit-def $rbp, 12, implicit-def dead $r8, 12, implicit-def dead $r9, 12, implicit-def dead $r10, 12, implicit-def dead $r11, 12, implicit-def dead $r12, 12, implicit-def dead $r13, 12, implicit-def dead $r14, 12, implicit-def dead $r15, 12, !18, debug-location !17

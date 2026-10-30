@@ -535,6 +535,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "machine-block-address-taken";
       hasAttributes = true;
     }
+    if (hasLabelMustBeEmitted()) {
+      os << (hasAttributes ? ", " : " (");
+      os << "label-must-be-emitted";
+      hasAttributes = true;
+    }
     if (isIRBlockAddressTaken()) {
       os << (hasAttributes ? ", " : " (");
       os << "ir-block-address-taken ";
