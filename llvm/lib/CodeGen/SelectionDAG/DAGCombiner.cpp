@@ -803,10 +803,11 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
                                 unsigned NumStores);
 
-    /// Helper function for mergeConsecutiveStores which checks if all the store
-    /// nodes have the same underlying object. We can still reuse the first
-    /// store's pointer info if all the stores are from the same object.
-    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes);
+    /// Helper function for mergeConsecutiveStores which checks if all the
+    /// load/store nodes have the same underlying object. We can still reuse the
+    /// first load/store's pointer info if all the load/stores are from the same
+    /// object.
+    bool hasSameUnderlyingObj(ArrayRef<MemOpLink> MemOps);
 
     /// This is a helper function for mergeConsecutiveStores. When the source
     /// elements of the consecutive stores are all constants or all extracted
@@ -6997,12 +6998,12 @@ SDValue DAGCombiner::foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
   return SDValue();
 }
 
-static bool arebothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
+static bool areBothOperandsNotSNan(SDValue Operand1, SDValue Operand2,
                                    SelectionDAG &DAG) {
   return DAG.isKnownNeverSNaN(Operand2) && DAG.isKnownNeverSNaN(Operand1);
 }
 
-static bool arebothOperandsNotNan(SDValue Operand1, SDValue Operand2,
+static bool areBothOperandsNotNan(SDValue Operand1, SDValue Operand2,
                                   SelectionDAG &DAG) {
   return DAG.isKnownNeverNaN(Operand2) && DAG.isKnownNeverNaN(Operand1);
 }
@@ -7014,7 +7015,7 @@ static unsigned getMinMaxOpcodeForClamp(bool IsMin, SDValue Operand1,
   EVT VT = Operand1.getValueType();
   unsigned IEEEOp = IsMin ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
   if (TLI.isOperationLegalOrCustom(IEEEOp, VT) &&
-      arebothOperandsNotNan(Operand1, Operand2, DAG))
+      areBothOperandsNotNan(Operand1, Operand2, DAG))
     return IEEEOp;
   unsigned PreferredOp = IsMin ? ISD::FMINNUM : ISD::FMAXNUM;
   if (TLI.isOperationLegalOrCustom(PreferredOp, VT))
@@ -7022,61 +7023,63 @@ static unsigned getMinMaxOpcodeForClamp(bool IsMin, SDValue Operand1,
   return ISD::DELETED_NODE;
 }
 
-// FIXME: use FMINIMUMNUM if possible, such as for RISC-V.
 static unsigned getMinMaxOpcodeForCompareFold(
     SDValue Operand1, SDValue Operand2, bool SetCCNoNaNs, ISD::CondCode CC,
     unsigned OrAndOpcode, SelectionDAG &DAG, bool isFMAXNUMFMINNUM_IEEE,
-    bool isFMAXNUMFMINNUM) {
+    bool isFMAXNUMFMINNUM, bool isFMAXIMUMNUMFMINIMUMNUM,
+    bool isPSEUDOFMAXFMIN) {
   // The optimization cannot be applied for all the predicates because
-  // of the way FMINNUM/FMAXNUM and FMINNUM_IEEE/FMAXNUM_IEEE handle
-  // NaNs. For FMINNUM_IEEE/FMAXNUM_IEEE, the optimization cannot be
-  // applied at all if one of the operands is a signaling NaN.
+  // of the way the min/max opcodes handle NaNs.
 
-  // It is safe to use FMINNUM_IEEE/FMAXNUM_IEEE if all the operands
-  // are non NaN values.
+  // It is safe to use PSEUDO_FMIN/PSEUDO_FMAX, FMINIMUMNUM/FMAXIMUMNUM or
+  // FMINNUM_IEEE/FMAXNUM_IEEE if all the operands are non NaN values.
   if (((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::AND))) {
-    return (SetCCNoNaNs || arebothOperandsNotNan(Operand1, Operand2, DAG)) &&
-                   isFMAXNUMFMINNUM_IEEE
-               ? ISD::FMINNUM_IEEE
-               : ISD::DELETED_NODE;
+    if (!SetCCNoNaNs && !areBothOperandsNotNan(Operand1, Operand2, DAG))
+      return ISD::DELETED_NODE;
+    return isPSEUDOFMAXFMIN           ? ISD::PSEUDO_FMIN
+           : isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMINIMUMNUM
+           : isFMAXNUMFMINNUM_IEEE    ? ISD::FMINNUM_IEEE
+                                      : ISD::DELETED_NODE;
   }
 
   if (((CC == ISD::SETGT || CC == ISD::SETGE) && (OrAndOpcode == ISD::OR)) ||
       ((CC == ISD::SETLT || CC == ISD::SETLE) && (OrAndOpcode == ISD::AND))) {
-    return (SetCCNoNaNs || arebothOperandsNotNan(Operand1, Operand2, DAG)) &&
-                   isFMAXNUMFMINNUM_IEEE
-               ? ISD::FMAXNUM_IEEE
-               : ISD::DELETED_NODE;
+    if (!SetCCNoNaNs && !areBothOperandsNotNan(Operand1, Operand2, DAG))
+      return ISD::DELETED_NODE;
+    return isPSEUDOFMAXFMIN           ? ISD::PSEUDO_FMAX
+           : isFMAXIMUMNUMFMINIMUMNUM ? ISD::FMAXIMUMNUM
+           : isFMAXNUMFMINNUM_IEEE    ? ISD::FMAXNUM_IEEE
+                                      : ISD::DELETED_NODE;
   }
 
-  // Both FMINNUM/FMAXNUM and FMINNUM_IEEE/FMAXNUM_IEEE handle quiet
-  // NaNs in the same way. But, FMINNUM/FMAXNUM and FMINNUM_IEEE/
-  // FMAXNUM_IEEE handle signaling NaNs differently. If we cannot prove
-  // that there are not any sNaNs, then the optimization is not valid
-  // for FMINNUM_IEEE/FMAXNUM_IEEE. In the presence of sNaNs, we apply
-  // the optimization using FMINNUM/FMAXNUM for the following cases. If
-  // we can prove that we do not have any sNaNs, then we can do the
-  // optimization using FMINNUM_IEEE/FMAXNUM_IEEE for the following
-  // cases.
+  bool IsMin;
   if (((CC == ISD::SETOLT || CC == ISD::SETOLE) && (OrAndOpcode == ISD::OR)) ||
-      ((CC == ISD::SETUGT || CC == ISD::SETUGE) && (OrAndOpcode == ISD::AND))) {
-    return isFMAXNUMFMINNUM ? ISD::FMINNUM
-           : arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
-                   isFMAXNUMFMINNUM_IEEE
-               ? ISD::FMINNUM_IEEE
-               : ISD::DELETED_NODE;
-  }
+      ((CC == ISD::SETUGT || CC == ISD::SETUGE) && (OrAndOpcode == ISD::AND)))
+    IsMin = true;
+  else if (((CC == ISD::SETOGT || CC == ISD::SETOGE) &&
+            (OrAndOpcode == ISD::OR)) ||
+           ((CC == ISD::SETULT || CC == ISD::SETULE) &&
+            (OrAndOpcode == ISD::AND)))
+    IsMin = false;
+  else
+    return ISD::DELETED_NODE;
 
-  if (((CC == ISD::SETOGT || CC == ISD::SETOGE) && (OrAndOpcode == ISD::OR)) ||
-      ((CC == ISD::SETULT || CC == ISD::SETULE) && (OrAndOpcode == ISD::AND))) {
-    return isFMAXNUMFMINNUM ? ISD::FMAXNUM
-           : arebothOperandsNotSNan(Operand1, Operand2, DAG) &&
-                   isFMAXNUMFMINNUM_IEEE
-               ? ISD::FMAXNUM_IEEE
-               : ISD::DELETED_NODE;
-  }
-
+  // For the above predicates, the optimization is valid if a NaN operand is
+  // discarded. PSEUDO_FMIN/PSEUDO_FMAX return the second operand if either
+  // operand is a NaN. FMINIMUMNUM/FMAXIMUMNUM always discard. FMINNUM/FMAXNUM
+  // and FMINNUM_IEEE/FMAXNUM_IEEE only do so for quiet NaNs, as a signaling NaN
+  // operand may instead produce a NaN.
+  if (isPSEUDOFMAXFMIN && DAG.isKnownNeverNaN(Operand2))
+    return IsMin ? ISD::PSEUDO_FMIN : ISD::PSEUDO_FMAX;
+  if (isFMAXIMUMNUMFMINIMUMNUM)
+    return IsMin ? ISD::FMINIMUMNUM : ISD::FMAXIMUMNUM;
+  if (!areBothOperandsNotSNan(Operand1, Operand2, DAG))
+    return ISD::DELETED_NODE;
+  if (isFMAXNUMFMINNUM)
+    return IsMin ? ISD::FMINNUM : ISD::FMAXNUM;
+  if (isFMAXNUMFMINNUM_IEEE)
+    return IsMin ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
   return ISD::DELETED_NODE;
 }
 
@@ -7127,12 +7130,21 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
                                TLI.isOperationLegal(ISD::FMINNUM_IEEE, OpVT);
   bool isFMAXNUMFMINNUM = TLI.isOperationLegalOrCustom(ISD::FMAXNUM, OpVT) &&
                           TLI.isOperationLegalOrCustom(ISD::FMINNUM, OpVT);
+  // A custom FMINIMUMNUM/FMAXIMUMNUM may be more expensive than the compares.
+  bool isFMAXIMUMNUMFMINIMUMNUM =
+      TLI.isOperationLegalOrCustom(ISD::FMAXIMUMNUM, OpVT) &&
+      TLI.isOperationLegalOrCustom(ISD::FMINIMUMNUM, OpVT) &&
+      TLI.isProfitableToCombineMinNumMaxNum(OpVT);
+  bool isPSEUDOFMAXFMIN =
+      TLI.isOperationLegalOrCustom(ISD::PSEUDO_FMAX, OpVT) &&
+      TLI.isOperationLegalOrCustom(ISD::PSEUDO_FMIN, OpVT);
   if (((OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
         TLI.isOperationLegal(ISD::SMAX, OpVT) &&
         TLI.isOperationLegal(ISD::UMIN, OpVT) &&
         TLI.isOperationLegal(ISD::SMIN, OpVT)) ||
        (OpVT.isFloatingPoint() &&
-        (isFMAXNUMFMINNUM_IEEE || isFMAXNUMFMINNUM))) &&
+        (isFMAXNUMFMINNUM_IEEE || isFMAXNUMFMINNUM ||
+         isFMAXIMUMNUMFMINIMUMNUM || isPSEUDOFMAXFMIN))) &&
       !ISD::isIntEqualitySetCC(CCL) && !ISD::isFPEqualitySetCC(CCL) &&
       CCL != ISD::SETFALSE && CCL != ISD::SETO && CCL != ISD::SETUO &&
       CCL != ISD::SETTRUE &&
@@ -7185,11 +7197,18 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
           NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
         else
           NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
-      } else if (OpVT.isFloatingPoint())
+      } else if (OpVT.isFloatingPoint()) {
+        // The min/max opcodes below are commutative, so move a known non-NaN
+        // operand second, where PSEUDO_FMIN/PSEUDO_FMAX can make use of it.
+        if (isPSEUDOFMAXFMIN && !DAG.isKnownNeverNaN(Operand2) &&
+            DAG.isKnownNeverNaN(Operand1))
+          std::swap(Operand1, Operand2);
         NewOpcode = getMinMaxOpcodeForCompareFold(
             Operand1, Operand2,
             LHSSetCCFlags.hasNoNaNs() && RHSSetCCFlags.hasNoNaNs(), CC,
-            LogicOp->getOpcode(), DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM);
+            LogicOp->getOpcode(), DAG, isFMAXNUMFMINNUM_IEEE, isFMAXNUMFMINNUM,
+            isFMAXIMUMNUMFMINIMUMNUM, isPSEUDOFMAXFMIN);
+      }
 
       if (NewOpcode != ISD::DELETED_NODE) {
         // Propagate fast-math flags from setcc.
@@ -10072,8 +10091,11 @@ SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
     // transform may not be safe because order of loads/stores outside of this
     // set may not be preserved.
     // TODO: We could allow multiple sizes by tracking each stored byte.
-    if (Store->getMemoryVT() != MemVT || !Store->isSimple() ||
-        Store->isIndexed() || !Store->hasOneUse())
+    // Keep a differently-sized store in the incoming chain and try to merge
+    // the stores collected after it.
+    if (Store->getMemoryVT() != MemVT)
+      break;
+    if (!Store->isSimple() || Store->isIndexed() || !Store->hasOneUse())
       return SDValue();
     Stores.push_back(Store);
     Chain = Store->getChain();
@@ -12388,21 +12410,16 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
 
     // fold (abs (sub nsw x, y)) -> abds(x, y)
     // fold (abs (add nsw x, -y)) -> abds(x, y)
-    bool AbsOpWillNSW =
-        AbsOp0->getFlags().hasNoSignedWrap() ||
-        (IsAdd ? DAG.willNotOverflowAdd(/*IsSigned=*/true, Op0, Op1)
-               : DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1));
-
     // Don't fold this for unsupported types as we lose the NSW handling.
     if (hasOperation(ISD::ABDS, VT) && TLI.preferABDSToABSWithNSW(VT) &&
-        AbsOpWillNSW)
+        (AbsOp0->getFlags().hasNoSignedWrap() ||
+         (IsAdd ? DAG.willNotOverflowAdd(/*IsSigned=*/true, Op0, Op1)
+                : DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1))))
       return CreateZextedAbd(ISD::ABDS);
 
     // fold (abs (sub x, y)) -> abdu(x, y)
-    bool AbsOpWillNUW =
-        !IsAdd && DAG.SignBitIsZero(Op0) && DAG.SignBitIsZero(Op1);
-
-    if (hasOperation(ISD::ABDU, VT) && AbsOpWillNUW)
+    if (!IsAdd && hasOperation(ISD::ABDU, VT) && DAG.SignBitIsZero(Op0) &&
+        DAG.SignBitIsZero(Op1))
       return CreateZextedAbd(ISD::ABDU);
 
     return SDValue();
@@ -13337,10 +13354,13 @@ SDValue DAGCombiner::foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
   }
 
   // (setcc (add nsw A, Const), 0, sets??) --> (setcc A, -Const, sets??)
+  // Ensure -Const doesn't overflow.
   SDValue A, B;
   if (ISD::isSignedIntSetCC(CC) && LHS->getFlags().hasNoSignedWrap() &&
       isZeroOrZeroSplat(RHS) && sd_match(LHS, m_Add(m_Value(A), m_Value(B))) &&
-      DAG.isConstantIntBuildVectorOrConstantInt(B)) {
+      ISD::matchUnaryPredicate(B, [](ConstantSDNode *C) {
+        return !C->getAPIntValue().isMinSignedValue();
+      })) {
     RHS = DAG.getNegative(B, LHS, B.getValueType());
     LHS = A;
   }
@@ -23406,12 +23426,12 @@ SDValue DAGCombiner::getMergeStoreChains(SmallVectorImpl<MemOpLink> &StoreNodes,
   return DAG.getTokenFactor(StoreDL, Chains);
 }
 
-bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> StoreNodes) {
+bool DAGCombiner::hasSameUnderlyingObj(ArrayRef<MemOpLink> MemOps) {
   const Value *UnderlyingObj = nullptr;
-  for (const auto &MemOp : StoreNodes) {
+  for (const auto &MemOp : MemOps) {
     const MachineMemOperand *MMO = MemOp.MemNode->getMemOperand();
     // Pseudo value like stack frame has its own frame index and size, should
-    // not use the first store's frame index for other frames.
+    // not use the first load/store's frame index for other frames.
     if (MMO->getPseudoValue())
       return false;
 
@@ -24211,6 +24231,7 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     unsigned FirstStoreAS = FirstInChain->getAddressSpace();
     Align FirstStoreAlign = FirstInChain->getAlign();
     LoadSDNode *FirstLoad = cast<LoadSDNode>(LoadNodes[0].MemNode);
+    unsigned FirstLoadAS = FirstLoad->getAddressSpace();
 
     // Scan the memory operations on the chain and find the first
     // non-consecutive load memory address. These variables hold the index in
@@ -24375,10 +24396,13 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
 
     // The merged loads are required to have the same incoming chain, so
     // using the first's chain is acceptable.
-
     SDValue NewStoreChain = getMergeStoreChains(StoreNodes, NumElem);
-    bool CanReusePtrInfo = hasSameUnderlyingObj(StoreNodes);
     AddToWorklist(NewStoreChain.getNode());
+
+    bool StoreCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(StoreNodes).take_front(NumElem));
+    bool LoadCanReusePtrInfo =
+        hasSameUnderlyingObj(ArrayRef(LoadNodes).take_front(NumElem));
 
     MachineMemOperand::Flags LdMMOFlags =
         isDereferenceable ? MachineMemOperand::MODereferenceable
@@ -24406,7 +24430,9 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
     if (UseVectorTy || !DoIntegerTruncate) {
       NewLoad = DAG.getLoad(
           JointMemOpVT, LoadDL, FirstLoad->getChain(), FirstLoad->getBasePtr(),
-          FirstLoad->getPointerInfo(), FirstLoadAlign, LdMMOFlags,
+          LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                              : MachinePointerInfo(FirstLoadAS),
+          FirstLoadAlign, LdMMOFlags,
           MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       SDValue StoreOp = NewLoad;
       if (NeedRotate) {
@@ -24420,22 +24446,24 @@ bool DAGCombiner::tryStoreMergeOfLoads(SmallVectorImpl<MemOpLink> &StoreNodes,
       }
       NewStore = DAG.getStore(
           NewStoreChain, StoreDL, StoreOp, FirstInChain->getBasePtr(),
-          CanReusePtrInfo ? FirstInChain->getPointerInfo()
-                          : MachinePointerInfo(FirstStoreAS),
+          StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
+                               : MachinePointerInfo(FirstStoreAS),
           FirstStoreAlign, StMMOFlags,
           MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
     } else { // This must be the truncstore/extload case
       EVT ExtendedTy =
           TLI.getTypeToTransformTo(*DAG.getContext(), JointMemOpVT);
-      NewLoad = DAG.getExtLoad(
-          ISD::EXTLOAD, LoadDL, ExtendedTy, FirstLoad->getChain(),
-          FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), JointMemOpVT,
-          FirstLoadAlign, LdMMOFlags,
-          MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
+      NewLoad =
+          DAG.getExtLoad(ISD::EXTLOAD, LoadDL, ExtendedTy,
+                         FirstLoad->getChain(), FirstLoad->getBasePtr(),
+                         LoadCanReusePtrInfo ? FirstLoad->getPointerInfo()
+                                             : MachinePointerInfo(FirstLoadAS),
+                         JointMemOpVT, FirstLoadAlign, LdMMOFlags,
+                         MMOMetadata(AAMDNodes(), nullptr, LoadMemCacheHint));
       NewStore = DAG.getTruncStore(
           NewStoreChain, StoreDL, NewLoad, FirstInChain->getBasePtr(),
-          CanReusePtrInfo ? FirstInChain->getPointerInfo()
-                          : MachinePointerInfo(FirstStoreAS),
+          StoreCanReusePtrInfo ? FirstInChain->getPointerInfo()
+                               : MachinePointerInfo(FirstStoreAS),
           JointMemOpVT, FirstInChain->getAlign(),
           FirstInChain->getMemOperand()->getFlags(),
           MMOMetadata(AAMDNodes(), nullptr, StoreMemCacheHint));
@@ -25596,11 +25624,19 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
       VT = VT.changeElementType(*DAG.getContext(), EltVT);
     }
 
-    // Check if this operation will be handled the default way for its type.
+    // Check if this operation will be handled the default way for its type,
+    // i.e. legalized through a stack temporary.
     auto IsTypeDefaultHandled = [this](EVT VT) {
-      return TLI.getTypeAction(*DAG.getContext(), VT) ==
-                 TargetLowering::TypeSplitVector ||
-             TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+      LLVMContext &Ctx = *DAG.getContext();
+      TargetLowering::LegalizeTypeAction Action = TLI.getTypeAction(Ctx, VT);
+      if (Action != TargetLowering::TypeWidenVector)
+        return Action == TargetLowering::TypeSplitVector ||
+               TLI.isOperationExpand(ISD::INSERT_VECTOR_ELT, VT);
+      // Widening redoes the insert on the widened type, where it does not go
+      // through memory if it is Legal, or Promote to another type. Custom
+      // lowering may still fall back to the stack, so treat it like Expand.
+      return !TLI.isOperationLegalOrPromote(ISD::INSERT_VECTOR_ELT,
+                                            TLI.getTypeToWidenTo(Ctx, VT));
     };
 
     // Check if this operation is illegal and will be handled the default way,
@@ -28125,6 +28161,33 @@ SDValue DAGCombiner::visitVECTOR_INTERLEAVE(SDNode *N) {
     return DAG.getMergeValues(Ops, DL);
   }
 
+  // interleave2(extract_lo/hi(a), extract_lo/hi(b))#{0,1}
+  //   -> extract_lo/hi(interleave2(a, b)#{0,1})
+  if (Factor == 2 && Op0.getOpcode() == ISD::EXTRACT_SUBVECTOR) {
+    SDValue Op1 = N->getOperand(1);
+    if (Op1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        Op0.getOperand(1) == Op1.getOperand(1)) {
+      EVT WideVT = Op0.getOperand(0).getValueType();
+      if (WideVT == VT.getDoubleNumVectorElementsVT(*DAG.getContext()) &&
+          (!LegalOperations || TLI.isVectorInterleaveLegalOrCustom(
+                                   ISD::VECTOR_INTERLEAVE, Factor, WideVT))) {
+        APInt Idx = Op0.getConstantOperandAPInt(1);
+        unsigned HalfNumElts = VT.getVectorMinNumElements();
+        if (Idx.isZero() || Idx == HalfNumElts) {
+          SDLoc DL(N);
+          SDValue Interleave =
+              DAG.getNode(ISD::VECTOR_INTERLEAVE, DL, {WideVT, WideVT},
+                          {Op0.getOperand(0), Op1.getOperand(0)});
+          SDValue WideResult = Interleave.getValue(Idx.isZero() ? 0 : 1);
+          SDValue Results[] = {
+              DAG.getExtractSubvector(DL, VT, WideResult, 0),
+              DAG.getExtractSubvector(DL, VT, WideResult, HalfNumElts)};
+          return CombineTo(N, Results[0], Results[1]);
+        }
+      }
+    }
+  }
+
   // Fold an interleave of fixed-length BUILD_VECTORs by rearranging their
   // scalar operands directly.
   if (Op0.getOpcode() == ISD::BUILD_VECTOR) {
@@ -30350,10 +30413,19 @@ SDValue DAGCombiner::visitSCALAR_TO_VECTOR(SDNode *N) {
     }
   }
 
+  if (Opcode != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  // scalar_to_vector (extract_vector_elt X, 0) --> extract_subvector X, 0
+  // X can be scalable.
+  if (VT.getVectorElementCount().isScalar() &&
+      isNullConstant(Scalar.getOperand(1)) &&
+      Scalar.getOperand(0).getValueType().getVectorElementType() == VecEltVT)
+    return DAG.getExtractSubvector(SDLoc(N), VT, Scalar.getOperand(0), 0);
+
   // Replace a SCALAR_TO_VECTOR(EXTRACT_VECTOR_ELT(V,C0)) pattern
   // with a VECTOR_SHUFFLE and possible truncate.
-  if (Opcode != ISD::EXTRACT_VECTOR_ELT ||
-      !Scalar.getOperand(0).getValueType().isFixedLengthVector())
+  if (!Scalar.getOperand(0).getValueType().isFixedLengthVector())
     return SDValue();
 
   // If we have an implicit truncate, truncate here if it is legal.

@@ -7867,7 +7867,7 @@ void testPointerAliasTryLockDubious(int x) {
   }
   ptr->data = 42;            // expected-warning{{writing variable 'data' requires holding mutex 'ptr->mu' exclusively}} \
                              // expected-warning{{mutex 'ptr->mu' is not held on every path through here}} \
-                             // expected-warning{{mutex 'returnsFoo().mu' is not held on every path through here}}
+                             // expected-warning{{mutex 'returnsFoo()->mu' is not held on every path through here}}
   ptr->mu.Unlock();          // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 }
 
@@ -8482,24 +8482,266 @@ struct GuardedOpsSelf {
   }
 };
 
-// '&mu' is '&this->mu', the mutex of the called object, whereas the pointer
-// to member '&GuardedOpsAddrOf::mu' is the 'mu' of any object.
-struct GuardedOpsAddrOf {
+} // namespace FunctionPointers
+
+namespace AnonymousMembers {
+
+// An attribute on a member of an anonymous struct/union may name a field of
+// the enclosing record, and vice versa.
+struct S {
   Mutex mu;
-  int data GUARDED_BY(&mu);
-  int any GUARDED_BY(&GuardedOpsAddrOf::mu);
-  void (*lock)() EXCLUSIVE_LOCK_FUNCTION(&mu);
-  void (*unlock)() UNLOCK_FUNCTION(&mu);
+  union {
+    int a GUARDED_BY(mu);
+  };
+  struct Also {
+    int az GUARDED_BY(inner);
+  };
+  struct {
+    Mutex inner;
+    int c GUARDED_BY(inner);
+    Also al;
+  };
+  int e GUARDED_BY(inner);
+  union { Mutex um; };
+  union { int i GUARDED_BY(um); };
+  int j GUARDED_BY(&S::um); // the wildcard, any object's um
+  struct {
+    struct {
+      Mutex deep;
+      int f GUARDED_BY(mu);
+    };
+    int g GUARDED_BY(deep);
+  };
+  int h GUARDED_BY(deep);
+  Mutex after ACQUIRED_AFTER(inner);
+
+  void member() {
+    a = 1; // expected-warning {{writing variable 'a' requires holding mutex 'mu' exclusively}}
+    c = 3; // expected-warning {{writing variable 'c' requires holding mutex 'inner' exclusively}}
+    e = 5; // expected-warning {{writing variable 'e' requires holding mutex 'inner' exclusively}}
+    i = 9; // expected-warning {{writing variable 'i' requires holding mutex 'um' exclusively}}
+    j = 10; // expected-warning {{writing variable 'j' requires holding mutex '&AnonymousMembers::S::um' exclusively}}
+    mu.Lock();
+    inner.Lock();
+    um.Lock();
+    a = 1;
+    c = 3;
+    e = 5;
+    i = 9;
+    j = 10;
+    um.Unlock();
+    inner.Unlock();
+    mu.Unlock();
+  }
 };
 
-void testMemberAddrOf(GuardedOpsAddrOf *g, GuardedOpsAddrOf *h) {
-  h->lock();
-  h->data = 1;
-  g->any = 1;
-  g->data = 1; // expected-warning {{writing variable 'data' requires holding mutex 'g->mu' exclusively}} \
-               // expected-note {{found near match 'h->mu'}}
-  h->unlock();
-  g->any = 1; // expected-warning {{writing variable 'any' requires holding mutex '&FunctionPointers::GuardedOpsAddrOf::mu' exclusively}}
+void test(S *s, S *other) {
+  s->mu.Lock();
+  s->a = 1;
+  s->mu.Unlock();
+  s->inner.Lock();
+  s->c = 3;
+  s->e = 5;
+  s->al.az = 10;
+  s->inner.Unlock();
+  other->mu.Lock();
+  s->a = 1; // expected-warning {{writing variable 'a' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->e = 5; // expected-warning {{writing variable 'e' requires holding mutex 's->inner' exclusively}}
+  s->al.az = 10; // expected-warning {{writing variable 'az' requires holding mutex 's->inner' exclusively}}
+  s->i = 9; // expected-warning {{writing variable 'i' requires holding mutex 's->um' exclusively}}
+  other->um.Lock();
+  s->j = 10;
+  other->um.Unlock();
+  s->mu.Lock();
+  s->f = 6;
+  s->mu.Unlock();
+  s->deep.Lock();
+  s->g = 7;
+  s->h = 8;
+  s->deep.Unlock();
+  s->f = 6; // expected-warning {{writing variable 'f' requires holding mutex 's->mu' exclusively}} \
+            // expected-note {{found near match 'other->mu'}}
+  s->g = 7; // expected-warning {{writing variable 'g' requires holding mutex 's->deep' exclusively}}
+  s->h = 8; // expected-warning {{writing variable 'h' requires holding mutex 's->deep' exclusively}}
+  other->mu.Unlock();
 }
 
-} // namespace FunctionPointers
+void testValue(S v) {
+  v.deep.Lock();
+  v.g = 7;
+  v.h = 8;
+  v.deep.Unlock();
+  v.h = 8; // expected-warning {{writing variable 'h' requires holding mutex 'v.deep' exclusively}}
+}
+
+void testOrder(S *s) {
+  s->after.Lock();
+  s->inner.Lock(); // expected-warning {{mutex 'inner' must be acquired before 'after'}}
+  s->inner.Unlock();
+  s->after.Unlock();
+}
+
+struct Base {
+  Mutex bmu;
+  union { int ba GUARDED_BY(bmu); };
+};
+
+struct Derived : Base {
+  int da GUARDED_BY(bmu);
+  union { int du GUARDED_BY(bmu); };
+};
+
+void testDerived(Derived *d, Derived *other) {
+  d->bmu.Lock();
+  d->ba = 1;
+  d->da = 2;
+  d->du = 3;
+  d->bmu.Unlock();
+  other->bmu.Lock();
+  d->ba = 1; // expected-warning {{writing variable 'ba' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  d->da = 2; // expected-warning {{writing variable 'da' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  d->du = 3; // expected-warning {{writing variable 'du' requires holding mutex 'd->bmu' exclusively}} \
+             // expected-note {{found near match 'other->bmu'}}
+  other->bmu.Unlock();
+}
+
+// A field of a named nested record may be guarded by a field of an enclosing
+// record, resolved on the nearest enclosing object, and vice versa.
+struct NamedNesting {
+  Mutex mu;
+  struct Named {
+    Mutex nmu;
+    int nx GUARDED_BY(nmu);
+    int ny GUARDED_BY(mu);
+    struct NamedIn {
+      int nix GUARDED_BY(nmu);
+    } nin;
+  } n, narr[2], *np, *pa[2];
+  struct Inner {
+    Mutex imu;
+    int w GUARDED_BY(mu);
+  };
+  struct {
+    Inner in;
+  };
+  int y GUARDED_BY(n.nmu);
+  int z GUARDED_BY(in.imu);
+};
+
+void testNamedNesting(NamedNesting *m, NamedNesting *o) {
+  m->mu.Lock();
+  m->n.ny = 1;
+  m->in.w = 2;
+  m->narr[1].ny = 3;
+  m->narr->ny = 3;
+  (&m->n)->ny = 5;
+  m->np->ny = 4; // expected-warning {{writing variable 'ny' requires holding mutex 'm->np->AnonymousMembers::NamedNesting::mu' exclusively}} \
+                 // expected-note {{found near match 'm->mu'}}
+  m->mu.Unlock();
+  o->mu.Lock();
+  m->n.ny = 1; // expected-warning {{writing variable 'ny' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  m->in.w = 2; // expected-warning {{writing variable 'w' requires holding mutex 'm->mu' exclusively}} \
+               // expected-note {{found near match 'o->mu'}}
+  o->mu.Unlock();
+  m->n.nmu.Lock();
+  m->in.imu.Lock();
+  m->y = 1;
+  m->z = 2;
+  o->y = 1; // expected-warning {{writing variable 'y' requires holding mutex 'o->n.nmu' exclusively}} \
+            // expected-note {{found near match 'm->n.nmu'}}
+  o->z = 2; // expected-warning {{writing variable 'z' requires holding mutex 'o->in.imu' exclusively}} \
+            // expected-note {{found near match 'm->in.imu'}}
+  m->in.imu.Unlock();
+  m->n.nmu.Unlock();
+}
+
+// An array of records accessed through its decayed pointer is still an object
+// of its element type, whose own field may be named.
+void testNamedNestingArray(NamedNesting *m, NamedNesting::Named narr[2]) {
+  m->narr->nmu.Lock();
+  m->narr->nx = 1;
+  m->narr->nin.nix = 2;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match 'm->narr->nmu'}}
+  m->narr->nmu.Unlock();
+  m->narr->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr->nmu' exclusively}}
+  m->narr->nin.nix = 2; // expected-warning {{writing variable 'nix' requires holding mutex 'm->narr->nmu' exclusively}}
+  narr->nmu.Lock();
+  narr->nx = 1;
+  narr->nin.nix = 2;
+  narr->nmu.Unlock();
+  // Pointer arithmetic is spelled as written, and is not a subscript.
+  (m->narr + 1)->nmu.Lock();
+  (m->narr + 1)->nx = 1;
+  m->narr[1].nx = 3; // expected-warning {{writing variable 'nx' requires holding mutex 'm->narr[1].nmu' exclusively}} \
+                     // expected-note {{found near match '(m->narr + 1)->nmu'}}
+  (m->narr + 1)->nmu.Unlock();
+  (m->np + 1)->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex '(m->np + 1)->nmu' exclusively}}
+  // An element of an array of pointers is a pointer.
+  m->pa[1]->nmu.Lock();
+  m->pa[1]->nx = 1;
+  m->pa[0]->nx = 1; // expected-warning {{writing variable 'nx' requires holding mutex 'm->pa[0]->nmu' exclusively}} \
+                    // expected-note {{found near match 'm->pa[1]->nmu'}}
+  m->pa[1]->nmu.Unlock();
+}
+
+// With only the nested object at hand, its enclosing record's field cannot be
+// reached; the requirement is spelled with the field's record.
+struct Unreachable {
+  Mutex mu;
+  union { Mutex amu; };
+  struct Inner {
+    void f() EXCLUSIVE_LOCKS_REQUIRED(mu);
+    void h() EXCLUSIVE_LOCKS_REQUIRED(amu);
+  } in;
+
+  void g(Inner *inner) EXCLUSIVE_LOCKS_REQUIRED(mu, amu) {
+    in.f();
+    in.h();
+    inner->f(); // expected-warning {{calling function 'f' requires holding mutex 'inner->AnonymousMembers::Unreachable::mu' exclusively}} \
+                // expected-note {{found near match 'mu'}}
+    inner->h(); // expected-warning {{calling function 'h' requires holding mutex 'inner->AnonymousMembers::Unreachable::amu' exclusively}} \
+                // expected-note {{found near match 'amu'}}
+  }
+};
+
+// An unqualified name is the innermost record's field.
+struct Shadowed {
+  Mutex mu;
+  struct Shadowing {
+    Mutex mu;
+    int ny GUARDED_BY(mu);
+    struct Deeper {
+      int dz GUARDED_BY(mu);
+    } d;
+  } n;
+};
+
+void testShadowed(Shadowed *o) {
+  o->mu.Lock();
+  o->n.ny = 1;   // expected-warning {{writing variable 'ny' requires holding mutex 'o->n.mu' exclusively}}
+  o->n.d.dz = 1; // expected-warning {{writing variable 'dz' requires holding mutex 'o->n.mu' exclusively}}
+  o->mu.Unlock();
+  o->n.mu.Lock();
+  o->n.ny = 2;
+  o->n.d.dz = 2;
+  o->n.mu.Unlock();
+}
+
+static union {
+  Mutex gmu;
+  int gx GUARDED_BY(gmu);
+};
+
+void testNamespaceUnion() {
+  gmu.Lock();
+  gx = 1;
+  gmu.Unlock();
+  gx = 2; // expected-warning {{writing variable 'gx' requires holding mutex 'gmu' exclusively}}
+}
+
+} // namespace AnonymousMembers

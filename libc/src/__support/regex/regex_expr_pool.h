@@ -47,24 +47,24 @@ class ExprPool {
   /// Initial directory capacity for 8 blocks (64B), holding up to 256 nodes
   /// before directory growth.
   static constexpr size_t INITIAL_BLOCKS_CAPACITY = 8;
+  /// Initial capacity for 4 unique ByteSets (4 * 32B = 128B), allocated lazily
+  /// on the first multi-bit ByteSet so pure literal patterns allocate 0 bytes.
+  static constexpr size_t INITIAL_BYTE_SETS_CAPACITY = 4;
   /// Initial power-of-two hash table size: 64 slots (256B), holding up to 44
   /// unique nodes at 70% max load factor while keeping initial pool footprint
   /// at 512B + 64B + 256B = 832B (< 1 KiB).
   static constexpr size_t INITIAL_HASH_CAPACITY = 64;
+  /// Scaling factor used when growing dynamic pool arrays and hash tables.
+  static constexpr size_t GROWTH_FACTOR = 2;
   /// Grow the hash table when occupancy reaches 70% to keep linear-probing
   /// chains short.
   static constexpr double MAX_LOAD_FACTOR = 0.7;
 
-  /// The maximum number of nodes allowed in the pool to prevent memory
-  /// exhaustion during compilation of highly complex or maliciously crafted
-  /// regular expressions.
-  static constexpr size_t MAX_NODE_LIMIT = 10000;
-
   // TODO: Once cpp::unique_ptr and AllocChecker-backed cpp::make_unique (and/or
   // an owning unique_span) are available in src/__support/CPP/, replace raw
   // Block* and span-backed manual new[]/delete[] ownership here so that Block
-  // lifecycles, directory growth, and hash-table growth are managed via RAII
-  // and ~ExprPool() can be defaulted.
+  // lifecycles, directory growth, ByteSet growth, and hash-table growth are
+  // managed via RAII and ~ExprPool() can be defaulted.
 
   /// Span of allocated Block* slots (capacity = blocks.size()).
   cpp::span<Block *> blocks;
@@ -72,11 +72,19 @@ class ExprPool {
   /// Total number of nodes allocated across all blocks.
   size_t node_count = 0;
 
+  /// Lazily allocated array of deduplicated 256-bit character sets.
+  cpp::span<ByteSet> byte_sets;
+  size_t byte_set_count = 0;
+
   /// Open-addressing hash table storing ExprIds (0 = empty bucket).
   cpp::span<ExprId> hashtable;
 
   cpp::span<Block *const> active_blocks() const {
     return blocks.first(block_count);
+  }
+
+  cpp::span<const ByteSet> active_byte_sets() const {
+    return byte_sets.first(byte_set_count);
   }
 
   /// Maximum number of nodes the current hash table can hold before rehashing.
@@ -109,22 +117,39 @@ class ExprPool {
   ErrorOr<ExprId> intern(Expr e);
 
 public:
+  /// The maximum number of nodes allowed in the pool to prevent memory
+  /// exhaustion during compilation of highly complex or maliciously crafted
+  /// regular expressions.
+  static constexpr size_t MAX_NODE_LIMIT = 10000;
+
   constexpr ExprPool() = default;
   ~ExprPool();
 
   /// Resolves an ExprId to a reference.
   const Expr &get(ExprId id) const { return slot_at(id); }
 
-  /// O(1) nullability query for a valid ExprId.
+  /// Resolves a ByteSet index to its 256-bit character set.
+  const ByteSet &get_byte_set(uint32_t id) const {
+    LIBC_ASSERT(id < byte_set_count);
+    return byte_sets[id];
+  }
+
+  /// O(1) unconditional nullability query for a valid ExprId.
   bool is_nullable(ExprId id) const { return get(id).nullable; }
+
+  /// O(1) query indicating whether the subtree at id contains an Anchor node.
+  bool has_anchors(ExprId id) const { return get(id).has_anchors; }
 
   /// Returns the number of unique AST nodes currently interned in this pool.
   size_t size() const { return node_count; }
 
+  /// Returns the number of unique multi-bit ByteSets interned in this pool.
+  size_t num_byte_sets() const { return byte_set_count; }
+
   /// Returns the current heap bytes allocated by this pool.
   size_t allocated_bytes() const {
     return (block_count * sizeof(Block)) + blocks.size_bytes() +
-           hashtable.size_bytes();
+           hashtable.size_bytes() + byte_sets.size_bytes();
   }
 
   // TODO: Use fluent interface (and_then, transform) for these factories once
@@ -136,18 +161,15 @@ public:
   ErrorOr<ExprId> empty_str();
   /// Creates or returns an existing Literal node for the given character.
   ErrorOr<ExprId> make_lit(char c);
-  /// Normalizing factory for Concatenation (L · R).
-  ///
-  /// Applies algebraic simplifications before interning:
-  /// - (Ø · R) or (R · Ø) => Ø
-  /// - (ε · R) or (R · ε) => R
+  /// Creates or returns an existing Anchor node for the given AnchorKind mask.
+  ErrorOr<ExprId> make_anchor(uint8_t mask);
+  /// Creates or returns an existing node for the given 256-bit character set.
+  ErrorOr<ExprId> make_byte_set(const ByteSet &bs);
+  /// Creates or returns a normalized Kleene star node (body*).
+  ErrorOr<ExprId> make_star(ExprId body);
+  /// Creates or returns a right-associated Concatenation node (l . r).
   ErrorOr<ExprId> make_concat(ExprId l, ExprId r);
-
-  /// Normalizing factory for Alternation (L | R).
-  ///
-  /// Applies algebraic simplifications before interning:
-  /// - (Ø | R) or (R | Ø) => R
-  /// - (R | R) => R (Idempotency)
+  /// Creates or returns a canonical deduplicated Alternation node (l | r).
   ErrorOr<ExprId> make_alt(ExprId l, ExprId r);
 };
 

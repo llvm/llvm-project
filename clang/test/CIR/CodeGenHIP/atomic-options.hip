@@ -67,9 +67,9 @@ __device__ float after_scoped(float *p, float v) {
 }
 
 // CIR-LABEL: @_Z4xchgPii
-// CIR: cir.atomic.xchg relaxed syncscope(hip_agent) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i {cir.amdgpu_no_private_addrspace}
+// CIR: cir.atomic.xchg relaxed syncscope(hip_agent) %{{.+}}, %{{.+}} : (!cir.ptr<!s32i>, !s32i) -> !s32i {cir.amdgpu_no_fine_grained_memory, cir.amdgpu_no_private_addrspace, cir.amdgpu_no_remote_memory}
 // LLVM-LABEL: @_Z4xchgPii
-// LLVM: atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[#NOPRIV:]]
+// LLVM: atomicrmw xchg ptr %{{.+}}, i32 %{{.+}} syncscope("agent") monotonic, align 4, !noalias.addrspace ![[#NOPRIV:]], !amdgpu.no.fine.grained.memory !{{[0-9]+}}, !amdgpu.no.remote.memory !{{[0-9]+}}{{$}}
 __device__ int xchg(int *p, int v) {
   return __hip_atomic_exchange(p, v, __ATOMIC_RELAXED, 4);
 }

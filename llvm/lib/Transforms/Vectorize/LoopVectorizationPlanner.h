@@ -175,6 +175,8 @@ public:
   /// is the end of the block.
   VPRecipeBase *getRecipeAtInsertPoint() const { return InsertPt; }
 
+  VPBasicBlock *getInsertBlock() const { return InsertPt.getBlock(); }
+
   /// Create a builder to insert after \p R.
   static VPBuilderBase getToInsertAfter(VPRecipeBase *R) {
     return {R->getParent(), std::next(R->getIterator())};
@@ -206,10 +208,10 @@ public:
                               const VPIRFlags &Flags = {},
                               const VPIRMetadata &MD = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
-                              const Twine &Name = "",
-                              Type *ResultTy = nullptr) {
-    VPInstruction *NewVPInst = tryInsertInstruction(
-        new VPInstruction(Opcode, Operands, Flags, MD, DL, Name, ResultTy));
+                              const Twine &Name = "", Type *ResultTy = nullptr,
+                              const VPIRAttributes &Attrs = {}) {
+    VPInstruction *NewVPInst = tryInsertInstruction(new VPInstruction(
+        Opcode, Operands, Flags, MD, DL, Name, ResultTy, Attrs));
     NewVPInst->setUnderlyingValue(Inst);
     return NewVPInst;
   }
@@ -449,12 +451,13 @@ public:
   /// result type \p ResultTy
   VPInstruction *createScalarIntrinsic(Intrinsic::ID IntrinsicID,
                                        ArrayRef<VPValue *> Operands,
-                                       Type *ResultTy, DebugLoc DL) {
+                                       Type *ResultTy, DebugLoc DL,
+                                       const Twine &Name = "") {
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
     return tryInsertInstruction(new VPInstruction(VPInstruction::Intrinsic, Ops,
-                                                  {}, {}, DL, "", ResultTy));
+                                                  {}, {}, DL, Name, ResultTy));
   }
 
   /// Create a scalar llvm.vscale call.
@@ -990,6 +993,9 @@ public:
   /// TODO: \p EpilogueVecKind should be removed once the re-use issue has been
   /// fixed.
   ///
+  /// When vectorizing the main loop, \p TrackedBlocks are updated to the
+  /// VPIRBasicBlocks wrapping the blocks generated for them.
+  ///
   /// Returns a mapping of SCEVs to their expanded IR values.
   /// Note that this is a temporary workaround needed due to the current
   /// epilogue handling.
@@ -1002,7 +1008,8 @@ public:
   executePlan(ElementCount VF, unsigned UF, VPlan &BestPlan,
               InnerLoopVectorizer &LB, DominatorTree *DT,
               EpilogueVectorizationKind EpilogueVecKind =
-                  EpilogueVectorizationKind::None);
+                  EpilogueVectorizationKind::None,
+              MutableArrayRef<VPBasicBlock *> TrackedBlocks = {});
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printPlans(raw_ostream &O);

@@ -73,9 +73,9 @@ removeIrrelevantProperties(PropertiesContainer<T> Base,
 using DeviceInfoProp = PropertiesContainer<ol_device_info_t>;
 using DeviceInfoProperties = PropertiesWithSizeContainer<ol_device_info_t>;
 
-inline const DeviceInfoProp PropBool{OL_DEVICE_INFO_SINGLE_FP_SUPPORT,
-                                     OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
-                                     OL_DEVICE_INFO_HALF_FP_SUPPORT};
+inline const DeviceInfoProp PropBool{
+    OL_DEVICE_INFO_SINGLE_FP_SUPPORT, OL_DEVICE_INFO_DOUBLE_FP_SUPPORT,
+    OL_DEVICE_INFO_HALF_FP_SUPPORT, OL_DEVICE_INFO_PREFERRED_LOCATION_HOST};
 inline const DeviceInfoProperties BoolProperties =
     createPropertiesWithSizeContainer(sizeof(bool), PropBool);
 
@@ -95,7 +95,10 @@ inline const DeviceInfoProp PropUint32{
     OL_DEVICE_INFO_MEMORY_CLOCK_RATE,
     OL_DEVICE_INFO_ADDRESS_BITS,
     OL_DEVICE_INFO_NUM_LANES,
-    OL_DEVICE_INFO_DRIVER_ID};
+    OL_DEVICE_INFO_DRIVER_ID,
+    OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE,
+    OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS,
+    OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS};
 
 inline const DeviceInfoProperties Uint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), PropUint32);
@@ -105,6 +108,14 @@ inline const DeviceInfoProp PropUint64{
     OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE};
 inline const DeviceInfoProperties Uint64Properties =
     createPropertiesWithSizeContainer(sizeof(uint64_t), PropUint64);
+
+// Devices are allowed to report zero for these, so they can only be checked
+// for support.
+inline const DeviceInfoProp PropUint64MayBeZero{
+    OL_DEVICE_INFO_HARDWARE_PARALLELISM, OL_DEVICE_INFO_TIMESTAMP_FREQUENCY,
+    OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE};
+inline const DeviceInfoProperties Uint64MayBeZeroProperties =
+    createPropertiesWithSizeContainer(sizeof(uint64_t), PropUint64MayBeZero);
 
 inline const DeviceInfoProp PropCapabilitiesFlags{
     OL_DEVICE_INFO_SINGLE_FP_CONFIG, OL_DEVICE_INFO_HALF_FP_CONFIG,
@@ -139,6 +150,18 @@ inline const DeviceInfoProp Prop_RelevantGTUint32 =
 inline const DeviceInfoProperties RelevantGTUint32Properties =
     createPropertiesWithSizeContainer(sizeof(uint32_t), Prop_RelevantGTUint32);
 
+// The host has no work group shared memory, so it reports zero for this.
+inline const DeviceInfoProp PropIrrelevantForHostGTUint64 = {
+    OL_DEVICE_INFO_WORK_GROUP_LOCAL_MEM_SIZE};
+inline const DeviceInfoProperties IrrelevantForHostGTUint64Properties =
+    createPropertiesWithSizeContainer(sizeof(uint64_t),
+                                      PropIrrelevantForHostGTUint64);
+
+inline const DeviceInfoProp Prop_RelevantGTUint64 =
+    removeIrrelevantProperties(PropUint64, PropIrrelevantForHostGTUint64);
+inline const DeviceInfoProperties RelevantGTUint64Properties =
+    createPropertiesWithSizeContainer(sizeof(uint64_t), Prop_RelevantGTUint64);
+
 inline const DeviceInfoProp PropDeviceType{OL_DEVICE_INFO_TYPE};
 inline const DeviceInfoProperties DeviceTypeProperties =
     createPropertiesWithSizeContainer(sizeof(ol_device_type_t), PropDeviceType);
@@ -148,9 +171,12 @@ inline const DeviceInfoProperties PlatformProperties =
     createPropertiesWithSizeContainer(sizeof(ol_platform_handle_t),
                                       PropPlatform);
 
-inline const DeviceInfoProp PropNames{
-    OL_DEVICE_INFO_NAME, OL_DEVICE_INFO_PRODUCT_NAME, OL_DEVICE_INFO_UID,
-    OL_DEVICE_INFO_VENDOR, OL_DEVICE_INFO_DRIVER_VERSION};
+inline const DeviceInfoProp PropNames{OL_DEVICE_INFO_NAME,
+                                      OL_DEVICE_INFO_PRODUCT_NAME,
+                                      OL_DEVICE_INFO_UID,
+                                      OL_DEVICE_INFO_VENDOR,
+                                      OL_DEVICE_INFO_DRIVER_VERSION,
+                                      OL_DEVICE_INFO_COMPUTE_UNIT_KIND};
 inline const DeviceInfoProperties NamesProperties =
     createPropertiesWithSizeContainer(0, PropNames);
 

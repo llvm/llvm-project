@@ -500,6 +500,14 @@ public:
   bool Pre(const parser::UseStmt &x) {
     if (x.moduleName.symbol) {
       Scope &thisScope{context_.FindScope(x.moduleName.source)};
+      const auto version{context_.langOptions().getOpenMPVersion()};
+      if ((version == 51 || version == 52) &&
+          x.moduleName.symbol->test(Symbol::Flag::OmpAssumesNoOpenmp)) {
+        if (auto *symbol{const_cast<Symbol *>(
+                omp::GetProgramUnit(thisScope).symbol())}) {
+          symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+        }
+      }
       common::visit(
           [&](auto &&details) {
             if constexpr (std::is_convertible_v<decltype(details),
@@ -2673,6 +2681,11 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
     Symbol::Flags dsa;
 
     Scope &scope{context_.FindScope(dirContext.directiveSource)};
+    // Skip constructs that enclose the symbol declaration (e.g. in a nested
+    // BLOCK).
+    if (IsLocalInsideScope(symbol->GetUltimate(), scope)) {
+      continue;
+    }
 
     auto initSymbolDSA = [&](const Symbol *sym, Symbol::Flags &dsa) {
       auto it{scope.find(sym->name())};

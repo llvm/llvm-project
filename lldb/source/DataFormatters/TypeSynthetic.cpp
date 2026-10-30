@@ -56,8 +56,8 @@ bool TypeFilterImpl::SetExpressionPathAtIndex(size_t i, llvm::StringRef path) {
 }
 
 llvm::Expected<size_t>
-TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (name) {
+TypeFilterImpl::FrontEnd::GetIndexOfChildWithName(llvm::StringRef name) {
+  if (!name.empty()) {
     for (size_t i = 0; i < filter->GetCount(); i++) {
       llvm::StringRef expr_path = filter->GetExpressionPathAtIndex(i);
       if (!expr_path.empty()) {
@@ -233,7 +233,8 @@ bool ScriptedSyntheticChildren::FrontEnd::MightHaveChildren() {
 }
 
 llvm::Expected<size_t>
-ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
+ScriptedSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
   if (!m_interface_sp)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   return m_interface_sp->GetIndexOfChildWithName(name);
@@ -246,9 +247,9 @@ lldb::ValueObjectSP ScriptedSyntheticChildren::FrontEnd::GetSyntheticValue() {
   return m_interface_sp->GetSyntheticValue();
 }
 
-ConstString ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
+std::string ScriptedSyntheticChildren::FrontEnd::GetSyntheticTypeName() {
   if (!m_interface_sp)
-    return ConstString();
+    return std::string();
 
   return m_interface_sp->GetSyntheticTypeName();
 }
@@ -454,14 +455,15 @@ BytecodeSyntheticChildren::FrontEnd::GetChildAtIndex(uint32_t idx) {
 }
 
 llvm::Expected<size_t>
-BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(ConstString name) {
+BytecodeSyntheticChildren::FrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
   if (!m_impl.get_child_index)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
 
   FormatterBytecode::ControlStack control = {
       m_impl.get_child_index->getBuffer()};
   FormatterBytecode::DataStack data = m_self;
-  data.emplace_back(name.GetString());
+  data.emplace_back(name.str());
   llvm::Error error = FormatterBytecode::Interpret(
       control, data, FormatterBytecode::sig_get_child_index, m_impl.version);
   if (error)

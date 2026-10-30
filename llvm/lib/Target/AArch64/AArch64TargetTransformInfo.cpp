@@ -15,6 +15,7 @@
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -990,6 +991,23 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LegalisationCost.first * Entry->Cost + 1;
 
       return LegalisationCost.first * Entry->Cost;
+    }
+    break;
+  }
+  case Intrinsic::pdep:
+  case Intrinsic::pext: {
+    unsigned BW = RetTy->getScalarSizeInBits();
+    if (!RetTy->isVectorTy() && ST->isSVEBitPermAvailable() && BW <= 64) {
+      Type *VecTy = VectorType::get(RetTy, 64 / BW, false);
+      InstructionCost Cost =
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind, 0,
+                             nullptr, nullptr) +
+          1 +
+          getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind, 0,
+                             nullptr, nullptr);
+      return Cost;
     }
     break;
   }
@@ -3324,6 +3342,33 @@ static std::optional<Instruction *> instCombineSVESDIV(InstCombiner &IC,
   return std::nullopt;
 }
 
+/// Match Or(And(MASK, A), And(Not(MASK), B)), which ISel selects as
+/// BSL/BIT/BIF. Both Ands must have one use and be in the Or's block. MainAnd,
+///
+/// OtherAnd, A and B are out parameters with the corresponding instructions.
+/// MainAnd refers to And that has Not as one of its operands.
+static bool matchBSL(const Instruction *I, Instruction *&MainAnd,
+                     Instruction *&OtherAnd, Value *&A, Value *&B) {
+  Value *MaskValue;
+  if (!match(I,
+             m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
+                    m_OneUse(m_c_And(m_Not(m_Value(MaskValue)), m_Value(A))))))
+    return false;
+
+  if (!match(OtherAnd, m_c_And(m_Specific(MaskValue), m_Value(B))))
+    return false;
+
+  MainAnd = I->getOperand(0) == OtherAnd ? cast<Instruction>(I->getOperand(1))
+                                         : cast<Instruction>(I->getOperand(0));
+
+  // Both Ands should be in same basic block as Or
+  if (I->getParent() != MainAnd->getParent() ||
+      I->getParent() != OtherAnd->getParent())
+    return false;
+
+  return true;
+}
+
 bool SimplifyValuePattern(SmallVector<Value *> &Vec, bool AllowPoison) {
   size_t VecSize = Vec.size();
   if (VecSize == 1)
@@ -4065,9 +4110,21 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         }
       }
 
+      if (!isa<ZExtInst, SExtInst>(I))
+        return std::nullopt;
+
       // The cast will be free for the s/urhadd instructions
-      if ((isa<ZExtInst>(I) || isa<SExtInst>(I)) &&
-          isExtPartOfAvgExpr(Usr, Dst, Src))
+      if (isExtPartOfAvgExpr(Usr, Dst, Src))
+        return 0;
+
+      // [US]SHLL/SHLL fold a doubling extend into a shift left by a splat
+      // immediate of at most the source element width.
+      const APInt *ShAmt;
+      unsigned SrcBits = Src->getScalarSizeInBits();
+      if (match(Usr, m_Shl(m_Specific(I), m_APInt(ShAmt))) &&
+          ShAmt->ule(SrcBits) && useNeonVector(Dst) &&
+          Dst->getScalarSizeInBits() == 2 * SrcBits &&
+          getTypeLegalizationCost(Src).second.getScalarSizeInBits() == SrcBits)
         return 0;
 
       return std::nullopt;
@@ -4109,6 +4166,33 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if ((SrcTy.isScalableVector() && SrcTy.getScalarSizeInBits() > 64) ||
       (DstTy.isScalableVector() && DstTy.getScalarSizeInBits() > 64))
     return InstructionCost::getInvalid();
+
+  // A bitcast that crosses register banks is costed as a vector insert/extract.
+  // Between the same register bank it is free. Note: Some costs are not handled
+  // well by this, like i1 vectors that need to be packed.
+  if (ISD == ISD::BITCAST && ST->isLittleEndian()) {
+    std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
+    std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
+    bool SrcIsFloatOrVec =
+        SrcLT.second.isVector() || SrcLT.second.isFloatingPoint();
+    bool DstIsFloatOrVec =
+        DstLT.second.isVector() || DstLT.second.isFloatingPoint();
+
+    // Consider the bitcast free if they are both the same type and have the
+    // same size after legalization. Scalable vectors are handled specially as
+    // the type legalization cost of v2i16 is v2i64.
+    if (SrcIsFloatOrVec == DstIsFloatOrVec &&
+        (SrcLT.second.getSizeInBits() == DstLT.second.getSizeInBits() ||
+         (SrcLT.second.isScalableVector() &&
+          SrcLT.second.getScalarSizeInBits() != 1 &&
+          DstLT.second.getScalarSizeInBits() != 1)))
+      return 0;
+
+    return std::max(SrcLT.first, DstLT.first) *
+           (CostKind == TTI::TCK_CodeSize
+                ? 1
+                : ST->getVectorInsertExtractBaseCost());
+  }
 
   // From a vector to a scalarized vector will be an series of extract-element
   // and extends.
@@ -4618,16 +4702,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f32, 2},
       {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f32, 6},
 
-      // Bitcasts from float to integer
-      {ISD::BITCAST, MVT::nxv2f16, MVT::nxv2i16, 0},
-      {ISD::BITCAST, MVT::nxv4f16, MVT::nxv4i16, 0},
-      {ISD::BITCAST, MVT::nxv2f32, MVT::nxv2i32, 0},
-
-      // Bitcasts from integer to float
-      {ISD::BITCAST, MVT::nxv2i16, MVT::nxv2f16, 0},
-      {ISD::BITCAST, MVT::nxv4i16, MVT::nxv4f16, 0},
-      {ISD::BITCAST, MVT::nxv2i32, MVT::nxv2f32, 0},
-
       // Add cost for extending to illegal -too wide- scalable vectors.
       // zero/sign extend are implemented by multiple unpack operations,
       // where each operation has a cost of 1.
@@ -5096,6 +5170,28 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
       if (!is_contained({ISD::ADD, ISD::SUB, ISD::MUL}, ISD))
         return InstructionCost::getInvalid();
 
+  if (CtxI && CtxI->getOpcode() == Opcode && !CtxI->use_empty() &&
+      useNeonVector(Ty)) {
+    // The Ands of a bit select are folded into the BSL that the Or becomes.
+    Instruction *MainAnd, *OtherAnd;
+    Value *A, *B;
+    if (Opcode == Instruction::And && CtxI->hasOneUse() &&
+        matchBSL(CtxI->user_back(), MainAnd, OtherAnd, A, B))
+      return 0;
+
+    // A Not is folded into the BIC, ORN or BSL of each And/Or using it, unless
+    // that And/Or negates both of its operands.
+    if (match(CtxI, m_Not(m_Value())) &&
+        all_of(CtxI->users(), [&](const User *U) {
+          const auto *UI = cast<Instruction>(U);
+          return is_contained({Instruction::And, Instruction::Or},
+                              UI->getOpcode()) &&
+                 UI->getParent() == CtxI->getParent() &&
+                 !match(UI, m_BinOp(m_Not(m_Value()), m_Not(m_Value())));
+        }))
+      return 0;
+  }
+
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -5495,7 +5591,9 @@ AArch64TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
 }
 
 /// Check whether Opcode1 has less throughput according to the scheduling
-/// model than Opcode2.
+/// model than Opcode2. For variant scheduling classes, the lowest throughput
+/// of Opcode1 and the highest throughput of Opcode2 are compared among all the
+/// scheduling classes they may be resolved to.
 bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
     unsigned Opcode1, unsigned Opcode2) const {
   const MCSchedModel &Sched = ST->getSchedModel();
@@ -5503,21 +5601,30 @@ bool AArch64TTIImpl::hasKnownLowerThroughputFromSchedulingModel(
   if (!Sched.hasInstrSchedModel())
     return false;
 
-  const MCSchedClassDesc *SCD1 =
-      Sched.getSchedClassDesc(TII->get(Opcode1).getSchedClass());
-  const MCSchedClassDesc *SCD2 =
-      Sched.getSchedClassDesc(TII->get(Opcode2).getSchedClass());
-  // We cannot handle variant scheduling classes without an MI. If we need to
-  // support them for any of the instructions we query the information of we
-  // might need to add a way to resolve them without a MI or not use the
-  // scheduling info.
-  assert(!SCD1->isVariant() && !SCD2->isVariant() &&
-         "Cannot handle variant scheduling classes without an MI");
-  if (!SCD1->isValid() || !SCD2->isValid())
-    return false;
-
-  return MCSchedModel::getReciprocalThroughput(*ST, *SCD1) >
-         MCSchedModel::getReciprocalThroughput(*ST, *SCD2);
+  auto GetRThroughput = [&](unsigned Opcode, bool Highest) {
+    std::optional<double> Res;
+    SmallVector<unsigned> Worklist = {TII->get(Opcode).getSchedClass()};
+    while (!Worklist.empty()) {
+      unsigned SchedClass = Worklist.pop_back_val();
+      const MCSchedClassDesc *SCD = Sched.getSchedClassDesc(SchedClass);
+      if (SCD->isVariant()) {
+        append_range(Worklist, AArch64_MC::getVariantSchedClassTargets(
+                                   SchedClass, Sched.getProcessorID()));
+        continue;
+      }
+      if (!SCD->isValid())
+        continue;
+      double RThroughput = MCSchedModel::getReciprocalThroughput(*ST, *SCD);
+      if (!Res || (Highest ? RThroughput > *Res : RThroughput < *Res))
+        Res = RThroughput;
+    }
+    return Res;
+  };
+  std::optional<double> RThroughput1 =
+      GetRThroughput(Opcode1, /*Highest=*/true);
+  std::optional<double> RThroughput2 =
+      GetRThroughput(Opcode2, /*Highest=*/false);
+  return RThroughput1 && RThroughput2 && *RThroughput1 > *RThroughput2;
 }
 
 InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
@@ -5651,8 +5758,14 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
-  return BaseT::getCmpSelInstrCost(Opcode, ValTy, CondTy, VecPred, CostKind,
-                                   Op1Info, Op2Info, I);
+  InstructionCost Cost = BaseT::getCmpSelInstrCost(
+      Opcode, ValTy, CondTy, VecPred, CostKind, Op1Info, Op2Info, I);
+  if (Opcode == Instruction::ICmp && isa<ScalableVectorType>(ValTy) &&
+      CostKind == TTI::TCK_RecipThroughput &&
+      hasKnownLowerThroughputFromSchedulingModel(AArch64::CMPEQ_PPzZZ_S,
+                                                 AArch64::CMEQv4i32))
+    Cost *= 2;
+  return Cost;
 }
 
 AArch64TTIImpl::TTI::MemCmpExpansionOptions
@@ -6328,7 +6441,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
        SE.getSmallConstantMaxTripCount(L) <= 32))
     return;
 
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
+  if (getBooleanLoopAttribute(L, "llvm.loop.unroll.runtime.disable"))
     return;
 
   if (SE.getSymbolicMaxBackedgeTakenCount(L) != SE.getBackedgeTakenCount(L))
@@ -7854,13 +7967,17 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
-static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+static bool isFNeg(Value *Op) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  return match(Op, m_FNegOrFSubNegZero(m_Value()));
+}
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
 /// shufflevectors extracts and/or sext/zext can be folded into (u,s)subl(2).
-bool AArch64TTIImpl::isProfitableToSinkOperands(
-    Instruction *I, SmallVectorImpl<Use *> &Ops) const {
+bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
+                                                SmallVectorImpl<Use *> &Ops,
+                                                const LoopInfo *LI) const {
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
     switch (II->getIntrinsicID()) {
     case Intrinsic::aarch64_neon_smull:
@@ -7993,6 +8110,23 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
   };
 
   switch (I->getOpcode()) {
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(I);
+    auto *II = dyn_cast<IntrinsicInst>(SI->getValueOperand());
+    if (!SI->isSimple() || !II)
+      break;
+
+    if (!LI ||
+        LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
+      break;
+
+    unsigned Factor = getInterleaveIntrinsicFactor(II->getIntrinsicID());
+    if (Factor) {
+      Ops.push_back(&SI->getOperandUse(0));
+      return true;
+    }
+    break;
+  }
   case Instruction::GetElementPtr:
   case Instruction::Add:
   case Instruction::Sub:
@@ -8109,35 +8243,16 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(
     // Pattern: Or(And(MaskValue, A), And(Not(MaskValue), B)) ->
     // bitselect(MaskValue, A, B) where Not(MaskValue) = Xor(MaskValue, -1)
     if (ST->hasNEON()) {
-      Instruction *OtherAnd, *IA, *IB;
-      Value *MaskValue;
       // MainAnd refers to And instruction that has 'Not' as one of its operands
-      if (match(I, m_c_Or(m_OneUse(m_Instruction(OtherAnd)),
-                          m_OneUse(m_c_And(m_OneUse(m_Not(m_Value(MaskValue))),
-                                           m_Instruction(IA)))))) {
-        if (match(OtherAnd,
-                  m_c_And(m_Specific(MaskValue), m_Instruction(IB)))) {
-          Instruction *MainAnd = I->getOperand(0) == OtherAnd
-                                     ? cast<Instruction>(I->getOperand(1))
-                                     : cast<Instruction>(I->getOperand(0));
+      Instruction *MainAnd, *OtherAnd;
+      Value *A, *B;
+      if (matchBSL(I, MainAnd, OtherAnd, A, B)) {
+        Ops.push_back(
+            &MainAnd->getOperandUse(MainAnd->getOperand(0) == A ? 1 : 0));
+        Ops.push_back(&I->getOperandUse(0));
+        Ops.push_back(&I->getOperandUse(1));
 
-          // Both Ands should be in same basic block as Or
-          if (I->getParent() != MainAnd->getParent() ||
-              I->getParent() != OtherAnd->getParent())
-            return false;
-
-          // Non-mask operands of both Ands should also be in same basic block
-          if (I->getParent() != IA->getParent() ||
-              I->getParent() != IB->getParent())
-            return false;
-
-          Ops.push_back(
-              &MainAnd->getOperandUse(MainAnd->getOperand(0) == IA ? 1 : 0));
-          Ops.push_back(&I->getOperandUse(0));
-          Ops.push_back(&I->getOperandUse(1));
-
-          return true;
-        }
+        return true;
       }
     }
 

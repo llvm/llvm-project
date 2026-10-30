@@ -290,13 +290,11 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
 
 /// Sinks instructions from loop's preheader to the loop body if the
 /// sum frequency of inserted copy is smaller than preheader's frequency.
-static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
-                                          DominatorTree &DT,
-                                          BlockFrequencyInfo &BFI,
-                                          MemorySSA &MSSA,
+static bool sinkLoopInvariantInstructions(Loop &L,
+                                          const SinkAndHoistDependencies &Deps,
+                                          LoopInfo &LI, BlockFrequencyInfo &BFI,
                                           ScalarEvolution *SE) {
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   BasicBlock *Preheader = L.getLoopPreheader();
   assert(Preheader && "Expected loop to have preheader");
 
@@ -312,8 +310,8 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
       }))
     return false;
 
-  MemorySSAUpdater MSSAU(&MSSA);
-  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, L, MSSA);
+  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, L,
+                                  *Deps.MSSAU.getMemorySSA());
 
   bool Changed = false;
 
@@ -339,10 +337,10 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     // No need to check for instruction's operands are loop invariant.
     assert(L.hasLoopInvariantOperands(&I) &&
            "Insts in a loop's preheader should have loop invariant operands!");
-    if (!canSinkOrHoistInst(I, &AA, &DT, &L, MSSAU, false, LICMFlags))
+    if (!canSinkOrHoistInst(I, Deps, &L, false, LICMFlags))
       continue;
-    if (sinkInstruction(Opts, L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
-                        &MSSAU)) {
+    if (sinkInstruction(Opts, L, I, ColdLoopBBs, LoopBlockNumber, LI, Deps.DT,
+                        BFI, &Deps.MSSAU)) {
       Changed = true;
       if (SE)
         SE->forgetBlockAndLoopDispositions(&I);
@@ -383,10 +381,12 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
     if (!Preheader)
       continue;
 
+    MemorySSAUpdater MSSAU(&MSSA);
+    SinkAndHoistDependencies Deps{AA, DT, MSSAU, /*ORE=*/nullptr};
     // Note that we don't pass SCEV here because it is only used to invalidate
     // loops in SCEV and we don't preserve (or request) SCEV at all making that
     // unnecessary.
-    Changed |= sinkLoopInvariantInstructions(L, AA, LI, DT, BFI, MSSA,
+    Changed |= sinkLoopInvariantInstructions(L, Deps, LI, BFI,
                                              /*ScalarEvolution*/ nullptr);
   } while (!PreorderLoops.empty());
 

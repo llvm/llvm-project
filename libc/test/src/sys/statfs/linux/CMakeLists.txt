@@ -1,9 +1,9 @@
-add_custom_target(libc_sys_statfs_unittests)
+add_libc_testsuite(libc-sys-statfs-tests)
 
 add_libc_test(
   statfs_test
   SUITE
-    libc_sys_statfs_unittests
+    libc-sys-statfs-tests
   SRCS
     statfs_test.cpp
   DEPENDS
@@ -19,7 +19,7 @@ add_libc_test(
 add_libc_test(
   fstatfs_test
   SUITE
-    libc_sys_statfs_unittests
+    libc-sys-statfs-tests
   SRCS
     fstatfs_test.cpp
   DEPENDS

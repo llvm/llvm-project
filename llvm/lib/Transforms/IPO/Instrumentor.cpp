@@ -331,6 +331,8 @@ bool InstrumentorImpl::shouldInstrumentTarget() {
 bool InstrumentorImpl::shouldInstrumentFunction(Function &Fn) {
   if (Fn.isDeclaration())
     return false;
+  if (Fn.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+    return false;
   bool RegexMatches = true;
   if (ParsedFunctionRegex.isValid())
     RegexMatches = ParsedFunctionRegex.match(Fn.getName());
@@ -986,7 +988,6 @@ static void readValuePack(const Range &R, Value &Pack,
                           function_ref<void(int, Value *)> SetterCB) {
   auto *Fn = IIRB.IRB.GetInsertBlock()->getParent();
   auto &DL = Fn->getDataLayout();
-  SmallVector<Value *> ParameterValues;
   unsigned Offset = 0;
   for (const auto &[Idx, RE] : enumerate(R)) {
     Value *V = getValue(RE);
@@ -1636,7 +1637,6 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
 
   SmallVector<Use *> Worklist(make_pointer_range(GV.uses()));
   SmallPtrSet<Use *, 32> Done;
-  DenseMap<std::pair<Value *, Function *>, Instruction *> VMap;
   DenseMap<Value *, Instruction *> ConstToInstMap;
   DenseMap<Function *, Instruction *> ReloadMap;
 
@@ -1683,7 +1683,6 @@ Value *GlobalVarIO::setAddress(Value &V, Value &NewV,
     }
   };
 
-  SmallPtrSet<Use *, 8> Visited;
   while (!Worklist.empty()) {
     Use *U = Worklist.pop_back_val();
     if (!Done.insert(U).second)

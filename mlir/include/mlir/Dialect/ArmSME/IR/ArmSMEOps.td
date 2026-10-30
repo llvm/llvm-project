@@ -38,6 +38,7 @@ def ArmSMETileType : I32EnumAttr<"ArmSMETileType", "Arm SME tile type",
 }
 
 def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
+  let cppNamespace = "::mlir::arm_sme";
   let description = [{
     An interface for operations that use Arm SME tiles. These operations need to
     be assigned a tile ID, an i32 attribute, which specifies which virtual tile

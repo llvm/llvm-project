@@ -258,6 +258,14 @@ public:
     return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
   }
 
+  /// Returns true if SVE bit-permute instructions (bext/bdep/bgrp) can be
+  /// emitted.
+  bool isSVEBitPermAvailable() const {
+    return hasSVEBitPerm() &&
+           (isSVEAvailable() ||
+            (isSVEorStreamingSVEAvailable() && hasSSVE_BitPerm()));
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -345,6 +353,13 @@ public:
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetUEFI() const { return TargetTriple.isUEFI(); }
+  /// UEFI follows the Windows ARM64 ABI and produces PE/COFF images, so most
+  /// of the Windows specific ABI handling (calling convention, callee saved
+  /// registers, frame chain, stack probing and unwind info) applies to it.
+  bool isTargetWindowsOrUEFI() const {
+    return TargetTriple.isOSWindowsOrUEFI();
+  }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
@@ -420,9 +435,9 @@ public:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
-      return isTargetWindows();
+      return isTargetWindowsOrUEFI();
     case CallingConv::PreserveNone:
-      return IsVarArg && isTargetWindows();
+      return IsVarArg && isTargetWindowsOrUEFI();
     case CallingConv::Win64:
       return true;
     default:

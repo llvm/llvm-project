@@ -156,6 +156,7 @@ add_subdirectory(BLAKE3)
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
   AMDGPUMetadata.cpp
+  AMDGPUPrintf.cpp
   APFixedPoint.cpp
   APFloat.cpp
   APInt.cpp
@@ -271,6 +272,7 @@ add_llvm_component_library(LLVMSupport
   SmallPtrSet.cpp
   SmallVector.cpp
   SourceMgr.cpp
+  SourceMgrDiagnosticVerifier.cpp
   SpecialCaseList.cpp
   Statistic.cpp
   StringExtras.cpp

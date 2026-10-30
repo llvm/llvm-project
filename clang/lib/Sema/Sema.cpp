@@ -1550,6 +1550,20 @@ void Sema::ActOnEndOfTranslationUnit() {
       Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
     }
 
+    // Uninitialized tentative definitions are zero-initialized (C17 6.9.2p2) so
+    // diagnose fields requiring explicit initialization.
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        !VD->getAnyInitializer()) {
+      if (const RecordDecl *RD = Type->getAsRecordDecl();
+          RD && RD->hasUninitializedExplicitInitFields()) {
+        Diag(VD->getLocation(), diag::warn_field_requires_explicit_init)
+            << /*Var-in-Record=*/1 << RD;
+        for (const FieldDecl *FD : RD->fields())
+          if (FD->hasAttr<ExplicitInitAttr>())
+            Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+      }
+    }
+
     // Notify the consumer that we've completed a tentative definition.
     if (!VD->isInvalidDecl())
       Consumer.CompleteTentativeDefinition(VD);
@@ -2269,7 +2283,9 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
 Sema::SemaDiagnosticBuilder
 Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
-  if (LangOpts.OpenMP)
+  // OpenMPSimd is set only for -fopenmp-simd without -fopenmp. It has no device
+  // compilation and ignores 'declare target', so there is nothing to defer for.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd)
     return LangOpts.OpenMPIsTargetDevice
                ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
                : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);

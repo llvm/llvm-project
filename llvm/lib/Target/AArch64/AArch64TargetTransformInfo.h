@@ -34,6 +34,7 @@ class APInt;
 class Instruction;
 class IntrinsicInst;
 class Loop;
+class LoopInfo;
 class SCEV;
 class ScalarEvolution;
 class Type;
@@ -177,7 +178,9 @@ public:
   bool prefersVectorizedAddressing() const override;
 
   /// Check whether Opcode1 has less throughput according to the scheduling
-  /// model than Opcode2.
+  /// model than Opcode2. For variant scheduling classes, the lowest throughput
+  /// of Opcode1 and the highest throughput of Opcode2 are compared among all
+  /// the scheduling classes they may be resolved to.
   bool hasKnownLowerThroughputFromSchedulingModel(unsigned Opcode1,
                                                   unsigned Opcode2) const;
 
@@ -566,8 +569,8 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool isProfitableToSinkOperands(Instruction *I,
-                                  SmallVectorImpl<Use *> &Ops) const override;
+  bool isProfitableToSinkOperands(Instruction *I, SmallVectorImpl<Use *> &Ops,
+                                  const LoopInfo *LI) const override;
 
   bool enableAggressiveInterleaving(bool) const override {
     return ST->enableAggressiveInterleaving();

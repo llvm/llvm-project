@@ -22,7 +22,7 @@
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUBase.h"
 #include "mlir/Dialect/OpenACC/OpenACCOpsDialect.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsEnums.h.inc"
 #include "mlir/Dialect/OpenACC/OpenACCOpsInterfaces.h.inc"
@@ -79,7 +79,6 @@
 
 namespace mlir {
 namespace acc {
-
 /// Enumeration used to encode the execution mapping on a loop construct.
 /// They refer directly to the OpenACC 3.3 standard:
 /// 2.9.2. gang
@@ -297,7 +296,6 @@ bool isGangWorkerVectorAllOne(ComputeOpT op) {
   return isConstantIntValue(stripIndexCasts(numWorkers), 1) &&
          isConstantIntValue(stripIndexCasts(vectorLength), 1);
 }
-
 } // namespace acc
 } // namespace mlir
 

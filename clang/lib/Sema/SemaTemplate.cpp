@@ -5613,8 +5613,6 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     //   parameter of type decltype(auto) ([temp.func.order]), the declaration
     //   is ill-formed.
     auto isUndeducedAuto = [](QualType T, bool DecltypeAuto) {
-      if (T.isNull())
-        return false;
       const AutoType *AT = T->getContainedAutoType();
       return AT && AT->isDecltypeAuto() == DecltypeAuto &&
              AT->getDeducedType().isNull();
@@ -10664,12 +10662,11 @@ Sema::ActOnExplicitInstantiation(Scope *S, SourceLocation ExternLoc,
                false, TypeResult(), /*IsTypeSpecifier*/ false,
                /*IsTemplateParamOrArg*/ false, /*OOK=*/OffsetOfKind::Outside)
           .get();
+  assert(!IsDependent &&
+         "explicit instantiation of dependent name not yet handled");
 
   if (!TagD)
     return true;
-
-  assert(!IsDependent &&
-         "explicit instantiation of dependent name not yet handled");
 
   TagDecl *Tag = cast<TagDecl>(TagD);
   assert(!Tag->isEnum() && "shouldn't see enumerations here");

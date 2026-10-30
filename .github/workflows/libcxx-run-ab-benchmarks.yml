@@ -1,0 +1,244 @@
+# This file defines a reusable workflow that runs the libc++ benchmarks against a baseline and a candidate
+# commit on the given machine setup, compares the results, and uploads the comparison as an artifact.
+# The results of each run are also uploaded as LNT v5 reports in a separate artifact.
+#
+# The baseline and the candidate are run interleaved on the same machine to mitigate the impact of
+# environmental noise. Both are benchmarked using the same version of the benchmark suite.
+
+name: "[libc++] Run A/B benchmarks"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      baseline:
+        description: 'The libc++ commit to use as the baseline'
+        required: true
+        type: string
+      candidate:
+        description: 'The libc++ commit to use as the candidate'
+        required: true
+        type: string
+      benchmark-suite-version:
+        description: 'The version of the benchmark suite used to benchmark both commits (a LLVM monorepo SHA)'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The name of the LNT machine configuration used for benchmarking'
+        required: true
+        type: string
+      setup:
+        description: 'The setup of the machine to benchmark on, as a JSON object (see libcxx/utils/ci/lnt/README.md)'
+        required: true
+        type: string
+      benchmarks:
+        description: 'Space-separated paths of the benchmarks to run, relative to the root of the monorepo'
+        required: true
+        type: string
+      samples:
+        description: 'The number of times to run the baseline and the candidate'
+        required: false
+        type: number
+        default: 5
+      artifact-name:
+        description: 'The name of the artifact to upload the results as'
+        required: true
+        type: string
+      lnt-artifact-name:
+        description: |
+          The name of the artifact to upload the LNT reports as. There is one report per run of the baseline and
+          the candidate.
+        required: true
+        type: string
+
+jobs:
+  run-ab-benchmarks:
+    name: Run A/B benchmarks on ${{ inputs.lnt-machine }}
+    runs-on: ${{ fromJSON(inputs.setup).runner }}
+    container: ${{ fromJSON(inputs.setup).container || null }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      BASELINE: ${{ inputs.baseline }}
+      BENCHMARKS: ${{ inputs.benchmarks }}
+      BENCHMARK_SUITE_VERSION: ${{ inputs.benchmark-suite-version }}
+      CANDIDATE: ${{ inputs.candidate }}
+      CMAKE_CACHE: ${{ fromJSON(inputs.setup).cmake-cache }}
+      COMPILER: ${{ fromJSON(inputs.setup).cxx }}
+      LIT_PARAMS: ${{ join(fromJSON(inputs.setup).lit-params, ' ') }}
+      # The results are reported under a machine distinct from the one holding historical results, since they
+      # are not comparable (e.g. they use a different version of the benchmark suite).
+      LNT_MACHINE: ${{ inputs.lnt-machine }}-ab
+      SAMPLES: ${{ inputs.samples }}
+      TEST_CONFIG: ${{ fromJSON(inputs.setup).test-config }}
+      TOOLING: ${{ github.workspace }}/tooling
+      XCODE_VERSION: ${{ fromJSON(inputs.setup).xcode-version }}
+    steps:
+      - name: Checkout the candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.candidate }}
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
+
+      # Building the baseline and checking out the benchmark suite only requires their commits to be available,
+      # not the full history.
+      - name: Fetch the baseline and the benchmark suite
+        run: git fetch --no-tags --depth=1 origin "${BASELINE}" "${BENCHMARK_SUITE_VERSION}"
+
+      # Check out the tooling from the commit the workflow is taken from, so that we're always running tooling
+      # that's in sync with the workflow's definition. Only the code and the benchmark suite are taken from the
+      # requested commits.
+      - name: Checkout the tooling from ${{ github.sha }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: tooling
+          sparse-checkout: |
+            libcxx/utils
+
+      - name: Select Xcode
+        if: runner.os == 'macOS'
+        run: echo "DEVELOPER_DIR=/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies via Homebrew
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install ninja cmake python@3.14
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          "${COMPILER}" --version
+          python3 --version
+
+      - name: Setup virtual environment
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install -r "${TOOLING}/libcxx/utils/requirements.txt"
+
+      - name: Build the baseline
+        env:
+          INSTALL_DIR: ${{ github.workspace }}/install/baseline
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts and CMake caches
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${BASELINE}"                           \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
+
+      - name: Build the candidate
+        env:
+          INSTALL_DIR: ${{ github.workspace }}/install/candidate
+        run: |
+          cd "${TOOLING}" # use the tooling checkout for scripts and CMake caches
+          rm -rf "${INSTALL_DIR}"
+          libcxx/utils/build-at-commit                       \
+            --git-repo "${GITHUB_WORKSPACE}"                 \
+            --commit "${CANDIDATE}"                          \
+            --install-dir "${INSTALL_DIR}"                   \
+            --                                               \
+            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
+            -C "${CMAKE_CACHE}"
+
+      - name: Run baseline and candidate interleaved
+        run: |
+          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
+          (while sleep 60; do echo "Still running the benchmarks..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
+
+          source .venv/bin/activate
+
+          read -ra configured_params <<< "${LIT_PARAMS}"
+          lit_params=()
+          for param in "${configured_params[@]}"; do
+            lit_params+=(--param "${param}")
+          done
+
+          # The benchmark suite is checked out in its own directory, so the benchmarks are relative to it.
+          read -ra paths <<< "${BENCHMARKS}"
+          benchmarks=()
+          for path in "${paths[@]}"; do
+            benchmarks+=("benchmark-suite/${path}")
+          done
+
+          mkdir -p iterations lnt
+          for i in $(seq 1 "${SAMPLES}"); do
+            for build in baseline candidate; do
+              case "${build}" in
+                baseline) commit="${BASELINE}" ;;
+                candidate) commit="${CANDIDATE}" ;;
+              esac
+              "${TOOLING}/libcxx/utils/test-at-commit" --test-suite-commit "${BENCHMARK_SUITE_VERSION}" --tmp-src-dir benchmark-suite --test-config "${TEST_CONFIG}" -B "benchmarks/${build}" --compiler "${COMPILER}" -- -v -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/${build}" "${benchmarks[@]}"
+              "${TOOLING}/libcxx/utils/consolidate-benchmarks" "benchmarks/${build}" > "iterations/${build}-${i}.lnt"
+              tee -a "${build}.lnt" < "iterations/${build}-${i}.lnt"
+
+              # The version of the benchmark suite is reported as a run parameter, since it changes for every
+              # pull request while LNT requires the information about a machine to remain the same.
+              "${TOOLING}/libcxx/utils/ci/lnt/create-lnt-report"                                        \
+                --input "iterations/${build}-${i}.lnt"                                                  \
+                --output "lnt/${build}-${i}.json"                                                       \
+                --machine "${LNT_MACHINE}"                                                              \
+                --commit "${commit}"                                                                    \
+                --compiler "${COMPILER}"                                                                \
+                --no-ordinal                                                                            \
+                --untracked-machine                                                                     \
+                --delete-after-inactive-days 180                                                        \
+                --run-parameter "test_suite_commit=${BENCHMARK_SUITE_VERSION}"                          \
+                --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+                --lit-build-dir "benchmarks/${build}"                                                   \
+                -- "${lit_params[@]}" --param libcxx_installation="${PWD}/install/${build}"
+            done
+          done
+
+      # Upload the reports before comparing the results, so they are available even if the comparison fails.
+      - name: Upload the LNT reports
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.lnt-artifact-name }}
+          path: lnt/*.json
+          if-no-files-found: error
+
+      - name: Compare baseline and candidate runs
+        run: |
+          source .venv/bin/activate
+          "${TOOLING}/libcxx/utils/compare-benchmarks" baseline.lnt candidate.lnt | tee results.txt
+
+          {
+            echo '```'
+            cat results.txt
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # The results are stored in a directory named after the artifact, which allows consumers to download
+      # several of these artifacts side by side.
+      - name: Collect the results
+        env:
+          ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        run: |
+          mkdir -p "artifact/${ARTIFACT_NAME}"
+          cp results.txt baseline.lnt candidate.lnt "artifact/${ARTIFACT_NAME}"
+
+      - name: Upload the results
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: artifact
+          if-no-files-found: error

@@ -16,6 +16,8 @@ functions:
     in-latest-posix: ''
   sigfillset:
     in-latest-posix: ''
+  sigismember:
+    in-latest-posix: ''
   signal:
     c-definition: 7.14.1.1
     in-latest-posix: ''

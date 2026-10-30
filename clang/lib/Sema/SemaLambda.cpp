@@ -1141,6 +1141,16 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
   // Determine if we're within a context where we know that the lambda will
   // be dependent, because there are template parameters in scope.
+  //
+  // FIXME: A lambda in the noexcept specifier of an abbreviated function
+  // template (e.g. `auto&&`) is not marked dependent when it captures
+  // a dependent entity. See:
+  // * clang/unittests/AST/LambdaDependencyTest.cpp
+  // * https://github.com/llvm/llvm-project/issues/232874
+  // * https://github.com/llvm/llvm-project/issues/233102
+  // A temporary guard in PaddingChecker::shouldSkipDecl skips fields of
+  // dependent type as a workaround; remove it together with this FIXME
+  // once the bug is fixed.
   CXXRecordDecl::LambdaDependencyKind LambdaDependencyKind =
       CXXRecordDecl::LDK_Unknown;
   if (CurScope->getTemplateParamParent() != nullptr) {
@@ -1488,7 +1498,7 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
     const auto &FTI = ParamInfo.getFunctionTypeInfo();
     LSI->ExplicitParams = FTI.getLParenLoc().isValid();
     if (!FTIHasSingleVoidParameter(FTI)) {
-      Params.reserve(Params.size());
+      Params.reserve(FTI.NumParams);
       for (unsigned I = 0; I < FTI.NumParams; ++I) {
         auto *Param = cast<ParmVarDecl>(FTI.Params[I].Param);
         Param->setScopeInfo(0, Params.size());

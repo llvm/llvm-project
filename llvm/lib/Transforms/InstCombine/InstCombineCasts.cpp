@@ -1381,6 +1381,15 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
   }
 
+  if (DestTy->isIntegerTy(1))
+    if (auto *LI = dyn_cast<LoadInst>(Src))
+      if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0))) {
+        if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+                LI, GEP, ICmpInst::ICMP_NE, ConstantInt::getNullValue(SrcTy),
+                Trunc, ConstantInt::get(cast<IntegerType>(SrcTy), 1)))
+          return Res;
+      }
+
   return Changed ? &Trunc : nullptr;
 }
 
@@ -2418,7 +2427,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
       FMF &= FPMO->getFastMathFlags();
 
-    if (match(Op, m_FNeg(m_Value(X)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op, m_FNegOrFSubNegZero(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTruncFMF(X, Ty, FMF);
       Value *Neg = Builder.CreateFNegFMF(InnerTrunc, FMF);
       return replaceInstUsesWith(FPT, Neg);

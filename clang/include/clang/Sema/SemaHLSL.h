@@ -224,6 +224,9 @@ public:
   bool CanPerformElementwiseCast(Expr *Src, QualType DestType);
   bool CanPerformAggregateSplatCast(Expr *Src, QualType DestType);
   bool CanPerformPackedTypeCast(Expr *Src, QualType DestTy);
+  ExprResult CreateOutArgExpr(Expr *Arg, QualType ArgTy, QualType ParamTy,
+                              InitializedEntity Entity, SourceLocation Loc,
+                              bool IsInOut);
   ExprResult ActOnOutParamExpr(ParmVarDecl *Param, Expr *Arg);
 
   QualType getInoutParameterType(QualType Ty);
@@ -338,6 +341,9 @@ private:
 
   void diagnoseSemanticType(const Decl *D, const HLSLAppliedSemanticAttr *A,
                             llvm::dxbc::PSV::SemanticKind SemanticKind);
+
+  void diagnoseSemanticShaderModel(const HLSLAppliedSemanticAttr *A,
+                                   llvm::dxbc::PSV::SemanticKind SemanticKind);
 
   void handleGlobalStructOrArrayOfWithResources(VarDecl *VD);
 

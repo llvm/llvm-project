@@ -2026,9 +2026,9 @@ static value alloc_builder(LLVMBuilderRef B) {
   return V;
 }
 
-/* llcontext -> llbuilder */
+/* llmodule -> llbuilder */
 value llvm_builder(value C) {
-  return alloc_builder(LLVMCreateBuilderInContext(Context_val(C)));
+  return alloc_builder(LLVMCreateBuilderForModule(Module_val(C)));
 }
 
 /* (llbasicblock, llvalue) llpos -> llbuilder -> unit */

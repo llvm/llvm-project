@@ -221,6 +221,7 @@ GIDefMatchData<"std::function<void(MachineIRBuilder &)>">;
 def unsigned_matchinfo: GIDefMatchData<"unsigned">;
 def register_vector_matchinfo : GIDefMatchData<"SmallVector<Register>">;
 def mi_vector_matchinfo : GIDefMatchData<"SmallVector<MachineInstr *>">;
+def register_pair_matchinfo : GIDefMatchData<"std::pair<Register, Register>">;
 
 def copy_prop : GICombineRule<
   (defs root:$d),
@@ -1406,6 +1407,12 @@ def trunc_shift: GICombineRule <
   (apply [{ Helper.applyCombineTruncOfShift(*${root}, ${matchinfo}); }])
 >;
 
+def simplify_demanded_bits : GICombineRule<
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_AND, G_OR, G_SHL, G_LSHR, G_ASHR):$root,
+         [{ return Helper.matchSimplifyDemandedBits(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFnNoErase(*${root}, ${matchinfo}); }])>;
+
 // Transform (mul x, -1) -> (sub 0, x)
 def mul_by_neg_one: GICombineRule <
   (defs root:$dst),
@@ -1414,10 +1421,8 @@ def mul_by_neg_one: GICombineRule <
 >;
 
 // Fold (xor (and x, y), y) -> (and (not x), y)
-def xor_of_and_with_same_reg_matchinfo :
-    GIDefMatchData<"std::pair<Register, Register>">;
 def xor_of_and_with_same_reg: GICombineRule <
-  (defs root:$root, xor_of_and_with_same_reg_matchinfo:$matchinfo),
+  (defs root:$root, register_pair_matchinfo:$matchinfo),
   (match (G_XOR $dst, $src1, $src2):$root,
          [{ return Helper.matchXorOfAndWithSameReg(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyXorOfAndWithSameReg(*${root}, ${matchinfo}); }])
@@ -2456,6 +2461,20 @@ def combine_shuffle_vector_to_build_vector : GICombineRule<
   (match (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
   (apply [{ Helper.applyCombineShuffleToBuildVector(*${root}); }])>;
 
+// Combines shuffles of buildvector into buildvector
+def combine_shuffle_of_buildvector_to_buildvector : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused),
+         (G_IMPLICIT_DEF $src2),
+         (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
+  (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
+def combine_shuffle_of_buildvectors_to_buildvector : GICombineRule<
+  (defs root:$root),
+  (match (G_BUILD_VECTOR $src1, GIVariadic<>:$unused1),
+         (G_BUILD_VECTOR $src2, GIVariadic<>:$unused2),
+         (G_SHUFFLE_VECTOR $dst, $src1, $src2, $mask):$root),
+  (apply [{ Helper.applyCombineShuffleOfBuildVector(*${root}); }])>;
+
 // Combines buildvector operations
 def combine_build_vector_of_bitcast : GICombineRule<
   (defs root:$root, register_vector_matchinfo:$matchinfo),
@@ -2751,6 +2770,28 @@ def SubUmaxSub: GICombineRule<
                     MRI.hasOneNonDBGUse(${max}.getReg()); }]),
    (apply (G_SUB $sub1, 0, $A), 
           (G_UMIN $root, $A, $sub1))>;
+          
+// (sub 0, (smin X, (sub 0, X))) --> (smax X, (sub 0, X))
+def NegSminNeg: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_SMIN $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_SMAX $root, $A, $sub1))>;
+
+// (sub 0, (umin X, (sub 0, X))) --> (umax X, (sub 0, X))
+def NegUminNeg: GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub, 0, $A),
+          (G_UMIN $max, $A, $sub),
+          (G_SUB $root, 0, $max),
+          [{ return MRI.hasOneNonDBGUse(${sub}.getReg()) &&
+                    MRI.hasOneNonDBGUse(${max}.getReg()); }]),
+   (apply (G_SUB $sub1, 0, $A), 
+          (G_UMAX $root, $A, $sub1))>;
    
 def integer_reassoc_combines: GICombineGroup<[
   APlusBMinusCMinusB,
@@ -2776,7 +2817,9 @@ def integer_reassoc_combines: GICombineGroup<[
 
 def max_min_combines: GICombineGroup<[
   SubSmaxSub, 
-  SubUmaxSub
+  SubUmaxSub,
+  NegSminNeg, 
+  NegUminNeg
 ]>;
 
 // fold (A+(shl (0-B), C)) -> (A-(shl B, C))

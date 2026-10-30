@@ -5,7 +5,8 @@
 #   /libcxx-bot benchmark <path-to-benchmarks-to-run>
 #
 # That will cause the specified benchmarks to be run on the PR and on the pull-request target, and
-# their results to be compared.
+# their results to be compared. Only machines defined in machines.json that opt into the PR
+# benchmarking are triggered.
 
 name: "[libc++] Benchmark PR"
 
@@ -66,15 +67,24 @@ jobs:
               repo: context.repo.repo,
               pull_number: context.issue.number,
             });
-            core.setOutput('pr_base', pr.data.base.sha);
-            core.setOutput('pr_head', pr.data.head.sha);
+
+            // Compare the PR against the commit where it diverged from its target branch.
+            const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              basehead: `${pr.data.base.sha}...${pr.data.head.sha}`,
+              per_page: 1,
+            });
+            core.setOutput('baseline', comparison.merge_base_commit.sha);
+            core.setOutput('candidate', pr.data.head.sha);
+
             const match = context.payload.comment.body.match(/\/libcxx-bot benchmark (.+)/);
             core.setOutput('benchmarks', match ? match[1] : '');
 
             // Benchmark the configurations defined in machines.json that opt into PR benchmarking.
             const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
             const selected = config.filter(cfg => cfg['pr-benchmarks']);
-            core.setOutput('matrix', JSON.stringify(selected.map(cfg => ({'lnt-machine': cfg['lnt-machine'], ...cfg.setup}))));
+            core.setOutput('matrix', JSON.stringify(selected.map(cfg => ({'lnt-machine': cfg['lnt-machine'], setup: cfg.setup}))));
 
       - name: Update comment with link to the run
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
@@ -94,193 +104,157 @@ jobs:
               body: [comment.body, note].join('\n\n'),
             });
     outputs:
-      pr_base: ${{ steps.vars.outputs.pr_base }}
-      pr_head: ${{ steps.vars.outputs.pr_head }}
+      baseline: ${{ steps.vars.outputs.baseline }}
+      candidate: ${{ steps.vars.outputs.candidate }}
       benchmarks: ${{ steps.vars.outputs.benchmarks }}
       matrix: ${{ steps.vars.outputs.matrix }}
 
   run-benchmarks:
+    name: Benchmark ${{ matrix.lnt-machine }}
+    needs:
+      - extract-info
+    permissions:
+      contents: read
     strategy:
       matrix:
         include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
       fail-fast: false
-    permissions:
-      pull-requests: write
-    runs-on: ${{ matrix.runner }}
-    container: ${{ matrix.container || null }}
-    defaults:
-      run:
-        shell: bash
+    uses: $/.github/workflows/libcxx-run-ab-benchmarks.yml
+    with:
+      baseline: ${{ needs.extract-info.outputs.baseline }}
+      candidate: ${{ needs.extract-info.outputs.candidate }}
+      # Use the benchmark suite from the PR, which allows benchmarking newly-introduced benchmarks.
+      benchmark-suite-version: ${{ needs.extract-info.outputs.candidate }}
+      lnt-machine: ${{ matrix.lnt-machine }}
+      setup: ${{ toJSON(matrix.setup) }}
+      benchmarks: ${{ needs.extract-info.outputs.benchmarks }}
+      artifact-name: ab-results-${{ matrix.lnt-machine }}
+      lnt-artifact-name: lnt-reports-${{ matrix.lnt-machine }}
+
+  # Submit the results of each machine to LNT, which allows linking to LNT's comparison page in the report.
+  # Machines whose benchmarks didn't complete have no reports, so submitting them fails too.
+  submit:
+    name: Submit ${{ matrix.lnt-machine }}
     needs:
       - extract-info
-    env:
-      BENCHMARKS: ${{ needs.extract-info.outputs.benchmarks }}
-      COMPILER: ${{ matrix.cxx }}
-      LIT_PARAMS: ${{ join(matrix.lit-params, ' ') }}
-      LNT_MACHINE: ${{ matrix.lnt-machine }}
-      PR_HEAD: ${{ needs.extract-info.outputs.pr_head }}
-      PR_BASE: ${{ needs.extract-info.outputs.pr_base }}
-      TEST_CONFIG: ${{ matrix.test-config }}
-      TOOLING: ${{ github.workspace }}/tooling
+      - run-benchmarks
+    # Submit the results of the machines that succeeded even if others failed.
+    if: ${{ !cancelled() && needs.extract-info.result == 'success' }}
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.extract-info.outputs.matrix) }}
+      fail-fast: false
+    uses: $/.github/workflows/lnt-submit.yml
+    with:
+      artifact-name: lnt-reports-${{ matrix.lnt-machine }}
+      test-suite: libcxx
+    secrets:
+      LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
+
+  report:
+    needs:
+      - extract-info
+      - run-benchmarks
+      - submit
+    # Report results even if some of the benchmark runs failed.
+    if: ${{ always() && needs.extract-info.result == 'success' }}
+    runs-on: ubuntu-26.04
+    permissions:
+      pull-requests: write
     steps:
-      - name: Checkout the PR
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Download the results
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          persist-credentials: false
-          ref: ${{ needs.extract-info.outputs.pr_head }}
-          fetch-depth: 0
-        # TODO(#226230): Remove this once we have resolved the underlying issue
-        # causing actions/checkout to be prematurely killed.
-        env:
-          GIT_TRACE: "true"
-          GIT_CURL_VERBOSE: "true"
+          pattern: ab-results-*
+          path: ${{ runner.temp }}/results
+          merge-multiple: true
 
-      # This workflow is always taken from the default branch. Check out the tooling from the corresponding
-      # commit so that we're always running tooling that's in sync with the workflow's definition. Only the
-      # code and the test suite (including its testing configuration) are taken from the PR head.
-      - name: Checkout the tooling from ${{ github.sha }}
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Each artifact is downloaded in its own directory, since the reports of all machines have the same names.
+      - name: Download the LNT reports
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          persist-credentials: false
-          ref: ${{ github.sha }}
-          path: tooling
-          sparse-checkout: |
-            libcxx/utils
-
-      - name: Select Xcode
-        if: runner.os == 'macOS'
-        run: echo "DEVELOPER_DIR=/Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer" >> $GITHUB_ENV
-
-      - name: Install dependencies via Homebrew
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install ninja cmake python@3.14
-          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
-
-      - name: Diagnose tools in use
-        run: |
-          cmake --version
-          ninja --version
-          "${COMPILER}" --version
-          python3 --version
-
-      - name: Setup virtual environment
-        run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install -r "${TOOLING}/libcxx/utils/requirements.txt"
-
-      - name: Determine the baseline commit
-        id: baseline
-        run: echo "commit=$(git merge-base "${PR_BASE}" "${PR_HEAD}")" >> "${GITHUB_OUTPUT}"
-
-      - name: Build the baseline
-        env:
-          CMAKE_CACHE: ${{ matrix.cmake-cache }}
-          COMMIT: ${{ steps.baseline.outputs.commit }}
-          INSTALL_DIR: ${{ github.workspace }}/install/baseline
-        run: |
-          cd "${TOOLING}" # use the tooling checkout for scripts
-          rm -rf "${INSTALL_DIR}"
-          libcxx/utils/build-at-commit                       \
-            --git-repo "${GITHUB_WORKSPACE}"                 \
-            --commit "${COMMIT}"                             \
-            --install-dir "${INSTALL_DIR}"                   \
-            --                                               \
-            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
-            -C "${CMAKE_CACHE}"
-
-      - name: Build the candidate
-        env:
-          CMAKE_CACHE: ${{ matrix.cmake-cache }}
-          COMMIT: ${{ needs.extract-info.outputs.pr_head }}
-          INSTALL_DIR: ${{ github.workspace }}/install/candidate
-        run: |
-          cd "${TOOLING}" # use the tooling checkout for scripts
-          rm -rf "${INSTALL_DIR}"
-          libcxx/utils/build-at-commit                       \
-            --git-repo "${GITHUB_WORKSPACE}"                 \
-            --commit "${COMMIT}"                             \
-            --install-dir "${INSTALL_DIR}"                   \
-            --                                               \
-            -DCMAKE_CXX_COMPILER="${COMPILER}"               \
-            -C "${CMAKE_CACHE}"
-
-      - name: Run baseline and candidate interleaved
-        run: |
-          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
-          (while sleep 60; do echo "Still running the benchmarks..."; done) &
-          keepalive=$!
-          trap 'kill ${keepalive}' EXIT
-
-          source .venv/bin/activate
-
-          read -ra configured_params <<< "${LIT_PARAMS}"
-          lit_params=()
-          for param in "${configured_params[@]}"; do
-            lit_params+=(--param "${param}")
-          done
-
-          # Run 5 times so we can pick the median, and interleave baseline and candidate to mitigate the impact of
-          # environmental noise
-          for _ in $(seq 1 5); do
-            "${TOOLING}/libcxx/utils/test-at-commit" --test-config "${TEST_CONFIG}" -B benchmarks/baseline --compiler "${COMPILER}" -- -v -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/baseline" "$BENCHMARKS"
-            "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/baseline | tee -a baseline.lnt
-            "${TOOLING}/libcxx/utils/test-at-commit" --test-config "${TEST_CONFIG}" -B benchmarks/candidate --compiler "${COMPILER}" -- -v -j1 "${lit_params[@]}" --param libcxx_installation="${PWD}/install/candidate" "$BENCHMARKS"
-            "${TOOLING}/libcxx/utils/consolidate-benchmarks" benchmarks/candidate | tee -a candidate.lnt
-          done
-
-      - name: Compare baseline and candidate runs
-        run: |
-          source .venv/bin/activate
-          "${TOOLING}/libcxx/utils/compare-benchmarks" baseline.lnt candidate.lnt | tee results.txt
+          pattern: lnt-reports-*
+          path: ${{ runner.temp }}/lnt-reports
 
       - name: Update comment with results
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          MATRIX: ${{ needs.extract-info.outputs.matrix }}
+          RESULTS_DIR: ${{ runner.temp }}/results
+          LNT_REPORTS_DIR: ${{ runner.temp }}/lnt-reports
+          LNT_URL: https://lnt.llvm.org
+          LNT_TEST_SUITE: libcxx
+          BASELINE: ${{ needs.extract-info.outputs.baseline }}
+          CANDIDATE: ${{ needs.extract-info.outputs.candidate }}
         with:
           script: |
             const fs = require('fs');
-            const results = fs.readFileSync('results.txt', 'utf8');
-            const { data: comment } = await github.rest.issues.getComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-            });
-            const details = [
-              '<details>',
-              '<summary>',
-              `Benchmark results for ${process.env.LNT_MACHINE}:`,
-              '</summary>',
-              '',
-              '```',
-              results,
-              '```',
-              '',
-              '</details>',
-            ].join('\n');
-            await github.rest.issues.updateComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              comment_id: context.payload.comment.id,
-              body: [comment.body, details].join('\n\n'),
+            const path = require('path');
+            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            // Return a link to the comparison of the baseline and the candidate on LNT, or nothing if there are no
+            // results for that machine.
+            function lnt_comparison(machine) {
+              const suite = process.env.LNT_TEST_SUITE;
+              const dir = path.join(process.env.LNT_REPORTS_DIR, `lnt-reports-${machine}`);
+              if (!fs.existsSync(dir)) {
+                return '';
+              }
+              const reports = fs.readdirSync(dir).filter(f => f.endsWith('.json'))
+                                .map(f => JSON.parse(fs.readFileSync(path.join(dir, f), 'utf8')));
+              if (reports.length === 0) {
+                return '';
+              }
+
+              // Select the runs of this job explicitly, since other runs may exist for the same commits (e.g.
+              // when several pull requests have the same baseline).
+              const url = new URL('/compare', process.env.LNT_URL);
+              for (const [side, commit] of [['a', process.env.BASELINE], ['b', process.env.CANDIDATE]]) {
+                const runs = reports.filter(r => r.commit.value === commit);
+                url.searchParams.append(`suite_${side}`, suite);
+                url.searchParams.append(`machine_${side}`, reports[0].machine.name);
+                url.searchParams.append(`commit_${side}`, commit);
+                for (const run of runs) {
+                  url.searchParams.append(`runs_${side}`, run.uuid);
+                }
+              }
+              url.searchParams.append('metric', 'execution_time');
+              // This ends up in an HTML block of the comment, where Markdown links aren't rendered.
+              return ` (<a href="${url.href.replaceAll('&', '&amp;')}">view on LNT</a>)`;
+            }
+
+            // Report the results of every machine we benchmarked on. Machines without results are those where
+            // the comparison failed.
+            const machines = JSON.parse(process.env.MATRIX).map(cfg => cfg['lnt-machine']);
+            const sections = machines.map(machine => {
+              const results = path.join(process.env.RESULTS_DIR, `ab-results-${machine}`, 'results.txt');
+              if (!fs.existsSync(results)) {
+                return `> _:x: Benchmarks for ${machine} failed. See ${run_url} for details._`;
+              }
+              return [
+                '<details>',
+                '<summary>',
+                `Benchmark results for ${machine}${lnt_comparison(machine)}:`,
+                '</summary>',
+                '',
+                '```',
+                fs.readFileSync(results, 'utf8'),
+                '```',
+                '',
+                '</details>',
+              ].join('\n');
             });
 
-      - name: Report failure in the comment
-        if: failure()
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
             const { data: comment } = await github.rest.issues.getComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
             });
-            const run_url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const note = `> _:x: Benchmarks for ${process.env.LNT_MACHINE} failed. See ${run_url} for details._`;
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: context.payload.comment.id,
-              body: [comment.body, note].join('\n\n'),
+              body: [comment.body, ...sections].join('\n\n'),
             });
