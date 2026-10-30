@@ -260,6 +260,7 @@ public:
   void Enter(const parser::OmpClause::UseDevicePtr &x);
   void Enter(const parser::OmpClause::UsesAllocators &x);
   void Enter(const parser::OmpClause::When &x);
+  void Enter(const parser::Name &);
 
 private:
   using LoopOrConstruct = std::variant<const parser::DoConstruct *,
@@ -442,6 +443,8 @@ private:
   void CheckAllowedMapTypes(
       parser::OmpMapType::Value, llvm::ArrayRef<parser::OmpMapType::Value>);
   void CheckCloseModifierOnMapMembers();
+  const Symbol *GetEnclosingNonHostDeclareTargetSubprogram(parser::CharBlock);
+  void WarnIfNonDeclareTargetDeviceUse(const parser::Name &);
 
   llvm::StringRef getClauseName(llvm::omp::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::omp::Directive directive) override;
@@ -576,6 +579,8 @@ private:
   // IF clauses that referenced them. If there was no modifier, the entire
   // directive is assumed to be listed.
   std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
+
+  UnorderedSymbolSet warnedNonDeclareTargetDeviceUseSymbols_;
 
   // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
   // and symbols mapped in TARGET EXIT DATA within the current function scope.

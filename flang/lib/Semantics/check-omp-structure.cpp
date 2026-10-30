@@ -171,6 +171,7 @@ OmpStructureChecker::OmpStructureChecker(SemanticsContext &context)
 void OmpStructureChecker::Enter(const parser::ProgramUnit &) { //
   ClearLabels();
   declareVariantPairs_.clear();
+  warnedNonDeclareTargetDeviceUseSymbols_.clear();
   // A REQUIRES directive with unified_address, unified_shared_memory, or
   // reverse_offload must appear lexically before any device construct or
   // device routine is scoped to a program unit.
@@ -774,6 +775,22 @@ bool OmpStructureChecker::IsNestedInDirective(llvm::omp::Directive directive) {
   return false;
 }
 
+static bool IsHostOnlyDeclareTarget(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  bool isHostOnly{false};
+  common::visit(
+      [&](auto &&details) {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          if (const auto &deviceType{details.ompDeclTargetDeviceType()}) {
+            isHostOnly = *deviceType == common::OmpDeviceType::Host;
+          }
+        }
+      },
+      ultimate.details());
+  return isHostOnly;
+}
+
 bool OmpStructureChecker::InTargetRegion() {
   if (IsNestedInDirective(llvm::omp::Directive::OMPD_target)) {
     // Return true even for device_type(host).
@@ -787,6 +804,62 @@ bool OmpStructureChecker::InTargetRegion() {
     }
   }
   return false;
+}
+
+// Return the enclosing subprogram if it is a declare target routine that can
+// execute on the device. Host-only declare target routines are intentionally
+// ignored.
+const Symbol *OmpStructureChecker::GetEnclosingNonHostDeclareTargetSubprogram(
+    parser::CharBlock source) {
+  const Scope &scope{context_.FindScope(source)};
+  if (scope.IsTopLevel()) {
+    return nullptr;
+  }
+
+  const Scope &programUnit{GetProgramUnitContaining(scope)};
+  const Symbol *symbol{programUnit.symbol()};
+  if (!symbol || !symbol->IsSubprogram()) {
+    return nullptr;
+  }
+
+  const Symbol &ultimate{symbol->GetUltimate()};
+  if (!ultimate.test(Symbol::Flag::OmpDeclareTarget) ||
+      IsHostOnlyDeclareTarget(ultimate)) {
+    return nullptr;
+  }
+
+  return &ultimate;
+}
+
+void OmpStructureChecker::WarnIfNonDeclareTargetDeviceUse(
+    const parser::Name &name) {
+  if (!name.symbol) {
+    return;
+  }
+
+  const Symbol &symbol{name.symbol->GetUltimate()};
+  if (symbol.test(Symbol::Flag::OmpDeclareTarget) ||
+      symbol.test(Symbol::Flag::OmpThreadprivate) ||
+      symbol.test(Symbol::Flag::CompilerCreated) || symbol.IsSubprogram() ||
+      !symbol.has<ObjectEntityDetails>() || IsNamedConstant(symbol) ||
+      IsDummy(symbol) || symbol.owner().kind() != Scope::Kind::Module) {
+    return;
+  }
+
+  const Symbol *declareTargetSubprogram{
+      GetEnclosingNonHostDeclareTargetSubprogram(name.source)};
+  if (!declareTargetSubprogram || &symbol == declareTargetSubprogram ||
+      !warnedNonDeclareTargetDeviceUseSymbols_.insert(symbol).second) {
+    return;
+  }
+
+  context_.Warn(common::UsageWarning::OpenMPUsage, name.source,
+      "Variable '%s' is referenced from an OpenMP DECLARE TARGET procedure but is not marked DECLARE TARGET"_warn_en_US,
+      symbol.name());
+}
+
+void OmpStructureChecker::Enter(const parser::Name &name) {
+  WarnIfNonDeclareTargetDeviceUse(name);
 }
 
 bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
