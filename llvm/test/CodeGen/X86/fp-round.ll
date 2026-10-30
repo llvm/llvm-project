@@ -1050,10 +1050,13 @@ define i32 @trunc_f32_to_i32_multiple_uses(float %x, ptr %p) nounwind {
 ; SSE2-LABEL: trunc_f32_to_i32_multiple_uses:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rbx
+; SSE2-NEXT:    subq $16, %rsp
 ; SSE2-NEXT:    movq %rdi, %rbx
+; SSE2-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; SSE2-NEXT:    callq truncf@PLT
 ; SSE2-NEXT:    movss %xmm0, (%rbx)
-; SSE2-NEXT:    cvttss2si %xmm0, %eax
+; SSE2-NEXT:    cvttss2si {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
+; SSE2-NEXT:    addq $16, %rsp
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    retq
 ;
