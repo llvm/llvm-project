@@ -184,6 +184,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Changes in existing checks
 
+- Improved {doc}`bugprone-argument-comment
+  <clang-tidy/checks/bugprone/argument-comment>` check by adding the
+  {option}`IgnoreMacros` option. Set it to `false` to add missing comments to
+  calls in a macro argument, such as `ASSERT(f(0))`.
+
 - Improved {doc}`bugprone-assignment-in-if-condition
   <clang-tidy/checks/bugprone/assignment-in-if-condition>` check by ignoring
   assignments inside GNU statement expressions unless they form the value of

@@ -47,6 +47,7 @@ private:
   };
 
   const unsigned StrictMode : 1;
+  const unsigned IgnoreMacros : 1;
   const unsigned IgnoreSingleArgument : 1;
   const unsigned CommentAnonymousInitLists : 1;
   const unsigned CommentBoolLiterals : 1;
@@ -61,10 +62,10 @@ private:
   llvm::Regex IdentRE;
 
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,
-                     SourceLocation ArgBeginLoc,
+                     SourceLocation ArgBeginLoc, SourceLocation CloseLoc,
                      llvm::ArrayRef<const Expr *> Args);
 
-  CommentKind shouldAddComment(const Expr *Arg) const;
+  CommentKind shouldAddComment(const Expr *Arg, const SourceManager &SM) const;
 };
 
 } // namespace clang::tidy::bugprone
