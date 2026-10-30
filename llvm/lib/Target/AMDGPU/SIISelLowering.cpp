@@ -20673,18 +20673,11 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
       Register RHS = MI->getOperand(3).getReg();
       VT.computeKnownBitsImpl(LHS, LHSKnown, DemandedElts, Depth + 1);
       VT.computeKnownBitsImpl(RHS, RHSKnown, DemandedElts, Depth + 1);
-      unsigned BitWidth = Known.getBitWidth();
       bool SelfMultiply =
           LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1);
-      // Sign/Zero extend from 24 bits.
-      if (IID == Intrinsic::amdgcn_mul_i24) {
-        LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
-        RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
-      } else {
-        LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
-        RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
-      }
-      Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
+      Known = computeKnownBitsForMul24(LHSKnown, RHSKnown, Known.getBitWidth(),
+                                       IID == Intrinsic::amdgcn_mul_i24,
+                                       SelfMultiply);
       break;
     }
     }

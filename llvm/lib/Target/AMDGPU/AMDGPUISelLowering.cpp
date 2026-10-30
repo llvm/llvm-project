@@ -61,6 +61,23 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
   return DAG.ComputeMaxSignificantBits(Op);
 }
 
+KnownBits AMDGPUTargetLowering::computeKnownBitsForMul24(KnownBits LHSKnown,
+                                                         KnownBits RHSKnown,
+                                                         unsigned BitWidth,
+                                                         bool IsSigned,
+                                                         bool SelfMultiply) {
+  // Sign/Zero extend from 24 bits.
+  if (IsSigned) {
+    LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
+    RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
+  } else {
+    LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
+    RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
+  }
+
+  return KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
+}
+
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
                                            const TargetSubtargetInfo &STI,
                                            const AMDGPUSubtarget &AMDGPUSTI)
@@ -6068,16 +6085,6 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   case AMDGPUISD::MUL_I24: {
     KnownBits LHSKnown = DAG.computeKnownBits(Op.getOperand(0), Depth + 1);
     KnownBits RHSKnown = DAG.computeKnownBits(Op.getOperand(1), Depth + 1);
-    unsigned BitWidth = Op.getScalarValueSizeInBits();
-
-    // Sign/Zero extend from 24 bits.
-    if (Opc == AMDGPUISD::MUL_I24) {
-      LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
-      RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
-    } else {
-      LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
-      RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
-    }
 
     // TODO: SelfMultiply can be poison, but not undef.
     bool SelfMultiply = Op.getOperand(0) == Op.getOperand(1);
@@ -6086,7 +6093,9 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
           Op.getOperand(0), DemandedElts, UndefPoisonKind::UndefOrPoison,
           Depth + 1);
 
-    Known = KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
+    Known = computeKnownBitsForMul24(LHSKnown, RHSKnown,
+                                     Op.getScalarValueSizeInBits(),
+                                     Opc == AMDGPUISD::MUL_I24, SelfMultiply);
     break;
   }
   case AMDGPUISD::PERM: {
