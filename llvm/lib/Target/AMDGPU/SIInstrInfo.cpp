@@ -8278,25 +8278,21 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   if (!RI.isVGPRClass(CurrRC))
     return;
 
-  const TargetRegisterClass *ExpectedRC = [&]() -> const TargetRegisterClass * {
-    if (MI.isPHI()) {
-      // The expected register class of the PHI node operands is determined by
-      // its target operand.
-      return getOpRegClass(MI, 0);
-    }
-
+  const TargetRegisterClass *ExpectedRC = nullptr;
+  if (MI.isPHI()) {
+    // The expected register class of the PHI node operands is determined by
+    // its target operand.
+    ExpectedRC = getOpRegClass(MI, 0);
+  } else {
     if (OpIdx >= get(Opcode).getNumOperands())
-      return nullptr;
+      return;
 
     const MCOperandInfo &Operand = get(Opcode).operands()[OpIdx];
     if (Operand.RegClass == -1)
-      return nullptr;
+      return;
 
-    return RI.getRegClass(getOpRegClassID(Operand));
-  }();
-
-  if (!ExpectedRC)
-    return;
+    ExpectedRC = RI.getRegClass(getOpRegClassID(Operand));
+  }
 
   if (RI.getMatchingSuperRegClass(CurrRC, ExpectedRC, AMDGPU::lo16)) {
     // Default to the lo16 only if the subregister is not specified.
