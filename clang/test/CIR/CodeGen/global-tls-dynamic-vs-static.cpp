@@ -21,11 +21,11 @@ thread_local  int d = f();
 // CIR-DAG: cir.func internal private @__tls_init()
 // CIR-DAG: cir.func internal private @__cxx_global_var_init()
 
-// CIR-DAG: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW1c", "_ZTH1c"> @c = #cir.int<5> : !s32i
+// CIR-DAG: cir.global external tls_model = tls_dyn @c = #cir.int<5> : !s32i
 // CIR-DAG: cir.func comdat weak_odr private hidden @_ZTW1c()
 // Note: C doesn't get an alias since it doesn't have an init function.
 
-// CIR-DAG: cir.global external tls_model = tls_dyn tls_refs = <"_ZTW1d", "_ZTH1d"> @d = #cir.int<0> : !s32i
+// CIR-DAG: cir.global external tls_model = tls_dyn @d = #cir.int<0> : !s32i
 // CIR-DAG: cir.func comdat weak_odr private hidden @_ZTW1d() -> !cir.ptr<!s32i>
 // CIR-DAG: cir.func @_ZTH1d() alias(@__tls_init)
 
