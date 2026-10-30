@@ -99,6 +99,13 @@ void lowerVectorPointerToInt(Module &M) {
       } else if (auto *BC = dyn_cast<BitCastInst>(I)) {
 
         Repl = asIntVec(BC->getOperand(0), B);
+      } else if (auto *ITP = dyn_cast<IntToPtrInst>(I)) {
+        // the integers themselves, at the pointer width
+        Repl = B.CreateZExtOrTrunc(ITP->getOperand(0),
+                                   intVecTy(cast<FixedVectorType>(I->getType())));
+      } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I)) {
+        // the address, in the target's 64-bit flat address space
+        Repl = asIntVec(ASC->getOperand(0), B);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
         auto *PVT = cast<FixedVectorType>(GEP->getType());
         unsigned N = PVT->getNumElements();

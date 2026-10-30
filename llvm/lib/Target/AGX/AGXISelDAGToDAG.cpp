@@ -44,6 +44,7 @@ private:
 
   void Select(SDNode *N) override;
   bool trySelectShift64(SDNode *N);
+  bool trySelectFieldInsert(SDNode *N);
 
   SDValue getI32Imm(uint64_t Imm, const SDLoc &DL) {
     return CurDAG->getTargetConstant(Imm, DL, MVT::i32);
@@ -173,10 +174,48 @@ void AGXDAGToDAGISel::Select(SDNode *N) {
     if (trySelectShift64(N))
       return;
     break;
+  case ISD::OR:
+    if (trySelectFieldInsert(N))
+      return;
+    break;
   default:
     break;
   }
   SelectCode(N);
+}
+
+/// (x & ~(m << s)) | (c << s) with a field m of consecutive ones and a small
+/// c: one bfi of c into x (setting a float's exponent field, as the float
+/// division does), instead of two mov_imm, an and and an or.
+bool AGXDAGToDAGISel::trySelectFieldInsert(SDNode *N) {
+  if (N->getValueType(0) != MVT::i32)
+    return false;
+  for (unsigned I = 0; I < 2; ++I) {
+    SDValue And = N->getOperand(I);
+    auto *Ins = dyn_cast<ConstantSDNode>(N->getOperand(1 - I));
+    if (!Ins || And.getOpcode() != ISD::AND || !And.hasOneUse())
+      continue;
+    auto *Keep = dyn_cast<ConstantSDNode>(And.getOperand(1));
+    if (!Keep)
+      continue;
+    uint32_t Field = ~uint32_t(Keep->getZExtValue());
+    uint32_t C = Ins->getZExtValue();
+    unsigned Shift, Width;
+    if (!isShiftedMask_32(Field, Shift, Width) || Width == 32 ||
+        (C & ~Field) || (C >> Shift) > 0xff)
+      return false;
+    // Small masks are and-able as immediates; leave those to the matcher.
+    if (Keep->getZExtValue() <= 0xff && C <= 0xff)
+      return false;
+    SDLoc DL(N);
+    SDValue Zero = getI32Imm(0, DL);
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       AGX::BFI_I32, DL, MVT::i32,
+                       {Zero, And.getOperand(0), Zero, getI32Imm(C >> Shift, DL),
+                        Zero, getI32Imm(Shift, DL), getI32Imm(Width, DL)}));
+    return true;
+  }
+  return false;
 }
 
 // The i32 format and the masks of 2, 3 and 4 consecutive values.

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRAliasAnnotate.h"
+#include "AIRKernelParams.h"
 #include "AIR.h"
 #include "AIRAddressSpaces.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -166,7 +167,8 @@ static bool annotateFunction(Function &F) {
 static bool runImpl(Module &M) {
   bool Changed = false;
   for (auto &F : M) {
-    if (F.isDeclaration())
+    // Kernels: a function they call may be passed one buffer twice.
+    if (F.isDeclaration() || isCalledFunction(F))
       continue;
     Changed |= annotateFunction(F);
   }

@@ -254,7 +254,9 @@ PointeeTypeMap buildPointeeTypeMap(Module &M) {
   for (auto &F : M)
     for (auto &BB : F)
       for (auto &I : BB) {
-        if (!I.getType()->isPointerTy())
+        // An alloca's pointee is its allocated type (the record says so),
+        // set in phase 4; accesses of another type are cast.
+        if (!I.getType()->isPointerTy() || isa<AllocaInst>(I))
           continue;
         if (auto *Ty = PointeeTypeMap::inferFromUsage(&I))
           PTM.set(&I, Ty);

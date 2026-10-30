@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRScalarStoreGuard.h"
+#include "AIRKernelParams.h"
+#include "llvm/ADT/DenseMap.h"
 #include "AIR.h"
 #include "AIRAddressSpaces.h"
 #include "llvm/ADT/StringRef.h"
@@ -48,25 +50,50 @@ static bool isDeviceWriteIntrinsic(const CallInst *CI) {
   return Callee->getName().starts_with(kAtomicGlobalPrefix);
 }
 
-static bool isScalarKernel(Function &F) {
-  if (F.isDeclaration())
-    return false;
+namespace {
+// What a function does, with the functions it calls.
+struct Summary {
   bool HasDeviceWrite = false;
   bool HasPerThreadIdx = false;
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
+};
+} // namespace
+
+static Summary summarize(const Function &F,
+                         DenseMap<const Function *, Summary> &Done) {
+  if (auto It = Done.find(&F); It != Done.end())
+    return It->second;
+  Summary S;
+  Done[&F] = S; // (no recursion in AIR)
+  for (const BasicBlock &BB : F) {
+    for (const Instruction &I : BB) {
       if (auto *SI = dyn_cast<StoreInst>(&I)) {
         if (SI->getPointerAddressSpace() == metal::AS::Device)
-          HasDeviceWrite = true;
+          S.HasDeviceWrite = true;
       } else if (auto *CI = dyn_cast<CallInst>(&I)) {
         if (isPerThreadIndexCall(CI))
-          HasPerThreadIdx = true;
+          S.HasPerThreadIdx = true;
         if (isDeviceWriteIntrinsic(CI))
-          HasDeviceWrite = true;
+          S.HasDeviceWrite = true;
+        if (const Function *Callee = CI->getCalledFunction();
+            Callee && !Callee->isDeclaration()) {
+          Summary C = summarize(*Callee, Done);
+          S.HasDeviceWrite |= C.HasDeviceWrite;
+          S.HasPerThreadIdx |= C.HasPerThreadIdx;
+        }
       }
     }
   }
-  return HasDeviceWrite && !HasPerThreadIdx;
+  return Done[&F] = S;
+}
+
+// A kernel (a function nothing calls) writing device memory with no
+// per-thread index, itself or in the functions it calls.
+static bool isScalarKernel(Function &F,
+                           DenseMap<const Function *, Summary> &Done) {
+  if (F.isDeclaration() || isCalledFunction(F))
+    return false;
+  Summary S = summarize(F, Done);
+  return S.HasDeviceWrite && !S.HasPerThreadIdx;
 }
 
 static bool scalarStoreGuard(Module &M) {
@@ -78,8 +105,9 @@ static bool scalarStoreGuard(Module &M) {
   LLVMContext &Ctx = M.getContext();
   Type *I32 = Type::getInt32Ty(Ctx);
 
+  DenseMap<const Function *, Summary> Done;
   for (Function &F : M) {
-    if (!isScalarKernel(F))
+    if (!isScalarKernel(F, Done))
       continue;
 
     // Insert: if (tid.x != 0) ret; before the existing entry body.

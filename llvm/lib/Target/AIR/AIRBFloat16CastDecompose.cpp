@@ -8,6 +8,7 @@
 
 #include "AIRBFloat16CastDecompose.h"
 #include "AIR.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
@@ -36,16 +37,116 @@ static bool bfloat16CastDecompose(Module &M) {
     return Elem;
   };
 
+  // Phase -1: fptosi/fptoui from half or bfloat go through f32, which holds
+  // every half and bfloat value exactly. Metal reads a bfloat operand of
+  // fptosi as half, and its compiler can hang on half -> i64 (a
+  // PTX-formalization cvt.rmi.s64.f16 request never finished compiling). The
+  // fpext bfloat this creates is decomposed by phase 0.
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (auto It = BB.begin(); It != BB.end();) {
+        Instruction *I = &*It++;
+        if (!isa<FPToSIInst>(I) && !isa<FPToUIInst>(I))
+          continue;
+        Value *Src = I->getOperand(0);
+        Type *SrcElem = Src->getType()->getScalarType();
+        if (!SrcElem->isHalfTy() && !SrcElem->isBFloatTy())
+          continue;
+        IRBuilder<> B(I);
+        Value *Wide = B.CreateFPExt(Src, matchShape(F32, Src->getType()), "to_f32");
+        Value *R = isa<FPToSIInst>(I) ? B.CreateFPToSI(Wide, I->getType())
+                                      : B.CreateFPToUI(Wide, I->getType());
+        R->takeName(I);
+        I->replaceAllUsesWith(R);
+        I->eraseFromParent();
+        Changed = true;
+      }
+    }
+  }
+
+  // Phase -1b: AIR's bfloat functions (air.rint.bf16, air.fabs.bf16,
+  // air.fma.bf16, ...) and bfloat compares are computed in f32: Metal's
+  // compiler never finishes compiling those functions on the M2 Max (the
+  // service's runner times out; PTX-formalization cvt.rni.s8.bf16 and the
+  // air-gpu bf16_fabs_bits / bf16_fma cases). Every bfloat is an f32; the
+  // result is rounded back by the fptrunc phase 0 decomposes.
+  auto toF32Name = [](StringRef Name) -> std::string {
+    // air.<fn>.bf16 / air.<fn>.v<N>bf16 -> air.<fn>.f32 / air.<fn>.v<N>f32
+    if (Name.consume_back("bf16"))
+      return (Name + "f32").str();
+    return "";
+  };
+  SmallVector<Function *, 4> BF16Fns;
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (auto It = BB.begin(); It != BB.end();) {
+        Instruction *I = &*It++;
+        if (auto *Cmp = dyn_cast<FCmpInst>(I)) {
+          if (!Cmp->getOperand(0)->getType()->getScalarType()->isBFloatTy())
+            continue;
+          IRBuilder<> B(I);
+          Type *F32T = matchShape(F32, Cmp->getOperand(0)->getType());
+          Value *R = B.CreateFCmp(Cmp->getPredicate(),
+                                  B.CreateFPExt(Cmp->getOperand(0), F32T),
+                                  B.CreateFPExt(Cmp->getOperand(1), F32T));
+          R->takeName(I);
+          I->replaceAllUsesWith(R);
+          I->eraseFromParent();
+          Changed = true;
+          continue;
+        }
+        auto *CI = dyn_cast<CallInst>(I);
+        Function *Callee = CI ? CI->getCalledFunction() : nullptr;
+        // Conversions and atomics name more than one type; they are not
+        // math on bfloat values.
+        if (!Callee || !Callee->getName().starts_with("air.") ||
+            !Callee->getName().ends_with("bf16") ||
+            Callee->getName().starts_with(kAIRConvertPrefix) ||
+            Callee->getName().contains("atomic"))
+          continue;
+        std::string Name = toF32Name(Callee->getName());
+        auto Widen = [&](Type *T) {
+          return T->getScalarType()->isBFloatTy() ? matchShape(F32, T) : T;
+        };
+        IRBuilder<> B(I);
+        SmallVector<Value *, 4> Args;
+        SmallVector<Type *, 4> ArgTys;
+        for (Value *A : CI->args()) {
+          Type *T = Widen(A->getType());
+          Args.push_back(T == A->getType() ? A : B.CreateFPExt(A, T));
+          ArgTys.push_back(T);
+        }
+        Type *RetTy = Widen(CI->getType());
+        FunctionCallee Fn = M.getOrInsertFunction(
+            Name, FunctionType::get(RetTy, ArgTys, false),
+            Callee->getAttributes());
+        Value *R = B.CreateCall(Fn, Args);
+        if (RetTy != CI->getType())
+          R = B.CreateFPTrunc(R, CI->getType());
+        R->takeName(I);
+        I->replaceAllUsesWith(R);
+        I->eraseFromParent();
+        if (!is_contained(BF16Fns, Callee))
+          BF16Fns.push_back(Callee);
+        Changed = true;
+      }
+    }
+  }
+  for (Function *Fn : BF16Fns)
+    if (Fn->use_empty())
+      Fn->eraseFromParent();
+
   // Phase 0: decompose fptrunc f32 -> bfloat (round-to-nearest-even) and
   // fpext bfloat -> f32, both as integer bit manipulation — the native casts
   // are miscompiled by the GPU JIT. Scalar and vector.
   //
-  // NB: no NaN-quieting branch. A `fcmp uno` + `select` to force the QNaN bit
-  // is undefined under the module's `air.compile.fast_math_enable` (which
-  // implies `nnan`); the AGX JIT miscompiles the resulting select and its
-  // surrounding bitcast chain — most visibly inside the bf16 atomic-add CAS
-  // loop, which corrupts adjacent lanes into NaN. Plain RTNE truncation is
-  // the correct lowering for a no-NaN target.
+  // NaNs: the rounding add carries out of a NaN whose high mantissa bits are
+  // set (0x7fffffff + 0x7fff + 1 is 0x8000ffff: -0), so a NaN keeps its high
+  // bits with the quiet bit set instead. NaN is detected with integer
+  // operations only: a `fcmp uno` + `select` is undefined under the module's
+  // `air.compile.fast_math_enable` (which implies `nnan`), and the GPU JIT
+  // miscompiled that select and its bitcast chain (most visibly inside the
+  // bf16 atomic-add CAS loop, which corrupted adjacent lanes into NaN).
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       for (auto It = BB.begin(); It != BB.end();) {
@@ -61,7 +162,11 @@ static bool bfloat16CastDecompose(Module &M) {
           Value *Rounded = B.CreateAdd(
               Bits, B.CreateAdd(Lsb, ConstantInt::get(I32T, 0x7fff)),
               "bf16_rnd");
-          Value *Res = B.CreateTrunc(B.CreateLShr(Rounded, 16), I16T);
+          Value *Abs = B.CreateAnd(Bits, ConstantInt::get(I32T, 0x7fffffff));
+          Value *IsNaN = B.CreateICmpUGT(Abs, ConstantInt::get(I32T, 0x7f800000));
+          Value *Quiet = B.CreateOr(B.CreateLShr(Bits, 16), ConstantInt::get(I32T, 0x40));
+          Rounded = B.CreateSelect(IsNaN, Quiet, B.CreateLShr(Rounded, 16));
+          Value *Res = B.CreateTrunc(Rounded, I16T);
           Value *BF = B.CreateBitCast(Res, I->getType(), I->getName());
           I->replaceAllUsesWith(BF);
           I->eraseFromParent();
@@ -146,6 +251,10 @@ static bool bfloat16CastDecompose(Module &M) {
   }
 
   // Phase 1: decompose sitofp/uitofp iN -> bfloat via f32 + bit manipulation.
+  // The magnitude is first rounded to bfloat's 8 significant bits, to nearest
+  // even, in the integer domain: converting to f32 first and truncating to
+  // bfloat would round twice (and the truncation alone rounds toward zero).
+  // The rounded magnitude q * 2^sh (q < 2^9) then converts to f32 exactly.
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       for (auto It = BB.begin(); It != BB.end();) {
@@ -156,12 +265,63 @@ static bool bfloat16CastDecompose(Module &M) {
           Type *F32T = matchShape(F32, I->getType());
           Type *I32T = matchShape(I32, I->getType());
           Type *I16T = matchShape(I16, I->getType());
-          Value *ToFloat =
-              isa<SIToFPInst>(I)
-                  ? B.CreateSIToFP(I->getOperand(0), F32T, "to_f32")
-                  : B.CreateUIToFP(I->getOperand(0), F32T, "to_f32");
-          // bf16 = upper 16 bits of f32.
+          Value *X = I->getOperand(0);
+          Type *XT = X->getType();
+          unsigned W = XT->getScalarSizeInBits();
+          if (W < 32) {
+            X = isa<SIToFPInst>(I) ? B.CreateSExt(X, I32T) : B.CreateZExt(X, I32T);
+            XT = I32T;
+            W = 32;
+          }
+          bool Signed = isa<SIToFPInst>(I);
+          Value *Neg = Signed ? B.CreateICmpSLT(X, Constant::getNullValue(XT))
+                              : nullptr;
+          // |x| as an unsigned value (INT_MIN's magnitude is its bit pattern).
+          Value *Mag = Signed ? B.CreateSelect(Neg, B.CreateNeg(X), X) : X;
+          auto C = [&](uint64_t V) { return ConstantInt::get(XT, V); };
+          // The bit length of |x| from the exponent of its f32 conversion
+          // (no llvm.ctlz: LLVMToAIRIntrinsics has run), one less where the
+          // conversion rounded up to the next power of two; 0 for 0.
+          Value *MagF = B.CreateBitCast(B.CreateUIToFP(Mag, F32T), I32T);
+          Value *E = B.CreateSub(B.CreateLShr(MagF, 23), ConstantInt::get(I32T, 126));
+          E = B.CreateSelect(B.CreateICmpSGT(E, ConstantInt::get(I32T, W)),
+                             ConstantInt::get(I32T, W), E);
+          Value *Bits = B.CreateZExtOrTrunc(E, XT);
+          Value *Top = B.CreateLShr(Mag, B.CreateSub(Bits, C(1)));
+          Bits = B.CreateSelect(B.CreateICmpEQ(Top, C(0)), B.CreateSub(Bits, C(1)),
+                                Bits);
+          Bits = B.CreateSelect(B.CreateICmpEQ(Mag, C(0)), C(0), Bits);
+          // sh = max(bits - 8, 0): the bits below bfloat's precision.
+          Value *Sh = B.CreateSelect(B.CreateICmpUGT(Bits, C(8)),
+                                     B.CreateSub(Bits, C(8)), C(0));
+          Value *Q = B.CreateLShr(Mag, Sh);
+          Value *Rem = B.CreateSub(Mag, B.CreateShl(Q, Sh));
+          // Half of the dropped unit; 0 when nothing is dropped, so that
+          // rem > half never holds then.
+          Value *Half = B.CreateSelect(B.CreateICmpEQ(Sh, C(0)), C(0),
+                                       B.CreateShl(C(1), B.CreateSub(Sh, C(1))));
+          Value *Up = B.CreateOr(
+              B.CreateICmpUGT(Rem, Half),
+              B.CreateAnd(B.CreateICmpEQ(Rem, Half),
+                          B.CreateAnd(B.CreateICmpNE(Sh, C(0)),
+                                      B.CreateICmpNE(B.CreateAnd(Q, C(1)), C(0)))));
+          Q = B.CreateAdd(Q, B.CreateZExt(Up, XT));
+          // q <= 2^8 converts exactly; scale by 2^sh through the exponent.
+          Value *QF = B.CreateUIToFP(B.CreateTrunc(Q, I32T), F32T);
+          Value *Scale = B.CreateBitCast(
+              B.CreateShl(B.CreateAdd(B.CreateTrunc(Sh, I32T),
+                                      ConstantInt::get(I32T, 127)),
+                          23),
+              F32T);
+          Value *ToFloat = B.CreateFMul(QF, Scale, "to_f32");
+          // bf16 = upper 16 bits of f32 (exact: 8 significant bits), with
+          // the sign set in the bits (an fneg here would reach Metal as is:
+          // AIRLowerFNeg has run).
           Value *AsInt = B.CreateBitCast(ToFloat, I32T, "f32_bits");
+          if (Signed)
+            AsInt = B.CreateOr(
+                AsInt, B.CreateSelect(Neg, ConstantInt::get(I32T, 0x80000000u),
+                                      Constant::getNullValue(I32T)));
           Value *Shifted = B.CreateLShr(AsInt, 16, "bf16_bits");
           Value *Narrow = B.CreateTrunc(Shifted, I16T, "bf16_i16");
           Value *Trunc = B.CreateBitCast(Narrow, I->getType(), I->getName());

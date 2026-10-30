@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRTargetMachine.h"
+#include "AIRAliasAnalysis.h"
 #include "AIRWriter/AIREmbedderPass.h"
 #include "AIRWriter/AIRWriterPass.h"
 #include "AIR.h"
@@ -23,11 +24,13 @@
 #include "AIRCrossBufferStoreSeparate.h"
 #include "AIRAliasAnnotate.h"
 #include "AIRDemoteF64.h"
+#include "AIREmulateF64.h"
 #include "AIRDeviceLoadsVolatile.h"
 #include "AIRInlineNonKernel.h"
 #include "LLVMToAIRIntrinsics.h"
 #include "AIRLowerAtomicRMW.h"
 #include "AIRLowerFNeg.h"
+#include "AIRSimdDivergenceGuard.h"
 #include "AIRLegalizeUnsupportedIR.h"
 #include "AIRNaNMinMax.h"
 #include "AIRNormalizeAllocas.h"
@@ -80,7 +83,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAIRTarget() {
   initializeAIRFromGenericGPUPass(*PR);
   initializeAIRInlineNonKernelLegacyPass(*PR);
   initializeAIRDemoteF64LegacyPass(*PR);
+  initializeAIREmulateF64LegacyPass(*PR);
   initializeAIRLowerFNegLegacyPass(*PR);
+  initializeAIRSimdDivergenceGuardLegacyPass(*PR);
   initializeAIRLegalizeUnsupportedIRLegacyPass(*PR);
   initializeAIRNaNMinMaxLegacyPass(*PR);
   initializeLLVMToAIRIntrinsicsLegacyPass(*PR);
@@ -152,7 +157,7 @@ public:
     addPass(createAIRDemoteF64LegacyPass());
     addPass(createAIRLowerFNegLegacyPass());
     addPass(createAIRLegalizeUnsupportedIRLegacyPass());
-    addPass(createAIRNaNMinMaxLegacyPass());
+    addPass(createAIRNaNMinMaxLegacyPass(/*SignedZeros=*/true));
     addPass(createLLVMToAIRIntrinsicsLegacyPass());
     addPass(createAIRBarrierRenameLegacyPass());
     addPass(createAIRLowerAtomicRMWLegacyPass());
@@ -176,6 +181,10 @@ public:
     // Emit Apple-style alias-scope MD + "air-buffer-no-alias" param attrs
     // after the IR shape is final but before final normalisations.
     addPass(createAIRAliasAnnotateLegacyPass());
+    // Keep blocks with SIMD-group calls under divergent control flow from
+    // being if-converted by Metal's compiler (they would run with every
+    // thread active). Late, after every pass that creates or moves them.
+    addPass(createAIRSimdDivergenceGuardLegacyPass());
     // Final pre-serialization normalizations.
     addPass(createAIRPrepareLegacyPass());
     // (AGX-1 cross-buffer store separation now runs early, after LowerSwitch.)
@@ -212,9 +221,14 @@ static cl::opt<bool> AIRPortable(
 // The passes of the full pipeline (AIRPassConfig::addCodeGenPrepare) that
 // define AIR rather than work around the Metal driver, in the same order.
 // Scalar arguments become constant buffers, AIR's own form, where the full
-// pipeline packs them into _scalar_buf for the Triton host.
+// pipeline packs them into _scalar_buf for the Triton host. AIR has no double
+// and no floating point environment: doubles and constrained intrinsics are
+// emulated first, before the passes that write AIR's functions (the soft-f64
+// library's intrinsics too). A module without them is left as it is (the
+// AIR agx-raise-to-air writes).
 void llvm::addAIRPortablePasses(legacy::PassManagerBase &PM) {
   PM.add(createAIRFromGenericGPULegacyPass());
+  PM.add(createAIREmulateF64LegacyPass());
   PM.add(createAIRNaNMinMaxLegacyPass());
   PM.add(createLLVMToAIRIntrinsicsLegacyPass());
   PM.add(createAIRBarrierRenameLegacyPass());
@@ -239,6 +253,19 @@ struct AIRPortablePass : RequiredPassInfoMixin<AIRPortablePass> {
 void AIRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AIRPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+  PB.registerAnalysisRegistrationCallback([](FunctionAnalysisManager &FAM) {
+    FAM.registerPass([] { return AIRAA(); });
+  });
+  PB.registerParseAACallback([](StringRef Name, AAManager &AAM) {
+    if (Name != "air-aa")
+      return false;
+    AAM.registerFunctionAnalysis<AIRAA>();
+    return true;
+  });
+}
+
+void AIRTargetMachine::registerEarlyDefaultAliasAnalyses(AAManager &AAM) {
+  AAM.registerFunctionAnalysis<AIRAA>();
 }
 
 bool AIRTargetMachine::addPassesToEmitFile(
@@ -306,7 +333,27 @@ AIRTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 AIRTargetLowering::AIRTargetLowering(const AIRTargetMachine &TM,
                                          const AIRSubtarget &STI)
-    : TargetLowering(TM, STI) {}
+    : TargetLowering(TM, STI) {
+  // AIR has no instruction selection, but the cost model the optimizations
+  // of portable AIR use asks which types and operations the target has: a
+  // GPU's 16- and 32-bit integers and floats, with their minimum, maximum,
+  // absolute value and bit counts (otherwise each costs a legalization, and
+  // simplifycfg keeps branches a GPU would rather select). 64-bit integers
+  // too, as register pairs (comparisons and selects of addresses are
+  // everywhere).
+  const TargetRegisterClass *RC = STI.getRegisterInfo()->getRegClass(0);
+  for (MVT VT : {MVT::i1, MVT::i16, MVT::i32, MVT::i64, MVT::f16, MVT::f32})
+    addRegisterClass(VT, RC);
+  computeRegisterProperties(STI.getRegisterInfo());
+  for (MVT VT : {MVT::i16, MVT::i32})
+    setOperationAction({ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX, ISD::ABS,
+                        ISD::CTLZ, ISD::CTTZ, ISD::CTPOP, ISD::BITREVERSE},
+                       VT, Legal);
+  for (MVT VT : {MVT::f16, MVT::f32})
+    setOperationAction({ISD::FMINNUM, ISD::FMAXNUM, ISD::FMINIMUM,
+                        ISD::FMAXIMUM, ISD::FMA, ISD::FABS, ISD::FCOPYSIGN},
+                       VT, Legal);
+}
 
 bool AIRTargetLowering::isLegalAddressingMode(const DataLayout &DL,
                                               const AddrMode &AM, Type *Ty,

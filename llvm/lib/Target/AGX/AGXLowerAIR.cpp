@@ -406,7 +406,9 @@ Value *LowerAIR::systemValue(IRBuilder<> &B, StringRef Role, Type *Ty,
   auto Read = [&](Intrinsic::ID ID) { return B.CreateIntrinsic(ID, {}); };
   auto XYZ = [&](Intrinsic::ID X, Intrinsic::ID Y, Intrinsic::ID Z) {
     SmallVector<Value *, 3> V;
-    for (auto [I, ID] : enumerate(ArrayRef<Intrinsic::ID>{X, Y, Z}))
+    // Not ArrayRef{X, Y, Z}: its array would not outlive the range-init.
+    Intrinsic::ID IDs[] = {X, Y, Z};
+    for (auto [I, ID] : enumerate(IDs))
       V.push_back(Only < 0 || int(I) == Only ? Read(ID) : nullptr);
     return V;
   };
@@ -1648,10 +1650,11 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     IRBuilder<> B(&I);
     Type *Ty = I.getType();
     bool Float = Ty->isFloatTy();
-    Value *X = nullptr, *R = nullptr;
-    if (Float && Afn(&I) && match(&I, m_FDiv(m_Value(X), m_Value(R))) &&
-        IsOne(X)) {
-      // 1 / sqrt(x) and 1 / x
+    Value *R = nullptr;
+    if (Float && Afn(&I) && I.getOpcode() == Instruction::FDiv &&
+        IsOne(I.getOperand(0))) {
+      // 1 / sqrt(x) and 1 / x (R is only set for these: it replaces I)
+      R = I.getOperand(1);
       Value *S;
       if (match(R, m_Intrinsic<Intrinsic::sqrt>(m_Value(S))) && Afn(R))
         R = B.CreateIntrinsic(Intrinsic::agx_rsqrt, {Ty}, {S});
@@ -1660,13 +1663,13 @@ void LowerAIR::recoverAGXOperations(Function &F) {
     } else if (auto *II = dyn_cast<IntrinsicInst>(&I);
                Float && II && Afn(II) &&
                (II->getIntrinsicID() == Intrinsic::sin ||
-                II->getIntrinsicID() == Intrinsic::cos) &&
-               match(II->getArgOperand(0),
-                     m_FMul(m_Value(X), m_SpecificFP(float(numbers::pi / 2))))) {
+                II->getIntrinsicID() == Intrinsic::cos)) {
+      // (both in radians: llvm.agx.sin is the code of llvm.sin, which LLVM
+      // does not fold on the host)
       R = B.CreateIntrinsic(II->getIntrinsicID() == Intrinsic::sin
                                 ? Intrinsic::agx_sin
                                 : Intrinsic::agx_cos,
-                            {Ty}, {X});
+                            {Ty}, {II->getArgOperand(0)});
     } else if (auto *Sel = dyn_cast<SelectInst>(&I);
                Sel && Ty->isFPOrFPVectorTy() &&
                match(Sel->getTrueValue(), m_NaN())) {
@@ -1912,6 +1915,70 @@ void LowerAIR::lowerCalls() {
   }
 }
 
+/// Whether values of T are laid out differently under the data layouts A and
+/// B: AIR's aligns 3-element vectors of 32-bit values to 16 bytes (a
+/// <3 x float> takes 16), AGX's to 4 (12).
+static bool layoutDiffers(Type *T, const DataLayout &A, const DataLayout &B) {
+  if (auto *AT = dyn_cast<ArrayType>(T))
+    return layoutDiffers(AT->getElementType(), A, B);
+  if (auto *ST = dyn_cast<StructType>(T))
+    return any_of(ST->elements(),
+                  [&](Type *E) { return layoutDiffers(E, A, B); });
+  if (!T->isSized() || isa<ScalableVectorType>(T))
+    return false;
+  return A.getTypeAllocSize(T) != B.getTypeAllocSize(T) ||
+         A.getABITypeAlign(T) != B.getABITypeAlign(T);
+}
+
+/// Before the module takes AGX's data layout: the address computations and
+/// stack slots whose types AGX lays out differently keep AIR's layout, as
+/// byte offsets and byte arrays (a <3 x float> array has a 16-byte stride).
+static void keepAIRLayout(Module &M, const DataLayout &AIR,
+                          const DataLayout &AGX) {
+  for (Function &F : M)
+    for (Instruction &I : make_early_inc_range(instructions(F))) {
+      if (auto *AI = dyn_cast<AllocaInst>(&I)) {
+        Type *T = AI->getAllocatedType();
+        if (!layoutDiffers(T, AIR, AGX))
+          continue;
+        IRBuilder<> B(AI);
+        auto *New = B.CreateAlloca(
+            ArrayType::get(B.getInt8Ty(), AIR.getTypeAllocSize(T)),
+            AI->getAddressSpace(), AI->getArraySize());
+        New->setAlignment(std::max(AI->getAlign(), AIR.getABITypeAlign(T)));
+        New->takeName(AI);
+        AI->replaceAllUsesWith(New);
+        AI->eraseFromParent();
+        continue;
+      }
+      auto *GEP = dyn_cast<GetElementPtrInst>(&I);
+      if (!GEP || GEP->getType()->isVectorTy() ||
+          !layoutDiffers(GEP->getSourceElementType(), AIR, AGX))
+        continue;
+      unsigned Width = AIR.getIndexTypeSizeInBits(GEP->getType());
+      SmallMapVector<Value *, APInt, 4> Variable;
+      APInt Constant(Width, 0);
+      if (!GEP->collectOffset(AIR, Width, Variable, Constant))
+        continue;
+      IRBuilder<> B(GEP);
+      Type *IntTy = B.getIntNTy(Width);
+      Value *Offset = nullptr;
+      for (auto &[V, Scale] : Variable) {
+        Value *Term = B.CreateMul(B.CreateSExtOrTrunc(V, IntTy),
+                                  ConstantInt::get(IntTy, Scale));
+        Offset = Offset ? B.CreateAdd(Offset, Term) : Term;
+      }
+      if (!Offset || !Constant.isZero())
+        Offset = Offset ? B.CreateAdd(Offset, ConstantInt::get(IntTy, Constant))
+                        : ConstantInt::get(IntTy, Constant);
+      Value *New = B.CreateGEP(B.getInt8Ty(), GEP->getPointerOperand(), Offset,
+                               "", GEP->getNoWrapFlags());
+      New->takeName(GEP);
+      GEP->replaceAllUsesWith(New);
+      GEP->eraseFromParent();
+    }
+}
+
 void LowerAIR::dropAIRMetadata() {
   for (StringRef Name : {"air.kernel", "air.version", "air.language_version",
                          "air.compile_options"})
@@ -2076,6 +2143,9 @@ bool LowerAIR::run() {
   recoverDoubles();
   dropAIRMetadata();
   M.setTargetTriple(TM.getTargetTriple());
+  // (AIR's layout: llc -mtriple=agx has already given the module AGX's)
+  keepAIRLayout(M, DataLayout(Triple("air").computeDataLayout()),
+                TM.createDataLayout());
   M.setDataLayout(TM.createDataLayout());
   for (AIRKernel &K : Kernels)
     passConstantBuffersByReference(K, K.NewF);

@@ -73,7 +73,8 @@ static cl::opt<std::string> KeepHints(
 
 #define DEBUG_TYPE "agx-raise-to-air"
 
-#include "AGXAIRSoftF64.inc"
+// The soft-f64 library, which the AIR target owns (air-emulate-f64).
+#include "../AIR/AIRSoftF64.inc"
 
 namespace {
 Constant *doubleBits(Constant *C);
@@ -762,8 +763,13 @@ void RaiseToAIR::raiseFunction(Function &F) {
 
 bool RaiseToAIR::linkSoftF64() {
   SMDiagnostic Err;
+  // (names kept while the textual IR is read: a release build's context
+  // discards them, and textual IR cannot be read without)
+  bool Discards = Ctx.shouldDiscardValueNames();
+  Ctx.setDiscardValueNames(false);
   std::unique_ptr<Module> Lib =
       parseAssemblyString(AIRSoftF64IR, Err, Ctx);
+  Ctx.setDiscardValueNames(Discards);
   if (!Lib) {
     error(nullptr, "soft-f64 library: " + Err.getMessage());
     return false;
@@ -1762,6 +1768,14 @@ void RaiseToAIR::inlineEmulations() {
       if (!CI || CI->getCalledFunction() != &F)
         continue;
       Callers.insert(CI->getFunction());
+      if (CI->getFunctionType() != F.getFunctionType()) {
+        std::string S;
+        raw_string_ostream OS(S);
+        OS << "the emulation of " << Key << " is " << *F.getFunctionType()
+           << ", its call " << *CI->getFunctionType();
+        error(CI->getFunction(), OS.str());
+        continue;
+      }
       InlineFunctionInfo IFI;
       if (!InlineFunction(*CI, IFI).isSuccess())
         error(CI->getFunction(), "cannot inline the emulation of " + Key);

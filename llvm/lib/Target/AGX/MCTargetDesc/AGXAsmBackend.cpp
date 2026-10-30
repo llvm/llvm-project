@@ -15,9 +15,17 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
+
+static cl::opt<bool> CallRelocations(
+    "agx-call-relocations", cl::init(false), cl::Hidden,
+    cl::desc("Calls to functions as relocations (R_AGX_CALL32) instead of "
+             "offsets resolved in the object, for a linker that places the "
+             "functions (ZLUDA's object merger, which shares one copy of "
+             "the functions several kernels call)"));
 
 namespace {
 
@@ -38,6 +46,18 @@ public:
   }
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &Fixup,
+                                    MCValue &Target, uint64_t &Value) override {
+    // A call (a branch to a function's symbol; branches within a function go
+    // to temporary labels) left to a relocation, its field 0.
+    const MCSymbol *Add = Target.getAddSym();
+    if (!CallRelocations || Fixup.getKind() != AGX::fixup_agx_branch32 ||
+        !Add || Add->isTemporary() || Target.getSubSym())
+      return std::nullopt;
+    Value = uint64_t(-2);
+    return false;
+  }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;

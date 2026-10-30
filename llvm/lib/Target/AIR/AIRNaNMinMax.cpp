@@ -212,7 +212,7 @@ static bool promoteBF16MinMax(Module &M) {
   return Changed;
 }
 
-static bool nanMinMax(Module &M) {
+static bool nanMinMax(Module &M, bool SignedZeros) {
   bool Changed = expandVectorReductions(M);
   Changed |= splitWideVectorMinMax(M);
   Changed |= promoteBF16MinMax(M);
@@ -230,11 +230,29 @@ static bool nanMinMax(Module &M) {
     IRBuilder<> B(CI->getNextNode());
     Value *A = CI->getArgOperand(0);
     Value *Bv = CI->getArgOperand(1);
+    // On Metal, air.fmin/fmax do not order signed zeros: of two zeros,
+    // minimum is -0 if either is (the OR of the encodings) and maximum +0 if
+    // either is (their AND).
+    Value *Ordered = CI;
+    if (SignedZeros) {
+      Type *ITy = CI->getType()->getWithNewType(
+          B.getIntNTy(CI->getType()->getScalarSizeInBits()));
+      Value *IA = B.CreateBitCast(A, ITy);
+      Value *IB = B.CreateBitCast(Bv, ITy);
+      Value *Or = B.CreateOr(IA, IB);
+      Value *BothZero = B.CreateICmpEQ(
+          B.CreateShl(Or, 1), Constant::getNullValue(ITy), "zero_check");
+      Value *Zero = B.CreateBitCast(
+          CI->getIntrinsicID() == Intrinsic::minimum ? Or : B.CreateAnd(IA, IB),
+          CI->getType());
+      Ordered = B.CreateSelect(BothZero, Zero, CI);
+    }
     Value *IsNaN = B.CreateFCmpUNO(A, Bv, "nan_check");
     Value *NaN = ConstantFP::getNaN(CI->getType());
-    Value *Sel = B.CreateSelect(IsNaN, NaN, CI, CI->getName() + ".nan");
-    CI->replaceAllUsesWith(Sel);
-    cast<SelectInst>(Sel)->setOperand(2, CI);
+    Value *Sel = B.CreateSelect(IsNaN, NaN, Ordered, CI->getName() + ".nan");
+    CI->replaceUsesWithIf(Sel, [&](Use &U) {
+      return U.getUser() != Ordered && U.getUser() != Sel;
+    });
     Changed = true;
   }
   return Changed;
@@ -242,16 +260,19 @@ static bool nanMinMax(Module &M) {
 
 PreservedAnalyses AIRNaNMinMaxPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
-  return nanMinMax(M) ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  return nanMinMax(M, /*SignedZeros=*/false) ? PreservedAnalyses::none()
+                                              : PreservedAnalyses::all();
 }
 
-bool AIRNaNMinMaxLegacy::runOnModule(Module &M) { return nanMinMax(M); }
+bool AIRNaNMinMaxLegacy::runOnModule(Module &M) {
+  return nanMinMax(M, SignedZeros);
+}
 
 char AIRNaNMinMaxLegacy::ID = 0;
 
 INITIALIZE_PASS(AIRNaNMinMaxLegacy, DEBUG_TYPE, "AIR NaN-safe min/max",
                 false, false)
 
-ModulePass *llvm::createAIRNaNMinMaxLegacyPass() {
-  return new AIRNaNMinMaxLegacy();
+ModulePass *llvm::createAIRNaNMinMaxLegacyPass(bool SignedZeros) {
+  return new AIRNaNMinMaxLegacy(SignedZeros);
 }

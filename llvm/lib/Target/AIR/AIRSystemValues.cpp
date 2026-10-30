@@ -7,10 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIRSystemValues.h"
+#include "AIRKernelParams.h"
+#include "AIRLowerAtomicRMW.h"
 #include "AIRWriter/AIRVersion.h"
 #include "AIRWriter/PointeeTypeMap.h"
 #include "AIR.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/StringSaver.h"
@@ -204,74 +207,94 @@ static bool airSystemValues(Module &M) {
   // may be named tid.
   DenseMap<Function *, SmallVector<AddedSysVal, 4>> SysValArgs;
 
-  SmallVector<Function *, 4> Funcs;
-  for (Function &F : M)
-    if (!F.isDeclaration())
-      Funcs.push_back(&F);
-
-  for (Function *FPtr : Funcs) {
-    Function &F = *FPtr;
-
-    struct UsedSysVal {
-      const SysValParam *Info;
-      SmallVector<CallInst *, 4> Calls;
-    };
-    SmallVector<UsedSysVal, 5> UsedSysVals;
-
-    for (const SysValParam &SV : kSysVals) {
-      Function *Decl = findDeclByPrefix(M, SV.IntrinsicName);
-      if (!Decl)
-        continue;
-      SmallVector<CallInst *, 4> Calls;
-      for (BasicBlock &BB : F)
-        for (Instruction &I : BB)
-          if (auto *CI = dyn_cast<CallInst>(&I))
-            if (CI->getCalledFunction() == Decl)
-              Calls.push_back(CI);
-      if (!Calls.empty())
-        UsedSysVals.push_back({&SV, std::move(Calls)});
-    }
-
-    if (UsedSysVals.empty())
+  // The system-value calls in each function.
+  struct UsedSysVal {
+    Function *F;
+    const SysValParam *Info;
+    SmallVector<CallInst *, 4> Calls;
+  };
+  SmallVector<UsedSysVal, 8> UsedSysVals;
+  for (const SysValParam &SV : kSysVals) {
+    Function *Decl = findDeclByPrefix(M, SV.IntrinsicName);
+    if (!Decl)
       continue;
-
-    // Build a new function type with extra params at the end.
-    auto *OldFTy = F.getFunctionType();
-    SmallVector<Type *, 8> NewParamTypes(OldFTy->params());
-    for (const UsedSysVal &USV : UsedSysVals)
-      NewParamTypes.push_back(USV.Info->IsVector ? Vec3 : I32);
-
-    auto *NewFTy = FunctionType::get(OldFTy->getReturnType(), NewParamTypes,
-                                     OldFTy->isVarArg());
-
-    auto *NewF =
-        Function::Create(NewFTy, F.getLinkage(), F.getAddressSpace(), "", &M);
-    NewF->copyAttributesFrom(&F);
-    NewF->copyMetadata(&F, 0);
-    NewF->splice(NewF->begin(), &F);
-
-    auto NewArgIt = NewF->arg_begin();
-    for (Argument &OldArg : F.args()) {
-      NewArgIt->setName(OldArg.getName());
-      OldArg.replaceAllUsesWith(&*NewArgIt);
-      ++NewArgIt;
+    MapVector<Function *, SmallVector<CallInst *, 4>> Calls;
+    for (User *U : Decl->users())
+      if (auto *CI = dyn_cast<CallInst>(U))
+        if (CI->getCalledFunction() == Decl)
+          Calls[CI->getFunction()].push_back(CI);
+    for (auto &[F, FCalls] : Calls) {
+      // (Their names are the parameters'.)
+      for (CallInst *CI : FCalls)
+        CI->setName("");
+      UsedSysVals.push_back({F, &SV, std::move(FCalls)});
     }
+  }
 
-    // Keep metadata that names the kernel (e.g. a pre-baked !air.kernel)
-    // pointing at the rewritten function; erasing F would null it out.
-    ValueAsMetadata::handleRAUW(&F, NewF);
+  // Each function using a system value gets it as a parameter, from its
+  // callers, up to the kernel's parameter (a pre-baked !air.kernel's when it
+  // has one already).
+  NamedMDNode *PreBaked = M.getNamedMetadata(kNMDKernel);
+  auto KernelNode = [&](Function &F) -> MDNode * {
+    if (PreBaked)
+      for (MDNode *K : PreBaked->operands())
+        if (K->getNumOperands() == 3 &&
+            mdconst::dyn_extract_or_null<Function>(K->getOperand(0)) == &F)
+          return K;
+    return nullptr;
+  };
+  auto Existing = [&](Function &F, StringRef Key) -> Argument * {
+    MDNode *K = KernelNode(F);
+    auto *Args = K ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
+    if (!Args)
+      return nullptr;
+    for (const MDOperand &Op : Args->operands()) {
+      auto *A = dyn_cast<MDNode>(Op);
+      if (!A || A->getNumOperands() < 2)
+        continue;
+      auto *Tag = dyn_cast<MDString>(A->getOperand(1));
+      auto *Idx = mdconst::dyn_extract_or_null<ConstantInt>(A->getOperand(0));
+      if (Tag && Idx && Tag->getString() == Key &&
+          Idx->getZExtValue() < F.arg_size())
+        return F.getArg(Idx->getZExtValue());
+    }
+    return nullptr;
+  };
+  SmallVector<AIRKernelParamRequest, 8> Requests;
+  for (const UsedSysVal &USV : UsedSysVals)
+    Requests.push_back({USV.F, USV.Info->MDTag,
+                        USV.Info->IsVector ? Vec3 : I32,
+                        USV.Info->ParamName});
+  AIRKernelParams Params = addKernelParams(M, Requests, Existing);
+  Changed |= !UsedSysVals.empty();
 
-    std::string FName = F.getName().str();
-    F.eraseFromParent();
-    NewF->setName(FName);
+  // The parameters added to kernels, described in !air.kernel: by the code
+  // below, or, pre-baked, here.
+  for (auto &[F, Key, A] : Params.Added) {
+    const SysValParam *Info = nullptr;
+    for (const SysValParam &SV : kSysVals)
+      if (SV.MDTag == Key)
+        Info = &SV;
+    SysValArgs[F].push_back({A->getArgNo(), Info});
+    MDNode *K = KernelNode(*F);
+    auto *Args = K ? dyn_cast<MDNode>(K->getOperand(2)) : nullptr;
+    if (!Args)
+      continue;
+    SmallVector<Metadata *, 8> Ops(Args->operands());
+    Ops.push_back(MDNode::get(
+        Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, A->getArgNo())),
+              MDString::get(Ctx, Info->MDTag),
+              MDString::get(Ctx, kMDArgTypeName),
+              MDString::get(Ctx, Info->IsVector ? "uint3" : "uint"),
+              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, airArgName(*A))}));
+    K->replaceOperandWith(2, MDNode::get(Ctx, Ops));
+  }
 
+  for (UsedSysVal &USV : UsedSysVals) {
+    Function *NewF = Params.get(USV.F);
+    Argument *SysArg = Params.Args[NewF].lookup(USV.Info->MDTag);
     BasicBlock &EntryBB = NewF->getEntryBlock();
-
-    for (UsedSysVal &USV : UsedSysVals) {
-      Argument *SysArg = &*NewArgIt++;
-      SysArg->setName(USV.Info->ParamName);
-      SysValArgs[NewF].push_back({SysArg->getArgNo(), USV.Info});
-
+    {
       if (USV.Info->IsVector) {
         // The components, extracted at the entry only for the calls that
         // return an array (a vector result is the parameter itself, and its
@@ -279,7 +302,7 @@ static bool airSystemValues(Module &M) {
         Value *Components[3] = {};
         auto Component = [&](unsigned K) {
           if (!Components[K]) {
-            IRBuilder<> B(&*EntryBB.begin());
+            IRBuilder<> B(&*EntryBB.getFirstInsertionPt());
             Components[K] = B.CreateExtractElement(
                 SysArg, ConstantInt::get(I32, K), USV.Info->Dims[K]);
           }
@@ -329,8 +352,6 @@ static bool airSystemValues(Module &M) {
         }
       }
     }
-
-    Changed = true;
   }
 
   // Remove unused intrinsic declarations.
@@ -450,20 +471,24 @@ static bool airSystemValues(Module &M) {
           continue;
 
         BufferType BT = describeBuffer(*F.getArg(I), DL, Names);
-        StringRef ArgName = F.getArg(I)->getName();
+        StringRef ArgName = airArgName(*F.getArg(I));
         char NameBuf[16];
         if (ArgName.empty()) {
           std::snprintf(NameBuf, sizeof(NameBuf), "%u", I);
           ArgName = NameBuf;
         }
         unsigned &LocIdx = (AS == 3) ? TGIdx : ArgIdx;
+        // The lock table of emulated atomics (AIRLowerAtomicRMW) has a
+        // location index of its own.
+        bool LockTable = AS == 1 && ArgName == kAtomicLockTableName;
         StringRef AccessMode = (AS == 2) ? kMDRead : kMDReadWrite;
         ParamNodes.push_back(MDNode::get(
             Ctx,
             {ConstantAsMetadata::get(ConstantInt::get(I32, I)),
              MDString::get(Ctx, kMDBuffer),
              MDString::get(Ctx, kMDLocationIndex),
-             ConstantAsMetadata::get(ConstantInt::get(I32, LocIdx)),
+             ConstantAsMetadata::get(ConstantInt::get(
+                 I32, LockTable ? kAtomicLockTableIndex : LocIdx)),
              ConstantAsMetadata::get(ConstantInt::get(I32, 1)),
              MDString::get(Ctx, AccessMode),
              MDString::get(Ctx, kMDAddressSpace),
@@ -474,7 +499,8 @@ static bool airSystemValues(Module &M) {
              ConstantAsMetadata::get(ConstantInt::get(I32, BT.Align)),
              MDString::get(Ctx, kMDArgTypeName), MDString::get(Ctx, BT.Name),
              MDString::get(Ctx, kMDArgName), MDString::get(Ctx, ArgName)}));
-        LocIdx++;
+        if (!LockTable)
+          LocIdx++;
       }
 
       // System-value params, in parameter order.
@@ -487,7 +513,7 @@ static bool airSystemValues(Module &M) {
                     MDString::get(Ctx, SV.Info->MDTag),
                     MDString::get(Ctx, kMDArgTypeName),
                     MDString::get(Ctx, TypeName), MDString::get(Ctx, kMDArgName),
-                    MDString::get(Ctx, F.getArg(SV.ArgNo)->getName())}));
+                    MDString::get(Ctx, airArgName(*F.getArg(SV.ArgNo)))}));
         }
       }
 
@@ -554,10 +580,26 @@ static bool airSystemValues(Module &M) {
   // lenient. Empirically required for the older-OS path.
   if (!M.getNamedMetadata("air.compile_options")) {
     auto *OptsMD = M.getOrInsertNamedMetadata("air.compile_options");
-    OptsMD->addOperand(
-        MDNode::get(Ctx, {MDString::get(Ctx, "air.compile.denorms_disable")}));
-    OptsMD->addOperand(
-        MDNode::get(Ctx, {MDString::get(Ctx, "air.compile.fast_math_enable")}));
+    // Denormals kept where the module asks for IEEE f32 (air.ieee-fp32): with
+    // denorms_disable the Metal compiler may treat a denormal as zero even
+    // where the AIR only moves its bits.
+    auto *IEEE = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("air.ieee-fp32"));
+    OptsMD->addOperand(MDNode::get(
+        Ctx, {MDString::get(Ctx, IEEE && !IEEE->isZero()
+                                     ? "air.compile.denorms_enable"
+                                     : "air.compile.denorms_disable")}));
+    // Fast math (no NaNs or infinities, reassociation) unless the module asks
+    // for IEEE math (the module flag air.precise-math, as a front end for a
+    // language without fast math by default sets it): under fast math the
+    // Metal compiler may fold the error-free transformations the AIR
+    // emulations of directed rounding are made of.
+    auto *Precise = mdconst::extract_or_null<ConstantInt>(
+        M.getModuleFlag("air.precise-math"));
+    OptsMD->addOperand(MDNode::get(
+        Ctx, {MDString::get(Ctx, Precise && !Precise->isZero()
+                                     ? "air.compile.fast_math_disable"
+                                     : "air.compile.fast_math_enable")}));
     OptsMD->addOperand(MDNode::get(
         Ctx, {MDString::get(Ctx, "air.compile.framebuffer_fetch_enable")}));
     Changed = true;

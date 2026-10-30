@@ -810,9 +810,33 @@ Strict floating point
 ---------------------
 
 The 32-bit floating point unit flushes denormal operands and results to zero,
-division and square root are not correctly rounded, and NaN results have the
-hardware's bit patterns. Two features, off by default, implement IEEE 754 and
-PTX behavior in software (``AGXStrictFP.cpp``):
+its reciprocal and reciprocal square root are approximations (within 1 ulp),
+and NaN results have the hardware's bit patterns.
+
+Without the features below, ``fdiv`` on ``float`` (without ``arcp`` or
+``afn``) and ``llvm.sqrt`` (without ``afn``) are still correctly rounded, with
+denormal operands and results flushed (``AGXISelLowering.cpp``). Division
+divides the significands, a in [1, 2) and d in [2, 4) (one ``bfi`` each sets
+the exponent field), with the refined reciprocal y = y0 + y0 (1 - d y0), y0 =
+``rcp(d)``, which is the correctly rounded 1 / d for every significand of the
+recorded ``rcp``, and one correction q = q0 + (a - d q0) y of q0 = a y,
+correctly rounded by Markstein's theorem; the exponents come back as two
+power-of-two factors that also give zeros and infinities. ``sqrt`` corrects s0
+= x ``rsqrt_special(x)`` once, s = s0 + (x - s0^2) ``rsqrt_special(x)`` / 2,
+which is correctly rounded for every significand (x below 2^-80 is scaled by
+2^64 so that the remainder is not flushed). The hardware's ``rcp`` and
+``rsqrt_special`` are those recorded for every significand on an M2 Max (AGX
+Performance Simulator, ``testsuite/transcendental``). A division takes 19
+instructions (1 / x 9) and a square root 13, constants included.
+
+``frem`` on ``float`` and ``half`` is an exact ``fmod``
+(``AGXCodeGenPrepare.cpp``): a loop reduces |a| by |b| 2^j while the quotient
+could reach 2^24, then a last step by |b| truncates the correctly rounded
+quotient and keeps whichever of a - q |b| and a - (q - 1) |b| lies in
+[0, |b|).
+
+Two features, off by default, implement IEEE 754 and PTX behavior in software
+(``AGXStrictFP.cpp``):
 
 ``ieee-fp32``
   In functions whose ``denormal_fpenv`` for ``float`` is IEEE (the default):
@@ -1095,9 +1119,12 @@ on the AIR hardware suite's inputs), where the hardware's approximations,
 which the ``afn`` forms keep, are tens of units off; ``sin`` and ``cos`` use
 the hardware's reduction beyond 2^22. ``tan``, the inverse and hyperbolic
 functions and their inverses, and ``sinpi``/``cospi``/``tanpi`` are built the
-same way (half in float). ``sqrt`` is the hardware's (within 1 unit) unless
-``ieee-fp32`` asks for correct rounding. The module then takes AGX's triple
-and data layout, and loses the AIR metadata and module flags.
+same way (half in float). ``sqrt`` and division are correctly rounded (see
+`Strict floating point`_). The module then takes AGX's triple and data
+layout, and loses the AIR metadata and module flags; address
+computations over types that AIR lays out differently (a ``<3 x float>``
+takes 16 bytes in AIR, 12 in AGX) become byte offsets with AIR's layout
+first, and their stack slots byte arrays of AIR's size.
 
 MLIR
 ====

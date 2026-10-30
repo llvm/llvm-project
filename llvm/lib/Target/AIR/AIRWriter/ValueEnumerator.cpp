@@ -36,12 +36,17 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
       break;
     }
 
+  // A pointer pointee is skipped, as in applyPTMOverride: an opaque pointer
+  // type is one Type, so a pointer loaded through an argument would make the
+  // argument's type its own pointee and ptrTypeIdx -> addType recurse forever
+  // (ZLUDA's globals buffer, which holds a pointer, did).
   for (auto &F : M)
     for (auto &Arg : F.args())
       if (Arg.getType()->isPointerTy() && !inferredPointee.count(Arg.getType()))
         if (auto *Ty =
                 PointeeTypeMap::inferFromUsage(const_cast<Argument *>(&Arg)))
-          inferredPointee[Arg.getType()] = Ty;
+          if (!Ty->isPointerTy())
+            inferredPointee[Arg.getType()] = Ty;
 
   auto applyPTMOverride = [&](Value *V) {
     Type *T = PTM.get(V);
@@ -88,8 +93,11 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
       addFunctionType(F.getFunctionType(), &F);
 
   for (auto &F : M)
-    if (!F.isDeclaration())
-      ptrTypeIdx(PtrAs0, F.getFunctionType());
+    if (!F.isDeclaration()) {
+      auto V = funcVariant.find(&F);
+      ptrTypeIdx(PtrAs0, V != funcVariant.end() ? V->second
+                                                : (Type *)F.getFunctionType());
+    }
 
   addType(Type::getMetadataTy(Ctx));
   addType(Type::getLabelTy(Ctx));
@@ -236,6 +244,8 @@ ValueEnumerator::ValueEnumerator(Module &M, const PointeeTypeMap &PTM)
 }
 
 unsigned ValueEnumerator::typeIdx(Type *T) {
+  if (auto V = variantIndex.find(T); V != variantIndex.end())
+    return V->second;
   if (isa<PointerType>(T))
     return ptrTypeIdx(T, pointeeType(T));
   TypeEntry E{T, nullptr};
@@ -273,8 +283,12 @@ unsigned ValueEnumerator::ptrTypeIdxForValue(const Value *V) {
 }
 
 unsigned ValueEnumerator::typeIdxForValue(const Value *V) {
-  if (auto *F = dyn_cast<Function>(V))
-    return ptrTypeIdx(F->getType(), F->getFunctionType());
+  if (auto *F = dyn_cast<Function>(V)) {
+    auto Var = funcVariant.find(F);
+    return ptrTypeIdx(F->getType(), Var != funcVariant.end()
+                                        ? Var->second
+                                        : (Type *)F->getFunctionType());
+  }
   if (auto *GV = dyn_cast<GlobalVariable>(V))
     return globalPtrTypeIdx(GV);
   if (V->getType()->isPointerTy())
@@ -288,7 +302,8 @@ unsigned ValueEnumerator::ptrTypeIdx(Type *PtrTy, Type *Pointee) {
   if (It != typeMap.end())
     return It->second;
 
-  addType(Pointee);
+  if (!variantIndex.count(Pointee))
+    addType(Pointee);
   return addEntry(E);
 }
 
@@ -379,10 +394,33 @@ unsigned ValueEnumerator::addType(Type *T) {
 unsigned ValueEnumerator::addFunctionType(FunctionType *FT, const Function *F) {
   TypeEntry E{FT, nullptr};
   auto It = typeMap.find(E);
-  if (It != typeMap.end())
+  if (It != typeMap.end()) {
+    // A kernel (no calls of it: a call's record takes the call's own function
+    // type) whose parameters' pointees differ: a variant of its own (two
+    // Geekbench kernels with the same opaque type, one reading an i64 and the
+    // other an i32 at the same constant-buffer parameter, made Metal's reader
+    // reject the library, "Unexpected bitcode file").
+    if (F && !F->isDeclaration() && F->use_empty() && !FT->isVarArg()) {
+      SmallVector<unsigned, 8> Mine = paramIndices(FT, F);
+      auto P = funcTypeParamIndices.find(FT);
+      if (P != funcTypeParamIndices.end() && P->second != Mine) {
+        for (auto &[Disc, Indices] : variantParamIndices)
+          if (Indices == Mine && cast<StructType>(Disc)->getName().starts_with(
+                                     "air.fnvariant") &&
+              types[variantIndex[Disc]].type == FT) {
+            funcVariant[F] = Disc;
+            return variantIndex[Disc];
+          }
+        Type *Disc = StructType::create(FT->getContext(), "air.fnvariant");
+        variantParamIndices[Disc] = Mine;
+        unsigned Idx = addEntry(TypeEntry{FT, Disc});
+        variantIndex[Disc] = Idx;
+        funcVariant[F] = Disc;
+        return Idx;
+      }
+    }
     return It->second;
-
-  SmallVector<unsigned, 8> ParamIndices;
+  }
 
   if (FT->getReturnType()->isPointerTy()) {
     Type *RetPointee = nullptr;
@@ -412,6 +450,20 @@ unsigned ValueEnumerator::addFunctionType(FunctionType *FT, const Function *F) {
     addType(FT->getReturnType());
   }
 
+  SmallVector<unsigned, 8> ParamIndices = paramIndices(FT, F);
+
+  funcTypeParamIndices[FT] = ParamIndices;
+
+  It = typeMap.find(E);
+  if (It != typeMap.end())
+    return It->second;
+
+  return addEntry(E);
+}
+
+SmallVector<unsigned, 8> ValueEnumerator::paramIndices(FunctionType *FT,
+                                                       const Function *F) {
+  SmallVector<unsigned, 8> ParamIndices;
   for (unsigned I = 0; I < FT->getNumParams(); I++) {
     Type *PT = FT->getParamType(I);
     if (!PT->isPointerTy()) {
@@ -474,13 +526,13 @@ unsigned ValueEnumerator::addFunctionType(FunctionType *FT, const Function *F) {
     ParamIndices.push_back(ptrTypeIdx(PT, Pointee));
   }
 
-  funcTypeParamIndices[FT] = ParamIndices;
+  return ParamIndices;
+}
 
-  It = typeMap.find(E);
-  if (It != typeMap.end())
-    return It->second;
-
-  return addEntry(E);
+unsigned ValueEnumerator::functionTypeIdx(const Function *F) {
+  auto It = funcVariant.find(F);
+  return It != funcVariant.end() ? variantIndex[It->second]
+                                 : typeIdx(F->getFunctionType());
 }
 
 void ValueEnumerator::addModuleConstant(const Constant *C) {

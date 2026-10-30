@@ -1,5 +1,5 @@
-; AIR has no call stack: the helper must be inlined into @kernel and then
-; erased, since AIR kernels cannot call defined functions.
+; A small helper is inlined into @kernel and then erased (only large
+; functions called from many places stay functions).
 ; RUN: llc -mtriple=air %s -o - | FileCheck %s
 
 ; CHECK: define void @kernel

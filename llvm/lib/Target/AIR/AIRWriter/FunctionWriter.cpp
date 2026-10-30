@@ -22,6 +22,7 @@
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -29,6 +30,35 @@ using namespace llvm;
 
 namespace llvm {
 namespace metal {
+
+// The source element type a GEP is written with. The typed reader requires it
+// to be the base pointer's pointee. An i32 GEP of a device pointer written as
+// float* (one collapsed to float, or inferred so from its float accesses) is
+// written as a float GEP (same stride); one of a base written otherwise (e.g.
+// the i32* bitcast normalizeGEPs puts before an i32 GEP of a float buffer,
+// a float stored through it) keeps i32, else the reader rejects the library
+// ("Explicit gep type does not match pointee type").
+static Type *writtenGEPSourceType(const GetElementPtrInst *GEP,
+                                  const PointeeTypeMap &PTM) {
+  Type *Src = GEP->getSourceElementType();
+  if (GEP->getPointerAddressSpace() != metal::AS::Device ||
+      !Src->isIntegerTy(32))
+    return Src;
+  Type *PtmTy = PTM.get(const_cast<GetElementPtrInst *>(GEP));
+  if (!PtmTy || !PtmTy->isFloatTy())
+    return Src;
+  Value *Base = const_cast<Value *>(GEP->getPointerOperand());
+  Type *BasePointee = nullptr;
+  if (auto *BaseGEP = dyn_cast<GetElementPtrInst>(Base))
+    BasePointee = BaseGEP->getNumIndices() == 1
+                      ? writtenGEPSourceType(BaseGEP, PTM)
+                      : BaseGEP->getResultElementType();
+  else
+    BasePointee = PTM.get(Base);
+  if (BasePointee && !BasePointee->isFloatTy())
+    return Src;
+  return PtmTy;
+}
 
 void emitConstantsBlock(
     BitstreamWriter &W, ValueEnumerator &E,
@@ -185,14 +215,7 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         V.push_back(GEP->isInBounds() ? 1 : 0);
 
-        Type *GepSrcTy = GEP->getSourceElementType();
-        if (GEP->getPointerAddressSpace() == metal::AS::Device &&
-            GepSrcTy->isIntegerTy(32)) {
-          if (auto *PtmTy = E.PTM.get(const_cast<GetElementPtrInst *>(GEP)))
-            if (PtmTy->isFloatTy())
-              GepSrcTy = PtmTy;
-        }
-        V.push_back(E.typeIdx(GepSrcTy));
+        V.push_back(E.typeIdx(writtenGEPSourceType(GEP, E.PTM)));
         for (auto &Op : GEP->operands())
           V.push_back(GetID(Op));
         W.EmitRecord(bitc::FUNC_CODE_INST_GEP, V);
@@ -301,8 +324,16 @@ void emitFunctionBlock(BitstreamWriter &W, const Function &F,
         }
 
         V.push_back(GetID(CI->getCalledOperand()));
-        for (unsigned J = 0; J < CI->arg_size(); J++)
-          V.push_back(GetID(CI->getArgOperand(J)));
+        for (unsigned J = 0; J < CI->arg_size(); J++) {
+          // Metadata: its metadata ID, relative like a value's (the reader's
+          // getValue, then getFnMetadataByID for a metadata parameter).
+          auto *MV = dyn_cast<MetadataAsValue>(CI->getArgOperand(J));
+          if (MV && MD.hasID(MV->getMetadata()))
+            V.push_back(
+                unsigned(CurInstID - (MD.operandID(MV->getMetadata()) - 1)));
+          else
+            V.push_back(GetID(CI->getArgOperand(J)));
+        }
         W.EmitRecord(bitc::FUNC_CODE_INST_CALL, V);
       } else if (auto *AI = dyn_cast<AllocaInst>(&I)) {
 

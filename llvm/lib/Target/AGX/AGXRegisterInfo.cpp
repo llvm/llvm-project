@@ -110,9 +110,11 @@ bool AGXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FI = FIOp.getIndex();
   int64_t Offset = MF.getFrameInfo().getObjectOffset(FI);
   if (agxExperimentalLeafCallsEnabled() &&
-      MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL)
-    Offset += AGXFrameLowering::getCallDepth(MF) *
-              AGXFrameLowering::CallFrameRegionBytes;
+      MF.getFunction().getCallingConv() != CallingConv::AGX_KERNEL) {
+    // After the kernel's region, one per depth (depth 0: an entry point of a
+    // module without kernels, at offset zero)
+    Offset += AGXFrameLowering::getCalleeFrameOffset(MF);
+  }
   if (Offset < 0 || Offset > 0x7fff)
     report_fatal_error("AGX stack frame too large");
   FIOp.ChangeToImmediate(Offset);

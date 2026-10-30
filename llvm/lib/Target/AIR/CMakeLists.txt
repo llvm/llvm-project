@@ -10,6 +10,7 @@ tablegen(LLVM AIRGenAIRIntrinsicMappings.inc -gen-searchable-tables)
 add_public_tablegen_target(AIRCommonTableGen)
 
 add_llvm_target(AIRCodeGen
+  AIRAliasAnalysis.cpp
   AIRSystemValues.cpp
   AIRAliasAnnotate.cpp
   AIRArgumentBuffer.cpp
@@ -19,8 +20,10 @@ add_llvm_target(AIRCodeGen
   AIRCrossBufferStoreSeparate.cpp
   AIRFromGenericGPU.cpp
   AIRDemoteF64.cpp
+  AIREmulateF64.cpp
   AIRDeviceLoadsVolatile.cpp
   AIRInlineNonKernel.cpp
+  AIRKernelParams.cpp
   LLVMToAIRIntrinsics.cpp
   AIRLowerAtomicRMW.cpp
   AIRLowerFNeg.cpp
@@ -31,6 +34,7 @@ add_llvm_target(AIRCodeGen
   AIRScalarArgsToConstantBuffers.cpp
   AIRScalarBufferPacking.cpp
   AIRScalarStoreGuard.cpp
+  AIRSimdDivergenceGuard.cpp
   AIRSplitI64Shuffle.cpp
   AIRTGBarrierInsert.cpp
   AIRTGGlobalCoalesce.cpp
@@ -42,10 +46,12 @@ add_llvm_target(AIRCodeGen
 
   LINK_COMPONENTS
   Analysis
+  AsmParser
   AsmPrinter
   CodeGen
   CodeGenTypes
   Core
+  Linker
   MC
   Object
   Passes

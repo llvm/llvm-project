@@ -12,6 +12,7 @@
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -41,6 +42,38 @@ void MetadataEnumerator::collect(Module &M, ValueEnumerator &E) {
       }
     }
   }
+  // Strings and nodes passed as call arguments (the rounding and exception
+  // behavior of a constrained intrinsic, the scope of
+  // llvm.experimental.noalias.scope.decl): the call record refers to them by
+  // their metadata IDs. Collected last, so the IDs of everything above stay
+  // as they are. (Values as call arguments are not enumerated: the module's
+  // constants do not include them.)
+  for (auto &F : M)
+    for (auto &BB : F)
+      for (auto &I : BB)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          for (const Use &U : CB->args())
+            if (auto *MV = dyn_cast<MetadataAsValue>(U.get()))
+              visitOperand(MV->getMetadata(), E);
+}
+
+void MetadataEnumerator::visitOperand(const Metadata *Op, ValueEnumerator &E) {
+  if (auto *S = dyn_cast<MDString>(Op)) {
+    if (!stringMap.count(S)) {
+      stringMap[S] = strings.size();
+      strings.push_back(S->getString());
+    }
+  } else if (auto *N = dyn_cast<MDNode>(Op)) {
+    visitNode(N, E);
+  }
+}
+
+bool MetadataEnumerator::hasID(const Metadata *Op) const {
+  if (auto *S = dyn_cast<MDString>(Op))
+    return stringMap.count(S);
+  if (auto *N = dyn_cast<MDNode>(Op))
+    return nodeMap.count(N);
+  return false;
 }
 
 void MetadataEnumerator::visitNode(const MDNode *N, ValueEnumerator &E) {

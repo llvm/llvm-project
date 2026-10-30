@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_AGX_AGX_H
 #define LLVM_LIB_TARGET_AGX_AGX_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
@@ -23,6 +25,7 @@ class ScheduleDAGMutation;
 class ScheduleDAGMI;
 struct MachineSchedContext;
 class FunctionPass;
+class IRBuilderBase;
 class Module;
 class ModulePass;
 class PassRegistry;
@@ -31,6 +34,7 @@ bool agxExperimentalLeafCallsEnabled();
 
 // IR passes.
 ModulePass *createAGXAlwaysInlinePass();
+ModulePass *createAGXGlobalDataArgsPass();
 ModulePass *createAGXLowerAIRPass(const AGXTargetMachine *TM);
 ModulePass *createAGXPromoteKernelArgsPass();
 ModulePass *createAGXCheckedAccessesPass(const AGXTargetMachine *TM);

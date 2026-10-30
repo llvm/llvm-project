@@ -19,6 +19,13 @@
 
 namespace llvm {
 
+/// The lock table of the Metal pipeline's 64- and 128-bit atomics: a device
+/// buffer parameter of this name at this location index, of
+/// kAtomicLockCount 32-bit words the host binds zeroed.
+inline constexpr const char *kAtomicLockTableName = "air_atomic_locks";
+inline constexpr unsigned kAtomicLockTableIndex = 30;
+inline constexpr unsigned kAtomicLockCount = 1024;
+
 class AIRLowerAtomicRMWPass : public RequiredPassInfoMixin<AIRLowerAtomicRMWPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);

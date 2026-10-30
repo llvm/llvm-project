@@ -177,6 +177,7 @@ AGXTargetLowering::AGXTargetLowering(const TargetMachine &TM,
                       ISD::FEXP10, ISD::FLOG, ISD::FLOG10, ISD::FPOW},
                      MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f16, Custom);
+  setOperationAction(ISD::FSQRT, MVT::f32, Custom);
   setOperationAction({ISD::FREM, ISD::FSIN, ISD::FCOS, ISD::FEXP, ISD::FEXP10,
                       ISD::FLOG, ISD::FLOG10, ISD::FPOW},
                      MVT::f16, Promote);
@@ -718,6 +719,8 @@ SDValue AGXTargetLowering::LowerOperation(SDValue Op,
                               SDLoc(Op));
   case ISD::FDIV:
     return lowerFDIV(Op, DAG);
+  case ISD::FSQRT:
+    return lowerFSQRT(Op, DAG);
   case ISD::FREM:
     return lowerFREM(Op, DAG);
   case ISD::FCOPYSIGN:
@@ -1582,38 +1585,124 @@ static SDValue getAGXIntrinsic(SelectionDAG &DAG, const SDLoc &DL,
                      DAG.getTargetConstant(IID, DL, MVT::i32), Arg);
 }
 
+/// float division without arcp / afn, correctly rounded (with denormal
+/// operands and results flushed, as the ALU does). The hardware's rcp is
+/// within 1 ulp; the quotient of the significands, a1 in [1, 2) and d in
+/// [2, 4) with the signs of a and b, takes the correctly rounded reciprocal
+///   y = y0 + y0 (1 - d y0), y0 = rcp(d)
+/// (correctly rounded for every significand with the recorded rcp table) and
+/// one correction of q0 = a1 y:
+///   q = q0 + (a1 - d q0) y,
+/// correctly rounded by Markstein's theorem (y is the rounded 1 / d, q0
+/// within 1 ulp, the remainder exact). The exponents come back as factors
+///   pa = 2^ea, pb = 2^(128 - eb),
+/// 0 / inf for a zero (or denormal) / infinite a, and inf / 0 for b, so that
+/// zeros and infinities need no other test; the product is exact or rounds
+/// once into the flushed or infinite range. pa first could flush a tiny a's
+/// intermediate, pb first a huge b's, so a below 2^-124 takes pb first (both
+/// at once flush the result anyway). NaNs are selected at the end.
+SDValue AGXTargetLowering::lowerFDIV32(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  const MVT VT = MVT::f32;
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  auto C = [&](uint32_t V) { return DAG.getConstant(V, DL, MVT::i32); };
+  auto K = [&](float V) { return DAG.getConstantFP(V, DL, VT); };
+  auto Bits = [&](SDValue X) { return DAG.getBitcast(MVT::i32, X); };
+  auto Flt = [&](SDValue X) { return DAG.getBitcast(VT, X); };
+  auto And = [&](SDValue X, uint32_t M) {
+    return DAG.getNode(ISD::AND, DL, MVT::i32, X, C(M));
+  };
+  auto Fma = [&](SDValue X, SDValue Y, SDValue Z) {
+    return DAG.getNode(ISD::FMA, DL, VT, X, Y, Z);
+  };
+  auto Mul = [&](SDValue X, SDValue Y) {
+    return DAG.getNode(ISD::FMUL, DL, VT, X, Y);
+  };
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  SDValue DB = Bits(B);
+  SDValue D = Flt(DAG.getNode(ISD::OR, DL, MVT::i32, And(DB, 0x807fffff),
+                              C(0x40000000)));
+  SDValue NegD = DAG.getNode(ISD::FNEG, DL, VT, D);
+  SDValue Y0 = getAGXIntrinsic(DAG, DL, Intrinsic::agx_rcp, VT, D);
+  SDValue Y = Fma(Fma(NegD, Y0, K(1.0f)), Y0, Y0);
+  SDValue PB = Flt(DAG.getNode(ISD::SUB, DL, MVT::i32, C(0x7f800000),
+                               And(DB, 0x7f800000)));
+  SDValue R;
+  SmallVector<SDValue, 2> NaNOperands = {B};
+  auto *CA = dyn_cast<ConstantFPSDNode>(A);
+  if (CA && CA->isExactlyValue(1.0)) {
+    // 1 / b: y is already the rounded quotient.
+    R = Mul(Y, PB);
+  } else {
+    SDValue AB = Bits(A);
+    SDValue A1 = Flt(DAG.getNode(ISD::OR, DL, MVT::i32, And(AB, 0x807fffff),
+                                 C(0x3f800000)));
+    SDValue Q0 = Mul(A1, Y);
+    SDValue Q = Fma(Fma(NegD, Q0, A1), Y, Q0);
+    SDValue PA = Flt(And(AB, 0x7f800000));
+    SDValue Small =
+        DAG.getSetCC(DL, CCVT, DAG.getNode(ISD::FABS, DL, VT, A), K(0x1p-124f),
+                     ISD::SETOLT);
+    R = Mul(Mul(Q, DAG.getSelect(DL, VT, Small, PB, PA)),
+            DAG.getSelect(DL, VT, Small, PA, PB));
+    NaNOperands.push_back(A);
+  }
+  if (Op->getFlags().hasNoNaNs())
+    return R;
+  // One compare-and-select per operand.
+  SDValue NaN =
+      DAG.getConstantFP(APFloat::getQNaN(APFloat::IEEEsingle()), DL, VT);
+  for (SDValue X : NaNOperands)
+    R = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, X, X, ISD::SETUO), NaN,
+                      R);
+  return R;
+}
+
 SDValue AGXTargetLowering::lowerFDIV(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
   SDNodeFlags Flags = Op->getFlags();
   SDValue A = Op.getOperand(0);
   SDValue B = Op.getOperand(1);
+  bool Approx = Flags.hasAllowReciprocal() || Flags.hasApproximateFuncs();
+  if (VT == MVT::f32 && !Approx)
+    return lowerFDIV32(Op, DAG);
   SDValue R = getAGXIntrinsic(DAG, DL, Intrinsic::agx_rcp, VT, B);
-
   auto *CA = dyn_cast<ConstantFPSDNode>(A);
   if (CA && CA->isExactlyValue(1.0))
     return R;
-  SDValue Q = DAG.getNode(ISD::FMUL, DL, VT, A, R, Flags);
-  if (Flags.hasAllowReciprocal() || Flags.hasApproximateFuncs() ||
-      VT == MVT::f16)
-    return Q;
+  return DAG.getNode(ISD::FMUL, DL, VT, A, R, Flags);
+}
 
-  // One Newton-Raphson step on the quotient: q += (a - b * q) * rcp(b).
-  SDValue E = DAG.getNode(ISD::FMA, DL, VT, DAG.getNode(ISD::FNEG, DL, VT, B),
-                          Q, A);
-  SDValue Refined = DAG.getNode(ISD::FMA, DL, VT, E, R, Q);
-  // The step turns an infinite quotient into NaN (0 * inf) and a zero one
-  // into +0; those quotients are already exact.
+/// float sqrt without afn, correctly rounded (denormals flushed): from
+/// y = rsqrt_special(x) (within 1 ulp; 1 for 0 and infinity),
+///   s0 = x y, s = s0 + (x - s0^2) y / 2
+/// is correctly rounded for every x in [1, 4) with the recorded table, and
+/// so for every x whose remainder x - s0^2 is not flushed: x below 2^-80 is
+/// scaled by 2^64 first. +-0 gives +-0, and the NaN of +inf's remainder
+/// (s0 = inf), negative values and NaNs are s0.
+SDValue AGXTargetLowering::lowerFSQRT(SDValue Op, SelectionDAG &DAG) const {
+  if (Op.getValueType() != MVT::f32 || Op->getFlags().hasApproximateFuncs())
+    return Op;
+  SDLoc DL(Op);
+  const MVT VT = MVT::f32;
+  SDValue X = Op.getOperand(0);
+  auto K = [&](float V) { return DAG.getConstantFP(V, DL, VT); };
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  SDValue AbsQ = DAG.getNode(ISD::FABS, DL, VT, Q);
-  SDValue Zero = DAG.getConstantFP(0.0, DL, VT);
-  SDValue Inf = DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), DL,
-                                  VT);
-  SDValue Exact =
-      DAG.getNode(ISD::OR, DL, CCVT,
-                  DAG.getSetCC(DL, CCVT, AbsQ, Zero, ISD::SETOEQ),
-                  DAG.getSetCC(DL, CCVT, AbsQ, Inf, ISD::SETOEQ));
-  return DAG.getSelect(DL, VT, Exact, Q, Refined);
+  SDValue Small = DAG.getSetCC(DL, CCVT, X, K(0x1p-80f), ISD::SETOLT);
+  SDValue XS = DAG.getSelect(
+      DL, VT, Small, DAG.getNode(ISD::FMUL, DL, VT, X, K(0x1p64f)), X);
+  SDValue Y = getAGXIntrinsic(DAG, DL, Intrinsic::agx_rsqrt_special, VT, XS);
+  SDValue S0 = DAG.getNode(ISD::FMUL, DL, VT, XS, Y);
+  SDValue H = DAG.getNode(ISD::FMUL, DL, VT, Y, K(0.5f));
+  SDValue Rem = DAG.getNode(ISD::FMA, DL, VT,
+                            DAG.getNode(ISD::FNEG, DL, VT, S0), S0, XS);
+  SDValue S = DAG.getNode(ISD::FMA, DL, VT, Rem, H, S0);
+  S = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, S, S, ISD::SETUO), S0, S);
+  return DAG.getSelect(DL, VT, Small,
+                       DAG.getNode(ISD::FMUL, DL, VT, S, K(0x1p-32f)), S);
 }
 
 /// copysign(m, s) = (m & ~sign) | (s & sign), on the bits.

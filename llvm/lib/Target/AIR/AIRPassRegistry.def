@@ -18,6 +18,7 @@
 #endif
 MODULE_PASS("air-inline-non-kernel", AIRInlineNonKernelPass())
 MODULE_PASS("air-demote-f64", AIRDemoteF64Pass())
+MODULE_PASS("air-emulate-f64", AIREmulateF64Pass())
 MODULE_PASS("air-lower-fneg", AIRLowerFNegPass())
 MODULE_PASS("air-legalize-unsupported-ir", AIRLegalizeUnsupportedIRPass())
 MODULE_PASS("air-nan-min-max", AIRNaNMinMaxPass())
@@ -37,6 +38,7 @@ MODULE_PASS("air-scalar-args-to-constant-buffers", AIRScalarArgsToConstantBuffer
 MODULE_PASS("air-air-system-values", AIRSystemValuesPass())
 MODULE_PASS("air-alias-annotate", AIRAliasAnnotatePass())
 MODULE_PASS("air-prepare", AIRPreparePass())
+MODULE_PASS("air-simd-divergence-guard", AIRSimdDivergenceGuardPass())
 MODULE_PASS("air-cross-buffer-store-separate", AIRCrossBufferStoreSeparatePass())
 MODULE_PASS("air-embed", AIREmbedderPass())
 MODULE_PASS("air-portable", AIRPortablePass())

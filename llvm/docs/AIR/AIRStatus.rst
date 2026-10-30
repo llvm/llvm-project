@@ -80,6 +80,22 @@ Each of these passed the FileCheck tests of the original branch.
 * A constant-address-space buffer argument was taken for a Triton scalar
   passed by reference: it was packed away and its uses replaced with
   ``undef``, so the kernel read zeros.
+* Plain LLVM IR the Metal pipeline passed through and Metal gets wrong (groups
+  ``llvm-float-ieee``, ``llvm-int-ops``, ``llvm-conv``, ``llvm-memory-ir``),
+  now expanded by ``air-legalize-unsupported-ir`` and ``air-nan-min-max``
+  in the Metal pipeline only (the portable AIR for AGX is unchanged):
+  ``frem`` (inexact, NaN for ``x frem inf``) becomes ``air.fmod.f32``;
+  ``llvm.round`` gets the operand's sign back (``air.round(-0)`` is +0);
+  ``llvm.minimum``/``maximum`` order signed zeros; ``llvm.roundeven`` and
+  ``llvm.nearbyint`` (compiler crash) become ``air.rint``;
+  ``llvm.sadd``/``ssub.with.overflow`` (wrong overflow bit) and
+  ``llvm.fptosi``/``fptoui.sat`` (compiler crash) are expanded;
+  ``llvm.ldexp``/``llvm.frexp`` (undefined) become ``air.ldexp(x, i32)`` and
+  ``air.frexp(x, thread i32 *)``; ``llvm.is.fpclass`` (undefined) becomes
+  integer tests. A private ``alloca`` accessed with another type (an i8 GEP,
+  an i32 store into an array, ``llvm.memset``) made the library rejected
+  (``Unexpected bitcode file!``): the writer typed the alloca's pointer by its
+  uses instead of its allocated type.
 
 Blockers
 ========
@@ -167,6 +183,14 @@ tells them apart. Several backend defects showed up only as such crashes.
 
 Passed to Metal unchanged, ``llvm.sqrt.f32`` is 1 ulp off; ``air.sqrt.f32``
 is correctly rounded, which is why the intrinsic is now lowered to it.
+
+Float subnormals are flushed to zero
+------------------------------------
+
+The M2 Max flushes f32 subnormal operands and results to zero, so results
+that depend on them (``llvm-float-ieee``'s ``denorm_*`` cases, a minimum of
++0 and a subnormal) differ from LLVM's IEEE default. Not fixable in the
+backend.
 
 Weak compare-and-exchange
 -------------------------

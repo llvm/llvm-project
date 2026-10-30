@@ -11,6 +11,9 @@
 //  * AGXAlwaysInline normally marks every non-kernel function always_inline
 //    (and internal, so it disappears once inlined). The opt-in call path keeps
 //    eligible functions out of this expansion and removes unused functions.
+//    The functions it keeps that use the global data buffer get its address
+//    as a parameter (AGXGlobalDataArgs, after inlining): only a kernel has it,
+//    in a uniform register.
 //  * AGXCodeGenPrepare expands what the hardware has no instruction or
 //    library for: integer division, and memory intrinsics that are not
 //    small enough to be expanded by instruction selection. There is no
@@ -64,10 +67,13 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include <cmath>
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
+#include "llvm/IR/ReplaceConstant.h"
+#include "llvm/ADT/SetVector.h"
 
 using namespace llvm;
 
@@ -122,9 +128,11 @@ static bool allocateExperimentalCallType(Type *Ty, unsigned &Slots) {
 
 static bool canKeepExperimentalCall(const Function &F) {
   if (F.isDeclaration() || F.hasFnAttribute(Attribute::AlwaysInline) ||
-      F.isVarArg() || F.hasStructRetAttr() || AGX::usesGlobalData(F))
+      F.isVarArg() || F.hasStructRetAttr())
     return false;
-  unsigned ArgSlots = 0;
+  // (two slots kept for the global data buffer's address, which
+  // AGXGlobalDataArgs may add)
+  unsigned ArgSlots = 2;
   for (const Argument &Arg : F.args())
     if (!allocateExperimentalCallType(Arg.getType(), ArgSlots))
       return false;
@@ -229,12 +237,13 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
         auto It = Depth.find(&F);
         if (It == Depth.end())
           continue;
+        // (by value: inserting a callee below may move the map's entries)
+        unsigned Next = It->second + 1;
         for (const Instruction &I : instructions(F)) {
           const auto *CB = dyn_cast<CallBase>(&I);
           const Function *Callee = CB ? CB->getCalledFunction() : nullptr;
           if (!Callee || Callee->isDeclaration() || Callee->isIntrinsic())
             continue;
-          unsigned Next = It->second + 1;
           if (Next > Depth.lookup(Callee)) {
             Depth[Callee] = Next;
             Updated = true;
@@ -294,7 +303,173 @@ bool AGXAlwaysInline::runOnModule(Module &M) {
   for (Function *F : Dead)
     F->eraseFromParent();
   Changed |= !Dead.empty();
+  // Called functions after every kernel: a kernel's program runs from its
+  // symbol to the end of .text, which must hold what it calls (a module from
+  // AIR lists its functions before its kernels).
+  if (agxExperimentalLeafCallsEnabled() && HasKernels) {
+    // (in increasing call depth: -agx-measured-call-frames places each
+    // depth's frames after the shallower ones', recorded as they compile)
+    SmallVector<Function *, 16> Called;
+    for (Function &F : M)
+      if (!F.isDeclaration() && F.getCallingConv() != CallingConv::AGX_KERNEL)
+        Called.push_back(&F);
+    auto DepthOf = [](const Function *F) {
+      unsigned D = 0;
+      if (Attribute A = F->getFnAttribute("agx-call-depth");
+          A.isStringAttribute())
+        (void)A.getValueAsString().getAsInteger(10, D);
+      return D;
+    };
+    llvm::stable_sort(Called, [&](const Function *A, const Function *B) {
+      return DepthOf(A) < DepthOf(B);
+    });
+    for (Function *F : Called) {
+      F->removeFromParent();
+      M.getFunctionList().push_back(F);
+    }
+    Changed |= !Called.empty();
+  }
   return Changed;
+}
+
+//===----------------------------------------------------------------------===//
+// AGXGlobalDataArgs
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// After inlining, the functions that are still called (the experimental
+/// call path) and use the global data buffer, and their callers up to the
+/// kernels, get its address as a last i64 parameter: a kernel has it in a
+/// uniform register (LowerFormalArguments), a called function has no access
+/// to it. In those functions each global data variable becomes that address
+/// plus its offset in computeGlobalDataLayout's layout, which instruction
+/// selection uses for the kernels' own accesses (no global is added or removed
+/// after this pass). A kernel passes the address of the layout's first
+/// variable less its offset.
+class AGXGlobalDataArgs : public ModulePass {
+public:
+  static char ID;
+  AGXGlobalDataArgs() : ModulePass(ID) {}
+  StringRef getPassName() const override { return "AGX Global Data Arguments"; }
+  bool runOnModule(Module &M) override;
+};
+
+} // namespace
+
+char AGXGlobalDataArgs::ID = 0;
+
+ModulePass *llvm::createAGXGlobalDataArgsPass() {
+  return new AGXGlobalDataArgs();
+}
+
+bool AGXGlobalDataArgs::runOnModule(Module &M) {
+  auto IsKernel = [](const Function &F) {
+    return F.getCallingConv() == CallingConv::AGX_KERNEL;
+  };
+  SetVector<Function *> Need;
+  for (Function &F : M)
+    if (!F.isDeclaration() && !IsKernel(F) && AGX::usesGlobalData(F))
+      Need.insert(&F);
+  for (unsigned I = 0; I < Need.size(); ++I)
+    for (User *U : Need[I]->users())
+      if (auto *CB = dyn_cast<CallBase>(U))
+        if (Function *Caller = CB->getFunction(); !IsKernel(*Caller))
+          Need.insert(Caller);
+  if (Need.empty())
+    return false;
+  AGX::GlobalDataLayout Layout = AGX::computeGlobalDataLayout(M);
+  if (Layout.empty())
+    return false;
+  LLVMContext &Ctx = M.getContext();
+  Type *I64 = Type::getInt64Ty(Ctx);
+
+  // Each function with the parameter added (its body moved over).
+  DenseMap<Function *, Function *> New;
+  for (Function *F : Need) {
+    FunctionType *FT = F->getFunctionType();
+    SmallVector<Type *, 8> Params(FT->params());
+    Params.push_back(I64);
+    // (in F's place: AGXAlwaysInline ordered the called functions)
+    Function *NF = Function::Create(
+        FunctionType::get(FT->getReturnType(), Params, false), F->getLinkage(),
+        F->getAddressSpace(), "");
+    M.getFunctionList().insert(F->getIterator(), NF);
+    NF->copyAttributesFrom(F);
+    NF->copyMetadata(F, 0);
+    NF->setCallingConv(F->getCallingConv());
+    NF->splice(NF->begin(), F);
+    for (auto [Old, NewArg] : zip(F->args(), NF->args())) {
+      NewArg.takeName(&Old);
+      Old.replaceAllUsesWith(&NewArg);
+    }
+    NF->getArg(FT->getNumParams())->setName("agx.global.data");
+    NF->takeName(F);
+    New[F] = NF;
+  }
+
+  // The global data variables' uses in those functions, as base + offset.
+  SmallVector<Constant *, 16> Globals;
+  for (auto &[GV, Offset] : Layout.Offsets)
+    Globals.push_back(const_cast<GlobalVariable *>(GV));
+  for (auto &[F, NF] : New) {
+    convertUsersOfConstantsToInstructions(Globals, NF);
+    Argument *Base = NF->getArg(NF->arg_size() - 1);
+    for (Instruction &I : instructions(*NF))
+      for (Use &U : I.operands()) {
+        auto *GV = dyn_cast<GlobalVariable>(U.get());
+        if (!GV)
+          continue;
+        std::optional<uint64_t> Offset = Layout.getOffset(GV);
+        if (!Offset)
+          continue;
+        auto *Phi = dyn_cast<PHINode>(&I);
+        IRBuilder<> B(Phi ? Phi->getIncomingBlock(U)->getTerminator() : &I);
+        U.set(B.CreateIntToPtr(B.CreateAdd(Base, B.getInt64(*Offset)),
+                               GV->getType()));
+      }
+  }
+
+  // The calls, with the caller's address (a kernel's from the layout's
+  // first variable).
+  // (the calls are in the new functions, whose bodies they are now)
+  SmallPtrSet<Function *, 16> Added;
+  for (auto &[F, NF] : New)
+    Added.insert(NF);
+  DenseMap<Function *, Value *> KernelBase;
+  auto BaseIn = [&](Function *Caller) -> Value * {
+    if (Added.contains(Caller))
+      return Caller->getArg(Caller->arg_size() - 1);
+    Value *&V = KernelBase[Caller];
+    if (!V) {
+      auto &[GV, Offset] = Layout.Offsets.front();
+      IRBuilder<> B(&*Caller->getEntryBlock().getFirstInsertionPt());
+      V = B.CreateSub(
+          B.CreatePtrToInt(const_cast<GlobalVariable *>(GV), I64),
+          B.getInt64(Offset), "agx.global.data");
+    }
+    return V;
+  };
+  for (auto &[F, NF] : New) {
+    for (User *U : make_early_inc_range(F->users())) {
+      auto *CB = dyn_cast<CallInst>(U);
+      if (!CB || CB->getCalledOperand() != F)
+        report_fatal_error("AGX: a function using global data is used other "
+                           "than called");
+      SmallVector<Value *, 8> Args(CB->args());
+      Args.push_back(BaseIn(CB->getFunction()));
+      auto *NC = CallInst::Create(NF, Args, "", CB->getIterator());
+      NC->setCallingConv(CB->getCallingConv());
+      NC->setAttributes(CB->getAttributes());
+      NC->setTailCallKind(CB->getTailCallKind());
+      NC->setDebugLoc(CB->getDebugLoc());
+      NC->takeName(CB);
+      CB->replaceAllUsesWith(NC);
+      CB->eraseFromParent();
+    }
+    F->eraseFromParent();
+  }
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1406,8 +1581,129 @@ bool AGXCodeGenPrepare::combineUniformAtomics(Function &F,
   return Changed;
 }
 
+/// powi(x, n) with a variable n: pow(|x|, n) (AGX has no powi library
+/// function, and SelectionDAG's fallback, pow(x, n), is NaN for a negative x),
+/// with the sign of x for an odd n. A constant n is left to SelectionDAG's
+/// multiplications.
+static bool expandPowI(Function &F) {
+  SmallVector<IntrinsicInst *, 4> Calls;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I);
+        II && II->getIntrinsicID() == Intrinsic::powi &&
+        !isa<Constant>(II->getArgOperand(1)) &&
+        (II->getType()->isFloatTy() || II->getType()->isHalfTy()))
+      Calls.push_back(II);
+  for (IntrinsicInst *II : Calls) {
+    IRBuilder<> B(II);
+    B.setFastMathFlags(II->getFastMathFlags());
+    Type *F32 = B.getFloatTy();
+    Value *X = B.CreateFPExt(II->getArgOperand(0), F32);
+    Value *N = II->getArgOperand(1);
+    Value *Mag = B.CreateBinaryIntrinsic(
+        Intrinsic::pow, B.CreateUnaryIntrinsic(Intrinsic::fabs, X),
+        B.CreateSIToFP(N, F32));
+    Value *Odd = B.CreateTrunc(N, B.getInt1Ty());
+    Value *R = B.CreateCopySign(
+        Mag, B.CreateSelect(Odd, X, ConstantFP::get(F32, 1.0)));
+    R = B.CreateFPTrunc(R, II->getType());
+    R->takeName(II);
+    II->replaceAllUsesWith(R);
+    II->eraseFromParent();
+  }
+  return !Calls.empty();
+}
+
+/// frem of float and half (in float): fmod, exact. A step reduces a by a
+/// divisor d with a / d < 2^24: q = trunc(a / d) is the integer part n or,
+/// rounded up, n + 1 (the quotient is correctly rounded and n representable),
+/// so the remainder is a - q d or a - (q - 1) d, whichever is in [0, d)
+/// (exact, or flushed). While a exceeds b 2^23 by more than an exponent
+/// step, a is first reduced by b 2^j, a multiple of b, with a / (b 2^j) <
+/// 2^24 (each step takes 23 bits off the exponent). A denormal b (IEEE float)
+/// is normalized by 2^24 for the loop, with a last step by b itself. The
+/// result has the sign of a; fmod(x, +-inf) is x (also a denormal x), and
+/// NaN for an infinite or NaN x, a NaN or zero y.
+static bool expandFRem(Function &F, const AGXSubtarget &ST) {
+  SmallVector<BinaryOperator *, 4> Rems;
+  for (Instruction &I : instructions(F))
+    if (I.getOpcode() == Instruction::FRem &&
+        (I.getType()->isFloatTy() || I.getType()->isHalfTy()))
+      Rems.push_back(cast<BinaryOperator>(&I));
+  bool DenormalB =
+      ST.hasIEEEFP32() &&
+      F.getDenormalMode(APFloat::IEEEsingle()).Input == DenormalMode::IEEE;
+  for (BinaryOperator *Rem : Rems) {
+    LLVMContext &Ctx = F.getContext();
+    BasicBlock *Before = Rem->getParent();
+    BasicBlock *After = Before->splitBasicBlock(Rem, "frem.done");
+    BasicBlock *Header = BasicBlock::Create(Ctx, "frem.loop", &F, After);
+    BasicBlock *Body = BasicBlock::Create(Ctx, "frem.reduce", &F, After);
+    Before->getTerminator()->eraseFromParent();
+
+    IRBuilder<> B(Before);
+    Type *F32 = B.getFloatTy(), *I32 = B.getInt32Ty();
+    auto K = [&](float V) { return ConstantFP::get(F32, V); };
+    auto Bits = [&](Value *V) { return B.CreateBitCast(V, I32); };
+    auto Exponent = [&](Value *V) { return B.CreateLShr(Bits(V), 23); };
+    // a mod d for a / d < 2^24 (a, d positive)
+    auto Step = [&](Value *A, Value *D) {
+      Value *Q = B.CreateUnaryIntrinsic(Intrinsic::trunc, B.CreateFDiv(A, D));
+      auto Rem = [&](Value *Q) {
+        return B.CreateIntrinsic(Intrinsic::fma, {F32},
+                                 {B.CreateFNeg(Q), D, A});
+      };
+      // With q one too large, a - (q - 1) d is the remainder (below d);
+      // with the right q it is at least d. (a - q d < 0 would not show an
+      // overestimate whose remainder is flushed.)
+      Value *Low = Rem(B.CreateFSub(Q, K(1.0f)));
+      return B.CreateSelect(B.CreateFCmpOLT(Low, D), Low, Rem(Q));
+    };
+
+    Value *X = B.CreateFPExt(Rem->getOperand(0), F32);
+    Value *Y = B.CreateFPExt(Rem->getOperand(1), F32);
+    Value *AX = B.CreateUnaryIntrinsic(Intrinsic::fabs, X);
+    Value *AY = B.CreateUnaryIntrinsic(Intrinsic::fabs, Y);
+    Value *BN = AY;
+    if (DenormalB)
+      BN = B.CreateSelect(B.CreateFCmpOLT(AY, K(0x1p-126f)),
+                          B.CreateFMul(AY, K(0x1p24f)), AY);
+    // NaN, or x itself for an infinite y: no reduction.
+    Value *NaN = B.CreateOr(B.CreateFCmpUGE(AX, K(INFINITY)),
+                            B.CreateFCmpULE(BN, K(0.0f)));
+    Value *YInf = B.CreateFCmpOEQ(AY, K(INFINITY));
+    Value *Start = B.CreateSelect(B.CreateOr(NaN, YInf), K(0.0f), AX);
+    Value *EB = Exponent(BN);
+    B.CreateBr(Header);
+
+    B.SetInsertPoint(Header);
+    PHINode *A = B.CreatePHI(F32, 2);
+    A->addIncoming(Start, Before);
+    Value *J = B.CreateSub(B.CreateSub(Exponent(A), EB), B.getInt32(23));
+    B.CreateCondBr(B.CreateICmpSGT(J, B.getInt32(0)), Body, After);
+
+    B.SetInsertPoint(Body);
+    Value *BK = B.CreateBitCast(B.CreateAdd(Bits(BN), B.CreateShl(J, 23)), F32);
+    A->addIncoming(Step(A, BK), Body);
+    B.CreateBr(Header);
+
+    B.SetInsertPoint(Rem);
+    Value *R = Step(A, BN);
+    if (DenormalB)
+      R = Step(R, AY);
+    R = B.CreateCopySign(R, X);
+    R = B.CreateSelect(YInf, X, R);
+    R = B.CreateSelect(NaN, K(NAN), R);
+    R = B.CreateFPTrunc(R, Rem->getType());
+    R->takeName(Rem);
+    Rem->replaceAllUsesWith(R);
+    Rem->eraseFromParent();
+  }
+  return !Rems.empty();
+}
+
 bool AGXCodeGenPrepare::expandMath(Function &F, const AGXSubtarget &ST) {
-  bool Changed = false;
+  bool Changed = expandPowI(F);
+  Changed |= expandFRem(F, ST);
   // An expansion may use functions that are expanded in turn (tan's sin).
   for (;;) {
     SmallVector<IntrinsicInst *, 8> Calls;
