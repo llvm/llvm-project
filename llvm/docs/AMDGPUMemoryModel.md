@@ -82,6 +82,8 @@ target-defined scopes and constraints:
 These are arranged from largest scope (*system scope*) to smallest scope
 ("singlethread").
 
+(amdgpu-subscopes)=
+
 #### Subscopes
 
 Every instance `X` of some scope `S1` other than "singlethread" scope is
@@ -90,6 +92,9 @@ partition is an instance of `S2` and is called a *subscope instance* of `X`.
 `S2` itself is called a *subscope* of `S1`.
 
 The two relations *subscope* and *subscope instance* are transitive.
+
+A scope instance `X` *contains* a scope instance `Y` if `Y` is a subset of
+`X`. In particular, every scope instance contains itself.
 
 It follows that if two scope instances `X` and `Y` intersect, then their
 intersection is the smaller of `X` and `Y`. The *common scope instance* `S'` of
@@ -314,32 +319,31 @@ following holds:
 - `X` is a *make-available* operation that follows `W` in program order,
   or,
 
-- `X` is a *make-available* operation whose scope instance includes `W`,
+- `X` is a *make-available* operation whose scope instance contains `W`,
   and there is an availability operation `Z` on `W` such that:
 
   - `Z` happens-before `X`, and,
-  - `Z`'s scope instance includes `X`.
+  - `Z`'s scope instance contains `X`.
 
 Then `X` makes `W` available in its own scope instance `S` and every
-subscope instance of `S` that also includes `W`.
+subscope instance of `S` that also contains `W`.
 
 ### Visibility Operation
 
 An operation `Y` is a *visibility operation* on a write `W` if `Y` is a
 *load-visible* operation to the same address, or a *make-visible* operation,
-and one of the following holds:
+and there exists an operation `X` such that:
 
-- There exists an *availability* operation `X` on write `W` such that:
-  - `X` happens-before `Y`, and,
-  - `X` makes `W` available in a scope instance `S1` that includes `Y`, and,
-  - `W` is included in the scope instance `S2` of `Y`.
-- There exists a *visibility* operation `X` on write `W` such that:
-  - `X` happens-before `Y`, and,
-  - `X` makes `W` visible in a scope instance `S1` that includes `Y`, and,
-  - `X` is included in the scope instance `S2` of `Y`.
+- `X` happens-before `Y`, and,
+- `X` makes `W` available or visible in a scope instance `S` that contains `Y`,
+  and,
+- `Y`'s scope instance contains `S`.
 
-Then `Y` makes `W` visible in the intersection `S` of `S1` and `S2`, and every
-subscope instance of `S` that includes `Y`.
+Then `Y` makes `W` visible in `S` and every subscope instance of `S` that
+contains `Y`.
+
+[Informational note --- "{ref}`contains<amdgpu-subscopes>`" is a reflexive
+relation over scope instances.]
 
 ### Location Order
 
@@ -350,7 +354,7 @@ A write `W` is *location-ordered* before a write `W1` to the same address if
 there exists an availability operation `Z` on `W` such that:
 
 - `Z` happens-before `W1`, and,
-- `W1` is included in `Z`'s scope instance.
+- `Z` makes `W` available in a scope instance that contains `W1`.
 
 A write `W` is *location-ordered* before a read `R` to the same address if
 there exists a visibility operation `Z` on write `W` such that:
@@ -405,7 +409,7 @@ The following properties follow from the definitions above:
    the chain.
 2. **A write cannot be made available in a scope that does not contain it.** The
    definition of an availability operation `X` requires that `X`'s scope
-   instance includes `W`. The operation makes `W` available in that scope
+   instance contains `W`. The operation makes `W` available in that scope
    instance and only those subscope instances that also contain `W`.
    Availability therefore cannot reach a scope instance that excludes `W`.
 3. **Visibility is bounded by availability.** When a write is available in a
@@ -415,7 +419,7 @@ The following properties follow from the definitions above:
 4. **A write can be made visible in a scope instance that does not contain it.**
    The definition of a *visibility operation* anchors scope instances to the
    observer (`Y`), not to the original write. The only precondition is that the
-   write must already be visible or available in the scope instance `S` of 'Y'
+   write must already be visible or available in the scope instance `S` of `Y`
    or a subscope instance of `S` that contains `Y`.
 5. **Availability and visibility chains.** For a write `W` to be visible to a
    read `R` anywhere in the system, the sufficient condition is a chain of
@@ -424,7 +428,7 @@ The following properties follow from the definitions above:
    inclusive scopes. Intermediate operations can bridge scope gaps that the
    endpoints cannot satisfy directly. Such a chain passes
    through at least one availability operation and at least one visibility
-   operation with inclusive scopes, such that their common scope includes both
+   operation with inclusive scopes, such that their common scope contains both
    `W` and `R`.
 
 (amdgcn-av-vulkan)=
