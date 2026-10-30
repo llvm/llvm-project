@@ -814,6 +814,37 @@ is the default, linker will not report the missing property otherwise will be re
 Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT or GNU_PROPERTY_X86_FEATURE_1_SHSTK properties.
 .Cm none
 is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+Equivalent to setting both
+.Cm ibt-report
+and
+.Cm shstk-report
+to the given value; if combined with
+.Cm ibt-report
+or
+.Cm shstk-report ,
+the last option on the command line for each property takes precedence.
+.Pp
+.It Cm ibt-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_IBT property.
+.Cm none
+is the default (unless
+.Cm force-ibt
+is specified, which defaults to
+.Cm warning ) ,
+linker will not report the missing property otherwise will be reported as a warning or an error.
+Overrides an earlier
+.Cm cet-report
+for GNU_PROPERTY_X86_FEATURE_1_IBT, and is overridden by a later
+.Cm cet-report .
+.Pp
+.It Cm shstk-report Ns = Ns Ar [none|warning|error]
+Specify how to report the missing GNU_PROPERTY_X86_FEATURE_1_SHSTK property.
+.Cm none
+is the default, linker will not report the missing property otherwise will be reported as a warning or an error.
+Overrides an earlier
+.Cm cet-report
+for GNU_PROPERTY_X86_FEATURE_1_SHSTK, and is overridden by a later
+.Cm cet-report .
 .Pp
 .It Cm gcs-report Ns = Ns Ar [none|warning|error]
 Specify how to report missing

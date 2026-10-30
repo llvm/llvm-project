@@ -40,8 +40,24 @@
 # CET_REPORT_ERROR: {{.*}}.o: -z cet-report: file does not have GNU_PROPERTY_X86_FEATURE_1_SHSTK property
 # CET_REPORT_ERROR-EMPTY:
 
-# RUN: ld.lld -e func1 %t.o %t4.o -o %t
+# RUN: ld.lld -e func1 %t.o %t3.o -o /dev/null -z ibt-report=warning 2>&1 \
+# RUN:   | FileCheck --check-prefix=IBT_REPORT %s
+# RUN: not ld.lld -e func1 %t.o %t3.o -o /dev/null -z ibt-report=error 2>&1 \
+# RUN:   | FileCheck --check-prefix=IBT_REPORT %s
+# IBT_REPORT: {{.*}}.o: -z ibt-report: file does not have GNU_PROPERTY_X86_FEATURE_1_IBT property
+# IBT_REPORT-EMPTY:
+
+# RUN: ld.lld -e func1 %t.o %t3.o -o /dev/null -z shstk-report=warning 2>&1 \
+# RUN:   | FileCheck --check-prefix=SHSTK_REPORT %s
+# RUN: not ld.lld -e func1 %t.o %t3.o -o /dev/null -z shstk-report=error 2>&1 \
+# RUN:   | FileCheck --check-prefix=SHSTK_REPORT %s
+# SHSTK_REPORT: {{.*}}.o: -z shstk-report: file does not have GNU_PROPERTY_X86_FEATURE_1_SHSTK property
+# SHSTK_REPORT-EMPTY:
+
+# RUN: ld.lld -e func1 %t.o %t4.o -o %t -z ibt-report=error 2>&1 | count 0
 # RUN: llvm-readelf -n %t | FileCheck --check-prefix=NOSHSTK %s
+# RUN: not ld.lld -e func1 %t.o %t4.o -o /dev/null -z shstk-report=error 2>&1 \
+# RUN:   | FileCheck --check-prefix=SHSTK_REPORT %s
 
 # Check .note.gnu.protery without property SHSTK.
 # NOSHSTK: Properties: x86 feature: IBT{{$}}

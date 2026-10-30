@@ -401,9 +401,17 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z zicfiss is only supported on RISC-V targets";
   }
 
-  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64 &&
-      ctx.arg.zCetReport != ReportPolicy::None)
-    ErrAlways(ctx) << "-z cet-report only supported on X86 and X86_64";
+  if (ctx.arg.emachine != EM_386 && ctx.arg.emachine != EM_X86_64) {
+    if (ctx.arg.zIbtReport != ReportPolicy::None &&
+        ctx.arg.zIbtReportSource != "-z force-ibt")
+      ErrAlways(ctx) << ctx.arg.zIbtReportSource
+                     << " only supported on X86 and X86_64";
+    if (ctx.arg.zShstkReport != ReportPolicy::None &&
+        (ctx.arg.zShstkReportSource != ctx.arg.zIbtReportSource ||
+         ctx.arg.zIbtReport == ReportPolicy::None))
+      ErrAlways(ctx) << ctx.arg.zShstkReportSource
+                     << " only supported on X86 and X86_64";
+  }
 
   if (ctx.arg.zMarkPlt) {
     if (ctx.arg.emachine != EM_X86_64)
@@ -1753,18 +1761,27 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
     ctx.arg.zBtiReport = ReportPolicy::Warning;
     ctx.arg.zBtiReportSource = "-z force-bti";
   }
+  if (ctx.arg.zForceIbt) {
+    ctx.arg.zIbtReport = ReportPolicy::Warning;
+    ctx.arg.zIbtReportSource = "-z force-ibt";
+  }
   if (ctx.arg.zGcs == GcsPolicy::Always) {
     ctx.arg.zGcsReport = ReportPolicy::Warning;
     ctx.arg.zGcsReportSource = "-z gcs";
   }
 
+  // Parse `-z *-report=` options in command-line order. On x86, `-z cet-report`
+  // sets both `zIbtReport` and `zShstkReport`, while `-z ibt-report` and
+  // `-z shstk-report` set them individually.
   auto reports = {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
-      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("cet-report", &ctx.arg.zIbtReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
       std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
+      std::make_pair("ibt-report", &ctx.arg.zIbtReport),
       std::make_pair("pauth-report", &ctx.arg.zPauthReport),
+      std::make_pair("shstk-report", &ctx.arg.zShstkReport),
       std::make_pair("zicfilp-unlabeled-report",
                      &ctx.arg.zZicfilpUnlabeledReport),
       std::make_pair("zicfilp-func-sig-report", &ctx.arg.zZicfilpFuncSigReport),
@@ -1789,10 +1806,19 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       }
       hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
-      if (option.first == "bti-report")
+      if (option.first == "bti-report") {
         ctx.arg.zBtiReportSource = "-z bti-report";
-      else if (option.first == "gcs-report")
+      } else if (option.first == "cet-report") {
+        ctx.arg.zIbtReportSource = "-z cet-report";
+        ctx.arg.zShstkReport = ctx.arg.zIbtReport;
+        ctx.arg.zShstkReportSource = "-z cet-report";
+      } else if (option.first == "gcs-report") {
         ctx.arg.zGcsReportSource = "-z gcs-report";
+      } else if (option.first == "ibt-report") {
+        ctx.arg.zIbtReportSource = "-z ibt-report";
+      } else if (option.first == "shstk-report") {
+        ctx.arg.zShstkReportSource = "-z shstk-report";
+      }
     }
   }
 
@@ -3059,15 +3085,15 @@ static void readSecurityNotes(Ctx &ctx) {
         << ": file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_GCS property";
 
-    reportUnless(ctx.arg.zCetReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
-        << f
-        << ": -z cet-report: file does not have "
+    reportUnless(ctx.arg.zIbtReport, features & GNU_PROPERTY_X86_FEATURE_1_IBT)
+        << f << ": " << ctx.arg.zIbtReportSource
+        << ": file does not have "
            "GNU_PROPERTY_X86_FEATURE_1_IBT property";
 
-    reportUnless(ctx.arg.zCetReport,
+    reportUnless(ctx.arg.zShstkReport,
                  features & GNU_PROPERTY_X86_FEATURE_1_SHSTK)
-        << f
-        << ": -z cet-report: file does not have "
+        << f << ": " << ctx.arg.zShstkReportSource
+        << ": file does not have "
            "GNU_PROPERTY_X86_FEATURE_1_SHSTK property";
 
     if (ctx.arg.emachine == EM_RISCV) {
@@ -3109,16 +3135,10 @@ static void readSecurityNotes(Ctx &ctx) {
                      "GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED";
     }
 
-    if (ctx.arg.zForceBti && !(features & GNU_PROPERTY_AARCH64_FEATURE_1_BTI)) {
+    if (ctx.arg.zForceBti)
       features |= GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
-    } else if (ctx.arg.zForceIbt &&
-               !(features & GNU_PROPERTY_X86_FEATURE_1_IBT)) {
-      if (ctx.arg.zCetReport == ReportPolicy::None)
-        Warn(ctx) << f
-                  << ": -z force-ibt: file does not have "
-                     "GNU_PROPERTY_X86_FEATURE_1_IBT property";
+    else if (ctx.arg.zForceIbt)
       features |= GNU_PROPERTY_X86_FEATURE_1_IBT;
-    }
     if (ctx.arg.zPacPlt && !(hasValidPauthAbiCoreInfo ||
                              (features & GNU_PROPERTY_AARCH64_FEATURE_1_PAC))) {
       Warn(ctx) << f
