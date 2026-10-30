@@ -440,7 +440,7 @@ static void writeArm64eChainedBind(uint8_t *buf, const Symbol *sym,
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
   bind->ordinal = ordinal;
   bind->zero = 0;
-  bind->addend = inlineAddend;
+  bind->addend = inlineAddend & 0x7ffff; // signed 19 bits
   bind->next = 0;
   bind->bind = 1;
   bind->auth = 0;
@@ -2517,12 +2517,28 @@ bool ChainedFixupsSection::isNeeded() const {
   return true;
 }
 
+// Whether a bind keeps its addend in its own addend field rather than in the
+// imports table. Like ld64, the arm64e formats keep addends below 256 KiB in
+// magnitude there, but DYLD_CHAINED_PTR_ARM64E no negative ones, which ld64
+// rejects for that format.
+static bool fitsInlineAddend(int64_t addend) {
+  switch (config->chainedFixupsPointerFormat) {
+  case DYLD_CHAINED_PTR_64:
+    return isUInt<8>(addend);
+  case DYLD_CHAINED_PTR_ARM64E:
+    return addend >= 0 && addend < (1 << 18);
+  case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+    return addend > -(1 << 18) && addend < (1 << 18);
+  }
+  llvm_unreachable("unexpected chained fixup pointer format");
+}
+
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
                                       int64_t addend, bool forceOutline) {
   locations.emplace_back(isec, offset);
   int64_t outlineAddend =
-      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
+      (forceOutline || !fitsInlineAddend(addend)) ? addend : 0;
   auto [it, inserted] = bindings.insert(
       {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
 
@@ -2536,11 +2552,11 @@ void ChainedFixupsSection::addBinding(const Symbol *sym,
   }
 }
 
-std::pair<uint32_t, uint8_t>
+std::pair<uint32_t, int32_t>
 ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend,
                                  bool forceOutline) const {
   int64_t outlineAddend =
-      (forceOutline || addend < 0 || addend > 0xFF) ? addend : 0;
+      (forceOutline || !fitsInlineAddend(addend)) ? addend : 0;
   auto it = bindings.find({sym, outlineAddend});
   assert(it != bindings.end() && "binding not found in the imports table");
   if (outlineAddend == 0)
