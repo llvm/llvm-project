@@ -6683,7 +6683,7 @@ KnownFPClass llvm::computeKnownFPClass(const Value *V, FastMathFlags FMF,
 bool llvm::cannotBeNegativeZero(const Value *V, const SimplifyQuery &SQ,
                                 unsigned Depth) {
   KnownFPClass Known = computeKnownFPClass(V, fcNegZero, SQ, Depth);
-  return Known.isKnownNeverNegZero();
+  return Known.isKnownNever(fcNegZero);
 }
 
 bool llvm::cannotBeOrderedLessThanZero(const Value *V, const SimplifyQuery &SQ,
