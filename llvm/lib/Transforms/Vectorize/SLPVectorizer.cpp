@@ -26753,7 +26753,7 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     Value *LHS = Fr->getOperand(0);
     Value *RHS = Sh->getOperand(0);
     const unsigned VF = getNumElements(Sh->getType());
-    auto IsFrozenLane = [&](unsigned Lane) {
+    auto IsFrozenLane = [&, Sh = Sh](unsigned Lane) {
       return Sh->getMaskValue(Lane) >= static_cast<int>(VF);
     };
     SmallSetVector<InsertElementInst *, 4> Inserts;
