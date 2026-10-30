@@ -390,6 +390,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the OCaml bindings
 
+* The minimum supported OCaml version is now 4.08.0.
+
 * Removed the `size_of` and `align_of` functions. Create a constant based on
   the result of `DataLayout.abi_size` or `DataLayout.abi_align` instead.
 
