@@ -3152,8 +3152,13 @@ bool Sema::SubstTypeConstraint(
   if (TemplArgInfo) {
     InstArgs.setLAngleLoc(TemplArgInfo->LAngleLoc);
     InstArgs.setRAngleLoc(TemplArgInfo->RAngleLoc);
-    if (SubstTemplateArguments(TemplArgInfo->arguments(), TemplateArgs,
-                               InstArgs))
+    // Constraints on lambda arguments can depend on the substituted parameters.
+    TemplateInstantiator Instantiator(
+        TemplateInstantiator::ForConstraintSubstitution, *this, TemplateArgs,
+        TC->getConceptNameLoc(), DeclarationName());
+    if (Instantiator.TransformTemplateArguments(
+            TemplArgInfo->arguments().begin(), TemplArgInfo->arguments().end(),
+            InstArgs))
       return true;
   }
   return AttachTypeConstraint(

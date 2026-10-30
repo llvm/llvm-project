@@ -44,6 +44,7 @@ add_llvm_target(AVRCodeGen
   CodeGenTypes
   Core
   MC
+  Passes
   SelectionDAG
   Support
   Target

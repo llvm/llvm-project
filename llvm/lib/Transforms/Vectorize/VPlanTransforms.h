@@ -490,11 +490,6 @@ struct VPlanTransforms {
       bool RequiresScalarEpilogue, VPValue *Step,
       std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
 
-  /// Materialize the backedge-taken count to be computed explicitly using
-  /// VPInstructions.
-  static void materializeBackedgeTakenCount(VPlan &Plan,
-                                            VPBasicBlock *VectorPH);
-
   /// Add explicit Unpack recipes to extract scalars from vectors as needed.
   static void materializeUnpacks(VPlan &Plan);
 

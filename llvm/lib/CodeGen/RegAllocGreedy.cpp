@@ -3082,7 +3082,10 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
-  if (CompactSlotIndexes) {
+  bool Compact = CompactSlotIndexes.getNumOccurrences()
+                     ? CompactSlotIndexes
+                     : TRI->shouldCompactSlotIndexes(*MF);
+  if (Compact) {
     // Compaction unlinks what it erases; this is what makes that safe.
     LIS->removeUnreferencedIntervals();
     Indexes->compactIndexes();
