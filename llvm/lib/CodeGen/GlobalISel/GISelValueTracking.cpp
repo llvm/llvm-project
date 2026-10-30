@@ -1362,26 +1362,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   if (auto Cst = GFConstant::getConstant(R, MRI)) {
     switch (Cst->getKind()) {
     case GFConstant::GFConstantKind::Scalar: {
-      auto APF = Cst->getScalarValue();
-      Known.setKnownFPClasses(APF.classify());
-      Known.setSignBit(APF.isNegative());
+      Known = KnownFPClass(Cst->getScalarValue());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
-      Known.setKnownFPClasses(fcNone);
-      bool SignBitAllZero = true;
-      bool SignBitAllOne = true;
+      Known = KnownFPClass::getEmpty();
 
-      for (auto C : *Cst) {
-        Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
-        if (C.isNegative())
-          SignBitAllZero = false;
-        else
-          SignBitAllOne = false;
-      }
-
-      if (SignBitAllOne != SignBitAllZero)
-        Known.setSignBit(SignBitAllOne);
+      for (const APFloat &C : *Cst)
+        Known |= KnownFPClass(C);
 
       break;
     }
@@ -2310,7 +2298,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     // Do we need anymore elements from Vec?
@@ -2349,7 +2337,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.setKnownFPClasses(fcNone);
+      Known = KnownFPClass::getEmpty();
     }
 
     if (!!DemandedRHS) {
