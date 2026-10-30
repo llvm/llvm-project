@@ -83,7 +83,7 @@ int getpw(unsigned int uid, char *buf);
 
 void test_getpw(void) {
   char buff[1024];
-  getpw(2, buff); // expected-warning{{The getpw() function is dangerous as it may overflow the provided buffer. It is obsoleted by getpwuid()}}
+  getpw(2, buff); // expected-warning{{The getpw() function is dangerous as it may overflow the provided buffer; it is obsoleted by getpwuid()}}
 }
 
 // CWE-273: Failure to Check Whether Privileges Were Dropped Successfully
@@ -175,12 +175,12 @@ void test_strcpy(void) {
   char x[4];
   char *y;
 
-  strcpy(x, y); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
+  strcpy(x, y); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer; replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'; CWE-119}}
 }
 
 void test_strcpy_2(void) {
   char x[4];
-  strcpy(x, "abcd"); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'. CWE-119}}
+  strcpy(x, "abcd"); //expected-warning{{Call to function 'strcpy' is insecure as it does not provide bounding of the memory buffer; replace unbounded copy functions with analogous functions that support length arguments such as 'strlcpy'; CWE-119}}
 }
 
 void test_strcpy_safe(void) {
@@ -214,7 +214,7 @@ void test_strcat(void) {
   char x[4];
   char *y;
 
-  strcat(x, y); //expected-warning{{Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer. Replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'. CWE-119}}
+  strcat(x, y); //expected-warning{{Call to function 'strcat' is insecure as it does not provide bounding of the memory buffer; replace unbounded copy functions with analogous functions that support length arguments such as 'strlcat'; CWE-119}}
 }
 
 //===----------------------------------------------------------------------===
