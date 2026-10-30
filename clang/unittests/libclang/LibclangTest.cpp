@@ -78,9 +78,18 @@ struct TestVFO {
     clang_VirtualFileOverlay_dispose(VFO);
   }
 };
+
+class VirtualFileOverlayTest : public ::testing::Test {
+protected:
+  void SetUp() override {
+#ifdef _WIN32
+    GTEST_SKIP() << "VirtualFileOverlay tests assume POSIX paths";
+#endif
+  }
+};
 }
 
-TEST(libclang, VirtualFileOverlay_Basic) {
+TEST_F(VirtualFileOverlayTest, Basic) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -102,7 +111,7 @@ TEST(libclang, VirtualFileOverlay_Basic) {
   T.map("/path/virtual/foo.h", "/real/foo.h");
 }
 
-TEST(libclang, VirtualFileOverlay_Unicode) {
+TEST_F(VirtualFileOverlayTest, Unicode) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -124,13 +133,13 @@ TEST(libclang, VirtualFileOverlay_Unicode) {
   T.map("/path/♫/☂.h", "/real/☂.h");
 }
 
-TEST(libclang, VirtualFileOverlay_InvalidArgs) {
+TEST_F(VirtualFileOverlayTest, InvalidArgs) {
   TestVFO T(nullptr);
   T.mapError("/path/./virtual/../foo.h", "/real/foo.h",
              CXError_InvalidArguments);
 }
 
-TEST(libclang, VirtualFileOverlay_RemapDirectories) {
+TEST_F(VirtualFileOverlayTest, RemapDirectories) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -182,7 +191,7 @@ TEST(libclang, VirtualFileOverlay_RemapDirectories) {
   T.map("/path/virtual/dir/in/subdir/foo4.h", "/real/foo4.h");
 }
 
-TEST(libclang, VirtualFileOverlay_CaseInsensitive) {
+TEST_F(VirtualFileOverlayTest, CaseInsensitive) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -206,7 +215,7 @@ TEST(libclang, VirtualFileOverlay_CaseInsensitive) {
   clang_VirtualFileOverlay_setCaseSensitivity(T.VFO, false);
 }
 
-TEST(libclang, VirtualFileOverlay_SharedPrefix) {
+TEST_F(VirtualFileOverlayTest, SharedPrefix) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -258,7 +267,7 @@ TEST(libclang, VirtualFileOverlay_SharedPrefix) {
   T.map("/path/foobarbaz.h", "/real/foobarbaz.h");
 }
 
-TEST(libclang, VirtualFileOverlay_AdjacentDirectory) {
+TEST_F(VirtualFileOverlayTest, AdjacentDirectory) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -304,7 +313,7 @@ TEST(libclang, VirtualFileOverlay_AdjacentDirectory) {
   T.map("/path/dir2/baz.h", "/real/baz.h");
 }
 
-TEST(libclang, VirtualFileOverlay_TopLevel) {
+TEST_F(VirtualFileOverlayTest, TopLevel) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"
@@ -326,7 +335,7 @@ TEST(libclang, VirtualFileOverlay_TopLevel) {
   T.map("/foo.h", "/real/foo.h");
 }
 
-TEST(libclang, VirtualFileOverlay_Empty) {
+TEST_F(VirtualFileOverlayTest, Empty) {
   const char *contents =
       "{\n"
       "  'version': 0,\n"

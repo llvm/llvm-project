@@ -75,6 +75,23 @@ function(add_clang_unittest test_name)
   set_property(GLOBAL APPEND PROPERTY CLANG_UNITTEST_LLVM_COMPONENTS ${ARG_LLVM_COMPONENTS})
 endfunction()
 
+# copy_libclang_dll_to_unittest(test_name)
+#
+# Windows has no rpath. lit injects the bin directory into PATH when running
+# the unit tests, but running a test executable directly requires libclang.dll
+# to sit next to it.
+function(copy_libclang_dll_to_unittest test_name)
+  if(NOT WIN32)
+    return()
+  endif()
+  get_target_property(libclang_type libclang TYPE)
+  if(libclang_type STREQUAL "SHARED_LIBRARY")
+    add_custom_command(TARGET ${test_name} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+              $<TARGET_FILE:libclang> $<TARGET_FILE_DIR:${test_name}>)
+  endif()
+endfunction()
+
 add_subdirectory(Basic)
 add_subdirectory(Lex)
 add_subdirectory(Parse)
@@ -97,9 +114,7 @@ add_subdirectory(CodeGen)
 if(HAVE_CLANG_REPL_SUPPORT)
   add_subdirectory(Interpreter)
 endif()
-# FIXME: libclang unit tests are disabled on Windows due
-# to failures, mostly in libclang.VirtualFileOverlay_*.
-if(NOT WIN32 AND CLANG_TOOL_LIBCLANG_BUILD) 
+if(CLANG_TOOL_LIBCLANG_BUILD)
   add_subdirectory(libclang)
 endif()
 add_subdirectory(DirectoryWatcher)
@@ -128,6 +143,9 @@ add_distinct_clang_unittest(AllClangUnitTests
   LLVM_COMPONENTS
   ${LLVM_COMPONENTS}
 )
+if(CLANG_TOOL_LIBCLANG_BUILD)
+  copy_libclang_dll_to_unittest(AllClangUnitTests)
+endif()
 
 # The Tooling library has some internal headers. Make those work. If we like
 # the merged clang unit test binary, we can update the include paths and make
