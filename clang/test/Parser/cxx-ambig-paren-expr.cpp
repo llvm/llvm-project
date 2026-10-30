@@ -70,3 +70,32 @@ void test(int i) {
     return;
 }
 
+namespace GH221890 {
+template <class T> struct S {}; // expected-note 2 {{'S' declared here}}
+struct Plain {}; // expected-note {{'Plain' declared here}}
+namespace foo {}
+namespace ns1 { template <class T> struct Q {}; } // expected-note {{'ns1::Q' declared here}}
+namespace ba { template <class T> struct T2 {}; struct P {}; } // expected-note 2 {{'ba' declared here}}
+namespace bar {}
+
+// Typo correction dropped or replaced the qualifier while the parser was
+// tentatively deciding whether the parenthesized construct is a type-id, and
+// the tokens of the original qualifier resurfaced after backtracking.
+int a = (void(foo::S<int>)); // expected-error {{no template named 'S' in namespace 'GH221890::foo'; did you mean simply 'S'?}} \
+                             // expected-error {{expected '(' for function-style cast or type construction}}
+int b = (void(foo::Q<int>)); // expected-error {{no template named 'Q' in namespace 'GH221890::foo'; did you mean 'ns1::Q'?}} \
+                             // expected-error {{expected '(' for function-style cast or type construction}}
+int c = (void(bar::ba::T2<int>)); // expected-error {{no member named 'ba' in namespace 'GH221890::bar'; did you mean simply 'ba'?}} \
+                                  // expected-error {{expected '(' for function-style cast or type construction}}
+int d = (void(bar::ba::P)); // expected-error {{no member named 'ba' in namespace 'GH221890::bar'; did you mean simply 'ba'?}} \
+                            // expected-error {{expected '(' for function-style cast or type construction}}
+void f() {
+  void(foo::S<int>); // expected-error {{no template named 'S' in namespace 'GH221890::foo'; did you mean simply 'S'?}} \
+                     // expected-error {{expected '(' for function-style cast or type construction}}
+}
+
+// The same constructs without a typo, and with a non-template name.
+int e = (void(S<int>)); // expected-error {{expected '(' for function-style cast or type construction}}
+int g = (void(foo::Plain)); // expected-error {{no member named 'Plain' in namespace 'GH221890::foo'; did you mean simply 'Plain'?}}
+}
+

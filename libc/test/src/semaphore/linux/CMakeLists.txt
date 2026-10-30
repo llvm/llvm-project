@@ -1,7 +1,7 @@
 add_libc_test(
   semaphore_test
   SUITE
-    libc_semaphore_unittests
+    libc-semaphore-tests
   SRCS
     semaphore_test.cpp
   DEPENDS

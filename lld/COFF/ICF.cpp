@@ -279,9 +279,16 @@ void ICF::run() {
 
   // From now on, sections in Chunks are ordered so that sections in
   // the same group are consecutive in the vector.
-  llvm::stable_sort(chunks, [](const SectionChunk *a, const SectionChunk *b) {
-    return a->eqClass[0] < b->eqClass[0];
+  SmallVector<uint64_t, 0> keys(chunks.size());
+  parallelFor(0, chunks.size(), [&](size_t i) {
+    keys[i] = uint64_t(chunks[i]->eqClass[0]) << 32 | i;
   });
+  parallelSort(keys.begin(), keys.end());
+  std::vector<SectionChunk *> sorted;
+  sorted.reserve(keys.size());
+  for (uint64_t k : keys)
+    sorted.push_back(chunks[uint32_t(k)]);
+  chunks = std::move(sorted);
 
   // Compare static contents and assign unique IDs for each static content.
   forEachClass([&](size_t begin, size_t end) { segregate<true>(begin, end); });

@@ -318,6 +318,18 @@ test-tools)
     step "Compare benchmark results" # perform a no-op comparison, just to run the tool
     "${MONOREPO_ROOT}/libcxx/utils/compare-benchmarks" "${BUILD_DIR}/results.lnt" "${BUILD_DIR}/results.lnt"
 
+    step "Create a LNT report from the benchmark results" # just to run the tool
+    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/create-lnt-report" \
+        --git-repo "${MONOREPO_ROOT}" \
+        --input "${BUILD_DIR}/results.lnt" \
+        --output "${BUILD_DIR}/results.json" \
+        --machine test-tools \
+        --commit HEAD \
+        --test-suite-commit HEAD \
+        --compiler "${CXX}" \
+        --lit-build-dir "${BUILD_DIR}/benchmarks" \
+        -- --param optimization=speed --param "libcxx_installation=${INSTALL_DIR}"
+
     step "Testing the selection of anchor commits"
     # Basic test with a known past window
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/select-anchor-commits" \
@@ -331,8 +343,7 @@ d179176f3e3505044ad14be19ccb3459a70206a9
 EOF
     diff "${BUILD_DIR}/anchors-expected.txt" "${BUILD_DIR}/anchors.txt"
 
-    # Exercise LNT tooling with --dry-run. Doing a real run is time consuming and would
-    # submit to a LNT instance, which we obviously don't want.
+    # Exercise LNT tooling with --dry-run, since doing a real run is time consuming.
     step "Run benchmarks using the LNT flow (dry-run)"
     "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks" \
         --dry-run -vv \
@@ -345,13 +356,6 @@ EOF
         --filter hash.bench.cpp \
         --output "${BUILD_DIR}/report.json" \
         -- --param optimization=speed --param "libcxx_installation=${INSTALL_DIR}"
-
-    step "Submit a LNT report (dry-run)"
-    "${MONOREPO_ROOT}/libcxx/utils/ci/lnt/submit-benchmarks" \
-        --dry-run -vv \
-        --lnt-url http://localhost:8000 \
-        --test-suite libcxx \
-        "${BUILD_DIR}/report.json"
 ;;
 #
 # Various Standard modes
@@ -485,7 +489,16 @@ bootstrapping-build)
           -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
           -DCOMPILER_RT_INCLUDE_TESTS=OFF \
           -DLLVM_ENABLE_ASSERTIONS=ON \
+          -DLLDB_ENABLE_PYTHON=ON \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests"
+
+    step "Install clang and LLDB to a fake location"
+    # lldb-server is a separate install component, but LLDB needs it to launch
+    # a process on Linux.
+    ${NINJA} -vC "${BUILD_DIR}" install-clang install-lldb install-lldb-server
+
+    # TODO: Find a cleaner way to get the libc++ test suite to grab the just-built LLDB
+    export PATH="${PATH}:${INSTALL_DIR}/bin"
 
     step "Running the libc++ and libc++abi tests"
     ${NINJA} -vC "${BUILD_DIR}" check-runtimes
@@ -717,12 +730,17 @@ apple-system|apple-system-hardened)
 ;;
 aarch64)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake"
+    # The ARM builders' preinstalled toolchains do not provide a discoverable
+    # clang-scan-deps. Disable automatic module scanning for these jobs.
+    # See https://github.com/llvm/llvm-project/issues/232946.
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 aarch64-no-exceptions)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AArch64.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
                    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
                    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF
     check-runtimes
@@ -730,32 +748,38 @@ aarch64-no-exceptions)
 # Aka Armv8 32 bit
 armv8)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Arm.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 armv8-no-exceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-no-exceptions.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv8Thumb-no-exceptions.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 # Armv7 32 bit. One building Arm only one Thumb only code.
 armv7)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Arm.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 armv7-no-exceptions)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7Thumb-no-exceptions.cmake" \
+                   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
     check-runtimes
 ;;
 armv7m-picolibc)
     test-armv7m-picolibc \
-        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake"
+        -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
 ;;
 armv7m-picolibc-no-exceptions)
     test-armv7m-picolibc \
         -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Armv7M-picolibc.cmake" \
+        -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
         -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
         -DLIBCXXABI_ENABLE_STATIC_UNWINDER=OFF \
         -DLIBCXX_ENABLE_EXCEPTIONS=OFF \

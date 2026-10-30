@@ -40,10 +40,13 @@ class PredIteratorCache;
 class ScalarEvolution;
 class SCEV;
 class SCEVExpander;
+class SCEVAddRecExpr;
 class TargetLibraryInfo;
 class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
+class ConditionalInductionDescriptor;
+
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
     RuntimePointerCheck;
@@ -701,6 +704,24 @@ struct IVConditionInfo {
 LLVM_ABI std::optional<IVConditionInfo>
 hasPartialIVCondition(const Loop &L, unsigned MSSAThreshold,
                       const MemorySSA &MSSA, AAResults &AA);
+
+/// Collect pointer values used by loads and stores whose addresses are derived
+/// from the conditional induction described by \p CondID. Add each pointer and
+/// an approximate SCEV expression for it to \p CompressedPtrs. The expression
+/// assumes that the conditional induction is incremented on every iteration.
+///
+/// Except for its backedge update, every value derived from \p CondID must be
+/// used only to compute an in-loop load/store address. The following
+/// restrictions also apply:
+/// - A value derived from \p CondID cannot be stored.
+/// - The allocation size of each access type must equal its type size. For
+///   example, types smaller than a byte, such as `i4`, are not supported.
+/// - The step of each pointer add recurrence must equal the access type's
+///   allocation size.
+/// Return true otherwise.
+LLVM_ABI bool collectCompressedPtrs(
+    DenseMap<Value *, const SCEVAddRecExpr *> &CompressedPtrs, const Loop &L,
+    const ConditionalInductionDescriptor &CondID, ScalarEvolution &SE);
 
 } // end namespace llvm
 

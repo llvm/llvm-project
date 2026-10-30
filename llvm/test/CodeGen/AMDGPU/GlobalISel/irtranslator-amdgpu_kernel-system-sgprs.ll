@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgpu8.03-amd-amdhsa -passes=amdgpu-attributor < %s | llc -global-isel -mtriple=amdgpu8.03-amd-amdhsa -amdgpu-ir-lower-kernel-arguments=0 -stop-after=irtranslator -o - | FileCheck -check-prefix=HSA %s
+; RUN: opt -mtriple=amdgpu8.03-amd-amdhsa -passes=amdgpu-attributor < %s | llc -global-isel -mtriple=amdgpu8.03-amd-amdhsa -amdgpu-ir-lower-kernel-arguments=0 -stop-after=ir-translator -o - | FileCheck -check-prefix=HSA %s
 
 ; HSA-LABEL: name: default_kernel
 ; HSA: liveins:

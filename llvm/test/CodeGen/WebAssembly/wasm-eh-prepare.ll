@@ -276,6 +276,9 @@ declare void @_ZSt9terminatev()
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"wasm"}
+
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32 immarg)
 ; CHECK-DAG: declare ptr @llvm.wasm.lsda()
 ; CHECK-DAG: declare i32 @__gxx_wasm_personality_v0(ptr)

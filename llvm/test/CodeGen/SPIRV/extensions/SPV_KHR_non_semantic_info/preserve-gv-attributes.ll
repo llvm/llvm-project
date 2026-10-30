@@ -1,5 +1,4 @@
-; Adapted from the SPIRV-LLVM-Translator --spirv-preserve-auxdata forward-path
-; tests. Global-variable attributes are emitted as NonSemantic.AuxData records.
+; Global-variable attributes are emitted as NonSemantic.AuxData records.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \

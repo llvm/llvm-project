@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 //
 #include "X86.h"
+#include "X86TargetMachine.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -59,10 +60,6 @@ static bool isV256I32Ty(Type *Ty) {
   return false;
 }
 #endif
-
-static cl::opt<bool>
-    X86ScalarizeAMX("enable-x86-scalar-amx", cl::init(false), cl::Hidden,
-                    cl::desc("X86: enable AMX scalarizition."));
 
 namespace {
 class X86LowerAMXIntrinsics {
@@ -511,7 +508,7 @@ X86LowerAMXIntrinsics::lowerTileDP(Instruction *TileDP) {
                                             KDWord, C, A, B);
   // we cannot assume there always be bitcast after tiledpbssd. So we need to
   // insert one bitcast as required
-  Builder.SetInsertPoint(End, End->getFirstNonPHIIt());
+  Builder.SetInsertPoint(End->getFirstNonPHIIt());
   Value *ResAMX =
       Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
   // Delete TileDP intrinsic and do some clean-up.
@@ -555,7 +552,7 @@ bool X86LowerAMXIntrinsics::lowerTileLoadStore(Instruction *TileLoadStore) {
   if (IsTileLoad) {
     // we cannot assume there always be bitcast after tileload. So we need to
     // insert one bitcast as required
-    Builder.SetInsertPoint(End, End->getFirstNonPHIIt());
+    Builder.SetInsertPoint(End->getFirstNonPHIIt());
     Value *ResAMX =
         Builder.CreateBitCast(ResVec, Type::getX86_AMXTy(Builder.getContext()));
     // Delete tileloadd6 intrinsic and do some clean-up
@@ -649,8 +646,11 @@ bool X86LowerAMXIntrinsics::visit() {
 
 namespace {
 bool shouldRunLowerAMXIntrinsics(const Function &F, const TargetMachine *TM) {
-  return X86ScalarizeAMX && (F.hasFnAttribute(Attribute::OptimizeNone) ||
-                             TM->getOptLevel() == CodeGenOptLevel::None);
+  const X86Options &CLOpts =
+      static_cast<const X86TargetMachine *>(TM)->getCLOpts();
+  return CLOpts.enable_x86_scalar_amx &&
+         (F.hasFnAttribute(Attribute::OptimizeNone) ||
+          TM->getOptLevel() == CodeGenOptLevel::None);
 }
 
 bool runLowerAMXIntrinsics(Function &F, DominatorTree *DT, LoopInfo *LI) {

@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // Delay cuf.alloc of descriptor (box) types from function entry to just before
-// their first use, possibly in a later block that dominates every use. This
+// their first use, possibly in a later block that dominates every use. The
+// target block is never on a CFG cycle, so the alloc runs at most once. This
 // defers cudaMallocManaged calls so that users can call cudaSetDevice before
 // any CUDA context is created.
 //
@@ -19,8 +20,10 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 
@@ -48,13 +51,15 @@ static fir::CoordinateOp getHostAssocTupleSlot(fir::StoreOp storeOp,
 /// Find the point before which the cuf.alloc group should be placed: the
 /// earliest use in the block that dominates all uses, or that block's
 /// terminator if it holds no use itself. Uses in nested regions resolve to
-/// their enclosing top-level op.
+/// their enclosing top-level op. The block is never one of \p cyclicBlocks,
+/// the blocks on a CFG cycle, since an alloc there would run on every trip.
 ///
 /// Host association stores go to \p hostAssocStores and sink with the group
 /// instead of constraining it; the tuple's readers constrain it instead.
 static mlir::Operation *
 findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
                 mlir::DominanceInfo &domInfo,
+                const llvm::SmallPtrSetImpl<mlir::Block *> &cyclicBlocks,
                 llvm::SmallVectorImpl<fir::StoreOp> &hostAssocStores) {
   mlir::Region *funcRegion = entryBlock->getParent();
 
@@ -108,6 +113,18 @@ findDelayTarget(fir::DeclareOp declareOp, mlir::Block *entryBlock,
       return nullptr;
   }
 
+  // A block on a CFG cycle (e.g. the header of a DO loop that lowered to
+  // branches because it contains a RETURN) executes once per trip, and the
+  // alloc would replace the descriptor each time. Climb the dominator tree to
+  // the nearest block that is not on a cycle. The entry block has no
+  // predecessors, so it is never on a cycle and the climb always ends.
+  while (cyclicBlocks.contains(common)) {
+    mlir::DominanceInfoNode *node = domInfo.getNode(common);
+    if (!node || !node->getIDom())
+      return nullptr;
+    common = node->getIDom()->getBlock();
+  }
+
   mlir::Operation *earliest = nullptr;
   for (mlir::Operation *use : uses)
     if (use->getBlock() == common &&
@@ -133,6 +150,15 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
       if (auto allocOp = mlir::dyn_cast<cuf::AllocOp>(op))
         if (mlir::isa<fir::BaseBoxType>(allocOp.getInType()))
           boxAllocOps.push_back(allocOp);
+    if (boxAllocOps.empty())
+      return;
+
+    // Blocks on a CFG cycle, natural loop or not: every block of a strongly
+    // connected component with more than one block or with a self edge.
+    llvm::SmallPtrSet<mlir::Block *, 8> cyclicBlocks;
+    for (auto it = llvm::scc_begin(&func.getBody()); !it.isAtEnd(); ++it)
+      if (it.hasCycle())
+        cyclicBlocks.insert(it->begin(), it->end());
 
     for (cuf::AllocOp allocOp : boxAllocOps) {
       // Find the fir.declare and fir.store using this cuf.alloc; bail on any
@@ -152,8 +178,8 @@ struct CUFAllocDelay : public fir::impl::CUFAllocDelayBase<CUFAllocDelay> {
         continue;
 
       llvm::SmallVector<fir::StoreOp> hostAssocStores;
-      mlir::Operation *delayTarget =
-          findDelayTarget(declareOp, &entryBlock, domInfo, hostAssocStores);
+      mlir::Operation *delayTarget = findDelayTarget(
+          declareOp, &entryBlock, domInfo, cyclicBlocks, hostAssocStores);
       if (!delayTarget)
         continue;
 

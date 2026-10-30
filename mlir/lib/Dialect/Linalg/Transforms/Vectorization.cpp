@@ -66,7 +66,8 @@ vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
 ///   * inferred from the static dims in the input and output tensors.
 /// Bails out if:
 ///   * vector sizes are not user-provided, and
-///   * at least one dim is dynamic (in both the input and output tensors).
+///   * at least one dim is dynamic (in both the input and output tensors),
+/// or if the strides are not 1.
 ///
 /// Before:
 ///     !t_in_type = tensor<1x2x3xf32>
@@ -693,8 +694,13 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
                                       ArrayRef<bool> dimsToMask) {
   auto maybeKind = getCombinerOpKind(reduceOp);
   assert(maybeKind && "Failed precondition: could not get reduction kind");
-  return vector::MultiDimReductionOp::create(
-      b, reduceOp->getLoc(), valueToReduce, acc, dimsToMask, *maybeKind);
+  // Keep the combiner's fast-math flags on the reduction.
+  arith::FastMathFlags fastMathFlags = arith::FastMathFlags::none;
+  if (auto fmfOp = dyn_cast<arith::ArithFastMathInterface>(reduceOp))
+    fastMathFlags = fmfOp.getFastMathFlagsAttr().getValue();
+  return vector::MultiDimReductionOp::create(b, reduceOp->getLoc(),
+                                             valueToReduce, acc, dimsToMask,
+                                             *maybeKind, fastMathFlags);
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
@@ -1992,6 +1998,13 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   if (!VectorType::isValidElementType(sourceType.getElementType()))
     return failure();
 
+  // The write is a vector.transfer_write at the slice offsets, which cannot
+  // express a stride.
+  if (!sliceOp.hasUnitStride()) {
+    LDBG() << "Only unit strides are supported";
+    return failure();
+  }
+
   // Get the pad value.
   // TransferReadOp (which is used to vectorize InsertSliceOp), requires a
   // scalar padding value. Note that:
@@ -3071,9 +3084,20 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
   // Create write
   auto writeIndices =
       getValueOrCreateConstantIndexOp(rewriter, loc, sliceOp.getMixedOffsets());
-  Operation *write =
-      vector::createWriteOrMaskedWrite(rewriter, loc, read, sliceOp.getDest(),
-                                       writeIndices, inputVectorSizes.empty());
+  // For a rank-reducing slice the vector need not cover the trailing result
+  // dims, so state which result dim each vector dim writes to.
+  AffineMap writeMap;
+  if (sourceType.getRank() != resultType.getRank()) {
+    SmallVector<AffineExpr> exprs;
+    for (int64_t resultDim : resultDimsForSourceDims)
+      exprs.push_back(rewriter.getAffineDimExpr(resultDim));
+    writeMap = AffineMap::get(resultType.getRank(), /*symbolCount=*/0, exprs,
+                              rewriter.getContext());
+  }
+
+  Operation *write = vector::createWriteOrMaskedWrite(
+      rewriter, loc, read, sliceOp.getDest(), writeIndices,
+      inputVectorSizes.empty(), writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
@@ -4230,7 +4254,7 @@ static FailureOr<Operation *> vectorizeConvolution(
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {

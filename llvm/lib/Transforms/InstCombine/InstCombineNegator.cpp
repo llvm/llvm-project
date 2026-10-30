@@ -78,9 +78,9 @@ STATISTIC(NegatorNumInstructionsNegatedSuccess,
 DEBUG_COUNTER(NegatorCounter, "instcombine-negator",
               "Controls Negator transformations in InstCombine pass");
 
-Negator::Negator(LLVMContext &C, const DataLayout &DL, const DominatorTree &DT_,
-                 bool IsTrulyNegation_, unsigned MaxDepth)
-    : Builder(C, TargetFolder(DL),
+Negator::Negator(Module &M, const DominatorTree &DT_, bool IsTrulyNegation_,
+                 unsigned MaxDepth)
+    : Builder(M, TargetFolder(M.getDataLayout()),
               IRBuilderCallbackInserter([&](Instruction *I) {
                 ++NegatorNumInstructionsCreatedTotal;
                 NewInstructions.push_back(I);
@@ -548,8 +548,8 @@ std::array<Value *, 2> Negator::getSortedOperandsOfBinOp(Instruction *I) {
       !DebugCounter::shouldExecute(NegatorCounter))
     return nullptr;
 
-  Negator N(Root->getContext(), IC.getDataLayout(), IC.getDominatorTree(),
-            LHSIsZero, IC.CLOpts.negator_max_depth);
+  Negator N(IC.getModule(), IC.getDominatorTree(), LHSIsZero,
+            IC.CLOpts.negator_max_depth);
   std::optional<Result> Res = N.run(Root, IsNSW);
   if (!Res) { // Negation failed.
     LLVM_DEBUG(dbgs() << "Negator: failed to sink negation into " << *Root

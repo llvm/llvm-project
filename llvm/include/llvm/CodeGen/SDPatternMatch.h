@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/TypeSize.h"
 
 #include <type_traits>
 
@@ -100,6 +101,10 @@ struct Opcode_match {
   bool match(SDValue N) { return N->getOpcode() == Opcode; }
 };
 
+template <unsigned Opcode> struct FixedOpcode_match {
+  bool match(SDValue N) { return N->getOpcode() == Opcode; }
+};
+
 // === Patterns combinators ===
 template <typename... Preds> struct And {
   bool match(SDValue N) { return true; }
@@ -150,6 +155,10 @@ template <typename... Preds> Or<Preds...> m_AnyOf(const Preds &...preds) {
 
 template <typename... Preds> auto m_NoneOf(const Preds &...preds) {
   return m_Unless(m_AnyOf(preds...));
+}
+
+template <unsigned Opcode> inline auto m_SpecificOpc() {
+  return FixedOpcode_match<Opcode>();
 }
 
 inline Opcode_match m_SpecificOpc(unsigned Opcode) {
@@ -391,6 +400,12 @@ struct Operands_match<OpIdx, OpndPred, OpndPreds...>
     return false;
   }
 };
+
+template <unsigned Opcode, typename... OpndPreds>
+auto m_Node(const OpndPreds &...Preds) {
+  return m_AllOf(m_SpecificOpc<Opcode>(),
+                 Operands_match<0, OpndPreds...>(Preds...));
+}
 
 template <typename... OpndPreds>
 auto m_Node(unsigned Opcode, const OpndPreds &...preds) {
@@ -1168,6 +1183,11 @@ template <typename Opnd> inline auto m_SExtLike(const Opnd &Op) {
   return m_AnyOf(m_SExt(Op), m_NNegZExt(Op));
 }
 
+/// Match a zext or sext
+template <typename Opnd> inline auto m_ZExtOrSExt(const Opnd &Op) {
+  return m_AnyOf(m_ZExt(Op), m_SExt(Op));
+}
+
 /// Match a aext or identity
 /// Allows to peek through optional extensions
 template <typename Opnd>
@@ -1361,12 +1381,12 @@ struct Zero_match {
   bool match(SDValue N) const { return isZeroOrZeroSplat(N, AllowUndefs); }
 };
 
-struct Ones_match {
+struct One_match {
   bool AllowUndefs;
 
-  Ones_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
+  One_match(bool AllowUndefs) : AllowUndefs(AllowUndefs) {}
 
-  bool match(SDValue N) { return isOnesOrOnesSplat(N, AllowUndefs); }
+  bool match(SDValue N) { return isOneOrOneSplat(N, AllowUndefs); }
 };
 
 struct AllOnes_match {
@@ -1377,8 +1397,8 @@ struct AllOnes_match {
   bool match(SDValue N) { return isAllOnesOrAllOnesSplat(N, AllowUndefs); }
 };
 
-inline Ones_match m_One(bool AllowUndefs = false) {
-  return Ones_match(AllowUndefs);
+inline One_match m_One(bool AllowUndefs = false) {
+  return One_match(AllowUndefs);
 }
 inline Zero_match m_Zero(bool AllowUndefs = false) {
   return Zero_match(AllowUndefs);
@@ -1416,6 +1436,37 @@ inline BinaryOpc_match<Zero_match, ValTy, false> m_Neg(const ValTy &V) {
 template <typename ValTy>
 inline BinaryOpc_match<ValTy, AllOnes_match, true> m_Not(const ValTy &V) {
   return m_Xor(V, m_AllOnes());
+}
+
+template <typename TS> struct TypeSize_match {
+  TS &BindVal;
+
+  explicit TypeSize_match(TS &V) : BindVal(V) {}
+
+  bool match(SDValue N) {
+    bool Scalable;
+    APInt KnownMin;
+
+    if (sd_match(N, m_VScale(m_ConstInt(KnownMin))))
+      Scalable = true;
+    else if (sd_match(N, m_ConstInt(KnownMin)))
+      Scalable = false;
+    else
+      return false;
+
+    if (KnownMin.isNegative() ||
+        !KnownMin.isIntN(std::numeric_limits<typename TS::ScalarTy>::digits))
+      return false;
+
+    BindVal = TS::get(KnownMin.getZExtValue(), Scalable);
+    return true;
+  }
+};
+
+/// Match any integer constant or constant multiple of VSCALE that can be
+/// represented using ElementCount.
+inline TypeSize_match<ElementCount> m_ElementCount(ElementCount &V) {
+  return TypeSize_match<ElementCount>(V);
 }
 
 template <unsigned IntrinsicId, typename... OpndPreds>

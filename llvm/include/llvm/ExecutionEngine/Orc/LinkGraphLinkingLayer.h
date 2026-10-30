@@ -32,11 +32,6 @@
 class LinkGraphLinkingLayerTests;
 
 namespace llvm {
-
-namespace jitlink {
-class EHFrameRegistrar;
-} // namespace jitlink
-
 namespace orc {
 
 /// LinkGraphLinkingLayer links LinkGraphs into the Executor using JITLink.

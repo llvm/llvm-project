@@ -17,10 +17,10 @@
 ! CHECK-LABEL:   func.func @_QPreduction_ior(
 ! CHECK-SAME:                                %[[VAL_0:.*]]: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "y"}) {
 ! CHECK:           %[[VAL_1:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFreduction_iorEi"}>
-! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFreduction_iorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] uniq_name("_QFreduction_iorEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           %[[VAL_3:.*]] = fir.alloca i32 <{bindc_name = "x", uniq_name = "_QFreduction_iorEx"}>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFreduction_iorEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QFreduction_iorEy"} : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] uniq_name("_QFreduction_iorEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QFreduction_iorEy") : (!fir.box<!fir.array<?xi32>>, !fir.dscope) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 ! CHECK:           hlfir.assign %[[VAL_6]] to %[[VAL_4]]#0 : i32, !fir.ref<i32>
 ! CHECK:           omp.parallel
@@ -29,8 +29,8 @@
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@{{.*}} %{{.*}}#0 -> %[[VAL_7:.*]] : !fir.ref<i32>) reduction(@ior_i32 %[[VAL_4]]#0 -> %[[VAL_12:.*]] : !fir.ref<i32>) {
 ! CHECK-NEXT:          omp.loop_nest (%[[VAL_13:.*]]) : i32 = (%[[VAL_9]]) to (%[[VAL_10]]) inclusive step (%[[VAL_11]]) {
-! CHECK:                 %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] {uniq_name = "_QFreduction_iorEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] {uniq_name = "_QFreduction_iorEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] uniq_name("_QFreduction_iorEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]] uniq_name("_QFreduction_iorEx") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 hlfir.assign %[[VAL_13]] to %[[VAL_8]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 %[[VAL_15:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 ! CHECK:                 %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> i64

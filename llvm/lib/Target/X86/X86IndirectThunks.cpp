@@ -125,7 +125,7 @@ bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
 }
 
 void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
-  bool Is64Bit = MF.getTarget().getTargetTriple().isX86_64();
+  bool Is64Bit = MF.getFunction().getParent()->getTargetTriple().isX86_64();
   Register ThunkReg;
   if (Is64Bit) {
     assert(MF.getName() == "__llvm_retpoline_r11" &&

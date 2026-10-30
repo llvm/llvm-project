@@ -195,8 +195,9 @@ using V = U<S<T>>;
 
 namespace GH202117 {
 template<template<decltype(foo())> typename T> struct S {}; // expected-error {{use of undeclared identifier 'foo'}}
-template<int*> struct P;
-S<P> s;
+template<int*> struct P; // expected-error@-1 {{conversion from 'int' to 'int *' is not allowed}}
+S<P> s; // expected-note {{template template argument has different template parameters}}
+// expected-note@-3 {{previous template template parameter}} expected-note@-2 {{declared here}}
 } // namespace GH202117
 
 namespace test17 {

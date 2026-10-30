@@ -25,7 +25,7 @@ define signext i8 @func_rr(ptr nocapture readonly %0, i32 signext %1) {
 ; Function Attrs: nounwind
 define signext i8 @func_fr(ptr readonly %0, i32 signext %1) {
 ; CHECK-LABEL: func_fr:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    sll %s1, %s1, 2
 ; CHECK-NEXT:    ldl.sx %s0, (%s1, %s0)
 ; CHECK-NEXT:    stl %s0, 8(%s1, %s11)
@@ -52,7 +52,7 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 define signext i8 @func_rf(ptr readonly %0, i64 %1, i32 signext %2) {
 ; CHECK-LABEL: func_rf:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    ld1b.sx %s0, 8(%s1, %s11)
 ; CHECK-NEXT:    adds.l %s11, 32, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)

@@ -1,1 +1,16 @@
-@LLVM_SHLIB_SYMBOL_VERSION@ { global: *; };
+@LLVM_SHLIB_SYMBOL_VERSION@ {
+  global: *;
+
+  # ClangIR components are kept as an internal implementation detail, as
+  # otherwise the cost of loading/dynamically linking these symbols is onerous.
+  # This likely means that users of libclang-cpp.so won't be able to
+  # independently call ClangIR components, but that is not a supported feature.
+  # AS this script is used only on Itanium dylib builds, we can use the mangled
+  # names here, which saves multiple-percent in at link time, since the linker
+  # doesn't have to demangle every symbol.
+  # We exclude mlir::, cir::, and clang::CIRGen namespace symbols.
+  local:
+    *[NKVRO]4mlir*;
+    *[NKVRO]3cir*;
+    *[NKVRO]5clang6CIRGen*;
+};

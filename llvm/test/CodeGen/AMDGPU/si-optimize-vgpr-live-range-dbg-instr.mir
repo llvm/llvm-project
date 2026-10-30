@@ -70,7 +70,6 @@ body:             |
   ; GCN-NEXT:   SI_END_CF [[SI_ELSE]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   DBG_VALUE_LIST !4, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_constu, 2712, DW_OP_mul, DW_OP_plus, DW_OP_plus_uconst, 2680, DW_OP_stack_value), [[GLOBAL_LOAD_DWORDX2_]], 0, debug-location !DILocation(line: 0, scope: !5)
   ; GCN-NEXT:   SI_RETURN
-  ; GCN-NEXT-SAME: %9
   bb.0:
     successors: %bb.3(0x40000000), %bb.1(0x40000000)
     liveins: $vgpr0

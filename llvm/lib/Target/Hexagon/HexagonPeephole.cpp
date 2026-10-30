@@ -26,16 +26,28 @@
 //     ...
 //     JMP_cNot killed %15, <%bb.1>, implicit dead %pc;
 //
-// Note: The peephole pass makes the instrucstions like
+// 3. Fuse the A2_vminub/C2_cmpgtup intrinsic pair, which share inputs, into the
+//    dual-output A6_vminub_RdP hardware instruction.
+//    %1 = A2_vminub %a, %b
+//    %2 = C2_cmpgtup %a, %b
+// turning it into
+//    %3, %4 = A6_vminub_RdP %a, %b
+// (Hexagon has no multi-output intrinsics, so the two results are produced by
+// separate intrinsics that this pass recombines.)
+//
+// Note: The first two transformations make instructions like
 // %170 = SXTW %166 or %16 = NOT_p killed %15
-// redundant and relies on some form of dead removal instructions, like
-// DCE or DIE to actually eliminate them.
+// redundant. A dead-instruction removal pass, such as DCE or DIE, eliminates
+// them.
 
 //===----------------------------------------------------------------------===//
 
 #include "Hexagon.h"
 #include "HexagonTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -68,17 +80,23 @@ static cl::opt<bool>
                       cl::init(true),
                       cl::desc("Disable Optimization of extensions to i64."));
 
+static cl::opt<bool>
+    FuseIntrinsicVMinUB("hexagon-fuse-intrinsic-vminub", cl::Hidden,
+                        cl::init(true),
+                        cl::desc("Fuse A2_vminub/C2_cmpgtup into "
+                                 "A6_vminub_RdP."));
+
 namespace {
   struct HexagonPeephole : public MachineFunctionPass {
-    const HexagonInstrInfo    *QII;
-    const HexagonRegisterInfo *QRI;
-    const MachineRegisterInfo *MRI;
+    const HexagonInstrInfo *QII;
+    MachineRegisterInfo *MRI;
 
   public:
     static char ID;
     HexagonPeephole() : MachineFunctionPass(ID) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
+    bool fuseIntrinsicVMinUB(MachineFunction &MF);
 
     StringRef getPassName() const override {
       return "Hexagon optimize redundant zero and size extends";
@@ -99,8 +117,9 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
+  bool Changed = false;
+
   QII = static_cast<const HexagonInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  QRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
   MRI = &MF.getRegInfo();
 
   DenseMap<unsigned, unsigned> PeepholeMap;
@@ -199,6 +218,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
             // Change the 1st operand.
             MI.removeOperand(1);
             MI.addOperand(MachineOperand::CreateReg(PeepholeSrc, false));
+            Changed = true;
           } else  {
             DenseMap<unsigned, std::pair<unsigned, unsigned> >::iterator DI =
               PeepholeDoubleRegsMap.find(SrcReg);
@@ -209,6 +229,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                   PeepholeSrc.first, false /*isDef*/, false /*isImp*/,
                   false /*isKill*/, false /*isDead*/, false /*isUndef*/,
                   false /*isEarlyClobber*/, PeepholeSrc.second));
+              Changed = true;
             }
           }
         }
@@ -232,6 +253,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                 MRI->clearKillFlags(PeepholeSrc);
                 int NewOp = QII->getInvertedPredicatedOpcode(MI.getOpcode());
                 MI.setDesc(QII->get(NewOp));
+                Changed = true;
                 Done = true;
               }
             }
@@ -266,6 +288,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
                   .add(MI.getOperand(S1));
               MRI->clearKillFlags(POrig);
               MI.eraseFromParent();
+              Changed = true;
             }
           } // if (NewOp)
         } // if (!Done)
@@ -274,7 +297,102 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
     } // Instruction
   } // Basic Block
+
+  if (FuseIntrinsicVMinUB)
+    Changed |= fuseIntrinsicVMinUB(MF);
+
+  return Changed;
+}
+
+// Return true if both instructions have identical input operands in order.
+static bool hasCommonInputOps(const MachineInstr &I1, const MachineInstr &I2) {
+  auto I1Uses = I1.explicit_uses();
+  auto I2Uses = I2.explicit_uses();
+  unsigned I1NumUses = I1.getNumExplicitOperands() - I1.getNumExplicitDefs();
+  unsigned I2NumUses = I2.getNumExplicitOperands() - I2.getNumExplicitDefs();
+  if (!I1NumUses || I1NumUses != I2NumUses)
+    return false;
+
+  auto I2Use = I2Uses.begin();
+  for (const MachineOperand &I1Use : I1Uses)
+    if (!I1Use.isIdenticalTo(*I2Use++))
+      return false;
   return true;
+}
+
+static bool modifiesPhysicalInput(ArrayRef<Register> Inputs,
+                                  const MachineInstr &Between,
+                                  const TargetRegisterInfo *TRI) {
+  for (Register Input : Inputs)
+    if (Between.modifiesRegister(Input, TRI))
+      return true;
+  return false;
+}
+
+bool HexagonPeephole::fuseIntrinsicVMinUB(MachineFunction &MF) {
+  bool Changed = false;
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+
+  for (MachineBasicBlock &MBB : MF) {
+    SmallPtrSet<MachineInstr *, 8> DeadMIs;
+
+    for (MachineInstr &MI : MBB) {
+      unsigned Opc = MI.getOpcode();
+      if ((Opc != Hexagon::A2_vminub && Opc != Hexagon::C2_cmpgtup) ||
+          DeadMIs.count(&MI))
+        continue;
+
+      unsigned SiblingOpc =
+          Opc == Hexagon::A2_vminub ? Hexagon::C2_cmpgtup : Hexagon::A2_vminub;
+      SmallVector<Register, 2> PhysicalInputs;
+      for (const MachineOperand &MO : MI.operands())
+        if (MO.isReg() && !MO.isDef() && MO.getReg().isPhysical())
+          PhysicalInputs.push_back(MO.getReg());
+      MachineInstr *Sibling = nullptr;
+      auto It = MI.getIterator();
+      for (++It; It != MBB.end(); ++It) {
+        if (!DeadMIs.count(&*It) && It->getOpcode() == SiblingOpc &&
+            hasCommonInputOps(MI, *It)) {
+          Sibling = &*It;
+          break;
+        }
+        if (modifiesPhysicalInput(PhysicalInputs, *It, TRI))
+          break;
+      }
+      if (!Sibling)
+        continue;
+
+      MachineInstr *VMin = Opc == Hexagon::A2_vminub ? &MI : Sibling;
+      MachineInstr *Cmp = Opc == Hexagon::A2_vminub ? Sibling : &MI;
+      Register VMinReg =
+          MRI->createVirtualRegister(&Hexagon::DoubleRegsRegClass);
+      Register CmpReg = MRI->createVirtualRegister(&Hexagon::PredRegsRegClass);
+
+      BuildMI(MBB, MI.getIterator(), MI.getDebugLoc(),
+              QII->get(Hexagon::A6_vminub_RdP), VMinReg)
+          .addReg(CmpReg, RegState::Define)
+          .add(VMin->getOperand(1))
+          .add(VMin->getOperand(2));
+
+      Register VMinDef = VMin->getOperand(0).getReg();
+      Register CmpDef = Cmp->getOperand(0).getReg();
+      assert(VMinDef.isVirtual() && CmpDef.isVirtual() &&
+             "vminub fusion requires virtual result registers");
+      MRI->replaceRegWith(VMinDef, VMinReg);
+      VMin->getOperand(0).setReg(VMinDef);
+      MRI->replaceRegWith(CmpDef, CmpReg);
+      Cmp->getOperand(0).setReg(CmpDef);
+
+      DeadMIs.insert(&MI);
+      DeadMIs.insert(Sibling);
+      Changed = true;
+    }
+
+    for (MachineInstr *MI : DeadMIs)
+      MI->eraseFromParent();
+  }
+
+  return Changed;
 }
 
 FunctionPass *llvm::createHexagonPeephole() {

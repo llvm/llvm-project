@@ -346,7 +346,7 @@ public:
                         is_constructible<value_type, typename iterator_traits<_ForwardIterator>::reference>::value,
                     int> = 0>
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void assign(_ForwardIterator __first, _ForwardIterator __last) {
-    __assign_with_size<_ClassicAlgPolicy>(__first, __last, std::distance(__first, __last));
+    __assign_with_size<_ClassicAlgPolicy>(__first, std::distance(__first, __last));
   }
 
 #if _LIBCPP_STD_VER >= 23
@@ -354,7 +354,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void assign_range(_Range&& __range) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
-      __assign_with_size<_RangeAlgPolicy>(ranges::begin(__range), ranges::end(__range), __n);
+      __assign_with_size<_RangeAlgPolicy>(ranges::begin(__range), __n);
 
     } else {
       __assign_with_sentinel(ranges::begin(__range), ranges::end(__range));
@@ -706,9 +706,8 @@ private:
   // The `_Iterator` in `*_with_size` functions can be input-only only if called from `*_range` (since C++23).
   // Otherwise, `_Iterator` is a forward iterator.
 
-  template <class _AlgPolicy, class _Iterator, class _Sentinel>
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n);
+  template <class _AlgPolicy, class _Iterator>
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __assign_with_size(_Iterator __first, difference_type __n);
 
   template <class _AlgPolicy,
             class _Iterator,
@@ -898,10 +897,7 @@ vector<_Tp, _Allocator>::__recommend(size_type __new_size) const {
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__construct_at_end(size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos));
-  }
+  __tx.__pos_ = std::__uninitialized_allocator_value_construct_n(this->__layout_.__alloc(), __layout_.__end_ptr(), __n);
 }
 
 //  Copy constructs __n objects starting at __layout_.__end_ptr() from __x
@@ -914,10 +910,7 @@ template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 inline void
 vector<_Tp, _Allocator>::__construct_at_end(size_type __n, const_reference __x) {
   _ConstructTransaction __tx(*this, __n);
-  const_pointer __new_end = __tx.__new_end_;
-  for (pointer __pos = __tx.__pos_; __pos != __new_end; __tx.__pos_ = ++__pos) {
-    __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos), __x);
-  }
+  __tx.__pos_ = std::__uninitialized_allocator_fill_n(this->__layout_.__alloc(), __layout_.__end_ptr(), __n, __x);
 }
 
 template <class _Tp, class _Allocator>
@@ -965,9 +958,9 @@ vector<_Tp, _Allocator>::__assign_with_sentinel(_Iterator __first, _Sentinel __l
 }
 
 template <class _Tp, class _Allocator>
-template <class _AlgPolicy, class _Iterator, class _Sentinel>
+template <class _AlgPolicy, class _Iterator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel, difference_type __n) {
+vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
     auto const __size = size();
@@ -1099,9 +1092,7 @@ vector<_Tp, _Allocator>::__move_range(pointer __from_s, pointer __from_e, pointe
   {
     pointer __i = __from_s + __n;
     _ConstructTransaction __tx(*this, __from_e - __i);
-    for (pointer __pos = __tx.__pos_; __i < __from_e; ++__i, (void)++__pos, __tx.__pos_ = __pos) {
-      __alloc_traits::construct(this->__layout_.__alloc(), std::__to_address(__pos), std::move(*__i));
-    }
+    __tx.__pos_ = std::__uninitialized_allocator_move(__layout_.__alloc(), __i, __from_e, __tx.__pos_).__out_;
   }
   std::move_backward(__from_s, __from_s + __n, __old_last);
 }

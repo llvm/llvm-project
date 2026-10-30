@@ -155,6 +155,7 @@ cc_test(
         "Dialect/AMDGPU/*.cpp",
     ]),
     deps = [
+        "//llvm:Support",
         "//mlir:AMDGPUUtils",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
@@ -343,6 +344,7 @@ cc_test(
         "//mlir:SideEffectInterfaces",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir/test:TestDialect",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

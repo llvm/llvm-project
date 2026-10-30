@@ -23,14 +23,14 @@ subroutine cancellationpoint_do()
 end subroutine
 ! CHECK-LABEL:   func.func @_QPcancellationpoint_do() {
 ! CHECK:           %[[VAL_0:.*]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFcancellationpoint_doEi"}>
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFcancellationpoint_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] uniq_name("_QFcancellationpoint_doEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:           omp.parallel {
 ! CHECK:             %[[VAL_2:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_3:.*]] = arith.constant 100 : i32
 ! CHECK:             %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:             omp.wsloop private(@_QFcancellationpoint_doEi_private_i32 %[[VAL_1]]#0 -> %[[VAL_5:.*]] : !fir.ref<i32>) {
 ! CHECK:               omp.loop_nest (%[[VAL_6:.*]]) : i32 = (%[[VAL_2]]) to (%[[VAL_3]]) inclusive step (%[[VAL_4]]) {
-! CHECK:                 %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] {uniq_name = "_QFcancellationpoint_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK:                 %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_5]] uniq_name("_QFcancellationpoint_doEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK:                 hlfir.assign %[[VAL_6]] to %[[VAL_7]]#0 : i32, !fir.ref<i32>
 ! CHECK:                 omp.cancellation_point cancellation_construct_type(loop)
 ! CHECK:                 omp.yield

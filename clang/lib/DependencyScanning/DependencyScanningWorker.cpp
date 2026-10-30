@@ -398,9 +398,14 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getPreprocessorOpts().AllowPCHWithDifferentModulesCachePath =
       true;
 
-  if (ScanInvocation->getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
+  if (ScanInvocation->getHeaderSearchOpts()
+          .ModulesValidateOncePerBuildSession ||
+      Service.getOpts().ValidateAgainstInvalidatedPaths)
     ScanInvocation->getHeaderSearchOpts().BuildSessionTimestamp =
         Service.getOpts().BuildSessionTimestamp;
+  if (Service.getOpts().ValidateAgainstInvalidatedPaths)
+    ScanInvocation->getHeaderSearchOpts().ModulesValidateDirectoryDependencies =
+        true;
 
   ScanInvocation->getFrontendOpts().DisableFree = false;
   ScanInvocation->getFrontendOpts().GenerateGlobalModuleIndex = false;
@@ -426,9 +431,6 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getHeaderSearchOpts().ModulesSkipPragmaDiagnosticMappings =
       true;
   ScanInvocation->getHeaderSearchOpts().ModulesForceValidateUserHeaders = false;
-
-  // Avoid some checks and module map parsing when loading PCM files.
-  ScanInvocation->getPreprocessorOpts().ModulesCheckRelocated = false;
 
   // FIXME: Do this even with PCHs by marking the option as something like
   // "preprocessor benign" in LangOptions.def so that it passes the
@@ -993,7 +995,8 @@ public:
 } // namespace clang
 
 DependencyScanningWorker::DependencyScanningWorker(
-    DependencyScanningService &Service)
+    DependencyScanningService &Service,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS)
     : Service(Service) {
   PCHContainerOps = std::make_shared<PCHContainerOperations>();
   // We need to read object files from PCH built outside the scanner.
@@ -1011,7 +1014,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-      Service, std::move(BaseFS));
+      Service, std::move(BaseFS), std::move(LocalFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;

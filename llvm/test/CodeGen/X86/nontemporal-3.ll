@@ -17,6 +17,7 @@ define void @test_zero_v2f64_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movntiq %rax, 8(%rdi)
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <2 x double> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -28,6 +29,7 @@ define void @test_zero_v4f32_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movntiq %rax, 8(%rdi)
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <4 x float> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -39,6 +41,7 @@ define void @test_zero_v2i64_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movntiq %rax, 8(%rdi)
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <2 x i64> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -50,6 +53,7 @@ define void @test_zero_v4i32_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movntiq %rax, 8(%rdi)
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <4 x i32> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -61,6 +65,7 @@ define void @test_zero_v8i16_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movntiq %rax, 8(%rdi)
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <8 x i16> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -72,6 +77,7 @@ define void @test_zero_v16i8_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movntiq %rax, 8(%rdi)
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <16 x i8> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -87,6 +93,7 @@ define void @test_zero_v4f64_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
 ; CHECK-NEXT:    movntiq %rax, 24(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 16(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <4 x double> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -100,6 +107,7 @@ define void @test_zero_v8f32_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
 ; CHECK-NEXT:    movntiq %rax, 24(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 16(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <8 x float> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -113,6 +121,7 @@ define void @test_zero_v4i64_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
 ; CHECK-NEXT:    movntiq %rax, 24(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 16(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <4 x i64> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -126,6 +135,7 @@ define void @test_zero_v8i32_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
 ; CHECK-NEXT:    movntiq %rax, 24(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 16(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <8 x i32> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -139,6 +149,7 @@ define void @test_zero_v16i16_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
 ; CHECK-NEXT:    movntiq %rax, 24(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 16(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <16 x i16> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -152,6 +163,7 @@ define void @test_zero_v32i8_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, (%rdi)
 ; CHECK-NEXT:    movntiq %rax, 24(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 16(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <32 x i8> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -163,6 +175,7 @@ define void @test_zero_v4f64_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v4f64_align16:
@@ -170,6 +183,7 @@ define void @test_zero_v4f64_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v4f64_align16:
@@ -177,6 +191,7 @@ define void @test_zero_v4f64_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <4 x double> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -188,6 +203,7 @@ define void @test_zero_v8f32_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v8f32_align16:
@@ -195,6 +211,7 @@ define void @test_zero_v8f32_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v8f32_align16:
@@ -202,6 +219,7 @@ define void @test_zero_v8f32_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <8 x float> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -213,6 +231,7 @@ define void @test_zero_v4i64_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v4i64_align16:
@@ -220,6 +239,7 @@ define void @test_zero_v4i64_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v4i64_align16:
@@ -227,6 +247,7 @@ define void @test_zero_v4i64_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <4 x i64> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -238,6 +259,7 @@ define void @test_zero_v8i32_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v8i32_align16:
@@ -245,6 +267,7 @@ define void @test_zero_v8i32_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v8i32_align16:
@@ -252,6 +275,7 @@ define void @test_zero_v8i32_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <8 x i32> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -263,6 +287,7 @@ define void @test_zero_v16i16_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v16i16_align16:
@@ -270,6 +295,7 @@ define void @test_zero_v16i16_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v16i16_align16:
@@ -277,6 +303,7 @@ define void @test_zero_v16i16_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <16 x i16> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -288,6 +315,7 @@ define void @test_zero_v32i8_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v32i8_align16:
@@ -295,6 +323,7 @@ define void @test_zero_v32i8_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v32i8_align16:
@@ -302,6 +331,7 @@ define void @test_zero_v32i8_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %xmm0, 16(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <32 x i8> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -321,6 +351,7 @@ define void @test_zero_v8f64_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, 32(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 56(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 48(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <8 x double> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -338,6 +369,7 @@ define void @test_zero_v16f32_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, 32(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 56(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 48(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <16 x float> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -355,6 +387,7 @@ define void @test_zero_v8i64_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, 32(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 56(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 48(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <8 x i64> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -372,6 +405,7 @@ define void @test_zero_v16i32_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, 32(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 56(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 48(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <16 x i32> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -389,6 +423,7 @@ define void @test_zero_v32i16_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, 32(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 56(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 48(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <32 x i16> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -406,6 +441,7 @@ define void @test_zero_v64i8_align1(ptr %dst) nounwind {
 ; CHECK-NEXT:    movntiq %rax, 32(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 56(%rdi)
 ; CHECK-NEXT:    movntiq %rax, 48(%rdi)
+; CHECK-NEXT:    sfence
 ; CHECK-NEXT:    retq
   store <64 x i8> zeroinitializer, ptr %dst, align 1, !nontemporal !1
   ret void
@@ -419,6 +455,7 @@ define void @test_zero_v8f64_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm0, 48(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v8f64_align16:
@@ -428,6 +465,7 @@ define void @test_zero_v8f64_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v8f64_align16:
@@ -437,6 +475,7 @@ define void @test_zero_v8f64_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <8 x double> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -450,6 +489,7 @@ define void @test_zero_v16f32_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm0, 48(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v16f32_align16:
@@ -459,6 +499,7 @@ define void @test_zero_v16f32_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v16f32_align16:
@@ -468,6 +509,7 @@ define void @test_zero_v16f32_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <16 x float> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -481,6 +523,7 @@ define void @test_zero_v8i64_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm0, 48(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v8i64_align16:
@@ -490,6 +533,7 @@ define void @test_zero_v8i64_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v8i64_align16:
@@ -499,6 +543,7 @@ define void @test_zero_v8i64_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <8 x i64> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -512,6 +557,7 @@ define void @test_zero_v16i32_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm0, 48(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v16i32_align16:
@@ -521,6 +567,7 @@ define void @test_zero_v16i32_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v16i32_align16:
@@ -530,6 +577,7 @@ define void @test_zero_v16i32_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <16 x i32> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -543,6 +591,7 @@ define void @test_zero_v32i16_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm0, 48(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v32i16_align16:
@@ -552,6 +601,7 @@ define void @test_zero_v32i16_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v32i16_align16:
@@ -561,6 +611,7 @@ define void @test_zero_v32i16_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <32 x i16> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -574,6 +625,7 @@ define void @test_zero_v64i8_align16(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    movntps %xmm0, 48(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v64i8_align16:
@@ -583,6 +635,7 @@ define void @test_zero_v64i8_align16(ptr %dst) nounwind {
 ; AVX-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: test_zero_v64i8_align16:
@@ -592,6 +645,7 @@ define void @test_zero_v64i8_align16(ptr %dst) nounwind {
 ; AVX512-NEXT:    vmovntps %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 48(%rdi)
 ; AVX512-NEXT:    vmovntps %xmm0, 32(%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    retq
   store <64 x i8> zeroinitializer, ptr %dst, align 16, !nontemporal !1
   ret void
@@ -605,6 +659,7 @@ define void @test_zero_v8f64_align32(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v8f64_align32:
@@ -612,6 +667,7 @@ define void @test_zero_v8f64_align32(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -620,6 +676,7 @@ define void @test_zero_v8f64_align32(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   store <8 x double> zeroinitializer, ptr %dst, align 32, !nontemporal !1
@@ -634,6 +691,7 @@ define void @test_zero_v16f32_align32(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v16f32_align32:
@@ -641,6 +699,7 @@ define void @test_zero_v16f32_align32(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -649,6 +708,7 @@ define void @test_zero_v16f32_align32(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   store <16 x float> zeroinitializer, ptr %dst, align 32, !nontemporal !1
@@ -663,6 +723,7 @@ define void @test_zero_v8i64_align32(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v8i64_align32:
@@ -670,6 +731,7 @@ define void @test_zero_v8i64_align32(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -678,6 +740,7 @@ define void @test_zero_v8i64_align32(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   store <8 x i64> zeroinitializer, ptr %dst, align 32, !nontemporal !1
@@ -692,6 +755,7 @@ define void @test_zero_v16i32_align32(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v16i32_align32:
@@ -699,6 +763,7 @@ define void @test_zero_v16i32_align32(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -707,6 +772,7 @@ define void @test_zero_v16i32_align32(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   store <16 x i32> zeroinitializer, ptr %dst, align 32, !nontemporal !1
@@ -721,6 +787,7 @@ define void @test_zero_v32i16_align32(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v32i16_align32:
@@ -728,6 +795,7 @@ define void @test_zero_v32i16_align32(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -736,6 +804,7 @@ define void @test_zero_v32i16_align32(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   store <32 x i16> zeroinitializer, ptr %dst, align 32, !nontemporal !1
@@ -750,6 +819,7 @@ define void @test_zero_v64i8_align32(ptr %dst) nounwind {
 ; SSE-NEXT:    movntps %xmm0, 32(%rdi)
 ; SSE-NEXT:    movntps %xmm0, 16(%rdi)
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
+; SSE-NEXT:    sfence
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_zero_v64i8_align32:
@@ -757,6 +827,7 @@ define void @test_zero_v64i8_align32(ptr %dst) nounwind {
 ; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX-NEXT:    sfence
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -765,6 +836,7 @@ define void @test_zero_v64i8_align32(ptr %dst) nounwind {
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovntps %ymm0, 32(%rdi)
 ; AVX512-NEXT:    vmovntps %ymm0, (%rdi)
+; AVX512-NEXT:    sfence
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   store <64 x i8> zeroinitializer, ptr %dst, align 32, !nontemporal !1

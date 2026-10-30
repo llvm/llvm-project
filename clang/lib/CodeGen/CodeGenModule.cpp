@@ -48,7 +48,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ModuleUtils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ABI/IRTypeMapper.h"
@@ -154,7 +153,7 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     AArch64ABIKind Kind = AArch64ABIKind::AAPCS;
     if (Target.getABI() == "darwinpcs")
       Kind = AArch64ABIKind::DarwinPCS;
-    else if (Triple.isOSWindows())
+    else if (Triple.isOSWindowsOrUEFI())
       return createWindowsAArch64TargetCodeGenInfo(CGM, AArch64ABIKind::Win64);
     else if (Target.getABI() == "aapcs-soft")
       Kind = AArch64ABIKind::AAPCSSoft;
@@ -338,6 +337,8 @@ createTargetCodeGenInfo(CodeGenModule &CGM) {
     return createLoongArchTargetCodeGenInfo(
         CGM, Target.getPointerWidth(LangAS::Default), ABIFRLen);
   }
+  case llvm::Triple::xtensa:
+    return createXtensaTargetCodeGenInfo(CGM);
   }
 }
 
@@ -438,6 +439,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsAndroidOrOHOS = T.isAndroid() || T.isOHOSFamily();
     Opts.IsWindowsArm64EC = T.isWindowsArm64EC();
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
+    Opts.IsBigEndian = !T.isLittleEndian();
 
     initializeCommonABICompatInfo(Opts.CompatInfo,
                                   getLangOpts().getClangABICompat());
@@ -629,10 +631,10 @@ CodeGenModule::CodeGenModule(ASTContext &C,
       CodeGenOpts.CoverageNotesFile.size() ||
       CodeGenOpts.CoverageDataFile.size())
     DebugInfo.reset(new CGDebugInfo(*this));
-  else if (getTriple().isOSWindows())
-    // On Windows targets, we want to emit compiler info even if debug info is
-    // otherwise disabled. Use a temporary CGDebugInfo instance to emit only
-    // basic compiler metadata.
+  else if (getTriple().isOSWindows() || getTriple().isUEFI())
+    // On Windows and UEFI targets, we want to emit compiler info even if debug
+    // info is otherwise disabled. Use a temporary CGDebugInfo instance to emit
+    // only basic compiler metadata.
     CGDebugInfo(*this);
 
   Block.GlobalUniqueCount = 0;
@@ -1413,6 +1415,11 @@ void CodeGenModule::Release() {
     // Note if we are compiling with /kernel.
     getModule().addModuleFlag(llvm::Module::Warning, "ms-kernel", 1);
   }
+  if (CodeGenOpts.HotPatch) {
+    // Note if we are compiling with /hotpatch. Min ensures that LTO only keeps
+    // it if every module was compiled with /hotpatch.
+    getModule().addModuleFlag(llvm::Module::Min, "ms-hotpatch", 1);
+  }
   if (CodeGenOpts.OptimizationLevel > 0 && CodeGenOpts.StrictVTablePointers) {
     // We don't support LTO with 2 with different StrictVTablePointers
     // FIXME: we could support it by stripping all the information introduced
@@ -1429,7 +1436,7 @@ void CodeGenModule::Release() {
                               "StrictVTablePointersRequirement",
                               llvm::MDNode::get(VMContext, Ops));
   }
-  if (getModuleDebugInfo() || getTriple().isOSWindows())
+  if (getModuleDebugInfo() || getTriple().isOSWindows() || getTriple().isUEFI())
     // We support a single version in the linked module. The LLVM
     // parser will drop debug info with a different version number
     // (and warn about it, too).
@@ -1500,6 +1507,9 @@ void CodeGenModule::Release() {
         llvm::MDString::get(getLLVMContext(),
                             llvm::getExceptionModelName(ExceptionModel)));
   }
+
+  if (CodeGenOpts.getDebuggerTuning() != llvm::DebuggerKind::Default)
+    getModule().setDebuggerTuning(CodeGenOpts.getDebuggerTuning());
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
@@ -1709,6 +1719,14 @@ void CodeGenModule::Release() {
           llvm::Module::Error, "ptrauth-init-fini-address-discrimination",
           LangOpts.PointerAuthCalls && LangOpts.PointerAuthInitFini &&
               LangOpts.PointerAuthInitFiniAddressDiscrimination);
+    }
+
+    if (LangOpts.hasSignReturnAddressHardening()) {
+      TargetInfo::BranchProtectionInfo BPI(LangOpts);
+      getModule().addModuleFlag(
+          llvm::Module::Error, "sign-return-address-harden",
+          llvm::MDString::get(getLLVMContext(),
+                              BPI.getSignReturnAddressHardeningStr()));
     }
 
     if (getTriple().isOSLinux()) {
@@ -2529,15 +2547,21 @@ static bool isUniqueInternalLinkageDecl(GlobalDecl GD,
 
 static std::string getMangledNameImpl(CodeGenModule &CGM, GlobalDecl GD,
                                       const NamedDecl *ND,
-                                      bool OmitMultiVersionMangling = false) {
+                                      bool OmitMultiVersionMangling = false,
+                                      bool IgnoreAsmLabel = false) {
   SmallString<256> Buffer;
   llvm::raw_svector_ostream Out(Buffer);
   MangleContext &MC = CGM.getCXXABI().getMangleContext();
   if (!CGM.getModuleNameHash().empty())
     MC.needsUniqueInternalLinkageNames();
-  bool ShouldMangle = MC.shouldMangleDeclName(ND);
+  bool ShouldMangle = !IgnoreAsmLabel
+                          ? MC.shouldMangleDeclName(ND)
+                          : MC.shouldMangleDeclNameIgnoringAsmLabel(ND);
   if (ShouldMangle)
-    MC.mangleName(GD.getWithDecl(ND), Out);
+    if (!IgnoreAsmLabel)
+      MC.mangleName(GD.getWithDecl(ND), Out);
+    else
+      MC.mangleNameIgnoringAsmLabel(GD.getWithDecl(ND), Out);
   else {
     IdentifierInfo *II = ND->getIdentifier();
     assert(II && "Attempt to mangle unnamed decl.");
@@ -2729,6 +2753,14 @@ StringRef CodeGenModule::getMangledName(GlobalDecl GD) {
 
   auto Result = Manglings.insert(std::make_pair(MangledName, GD));
   return MangledDeclNames[CanonicalGD] = Result.first->first();
+}
+
+std::string CodeGenModule::getMangledNameIgnoringAsmLabel(GlobalDecl GD,
+                                                          const NamedDecl *ND) {
+  std::string MangledName =
+      getMangledNameImpl(*this, GD, ND, /*OmitMultiVersionMangling=*/false,
+                         /*IgnoreAsmLabel=*/true);
+  return MangledName;
 }
 
 StringRef CodeGenModule::getBlockMangledName(GlobalDecl GD,
@@ -3302,7 +3334,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
     ExplicitAlignment = llvm::Align(alignment);
   else if (LangOpts.FunctionAlignment)
-    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
+    ExplicitAlignment = llvm::Align::fromLog2(LangOpts.FunctionAlignment);
 
   if (ExplicitAlignment) {
     F->setAlignment(ExplicitAlignment);
@@ -4220,28 +4252,39 @@ void CodeGenModule::EmitDeferred() {
       }
     }
 
+    // Check to see if we've already emitted this. This is necessary for a
+    // couple of reasons: first, decls can end up in the deferred-decls queue
+    // multiple times, and second, decls can end up with definitions in unusual
+    // ways (e.g. by an extern inline function acquiring a strong function
+    // redefinition). Just ignore these cases. Do this before requesting a
+    // correctly typed value for the definition, since that operation may
+    // replace an existing global whose LLVM type differs.
+    StringRef MangledName = getMangledName(D);
+    llvm::GlobalValue *GV = GetGlobalValue(MangledName);
+    if (GV && !GV->isDeclaration()) {
+      GlobalDecl ExistingGD;
+      if (lookupRepresentativeDecl(MangledName, ExistingGD) &&
+          D.getCanonicalDecl().getDecl() ==
+              ExistingGD.getCanonicalDecl().getDecl())
+        continue;
+    }
+
     // We should call GetAddrOfGlobal with IsForDefinition set to true in order
     // to get GlobalValue with exactly the type we need, not something that
     // might had been created for another decl with the same mangled name but
     // different type.
-    llvm::GlobalValue *GV = dyn_cast<llvm::GlobalValue>(
-        GetAddrOfGlobal(D, ForDefinition));
+    GV = dyn_cast<llvm::GlobalValue>(GetAddrOfGlobal(D, ForDefinition));
 
     // In case of different address spaces, we may still get a cast, even with
     // IsForDefinition equal to true. Query mangled names table to get
     // GlobalValue.
     if (!GV)
-      GV = GetGlobalValue(getMangledName(D));
+      GV = GetGlobalValue(MangledName);
 
     // Make sure GetGlobalValue returned non-null.
     assert(GV);
 
-    // Check to see if we've already emitted this.  This is necessary
-    // for a couple of reasons: first, decls can end up in the
-    // deferred-decls queue multiple times, and second, decls can end
-    // up with definitions in unusual ways (e.g. by an extern inline
-    // function acquiring a strong function redefinition).  Just
-    // ignore these cases.
+    // GetAddrOfGlobal may itself cause the declaration to be emitted.
     if (!GV->isDeclaration())
       continue;
 
@@ -4540,6 +4583,12 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
+  // In an OpenMP compilation Sema may defer a function's diagnostics to the end
+  // of the TU (see Sema::emitDeferredDiags). Emitting it before then would let
+  // code with pending errors reach CodeGen.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd && isa<FunctionDecl>(Global))
+    return false;
+
   // In OpenMP 5.0 variables and function may be marked as
   // device_type(host/nohost) and we should not emit them eagerly unless we sure
   // that they must be emitted on the host/device. To be sure we need to have
@@ -4737,14 +4786,6 @@ ConstantAddress CodeGenModule::GetWeakRefReference(const ValueDecl *VD) {
   return ConstantAddress(Aliasee, DeclTy, Alignment);
 }
 
-template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *D) {
-  if (!D)
-    return false;
-  if (auto *A = D->getAttr<AttrT>())
-    return A->isImplicit();
-  return D->isImplicit();
-}
-
 static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
                                     const ValueDecl *Global) {
   const LangOptions &LangOpts = CGM.getLangOpts();
@@ -4777,19 +4818,6 @@ static bool shouldSkipAliasEmission(const CodeGenModule &CGM,
   return false;
 }
 
-bool CodeGenModule::shouldEmitCUDAGlobalVar(const VarDecl *Global) const {
-  assert(LangOpts.CUDA && "Should not be called by non-CUDA languages");
-  // We need to emit host-side 'shadows' for all global
-  // device-side variables because the CUDA runtime needs their
-  // size and host-side address in order to provide access to
-  // their device-side incarnations.
-  return !LangOpts.CUDAIsDevice || Global->hasAttr<CUDADeviceAttr>() ||
-         Global->hasAttr<CUDAConstantAttr>() ||
-         Global->hasAttr<CUDASharedAttr>() ||
-         Global->getType()->isCUDADeviceBuiltinSurfaceType() ||
-         Global->getType()->isCUDADeviceBuiltinTextureType();
-}
-
 void CodeGenModule::EmitGlobal(GlobalDecl GD) {
   const auto *Global = cast<ValueDecl>(GD.getDecl());
 
@@ -4814,31 +4842,8 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
     return emitCPUDispatchDefinition(GD);
 
   // If this is CUDA, be selective about which declarations we emit.
-  // Non-constexpr non-lambda implicit host device functions are not emitted
-  // unless they are used on device side.
-  if (LangOpts.CUDA) {
-    assert((isa<FunctionDecl>(Global) || isa<VarDecl>(Global)) &&
-           "Expected Variable or Function");
-    if (const auto *VD = dyn_cast<VarDecl>(Global)) {
-      if (!shouldEmitCUDAGlobalVar(VD))
-        return;
-    } else if (LangOpts.CUDAIsDevice) {
-      const auto *FD = dyn_cast<FunctionDecl>(Global);
-      if ((!Global->hasAttr<CUDADeviceAttr>() ||
-           (LangOpts.OffloadImplicitHostDeviceTemplates &&
-            hasImplicitAttr<CUDAHostAttr>(FD) &&
-            hasImplicitAttr<CUDADeviceAttr>(FD) && !FD->isConstexpr() &&
-            !isLambdaCallOperator(FD) &&
-            !getContext().CUDAImplicitHostDeviceFunUsedByDevice.count(FD))) &&
-          !Global->hasAttr<CUDAGlobalAttr>() &&
-          !(LangOpts.HIPStdPar && isa<FunctionDecl>(Global) &&
-            !Global->hasAttr<CUDAHostAttr>()))
-        return;
-      // Device-only functions are the only things we skip.
-    } else if (!Global->hasAttr<CUDAHostAttr>() &&
-               Global->hasAttr<CUDADeviceAttr>())
-      return;
-  }
+  if (LangOpts.CUDA && !getContext().shouldEmitCUDADecl(Global))
+    return;
 
   if (LangOpts.OpenMP) {
     // If this is OpenMP, check if it is legal to emit this global normally.
@@ -5515,8 +5520,8 @@ void CodeGenModule::emitCPUDispatchDefinition(GlobalDecl GD) {
       IFunc = GI;
     }
 
-    std::string AliasName = getMangledNameImpl(
-        *this, GD, FD, /*OmitMultiVersionMangling=*/true);
+    std::string AliasName =
+        getMangledNameImpl(*this, GD, FD, /*OmitMultiVersionMangling=*/true);
     llvm::Constant *AliasFunc = GetGlobalValue(AliasName);
     if (!AliasFunc) {
       auto *GA = llvm::GlobalAlias::create(DeclTy, AS, Linkage, AliasName,
@@ -6450,22 +6455,7 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
 }
 
 LangAS CodeGenModule::GetGlobalConstantAddressSpace() const {
-  // OpenCL v1.2 s6.5.3: a string literal is in the constant address space.
-  if (LangOpts.OpenCL)
-    return LangAS::opencl_constant;
-  if (LangOpts.SYCLIsDevice)
-    return LangAS::sycl_global;
-  if (LangOpts.HIP && LangOpts.CUDAIsDevice && getTriple().isSPIRV())
-    // For HIPSPV map literals to cuda_device (maps to CrossWorkGroup in SPIR-V)
-    // instead of default AS (maps to Generic in SPIR-V). Otherwise, we end up
-    // with OpVariable instructions with Generic storage class which is not
-    // allowed (SPIR-V V1.6 s3.42.8). Also, mapping literals to SPIR-V
-    // UniformConstant storage class is not viable as pointers to it may not be
-    // casted to Generic pointers which are used to model HIP's "flat" pointers.
-    return LangAS::cuda_device;
-  if (auto AS = getTarget().getConstantAddressSpace())
-    return *AS;
-  return LangAS::Default;
+  return CodeGenUtils::getGlobalConstantAddressSpace(LangOpts, getTarget());
 }
 
 // In address space agnostic languages, string literals are in default address
@@ -6547,6 +6537,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   QualType ASTTy = D->getType();
   if (getLangOpts().OpenCL && ASTTy->isSamplerT())
     return;
+
+  // TODO(Reflection): add support for consteval-only types.
 
   // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
   if (getLangOpts().HLSL &&
@@ -7043,7 +7035,7 @@ static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
 void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
   auto DK = VD->isThisDeclarationADefinition();
   if ((DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>()) ||
-      (LangOpts.CUDA && !shouldEmitCUDAGlobalVar(VD)))
+      (LangOpts.CUDA && !getContext().shouldEmitCUDADecl(VD)))
     return;
 
   TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();

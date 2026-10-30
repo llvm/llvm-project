@@ -16,11 +16,13 @@
 #define LLVM_TRANSFORMS_SCALAR_GVN_H
 
 #include "llvm/IR/PassManager.h"
+#include <memory>
 #include <optional>
 
 namespace llvm {
 
 class FunctionPass;
+class GVNPassImpl;
 
 /// A set of parameters to control various transforms performed by GVN pass.
 //  Each of the optional boolean parameters can be set to:
@@ -76,10 +78,17 @@ struct GVNOptions {
 };
 
 class GVNPass : public OptionalPassInfoMixin<GVNPass> {
-  GVNOptions Options;
+  std::unique_ptr<GVNPassImpl> Impl;
 
 public:
-  GVNPass(GVNOptions Options = {}) : Options(Options) {}
+  LLVM_ABI GVNPass(GVNOptions Options = {});
+  LLVM_ABI ~GVNPass();
+
+  LLVM_ABI GVNPass(GVNPass &&) noexcept;
+  LLVM_ABI GVNPass &operator=(GVNPass &&) noexcept;
+
+  GVNPass(const GVNPass &) = delete;
+  GVNPass &operator=(const GVNPass &) = delete;
 
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
