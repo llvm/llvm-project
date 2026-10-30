@@ -455,16 +455,6 @@ std::error_code SampleProfileWriterExtBinaryBase::writeNameTableSection(
     addNames(I.second);
   }
 
-  if (DataAccessProfileData) {
-    for (const auto &[SymHandleRef, RecordRef] :
-         DataAccessProfileData->getRecords()) {
-      addName(FunctionId(std::get<StringRef>(SymHandleRef)));
-
-      for (const auto &Loc : RecordRef.Locations)
-        addName(FunctionId(Loc.FileName));
-    }
-  }
-
   // If NameTable contains ".__uniq." suffix, set SecFlagUniqSuffix flag
   // so compiler won't strip the suffix during profile matching after
   // seeing the flag in the profile.
@@ -1015,24 +1005,15 @@ std::error_code SampleProfileWriterExtBinaryBase::writeDataAccessProfiles() {
   if (!DataAccessProfileData || DataAccessProfileData->empty())
     return sampleprof_error::success;
 
-  const auto Records = DataAccessProfileData->getRecords();
-  encodeULEB128(Records.size(), *OutputStream);
-
-  for (const auto &[SymHandleRef, RecordRef] : Records) {
-    if (std::error_code EC =
-            writeNameIdx(FunctionId(std::get<StringRef>(SymHandleRef))))
-      return EC;
-
-    encodeULEB128(RecordRef.AccessCount, *OutputStream);
-    encodeULEB128(RecordRef.Locations.size(), *OutputStream);
-
-    for (const auto &Loc : RecordRef.Locations) {
-      if (std::error_code EC = writeNameIdx(FunctionId(Loc.FileName)))
-        return EC;
-      encodeULEB128(Loc.Line, *OutputStream);
-    }
+  std::string SerializedData;
+  raw_string_ostream OS(SerializedData);
+  ProfOStream POS(OS);
+  if (Error E = DataAccessProfileData->serialize(POS)) {
+    consumeError(std::move(E));
+    return sampleprof_error::unsupported_writing_format;
   }
 
+  *OutputStream << SerializedData;
   return sampleprof_error::success;
 }
 

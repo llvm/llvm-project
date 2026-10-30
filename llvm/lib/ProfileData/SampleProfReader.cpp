@@ -1131,44 +1131,16 @@ std::error_code SampleProfileReaderExtBinaryBase::readDataAccessProfiles() {
   if (Data >= End)
     return sampleprof_error::success;
 
-  ErrorOr<uint64_t> NumDataAccessProfiles = readNumber<uint64_t>();
-  if (std::error_code EC = NumDataAccessProfiles.getError())
-    return EC;
-  if (*NumDataAccessProfiles == 0)
-    return sampleprof_error::success;
-
   DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
-  for (uint64_t I = 0; I < *NumDataAccessProfiles; ++I) {
-    ErrorOr<FunctionId> SymName = readStringFromTable();
-    if (std::error_code EC = SymName.getError())
-      return EC;
-
-    ErrorOr<uint64_t> AccessCount = readNumber<uint64_t>();
-    if (std::error_code EC = AccessCount.getError())
-      return EC;
-
-    ErrorOr<uint64_t> NumLocations = readNumber<uint64_t>();
-    if (std::error_code EC = NumLocations.getError())
-      return EC;
-
-    SmallVector<memprof::SourceLocation> Locations;
-    for (uint64_t J = 0; J < *NumLocations; ++J) {
-      ErrorOr<FunctionId> FileName = readStringFromTable();
-      if (std::error_code EC = FileName.getError())
-        return EC;
-
-      ErrorOr<uint32_t> Line = readNumber<uint32_t>();
-      if (std::error_code EC = Line.getError())
-        return EC;
-
-      Locations.emplace_back(FileName->stringRef(), *Line);
-    }
-
-    if (Error E = DataAccessProfileData->setDataAccessProfile(
-            SymName->stringRef(), *AccessCount, Locations))
-      consumeError(std::move(E));
+  const unsigned char *Ptr = Data;
+  if (Error E = DataAccessProfileData->deserialize(Ptr)) {
+    consumeError(std::move(E));
+    return sampleprof_error::malformed;
   }
+  if (Ptr != End)
+    return sampleprof_error::malformed;
 
+  Data = Ptr;
   return sampleprof_error::success;
 }
 
