@@ -26472,6 +26472,13 @@ static SDValue performExtendCombine(SDNode *N,
   if (SDValue V = performExtendToBoolVectorLoadCombine(N, DAG, DCI, *Subtarget))
     return V;
 
+  // The sign extensions of the low bits of the lanes may fold only after the
+  // operand chain of the extension is formed.
+  if (N->getOpcode() == ISD::ANY_EXTEND && VT.isFixedLengthVector())
+    for (SDNode *User : N->users())
+      if (User->getOpcode() == ISD::SIGN_EXTEND_INREG)
+        DCI.AddToWorklist(User);
+
   if (N->getValueType(0).isFixedLengthVector() &&
       N->getOpcode() == ISD::SIGN_EXTEND &&
       N->getOperand(0)->getOpcode() == ISD::SETCC)
@@ -31102,6 +31109,29 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
       return DAG.getNode(AArch64ISD::CSEL, DL, VT,
                          DAG.getAllOnesConstant(DL, VT), FVal,
                          Src.getOperand(2), Src.getOperand(3));
+  }
+
+  // The any extensions and the extracts keep the low bits of the lanes, so the
+  // lanes, fitting in the extended bits like the vector compare lanes, are
+  // sign-extended by the chain, rebuilt with the sign extensions.
+  if (Opc == ISD::ANY_EXTEND && Src.getValueType().isFixedLengthVector()) {
+    SmallVector<SDValue> Chain;
+    SDValue V = Src;
+    while ((V.getOpcode() == ISD::ANY_EXTEND ||
+            V.getOpcode() == ISD::EXTRACT_SUBVECTOR) &&
+           V.getOperand(0).getValueType().isFixedLengthVector()) {
+      Chain.push_back(V);
+      V = V.getOperand(0);
+    }
+    if (DAG.ComputeMaxSignificantBits(V) <=
+        cast<VTSDNode>(N->getOperand(1))->getVT().getScalarSizeInBits()) {
+      for (SDValue Op : reverse(Chain))
+        V = Op.getOpcode() == ISD::ANY_EXTEND
+                ? DAG.getNode(ISD::SIGN_EXTEND, DL, Op.getValueType(), V)
+                : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, Op.getValueType(), V,
+                              Op.getOperand(1));
+      return V;
+    }
   }
 
   if (DCI.isBeforeLegalizeOps())
