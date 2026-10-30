@@ -113,17 +113,19 @@ namespace cwg1432 { // cwg1432: 16 open 2022-11-11
 namespace cwg1439 { // cwg1439: 2.7
 class A {
   template <typename>
-  friend void f();
+  friend int f();
 
   template <typename>
   friend struct B;
+
+  static int private_i;
 };
 
-void (*p1)() = &f<int>;
+int (*p1)() = &f<int>;
 // expected-error@-1 {{use of undeclared identifier 'f'}}
 
 // FIXME: only the first error is relevant, others are noise
-void (*p2)() = &cwg1439::f<int>;
+int (*p2)() = &cwg1439::f<int>;
 // expected-error@-1 {{no member named 'f' in namespace 'cwg1439'}}
 // expected-error@-2 {{expected '(' for function-style cast or type construction}}
 // expected-error@-3 {{expected expression}}
@@ -135,13 +137,15 @@ cwg1439::B<int>* p4;
 // expected-error@-1 {{no template named 'B' in namespace 'cwg1439'}}
 
 template <typename>
-void f();
+int f() { return A::private_i; }
 
 template <typename>
-struct B;
+struct B {
+  int i = A::private_i;
+};
 
-void (*p5)() = &f<int>;
-void (*p6)() = &cwg1439::f<int>;
+int (*p5)() = &f<int>;
+int (*p6)() = &cwg1439::f<int>;
 B<int>* p7;
 cwg1439::B<int>* p8;
 } // namespace cwg1439
