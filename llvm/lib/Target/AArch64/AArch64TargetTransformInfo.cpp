@@ -7967,7 +7967,10 @@ static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   return false;
 }
 
-static bool isFNeg(Value *Op) { return match(Op, m_FNeg(m_Value())); }
+static bool isFNeg(Value *Op) {
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  return match(Op, m_FNegOrFSubNegZero(m_Value()));
+}
 
 /// Check if sinking \p I's operands to I's basic block is profitable, because
 /// the operands can be folded into a target instruction, e.g.
