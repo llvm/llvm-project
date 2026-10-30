@@ -559,6 +559,11 @@ private:
   /// during \c SourceManager serialization.
   void computeNonAffectingInputFiles();
 
+  /// Walks \p Loc up the include and expansion hierarchy to the nearest
+  /// location in a file this module file still writes entries for. A local
+  /// entry must not name a parent whose locations were reused, or the entry
+  /// becomes unreachable from this module file's root.
+
   /// Some affecting files can be included from files that are not affecting.
   /// This function erases source locations pointing into such files.
   SourceLocation getAffectingIncludeLoc(const SourceManager &SourceMgr,

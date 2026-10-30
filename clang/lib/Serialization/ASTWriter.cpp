@@ -6913,9 +6913,6 @@ unsigned ASTWriter::getAdjustedNumCreatedFIDs(FileID FID) const {
 }
 
 SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
-  if (Loc.isMacroID())
-    return SourceLocation();
-
   SourceLocation::UIntTy Offset = Loc.getOffset();
   if (PP->getSourceManager().isLoadedOffset(Offset))
     return SourceLocation();
@@ -6932,8 +6929,13 @@ SourceLocation ASTWriter::getRedirectedLocation(SourceLocation Loc) const {
   int64_t Adjustment = NonAffectingRedirectAdjustments[Idx];
   if (!Adjustment)
     return SourceLocation();
-  return SourceLocation::getFileLoc(static_cast<SourceLocation::UIntTy>(
-      static_cast<int64_t>(Offset) - Adjustment));
+  // A location in a reused file is redirected to the loaded copy, which has
+  // the same text, so an expansion in it is named there too. The kind of the
+  // location has to survive the trip.
+  auto Redirected = static_cast<SourceLocation::UIntTy>(
+      static_cast<int64_t>(Offset) - Adjustment);
+  return Loc.isMacroID() ? SourceLocation::getMacroLoc(Redirected)
+                         : SourceLocation::getFileLoc(Redirected);
 }
 
 SourceLocation ASTWriter::getAdjustedLocation(SourceLocation Loc) const {

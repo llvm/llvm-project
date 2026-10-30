@@ -2136,7 +2136,13 @@ SourceManager::isInTheSameTranslationUnit(FileIDAndOffset &LOffs,
     return std::make_pair(true, LOffs.second < ROffs.second);
   }
 
-  llvm_unreachable("Unsortable locations found");
+  // Reusing a loaded module's entries for a duplicate input file can leave an
+  // entry whose include chain leaves this module file, so two locations of it
+  // need not meet at a common ancestor any more. Order them by where they sit
+  // in the source location address space, which stays total.
+  return std::make_pair(
+      true, isBeforeInSLocAddrSpace(getComposedLoc(LOffs.first, LOffs.second),
+                                    getComposedLoc(ROffs.first, ROffs.second)));
 }
 
 void SourceManager::PrintStats() const {
