@@ -1043,6 +1043,14 @@ static FailureOr<llvm::SmallBitVector> computeMemRefRankReductionMaskByStrides(
   if (static_cast<int64_t>(unusedDims.count()) + reducedType.getRank() !=
       originalType.getRank())
     return failure();
+  // Counting does not check which dim each stride belongs to, so only accept
+  // the mask if the kept dims match the reduced shape in order.
+  SmallVector<int64_t> keptSizes;
+  for (auto [dim, size] : llvm::enumerate(originalType.getShape()))
+    if (!unusedDims.test(dim))
+      keptSizes.push_back(size);
+  if (!llvm::equal(keptSizes, reducedType.getShape()))
+    return failure();
   return unusedDims;
 }
 
