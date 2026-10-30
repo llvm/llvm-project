@@ -129,6 +129,7 @@ void QueueImpl::setKernelLaunchParams(
     std::vector<EventImplPtr> &&Events,
     const ol_kernel_launch_size_args_t &Range) {
   assert(MContext && "Context impl ptr can't be nullptr");
+  NestedCallsTracker Tracker(*MContext);
   checkEventsPlatformMatch(Events, *MContext);
   MCurrentSubmitInfo.DepEvents = std::move(Events);
   MCurrentSubmitInfo.Range = Range;
@@ -137,7 +138,6 @@ void QueueImpl::setKernelLaunchParams(
 void QueueImpl::submitKernelImpl(DeviceKernelInfo &KernelInfo, void *ArgData,
                                  size_t ArgSize) {
   assert(MContext && "Context impl ptr can't be nullptr");
-  NestedCallsTracker Tracker(*MContext);
   ol_symbol_handle_t Kernel =
       detail::ProgramAndKernelManager::getInstance().getOrCreateKernel(
           KernelInfo, MContext, MDevice);
