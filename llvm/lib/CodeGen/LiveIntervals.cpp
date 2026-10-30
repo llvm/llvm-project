@@ -469,7 +469,7 @@ void LiveIntervals::extendSegmentsToUses(LiveRange &Segments,
   SmallPtrSet<VNInfo*, 8> UsedPHIs;
   // Blocks that have already been added to WorkList as live-out.
   if (++LiveOutTag == 0) {
-    fill(LiveOutTags, 0);
+    llvm::fill(LiveOutTags, 0);
     LiveOutTag = 1;
   }
 
