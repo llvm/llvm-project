@@ -371,8 +371,9 @@ bool AssemblerInvocation::CreateFromArgs(AssemblerInvocation &Opts,
   Opts.RelocationModel =
       std::string(Args.getLastArgValue(OPT_mrelocation_model, "pic"));
   Opts.TargetABI = std::string(Args.getLastArgValue(OPT_target_abi));
-  Opts.IncrementalLinkerCompatible =
-      Args.hasArg(OPT_mincremental_linker_compatible);
+  Opts.IncrementalLinkerCompatible = Args.hasFlag(
+      OPT_mincremental_linker_compatible, OPT_mno_incremental_linker_compatible,
+      Opts.Triple.isDefaultIncrementalLinkerCompatibleByDefault());
   Opts.SymbolDefs = Args.getAllArgValues(OPT_defsym);
 
   // EmbedBitcode Option. If -fembed-bitcode is enabled, set the flag.
@@ -468,6 +469,7 @@ executeAssemblerImpl(const cl::LibraryOptionsContext &LibraryOptions,
   MCTargetOptions MCOptions;
   MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.MCRelaxAll = Opts.RelaxAll;
+  MCOptions.MCIncrementalLinkerCompatible = Opts.IncrementalLinkerCompatible;
   MCOptions.EmitDwarfUnwind = Opts.EmitDwarfUnwind;
   MCOptions.EmitCompactUnwindNonCanonical = Opts.EmitCompactUnwindNonCanonical;
   MCOptions.EmitSFrameUnwind = Opts.EmitSFrameUnwind;
