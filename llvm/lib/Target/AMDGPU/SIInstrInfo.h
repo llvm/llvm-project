@@ -223,6 +223,19 @@ private:
   bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                   StringRef &ErrInfo) const;
 
+  /// Check for a common subclass after mapping to equivalent VGPR classes,
+  /// allowing boolean lowering and unknown classes. \p AllowTrue16Widening
+  /// permits a 16/32-bit mismatch, which True16 lowering still relies on.
+  bool checkRegClassCompatibility(const TargetRegisterClass *DefRC,
+                                  const TargetRegisterClass *UseRC,
+                                  bool AllowTrue16Widening = true) const;
+
+  /// Verify the operand widths of a copy-like instruction, taking subregister
+  /// indices into account.
+  bool verifyCopyLikeSizes(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI,
+                           StringRef &ErrInfo) const;
+
   bool resultDependsOnExec(const MachineInstr &MI) const;
 
   MachineInstr *convertToThreeAddressImpl(MachineInstr &MI,

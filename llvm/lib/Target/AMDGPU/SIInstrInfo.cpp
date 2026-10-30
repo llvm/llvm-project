@@ -5455,11 +5455,144 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
   return true;
 }
 
+/// \returns the register class of the lane of \p RC selected by the
+/// subregister index operand \p SubIdx, or null if it is not known.
+static const TargetRegisterClass *
+getLaneRegClass(const SIRegisterInfo &RI, const TargetRegisterClass *RC,
+                const MachineOperand &SubIdx) {
+  // The generic verifier only range checks this after verifyInstruction.
+  if (!RC || !SubIdx.isImm() || SubIdx.getImm() <= 0 ||
+      SubIdx.getImm() >= RI.getNumSubRegIndices())
+    return nullptr;
+  return RI.getSubRegisterClass(RC, SubIdx.getImm());
+}
+
+/// VReg_1 and SCC hold a boolean that is lowered to either a 32-bit value or,
+/// for VReg_1, a lane mask.
+static bool isBoolLowering(const SIRegisterInfo &RI,
+                           const TargetRegisterClass *A,
+                           const TargetRegisterClass *B) {
+  if (A != &AMDGPU::VReg_1RegClass && A != &AMDGPU::SCC_CLASSRegClass)
+    std::swap(A, B);
+  if (A != &AMDGPU::VReg_1RegClass && A != &AMDGPU::SCC_CLASSRegClass)
+    return false;
+
+  const TargetRegisterClass *VRC = RI.getEquivalentVGPRClass(B);
+  bool Is32Bit = RI.getCommonSubClass(VRC, &AMDGPU::VGPR_32RegClass);
+  if (A == &AMDGPU::SCC_CLASSRegClass)
+    return Is32Bit || RI.getCommonSubClass(VRC, &AMDGPU::VReg_64RegClass);
+  return Is32Bit ||
+         (RI.isSGPRClass(B) &&
+          RI.getCommonSubClass(VRC, RI.getEquivalentVGPRClass(RI.getBoolRC())));
+}
+
+bool SIInstrInfo::checkRegClassCompatibility(const TargetRegisterClass *DefRC,
+                                             const TargetRegisterClass *UseRC,
+                                             bool AllowTrue16Widening) const {
+  if (!DefRC || !UseRC || DefRC == UseRC)
+    return true;
+  if (isBoolLowering(RI, DefRC, UseRC))
+    return true;
+
+  // Copies can cross register banks and register allocation constraints.
+  DefRC = RI.getEquivalentVGPRClass(DefRC);
+  UseRC = RI.getEquivalentVGPRClass(UseRC);
+  if (RI.getCommonSubClass(DefRC, UseRC))
+    return true;
+
+  // TODO: Remove along with Fix16BitCopies.
+  return AllowTrue16Widening && ST.useRealTrue16Insts() && Fix16BitCopies &&
+         ((RI.getCommonSubClass(DefRC, &AMDGPU::VGPR_16RegClass) &&
+           RI.getCommonSubClass(UseRC, &AMDGPU::VGPR_32RegClass)) ||
+          (RI.getCommonSubClass(DefRC, &AMDGPU::VGPR_32RegClass) &&
+           RI.getCommonSubClass(UseRC, &AMDGPU::VGPR_16RegClass)));
+}
+
+bool SIInstrInfo::verifyCopyLikeSizes(const MachineInstr &MI,
+                                      const MachineRegisterInfo &MRI,
+                                      StringRef &ErrInfo) const {
+  if (!MI.isCopy() && !MI.isPHI() && !MI.isRegSequence() &&
+      !MI.isInsertSubreg() && !MI.isSubregToReg() && !MI.isExtractSubreg())
+    return true;
+
+  const MachineOperand &Dst = MI.getOperand(0);
+  if (!Dst.isReg() || !Dst.getReg())
+    return true;
+  const TargetRegisterClass *DstRC = RI.getRegClassForOperandReg(MRI, Dst);
+
+  switch (MI.getOpcode()) {
+  case AMDGPU::COPY:
+  case AMDGPU::PHI: {
+    const bool IsCopy = MI.isCopy();
+    for (const MachineOperand &Src : MI.explicit_uses()) {
+      if (!Src.isReg() || !Src.getReg())
+        continue;
+      // Fix16BitCopies widens COPYs and subregister-free PHIs.
+      bool AllowTrue16Widening =
+          IsCopy || (!Dst.getSubReg() && !Src.getSubReg());
+      if (!checkRegClassCompatibility(DstRC,
+                                      RI.getRegClassForOperandReg(MRI, Src),
+                                      AllowTrue16Widening)) {
+        ErrInfo = IsCopy ? "COPY operands have mismatched sizes"
+                         : "PHI operands have mismatched sizes";
+        return false;
+      }
+    }
+    return true;
+  }
+  case AMDGPU::REG_SEQUENCE:
+    for (unsigned I = 1, E = MI.getNumOperands(); I + 1 < E; I += 2) {
+      const MachineOperand &Src = MI.getOperand(I);
+      if (!Src.isReg() || !Src.getReg())
+        continue;
+      if (!checkRegClassCompatibility(
+              getLaneRegClass(RI, DstRC, MI.getOperand(I + 1)),
+              RI.getRegClassForOperandReg(MRI, Src))) {
+        ErrInfo = "REG_SEQUENCE source does not match its subregister index";
+        return false;
+      }
+    }
+    return true;
+  case AMDGPU::INSERT_SUBREG:
+    // The generic verifier checks the inserted value against the subregister
+    // index, which it allows to be narrower.
+    if (!checkRegClassCompatibility(
+            DstRC, RI.getRegClassForOperandReg(MRI, MI.getOperand(1)))) {
+      ErrInfo = "INSERT_SUBREG operands have mismatched sizes";
+      return false;
+    }
+    return true;
+  case AMDGPU::SUBREG_TO_REG:
+    if (!checkRegClassCompatibility(
+            getLaneRegClass(RI, DstRC, MI.getOperand(2)),
+            RI.getRegClassForOperandReg(MRI, MI.getOperand(1)))) {
+      ErrInfo = "SUBREG_TO_REG source does not match its subregister index";
+      return false;
+    }
+    return true;
+  case AMDGPU::EXTRACT_SUBREG: {
+    const TargetRegisterClass *SrcRC =
+        RI.getRegClassForOperandReg(MRI, MI.getOperand(1));
+    if (!checkRegClassCompatibility(
+            DstRC, getLaneRegClass(RI, SrcRC, MI.getOperand(2)))) {
+      ErrInfo = "EXTRACT_SUBREG result does not match its subregister index";
+      return false;
+    }
+    return true;
+  }
+  default:
+    return true;
+  }
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint32_t Opcode = MI.getOpcode();
   const MachineFunction *MF = MI.getMF();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  if (!verifyCopyLikeSizes(MI, MRI, ErrInfo))
+    return false;
 
   // FIXME: At this point the COPY verify is done only for non-ssa forms.
   // Find a better property to recognize the point where instruction selection
