@@ -49,7 +49,7 @@ _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
 template <class _Rep, class _Period, __enable_if_t<is_floating_point<_Rep>::value, int> = 0>
-inline chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
+inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
   using namespace chrono;
   using __ratio       = ratio_divide<_Period, nano>;
   using __ns_rep      = nanoseconds::rep;
@@ -69,7 +69,7 @@ inline chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period
 }
 
 template <class _Rep, class _Period, __enable_if_t<!is_floating_point<_Rep>::value, int> = 0>
-inline chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
+inline _LIBCPP_HIDE_FROM_ABI chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period> __d) {
   using namespace chrono;
   if (__d.count() == 0) {
     return nanoseconds(0);
@@ -96,7 +96,7 @@ inline chrono::nanoseconds __safe_nanosecond_cast(chrono::duration<_Rep, _Period
 }
 
 template <class _Duration>
-chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
+_LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
   return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
 }
 
@@ -118,7 +118,7 @@ class _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_WARN_UNUSED condition_variable {
   __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
 
 public:
-  _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR condition_variable() _NOEXCEPT = default;
 
 #  if _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION
   ~condition_variable() = default;
@@ -135,13 +135,14 @@ public:
   void wait(unique_lock<mutex>& __lk) _NOEXCEPT;
 
   template <class _Predicate>
-  void wait(unique_lock<mutex>& __lk, _Predicate __pred) {
+  _LIBCPP_HIDE_FROM_ABI void wait(unique_lock<mutex>& __lk, _Predicate __pred) {
     while (!__pred())
       wait(__lk);
   }
 
   template <class _Clock, class _Duration>
-  cv_status wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t) {
+  _LIBCPP_HIDE_FROM_ABI cv_status
+  wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t) {
     using namespace chrono;
     using __clock_tp_ns = time_point<_Clock, nanoseconds>;
 
@@ -156,7 +157,8 @@ public:
   }
 
   template <class _Clock, class _Duration, class _Predicate>
-  bool wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred) {
+  _LIBCPP_HIDE_FROM_ABI bool
+  wait_until(unique_lock<mutex>& __lk, const chrono::time_point<_Clock, _Duration>& __t, _Predicate __pred) {
     while (!__pred()) {
       if (wait_until(__lk, __t) == cv_status::timeout)
         return __pred();
@@ -165,25 +167,27 @@ public:
   }
 
   template <class _Rep, class _Period>
-  cv_status wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d) {
+  _LIBCPP_HIDE_FROM_ABI cv_status wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d) {
     return wait_until(__lk, std::__rel_to_abs(__d));
   }
 
   template <class _Rep, class _Period, class _Predicate>
-  bool wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
+  _LIBCPP_HIDE_FROM_ABI bool
+  wait_for(unique_lock<mutex>& __lk, const chrono::duration<_Rep, _Period>& __d, _Predicate __pred);
 
   typedef __libcpp_condvar_t* native_handle_type;
-  [[__nodiscard__]] native_handle_type native_handle() { return &__cv_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() { return &__cv_; }
 
 private:
   void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<chrono::system_clock, chrono::nanoseconds>) _NOEXCEPT;
 #  if _LIBCPP_HAS_COND_CLOCKWAIT
-  void
+  _LIBCPP_HIDE_FROM_ABI void
   __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<chrono::steady_clock, chrono::nanoseconds>) _NOEXCEPT;
 #  endif
   template <class _Clock>
-  void __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<_Clock, chrono::nanoseconds>) _NOEXCEPT;
+  _LIBCPP_HIDE_FROM_ABI void
+  __do_timed_wait(unique_lock<mutex>& __lk, chrono::time_point<_Clock, chrono::nanoseconds>) _NOEXCEPT;
 };
 #endif // _LIBCPP_HAS_THREADS
 
