@@ -28,16 +28,16 @@ struct ContainsNonTrivial {
 // CIR-NEXT:    %[[NT_OTHER_I:.*]] = cir.load align(8) %{{.*}} : !cir.ptr<!cir.ptr<!rec_ContainsNonTrivial>>
 // CIR-NEXT:    %[[NT_I_SRC:.*]] = cir.get_member %[[NT_OTHER_I]][2] {name = "i"}
 // CIR-NEXT:    %[[NT_SIZE_IJ:.*]] = cir.const #cir.int<12> : !u64i
-// CIR-NEXT:    %[[NT_I_SRC_VOID:.*]] = cir.cast bitcast %[[NT_I_SRC]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR-NEXT:    %[[NT_I_DST_VOID:.*]] = cir.cast bitcast %[[NT_I_DST]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CIR-NEXT:    %[[NT_I_SRC_VOID:.*]] = cir.cast bitcast %[[NT_I_SRC]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR-NEXT:    cir.libc.memcpy %[[NT_SIZE_IJ]] bytes from %[[NT_I_SRC_VOID]] align(4) to %[[NT_I_DST_VOID]] align(4)
 // CIR:         cir.call @_ZN21HasNonTrivialAssignOpaSERKS_(
 // CIR-NEXT:    %[[NT_K_DST:.*]] = cir.get_member %[[NT_THIS]][5] {name = "k"}
 // CIR-NEXT:    %[[NT_OTHER_K:.*]] = cir.load align(8) %{{.*}} : !cir.ptr<!cir.ptr<!rec_ContainsNonTrivial>>
 // CIR-NEXT:    %[[NT_K_SRC:.*]] = cir.get_member %[[NT_OTHER_K]][5] {name = "k"}
 // CIR-NEXT:    %[[NT_SIZE_KLM:.*]] = cir.const #cir.int<2> : !u64i
-// CIR-NEXT:    %[[NT_K_SRC_VOID:.*]] = cir.cast bitcast %[[NT_K_SRC]] : !cir.ptr<!u16i> -> !cir.ptr<!void>
 // CIR-NEXT:    %[[NT_K_DST_VOID:.*]] = cir.cast bitcast %[[NT_K_DST]] : !cir.ptr<!u16i> -> !cir.ptr<!void>
+// CIR-NEXT:    %[[NT_K_SRC_VOID:.*]] = cir.cast bitcast %[[NT_K_SRC]] : !cir.ptr<!u16i> -> !cir.ptr<!void>
 // CIR-NEXT:    cir.libc.memcpy %[[NT_SIZE_KLM]] bytes from %[[NT_K_SRC_VOID]] align(1) to %[[NT_K_DST_VOID]] align(1)
 // CIR:         cir.call @_ZN21HasNonTrivialAssignOpaSERKS_(
 // CIR:         cir.return
@@ -114,8 +114,8 @@ void copyTrivial(Trivial &a, Trivial &b) { a = b; }
 // CIR-NEXT:    %[[TR_OTHER:.*]] = cir.load align(8) %{{.*}} : !cir.ptr<!cir.ptr<!rec_Trivial>>
 // CIR-NEXT:    %[[TR_SRC:.*]] = cir.get_member %[[TR_OTHER]][0] {name = "i"}
 // CIR-NEXT:    %[[TR_SIZE:.*]] = cir.const #cir.int<36> : !u64i
-// CIR-NEXT:    %[[TR_SRC_VOID:.*]] = cir.cast bitcast %[[TR_SRC]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR-NEXT:    %[[TR_DST_VOID:.*]] = cir.cast bitcast %[[TR_DST]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CIR-NEXT:    %[[TR_SRC_VOID:.*]] = cir.cast bitcast %[[TR_SRC]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR-NEXT:    cir.libc.memcpy %[[TR_SIZE]] bytes from %[[TR_SRC_VOID]] align(8) to %[[TR_DST_VOID]] align(8)
 // CIR-NEXT:    cir.store %[[TR_THIS]], %{{.*}}
 // CIR:         cir.return
@@ -223,8 +223,8 @@ struct HasPadding {
 // CIR-NEXT:    %[[HP_OTHER:.*]] = cir.load align(8) %{{.*}} : !cir.ptr<!cir.ptr<!rec_HasPadding>>
 // CIR-NEXT:    %[[HP_SRC:.*]] = cir.get_member %[[HP_OTHER]][0] {name = "a"}
 // CIR-NEXT:    %[[HP_SIZE:.*]] = cir.const #cir.int<268> : !u64i
-// CIR-NEXT:    %[[HP_SRC_VOID:.*]] = cir.cast bitcast %[[HP_SRC]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR-NEXT:    %[[HP_DST_VOID:.*]] = cir.cast bitcast %[[HP_DST]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CIR-NEXT:    %[[HP_SRC_VOID:.*]] = cir.cast bitcast %[[HP_SRC]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR-NEXT:    cir.libc.memcpy %[[HP_SIZE]] bytes from %[[HP_SRC_VOID]] align(8) to %[[HP_DST_VOID]] align(8)
 // CIR-NEXT:    cir.store %[[HP_THIS]], %{{.*}}
 // CIR:         cir.return

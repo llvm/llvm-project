@@ -142,8 +142,9 @@ private:
     CIRGenBuilderTy &builder = cgf.getBuilder();
     mlir::Value sizeOp =
         builder.getConstInt(loc, cgf.sizeTy, size.getQuantity());
-    builder.createMemCpy(loc, destPtr.withElementType(builder, cgf.voidTy),
-                         srcPtr.withElementType(builder, cgf.voidTy), sizeOp);
+    Address destCast = destPtr.withElementType(builder, cgf.voidTy);
+    Address srcCast = srcPtr.withElementType(builder, cgf.voidTy);
+    builder.createMemCpy(loc, destCast, srcCast, sizeOp);
   }
 
   void addInitialField(FieldDecl *f) {
