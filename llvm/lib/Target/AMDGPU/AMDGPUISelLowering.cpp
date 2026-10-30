@@ -163,14 +163,18 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
     setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i64, VT,
                      Expand);
 
+  // Subword loads always extend to i32 on AMDGPU.
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+                   MVT::i8, Legal);
+  setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, MVT::i32,
+                   MVT::i16, Legal);
+
   for (MVT VT : MVT::integer_valuetypes()) {
     if (VT == MVT::i64)
       continue;
 
     for (auto Op : {ISD::SEXTLOAD, ISD::ZEXTLOAD, ISD::EXTLOAD}) {
       setLoadExtAction(Op, VT, MVT::i1, Promote);
-      setLoadExtAction(Op, VT, MVT::i8, Legal);
-      setLoadExtAction(Op, VT, MVT::i16, Legal);
       setLoadExtAction(Op, VT, MVT::i32, Expand);
     }
   }
