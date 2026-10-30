@@ -1,13 +1,14 @@
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-scf-uplift-while-to-for))' -split-input-file -allow-unregistered-dialect | FileCheck %s
 
-func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
+func.func @uplift_while(%arg0: index, %arg1: index) -> index {
+  %step = arith.constant 2 : index
   %0 = scf.while (%arg3 = %arg0) : (index) -> (index) {
     %1 = arith.cmpi slt, %arg3, %arg1 : index
     scf.condition(%1) %arg3 : index
   } do {
   ^bb0(%arg3: index):
     "test.test1"(%arg3) : (index) -> ()
-    %added = arith.addi %arg3, %arg2 : index
+    %added = arith.addi %arg3, %step : index
     "test.test2"(%added) : (index) -> ()
     scf.yield %added : index
   }
@@ -15,16 +16,16 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
-//       CHECK:     %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index) -> index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[STEP:.*]] = arith.constant 2 : index
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
 //       CHECK:     "test.test1"(%[[I]]) : (index) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : index
 //       CHECK:     "test.test2"(%[[INC]]) : (index) -> ()
-//       CHECK:     %[[R1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
-//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
+//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[C1]] : index
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
 //       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : index
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
@@ -33,14 +34,15 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 
 // -----
 
-func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
+func.func @uplift_while(%arg0: index, %arg1: index) -> index {
+  %step = arith.constant 2 : index
   %0 = scf.while (%arg3 = %arg0) : (index) -> (index) {
     %1 = arith.cmpi sgt, %arg1, %arg3 : index
     scf.condition(%1) %arg3 : index
   } do {
   ^bb0(%arg3: index):
     "test.test1"(%arg3) : (index) -> ()
-    %added = arith.addi %arg3, %arg2 : index
+    %added = arith.addi %arg3, %step : index
     "test.test2"(%added) : (index) -> ()
     scf.yield %added : index
   }
@@ -48,16 +50,16 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
-//       CHECK:     %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index) -> index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[STEP:.*]] = arith.constant 2 : index
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
 //       CHECK:     "test.test1"(%[[I]]) : (index) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : index
 //       CHECK:     "test.test2"(%[[INC]]) : (index) -> ()
-//       CHECK:     %[[R1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
-//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
+//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[C1]] : index
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
 //       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : index
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
@@ -66,14 +68,15 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 
 // -----
 
-func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
+func.func @uplift_while(%arg0: index, %arg1: index) -> index {
+  %step = arith.constant 2 : index
   %0 = scf.while (%arg3 = %arg0) : (index) -> (index) {
     %1 = arith.cmpi slt, %arg3, %arg1 : index
     scf.condition(%1) %arg3 : index
   } do {
   ^bb0(%arg3: index):
     "test.test1"(%arg3) : (index) -> ()
-    %added = arith.addi %arg2, %arg3 : index
+    %added = arith.addi %step, %arg3 : index
     "test.test2"(%added) : (index) -> ()
     scf.yield %added : index
   }
@@ -81,16 +84,16 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
-//       CHECK:     %[[C0:.*]] = arith.constant 0 : index
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
+//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index) -> index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[STEP:.*]] = arith.constant 2 : index
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
 //       CHECK:     "test.test1"(%[[I]]) : (index) -> ()
-//       CHECK:     %[[INC:.*]] = arith.addi %[[STEP]], %[[I]] : index
+//       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : index
 //       CHECK:     "test.test2"(%[[INC]]) : (index) -> ()
-//       CHECK:     %[[R1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
-//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
+//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[C1]] : index
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
 //       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : index
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
@@ -100,16 +103,17 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 
 // -----
 
-func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) {
+func.func @uplift_while(%arg0: index, %arg1: index) -> (i32, f32) {
   %c1 = arith.constant 1 : i32
   %c2 = arith.constant 2.0 : f32
+  %step = arith.constant 2 : index
   %0:3 = scf.while (%arg4 = %c1, %arg3 = %arg0, %arg5 = %c2) : (i32, index, f32) -> (i32, index, f32) {
     %1 = arith.cmpi slt, %arg3, %arg1 : index
     scf.condition(%1) %arg4, %arg3, %arg5 : i32, index, f32
   } do {
   ^bb0(%arg4: i32, %arg3: index, %arg5: f32):
     %1 = "test.test1"(%arg4) : (i32) -> i32
-    %added = arith.addi %arg3, %arg2 : index
+    %added = arith.addi %arg3, %step : index
     %2 = "test.test2"(%arg5) : (f32) -> f32
     scf.yield %1, %added, %2 : i32, index, f32
   }
@@ -117,9 +121,10 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) 
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> (i32, f32)
+//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index) -> (i32, f32)
 //   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i32
 //   CHECK-DAG:     %[[C2:.*]] = arith.constant 2.000000e+00 : f32
+//   CHECK-DAG:     %[[STEP:.*]] = arith.constant 2 : index
 //       CHECK:     %[[RES:.*]]:2 = scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]]
 //  CHECK-SAME:     iter_args(%[[ARG1:.*]] = %[[C1]], %[[ARG2:.*]] = %[[C2]]) -> (i32, f32) {
 //       CHECK:     %[[T1:.*]] = "test.test1"(%[[ARG1]]) : (i32) -> i32
@@ -129,14 +134,15 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) 
 
 // -----
 
-func.func @uplift_while(%arg0: i64, %arg1: i64, %arg2: i64) -> i64 {
+func.func @uplift_while(%arg0: i64, %arg1: i64) -> i64 {
+  %step = arith.constant 2 : i64
   %0 = scf.while (%arg3 = %arg0) : (i64) -> (i64) {
     %1 = arith.cmpi slt, %arg3, %arg1 : i64
     scf.condition(%1) %arg3 : i64
   } do {
   ^bb0(%arg3: i64):
     "test.test1"(%arg3) : (i64) -> ()
-    %added = arith.addi %arg3, %arg2 : i64
+    %added = arith.addi %arg3, %step : i64
     "test.test2"(%added) : (i64) -> ()
     scf.yield %added : i64
   }
@@ -144,16 +150,16 @@ func.func @uplift_while(%arg0: i64, %arg1: i64, %arg2: i64) -> i64 {
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGIN:.*]]: i64, %[[END:.*]]: i64, %[[STEP:.*]]: i64) -> i64
-//       CHECK:     %[[C0:.*]] = arith.constant 0 : i64
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : i64
+//  CHECK-SAME:     (%[[BEGIN:.*]]: i64, %[[END:.*]]: i64) -> i64
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i64
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i64
+//   CHECK-DAG:     %[[STEP:.*]] = arith.constant 2 : i64
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] : i64 {
 //       CHECK:     "test.test1"(%[[I]]) : (i64) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : i64
 //       CHECK:     "test.test2"(%[[INC]]) : (i64) -> ()
-//       CHECK:     %[[R1:.*]] = arith.subi %[[STEP]], %[[C1]] : i64
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : i64
-//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : i64
+//       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[C1]] : i64
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : i64
 //       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : i64
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : i64
@@ -163,16 +169,17 @@ func.func @uplift_while(%arg0: i64, %arg1: i64, %arg2: i64) -> i64 {
 // -----
 
 // A case where all 'before' arguments are forwarded but reordered.
-func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) {
+func.func @uplift_while(%arg0: index, %arg1: index) -> (i32, f32) {
   %c1 = arith.constant 1 : i32
   %c2 = arith.constant 2.0 : f32
+  %step = arith.constant 2 : index
   %0:3 = scf.while (%arg4 = %c1, %arg3 = %arg0, %arg5 = %c2) : (i32, index, f32) -> (index, i32, f32) {
     %1 = arith.cmpi slt, %arg3, %arg1 : index
     scf.condition(%1) %arg3, %arg4, %arg5 : index, i32, f32
   } do {
   ^bb0(%arg3: index, %arg4: i32, %arg5: f32):
     %1 = "test.test1"(%arg4) : (i32) -> i32
-    %added = arith.addi %arg3, %arg2 : index
+    %added = arith.addi %arg3, %step : index
     %2 = "test.test2"(%arg5) : (f32) -> f32
     scf.yield %1, %added, %2 : i32, index, f32
   }
@@ -180,9 +187,10 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) 
 }
 
 // CHECK-LABEL: func @uplift_while
-//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> (i32, f32)
+//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index) -> (i32, f32)
 //   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i32
 //   CHECK-DAG:     %[[C2:.*]] = arith.constant 2.000000e+00 : f32
+//   CHECK-DAG:     %[[STEP:.*]] = arith.constant 2 : index
 //       CHECK:     %[[RES:.*]]:2 = scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]]
 //  CHECK-SAME:     iter_args(%[[ARG1:.*]] = %[[C1]], %[[ARG2:.*]] = %[[C2]]) -> (i32, f32) {
 //       CHECK:     %[[T1:.*]] = "test.test1"(%[[ARG1]]) : (i32) -> i32
@@ -213,3 +221,66 @@ func.func @uplift_while_zero_trip() -> index {
 // CHECK-LABEL: func @uplift_while_zero_trip
 //       CHECK:     %[[LB:.*]] = arith.constant 10 : index
 //       CHECK:     return %[[LB]] : index
+
+// -----
+
+// Do not create an `scf.for` unless the step is provably positive.
+func.func @do_not_uplift_negative_step() -> index {
+  %lb = arith.constant 6 : index
+  %ub = arith.constant 5 : index
+  %step = arith.constant -2 : index
+  %0 = scf.while (%arg = %lb) : (index) -> index {
+    %1 = arith.cmpi slt, %arg, %ub : index
+    scf.condition(%1) %arg : index
+  } do {
+  ^bb0(%arg: index):
+    %added = arith.addi %arg, %step : index
+    scf.yield %added : index
+  }
+  return %0 : index
+}
+
+// CHECK-LABEL: func @do_not_uplift_negative_step
+//   CHECK-NOT: scf.for
+//       CHECK: scf.while
+//       CHECK: return
+
+// -----
+
+func.func @do_not_uplift_zero_step(%lb: index, %ub: index) -> index {
+  %step = arith.constant 0 : index
+  %0 = scf.while (%arg = %lb) : (index) -> index {
+    %1 = arith.cmpi slt, %arg, %ub : index
+    scf.condition(%1) %arg : index
+  } do {
+  ^bb0(%arg: index):
+    %added = arith.addi %arg, %step : index
+    scf.yield %added : index
+  }
+  return %0 : index
+}
+
+// CHECK-LABEL: func @do_not_uplift_zero_step
+//   CHECK-NOT: scf.for
+//       CHECK: scf.while
+//       CHECK: return
+
+// -----
+
+func.func @do_not_uplift_dynamic_step(%lb: index, %ub: index,
+                                      %step: index) -> index {
+  %0 = scf.while (%arg = %lb) : (index) -> index {
+    %1 = arith.cmpi slt, %arg, %ub : index
+    scf.condition(%1) %arg : index
+  } do {
+  ^bb0(%arg: index):
+    %added = arith.addi %arg, %step : index
+    scf.yield %added : index
+  }
+  return %0 : index
+}
+
+// CHECK-LABEL: func @do_not_uplift_dynamic_step
+//   CHECK-NOT: scf.for
+//       CHECK: scf.while
+//       CHECK: return

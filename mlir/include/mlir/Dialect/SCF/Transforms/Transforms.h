@@ -247,6 +247,7 @@ FailureOr<WhileOp> wrapWhileLoopInZeroTripCheck(WhileOp whileOp,
 /// Uplifitng expects a specific ops pattern:
 ///  * `before` block consisting of single arith.cmp op
 ///  * `after` block containing arith.addi
+///  * induction step is a strictly positive constant
 FailureOr<ForOp> upliftWhileToForLoop(RewriterBase &rewriter, WhileOp loop);
 
 } // namespace scf
