@@ -270,6 +270,7 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerANY_EXTEND(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
 
   FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                              bool ForCodeSize) const override;
