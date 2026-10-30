@@ -499,13 +499,9 @@ struct AssumeSimplify {
     SmallVector<MergeIterator, 4> SplitPoints;
     for (auto &Elem : BBToAssume) {
       SmallVectorImpl<IntrinsicInst *> &AssumesInBB = Elem.second;
-      AssumesInBB.erase(
-          llvm::remove_if(AssumesInBB,
-                          [](IntrinsicInst *I) {
-                            return any_of(I->bundle_op_infos(),
-                                          bundleHasOffset);
-                          }),
-          AssumesInBB.end());
+      llvm::erase_if(AssumesInBB, [](IntrinsicInst *I) {
+        return any_of(I->bundle_op_infos(), bundleHasOffset);
+      });
       if (AssumesInBB.size() < 2)
         continue;
       /// AssumesInBB is already sorted by order in the block.
