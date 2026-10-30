@@ -51,12 +51,12 @@ static Sched* get_sched() {
 }
 
 void __apply(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
-  if (__iterations < 2) {
-    apply_serial(__iterations, __context, __func);
+  if (chunk_count < 2) {
+    apply_serial(chunk_count, context, func);
     return;
   }
   Sched* sched = get_sched();
-  sched->apply(__iterations, __context, __func);
+  sched->apply(chunk_count, context, func);
 }
 
 } // namespace __pstl::__statpart
