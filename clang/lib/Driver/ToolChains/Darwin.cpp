@@ -345,8 +345,13 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     // FIXME: Why do this only on this path?
     Args.AddLastArg(CmdArgs, options::OPT_force__cpusubtype__ALL);
 
-    Args.AddLastArg(CmdArgs, options::OPT_bundle);
-    Args.AddAllArgs(CmdArgs, options::OPT_bundle__loader);
+    const bool IsKext = Args.hasArg(options::OPT_fapple_kext);
+    if (IsKext) {
+      CmdArgs.push_back("-kext");
+    } else {
+      Args.AddLastArg(CmdArgs, options::OPT_bundle);
+      Args.AddAllArgs(CmdArgs, options::OPT_bundle__loader);
+    }
     Args.AddAllArgs(CmdArgs, options::OPT_client__name);
 
     Arg *A;
@@ -356,14 +361,17 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
       D.Diag(diag::err_drv_argument_only_allowed_with) << A->getAsString(Args)
                                                        << "-dynamiclib";
 
-    Args.AddLastArg(CmdArgs, options::OPT_force__flat__namespace);
+    if (!IsKext)
+      Args.AddLastArg(CmdArgs, options::OPT_force__flat__namespace);
     Args.AddLastArg(CmdArgs, options::OPT_keep__private__externs);
-    Args.AddLastArg(CmdArgs, options::OPT_private__bundle);
+    if (!IsKext)
+      Args.AddLastArg(CmdArgs, options::OPT_private__bundle);
   } else {
     CmdArgs.push_back("-dylib");
 
     Arg *A;
-    if ((A = Args.getLastArg(options::OPT_bundle)) ||
+    if ((A = Args.getLastArg(options::OPT_fapple_kext)) ||
+        (A = Args.getLastArg(options::OPT_bundle)) ||
         (A = Args.getLastArg(options::OPT_bundle__loader)) ||
         (A = Args.getLastArg(options::OPT_client__name)) ||
         (A = Args.getLastArg(options::OPT_force__flat__namespace)) ||
@@ -3561,6 +3569,12 @@ void Darwin::addClangTargetOptions(
 
   MachO::addClangTargetOptions(DriverArgs, CC1Args, BA, DeviceOffloadKind);
 
+  if (DriverArgs.hasArg(options::OPT_mkernel, options::OPT_fapple_kext,
+                        options::OPT_ffreestanding)) {
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("-disable-atexit-based-global-dtor-lowering");
+  }
+
   // When compiling device code (e.g. SPIR-V for HIP), skip host-specific
   // flags like -faligned-alloc-unavailable and -fno-sized-deallocation
   // that depend on the host OS version and are irrelevant to device code.
@@ -4054,6 +4068,9 @@ void Darwin::addStartObjectFileArgs(const ArgList &Args,
   // Firmware uses the "bare metal" start object file args.
   if (isTargetFirmware())
     return MachO::addStartObjectFileArgs(Args, CmdArgs);
+
+  if (Args.hasArg(options::OPT_fapple_kext))
+    return;
 
   // Derived from startfile spec.
   if (Args.hasArg(options::OPT_dynamiclib))

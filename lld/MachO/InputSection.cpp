@@ -252,6 +252,12 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       if (target->hasAttr(r.type, RelocAttrBits::LOAD) &&
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
+      // The kernel linker binds these using the external relocations, which
+      // take the addend from the relocated location.
+      if (config->outputType == MH_KEXT_BUNDLE && needsBinding(referentSym) &&
+          !target->hasAttr(r.type, RelocAttrBits::GOT) &&
+          !target->hasAttr(r.type, RelocAttrBits::TLV))
+        continue;
       // For dtrace symbols, do not handle them as normal undefined symbols
       if (referentSym->getName().starts_with("___dtrace_")) {
         // Change dtrace call site to pre-defined instructions
