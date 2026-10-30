@@ -184,6 +184,7 @@ static void filterSharedDeallocCandidates(
 /// ops are handled uniformly. An allocation is eligible when:
 ///   - it has a static shape (dynamic shapes are silently skipped), and
 ///   - its element type is an integer or float, and
+///   - its layout is identity, and
 ///   - it lives directly in the function's entry block (allocs nested in a
 ///     region are skipped for now), and
 ///   - every dealloc that may free it is anchored in that same entry block --
@@ -199,8 +200,8 @@ static void filterSharedDeallocCandidates(
 static LogicalResult collectCandidates(
     FunctionOpInterface funcOp, const BufferViewFlowAnalysis &analysis,
     llvm::Statistic &numSkipDynamic, llvm::Statistic &numSkipUnsupportedType,
-    llvm::Statistic &numSkipNested, llvm::Statistic &numSkipSharedDealloc,
-    llvm::Statistic &numEligible,
+    llvm::Statistic &numSkipUnsupportedLayout, llvm::Statistic &numSkipNested,
+    llvm::Statistic &numSkipSharedDealloc, llvm::Statistic &numEligible,
     SmallVector<AllocationCandidate> &candidates) {
   // All candidates are planned relative to the function's entry block.
   if (funcOp.getFunctionBody().empty())
@@ -225,6 +226,12 @@ static LogicalResult collectCandidates(
     // computeSizeInBytes only supports integer and floating-point elements.
     if (!memrefType.getElementType().isIntOrFloat()) {
       ++numSkipUnsupportedType;
+      return WalkResult::advance();
+    }
+
+    // memref.view requires an identity layout for its result.
+    if (!memrefType.getLayout().isIdentity()) {
+      ++numSkipUnsupportedLayout;
       return WalkResult::advance();
     }
 
@@ -374,8 +381,9 @@ void StaticMemoryPlannerAnalysisPass::runOnOperation() {
   BufferViewFlowAnalysis analysis(funcOp);
   SmallVector<AllocationCandidate> candidates;
   if (failed(collectCandidates(funcOp, analysis, numSkipDynamic,
-                               numSkipUnsupportedType, numSkipNested,
-                               numSkipSharedDealloc, numEligible, candidates)))
+                               numSkipUnsupportedType, numSkipUnsupportedLayout,
+                               numSkipNested, numSkipSharedDealloc, numEligible,
+                               candidates)))
     return signalPassFailure();
 
   if (candidates.empty())
