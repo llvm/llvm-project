@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=mipsel-unknown-linux-gnu -mattr=+micromips -mcpu=mips32r2 \
-# RUN:     -verify-machineinstrs -run-pass micromips-reduce-size \
+# RUN:     -verify-machineinstrs -run-pass mips-micro-reduce-size \
 # RUN:      %s -o - | FileCheck %s
 
 --- |
