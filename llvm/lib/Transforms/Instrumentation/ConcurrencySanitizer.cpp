@@ -276,7 +276,7 @@ void ConcurrencySanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
   FlagsTy = Type::getInt32Ty(Ctx);
 
   AttributeList Attr = AttributeList().addFnAttribute(Ctx, Attribute::NoUnwind);
-  IRBuilder<> IRB(Ctx);
+  IRBuilder<> IRB(M);
   Type *VoidTy = IRB.getVoidTy();
   Type *PtrTy = IRB.getPtrTy();
   CsanFuncEntry =
