@@ -413,10 +413,11 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
     DumpOpts.TT = Obj->makeTriple();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
-    DumpOpts.Verbose = ErrorDetails != NoDetailsOnlySummary &&
-                       ErrorDetails != NoDetailsOrSummary;
+    DumpOpts.Verbose = true;
+    DumpOpts.ShowErrorDetails = ErrorDetails != NoDetailsOnlySummary &&
+                                ErrorDetails != NoDetailsOrSummary;
     DumpOpts.ShowAggregateErrors = ErrorDetails != OnlyDetailsNoSummary &&
-                                   ErrorDetails != NoDetailsOnlySummary;
+                                   ErrorDetails != NoDetailsOrSummary;
     DumpOpts.JsonErrSummaryFile = JsonErrSummaryFile;
     return DumpOpts.noImplicitRecursion();
   }
