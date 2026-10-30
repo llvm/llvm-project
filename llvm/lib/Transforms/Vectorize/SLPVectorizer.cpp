@@ -24232,11 +24232,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     if (!I)
       return V;
     // Drop nneg propagated from the original cast.
-    Value *Op;
     if (auto *CI = dyn_cast<CastInst>(VL0);
-        CI && match(I, m_NNegZExt(m_Value(Op))) &&
-        Op->getType()->getScalarType() != CI->getSrcTy())
-      cast<ZExtInst>(I)->setNonNeg(false);
+        CI && isa<PossiblyNonNegInst>(I) &&
+        I->getOperand(0)->getType()->getScalarType() !=
+            CI->getSrcTy()->getScalarType())
+      I->setNonNeg(false);
+    // A copyable zext lane is a zext of a truncated constant, which may be
+    // negative or undef.
+    if (E->hasCopyableElements() && isa<PossiblyNonNegInst>(I) &&
+        any_of(enumerate(E->Scalars), [&](const auto &P) {
+          return E->isCopyableElement(P.value()) &&
+                 !match(E->getOperand(0)[P.index()], m_NonNegative());
+        }))
+      I->setNonNeg(false);
     // A lane may be emitted in negated form (sub C, x as add x, -C, or an
     // add/sub lane with swapped operands) when all its uses are
     // sign-insensitive (icmp eq/ne 0 or abs). The value stays correct for
@@ -24787,6 +24795,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
                      : Builder.CreateCast(VecOpcode, InVec, VecTy);
+      if (V != InVec) {
+        V = PropagateIRFlags(V);
+        // Wrap flags of the original trunc do not hold for a demoted result.
+        if (It != MinBWs.end())
+          if (auto *TI = dyn_cast<TruncInst>(V))
+            TI->dropPoisonGeneratingFlags();
+      }
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;

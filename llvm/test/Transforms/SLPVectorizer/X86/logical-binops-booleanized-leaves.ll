@@ -386,9 +386,9 @@ define <8 x i1> @and_multiuse_bv(ptr %p, ptr %q, ptr %s) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[P]], align 1
 ; CHECK-NEXT:    [[A0:%.*]] = load i8, ptr [[P]], align 1, !range [[RNG0:![0-9]+]], !noundef [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Q]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc <8 x i8> [[TMP0]] to <8 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nuw <8 x i8> [[TMP0]] to <8 x i1>
 ; CHECK-NEXT:    [[T0:%.*]] = trunc nuw i8 [[A0]] to i1
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i8> [[TMP1]] to <8 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw <8 x i8> [[TMP1]] to <8 x i1>
 ; CHECK-NEXT:    store i1 [[T0]], ptr [[S]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <8 x i1> [[TMP2]], [[TMP3]]
 ; CHECK-NEXT:    ret <8 x i1> [[TMP4]]
