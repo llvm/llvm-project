@@ -1188,6 +1188,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   evaluated once in Sema and the results are stored in the AST. (#GH212106)
 - Fixed an assertion failure in `-extract-api` when a documentation comment
   contains invalid UTF-8. (#GH212393)
+- Fixed a stack overflow crash when parsing deeply nested expression lists and block literals. (#GH121952)
 - Fixed a crash in codegen on 32-bit targets caused by a struct too large to
   represent in `size_t`. The `err_struct_too_large` check now scales the
   threshold to the target's `size_t` width instead of using a fixed

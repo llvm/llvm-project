@@ -3214,54 +3214,57 @@ bool Parser::ParseExpressionList(SmallVectorImpl<Expr *> &Exprs,
                                  bool FailImmediatelyOnInvalidExpr,
                                  bool ParsingExpansionStmtInitList) {
   bool SawError = false;
-  while (true) {
-    if (ExpressionStarts)
-      ExpressionStarts();
 
-    ExprResult Expr;
-    if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
-      Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
-      Expr = ParseBraceInitializer();
-    } else
-      Expr = ParseAssignmentExpression();
+  Actions.runWithSufficientStackSpace(Tok.getLocation(), [&] {
+    while (true) {
+      if (ExpressionStarts)
+        ExpressionStarts();
 
-    if (Tok.is(tok::ellipsis))
-      Expr = Actions.ActOnPackExpansion(Expr.get(), ConsumeToken());
-    else if (Tok.is(tok::code_completion)) {
-      // There's nothing to suggest in here as we parsed a full expression.
-      // Instead fail and propagate the error since caller might have something
-      // the suggest, e.g. signature help in function call. Note that this is
-      // performed before pushing the \p Expr, so that signature help can report
-      // current argument correctly.
-      SawError = true;
-      cutOffParsing();
-      break;
-    }
-    if (Expr.isInvalid()) {
-      SawError = true;
-      if (FailImmediatelyOnInvalidExpr)
+      ExprResult Expr;
+      if (getLangOpts().CPlusPlus11 && Tok.is(tok::l_brace)) {
+        Diag(Tok, diag::compat_cxx11_generalized_initializer_lists);
+        Expr = ParseBraceInitializer();
+      } else
+        Expr = ParseAssignmentExpression();
+
+      if (Tok.is(tok::ellipsis))
+        Expr = Actions.ActOnPackExpansion(Expr.get(), ConsumeToken());
+      else if (Tok.is(tok::code_completion)) {
+        // There's nothing to suggest in here as we parsed a full expression.
+        // Instead fail and propagate the error since caller might have
+        // something the suggest, e.g. signature help in function call. Note
+        // that this is performed before pushing the \p Expr, so that signature
+        // help can report current argument correctly.
+        SawError = true;
+        cutOffParsing();
+        break;
+      }
+      if (Expr.isInvalid()) {
+        SawError = true;
+        if (FailImmediatelyOnInvalidExpr)
+          break;
+
+        // We expect '}' rather than ')' at the end of an expansion-init-list.
+        SkipUntil(tok::comma,
+                  ParsingExpansionStmtInitList ? tok::r_brace : tok::r_paren,
+                  StopAtSemi | StopBeforeMatch);
+      } else {
+        Exprs.push_back(Expr.get());
+      }
+
+      if (Tok.isNot(tok::comma))
+        break;
+      // Move to the next argument, remember where the comma was.
+      Token Comma = Tok;
+      ConsumeToken();
+
+      // CWG 3061: Trailing commas are allowed in expansion-init-lists.
+      if (ParsingExpansionStmtInitList && Tok.is(tok::r_brace))
         break;
 
-      // We expect '}' rather than ')' at the end of an expansion-init-list.
-      SkipUntil(tok::comma,
-                ParsingExpansionStmtInitList ? tok::r_brace : tok::r_paren,
-                StopAtSemi | StopBeforeMatch);
-    } else {
-      Exprs.push_back(Expr.get());
+      checkPotentialAngleBracketDelimiter(Comma);
     }
-
-    if (Tok.isNot(tok::comma))
-      break;
-    // Move to the next argument, remember where the comma was.
-    Token Comma = Tok;
-    ConsumeToken();
-
-    // CWG 3061: Trailing commas are allowed in expansion-init-lists.
-    if (ParsingExpansionStmtInitList && Tok.is(tok::r_brace))
-      break;
-
-    checkPotentialAngleBracketDelimiter(Comma);
-  }
+  });
   return SawError;
 }
 
@@ -3399,7 +3402,10 @@ ExprResult Parser::ParseBlockLiteralExpression() {
   }
   EnterExpressionEvaluationContextForFunction PotentiallyEvaluated(
        Actions, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-  StmtResult Stmt(ParseCompoundStatementBody());
+  StmtResult Stmt;
+  Actions.runWithSufficientStackSpace(
+      Tok.getLocation(), [&] { Stmt = ParseCompoundStatementBody(); });
+
   BlockScope.Exit();
   if (!Stmt.isInvalid())
     Result = Actions.ActOnBlockStmtExpr(CaretLoc, Stmt.get(), getCurScope());
