@@ -4056,6 +4056,31 @@ template<typename T> constexpr T *addressof(T &value) {
 }
 ```
 
+### `__builtin_imgrel32`
+
+`__builtin_imgrel32` returns the offset of a global variable or function from
+the image base, as a 32-bit unsigned integer. It is only available on COFF
+targets, and the argument must be the address of a global variable, an element
+of one, or a function. Thread-local variables and `dllimport` declarations are
+rejected. The result is an address constant that the linker resolves, so it
+can initialize static data. In a function body it is evaluated at run time.
+It lowers to an image relative relocation (`IMAGE_REL_AMD64_ADDR32NB` on
+x86-64), the same relocation MSVC uses for C++ run-time type information.
+
+**Syntax**:
+
+```c++
+unsigned __builtin_imgrel32(const void *address)
+```
+
+**Example of use**:
+
+```c++
+extern int data;
+struct locator { unsigned signature, data_rva; };
+const struct locator locator = { 1, __builtin_imgrel32(&data) };
+```
+
 ### `__builtin_function_start`
 
 `__builtin_function_start` returns the address of a function body.
