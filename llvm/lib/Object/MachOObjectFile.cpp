@@ -3501,10 +3501,13 @@ void MachOChainedFixupEntry::moveNext() {
   SegmentIndex = SegInfo.SegIdx;
   SegmentOffset = SegInfo.Header.page_size * PageIndex + PageOffset;
 
-  // FIXME: Handle other pointer formats.
-  uint16_t PointerFormat = SegInfo.Header.pointer_format;
+  // FIXME: Handle the 32-bit, kernel and firmware pointer formats, and
+  // DYLD_CHAINED_PTR_ARM64E_USERLAND.
+  PointerFormat = SegInfo.Header.pointer_format;
+  bool IsArm64e = PointerFormat == MachO::DYLD_CHAINED_PTR_ARM64E ||
+                  PointerFormat == MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND24;
   if (PointerFormat != MachO::DYLD_CHAINED_PTR_64 &&
-      PointerFormat != MachO::DYLD_CHAINED_PTR_64_OFFSET) {
+      PointerFormat != MachO::DYLD_CHAINED_PTR_64_OFFSET && !IsArm64e) {
     *E = createError("segment " + Twine(SegmentIndex) +
                      " has unsupported chained fixup pointer_format " +
                      Twine(PointerFormat));
@@ -3517,6 +3520,10 @@ void MachOChainedFixupEntry::moveNext() {
   Addend = 0;
   PointerValue = 0;
   SymbolName = {};
+  IsAuthenticated = false;
+  HasAddressDiversity = false;
+  Key = 0;
+  Diversity = 0;
 
   if (SegmentOffset + sizeof(RawValue) > SegmentData.size()) {
     *E = malformedError("fixup in segment " + Twine(SegmentIndex) +
@@ -3538,15 +3545,59 @@ void MachOChainedFixupEntry::moveNext() {
     return (RawValue >> Right) & ((1ULL << Count) - 1);
   };
 
-  // The `bind` field (most significant bit) of the encoded fixup determines
-  // whether it is dyld_chained_ptr_64_bind or dyld_chained_ptr_64_rebase.
-  bool IsBind = Field(63, 1);
-  Kind = IsBind ? FixupKind::Bind : FixupKind::Rebase;
-  uint32_t Next = Field(51, 12);
-  if (IsBind) {
-    uint32_t ImportOrdinal = Field(0, 24);
-    uint8_t InlineAddend = Field(24, 8);
+  bool IsBind;
+  uint32_t Next;
+  uint32_t ImportOrdinal = 0;
+  int64_t InlineAddend = 0;
+  if (IsArm64e) {
+    // The `auth` and `bind` fields (the two most significant bits) of the
+    // encoded fixup determine which dyld_chained_ptr_arm64e_* struct it is.
+    IsAuthenticated = Field(63, 1);
+    IsBind = Field(62, 1);
+    Next = Field(51, 11);
+    if (IsAuthenticated) {
+      Diversity = Field(32, 16);
+      HasAddressDiversity = Field(48, 1);
+      Key = Field(49, 2);
+    }
+    if (IsBind) {
+      ImportOrdinal = Field(
+          0,
+          PointerFormat == MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND24 ? 24 : 16);
+      // Authenticated binds have no room for an addend.
+      if (!IsAuthenticated)
+        InlineAddend = SignExtend64<19>(Field(32, 19));
+    } else if (IsAuthenticated) {
+      // The target of an authenticated rebase is an offset from the image.
+      PointerValue = Field(0, 32) + textAddress();
+    } else {
+      // DYLD_CHAINED_PTR_ARM64E rebases hold an address, and
+      // DYLD_CHAINED_PTR_ARM64E_USERLAND24 rebases an offset from the image.
+      uint64_t Target = Field(0, 43);
+      if (PointerFormat == MachO::DYLD_CHAINED_PTR_ARM64E_USERLAND24)
+        Target += textAddress();
+      PointerValue = Target | (Field(43, 8) << 56);
+    }
+  } else {
+    // The `bind` field (most significant bit) of the encoded fixup determines
+    // whether it is dyld_chained_ptr_64_bind or dyld_chained_ptr_64_rebase.
+    IsBind = Field(63, 1);
+    Next = Field(51, 12);
+    if (IsBind) {
+      ImportOrdinal = Field(0, 24);
+      InlineAddend = Field(24, 8);
+    } else {
+      uint64_t Target = Field(0, 36);
+      uint64_t High8 = Field(36, 8);
 
+      PointerValue = Target | (High8 << 56);
+      if (PointerFormat == MachO::DYLD_CHAINED_PTR_64_OFFSET)
+        PointerValue += textAddress();
+    }
+  }
+
+  Kind = IsBind ? FixupKind::Bind : FixupKind::Rebase;
+  if (IsBind) {
     if (ImportOrdinal >= FixupTargets.size()) {
       *E = malformedError("fixup in segment " + Twine(SegmentIndex) +
                           " at offset " + Twine(SegmentOffset) +
@@ -3561,18 +3612,12 @@ void MachOChainedFixupEntry::moveNext() {
     Addend = InlineAddend ? InlineAddend : Target.addend();
     Flags = Target.weakImport() ? MachO::BIND_SYMBOL_FLAGS_WEAK_IMPORT : 0;
     SymbolName = Target.symbolName();
-  } else {
-    uint64_t Target = Field(0, 36);
-    uint64_t High8 = Field(36, 8);
-
-    PointerValue = Target | (High8 << 56);
-    if (PointerFormat == MachO::DYLD_CHAINED_PTR_64_OFFSET)
-      PointerValue += textAddress();
   }
 
-  // The stride is 4 bytes for DYLD_CHAINED_PTR_64(_OFFSET).
+  // The stride is 8 bytes for the arm64e formats and 4 bytes for
+  // DYLD_CHAINED_PTR_64(_OFFSET).
   if (Next != 0) {
-    PageOffset += 4 * Next;
+    PageOffset += (IsArm64e ? 8 : 4) * Next;
   } else {
     ++PageIndex;
     findNextPageWithFixups();
