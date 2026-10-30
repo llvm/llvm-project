@@ -810,7 +810,9 @@ CHRScope * CHR::findScope(Region *R) {
     }
     if (Selects.size() > 0) {
       auto AddSelects = [&](RegInfo &RI) {
-        for (auto *SI : Selects)
+        for (auto *SI : Selects) {
+          if (!SI->getType()->isIntegerTy())
+            continue;
           if (checkBiasedSelect(Opts, SI, RI.R, TrueBiasedSelectsGlobal,
                                 FalseBiasedSelectsGlobal, SelectBiasMap))
             RI.Selects.push_back(SI);
@@ -819,6 +821,7 @@ CHRScope * CHR::findScope(Region *R) {
               return OptimizationRemarkMissed(DEBUG_TYPE, "SelectNotBiased", SI)
                   << "Select not biased";
             });
+        }
       };
       if (!Result) {
         CHR_DEBUG(dbgs() << "Found a select-only region\n");
