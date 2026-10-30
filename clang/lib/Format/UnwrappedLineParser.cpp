@@ -1097,6 +1097,13 @@ void UnwrappedLineParser::conditionalCompilationCondition(bool Unreachable) {
 
 void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
   ++PP.BranchLevel;
+  // Inside an already-unreachable branch, still track BranchLevel and PP.Stack
+  // for directive indentation and #endif matching, but do not track branch
+  // combinations in LevelBranchIndex/LevelBranchCount.
+  if (!PP.Stack.empty() && PP.Stack.back().Kind == PP_Unreachable) {
+    conditionalCompilationCondition(/*Unreachable=*/true);
+    return;
+  }
   assert(PP.BranchLevel >= 0 &&
          PP.BranchLevel <= (int)PP.LevelBranchIndex.size());
   if (PP.BranchLevel == (int)PP.LevelBranchIndex.size()) {
@@ -1111,6 +1118,10 @@ void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
 void UnwrappedLineParser::conditionalCompilationAlternative() {
   if (!PP.Stack.empty())
     PP.Stack.pop_back();
+  if (!PP.Stack.empty() && PP.Stack.back().Kind == PP_Unreachable) {
+    conditionalCompilationCondition(/*Unreachable=*/true);
+    return;
+  }
   assert(PP.BranchLevel < (int)PP.LevelBranchIndex.size());
   if (!PP.ChainBranchIndex.empty())
     ++PP.ChainBranchIndex.top();
@@ -1120,6 +1131,13 @@ void UnwrappedLineParser::conditionalCompilationAlternative() {
 }
 
 void UnwrappedLineParser::conditionalCompilationEnd() {
+  if (!PP.Stack.empty())
+    PP.Stack.pop_back();
+  if (!PP.Stack.empty() && PP.Stack.back().Kind == PP_Unreachable) {
+    if (PP.BranchLevel > -1)
+      --PP.BranchLevel;
+    return;
+  }
   assert(PP.BranchLevel < (int)PP.LevelBranchIndex.size());
   if (PP.BranchLevel >= 0 && !PP.ChainBranchIndex.empty()) {
     if (PP.ChainBranchIndex.top() + 1 > PP.LevelBranchCount[PP.BranchLevel])
@@ -1130,8 +1148,6 @@ void UnwrappedLineParser::conditionalCompilationEnd() {
     --PP.BranchLevel;
   if (!PP.ChainBranchIndex.empty())
     PP.ChainBranchIndex.pop();
-  if (!PP.Stack.empty())
-    PP.Stack.pop_back();
 }
 
 void UnwrappedLineParser::parsePPIf(bool IfDef) {
