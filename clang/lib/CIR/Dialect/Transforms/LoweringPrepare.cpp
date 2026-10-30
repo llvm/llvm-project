@@ -3490,6 +3490,11 @@ void LoweringPreparePass::runOnOperation() {
     runOnOp(o);
 
   buildCXXGlobalInitFunc();
+  // The C++20 module initializer has been built from these. Nothing after this
+  // pass reads them, so drop them to keep a second run of this pass from
+  // building it again.
+  mlirModule->removeAttr(CIRDialect::getCXXModuleInitFnNameAttrName());
+  mlirModule->removeAttr(CIRDialect::getCXXModuleImportedInitsAttrName());
   buildCXXGlobalTlsFunc();
   if (getLangOpts().CUDA && !getLangOpts().CUDAIsDevice) {
     buildCUDAModuleCtor();
