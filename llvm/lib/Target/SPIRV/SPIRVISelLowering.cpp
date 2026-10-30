@@ -289,12 +289,9 @@ static void validateGroupWaitEventsPtr(const SPIRVSubtarget &STI,
   doInsertBitcast(STI, MRI, GR, I, OpReg, OpIdx, NewPtrType);
 }
 
-// The Size operand of OpLifetimeStart/OpLifetimeStop must be 0 if Pointer
-// points to a non-void type; i8 (uchar*) is treated as void*. The exception is
-// a variable length array: its pointer only points to the element type, so the
-// byte size is kept and the pointer is bitcast to uchar* to make that valid.
-static void validateLifetimeStart(const SPIRVSubtarget &STI,
-                                  MachineRegisterInfo *MRI,
+// Per the SPIR-V spec, the Size operand of OpLifetimeStart/OpLifetimeStop must
+// be 0 if Pointer points to a non-void type (with i8* treated as void*).
+static void validateLifetimeStart(MachineRegisterInfo *MRI,
                                   SPIRVGlobalRegistry &GR, MachineInstr &I) {
   Register PtrReg = I.getOperand(0).getReg();
   MachineFunction *MF = I.getParent()->getParent();
@@ -306,19 +303,7 @@ static void validateLifetimeStart(const SPIRVSubtarget &STI,
       (PointeeElemType->getOpcode() == SPIRV::OpTypeInt &&
        PointeeElemType->getOperand(1).getImm() == 8))
     return;
-  MachineInstr *PtrDef = MRI->getVRegDef(PtrReg);
-  if (!PtrDef || PtrDef->getOpcode() != SPIRV::OpVariableLengthArrayINTEL) {
-    I.getOperand(1).setImm(0);
-    return;
-  }
-  SPIRV::StorageClass::StorageClass SC =
-      static_cast<SPIRV::StorageClass::StorageClass>(
-          PtrType->getOperand(1).getImm());
-  MachineIRBuilder MIB(I);
-  LLVMContext &Context = MF->getFunction().getContext();
-  SPIRVTypeInst NewPtrType =
-      GR.getOrCreateSPIRVPointerType(IntegerType::getInt8Ty(Context), MIB, SC);
-  doInsertBitcast(STI, MRI, GR, I, PtrReg, 0, NewPtrType);
+  I.getOperand(1).setImm(0);
 }
 
 static void validatePtrUnwrapStructField(const SPIRVSubtarget &STI,
@@ -647,7 +632,7 @@ void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
       case SPIRV::OpLifetimeStart:
       case SPIRV::OpLifetimeStop:
         if (MI.getOperand(1).getImm() > 0)
-          validateLifetimeStart(STI, MRI, GR, MI);
+          validateLifetimeStart(MRI, GR, MI);
         break;
       case SPIRV::OpGroupAsyncCopy:
         validatePtrUnwrapStructField(STI, MRI, GR, MI, 3);
