@@ -613,4 +613,7 @@ let TargetPrefix = "dx" in {
 
   def int_dx_view_id
       : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
+
+  def int_dx_coverage
+      : DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }

@@ -1162,6 +1162,15 @@ def SampleIndex : DXILOp<90, sampleIndex> {
   let attributes = [Attributes<DXIL1_0, [ReadNone]>];
 }
 
+def Coverage : DXILOp<91, coverage> {
+  let Doc = "returns the coverage mask input in a pixel shader";
+  let intrinsics = [IntrinSelect<int_dx_coverage>];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_0, [Int32Ty]>];
+  let stages = [Stages<DXIL1_0, [pixel]>];
+  let attributes = [Attributes<DXIL1_0, [ReadNone]>];
+}
+
 def ThreadId : DXILOp<93, threadId> {
   let Doc = "Reads the thread ID";
   let intrinsics = [IntrinSelect<int_dx_thread_id>];
