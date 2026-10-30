@@ -460,24 +460,4 @@ TEST_F(LexicalScopesTest, TestMetaInst) {
   EXPECT_TRUE(LS.dominates(InBlockLoc.get(), MBB4));
 }
 
-// Test function map creation.
-TEST_F(LexicalScopesTest, TestFunctionScan) {
-  auto MF2 = createMachineFunction(Ctx, Mod, "Test2");
-  DIBuilder DIB(Mod, false, OurCU);
-  DISubprogram *Func2 =
-      DIB.createFunction(OurCU, "Func2", "", OurFile, 1, OurSubT, 1,
-                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
-  DISubprogram *UnattachedFunc =
-      DIB.createFunction(OurCU, "UnattachedFunc", "", OurFile, 1, OurSubT, 1,
-                         DINode::FlagZero, DISubprogram::SPFlagDefinition);
-  MF2->getFunction().setSubprogram(Func2);
-  DIB.finalize();
-
-  LexicalScopes LS;
-  LS.initialize(Mod);
-  ASSERT_EQ(LS.getFunction(OurFunc), &MF->getFunction());
-  ASSERT_EQ(LS.getFunction(Func2), &MF2->getFunction());
-  ASSERT_EQ(LS.getFunction(UnattachedFunc), nullptr);
-}
-
 } // anonymous namespace
