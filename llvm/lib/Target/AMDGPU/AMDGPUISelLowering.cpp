@@ -61,21 +61,17 @@ unsigned AMDGPUTargetLowering::numBitsSigned(SDValue Op, SelectionDAG &DAG) {
   return DAG.ComputeMaxSignificantBits(Op);
 }
 
-KnownBits AMDGPUTargetLowering::computeKnownBitsForMul24(KnownBits LHSKnown,
-                                                         KnownBits RHSKnown,
-                                                         unsigned BitWidth,
-                                                         bool IsSigned,
-                                                         bool SelfMultiply) {
+KnownBits AMDGPUTargetLowering::computeKnownBitsForMul24(
+    const KnownBits &LHSKnown, const KnownBits &RHSKnown, unsigned BitWidth,
+    bool IsSigned, bool SelfMultiply) {
   // Sign/Zero extend from 24 bits.
-  if (IsSigned) {
-    LHSKnown = LHSKnown.trunc(24).sext(BitWidth);
-    RHSKnown = RHSKnown.trunc(24).sext(BitWidth);
-  } else {
-    LHSKnown = LHSKnown.trunc(24).zext(BitWidth);
-    RHSKnown = RHSKnown.trunc(24).zext(BitWidth);
-  }
-
-  return KnownBits::mul(LHSKnown, RHSKnown, SelfMultiply);
+  KnownBits LHS24 = LHSKnown.trunc(24);
+  KnownBits RHS24 = RHSKnown.trunc(24);
+  if (IsSigned)
+    return KnownBits::mul(LHS24.sext(BitWidth), RHS24.sext(BitWidth),
+                          SelfMultiply);
+  return KnownBits::mul(LHS24.zext(BitWidth), RHS24.zext(BitWidth),
+                        SelfMultiply);
 }
 
 AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,

@@ -49,8 +49,8 @@ public:
   /// \p BitWidth wide result, given the known bits of its operands. Only the
   /// low 24 bits of each operand are used, zero- or sign-extended depending on
   /// \p IsSigned.
-  static KnownBits computeKnownBitsForMul24(KnownBits LHSKnown,
-                                            KnownBits RHSKnown,
+  static KnownBits computeKnownBitsForMul24(const KnownBits &LHSKnown,
+                                            const KnownBits &RHSKnown,
                                             unsigned BitWidth, bool IsSigned,
                                             bool SelfMultiply);
 
