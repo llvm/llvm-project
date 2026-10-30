@@ -710,29 +710,16 @@ TEST_F(FormatTestMacroExpansion, GoogleMacrosFormatsAsPtrDecl) {
 }
 
 // Macros whose expansion contains multiple statements or control flow (e.g.,
-// `if`) produce multiple unwrapped lines, which prevents short function
-// merging.
-//
-// FIXME: These should format onto a single line (e.g.,
-// `void f() { RETURN_IF_ERROR(F()); }`).
-TEST_F(FormatTestMacroExpansion, GoogleMacrosShortFunctionFormattingIsBroken) {
+// `if`) produce multiple unwrapped lines, but the macro call itself is a single
+// line, so short function merging still applies.
+TEST_F(FormatTestMacroExpansion, GoogleMacrosShortFunctionMerging) {
   // RETURN_IF_ERROR expands to `if (x) return expr`.
-  verifyFormat("void f() {\n"
-               "  RETURN_IF_ERROR(F());\n"
-               "}",
-               getGoogleStyle());
-  verifyFormat("void f() {\n"
-               "  ABSL_RETURN_IF_ERROR(F());\n"
-               "}",
-               getGoogleStyle());
+  verifyFormat("void f() { RETURN_IF_ERROR(F()); }", getGoogleStyle());
+  verifyFormat("void f() { ABSL_RETURN_IF_ERROR(F()); }", getGoogleStyle());
   // 3-arg ASSIGN_OR_RETURN expands to `a = (b); if (x) return c`.
-  verifyFormat("void f() {\n"
-               "  ASSIGN_OR_RETURN(auto x, F(), R());\n"
-               "}",
+  verifyFormat("void f() { ASSIGN_OR_RETURN(auto x, F(), R()); }",
                getGoogleStyle());
-  verifyFormat("void f() {\n"
-               "  ABSL_ASSIGN_OR_RETURN(auto x, F(), R());\n"
-               "}",
+  verifyFormat("void f() { ABSL_ASSIGN_OR_RETURN(auto x, F(), R()); }",
                getGoogleStyle());
 }
 } // namespace
