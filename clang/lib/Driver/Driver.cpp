@@ -3972,12 +3972,13 @@ static StringRef getCanonicalArchString(Compilation &C,
         return StringRef();
       }
     }
-  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca")) {
-    if (!StringToOffloadArch(ArchStr).isIntelIGCA()) {
-      C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
-          << "IGCA" << ArchStr;
-      return StringRef();
-    }
+  } else if (Triple.isSPIRV() && ArchStr.starts_with("igca") &&
+             !StringToOffloadArch(ArchStr).isIntelIGCA()) {
+    // Only an invalid IGCA target stops here; a valid one still needs the
+    // SPIR-V target checks below.
+    C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
+        << "IGCA" << ArchStr;
+    return StringRef();
   } else if (Kind == Action::OFK_SYCL && Triple.isSPIRV() &&
              Triple.getVendor() == llvm::Triple::UnknownVendor &&
              !ArchStr.empty() && !Arch.isIntel() && !Arch.isGeneric()) {
@@ -3986,6 +3987,14 @@ static StringRef getCanonicalArchString(Compilation &C,
     // for a device that does not exist.
     C.getDriver().Diag(clang::diag::err_drv_offload_bad_gpu_arch)
         << "SYCL" << ArchStr;
+    return StringRef();
+  } else if (Kind == Action::OFK_SYCL && Triple.isSPIRV() && Arch.isIntel() &&
+             (Triple.getVendor() != llvm::Triple::UnknownVendor ||
+              Triple.getOS() != llvm::Triple::UnknownOS)) {
+    // Intel names always use a plain SPIR-V target such as
+    // spirv64-unknown-unknown, so reject them on any other SPIR-V target.
+    C.getDriver().Diag(clang::diag::err_target_unsupported_arch)
+        << ArchStr << Triple.str();
     return StringRef();
   }
 

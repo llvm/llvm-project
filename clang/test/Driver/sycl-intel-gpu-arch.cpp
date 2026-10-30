@@ -99,6 +99,20 @@
 // RUN:   --offload-targets=spirv64-intel --offload-arch=foo -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=CHK-NOT-CHECKED %s
 // CHK-NOT-CHECKED-NOT: error:
+/// An Intel name needs a plain SPIR-V target.
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-intel --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=xe-pvc -DTRIPLE=spirv64-intel %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-amd-amdhsa --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=xe-pvc -DTRIPLE=spirv64-amd-amdhsa %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-unknown-amdhsa --offload-arch=xe-pvc -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=xe-pvc -DTRIPLE=spirv64-unknown-amdhsa %s
+// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// RUN:   --offload-targets=spirv64-intel --offload-arch=graniterapids -c %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=CHK-NOT-PLAIN -DARCH=graniterapids -DTRIPLE=spirv64-intel %s
+// CHK-NOT-PLAIN: error: the target architecture '[[ARCH]]' is not supported by the target '[[TRIPLE]]'
 // RUN: %clang -ccc-print-phases --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-targets=spirv64-unknown-unknown --offload-arch=graniterapids \
 // RUN:   -c %s 2>&1 | FileCheck -check-prefixes=CHK-GOOD-ARCH %s
