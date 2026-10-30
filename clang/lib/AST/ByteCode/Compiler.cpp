@@ -3723,11 +3723,6 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
 
-    // An ordinary C23 literal may have been folded for static initialization.
-    if (P.isGlobalInitialized(*GlobalIndex) &&
-        (!Ctx.getLangOpts().C23 || E->isConstexpr()))
-      return true;
-
     if (T) {
       if (!this->visit(Init))
         return false;
