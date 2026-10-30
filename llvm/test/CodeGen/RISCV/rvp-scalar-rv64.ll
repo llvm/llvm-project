@@ -1059,8 +1059,7 @@ define i64 @macc_w00(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @macc_w01(i64 %rd, i32 %a, i64 %b) nounwind {
 ; CHECK-LABEL: macc_w01:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a2, a2, 32
-; CHECK-NEXT:    macc.w00 a0, a1, a2
+; CHECK-NEXT:    macc.w01 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bhi = ashr i64 %b, 32
@@ -1072,9 +1071,7 @@ define i64 @macc_w01(i64 %rd, i32 %a, i64 %b) nounwind {
 define i64 @macc_w11(i64 %rd, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: macc_w11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a1, 32
-; CHECK-NEXT:    srai a2, a2, 32
-; CHECK-NEXT:    macc.w00 a0, a1, a2
+; CHECK-NEXT:    macc.w11 a0, a1, a2
 ; CHECK-NEXT:    ret
   %ahi = ashr i64 %a, 32
   %bhi = ashr i64 %b, 32
@@ -1098,8 +1095,7 @@ define i64 @macc_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 define i64 @macc_w01_commute(i64 %rd, i32 %a, i64 %b) nounwind {
 ; CHECK-LABEL: macc_w01_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a2, a2, 32
-; CHECK-NEXT:    macc.w00 a0, a1, a2
+; CHECK-NEXT:    macc.w01 a0, a1, a2
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bhi = ashr i64 %b, 32
@@ -1111,9 +1107,7 @@ define i64 @macc_w01_commute(i64 %rd, i32 %a, i64 %b) nounwind {
 define i64 @macc_w11_commute(i64 %rd, i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: macc_w11_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srai a1, a1, 32
-; CHECK-NEXT:    srai a2, a2, 32
-; CHECK-NEXT:    macc.w00 a0, a1, a2
+; CHECK-NEXT:    macc.w11 a0, a1, a2
 ; CHECK-NEXT:    ret
   %ahi = ashr i64 %a, 32
   %bhi = ashr i64 %b, 32
