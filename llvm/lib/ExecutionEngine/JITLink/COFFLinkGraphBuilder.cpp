@@ -474,9 +474,9 @@ Expected<Symbol *> COFFLinkGraphBuilder::createDefinedSymbol(
   }
 
   if (Symbol.isAbsolute())
-    return &G->addAbsoluteSymbol(SymbolName,
-                                 orc::ExecutorAddr(Symbol.getValue()), 0,
-                                 Linkage::Strong, Scope::Local, false);
+    return &G->addAbsoluteSymbol(
+        SymbolName, orc::ExecutorAddr(Symbol.getValue()), 0, Linkage::Strong,
+        Symbol.isExternal() ? Scope::Default : Scope::Local, false);
 
   if (llvm::COFF::isReservedSectionNumber(Symbol.getSectionNumber()))
     return make_error<JITLinkError>(
