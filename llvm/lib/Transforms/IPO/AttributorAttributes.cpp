@@ -7976,11 +7976,18 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
       }
     }
 
-    if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
-      if (!I->mayReadFromMemory())
-        State.addKnownBits(NO_READS);
-      if (!I->mayWriteToMemory())
-        State.addKnownBits(NO_WRITES);
+    // Only a call site anchor performs the accesses of the position. A floating
+    // value is only defined by its anchor, e.g., a loaded pointer may be
+    // written through even though the load does not write.
+    IRPosition::Kind Kind = IRP.getPositionKind();
+    if (Kind == IRPosition::IRP_CALL_SITE ||
+        Kind == IRPosition::IRP_CALL_SITE_ARGUMENT) {
+      if (auto *I = dyn_cast<Instruction>(&IRP.getAnchorValue())) {
+        if (!I->mayReadFromMemory())
+          State.addKnownBits(NO_READS);
+        if (!I->mayWriteToMemory())
+          State.addKnownBits(NO_WRITES);
+      }
     }
   }
 
