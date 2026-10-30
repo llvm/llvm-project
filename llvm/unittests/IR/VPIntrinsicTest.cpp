@@ -125,6 +125,7 @@ TEST_F(VPIntrinsicTest, VPModuleComplete) {
 
   // Check that all @llvm.vp.* functions in the module are recognized vp
   // intrinsics.
+  std::set<Intrinsic::ID> SeenIDs;
   for (const auto &VPDecl : *M) {
     ASSERT_TRUE(VPDecl.isIntrinsic());
     ASSERT_TRUE(VPIntrinsic::isVPIntrinsic(VPDecl.getIntrinsicID()));

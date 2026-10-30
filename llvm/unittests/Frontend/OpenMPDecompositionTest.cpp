@@ -645,6 +645,8 @@ TEST_F(OpenMPDecompositionTest, Shared1) {
 // (31) The effect of the shared, default, thread_limit, or order clause is as
 // if it is applied to all leaf constructs that permit the clause.
 TEST_F(OpenMPDecompositionTest, Default1) {
+  omp::Object x{"x"};
+
   omp::List<omp::Clause> Clauses{
       {OMPC_default,
        omp::clause::Default{
@@ -671,6 +673,8 @@ TEST_F(OpenMPDecompositionTest, Default1) {
 // (31) The effect of the shared, default, thread_limit, or order clause is as
 // if it is applied to all leaf constructs that permit the clause.
 TEST_F(OpenMPDecompositionTest, ThreadLimit1) {
+  omp::Object x{"x"};
+
   omp::List<omp::Clause> Clauses{
       {OMPC_thread_limit, omp::clause::ThreadLimit{{omp::ExprTy{}}}},
   };
@@ -695,6 +699,8 @@ TEST_F(OpenMPDecompositionTest, ThreadLimit1) {
 // (31) The effect of the shared, default, thread_limit, or order clause is as
 // if it is applied to all leaf constructs that permit the clause.
 TEST_F(OpenMPDecompositionTest, Order1) {
+  omp::Object x{"x"};
+
   omp::List<omp::Clause> Clauses{
       {OMPC_order,
        omp::clause::Order{{omp::clause::Order::OrderModifier::Unconstrained,

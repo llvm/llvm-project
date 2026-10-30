@@ -509,6 +509,8 @@ TEST_F(RematerializerTest, SubRegRematSupport) {
     S_ENDPGM 0
 )MIR";
   rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+
     const unsigned MBB0 = 0, MBB1 = 1;
     const RegisterIdx Cst01 = 0, Cst2 = 1, Cst99 = 2;
 
@@ -715,6 +717,8 @@ TEST_F(RematerializerTest, FirstOperandNotDef) {
     S_ENDPGM 0
 )MIR";
   rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+
     const RegisterIdx Cst0 = 0;
     EXPECT_EQ(RW->getNumRegs(), 1U);
     EXPECT_EQ(RW->getReg(Cst0).Defs.size(), 1U);

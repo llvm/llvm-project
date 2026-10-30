@@ -56,6 +56,7 @@ operator<<(std::ostream &OS, const MachineFunction &MF);
 static std::unique_ptr<Module>
 parseMIR(LLVMContext &Context, std::unique_ptr<MIRParser> &MIR,
          const TargetMachine &TM, StringRef MIRCode, MachineModuleInfo &MMI) {
+  SMDiagnostic Diagnostic;
   std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
   MIR = createMIRParser(std::move(MBuffer), Context);
   if (!MIR)

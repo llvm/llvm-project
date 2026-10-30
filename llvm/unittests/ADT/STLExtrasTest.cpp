@@ -114,6 +114,8 @@ TEST(STLExtrasTest, EnumerateRValueRef) {
   using PairType = std::pair<std::size_t, int>;
   std::vector<PairType> Results;
 
+  auto Enumerator = llvm::enumerate(std::vector<int>{1, 2, 3});
+
   for (auto X : llvm::enumerate(std::vector<int>{1, 2, 3})) {
     Results.emplace_back(X.index(), X.value());
   }

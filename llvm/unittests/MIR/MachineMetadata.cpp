@@ -70,6 +70,7 @@ protected:
 
   std::unique_ptr<Module> parseMIR(const TargetMachine &TM, StringRef MIRCode,
                                    MachineModuleInfo &MMI) {
+    SMDiagnostic Diagnostic;
     std::unique_ptr<MemoryBuffer> MBuffer = MemoryBuffer::getMemBuffer(MIRCode);
     MIR = createMIRParser(std::move(MBuffer), Context);
     if (!MIR)

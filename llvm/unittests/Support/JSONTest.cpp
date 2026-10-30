@@ -520,6 +520,7 @@ static std::string errorContext(const Value &V, const Path::Root &R) {
 
 TEST(JSONTest, Deserialize) {
   std::map<std::string, std::vector<CustomStruct>> R;
+  CustomStruct ExpectedStruct = {"foo", 42, true};
   std::map<std::string, std::vector<CustomStruct>> Expected;
   Value J = Object{{"foo", Array{
                                Object{

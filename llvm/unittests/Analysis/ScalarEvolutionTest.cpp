@@ -618,6 +618,9 @@ TEST_F(ScalarEvolutionsTest, SCEVNormalization) {
 
 // Expect the call of getZeroExtendExpr will not cost exponential time.
 TEST_F(ScalarEvolutionsTest, SCEVZeroExtendExpr) {
+  LLVMContext C;
+  SMDiagnostic Err;
+
   // Generate a function like below:
   // define void @foo() {
   // entry:

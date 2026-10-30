@@ -525,6 +525,7 @@ TEST(BasicBlockTest, DiscardValueNames) {
 }
 
 TEST(BasicBlockTest, DiscardValueNames2) {
+  SMDiagnostic Err;
   LLVMContext Ctx;
   Module M("Mod", Ctx);
   auto FTy = FunctionType::get(Type::getVoidTy(M.getContext()),

@@ -185,6 +185,7 @@ TEST(InstDeleterIRStrategyTest, EmptyFunction) {
 TEST(InstDeleterIRStrategyTest, PhiNodes) {
   // Test that inst deleter works correctly with the phi nodes.
 
+  LLVMContext Ctx;
   StringRef Source = "\n\
       define i32 @earlyreturncrash(i32 %x) {\n\
       entry:\n\

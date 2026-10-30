@@ -340,6 +340,7 @@ TEST(BTFParserTest, parserReset) {
 
 TEST(BTFParserTest, btfContext) {
   MockData1 Mock;
+  BTFParser BTF;
   std::unique_ptr<BTFContext> Ctx = BTFContext::create(Mock.makeObj());
 
   std::optional<DILineInfo> I1 = Ctx->getLineInfoForAddress({16, 1});

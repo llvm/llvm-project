@@ -748,6 +748,7 @@ TEST(APFloatTest, FMA) {
   // Test x87 extended precision case from http://llvm.org/PR20728.
   {
     APFloat M1(APFloat::x87DoubleExtended(), 1);
+    APFloat M2(APFloat::x87DoubleExtended(), 1);
     APFloat A(APFloat::x87DoubleExtended(), 3);
 
     bool losesInfo = false;
@@ -4620,6 +4621,11 @@ TEST(APFloatTest, scalbn) {
   APFloat LargestF64 = APFloat::getLargest(APFloat::IEEEdouble(), false);
   APFloat NegLargestF64 = APFloat::getLargest(APFloat::IEEEdouble(), true);
 
+  APFloat SmallestNormalizedF64
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), false);
+  APFloat NegSmallestNormalizedF64
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), true);
+
   APFloat LargestDenormalF64(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1023");
   APFloat NegLargestDenormalF64(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1023");
 
@@ -4727,6 +4733,8 @@ TEST(APFloatTest, frexp) {
   APFloat MZero = APFloat::getZero(APFloat::IEEEdouble(), true);
   APFloat One(1.0);
   APFloat MOne(-1.0);
+  APFloat Two(2.0);
+  APFloat MTwo(-2.0);
 
   APFloat LargestDenormal(APFloat::IEEEdouble(), "0x1.ffffffffffffep-1023");
   APFloat NegLargestDenormal(APFloat::IEEEdouble(), "-0x1.ffffffffffffep-1023");
@@ -4752,6 +4760,11 @@ TEST(APFloatTest, frexp) {
 
   APFloat SNaNWithPayload = APFloat::getSNaN(APFloat::IEEEdouble(), false,
                                              &Payload);
+
+  APFloat SmallestNormalized
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), false);
+  APFloat NegSmallestNormalized
+    = APFloat::getSmallestNormalized(APFloat::IEEEdouble(), true);
 
   int Exp;
   APFloat Frac(APFloat::IEEEdouble());
