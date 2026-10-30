@@ -113,6 +113,10 @@ struct DeviceGeometryPropsTy {
 };
 
 struct PluginManager;
+namespace llvm::omp::target::rr {
+struct RecordReplayTy;
+} // namespace llvm::omp::target::rr
+using RecordReplayTy = llvm::omp::target::rr::RecordReplayTy;
 
 struct DeviceTy {
   int32_t DeviceID;
@@ -148,6 +152,18 @@ struct DeviceTy {
 
   /// Load \p Img onto the device and return the resulting program.
   llvm::Expected<ProgramTy> loadBinary(__tgt_device_image *Img);
+
+  /// Enable kernel record (\p IsRecord) or replay on this device by reserving
+  /// \p MemorySize bytes of device memory at \p VAddr. While active, device
+  /// allocations are served from that region.
+  llvm::Error activateRecordReplay(uint64_t MemorySize, void *VAddr,
+                                   bool IsRecord, bool IsNative,
+                                   bool SaveOutput, bool EmitReport,
+                                   const char *ReportFilename,
+                                   const char *OutputDirPath);
+
+  /// The active record/replay state, or null if neither is enabled.
+  RecordReplayTy *getRecordReplay() { return RecordReplay.get(); }
 
   /// Resolve the device address of the global variable \p Name in \p Program,
   /// recording it for kernel record/replay if recording is currently active.
@@ -376,6 +392,12 @@ private:
   /// Launch-geometry properties for each kernel registered on this device.
   using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
   ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
+
+  /// Whether allocations must currently be served by record/replay.
+  bool isRecordingOrReplaying() const;
+
+  /// Kernel record/replay state, if enabled.
+  std::unique_ptr<RecordReplayTy> RecordReplay;
 
   /// Whether this is a host device.
   bool IsHostDevice = false;
