@@ -617,7 +617,7 @@ public:
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    Os << "The return value is +1 and results in a memory leak";
+    Os << "The return value is +1 and results in a memory leak.";
 
     PathDiagnosticLocation BSLoc(E->getSourceRange().getBegin(),
                                  BR->getSourceManager());
