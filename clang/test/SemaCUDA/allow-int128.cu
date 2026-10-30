@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -verify -fsyntax-only %s
-// RUN: %clang_cc1 -triple nvptx \
+// RUN: %clang_cc1 -triple nvptx64 \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu \
 // RUN:   -fcuda-is-device -verify -fsyntax-only %s
 
