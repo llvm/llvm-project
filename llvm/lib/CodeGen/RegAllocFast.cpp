@@ -1626,6 +1626,21 @@ void RegAllocFastImpl::findAndSortDefOperandIndexes(const MachineInstr &MI) {
   });
 }
 
+// Returns true if MI has an assigned subregister def overlapping PhysReg
+// whose tied use is not undef.
+static bool hasTiedSubRegDef(const MachineInstr &MI, MCRegister PhysReg,
+                             const TargetRegisterInfo &TRI) {
+  for (const MachineOperand &MO : MI.all_defs()) {
+    if (!MO.isReg() || !MO.getSubReg() || !MO.isTied() ||
+        getTiedOperand(MI, MO).isUndef())
+      continue;
+    Register DefReg = MO.getReg();
+    if (DefReg.isPhysical() && TRI.regsOverlap(DefReg, PhysReg))
+      return true;
+  }
+  return false;
+}
+
 void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   // Backwards, a def frees a register and a use occupies it. The phases:
   // * pre-assigned physreg defs
@@ -1773,6 +1788,10 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       if (isLiveThroughDef(MI, MO))
         continue;
       if (!Reg)
+        continue;
+      // The implicit super-register def must not free the assignment while a
+      // non-undef use tied to an overlapping subregister def is still pending.
+      if (Reg.isPhysical() && hasTiedSubRegDef(MI, Reg, *TRI))
         continue;
       if (Reg.isVirtual()) {
         assert(!shouldAllocateRegister(Reg));
