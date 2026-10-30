@@ -3066,20 +3066,11 @@ void SymbolFileNativePDB::BuildParentMap() {
     }
     if (!IsTypedefUdt(*udt_or_err))
       continue;
-    llvm::StringRef base_name =
-        MSVCUndecoratedNameParser::DropScope(udt_or_err->Name);
-    m_typedef_base_names.Append(ConstString(base_name), gid);
-
-    if (std::optional<Type::ParsedName> parsed_name =
-            Type::GetTypeScopeAndBasename(udt_or_err->Name)) {
-      std::string scope_name;
-      for (llvm::StringRef scope : parsed_name->scope) {
-        if (!scope_name.empty())
-          scope_name += "::";
-        scope_name += scope;
-        m_typedef_scopes.try_emplace(scope_name, gid);
-      }
-    }
+    MSVCUndecoratedNameParser parser(udt_or_err->Name);
+    llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
+    m_typedef_base_names.Append(ConstString(specs.back().GetBaseName()), gid);
+    for (const MSVCUndecoratedNameSpecifier &scope : specs.drop_back())
+      m_typedef_scopes.try_emplace(scope.GetFullName(), gid);
   }
   m_typedef_base_names.Sort(std::less<uint32_t>());
 
