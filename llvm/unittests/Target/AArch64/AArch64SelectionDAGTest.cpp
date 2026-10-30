@@ -82,6 +82,44 @@ protected:
   std::unique_ptr<SelectionDAG> DAG;
 };
 
+TEST_F(AArch64SelectionDAGTest, ConsecutiveArgumentRegisters) {
+  const auto &TLI = DAG->getTargetLoweringInfo();
+  auto NeedsConsecutiveRegisters = [&](Type *Ty) {
+    return TLI.functionArgumentNeedsConsecutiveRegisters(
+        Ty, CallingConv::C, false, M->getDataLayout());
+  };
+  Type *I8 = Type::getInt8Ty(Context);
+  Type *I64 = Type::getInt64Ty(Context);
+  Type *F32 = Type::getFloatTy(Context);
+  Type *Empty = StructType::get(Context);
+  Type *Mixed = StructType::get(Context, {I8, F32});
+  Type *Huge = ArrayType::get(I8, 1ULL << 30);
+
+  EXPECT_TRUE(NeedsConsecutiveRegisters(Huge));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(ArrayType::get(Huge, 2)));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(
+      ArrayType::get(StructType::get(Context, {Huge, I8}), 2)));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(
+      ArrayType::get(StructType::get(Context, {Huge, F32}), 2)));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(ArrayType::get(Mixed, 2)));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(ArrayType::get(Mixed, 0)));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(ArrayType::get(Empty, 2)));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(ArrayType::get(
+      StructType::get(Context, {I8, ArrayType::get(F32, 0), Empty}), 2)));
+  // Compare lowered value types, not IR types: pointers and i64 both use i64.
+  EXPECT_TRUE(NeedsConsecutiveRegisters(ArrayType::get(
+      StructType::get(Context, {PointerType::getUnqual(Context), I64}), 2)));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(
+      ArrayType::get(FixedVectorType::get(F32, 4), 2)));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(ArrayType::get(
+      StructType::get(Context, {FixedVectorType::get(F32, 4), F32}), 2)));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(Mixed));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(I64));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(FixedVectorType::get(F32, 4)));
+  EXPECT_FALSE(NeedsConsecutiveRegisters(ScalableVectorType::get(F32, 4)));
+  EXPECT_TRUE(NeedsConsecutiveRegisters(ScalableVectorType::get(F32, 8)));
+}
+
 TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   SDLoc Loc;
   auto Int8VT = EVT::getIntegerVT(Context, 8);
