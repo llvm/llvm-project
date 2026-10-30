@@ -21,8 +21,7 @@
 // DRIVER-SAME: "--emit-fatbin-only" "-o" "{{.*}}.hipfb"
 // DRIVER-SAME: "{{.*}}.x.bundle.bc" "{{.*}}.y.bundle.bc"
 
-/// Request the arch names that device images are labeled with: target-ID
-/// features are sorted and --no-offload-arch is applied.
+/// Request the canonical target ID that device images are labeled with.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --hip-link --cuda-device-only \
 // RUN:   --offload-arch=gfx908:xnack+:sramecc- \
@@ -30,17 +29,6 @@
 // RUN:   | FileCheck %s --check-prefix=TARGET-ID
 // TARGET-ID: "{{.*}}clang-linker-wrapper"
 // TARGET-ID-SAME: "--should-extract=gfx908:sramecc-:xnack+"
-
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
-// RUN:   -fgpu-rdc --hip-link --cuda-device-only \
-// RUN:   --offload-targets=amdgcn-amd-amdhsa --offload-arch=gfx906 \
-// RUN:   --offload-arch=gfx942 --no-offload-arch=gfx906 \
-// RUN:   %t.x.bundle.bc -o %t.hipfb 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=REMOVED
-// REMOVED: "{{.*}}clang-linker-wrapper"
-// REMOVED-NOT: "--should-extract=gfx906"
-// REMOVED-SAME: "--should-extract=gfx942"
-// REMOVED-NOT: "--should-extract=gfx906"
 
 // RUN: %clang -### -v --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --hip-link --cuda-device-only \

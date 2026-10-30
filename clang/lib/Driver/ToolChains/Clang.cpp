@@ -24,6 +24,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -9924,15 +9925,15 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       }
 
       // If the user explicitly requested it via `--offload-arch` we should
-      // extract it from any static libraries if present. Use the arch names
-      // from getOffloadArchs so target-ID features are sorted to match the
-      // image labels and --no-offload-arch is applied.
-      if (ToolChainArgs.hasArg(OPT_offload_arch_EQ))
-        for (const BoundArch &BA :
-             C.getDriver().getOffloadArchs(C, ToolChainArgs, Kind, *TC))
-          if (!BA.ArchName.empty())
-            CmdArgs.emplace_back(
-                Args.MakeArgString("--should-extract=" + BA.ArchName));
+      // extract it from any static libraries if present. Device images are
+      // labeled with the canonical target ID, so request that.
+      for (StringRef Arg : ToolChainArgs.getAllArgValues(OPT_offload_arch_EQ)) {
+        std::optional<std::string> TargetID;
+        if (TC->getTriple().isAMDGPU())
+          TargetID = getCanonicalTargetID(TC->getTriple(), Arg);
+        CmdArgs.emplace_back(Args.MakeArgString(
+            "--should-extract=" + (TargetID ? StringRef(*TargetID) : Arg)));
+      }
 
       // If this is OpenMP the device linker will need `-lompdevice`.
       if (Kind == Action::OFK_OpenMP && !Args.hasArg(OPT_no_offloadlib) &&
