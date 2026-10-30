@@ -22,6 +22,14 @@ static_assert(alignof(RealValue) == alignof(RealValueImpl));
 static_assert(std::is_trivially_copyable_v<RealValueImpl>);
 #endif
 
+RealValueImpl &RealValue::impl() {
+  return *std::launder(reinterpret_cast<RealValueImpl *>(opaque_));
+}
+
+const RealValueImpl &RealValue::impl() const {
+  return *std::launder(reinterpret_cast<const RealValueImpl *>(opaque_));
+}
+
 RealValue::RealValue() { new (this) RealValueImpl(); }
 
 #if !FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL

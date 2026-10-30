@@ -20,6 +20,14 @@ static_assert(alignof(IntegerValue) == alignof(IntegerValueImpl));
 static_assert(std::is_trivially_copyable_v<IntegerValueImpl>);
 #endif
 
+IntegerValueImpl &IntegerValue::impl() {
+  return *std::launder(reinterpret_cast<IntegerValueImpl *>(opaque_));
+}
+
+const IntegerValueImpl &IntegerValue::impl() const {
+  return *std::launder(reinterpret_cast<const IntegerValueImpl *>(opaque_));
+}
+
 IntegerValue::IntegerValue() { new (this) IntegerValueImpl(); }
 
 #if !FLANG_TRIVIALLY_COPYABLE_VALUE_IMPL

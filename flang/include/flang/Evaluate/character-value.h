@@ -229,13 +229,13 @@ private:
   static CharacterValue FromImpl(CharacterValueImpl &&y);
 
   CharacterValueImpl &impl() {
-    return *reinterpret_cast<CharacterValueImpl *>(this);
+    return *reinterpret_cast<CharacterValueImpl *>(this->opaque_);
   }
   const CharacterValueImpl &impl() const {
-    return *reinterpret_cast<const CharacterValueImpl *>(this);
+    return *reinterpret_cast<const CharacterValueImpl *>(this->opaque_);
   }
 
-  [[maybe_unused]] alignas(
+  alignas(
       detail::kCharacterObjectAlign) char opaque_[detail::kCharacterObjectSize];
 };
 

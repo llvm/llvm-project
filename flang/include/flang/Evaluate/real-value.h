@@ -13,6 +13,7 @@
 #include "flang/Evaluate/object-sizes.h"
 #include "flang/Evaluate/target.h"
 #include "llvm/Support/Compiler.h"
+#include <cstddef>
 
 // Some environments, viz. glibc 2.17 and *BSD, allow the macro HUGE
 // to leak out of <math.h>.
@@ -246,13 +247,10 @@ private:
   static ValueWithRealFlags<RealValue> FromImpl(
       ValueWithRealFlags<RealValueImpl> &&x);
 
-  RealValueImpl &impl() { return *reinterpret_cast<RealValueImpl *>(this); }
-  const RealValueImpl &impl() const {
-    return *reinterpret_cast<const RealValueImpl *>(this);
-  }
+  RealValueImpl &impl();
+  const RealValueImpl &impl() const;
 
-  [[maybe_unused]] alignas(
-      detail::kRealObjectAlign) char opaque_[detail::kRealObjectSize];
+  alignas(detail::kRealObjectAlign) std::byte opaque_[detail::kRealObjectSize];
 };
 
 } // namespace Fortran::evaluate::value
