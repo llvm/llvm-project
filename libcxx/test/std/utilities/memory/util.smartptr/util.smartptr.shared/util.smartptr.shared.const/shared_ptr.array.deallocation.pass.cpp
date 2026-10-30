@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-exceptions
+// UNSUPPORTED: sanitizer-new-delete
 
 // <memory>
 
