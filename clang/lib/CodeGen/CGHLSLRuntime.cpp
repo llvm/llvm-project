@@ -1184,9 +1184,11 @@ static llvm::Value *createSPIRVInputLoad(
     llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
     llvm::hlsl::InterpolationMode InterpMode) {
   // SPIR-V integer built-ins are 32-bit, so a narrower integer declaration
-  // loads the 32-bit built-in and truncates it. Other types are loaded as is.
+  // loads the 32-bit built-in and truncates it. Boolean built-ins and other
+  // types are loaded as is.
   bool Truncate = Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
-                  Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 32;
+                  Ty->isIntegerTy() && !Ty->isIntegerTy(1) &&
+                  Ty->getIntegerBitWidth() < 32;
   llvm::Type *LoadTy = Truncate ? B.getInt32Ty() : Ty;
   auto *GV = new llvm::GlobalVariable(
       M, LoadTy, /* isConstant= */ true, llvm::GlobalValue::ExternalLinkage,
@@ -1805,6 +1807,24 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     // dedicated operation.
     if (CGM.getTarget().getTriple().isDXIL())
       return B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_coverage));
+    break;
+  case llvm::dxbc::PSV::SemanticKind::InnerCoverage:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_InnerCoverage is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      // FullyCoveredEXT is a boolean, but SV_InnerCoverage is an integer where
+      // only bit 0 is set when the pixel is fully covered.
+      llvm::Value *FullyCovered = createSPIRVInputLoad(
+          B, CGM.getModule(), B.getInt1Ty(), Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          /* FullyCoveredEXT */ 5264, InterpMode);
+      return B.CreateZExt(FullyCovered, Type);
+    }
+    // The inner coverage is not part of the signature and is read with a
+    // dedicated operation.
+    if (CGM.getTarget().getTriple().isDXIL())
+      return B.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::dx_inner_coverage));
     break;
   case llvm::dxbc::PSV::SemanticKind::SampleIndex:
     assert(Stage == llvm::Triple::Pixel &&

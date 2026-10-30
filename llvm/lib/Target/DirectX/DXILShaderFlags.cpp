@@ -267,6 +267,9 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_view_id:
       CSF.ViewID = true;
       break;
+    case Intrinsic::dx_inner_coverage:
+      CSF.InnerCoverage = true;
+      break;
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 

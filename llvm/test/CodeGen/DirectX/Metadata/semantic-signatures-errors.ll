@@ -58,6 +58,7 @@
 ; RUN: cat %t/coverage-common.ll %t/coverage-vector.ll > %t/coverage.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/coverage.ll 2>&1 | FileCheck %s --check-prefix=COVERAGE-VECTOR
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/coverage-input.ll 2>&1 | FileCheck %s --check-prefix=COVERAGE-INPUT
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/inner-coverage-input.ll 2>&1 | FileCheck %s --check-prefix=INNERCOV-INPUT
 
 ;--- triple.ll
 ; TRIPLE: Invalid semantic signature: expected an entry/input/output signature triple
@@ -466,4 +467,16 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !0 = !{ptr @main, !1, null}
 !1 = !{!2}
 !2 = !{i32 0, !"SV_Coverage", i32 5, i32 14, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
+!3 = !{i32 0}
+
+;--- inner-coverage-input.ll
+; INNERCOV-INPUT: entry 'main' input signature: semantic accessed by a dedicated intrinsic must not appear in an input/output signature
+; The inner coverage is read with dx.op.innerCoverage rather than the signature.
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, !1, null}
+!1 = !{!2}
+!2 = !{i32 0, !"SV_InnerCoverage", i32 5, i32 15, !3, i32 0, i32 1, i8 1, i32 -1, i8 -1, i8 0, i8 0, i32 0}
 !3 = !{i32 0}
