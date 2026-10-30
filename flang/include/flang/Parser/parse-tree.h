@@ -469,7 +469,7 @@ struct InternalSubprogram {
   UNION_CLASS_BOILERPLATE(InternalSubprogram);
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>, ErrorRecovery>
       u;
 };
 
@@ -580,7 +580,7 @@ struct ProgramUnit {
       common::Indirection<SubroutineSubprogram>, common::Indirection<Module>,
       common::Indirection<Submodule>, common::Indirection<BlockData>,
       common::Indirection<CompilerDirective>,
-      common::Indirection<OpenACCRoutineConstruct>>
+      common::Indirection<OpenACCRoutineConstruct>, ErrorRecovery>
       u;
 };
 
@@ -3000,7 +3000,7 @@ struct ModuleSubprogram {
       common::Indirection<SubroutineSubprogram>,
       common::Indirection<SeparateModuleSubprogram>,
       common::Indirection<OpenACCRoutineConstruct>,
-      common::Indirection<CompilerDirective>>
+      common::Indirection<CompilerDirective>, ErrorRecovery>
       u;
 };
 
@@ -3257,7 +3257,7 @@ struct InterfaceSpecification {
   UNION_CLASS_BOILERPLATE(InterfaceSpecification);
   std::variant<InterfaceBody, Statement<ProcedureStmt>,
       common::Indirection<CompilerDirective>,
-      common::Indirection<OpenACCRoutineConstruct>>
+      common::Indirection<OpenACCRoutineConstruct>, ErrorRecovery>
       u;
 };
 
