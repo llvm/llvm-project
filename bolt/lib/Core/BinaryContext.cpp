@@ -612,12 +612,7 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   // a section, it could be an absolute address too.
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   if (Section && Section->isText()) {
-    // On AArch64 containsAddress(UseMaxSize) also accepts addresses in the
-    // padding after the function.
-    const bool InFunctionBody =
-        BF.containsAddress(Address, /*UseMaxSize=*/isAArch64()) &&
-        (!isAArch64() || Address < BF.getAddress() + BF.getSize());
-    if (InFunctionBody) {
+    if (BF.containsAddress(Address, false)) {
       if (Address != BF.getAddress()) {
         // The address could potentially escape. Mark it as another entry
         // point into the function.
