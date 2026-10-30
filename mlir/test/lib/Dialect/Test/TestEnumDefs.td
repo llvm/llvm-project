@@ -163,6 +163,18 @@ def TestBitEnumVerticalBar
   let separator = " | ";
 }
 
+// Define an enum whose cases are separated by whitespace only.
+def TestBitEnumSpace
+    : I32BitEnum<"TestBitEnumSpace", "a space-separated test bit enum", [
+        TestBitEnumNone,
+        I32BitEnumCaseBit<"User", 0, "user">,
+        I32BitEnumCaseBit<"Group", 1, "group">,
+        I32BitEnumCaseBit<"Other", 2, "other">,
+      ]> {
+  let cppNamespace = "test";
+  let separator = " ";
+}
+
 def TestStructBitEnum
     : I32BitEnum<"TestStructBitEnum", "a bit enum nested in a struct", [
         TestBitEnumNone,

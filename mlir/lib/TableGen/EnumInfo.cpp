@@ -147,4 +147,31 @@ bool EnumInfo::printBitEnumQuoted() const {
   return def->getValueAsBit("printBitEnumQuoted");
 }
 
+StringRef EnumInfo::getBitEnumSeparator() const {
+  return def->getValueAsString("separator");
+}
+
+EnumInfo::BitEnumSeparatorKind EnumInfo::getBitEnumSeparatorKind() const {
+  StringRef separator = getBitEnumSeparator().trim();
+  if (separator == "|")
+    return BitEnumSeparatorKind::VerticalBar;
+  if (separator == ",")
+    return BitEnumSeparatorKind::Comma;
+  // `BitEnumBase` asserts that the separator is one of these three.
+  assert(separator.empty() && "unexpected bit enum separator");
+  return BitEnumSeparatorKind::Space;
+}
+
+StringRef EnumInfo::getBitEnumSeparatorParser() const {
+  switch (getBitEnumSeparatorKind()) {
+  case BitEnumSeparatorKind::VerticalBar:
+    return "parseOptionalVerticalBar";
+  case BitEnumSeparatorKind::Comma:
+    return "parseOptionalComma";
+  case BitEnumSeparatorKind::Space:
+    return "";
+  }
+  llvm_unreachable("unknown bit enum separator kind");
+}
+
 const Record &EnumInfo::getDef() const { return *def; }

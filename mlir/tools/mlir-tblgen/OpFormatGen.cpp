@@ -509,8 +509,8 @@ static bool needsPropDictEnumBrackets(const NamedAttribute *attr) {
   if (!shouldStripEnumAttrInPropDict(attr))
     return false;
   EnumInfo enumInfo(getEnumInfoRecord(attr->attr.getBaseAttr()));
-  return enumInfo.isBitEnum() &&
-         enumInfo.getDef().getValueAsString("separator").trim() == ",";
+  return enumInfo.isBitEnum() && enumInfo.getBitEnumSeparatorKind() ==
+                                     EnumInfo::BitEnumSeparatorKind::Comma;
 }
 
 /// Returns if we should format the given attribute as an SymbolNameAttr.
@@ -614,7 +614,8 @@ const char *const enumAttrParserCode = R"(
 /// {5}: The error message on failure when the enum isn't present.
 /// {6}: The attribute assignment expression.
 /// {7}: The C++ enum type.
-/// {8}: The optional parser for the enum separator.
+/// {8}: The code that parses the next case keyword into `attrStr`, breaking
+///      out of the loop when there is none.
 const char *const unquotedBitEnumAttrParserCode = R"(
   {
     ::llvm::StringRef attrStr;
@@ -629,10 +630,7 @@ const char *const unquotedBitEnumAttrParserCode = R"(
           return parser.emitError(loc, "invalid ")
                  << "{0} attribute specification: \"" << attrStr << '"';;
         flags = flags | *flag;
-        if (failed(parser.{8}()))
-          break;
-        if (parser.parseKeyword(&attrStr))
-          return ::mlir::failure();
+        {8}
       }
       auto attrOptional = ::std::optional<{7}>(flags);
       {0}Attr = {3};
@@ -1311,18 +1309,27 @@ static void genEnumAttrParser(const NamedAttribute *var, MethodBody &body,
 
   if (formatAsEnumDirective && enumInfo.isBitEnum() &&
       (formatBitEnumAsUnquoted || !enumInfo.printBitEnumQuoted())) {
-    StringRef separator = enumInfo.getDef().getValueAsString("separator");
-    StringRef parseSeparatorFn = llvm::StringSwitch<StringRef>(separator.trim())
-                                     .Case("|", "parseOptionalVerticalBar")
-                                     .Case(",", "parseOptionalComma")
-                                     .Default("invalid bit enum separator");
+    // With a space-only separator, the cases are a run of keywords;
+    // otherwise each further case follows a separator token.
+    StringRef parseSeparatorFn = enumInfo.getBitEnumSeparatorParser();
+    std::string parseNextCase;
+    if (parseSeparatorFn.empty()) {
+      parseNextCase =
+          formatv("if (parser.parseOptionalKeyword(&attrStr, {0})) break;",
+                  validCaseKeywordsStr);
+    } else {
+      parseNextCase = formatv("if (failed(parser.{0}())) break;\n"
+                              "        if (parser.parseKeyword(&attrStr))\n"
+                              "          return ::mlir::failure();",
+                              parseSeparatorFn);
+    }
     std::string enumType =
         (enumInfo.getCppNamespace() + "::" + enumInfo.getEnumClassName()).str();
     body << formatv(unquotedBitEnumAttrParserCode, var->name,
                     enumInfo.getCppNamespace(),
                     enumInfo.getStringToSymbolFnName(), attrBuilderStr,
                     validCaseKeywordsStr, errorMessage, attrAssignment,
-                    enumType, parseSeparatorFn);
+                    enumType, parseNextCase);
     return;
   }
 
@@ -3742,8 +3749,9 @@ static std::optional<LogicalResult> checkRangeForElement(
       continue;
     }
 
-    // Skip optionally parsed elements.
-    if (element != optionalGuard && isOptionallyParsed(element))
+    // Skip whitespace and optionally parsed elements.
+    if (isa<WhitespaceElement>(element) ||
+        (element != optionalGuard && isOptionallyParsed(element)))
       continue;
 
     // We found a closing element that is valid.
@@ -3983,33 +3991,42 @@ LogicalResult OpFormatParser::verifySuccessors(SMLoc loc) {
 LogicalResult
 OpFormatParser::verifyEnumAdjacentLiterals(SMLoc loc,
                                            ArrayRef<FormatElement *> elements) {
-  for (auto [index, element] : llvm::enumerate(elements)) {
-    auto *attr = dyn_cast<AttributeVariable>(element);
+  auto getBitEnum = [](FormatElement *el) -> std::optional<EnumInfo> {
+    auto *attr = dyn_cast<AttributeVariable>(el);
     if (!attr || !attr->shouldFormatAsEnum())
-      continue;
-
-    Attribute baseAttr = attr->getVar()->attr.getBaseAttr();
-    EnumInfo enumInfo(getEnumInfoRecord(baseAttr));
+      return std::nullopt;
+    EnumInfo enumInfo(getEnumInfoRecord(attr->getVar()->attr.getBaseAttr()));
     if (!enumInfo.isNewStyleBitEnum())
-      continue;
-
-    auto remaining = elements.drop_front(index + 1);
-    auto next = llvm::find_if_not(remaining, llvm::IsaPred<WhitespaceElement>);
-    if (next == remaining.end())
-      continue;
-
-    auto *literal = dyn_cast<LiteralElement>(*next);
+      return std::nullopt;
+    return enumInfo;
+  };
+  auto isBase = [&](FormatElement *el) { return getBitEnum(el).has_value(); };
+  // The enum parser would take a following separator literal, or with a
+  // space-only separator a following case literal, as part of the enum.
+  auto isInvalid = [&](FormatElement *base, FormatElement *el) {
+    auto *literal = dyn_cast<LiteralElement>(el);
     if (!literal)
-      continue;
-
-    StringRef separator =
-        enumInfo.getDef().getValueAsString("separator").trim();
-    if (literal->getSpelling() == separator) {
-      return emitError(loc, "unquoted bit enum cannot be followed by its '" +
-                                separator + "' separator literal");
+      return false;
+    EnumInfo enumInfo = *getBitEnum(base);
+    StringRef spelling = literal->getSpelling();
+    if (spelling == enumInfo.getBitEnumSeparator().trim()) {
+      (void)emitError(loc, "unquoted bit enum cannot be followed by its '" +
+                               spelling + "' separator literal");
+      return true;
     }
-  }
-  return success();
+    if (enumInfo.getBitEnumSeparatorKind() ==
+            EnumInfo::BitEnumSeparatorKind::Space &&
+        llvm::any_of(enumInfo.getAllCases(), [&](const EnumCase &enumCase) {
+          return enumCase.getStr() == spelling;
+        })) {
+      (void)emitError(loc, "space-separated bit enum cannot be followed by "
+                           "its '" +
+                               spelling + "' case literal");
+      return true;
+    }
+    return false;
+  };
+  return verifyAdjacentElements(isBase, isInvalid, elements);
 }
 
 LogicalResult
@@ -4636,8 +4653,6 @@ OpFormatParser::parseTypeDirectiveOperand(SMLoc loc, bool isRefChild) {
 
 LogicalResult OpFormatParser::verifyOptionalGroupElements(
     SMLoc loc, ArrayRef<FormatElement *> elements, FormatElement *anchor) {
-  if (failed(verifyEnumAdjacentLiterals(loc, elements)))
-    return failure();
   for (FormatElement *element : elements) {
     if (failed(verifyOptionalGroupElement(loc, element, element == anchor)))
       return failure();
