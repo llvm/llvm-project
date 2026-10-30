@@ -1,9 +1,9 @@
-add_custom_target(libc_termios_unittests)
+add_libc_testsuite(libc-termios-tests)
 
 add_libc_test(
   termios_test
   SUITE
-    libc_termios_unittests
+    libc-termios-tests
   SRCS
     termios_test.cpp
   DEPENDS
@@ -25,9 +25,34 @@ add_libc_test(
 )
 
 add_libc_test(
+  tcflush_test
+  SUITE
+    libc-termios-tests
+  SRCS
+    tcflush_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.poll_macros
+    libc.hdr.sys_ioctl_macros
+    libc.hdr.termios_macros
+    libc.hdr.types.struct_pollfd
+    libc.src.__support.libc_errno
+    libc.src.errno.errno
+    libc.src.fcntl.open
+    libc.src.poll.poll
+    libc.src.stdio.snprintf
+    libc.src.sys.ioctl.ioctl
+    libc.src.termios.tcflush
+    libc.src.unistd.close
+    libc.src.unistd.write
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   tcgetwinsize_test
   SUITE
-    libc_termios_unittests
+    libc-termios-tests
   SRCS
     tcgetwinsize_test.cpp
   DEPENDS
@@ -46,7 +71,7 @@ add_libc_test(
 add_libc_test(
   tcsetwinsize_test
   SUITE
-    libc_termios_unittests
+    libc-termios-tests
   SRCS
     tcsetwinsize_test.cpp
   DEPENDS

@@ -1,6 +1,6 @@
-; Check that debug intrinsics do not affect code generation.
+; RUN: llc < %s -mtriple=aarch64-unknown-unknown | FileCheck %s
 
-; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=AARCH64-CHECK %s
+; Check that debug intrinsics do not affect code generation.
 
 define i64 @simulate(<2 x i32> %a) {
 entry:
@@ -20,11 +20,11 @@ end:                                        ; preds = %body
   ret i64 %res
 }
 
-; AARCH64-CHECK: simulate:
-; AARCH64-CHECK: movi v0.2d, #0000000000000000
-; AARCH64-CHECK: bl lrand48
-; AARCH64-CHECK: mov x19, x0
-; AARCH64-CHECK: BB0_1:
+; CHECK: simulate:
+; CHECK: movi v0.2d, #0000000000000000
+; CHECK: bl lrand48
+; CHECK: mov x19, x0
+; CHECK: BB0_1:
 
 
 define i64 @simulateWithDebugIntrinsic(<2 x i32> %a) local_unnamed_addr  {
@@ -46,11 +46,11 @@ end:                                        ; preds = %body
   ret i64 %res
 }
 
-; AARCH64-CHECK: simulateWithDebugIntrinsic
-; AARCH64-CHECK: movi v0.2d, #0000000000000000
-; AARCH64-CHECK: bl lrand48
-; AARCH64-CHECK: mov x19, x0
-; AARCH64-CHECK: BB1_1:
+; CHECK: simulateWithDebugIntrinsic
+; CHECK: movi v0.2d, #0000000000000000
+; CHECK: bl lrand48
+; CHECK: mov x19, x0
+; CHECK: BB1_1:
 
 
 define i64 @simulateWithDbgDeclare(<2 x i32> %a) local_unnamed_addr  {
@@ -72,11 +72,11 @@ end:                                        ; preds = %body
   ret i64 %res
 }
 
-; AARCH64-CHECK: simulateWithDbgDeclare:
-; AARCH64-CHECK: movi v0.2d, #0000000000000000
-; AARCH64-CHECK: bl lrand48
-; AARCH64-CHECK: mov x19, x0
-; AARCH64-CHECK: BB2_1:
+; CHECK: simulateWithDbgDeclare:
+; CHECK: movi v0.2d, #0000000000000000
+; CHECK: bl lrand48
+; CHECK: mov x19, x0
+; CHECK: BB2_1:
 
 declare i64 @lrand48()
 

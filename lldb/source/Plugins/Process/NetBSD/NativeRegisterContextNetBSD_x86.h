@@ -22,9 +22,9 @@
 #include <optional>
 
 #include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
-#include "Plugins/Process/Utility/RegisterContext_x86.h"
+#include "Register/Arch/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
-#include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include "Register/Arch/lldb-x86-register-enums.h"
 
 namespace lldb_private {
 namespace process_netbsd {

@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallString.h"
@@ -566,15 +565,8 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
   auto EntryCount = F.getEntryCount();
   if (!EntryCount)
     return std::nullopt;
-  // Use 128 bit APInt to do the arithmetic to avoid overflow.
-  APInt BlockCount(128, *EntryCount);
-  APInt BlockFreq(128, Freq.getFrequency());
-  APInt EntryFreq(128, getEntryFreq().getFrequency());
-  BlockCount *= BlockFreq;
-  // Rounded division of BlockCount by EntryFreq. Since EntryFreq is unsigned
-  // lshr by 1 gives EntryFreq/2.
-  BlockCount = (BlockCount + EntryFreq.lshr(1)).udiv(EntryFreq);
-  return BlockCount.getLimitedValue();
+  return mulDivNearest(*EntryCount, Freq.getFrequency(),
+                       getEntryFreq().getFrequency());
 }
 
 bool

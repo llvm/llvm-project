@@ -15,11 +15,14 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPMEMORYUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Support/Alignment.h"
 
 #include <cstdint>
+#include <optional>
+#include <tuple>
 
 namespace llvm {
 class AssumptionCache;
@@ -38,6 +41,35 @@ class VectorType;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+/// Caches the results of the expensive analyses that are queried repeatedly
+/// for the same values while the vectorization trees are built and their costs
+/// are estimated. The results may change once the vectorized code is emitted
+/// and the scalars are erased, so the cache is cleared after each successful
+/// vectorizeTree().
+class SLPAnalysisCache {
+public:
+  /// Cached llvm::getPointersDiff(), a miss may require SCEV analysis. The
+  /// result for (\p PtrA, \p PtrB) also serves the query for the swapped
+  /// pointers.
+  std::optional<int64_t>
+  getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB, Value *PtrB,
+                  const DataLayout &DL, ScalarEvolution &SE,
+                  bool StrictCheck = false, bool CheckType = true);
+
+  /// Cached llvm::isGuaranteedNotToBePoison().
+  bool isGuaranteedNotToBePoison(const Value *V, AssumptionCache *AC);
+
+  void clear() {
+    PtrsDiffCache.clear();
+    NotPoisonCache.clear();
+  }
+
+private:
+  using PtrsDiffKeyT = std::tuple<Type *, Value *, Type *, Value *, unsigned>;
+  SmallDenseMap<PtrsDiffKeyT, std::optional<int64_t>, 16> PtrsDiffCache;
+  SmallDenseMap<const Value *, bool, 16> NotPoisonCache;
+};
 
 /// \p MaxDepth is the recursion limit for getUnderlyingObject.
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
@@ -83,7 +115,8 @@ bool isMaskedLoadCompress(
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
     bool &IsMasked, unsigned &InterleaveFactor,
-    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy);
+    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy,
+    SLPAnalysisCache &Cache);
 
 /// Checks if the \p VL can be transformed to a (masked)load + compress or
 /// (masked) interleaved load.
@@ -93,7 +126,8 @@ bool isMaskedLoadCompress(
     const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
-    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec);
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
+    SLPAnalysisCache &Cache);
 
 /// Checks if the simple loads of \p VL, mixed with the undef and poison lanes,
 /// can be replaced by a single load of the whole \p VL width. The loads must be
@@ -118,7 +152,8 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            const TargetTransformInfo &TTI, const DataLayout &DL,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
-                           FixedVectorType *&StoreVecTy);
+                           FixedVectorType *&StoreVecTy,
+                           SLPAnalysisCache &Cache);
 
 /// Clusters \p VL pointers by (basic block, underlying object) pair and sorts
 /// each cluster by offset. Returns false and leaves \p SortedIndices empty if
@@ -126,7 +161,8 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
                             Type *ElemTy, const DataLayout &DL,
                             ScalarEvolution &SE, unsigned MaxDepth,
-                            SmallVectorImpl<unsigned> &SortedIndices);
+                            SmallVectorImpl<unsigned> &SortedIndices,
+                            SLPAnalysisCache &Cache);
 
 } // namespace llvm::slpvectorizer
 

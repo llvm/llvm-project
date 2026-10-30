@@ -1,0 +1,13 @@
+add_entrypoint_object(
+  eventfd
+  SRCS
+    eventfd.cpp
+  HDRS
+    ../eventfd.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.eventfd
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

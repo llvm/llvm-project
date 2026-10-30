@@ -22,20 +22,14 @@ define i128 @fptosi_f16_to_i128(half %a) nounwind strictfp {
 ;
 ; RV64IZFH-LABEL: fptosi_f16_to_i128:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi sp, sp, -16
-; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    call __fixhfti
-; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    fcvt.l.h a0, fa0, rtz
+; RV64IZFH-NEXT:    srai a1, a0, 63
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fptosi_f16_to_i128:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    addi sp, sp, -16
-; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    call __fixhfti
-; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZHINX-NEXT:    addi sp, sp, 16
+; RV64IZHINX-NEXT:    fcvt.l.h a0, a0, rtz
+; RV64IZHINX-NEXT:    srai a1, a0, 63
 ; RV64IZHINX-NEXT:    ret
   %1 = call i128 @llvm.experimental.constrained.fptosi.i128.f16(half %a, metadata !"fpexcept.strict")
   ret i128 %1
@@ -54,20 +48,14 @@ define i128 @fptoui_f16_to_i128(half %a) nounwind strictfp {
 ;
 ; RV64IZFH-LABEL: fptoui_f16_to_i128:
 ; RV64IZFH:       # %bb.0:
-; RV64IZFH-NEXT:    addi sp, sp, -16
-; RV64IZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZFH-NEXT:    call __fixunshfti
-; RV64IZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZFH-NEXT:    addi sp, sp, 16
+; RV64IZFH-NEXT:    fcvt.l.h a0, fa0, rtz
+; RV64IZFH-NEXT:    li a1, 0
 ; RV64IZFH-NEXT:    ret
 ;
 ; RV64IZHINX-LABEL: fptoui_f16_to_i128:
 ; RV64IZHINX:       # %bb.0:
-; RV64IZHINX-NEXT:    addi sp, sp, -16
-; RV64IZHINX-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IZHINX-NEXT:    call __fixunshfti
-; RV64IZHINX-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IZHINX-NEXT:    addi sp, sp, 16
+; RV64IZHINX-NEXT:    fcvt.l.h a0, a0, rtz
+; RV64IZHINX-NEXT:    li a1, 0
 ; RV64IZHINX-NEXT:    ret
   %1 = call i128 @llvm.experimental.constrained.fptoui.i128.f16(half %a, metadata !"fpexcept.strict")
   ret i128 %1

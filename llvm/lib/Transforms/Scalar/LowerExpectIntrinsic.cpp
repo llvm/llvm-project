@@ -41,9 +41,10 @@ STATISTIC(ExpectIntrinsicsHandled,
 // programmers may be using __builtin_expect() / llvm.expect to annotate that a
 // branch is likely or unlikely to be taken.
 
-static std::tuple<uint32_t, uint32_t>
-getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
-  const ScalarOptions &Opts = ScalarOptions::Global;
+static std::tuple<uint32_t, uint32_t> getBranchWeight(const ScalarOptions &Opts,
+                                                      Intrinsic::ID IntrinsicID,
+                                                      CallInst *CI,
+                                                      int BranchCount) {
   if (IntrinsicID == Intrinsic::expect) {
     // __builtin_expect
     return std::make_tuple(Opts.likely_branch_weight,
@@ -63,7 +64,7 @@ getBranchWeight(Intrinsic::ID IntrinsicID, CallInst *CI, int BranchCount) {
   }
 }
 
-static bool handleSwitchExpect(SwitchInst &SI) {
+static bool handleSwitchExpect(const ScalarOptions &Opts, SwitchInst &SI) {
   CallInst *CI = dyn_cast<CallInst>(SI.getCondition());
   if (!CI)
     return false;
@@ -82,7 +83,7 @@ static bool handleSwitchExpect(SwitchInst &SI) {
   unsigned n = SI.getNumCases(); // +1 for default case.
   uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
   std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) =
-      getBranchWeight(Fn->getIntrinsicID(), CI, n + 1);
+      getBranchWeight(Opts, Fn->getIntrinsicID(), CI, n + 1);
 
   SmallVector<uint32_t, 16> Weights(n + 1, UnlikelyBranchWeightVal);
 
@@ -103,7 +104,7 @@ static bool handleSwitchExpect(SwitchInst &SI) {
 /// with the expected value of phi def, then the corresponding incoming
 /// edge of the phi is unlikely to be taken. Using that information,
 /// the branch probability info for the originating branch can be inferred.
-static void handlePhiDef(CallInst *Expect) {
+static void handlePhiDef(const ScalarOptions &Opts, CallInst *Expect) {
   Value &Arg = *Expect->getArgOperand(0);
   ConstantInt *ExpectedValue = dyn_cast<ConstantInt>(Expect->getArgOperand(1));
   if (!ExpectedValue)
@@ -241,7 +242,7 @@ static void handlePhiDef(CallInst *Expect) {
     };
     uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
     std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) = getBranchWeight(
-        Expect->getCalledFunction()->getIntrinsicID(), Expect, 2);
+        Opts, Expect->getCalledFunction()->getIntrinsicID(), Expect, 2);
     if (!ExpectedValueIsLikely)
       std::swap(LikelyBranchWeightVal, UnlikelyBranchWeightVal);
 
@@ -259,7 +260,8 @@ static void handlePhiDef(CallInst *Expect) {
 }
 
 // Handle both CondBrInst and SelectInst.
-template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
+template <class BrSelInst>
+static bool handleBrSelExpect(const ScalarOptions &Opts, BrSelInst &BSI) {
 
   // Handle non-optimized IR code like:
   //   %expval = call i64 @llvm.expect.i64(i64 %conv1, i64 1)
@@ -314,7 +316,7 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
 
   uint32_t LikelyBranchWeightVal, UnlikelyBranchWeightVal;
   std::tie(LikelyBranchWeightVal, UnlikelyBranchWeightVal) =
-      getBranchWeight(Fn->getIntrinsicID(), CI, 2);
+      getBranchWeight(Opts, Fn->getIntrinsicID(), CI, 2);
 
   SmallVector<uint32_t, 4> ExpectedWeights;
   if ((ExpectedValue->getZExtValue() == ValueComparedTo) ==
@@ -341,15 +343,16 @@ template <class BrSelInst> static bool handleBrSelExpect(BrSelInst &BSI) {
 }
 
 static bool lowerExpectIntrinsic(Function &F) {
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed = false;
 
   for (BasicBlock &BB : F) {
     // Create "block_weights" metadata.
     if (CondBrInst *BI = dyn_cast<CondBrInst>(BB.getTerminator())) {
-      if (handleBrSelExpect<CondBrInst>(*BI))
+      if (handleBrSelExpect<CondBrInst>(Opts, *BI))
         ExpectIntrinsicsHandled++;
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(BB.getTerminator())) {
-      if (handleSwitchExpect(*SI))
+      if (handleSwitchExpect(Opts, *SI))
         ExpectIntrinsicsHandled++;
     }
 
@@ -360,7 +363,7 @@ static bool lowerExpectIntrinsic(Function &F) {
       CallInst *CI = dyn_cast<CallInst>(&Inst);
       if (!CI) {
         if (SelectInst *SI = dyn_cast<SelectInst>(&Inst)) {
-          if (handleBrSelExpect(*SI))
+          if (handleBrSelExpect(Opts, *SI))
             ExpectIntrinsicsHandled++;
         }
         continue;
@@ -372,7 +375,7 @@ static bool lowerExpectIntrinsic(Function &F) {
         // Before erasing the llvm.expect, walk backward to find
         // phi that define llvm.expect's first arg, and
         // infer branch probability:
-        handlePhiDef(CI);
+        handlePhiDef(Opts, CI);
         Value *Exp = CI->getArgOperand(0);
         CI->replaceAllUsesWith(Exp);
         CI->eraseFromParent();

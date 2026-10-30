@@ -2554,7 +2554,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     // reordering on the values that live in the first seen basic block.
     // The main idea is that we want to avoid forming expressions that would
     // become loop dependent.
-    if (ScalarOptions::Global.reassociate_use_cse_local) {
+    if (UseCSELocal) {
       const BasicBlock *FirstSeenBB = nullptr;
       int StartIdx = Ops.size() - 1;
       // Skip the first value of the expression since we need at least two
@@ -2731,6 +2731,7 @@ PreservedAnalyses ReassociatePass::run(Function &F,
 
 PreservedAnalyses ReassociatePass::runImpl(Function &F, UniformityInfo &UI) {
   UA = &UI;
+  UseCSELocal = getScalarOptions(F).reassociate_use_cse_local;
 
   // Get the functions basic blocks in Reverse Post Order. This order is used by
   // BuildRankMap to pre calculate ranks correctly. It also excludes dead basic

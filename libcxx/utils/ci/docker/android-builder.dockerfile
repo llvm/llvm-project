@@ -28,7 +28,9 @@
 #   BUILDKITE_AGENT_TOKEN=<token>
 
 ARG BASE_IMAGE_VERSION
-FROM ghcr.io/llvm/libcxx-linux-builder-base:${BASE_IMAGE_VERSION}
+FROM ghcr.io/llvm/libcxx-linux-builder:${BASE_IMAGE_VERSION}
+
+USER root
 
 ARG ANDROID_CLANG_VERSION
 ARG ANDROID_CLANG_PREBUILTS_COMMIT
@@ -77,6 +79,7 @@ EOF
 
 # Create the libcxx-builder user
 RUN sudo useradd --create-home libcxx-builder
+USER libcxx-builder
 WORKDIR /home/libcxx-builder
 
 # Install the Buildkite agent and dependencies. This must be done as non-root
@@ -94,6 +97,7 @@ EOF
 ENV PATH="${PATH}:/home/libcxx-builder/.buildkite-agent/bin"
 
 # Install Docker
+USER root
 RUN <<EOF
   set -e
   curl -fsSL https://get.docker.com -o /tmp/get-docker.sh

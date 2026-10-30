@@ -3822,17 +3822,20 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
 };
 
 // Fences stronger than a workgroup order memory the SPMD barrier does not.
-static bool strictFence(const FenceInst &FI) {
-  SyncScope::ID SS = FI.getSyncScopeID();
+static bool isStrictFence(const Instruction &I) {
+  const auto *FI = dyn_cast<FenceInst>(&I);
+  if (!FI)
+    return false;
+  SyncScope::ID SS = FI->getSyncScopeID();
   if (SS == SyncScope::SingleThread)
     return false;
   if (SS == SyncScope::System)
     return true;
-  std::optional<StringRef> Name = FI.getContext().getSyncScopeName(SS);
+  std::optional<StringRef> Name = FI->getContext().getSyncScopeName(SS);
   if (!Name)
     return true;
-  auto Parsed = parseAtomicScopeIRString(
-      Triple(FI.getModule()->getTargetTriple()), *Name);
+  auto Parsed =
+      parseAtomicScopeIRString(FI->getModule()->getTargetTriple(), *Name);
   if (!Parsed)
     return true;
   switch (Parsed->first) {
@@ -4287,11 +4290,6 @@ struct AAKernelInfoFunction : AAKernelInfo {
     };
 
     auto &AllocSharedRFI = OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared];
-    auto IsStrictFence = [](const Instruction &I) {
-      if (const auto *FI = dyn_cast<FenceInst>(&I))
-        return strictFence(*FI);
-      return false;
-    };
     SmallPtrSet<BasicBlock *, 8> Visited;
     for (Instruction *GuardedI : SPMDCompatibilityTracker) {
       BasicBlock *BB = GuardedI->getParent();
@@ -4308,7 +4306,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         if (OpenMPOpt::getCallIfRegularCall(*I, &AllocSharedRFI))
           continue;
         // Nothing tracked is sunk across a strict fence.
-        if (IsStrictFence(*I) || !I->user_empty() ||
+        if (isStrictFence(*I) || !I->user_empty() ||
             !SPMDCompatibilityTracker.contains(I)) {
           LastEffect = nullptr;
           continue;
@@ -4337,7 +4335,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
       Instruction *GuardedRegionStart = nullptr, *GuardedRegionEnd = nullptr;
       for (Instruction &I : *BB) {
         // A strict fence splits a guarded region so it stays outside it.
-        if (IsStrictFence(I)) {
+        if (isStrictFence(I)) {
           if (SPMDCompatibilityTracker.contains(&I))
             CalleeAAFunction.getGuardedInstructions().insert(&I);
           if (GuardedRegionStart) {

@@ -677,7 +677,7 @@ public:
   // caller must describe the address with a byte offset, using a
   // GlobalOffsetAttr, instead.
   [[nodiscard]] bool computeGlobalViewIndicesFromFlatOffset(
-      int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
+      int64_t offset, mlir::Type ty, const cir::CIRDataLayout &layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 
   // Convert high-level indices (e.g. from GlobalViewAttr) to byte offset.
@@ -803,7 +803,7 @@ public:
                    llvm::ArrayRef<mlir::Attribute> maskAttrs) {
     auto vecType = mlir::cast<cir::VectorType>(vec1.getType());
     auto resultTy =
-        cir::VectorType::get(vecType.getElementType(), maskAttrs.size());
+        cir::VectorType::getFixed(vecType.getElementType(), maskAttrs.size());
     return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, vec2,
                                      getArrayAttr(maskAttrs));
   }
@@ -832,6 +832,12 @@ public:
                                            mlir::Value rowIdx,
                                            mlir::Value columnIdx) {
     return cir::MatrixExtractOp::create(*this, loc, matrix, rowIdx, columnIdx);
+  }
+
+  cir::MatrixExtractRowOp createMatrixExtractRow(mlir::Location loc,
+                                                 mlir::Value matrix,
+                                                 mlir::Value rowIdx) {
+    return cir::MatrixExtractRowOp::create(*this, loc, matrix, rowIdx);
   }
 
   cir::MatrixInsertOp createMatrixInsert(mlir::Location loc, mlir::Value value,

@@ -462,7 +462,7 @@ private:
   bool mangleSubstitution(TemplateName Template);
   bool mangleSubstitution(uintptr_t Ptr);
 
-  void mangleExistingSubstitution(TemplateName name);
+  TemplateName mangleExistingSubstitution(TemplateName name);
 
   bool mangleStandardSubstitution(const NamedDecl *ND);
 
@@ -2644,7 +2644,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::TemplateSpecialization: {
     const TemplateSpecializationType *TST =
         cast<TemplateSpecializationType>(Ty);
-    TemplateName TN = TST->getTemplateName();
+    TemplateName TN = mangleExistingSubstitution(TST->getTemplateName());
     switch (TN.getKind()) {
     case TemplateName::Template:
     case TemplateName::QualifiedTemplate: {
@@ -2670,12 +2670,9 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
     case TemplateName::DeducedTemplate:
       llvm_unreachable("invalid base for a template specialization type");
 
-    case TemplateName::SubstTemplateTemplateParm: {
-      SubstTemplateTemplateParmStorage *subst =
-          TN.getAsSubstTemplateTemplateParm();
-      mangleExistingSubstitution(subst->getReplacement());
+    case TemplateName::SubstTemplateTemplateParm:
+      // mangleExistingSubstitution already mangled a substitution for it.
       break;
-    }
 
     case TemplateName::SubstTemplateTemplateParmPack: {
       // FIXME: not clear how to mangle this!
@@ -7190,10 +7187,16 @@ void CXXNameMangler::mangleSeqID(unsigned SeqID) {
   Out << '_';
 }
 
-void CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
-  bool result = mangleSubstitution(tname);
-  assert(result && "no existing substitution for template name");
-  (void) result;
+TemplateName CXXNameMangler::mangleExistingSubstitution(TemplateName tname) {
+  while (SubstTemplateTemplateParmStorage *subst =
+             tname.getAsSubstTemplateTemplateParm()) {
+    if (mangleSubstitution(subst->getReplacement()))
+      return tname;
+    if (isCompatibleWith(LangOptions::ClangABI::Ver23))
+      return tname;
+    tname = subst->getReplacement();
+  }
+  return tname;
 }
 
 // <substitution> ::= S <seq-id> _

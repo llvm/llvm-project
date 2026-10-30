@@ -131,7 +131,7 @@ define i32 @test_ret_applies_to_all() {
   ret i32 %ret
 }
 
-; Case 6: When considering @mid, the return instruciton has sub-value 0
+; Case 6: When considering @mid, the return instruction has sub-value 0
 ; unconditionally live, but 1 only conditionally live. Since at that level we're
 ; applying the results to the whole of %res, this means %res is live and cannot
 ; be reduced. There is scope for further optimisation here (though not visible

@@ -1370,7 +1370,7 @@ static void parseClangOption(Ctx &ctx, StringRef opt, const Twine &msg) {
   const char *argv[] = {ctx.arg.progName.data(), opt.data()};
   // Called after initLLVM() to ensure target-specific RegisterLibraryOptions
   // have been called.
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(ctx.arg.libraryOptions, argv, "", &os))
     return;
   ErrAlways(ctx) << msg << ": " << StringRef(err).trim();
 }
@@ -1527,7 +1527,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.mergeArmExidx =
       args.hasFlag(OPT_merge_exidx_entries, OPT_no_merge_exidx_entries, true);
   ctx.arg.mmapOutputFile =
-      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, false);
+      args.hasFlag(OPT_mmap_output_file, OPT_no_mmap_output_file, true);
   ctx.arg.nmagic = args.hasFlag(OPT_nmagic, OPT_no_nmagic, false);
   ctx.arg.nostdlib = args.hasArg(OPT_nostdlib);
   ctx.arg.oFormatBinary = isOutputFormatBinary(ctx, args);

@@ -2416,7 +2416,27 @@ Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
   return common::visit(
       [&](auto &y) -> Expr<T> {
         if (auto folded{OperandsAreConstants(x.left(), y)}) {
-          auto power{evaluate::IntPower(folded->first, folded->second)};
+          ValueWithRealFlags<Scalar<T>> power;
+          if constexpr (T::category == TypeCategory::Complex && T::kind == 4) {
+            // Match flang-rt's cpowi/cpowk (complex-powi.cpp): accumulate in
+            // COMPLEX(8) and round to single once, rather than rounding every
+            // intermediate product (which costs a few single-precision ULPs).
+            using DoubleComplex = Scalar<Type<TypeCategory::Complex, 8>>;
+            using DoublePart = DoubleComplex::Part;
+            using SinglePart = typename Scalar<T>::Part;
+            // Single -> double is exact, so these conversions raise no flags.
+            DoubleComplex wideBase{
+                DoublePart::Convert(folded->first.REAL()).value,
+                DoublePart::Convert(folded->first.AIMAG()).value};
+            auto wide{evaluate::IntPower(wideBase, folded->second)};
+            power.flags = wide.flags;
+            power.value = Scalar<T>{SinglePart::Convert(wide.value.REAL())
+                                        .AccumulateFlags(power.flags),
+                SinglePart::Convert(wide.value.AIMAG())
+                    .AccumulateFlags(power.flags)};
+          } else {
+            power = evaluate::IntPower(folded->first, folded->second);
+          }
           context.RealFlagWarnings(power.flags, "power with INTEGER exponent");
           if (context.targetCharacteristics().areSubnormalsFlushedToZero()) {
             power.value = power.value.FlushSubnormalToZero();
@@ -2477,6 +2497,36 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
       return Expr<T>{Constant<T>{std::move(res)}};
     }
     return Expr<T>{Constant<T>{folded->second}};
+  }
+  // max(c, max(c, x)) -> max(c, x), and likewise for min, in any operand
+  // order, when c is a constant.  An extent max(0,ub) whose ub serializes as
+  // ubound(a,dim) is re-folded on read-back into max(0,max(0,ub)); collapsing
+  // it makes the module-file round trip a fixed point, so structural
+  // comparisons of function results and character lengths across module files
+  // still match.  Only a repeated constant is absorbed: Expr::operator== is
+  // defined for comparing procedure characteristics, where two dummy arguments
+  // at the same position compare equal regardless of identity, so a repeated
+  // variable is not reliably the same variable, and a repeated impure function
+  // reference or VOLATILE read must not be dropped.
+  if constexpr (T::category == TypeCategory::Integer ||
+      T::category == TypeCategory::Unsigned) {
+    auto absorbs{[&](const Expr<T> &operand, const Expr<T> &nested) {
+      const auto *c{std::get_if<Constant<T>>(&operand.u)};
+      const auto *inner{std::get_if<Extremum<T>>(&nested.u)};
+      if (!c || !inner || inner->ordering != x.ordering) {
+        return false;
+      }
+      auto isSameConstant{[&](const Expr<T> &y) {
+        const auto *ic{std::get_if<Constant<T>>(&y.u)};
+        return ic && *ic == *c;
+      }};
+      return isSameConstant(inner->left()) || isSameConstant(inner->right());
+    }};
+    if (absorbs(x.left(), x.right())) {
+      return Expr<T>{std::move(x.right())};
+    } else if (absorbs(x.right(), x.left())) {
+      return Expr<T>{std::move(x.left())};
+    }
   }
   return Expr<T>{std::move(x)};
 }
