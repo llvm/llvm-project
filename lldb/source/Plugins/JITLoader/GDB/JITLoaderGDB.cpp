@@ -323,8 +323,12 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
 
       char jit_name[64];
       snprintf(jit_name, 64, "JIT(0x%" PRIx64 ")", symbolfile_addr);
+      // Don't use the index cache for symbol tables of binaries read out of a
+      // corefile.
+      const bool disable_memory_symtab_caching = (bool)m_process->GetCoreFile();
       llvm::Expected<ModuleSP> module_sp_or_err =
           m_process->ReadModuleFromMemory(FileSpec(jit_name), symbolfile_addr,
+                                          disable_memory_symtab_caching,
                                           symbolfile_size);
       if (auto err = module_sp_or_err.takeError())
         LLDB_LOG_ERROR(

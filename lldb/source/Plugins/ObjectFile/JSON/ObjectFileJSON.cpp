@@ -109,10 +109,10 @@ ObjectFile *ObjectFileJSON::CreateInstance(const ModuleSP &module_sp,
                             std::move(body.sections));
 }
 
-ObjectFile *ObjectFileJSON::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                 WritableDataBufferSP data_sp,
-                                                 const ProcessSP &process_sp,
-                                                 addr_t header_addr) {
+ObjectFile *ObjectFileJSON::CreateMemoryInstance(
+    const ModuleSP &module_sp, WritableDataBufferSP data_sp,
+    const ProcessSP &process_sp, addr_t header_addr,
+    bool disable_memory_symtab_caching) {
   return nullptr;
 }
 

@@ -296,8 +296,12 @@ lldb_private::UUID DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress(
   if (header.e_type != expected_type)
     return UUID();
 
+  // Don't use the index cache for symbol tables of binaries read out of a
+  // corefile.
+  const bool disable_memory_symtab_caching = (bool)process->GetCoreFile();
   llvm::Expected<ModuleSP> memory_module_sp_or_err =
-      process->ReadModuleFromMemory(FileSpec("temp_freebsd_kernel"), addr);
+      process->ReadModuleFromMemory(FileSpec("temp_freebsd_kernel"), addr,
+                                    disable_memory_symtab_caching);
   if (auto err = memory_module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(log, std::move(err),
                    "DynamicLoaderFreeBSDKernel::CheckForKernelImageAtAddress: "
@@ -394,8 +398,13 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::ReadMemoryModule(
     }
   }
 
+  // Don't use the index cache for symbol tables of binaries read out of a
+  // corefile.
+  const bool disable_memory_symtab_caching = (bool)process->GetCoreFile();
   llvm::Expected<ModuleSP> memory_module_sp_or_err =
-      process->ReadModuleFromMemory(file_spec, m_load_address, size_to_read);
+      process->ReadModuleFromMemory(file_spec, m_load_address,
+                                    disable_memory_symtab_caching,
+                                    size_to_read);
   if (auto err = memory_module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(log, std::move(err),
                    "KextImageInfo::ReadMemoryModule: Failed to read module "

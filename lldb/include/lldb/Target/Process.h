@@ -2072,11 +2072,16 @@ public:
   /// \param[in] header_addr
   ///   The address pointing to the beginning of the object file's header.
   ///
+  /// \param[in] disable_memory_symtab_caching
+  ///   If true, the symbol table for this module will not be loaded from or
+  ///   saved to the index cache, even if caching of memory modules is enabled.
+  ///
   /// \param[in] size_to_read
   ///   The number of bytes to read from memory. This should be large enough to
   ///   identify the object file format. Defaults to 512.
   llvm::Expected<lldb::ModuleSP>
   ReadModuleFromMemory(const FileSpec &file_spec, lldb::addr_t header_addr,
+                       bool disable_memory_symtab_caching,
                        size_t size_to_read = 512);
 
   /// Attempt to get the attributes for a region of memory in the process.

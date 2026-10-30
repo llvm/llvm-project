@@ -44,7 +44,8 @@ static void EncodeDecode(const Symtab &object, ByteOrder byte_order) {
   object.Encode(file);
   llvm::ArrayRef<uint8_t> bytes = file.GetData();
   DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
-  Symtab decoded_object(object.GetObjectFile());
+  Symtab decoded_object(object.GetObjectFile(),
+                        /*disable_memory_symtab_caching=*/false);
   offset_t data_offset = 0;
   bool uuid_mismatch = false;
   decoded_object.Decode(data, &data_offset, uuid_mismatch);
@@ -296,7 +297,7 @@ LinkEditData:
   ASSERT_NE(objfile, nullptr);
 
   // Test encoding and decoding an empty symbol table.
-  Symtab symtab(objfile);
+  Symtab symtab(objfile, /*disable_memory_symtab_caching=*/false);
   symtab.PreloadSymbols();
   EncodeDecode(symtab);
 
@@ -671,7 +672,7 @@ LinkEditData:
   // Test encoding and decoding an empty symbol table.
   DataExtractor data(symtab_cache_bytes, sizeof(symtab_cache_bytes),
                      eByteOrderLittle, 8);
-  Symtab symtab(objfile);
+  Symtab symtab(objfile, /*disable_memory_symtab_caching=*/false);
   offset_t data_offset = 0;
   bool uuid_mismatch = false; // Gets set to true if signature doesn't match.
   const bool success = symtab.Decode(data, &data_offset, uuid_mismatch);

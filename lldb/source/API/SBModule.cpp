@@ -53,8 +53,12 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
+    // Don't use the index cache for symbol tables of binaries read out of a
+    // corefile.
+    const bool disable_memory_symtab_caching = (bool)process_sp->GetCoreFile();
     llvm::Expected<ModuleSP> module_sp_or_err =
-        process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+        process_sp->ReadModuleFromMemory(FileSpec(), header_addr,
+                                         disable_memory_symtab_caching);
     if (auto err = module_sp_or_err.takeError()) {
       llvm::consumeError(std::move(err));
       return;

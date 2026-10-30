@@ -32,8 +32,9 @@
 using namespace lldb;
 using namespace lldb_private;
 
-Symtab::Symtab(ObjectFile *objfile)
-    : m_objfile(objfile), m_file_addr_to_index(*this) {
+Symtab::Symtab(ObjectFile *objfile, bool disable_memory_symtab_caching)
+    : m_objfile(objfile), m_file_addr_to_index(*this),
+      m_disable_memory_symtab_caching(disable_memory_symtab_caching) {
   m_name_to_symbol_indices.emplace(std::make_pair(
       lldb::eFunctionNameTypeNone, UniqueCStringMap<uint32_t>()));
   m_name_to_symbol_indices.emplace(std::make_pair(
@@ -1149,7 +1150,8 @@ std::string Symtab::GetCacheKey() {
 }
 
 void Symtab::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory(),
+                                               m_disable_memory_symtab_caching);
   if (!cache)
     return; // Caching is not enabled.
 
@@ -1328,7 +1330,8 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 bool Symtab::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory());
+  DataFileCache *cache = Module::GetIndexCache(m_objfile->IsInMemory(),
+                                               m_disable_memory_symtab_caching);
   if (!cache)
     return false;
 

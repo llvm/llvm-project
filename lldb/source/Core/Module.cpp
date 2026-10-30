@@ -288,6 +288,7 @@ Module::~Module() {
 
 ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
                                         lldb::addr_t header_addr, Status &error,
+                                        bool disable_memory_symtab_caching,
                                         size_t size_to_read) {
   if (m_objfile_sp) {
     error = Status::FromErrorString("object file already exists");
@@ -304,8 +305,9 @@ ObjectFile *Module::GetMemoryObjectFile(const lldb::ProcessSP &process_sp,
       if (bytes_read < size_to_read)
         data_sp->SetByteSize(bytes_read);
       if (data_sp->GetByteSize() > 0) {
-        m_objfile_sp = ObjectFile::FindPlugin(shared_from_this(), process_sp,
-                                              header_addr, data_sp);
+        m_objfile_sp =
+            ObjectFile::FindPlugin(shared_from_this(), process_sp, header_addr,
+                                   data_sp, disable_memory_symtab_caching);
         if (m_objfile_sp) {
           m_memory_module_addr = header_addr;
 
@@ -1666,12 +1668,14 @@ std::string Module::GetCacheKey() {
   return key;
 }
 
-DataFileCache *Module::GetIndexCache(bool memory_module) {
+DataFileCache *Module::GetIndexCache(bool memory_module,
+                                     bool disable_memory_symtab_caching) {
   bool lldb_index_enabled = false;
   if (ModuleList::GetGlobalModuleListProperties().GetEnableLLDBIndexCache())
     lldb_index_enabled = true;
-  if (memory_module && ModuleList::GetGlobalModuleListProperties()
-                           .GetEnableLLDBIndexCacheMemoryModules())
+  if (memory_module && !disable_memory_symtab_caching &&
+      ModuleList::GetGlobalModuleListProperties()
+          .GetEnableLLDBIndexCacheMemoryModules())
     lldb_index_enabled = true;
   if (!lldb_index_enabled)
     return nullptr;

@@ -203,15 +203,16 @@ ObjectFile *ObjectFileWasm::CreateInstance(const ModuleSP &module_sp,
   return nullptr;
 }
 
-ObjectFile *ObjectFileWasm::CreateMemoryInstance(const ModuleSP &module_sp,
-                                                 WritableDataBufferSP data_sp,
-                                                 const ProcessSP &process_sp,
-                                                 addr_t header_addr) {
+ObjectFile *ObjectFileWasm::CreateMemoryInstance(
+    const ModuleSP &module_sp, WritableDataBufferSP data_sp,
+    const ProcessSP &process_sp, addr_t header_addr,
+    bool disable_memory_symtab_caching) {
   if (!ValidateModuleHeader(data_sp->GetData()))
     return nullptr;
 
   std::unique_ptr<ObjectFileWasm> objfile_up(
       new ObjectFileWasm(module_sp, data_sp, process_sp, header_addr));
+  objfile_up->SetDisableMemorySymtabCaching(disable_memory_symtab_caching);
   ArchSpec spec = objfile_up->GetArchitecture();
   if (spec && objfile_up->SetModulesArchitecture(spec))
     return objfile_up.release();

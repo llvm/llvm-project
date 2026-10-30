@@ -169,10 +169,16 @@ public:
   ///
   /// \param[in] header_addr
   ///     The address of the header for the object file in memory.
+  ///
+  /// \param[in] disable_memory_symtab_caching
+  ///     If true, the symbol table for this object file will not be loaded
+  ///     from or saved to the index cache, even if caching of memory modules
+  ///     is enabled. This is used for binaries read out of a corefile.
   static lldb::ObjectFileSP FindPlugin(const lldb::ModuleSP &module_sp,
                                        const lldb::ProcessSP &process_sp,
                                        lldb::addr_t header_addr,
-                                       lldb::WritableDataBufferSP file_data_sp);
+                                       lldb::WritableDataBufferSP file_data_sp,
+                                       bool disable_memory_symtab_caching);
 
   static ModuleSpecList
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
@@ -691,6 +697,17 @@ public:
   /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
+  /// Returns true if the symbol table for this in-memory object file should
+  /// not be loaded from the index cache, even if caching of memory modules is
+  /// enabled.
+  bool GetDisableMemorySymtabCaching() const {
+    return m_disable_memory_symtab_caching;
+  }
+
+  void SetDisableMemorySymtabCaching(bool disable) {
+    m_disable_memory_symtab_caching = disable;
+  }
+
   // Strip linker annotations (such as @@VERSION) from symbol names.
   virtual llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
@@ -782,6 +799,9 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+  /// Set if the symbol table for an in-memory object file should not be
+  /// loaded from the index cache.
+  bool m_disable_memory_symtab_caching;
 
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
   std::recursive_mutex m_sections_mutex;

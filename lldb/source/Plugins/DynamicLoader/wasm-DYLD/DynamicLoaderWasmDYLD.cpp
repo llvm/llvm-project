@@ -76,8 +76,11 @@ lldb::ModuleSP DynamicLoaderWasmDYLD::LoadModuleAtAddress(
           file, link_map_addr, base_addr, base_addr_is_offset))
     return module_sp;
 
-  llvm::Expected<ModuleSP> module_sp_or_err =
-      m_process->ReadModuleFromMemory(file, base_addr);
+  // Don't use the index cache for symbol tables of binaries read out of a
+  // corefile.
+  const bool disable_memory_symtab_caching = (bool)m_process->GetCoreFile();
+  llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+      file, base_addr, disable_memory_symtab_caching);
   if (auto err = module_sp_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
                    "Failed to read module from memory: {0}");
