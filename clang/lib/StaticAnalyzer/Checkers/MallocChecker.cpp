@@ -819,9 +819,8 @@ private:
   /// that are passed directly (as arguments) to the opaque call \p Call.
   /// By default a pointer passed to an opaque call would be marked as
   /// "escaped" (i.e. using it, releasing it and not releasing it are all
-  /// accepted as potentially valid) but for many system functions either:
-  /// (1) we can assume that it can't release the memory; or
-  /// (2) it will be explicitly modeled, so the generic "escape" is unwanted.
+  /// accepted as potentially valid) but if the called function is from a
+  /// system header we can often see that it wont't release the memory.
   ///
   /// \param [out] EscapingSymbol A function might not free memory in general,
   ///   but could be known to free a particular symbol. In this case, false is
@@ -3786,11 +3785,6 @@ bool MallocChecker::ignoreDirectEscapeTo(const CallEvent *Call,
     return true;
   }
 
-  // If it's one of the allocation functions we can reason about, we model
-  // its behavior explicitly.
-  if (isMemCall(*Call))
-    return true;
-
   // At this point the only thing left to handle is straight function calls.
   const FunctionDecl *FD = cast<SimpleFunctionCall>(Call)->getDecl();
   if (!FD)
@@ -3920,12 +3914,16 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(
     ProgramStateRef State, const InvalidatedSymbols &Escaped,
     const CallEvent *Call, PointerEscapeKind Kind,
     bool IsConstPointerEscape) const {
-  // If we know that the call does not free memory, or we want to process the
-  // call later, keep tracking the top level arguments.
   SymbolRef EscapingSymbol = nullptr;
-  if (Kind == PSK_DirectEscapeOnCall &&
-      ignoreDirectEscapeTo(Call, State, EscapingSymbol)) {
-    return State;
+  if (Kind == PSK_DirectEscapeOnCall) {
+    // If we want to model this call explicitly, don't discard state.
+    // FIXME: Maybe extend this to non-direct escape and/or non-simple calls
+    // (e.g. 'isMemCall' is true for a C++ method with ownership attributes)?
+    if (isa<SimpleFunctionCall>(Call) && isMemCall(*Call))
+      return State;
+    // If we know that the call cannot release memory, don't discard state.
+    if (ignoreDirectEscapeTo(Call, State, EscapingSymbol))
+      return State;
   }
 
   for (SymbolRef sym : Escaped) {
