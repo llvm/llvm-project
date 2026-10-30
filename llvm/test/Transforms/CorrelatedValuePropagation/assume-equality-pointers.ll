@@ -14,7 +14,7 @@ define ptr @assume_ptr_equality(ptr %x) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[X]], inttoptr (i64 12345678 to ptr)
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C]])
-; CHECK-NEXT:    ret ptr inttoptr (i64 12345678 to ptr)
+; CHECK-NEXT:    ret ptr [[X]]
 ;
 entry:
   %c = icmp eq ptr %x, inttoptr (i64 12345678 to ptr)
@@ -28,7 +28,7 @@ define ptr @assume_ptr_equality_return_value(ptr %p) {
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P]], inttoptr (i64 -1 to ptr)
 ; CHECK-NEXT:    br i1 [[C]], label %[[BB_IF:.*]], label %[[BB_ELSE:.*]]
 ; CHECK:       [[BB_IF]]:
-; CHECK-NEXT:    ret ptr inttoptr (i64 -1 to ptr)
+; CHECK-NEXT:    ret ptr [[P]]
 ; CHECK:       [[BB_ELSE]]:
 ; CHECK-NEXT:    ret ptr null
 ;
@@ -45,13 +45,14 @@ bb.else:
 define ptr @assume_ptr_equality_phi_node(ptr %p) {
 ; CHECK-LABEL: define ptr @assume_ptr_equality_phi_node(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P]], @g
 ; CHECK-NEXT:    br i1 [[C]], label %[[JOIN:.*]], label %[[BB_ELSE:.*]]
 ; CHECK:       [[BB_ELSE]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    ret ptr @g
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[P]], %[[ENTRY]] ], [ @g, %[[BB_ELSE]] ]
+; CHECK-NEXT:    ret ptr [[PHI]]
 ;
 entry:
   %c = icmp eq ptr %p, @g
@@ -68,13 +69,14 @@ join:
 define ptr @assume_ptr_equality_common_value_phi_node(ptr %p) {
 ; CHECK-LABEL: define ptr @assume_ptr_equality_common_value_phi_node(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P]], inttoptr (i64 -1 to ptr)
 ; CHECK-NEXT:    br i1 [[C]], label %[[JOIN:.*]], label %[[BB_ELSE:.*]]
 ; CHECK:       [[BB_ELSE]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    ret ptr [[P]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ inttoptr (i64 -1 to ptr), %[[ENTRY]] ], [ [[P]], %[[BB_ELSE]] ]
+; CHECK-NEXT:    ret ptr [[PHI]]
 ;
 entry:
   %c = icmp eq ptr %p, inttoptr (i64 -1 to ptr)
