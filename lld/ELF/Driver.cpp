@@ -3260,9 +3260,10 @@ static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
 
   for (auto *file : ctx.objectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file);
-    if (obj->dynDbgSec) {
-      MemoryBufferRef mb(toStringRef(obj->dynDbgSec->contentMaybeDecompress()),
-                         obj->mb.getBufferIdentifier());
+    if (obj->dynDbgInfo) {
+      MemoryBufferRef mb(
+          toStringRef(obj->dynDbgInfo->inputSec->contentMaybeDecompress()),
+          obj->mb.getBufferIdentifier());
       dctx.driver.addFile(createObjFile(dctx, mb));
     }
   }
@@ -3276,6 +3277,10 @@ static void linkDynamicDebug(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
       saveArg(Twine("-O") + Twine(ctx.arg.optimize))};
   if (ctx.arg.resolveGroups)
     args.push_back("--force-group-allocation");
+  if (ctx.arg.gcSections) {
+    dctx.dynDbgInnerGCRoots = std::move(ctx.dynDbgInnerGCRoots);
+    args.push_back("--gc-sections");
+  }
   for (const auto &ws : wrapped)
     args.push_back(saveArg(Twine("--wrap=") + ws.sym->getName()));
   dctx.driver.linkerMain(args);

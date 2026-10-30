@@ -646,7 +646,8 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
     if (sec.sh_type == SHT_LLVM_DYNDBG_ELF) {
       if (check(obj.getSectionName(sec, shstrtab)) == dynDbgSecName) {
         sections[i] = &InputSection::discarded;
-        dynDbgSec = std::make_unique<InputSection>(*this, sec, dynDbgSecName);
+        dynDbgInfo = std::make_unique<DynDbgInfo>(
+            new InputSection(*this, sec, dynDbgSecName));
         ctx.hasDynDbg = true;
       }
       continue;
@@ -1197,6 +1198,32 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
   return makeThreadLocal<InputSection>(*this, sec, name);
 }
 
+template <typename ELFT>
+static void
+visitGlobalRelocSymbolIndices(Ctx &ctx, const ObjFile<ELFT> &elf,
+                              const typename ELFT::Shdr &sh,
+                              llvm::function_ref<void(uint32_t)> fn) {
+  auto visit = [&, firstGlobal = elf.getFirstGlobal()](uint32_t symIdx) {
+    if (symIdx >= firstGlobal)
+      fn(symIdx);
+  };
+
+  object::ELFFile<ELFT> obj = elf.getObj();
+  if (sh.sh_type == SHT_CREL) {
+    auto [rels, relas] = CHECK2(obj.crels(sh), &elf);
+    for (const auto &r : rels)
+      visit(r.getSymbol(false));
+    for (const auto &r : relas)
+      visit(r.getSymbol(false));
+  } else if (sh.sh_type == SHT_RELA) {
+    for (const auto &r : CHECK2(obj.relas(sh), &elf))
+      visit(r.getSymbol(ctx.arg.isMips64EL));
+  } else {
+    for (const auto &r : CHECK2(obj.rels(sh), &elf))
+      visit(r.getSymbol(ctx.arg.isMips64EL));
+  }
+}
+
 // Initialize symbols. symbols is a parallel array to the corresponding ELF
 // symbol table.
 template <class ELFT>
@@ -1259,7 +1286,7 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
     sym->referenced = true;
   }
 
-  if (dynDbgSec)
+  if (dynDbgInfo)
     initDynDbgSymbols();
 }
 
@@ -1268,8 +1295,9 @@ void ObjFile<ELFT>::initializeSymbols(const object::ELFFile<ELFT> &obj) {
 // those reached by an inner relocation against a SHF_ALLOC section with
 // `isDynDbgRef`; the rest are only needed by debug sections.
 template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
-  MemoryBufferRef dbgMb(toStringRef(dynDbgSec->contentMaybeDecompress()),
-                        mb.getBufferIdentifier());
+  MemoryBufferRef dbgMb(
+      toStringRef(dynDbgInfo->inputSec->contentMaybeDecompress()),
+      mb.getBufferIdentifier());
   std::unique_ptr<ELFFileBase> efb = createObjFile(ctx, dbgMb);
   // Compare ekind (note ObjFile<ELFT>::classof only tests InputFile::kind()).
   if (efb->ekind != ekind) {
@@ -1282,30 +1310,17 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
 
   ArrayRef<Elf_Sym> dbgSyms = dbgObj.template getGlobalELFSyms<ELFT>();
   SmallVector<bool, 0> globalUsed(dbgSyms.size());
-  auto setSymUsed = [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
-    if (symIdx >= firstGlobal)
-      globalUsed[symIdx - firstGlobal] = true;
-  };
-
   for (const Elf_Shdr &sh : dbgObj.template getELFShdrs<ELFT>()) {
     if (!isStaticRelSecType(sh.sh_type))
       continue;
     const Elf_Shdr &target = *CHECK2(obj.getSection(sh.sh_info), &dbgObj);
     if (!(target.sh_flags & SHF_ALLOC))
       continue;
-    if (sh.sh_type == SHT_CREL) {
-      auto [rels, relas] = CHECK2(obj.crels(sh), &dbgObj);
-      for (const Elf_Rel &r : rels)
-        setSymUsed(r.getSymbol(false));
-      for (const Elf_Rela &r : relas)
-        setSymUsed(r.getSymbol(false));
-    } else if (sh.sh_type == SHT_RELA) {
-      for (const Elf_Rela &r : CHECK2(obj.relas(sh), &dbgObj))
-        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
-    } else {
-      for (const Elf_Rel &r : CHECK2(obj.rels(sh), &dbgObj))
-        setSymUsed(r.getSymbol(ctx.arg.isMips64EL));
-    }
+    visitGlobalRelocSymbolIndices(
+        ctx, dbgObj, sh,
+        [&, firstGlobal = dbgObj.firstGlobal](uint32_t symIdx) {
+          globalUsed[symIdx - firstGlobal] = true;
+        });
   }
 
   for (size_t i = 0, end = dbgSyms.size(); i != end; ++i) {
@@ -1323,6 +1338,10 @@ template <class ELFT> void ObjFile<ELFT>::initDynDbgSymbols() {
         Msg(ctx) << this << ": dynamic debugging reference to " << name;
     }
   }
+
+  // Keep hold of the ELF object file for `--gc-sections`.
+  if (ctx.arg.gcSections)
+    dynDbgInfo->elf = std::move(efb);
 }
 
 template <class ELFT>
@@ -2045,6 +2064,142 @@ std::string elf::replaceThinLTOSuffix(Ctx &ctx, StringRef path) {
   if (path.consume_back(suffix))
     return (path + repl).str();
   return std::string(path);
+}
+
+DynDbgInfo::DynDbgInfo(InputSection *is) : inputSec(is) { assert(is); }
+
+namespace {
+// LockGuard takes ownership of a mutex from a pool of mutexes based on the hash
+// of the address of the object being locked. This means that each object does
+// not need to have its own mutex but at the potential cost of more lock
+// contention.
+struct LockGuard {
+  std::mutex *mutex;
+
+  LockGuard(const void *ptr, std::vector<std::mutex> &mutexPool) {
+    assert(!mutexPool.empty());
+    mutex = &mutexPool[hash_value(ptr) % mutexPool.size()];
+    mutex->lock();
+  }
+  ~LockGuard() { mutex->unlock(); }
+};
+} // namespace
+
+// Scans the unoptimized "inner" `__dyndbg.` prefixed symbols of the "inner"
+// object and records the "inner" section references to optimized "outer"
+// symbols in the DynDbgGCInfo attached to the InputSection containing the
+// optimized "outer" equivalent symbol. These DynDbgGCInfo references become
+// additional dependencies for the "outer" InputSections during the "outer"
+// `--gc-sections` mark live.
+//
+// One `__dyndbg.` prefixed symbol per "inner" section is recorded as an "inner"
+// GC root in the DynDbgGCInfo of the corresponding "outer" InputSection.
+// Usually, each "outer" InputSection will have 1 "inner" GC root. However, it
+// is possible to have multiple when linking dynamic debug objects that have
+// been combined in a relocatable link. During the "outer" `--gc-sections` mark
+// live, each live "outer" InputSection appends its "inner" GC roots to form all
+// the GC roots for the "inner" `--gc-sections` mark live.
+template <typename ELFT> void ObjFile<ELFT>::maybeCreateDynDbgGCInfo() {
+  if (!dynDbgInfo || dynDbgInfo->gcInfoCreated || !dynDbgInfo->elf)
+    return;
+
+  LockGuard lock(this, ctx.dynDbgGCMutexPool);
+  if (dynDbgInfo->gcInfoCreated)
+    return;
+
+  auto *symtab = ctx.symtab.get();
+  auto &dbgObj = cast<ObjFile<ELFT>>(*(dynDbgInfo->elf));
+  const object::ELFFile<ELFT> obj = dbgObj.getObj();
+  ArrayRef<Elf_Shdr> dbgShdrs = dbgObj.template getELFShdrs<ELFT>();
+  uint32_t numDbgShdrs = dbgShdrs.size();
+
+  // Used to record a section's relocation section index and whether the section
+  // has already been processed.
+  struct SecInfo {
+    uint32_t relocIdx;
+    bool processed;
+  };
+  SmallVector<SecInfo, 0> secInfos(numDbgShdrs);
+
+  // Populate relocation section indices and any extended symbol index table.
+  for (uint32_t secIdx = 1; secIdx < numDbgShdrs; ++secIdx) {
+    const Elf_Shdr &sh = dbgShdrs[secIdx];
+    if (isStaticRelSecType(sh.sh_type))
+      secInfos[sh.sh_info].relocIdx = secIdx;
+    else if (sh.sh_type == SHT_SYMTAB_SHNDX)
+      dbgObj.shndxTable = CHECK2(obj.getSHNDXTable(sh, dbgShdrs), &dbgObj);
+  }
+
+  ArrayRef<Elf_Sym> dbgSyms = dbgObj.template getELFSyms<ELFT>();
+  for (uint32_t i = dbgObj.firstGlobal, end = dbgSyms.size(); i != end; ++i) {
+    const Elf_Sym &s = dbgSyms[i];
+    uint32_t secIdx = s.st_shndx;
+    if (secIdx == SHN_UNDEF)
+      continue;
+
+    if (LLVM_UNLIKELY(secIdx == SHN_XINDEX))
+      secIdx =
+          check(getExtendedSymbolTableIndex<ELFT>(s, i, dbgObj.shndxTable));
+    else if (LLVM_UNLIKELY(secIdx >= SHN_LORESERVE))
+      continue;
+
+    SecInfo &si = secInfos[secIdx];
+    if (si.processed)
+      continue;
+
+    // Only interested in dynamic debugging "inner" `__dyndbg.` prefixed
+    // symbols.
+    StringRef name = CHECK2(s.getName(dbgObj.stringTable), this);
+    if (!name.starts_with("__dyndbg."))
+      continue;
+
+    // Only one "inner" GC root is required per "inner" section.
+    si.processed = true;
+
+    // Try to find the matching "outer" symbol.
+    Symbol *sym = symtab->find(name.drop_front(9));
+    if (!sym || !sym->isDefined() || sym->file != this)
+      continue;
+
+    InputSection *is = dyn_cast<InputSection>(cast<Defined>(sym)->section);
+    if (!is)
+      continue;
+
+    assert(is->file == this);
+
+    // Get or create the InputSection's DynDbgGCInfo.
+    DynDbgGCInfo *gcInfo = is->dynDbgGCInfo;
+    if (!gcInfo) {
+      gcInfo = new DynDbgGCInfo;
+      dynDbgInfo->gcInfos.emplace_back(std::unique_ptr<DynDbgGCInfo>(gcInfo));
+      is->dynDbgGCInfo = gcInfo;
+    }
+
+    // Add this "inner" `__dyndbg.` prefixed symbol as a GC root for the "inner"
+    // section.
+    gcInfo->roots.push_back(name);
+
+    if (!si.relocIdx)
+      continue;
+
+    // Find "outer" symbols referenced by the "inner" section and record in the
+    // InputSection's DynDbgGCInfo.
+    DenseSet<uint32_t> processedSyms;
+    visitGlobalRelocSymbolIndices(
+        ctx, dbgObj, dbgShdrs[si.relocIdx], [&](uint32_t symIdx) {
+          const Elf_Sym &s = dbgSyms[symIdx];
+          if (s.st_shndx != SHN_UNDEF || !processedSyms.insert(symIdx).second)
+            return;
+
+          StringRef name = CHECK2(s.getName(dbgObj.stringTable), this);
+          Symbol *sym = symtab->find(name);
+          if (sym && (sym->isDefined() || sym->isShared()))
+            gcInfo->refs.push_back(sym);
+        });
+  }
+
+  dynDbgInfo->gcInfoCreated = true;
+  dynDbgInfo->elf.reset(); // ELF file no longer required.
 }
 
 template class elf::ObjFile<ELF32LE>;

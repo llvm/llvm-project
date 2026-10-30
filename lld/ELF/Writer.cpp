@@ -1931,16 +1931,17 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     if (ctx.hasDynDbg) {
       InputSection *unknownSec = make<InputSection>(
           ctx.internalFile, dynDbgSecName, 0, 0, 0, 0, ArrayRef<uint8_t>());
+      bool gcSections = ctx.arg.gcSections;
       for (Symbol *sym : ctx.symtab->getSymbols()) {
-        if (!sym->isDynDbgRef)
+        if (!sym->isDynDbgRef || (gcSections && !sym->hasFlag(USED)))
           continue;
 
         if (sym->isUndefined()) {
           // Report against the referencing dynamic debugging section when the
           // symbol's file has one.
           auto *dbgObj = dyn_cast<ObjFile<ELFT>>(sym->file);
-          InputSectionBase *isec = dbgObj && dbgObj->dynDbgSec
-                                       ? dbgObj->dynDbgSec.get()
+          InputSectionBase *isec = dbgObj && dbgObj->dynDbgInfo
+                                       ? dbgObj->dynDbgInfo->inputSec.get()
                                        : unknownSec;
           maybeReportUndefined(ctx, cast<Undefined>(*sym), *isec, 0);
           continue;

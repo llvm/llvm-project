@@ -206,6 +206,8 @@ public:
     return getELFSyms<ELFT>().slice(firstGlobal);
   }
 
+  uint32_t getFirstGlobal() const { return firstGlobal; }
+
   // Get cached DWARF information.
   DWARFCache *getDwarf();
 
@@ -236,6 +238,23 @@ public:
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
 };
 
+// Dynamic debugging info.
+struct DynDbgGCInfo;
+
+struct DynDbgInfo {
+  // Embedded unoptimized dynamic debug input section.
+  std::unique_ptr<InputSection> inputSec;
+
+  // The following are used for `--gc-sections` support.
+  std::atomic<bool> gcInfoCreated = false;
+  std::unique_ptr<ELFFileBase> elf;
+  // Lifetime control of DynDbgGCInfo in InputSection is not straightforward, so
+  // do so from here instead.
+  SmallVector<std::unique_ptr<DynDbgGCInfo>, 0> gcInfos;
+
+  DynDbgInfo(InputSection *is);
+};
+
 // .o file.
 template <class ELFT> class ObjFile : public ELFFileBase {
   LLVM_ELF_IMPORT_TYPES_ELFT(ELFT)
@@ -264,8 +283,9 @@ public:
   // Pointer to this input file's .llvm_addrsig section, if it has one.
   const Elf_Shdr *addrsigSec = nullptr;
 
-  // Embedded unoptimized dynamic debug input section.
-  std::unique_ptr<InputSection> dynDbgSec;
+  // Dynamic debugging info.
+  std::unique_ptr<DynDbgInfo> dynDbgInfo;
+  void maybeCreateDynDbgGCInfo();
 
   // SHT_LLVM_CALL_GRAPH_PROFILE section index.
   uint32_t cgProfileSectionIndex = 0;
