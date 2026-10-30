@@ -1168,6 +1168,15 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               WhitespaceSensitiveMacros,
               std::vector<std::string>({"STRINGIZE", "ASSERT"}));
 
+  CHECK_PARSE("IncludeBlocks: Merge", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Merge);
+  CHECK_PARSE("IncludeBlocks: Regroup", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Regroup);
+  CHECK_PARSE("IncludeBlocks: Preserve", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_Preserve);
+  CHECK_PARSE("IncludeBlocks: RegroupByDirectory", IncludeStyle.IncludeBlocks,
+              tooling::IncludeStyle::IBS_RegroupByDirectory);
+
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
       {"abc/.*", 2, 0, false}, {".*", 1, 0, true}};
