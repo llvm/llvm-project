@@ -2760,13 +2760,18 @@ public:
   }
 
   void visitICmpInst(ICmpInst &I) {
+    Type *OpTy = I.getOperand(0)->getType();
+    unsigned AddrWidth =
+        OpTy->isPtrOrPtrVectorTy() ? DL.getAddressSizeInBits(OpTy) : 0;
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      const APInt &LHSVal =
-          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
-      const APInt &RHSVal =
-          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
+      const APInt &LHSVal = LHS.isPointer()
+                                ? LHS.asPointer().address().trunc(AddrWidth)
+                                : LHS.asInteger();
+      const APInt &RHSVal = RHS.isPointer()
+                                ? RHS.asPointer().address().trunc(AddrWidth)
+                                : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(
