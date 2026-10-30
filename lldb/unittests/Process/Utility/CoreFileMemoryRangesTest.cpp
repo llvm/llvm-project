@@ -203,3 +203,50 @@ TEST(CoreFileMemoryRangesTest, PartialOverlapping) {
   ASSERT_THAT(start_addr / 2, searched_range->GetRangeBase());
   ASSERT_THAT(end_addr, searched_range->GetRangeEnd());
 }
+
+static std::string DumpRange(lldb::addr_t start_addr, uint64_t size) {
+  llvm::AddressRange range(start_addr, start_addr + size);
+  const CoreFileMemoryRange core_range = {range, 0x3};
+  return core_range.Dump();
+}
+
+TEST(CoreFileMemoryRangesTest, DumpFormatsBytes) {
+  EXPECT_EQ("of 0B at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 0));
+  EXPECT_EQ("of 500B at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 500));
+  EXPECT_EQ("of 999B at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 999));
+}
+
+TEST(CoreFileMemoryRangesTest, DumpFormatsKilobytes) {
+  EXPECT_EQ("of 1KB at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 1000));
+  EXPECT_EQ("of 8KB at 0x00007ffff7d8a000",
+            DumpRange(0x7ffff7d8a000, 8 * 1000));
+  EXPECT_EQ("of 1.50KB at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 1500));
+}
+
+TEST(CoreFileMemoryRangesTest, DumpFormatsMegabytes) {
+  EXPECT_EQ("of 16MB at 0x00007ffff7d8a000",
+            DumpRange(0x7ffff7d8a000, 16 * 1000 * 1000));
+  EXPECT_EQ("of 1.50MB at 0x00007ffff7d8a000",
+            DumpRange(0x7ffff7d8a000, 1500000));
+}
+
+TEST(CoreFileMemoryRangesTest, DumpFormatsGigabytes) {
+  EXPECT_EQ("of 5GB at 0x00007ffff7d8a000",
+            DumpRange(0x7ffff7d8a000, 5ULL * 1000 * 1000 * 1000));
+  EXPECT_EQ("of 1.50GB at 0x00007ffff7d8a000",
+            DumpRange(0x7ffff7d8a000, 1500000000ULL));
+}
+
+TEST(CoreFileMemoryRangesTest, DumpRoundsToWholeNumber) {
+  // Values that round to a whole number at two decimal places should not
+  // print a fractional part.
+  EXPECT_EQ("of 2KB at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 1999));
+  EXPECT_EQ("of 1KB at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 1004));
+  EXPECT_EQ("of 1.01KB at 0x00007ffff7d8a000", DumpRange(0x7ffff7d8a000, 1006));
+}
+
+TEST(CoreFileMemoryRangesTest, DumpFormatsAddress) {
+  EXPECT_EQ("of 4KB at 0x0000000000001000", DumpRange(0x1000, 4000));
+  EXPECT_EQ("of 4KB at 0xfffffffffffff000",
+            DumpRange(0xfffffffffffff000, 4000));
+}
