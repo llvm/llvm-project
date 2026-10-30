@@ -1605,7 +1605,10 @@ public:
     }
     if (auto actualType{
             characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
-      bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+      // Characterize() sees only the first consequent-arg.
+      const auto *condArg{actual_.GetConditionalArg()};
+      bool actualIsPolymorphic{condArg ? condArg->IsPolymorphic()
+                                       : actualType->type().IsPolymorphic()};
       bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
       if (actualIsPolymorphic && !dummyIsPolymorphic) {
         return true;
@@ -1625,7 +1628,17 @@ public:
   }
 
   bool HaveCoarrayDifferences() const {
-    return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
+    bool isCoindexed{false};
+    if (const auto *condArg{actual_.GetConditionalArg()}) {
+      // ExtractCoarrayRef() finds no data-ref in a conditional argument.
+      condArg->ForEachConsequent(
+          [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+            isCoindexed |= cons && ExtractCoarrayRef(cons->value());
+          });
+    } else {
+      isCoindexed = ExtractCoarrayRef(actual_).has_value();
+    }
+    return isCoindexed && dummyObj_.type.corank() == 0;
   }
 
   bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
@@ -1710,7 +1723,30 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
           : nullptr};
   const bool forCopyIn{!forCopyOut};
-  if (!evaluate::IsVariable(*actual)) {
+  if (const auto *condArg{actual->GetConditionalArg()}) {
+    // The actual argument is the consequent-arg chosen at run time (F2023
+    // 15.5.2.3 p2), so apply the rules for a plain actual argument to each
+    // one. IsVariable() of the whole argument would look at the condition.
+    bool anyVariable{false};
+    bool anyOtherExpr{false};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (cons) {
+            const Expr<SomeType> &expr{cons->value()};
+            if (evaluate::IsVariable(expr)) {
+              anyVariable = true;
+            } else if (!IsNamedConstantDesignator(expr)) {
+              anyOtherExpr = true;
+            }
+          }
+        });
+    if (forCopyIn && anyOtherExpr) {
+      return true;
+    }
+    if (forCopyOut && !anyVariable) {
+      return false;
+    }
+  } else if (!evaluate::IsVariable(*actual)) {
     // A designator whose base object is a named constant is not a variable,
     // but it still designates an object with storage.  It never needs
     // copy-out, since a named constant is not definable; whether it needs

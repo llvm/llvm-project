@@ -141,6 +141,8 @@ public:
     // Returns the first non-.NIL. consequent expression, or nullptr.
     const Expr<SomeType> *FirstNonNilConsequent() const;
     bool HasNilConsequent() const;
+    // True if any consequent-arg is polymorphic (F2023 15.5.2.3 p4).
+    bool IsPolymorphic() const;
 
     bool operator==(const ConditionalArg &) const;
     llvm::raw_ostream &AsFortran(llvm::raw_ostream &) const;
@@ -187,6 +189,8 @@ public:
 
   common::Label GetLabel() const { return std::get<common::Label>(u_); }
 
+  // For a conditional argument, the type of its first consequent-arg; see
+  // ConditionalArg::IsPolymorphic().
   std::optional<DynamicType> GetType() const;
   int Rank() const;
   bool operator==(const ActualArgument &) const;
