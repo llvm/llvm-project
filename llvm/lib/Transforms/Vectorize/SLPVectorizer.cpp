@@ -31160,7 +31160,14 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
                              : getFloorFullVectorNumberOfElements(
                                    *TTI, ScalarTy, VL.size(), Opts->slp_revec),
                          MinVF);
-  MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
+  // A stored two-lane buildvector is limited like the two stores it replaces:
+  // by the width of its lanes, not by the widest value in their operand trees.
+  unsigned MaxVFEltSize = Sz;
+  if (IE && VL.size() == 2 && any_of(VL, [](Value *V) {
+        return any_of(V->users(), IsaPred<StoreInst>);
+      }))
+    MaxVFEltSize = DL->getTypeSizeInBits(IE->getOperand(1)->getType());
+  MaxVF = std::min(R.getMaximumVF(MaxVFEltSize, S.getOpcode()), MaxVF);
   // Standalone seeds only need one register worth of lanes.
   if (StandaloneSeeds && Sz != 0)
     MaxVF = std::min(MaxVF, std::max(MinVF, R.getMaxVecRegSize() / Sz));
