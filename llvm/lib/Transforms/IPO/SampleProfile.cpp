@@ -258,6 +258,14 @@ static cl::opt<bool> CallsitePrioritizedInline(
     cl::desc("Use call site prioritized inlining for sample profile loader. "
              "Currently only CSSPGO is supported."));
 
+static cl::opt<bool> ImportLocalIndirectTargets(
+    "sample-profile-import-local-indirect-targets", cl::Hidden, cl::init(false),
+    cl::desc(
+        "In ThinLTO pre-link, also add hot profiled targets of a deferred "
+        "indirect call to the import list when they are defined in the "
+        "current module, so they can be imported together with the caller "
+        "into other modules."));
+
 static cl::opt<bool> UsePreInlinerDecision(
     "sample-profile-use-preinliner", cl::Hidden,
     cl::desc("Use the preinliner decisions stored in profile context."));
@@ -497,7 +505,8 @@ protected:
   findIndirectCallFunctionSamples(const Instruction &I, uint64_t &Sum) const;
   void findExternalInlineCandidate(CallBase *CB, const FunctionSamples *Samples,
                                    DenseSet<GlobalValue::GUID> &InlinedGUIDs,
-                                   uint64_t Threshold);
+                                   uint64_t Threshold,
+                                   bool IncludeLocalTargets = false);
   // Attempt to promote indirect call and also inline the promoted call
   bool tryPromoteAndInlineCandidate(
       Function &F, InlineCandidate &Candidate, uint64_t SumOrigin,
@@ -1018,7 +1027,13 @@ void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
 
 void SampleProfileLoader::findExternalInlineCandidate(
     CallBase *CB, const FunctionSamples *Samples,
-    DenseSet<GlobalValue::GUID> &InlinedGUIDs, uint64_t Threshold) {
+    DenseSet<GlobalValue::GUID> &InlinedGUIDs, uint64_t Threshold,
+    bool IncludeLocalTargets) {
+  // A deferred indirect target defined here may need importing alongside its
+  // caller into another module. Its profile can lack a residual call-target
+  // count, and any direct call to it can be inlined away before summary
+  // creation. Include such definitions only when processing deferred indirect
+  // calls.
 
   // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
   // function make sure it's imported
@@ -1048,7 +1063,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     // Set threshold to zero to honor pre-inliner decision.
     if (UsePreInlinerDecision)
       Threshold = 0;
-    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold);
+    Samples->findInlinedFunctions(InlinedGUIDs, SymbolMap, Threshold,
+                                  IncludeLocalTargets);
     return;
   }
 
@@ -1073,9 +1089,12 @@ void SampleProfileLoader::findExternalInlineCandidate(
       continue;
 
     Function *Func = SymbolMap.lookup(CalleeSample->getFunction());
-    // Add to the import list only when it's defined out of module.
     if (!Func || Func->isDeclaration())
       InlinedGUIDs.insert(CalleeSample->getGUID());
+    else if (IncludeLocalTargets && CalleeSample->getTotalSamples())
+      // Preserve assigned GUIDs, falling back to the name/linkage identity
+      // before AssignGUIDPass runs at the end of the pre-link pipeline.
+      InlinedGUIDs.insert(Func->getGUIDOrFallback());
 
     // Import hot CallTargets, which may not be available in IR because full
     // profile annotation cannot be done until backend compilation in ThinLTO.
@@ -1085,6 +1104,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
           const Function *Callee = SymbolMap.lookup(TS.first);
           if (!Callee || Callee->isDeclaration())
             InlinedGUIDs.insert(TS.first.getHashCode());
+          else if (IncludeLocalTargets)
+            InlinedGUIDs.insert(Callee->getGUIDOrFallback());
         }
 
     // Import hot child context profile associted with callees. Note that this
@@ -1183,7 +1204,8 @@ bool SampleProfileLoader::inlineHotFunctions(
           uint64_t SumOrigin = Sum;
           if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
             findExternalInlineCandidate(I, FS, InlinedGUIDs,
-                                        PSI->getOrCompHotCountThreshold());
+                                        PSI->getOrCompHotCountThreshold(),
+                                        ImportLocalIndirectTargets);
             continue;
           }
           if (!callsiteIsHot(FS, PSI, ProfAccForSymsInList))
@@ -1450,7 +1472,8 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         // TODO: Consider disable pre-lTO ICP for MonoLTO as well
         if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
           findExternalInlineCandidate(I, FS, InlinedGUIDs,
-                                      PSI->getOrCompHotCountThreshold());
+                                      PSI->getOrCompHotCountThreshold(),
+                                      ImportLocalIndirectTargets);
           continue;
         }
         uint64_t EntryCountDistributed =
