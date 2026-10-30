@@ -235,8 +235,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   now diagnosed as a C++26 extension under `-Wc++26-extensions` (previously it
   was diagnosed as a Clang extension under `-Wc23-extensions`), and a new
   `-Wpre-c++26-compat` warning is available in C++26 mode. The
-  `__cpp_pp_embed` feature-test macro is not yet defined because of known
-  issues in the implementation.
+  `__cpp_pp_embed` feature-test macro is now defined.
 
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
@@ -861,6 +860,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Attribute Support
 
+- Fixed a crash when using a zero-argument call to an undeclared
+  `__CFStringMakeConstantString` as a format string. (#GH225034)
+
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
   syntax followed by a parenthesized expression list in C code. (#GH225045)
 
@@ -1135,6 +1137,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   init-captures in default member initializers used during aggregate
   initialization. (#GH196469)
 
+- Fixed incorrect evaluation of compound requirements when a return-type
+  requirement contains a lambda with constrained template parameters.
+
+- Fixed a bug where Clang could ignore lambda constraints in return-type
+  requirements.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1146,6 +1154,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
+
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` condition. (#GH184060)
 
 #### Miscellaneous Bug Fixes
 

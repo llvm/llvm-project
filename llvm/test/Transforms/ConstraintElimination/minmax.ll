@@ -584,7 +584,7 @@ define i32 @simplify_ult_smax_val_fail2(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[B]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.smax.i32(i32 [[B]], i32 [[ADD]])
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ; CHECK:       else:

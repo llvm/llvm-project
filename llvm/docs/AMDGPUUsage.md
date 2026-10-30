@@ -3523,7 +3523,8 @@ callable functions (i.e. those that do not correspond to hardware entry points):
 - On entry to a function the dependency counters (`VMcnt`, `LOADcnt` etc.)
   are in an indeterminate state.
 - On return from a function, all dependency counters must be zero except for
-  `VScnt`/`STOREcnt`.
+  `VScnt`/`STOREcnt` or `VMcnt`/`LOADcnt` if the only outstanding
+  operations are `global_inv` or `buffer_inv`.
 
 For entry points, the ABI conventions are dictated by the hardware behavior at
 wave launch and wave termination:
@@ -3916,11 +3917,10 @@ The AMDGPU backend uses the following ELF header:
       See {ref}`amdgpu-generic-processor-versioning`
   :::
 
-  For code object V4 and later, processors with hardwired-on XNACK, such as
-  `gfx1250`, use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4` (zero) because
-  they do not support mode selection. Their XNACK behavior is implied by
-  `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is disabled on
-  these processors.
+  For code object V4 and later use `EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4`
+  (zero) because they do not support mode selection. Their XNACK behavior is
+  implied by `EF_AMDGPU_MACH`; a zero XNACK field does not mean replay is
+  disabled on these processors.
 
   For code object V4 and later, processors with hardwired-on SRAMECC use
   `EF_AMDGPU_FEATURE_SRAMECC_UNSUPPORTED_V4` (zero) because they do not
@@ -7283,10 +7283,10 @@ The fields used by CP for code objects before V3 also match those specified in
 * - 458
   - 1 bit
   - ENABLE_WAVEFRONT_SIZE32
-  - GFX6-GFX9
+  - GFX6-GFX9, GFX125*
     : Reserved, must be 0.
 
-    GFX10-GFX11
+    GFX10-GFX11, GFX120*, GFX13
     : - If 0 execute in wavefront size 64 mode.
       - If 1 execute in native wavefront size 32 mode.
 * - 459
@@ -17628,7 +17628,7 @@ terminated by an `.end_amdhsa_kernel` directive.
   - Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_wavefront_size32`
   - Target Feature Specific (wavefrontsize64)
-  - GFX10-GFX12
+  - GFX10-GFX13 (except GFX125*)
   - Controls ENABLE_WAVEFRONT_SIZE32 in {ref}`amdgpu-amdhsa-kernel-descriptor-v3-table`.
 * - `.amdhsa_uses_dynamic_stack`
   - 0

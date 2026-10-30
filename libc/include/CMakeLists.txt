@@ -745,6 +745,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_eventfd_macros
+    .llvm-libc-types.eventfd_t
 )
 
 add_header_macro(
@@ -1207,6 +1208,7 @@ add_header_macro(
   ../libc/include/netinet/tcp.yaml
   netinet/tcp.h
   DEPENDS
+    .llvm-libc-macros.netinet_tcp_macros
     .llvm_libc_common_h
 )
 
