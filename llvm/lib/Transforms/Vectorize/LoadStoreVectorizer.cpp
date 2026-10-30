@@ -97,6 +97,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
@@ -120,6 +121,10 @@ using namespace llvm;
 
 STATISTIC(NumVectorInstructions, "Number of vector accesses generated");
 STATISTIC(NumScalarsVectorized, "Number of scalar accesses vectorized");
+
+static cl::opt<bool> CostScalarStorePacking(
+    "load-store-vectorizer-cost-stores", cl::Hidden, cl::init(false),
+    cl::desc("Require profitable packing for scalar store chains"));
 
 namespace {
 
@@ -1125,6 +1130,72 @@ bool Vectorizer::vectorizeChain(Chain &C) {
                                    MaybeAlign(), DL, C[0].Inst, nullptr, &DT));
   }
 
+  // Packing independent scalar values can cost more than the memory
+  // instructions it replaces. Leave such stores for SLP, which can also cost
+  // vectorizing their producers. This estimate covers complete, non-overlapping
+  // scalar chains with no type conversions; other chains retain the existing
+  // policy until their packing operations are modeled as well.
+  if (CostScalarStorePacking && !IsLoadChain &&
+      !ChainContainsExtraLoadsStores && C.size() == NumElem) {
+    SmallVector<Value *, 8> StoredValues;
+    bool IsScalarChain = true;
+    unsigned ElemBytes = DL.getTypeStoreSize(VecElemTy);
+    for (unsigned I = 0; I < C.size(); ++I) {
+      auto *SI = cast<StoreInst>(C[I].Inst);
+      APInt Offset = C[I].OffsetFromLeader - C[0].OffsetFromLeader;
+      if (SI->getValueOperand()->getType() != VecElemTy ||
+          Offset != I * ElemBytes) {
+        IsScalarChain = false;
+        break;
+      }
+      StoredValues.push_back(SI->getValueOperand());
+    }
+    // Constant-only vectors do not need runtime lane packing. Their
+    // materialization costs are not covered by the scalarization interface.
+    if (IsScalarChain && !llvm::all_of(StoredValues, [](Value *V) {
+          return isa<Constant>(V);
+        })) {
+      auto CostKind =
+          F.hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+      InstructionCost ScalarCost = 0;
+      for (const ChainElem &E : C)
+        ScalarCost +=
+            TTI.getMemoryOpCost(Instruction::Store, VecElemTy,
+                                getLoadStoreAlignment(E.Inst), AS, CostKind);
+      InstructionCost VectorCost = TTI.getMemoryOpCost(
+          Instruction::Store, VecTy, Alignment, AS, CostKind);
+      // Reassembling every lane of an existing vector in order needs no
+      // packing instructions. Some targets' scalarization estimates do not
+      // inspect the inserted values, so recognize this identity explicitly.
+      Value *SourceVector = nullptr;
+      bool ReusesVector = true;
+      for (unsigned I = 0; I < StoredValues.size(); ++I) {
+        auto *EE = dyn_cast<ExtractElementInst>(StoredValues[I]);
+        auto *Index =
+            EE ? dyn_cast<ConstantInt>(EE->getIndexOperand()) : nullptr;
+        if (!EE || !Index || Index->getValue() != I ||
+            EE->getVectorOperand()->getType() != VecTy ||
+            (SourceVector && SourceVector != EE->getVectorOperand())) {
+          ReusesVector = false;
+          break;
+        }
+        SourceVector = EE->getVectorOperand();
+      }
+      if (!ReusesVector)
+        VectorCost += TTI.getScalarizationOverhead(
+            cast<FixedVectorType>(VecTy), APInt::getAllOnes(NumElem),
+            /*Insert=*/true, /*Extract=*/false, CostKind,
+            /*ForPoisonSrc=*/true, StoredValues);
+      if (!ScalarCost.isValid() || !VectorCost.isValid() ||
+          VectorCost >= ScalarCost) {
+        LLVM_DEBUG(dbgs() << "LSV: scalar store packing is not profitable: "
+                          << ScalarCost << " scalar, " << VectorCost
+                          << " vector\n");
+        return false;
+      }
+    }
+  }
+
   // All elements of the chain must have the same scalar-type size.
 #ifndef NDEBUG
   for (const ChainElem &E : C)
@@ -1748,6 +1819,10 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
       continue;
 
     Type *Ty = getLoadStoreType(&I);
+    // Chains describe fixed byte offsets and sizes. Scalable accesses cannot
+    // be represented by this pass's fixed-width vectorization factors.
+    if (isa<ScalableVectorType>(Ty))
+      continue;
     if (!VectorType::isValidElementType(Ty->getScalarType()))
       continue;
 
