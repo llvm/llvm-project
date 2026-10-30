@@ -88,12 +88,12 @@ body:             |
 
   bb.1.if.then:
     %4, $cpsr = tMOVi8 42, 14, $noreg
-    tSTRspi killed %4, %stack.0.retval, 0, 14, $noreg :: (store (s32) into %ir.retval)
+    tSTRspi %4, %stack.0.retval, 0, 14, $noreg :: (store (s32) into %ir.retval)
     tB %bb.3.return, 14, $noreg
 
   bb.2.if.end:
     %3, $cpsr = tMOVi8 1, 14, $noreg
-    tSTRspi killed %3, %stack.0.retval, 0, 14, $noreg :: (store (s32) into %ir.retval)
+    tSTRspi %3, %stack.0.retval, 0, 14, $noreg :: (store (s32) into %ir.retval)
 
   bb.3.return:
     %5 = tLDRspi %stack.0.retval, 0, 14, $noreg :: (dereferenceable load (s32) from %ir.retval)

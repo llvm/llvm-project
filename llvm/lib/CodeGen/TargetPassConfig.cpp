@@ -21,7 +21,6 @@
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
-#include "llvm/CodeGen/BasicBlockMatchingAndInference.h"
 #include "llvm/CodeGen/BasicBlockSectionsProfileReader.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
@@ -335,6 +334,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption(const TargetMachine &TM) {
     Opt.EnableIPRA = Opts.enable_ipra == BoolOrDefault::True;
   Opt.EnableFastISelOption = toBoolOrDefault(Opts.fast_isel);
   Opt.EnableRegAllocFastTied = toBoolOrDefault(Opts.regalloc_fast_tied);
+  Opt.EnableMachinePipeliner = toBoolOrDefault(Opts.enable_pipeliner);
   Opt.EnableGlobalISelOption = toBoolOrDefault(Opts.global_isel);
   Opt.VerifyMachineCode = computeMachineVerifierMode(
       Opts, valueOr(Opts.verify_machineinstrs, false));
@@ -997,6 +997,10 @@ void TargetPassConfig::addMachinePasses() {
   if (TM->Options.EnableIPRA)
     addPass(createRegUsageInfoPropPass());
 
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      valueOr(getOpts(*TM).enable_pipeliner, isMachinePipelinerEnabled()))
+    addPass(&MachinePipelinerID);
+
   // Run pre-ra passes.
   addPreRegAlloc();
 
@@ -1150,7 +1154,7 @@ void TargetPassConfig::addMachinePasses() {
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
-      if (!Opts.basic_block_section_match_infer || PropellerMatchBBID)
+      if (!Opts.basic_block_section_match_infer || Opts.propeller_match_bbid)
         addPass(llvm::createBasicBlockPathCloningPass());
       if (Opts.basic_block_section_match_infer)
         addPass(llvm::createBasicBlockMatchingAndInferencePass());

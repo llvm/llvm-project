@@ -1074,7 +1074,8 @@ Instruction *InstCombinerImpl::foldIntrinsicIsFPClass(IntrinsicInst &II) {
 
   Value *FNegSrc;
   // is.fpclass (fneg x), mask -> is.fpclass x, (fneg mask)
-  if (match(Src0, m_FNeg(m_Value(FNegSrc))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Src0, m_FNegOrFSubNegZero(m_Value(FNegSrc))))
     return CallInst::Create(
         II.getCalledFunction(),
         {FNegSrc, ConstantInt::get(Src1->getType(), fneg(Mask))});
@@ -2532,10 +2533,16 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Value *V = foldCmpIntrinsicOfExtended(II, Builder, DL))
       return replaceInstUsesWith(CI, V);
 
+    auto *Cmp = cast<CmpIntrinsic>(II);
+    Value *I0 = Cmp->getLHS(), *I1 = Cmp->getRHS();
+    Value *LHS, *RHS;
+    if (matchCommonBinOpOperands(I0, I1, Cmp->getLTPredicate(), LHS, RHS,
+                                 SQ.getWithInstruction(II)))
+      return replaceInstUsesWith(
+          CI, Builder.CreateIntrinsic(II->getType(), IID, {LHS, RHS}));
+
     if (IID == Intrinsic::ucmp)
       break;
-
-    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
 
     // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
     if (match(I1, m_Zero())) {
@@ -2545,7 +2552,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(
             CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
     }
-    Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(
           CI,
@@ -2662,7 +2668,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         // powi(-x, p) -> powi(x, p)
         // powi(fabs(x), p) -> powi(x, p)
         // powi(copysign(x, y), p) -> powi(x, p)
-        if (match(II->getArgOperand(0), m_FNeg(m_Value(X))) ||
+        // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+        if (match(II->getArgOperand(0), m_FNegOrFSubNegZero(m_Value(X))) ||
             match(II->getArgOperand(0), m_FAbs(m_Value(X))) ||
             match(II->getArgOperand(0),
                   m_Intrinsic<Intrinsic::copysign>(m_Value(X), m_Value())))
@@ -3062,7 +3069,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
     Value *X, *Y;
-    if (match(Arg0, m_FNeg(m_Value(X))) && match(Arg1, m_FNeg(m_Value(Y))) &&
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Arg0, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(Arg1, m_FNegOrFSubNegZero(m_Value(Y))) &&
         (Arg0->hasOneUse() || Arg1->hasOneUse())) {
       // If both operands are negated, invert the call and negate the result:
       // min(-X, -Y) --> -(max(X, Y))
@@ -3165,7 +3174,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // it would be an extra instruction for min (fnabs), but
     // that is still likely better for analysis and codegen.
     auto IsMinMaxOrXNegX = [IID, &X](Value *Op0, Value *Op1) {
-      if (match(Op0, m_FNeg(m_Value(X))) && match(Op1, m_Specific(X)))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(Op0, m_FNegOrFSubNegZero(m_Value(X))) &&
+          match(Op1, m_Specific(X)))
         return Op0->hasOneUse() ||
                (IID != Intrinsic::minimum && IID != Intrinsic::minnum &&
                 IID != Intrinsic::minimumnum);
@@ -3187,8 +3198,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     // -A * -B -> A * B
     Value *A, *B;
-    if (match(II->getArgOperand(0), m_FNeg(m_Value(A))) &&
-        match(II->getArgOperand(1), m_FNeg(m_Value(B)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(II->getArgOperand(0), m_FNegOrFSubNegZero(m_Value(A))) &&
+        match(II->getArgOperand(1), m_FNegOrFSubNegZero(m_Value(B)))) {
       replaceOperand(*II, 0, A);
       replaceOperand(*II, 1, B);
       return II;
@@ -3198,11 +3210,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Op1 = II->getOperand(1);
     Value *OpNotNeg, *NegatedOp;
     unsigned NegatedOpArg, OtherOpArg;
-    if (match(Op0, m_FNeg(m_Value(OpNotNeg)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_FNegOrFSubNegZero(m_Value(OpNotNeg)))) {
       NegatedOp = Op0;
       NegatedOpArg = 0;
       OtherOpArg = 1;
-    } else if (match(Op1, m_FNeg(m_Value(OpNotNeg)))) {
+    } else if (match(Op1, m_FNegOrFSubNegZero(m_Value(OpNotNeg)))) {
       NegatedOp = Op1;
       NegatedOpArg = 1;
       OtherOpArg = 0;
@@ -3254,7 +3267,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Src1 = II->getArgOperand(1);
     Value *Src2 = II->getArgOperand(2);
     Value *X, *Y;
-    if (match(Src0, m_FNeg(m_Value(X))) && match(Src1, m_FNeg(m_Value(Y))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Src0, m_FNegOrFSubNegZero(m_Value(X))) &&
+        match(Src1, m_FNegOrFSubNegZero(m_Value(Y))))
       return replaceInstUsesWith(
           *II, Builder.CreateIntrinsic(IID, II->getType(), {X, Y, Src2}, II));
 
@@ -3323,7 +3338,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     // Peek through changes of magnitude's sign-bit. This call rewrites those:
     // copysign (fabs X), Sign --> copysign X, Sign
     // copysign (fneg X), Sign --> copysign X, Sign
-    if (match(Mag, m_FAbs(m_Value(X))) || match(Mag, m_FNeg(m_Value(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Mag, m_FAbs(m_Value(X))) ||
+        match(Mag, m_FNegOrFSubNegZero(m_Value(X))))
       return replaceInstUsesWith(*II, Builder.CreateCopySign(X, Sign, II));
 
     // copysign(floor(fabs(X)), X) --> copysign(trunc(X), X)
@@ -3359,7 +3376,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg = II->getArgOperand(0);
     Value *X;
     // fabs (-X) --> fabs (X)
-    if (match(Arg, m_FNeg(m_Value(X)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Arg, m_FNegOrFSubNegZero(m_Value(X)))) {
       Value *Fabs = Builder.CreateFAbs(X, II);
       return replaceInstUsesWith(CI, Fabs);
     }
@@ -3383,10 +3401,12 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return SI;
       }
       // fabs (select Cond, -FVal, FVal) --> fabs FVal
-      if (match(TVal, m_FNeg(m_Specific(FVal))))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(TVal, m_FNegOrFSubNegZero(m_Specific(FVal))))
         return replaceInstUsesWith(*II, Builder.CreateFAbs(FVal, II));
       // fabs (select Cond, TVal, -TVal) --> fabs TVal
-      if (match(FVal, m_FNeg(m_Specific(TVal))))
+      // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+      if (match(FVal, m_FNegOrFSubNegZero(m_Specific(TVal))))
         return replaceInstUsesWith(*II, Builder.CreateFAbs(TVal, II));
     }
 
@@ -3420,7 +3440,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::cosh: {
     Value *X, *Sign;
     Value *Src = II->getArgOperand(0);
-    if (match(Src, m_FNeg(m_Value(X))) || match(Src, m_FAbs(m_Value(X))) ||
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Src, m_FNegOrFSubNegZero(m_Value(X))) ||
+        match(Src, m_FAbs(m_Value(X))) ||
         match(Src, m_CopySign(m_Value(X), m_Value(Sign)))) {
       // f(-x) --> f(x)
       // f(fabs(x)) --> f(x)
@@ -3440,7 +3462,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   case Intrinsic::tan:
   case Intrinsic::tanh: {
     Value *X;
-    if (match(II->getArgOperand(0), m_OneUse(m_FNeg(m_Value(X)))) &&
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(II->getArgOperand(0),
+              m_OneUse(m_FNegOrFSubNegZero(m_Value(X)))) &&
         !mayFlushDenormalsToPositiveZero(II)) {
       // f(-x) --> -f(x)
       // for f in {sin, sinh, tan, tanh}
@@ -4013,10 +4037,18 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         };
         MaybeSimplifyHint(Ptr1);
         MaybeSimplifyHint(Ptr2);
+        SimpleAAQueryInfo AAQI(*AA);
+        AAQI.AllowEphemerals = false;
+        if (AA->alias(MemoryLocation::getBeforeOrAfter(Ptr1),
+                      MemoryLocation::getBeforeOrAfter(Ptr2), AAQI,
+                      II) == AliasResult::NoAlias) {
+          return RemoveBundle();
+        }
       } break;
 
       // TODO: Drop these assumes when they are redundant
       case BundleAttr::DereferenceableOrNull:
+      case BundleAttr::Range:
         break;
 
       // This cannot be simplified
@@ -4025,10 +4057,26 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
-    // If the assume has operand bundles, the folds below will never work, so
-    // don't bother trying.
-    if (II->hasOperandBundles())
+    if (II->hasOperandBundles()) {
+      // Merge consecutive assumes to save some resources
+      if (auto *PrevAI = dyn_cast_or_null<AssumeInst>(II->getPrevNode());
+          PrevAI && PrevAI->hasOperandBundles()) {
+        SmallVector<OperandBundleDef, 4> Bundles;
+        Bundles.reserve(II->getNumOperandBundles() +
+                        PrevAI->getNumOperandBundles());
+        for (auto Bundle : PrevAI->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        for (auto Bundle : II->operand_bundles())
+          Bundles.emplace_back(Bundle);
+        Builder.CreateAssumption(Bundles);
+        eraseInstFromFunction(*PrevAI);
+        return eraseInstFromFunction(*II);
+      }
+
+      // If the assume has operand bundles, the folds below will never work, so
+      // don't bother trying.
       break;
+    }
 
     Value *IIOperand = II->getArgOperand(0);
 
@@ -5292,9 +5340,6 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
         auto *OpIntTy = GCR.getOperand(2)->getType();
         GCR.setOperand(2, ConstantInt::get(OpIntTy, GCR.getBasePtrIndex()));
       }
-
-      // TODO: bitcast(relocate(p)) -> relocate(bitcast(p))
-      // Canonicalize on the type from the uses to the defs
 
       // TODO: relocate((gep p, C, C2, ...)) -> gep(relocate(p), C, C2, ...)
       LiveGcValues.insert(BasePtr);

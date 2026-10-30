@@ -2,35 +2,43 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
-; A pointer to a function that is not internal refers to the function
-; descriptor through the indirect symbol, like code taking the address
-; (@take_bar), so that both compare equal. Both use the same ADA slot.
-; CHECK: func_s CSECT
-; CHECK: DC AD(AD({{.*}}#S)+XL8'0000000000000008')
-; CHECK: func_e CSECT
-; CHECK: DC VD(bar@indirect)
-; CHECK: * Offset 0 pointer to function descriptor bar
-; CHECK-NEXT: DC VD(bar@indirect)
-; CHECK-NEXT: * Offset 8 function descriptor of foo
-; CHECK-NEXT: DC RD(foo)
-; CHECK-NEXT: DC VD(foo)
-; CHECK-NOT: DC VD(bar@indirect)
-@x = hidden global i32 4077, align 4
-@y = hidden global ptr @x, align 8
-@func_s = hidden global ptr @foo, align 8
-@func_e = hidden global ptr @bar, align 8
+; A pointer to a global variable is emitted as a direct AD-con.
+; CHECK-LABEL: ptr_var CSECT
+; CHECK:  DC AD(gvar)
 
-define hidden void @bar() {
-entry:
-  ret void
-}
+; A pointer to an internal function is emitted as an offset into the ADA
+; (function descriptor of foo is the first ADA slot, at offset 0).
+; CHECK-LABEL: ptr_foo CSECT
+; CHECK:  DC AD(AD({{.*}}#S)+XL8'0000000000000000')
+
+; A pointer to a function alias with external linkage uses the indirect symbol.
+; CHECK-LABEL: ptr_bar CSECT
+; CHECK:  DC VD(bar@indirect)
+
+; The ADA section holds: the function descriptor of foo (internal, offset 0)
+; and the indirect slot for bar (external alias, offset 16).
+; CHECK-LABEL: {{.*}}#S XATTR
+; CHECK: * Offset 0 function descriptor of foo
+; CHECK-NEXT:  DC RD(foo)
+; CHECK-NEXT:  DC VD(foo)
+; CHECK: * Offset 16 pointer to function descriptor bar
+; CHECK-NEXT:  DC VD(bar@indirect)
+
+@gvar = hidden global i32 42, align 4
+
+; GV path in lowerConstant: pointer to a global variable.
+@ptr_var = hidden global ptr @gvar, align 8
 
 define internal void @foo() {
 entry:
   ret void
 }
 
-define hidden ptr @take_bar() {
-entry:
-  ret ptr @bar
-}
+; FV path in lowerConstant: pointer to an internal function (descriptor in ADA).
+@ptr_foo = hidden global ptr @foo, align 8
+
+; GA path in lowerConstant: alias of a function with external linkage.
+@bar = hidden alias void (), ptr @foo
+
+; GA path with non-local linkage: uses the indirect symbol.
+@ptr_bar = hidden global ptr @bar, align 8

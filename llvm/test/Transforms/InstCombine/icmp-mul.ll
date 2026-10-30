@@ -1551,7 +1551,7 @@ entry:
 define i1 @icmp_mul_nsw_slt_neg(i8 %x, i8 %y) {
 ; CHECK-LABEL: @icmp_mul_nsw_slt_neg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
@@ -1566,7 +1566,7 @@ define i1 @icmp_mul_nsw_slt_neg_var(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COND:%.*]] = icmp slt i8 [[Z:%.*]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:

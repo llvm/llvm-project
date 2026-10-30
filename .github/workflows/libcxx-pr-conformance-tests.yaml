@@ -294,7 +294,7 @@ jobs:
       - name: Install a current LLVM
         if: ${{ matrix.mingw != true }}
         run: |
-          choco install -y llvm --version=21.1.8 --allow-downgrade
+          choco install -y llvm --version=22.1.8 --allow-downgrade
       - name: Install llvm-mingw
         if: ${{ matrix.mingw == true }}
         run: |
