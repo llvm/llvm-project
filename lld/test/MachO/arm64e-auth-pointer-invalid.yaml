@@ -1,0 +1,156 @@
+# REQUIRES: aarch64
+# RUN: yaml2obj -D CONTENT=0000000034120580 %s -o %t.valid.o
+# RUN: %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.valid.o -o %t.dylib
+# RUN: yaml2obj -D CONTENT=0000000034120500 %s -o %t.no-auth.o
+# RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.no-auth.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=AUTH
+# RUN: yaml2obj -D CONTENT=0000000034120D80 %s -o %t.bit51.o
+# RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.bit51.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESERVED
+# RUN: yaml2obj -D CONTENT=00000000341205C0 %s -o %t.bit62.o
+# RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.bit62.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=RESERVED
+# RUN: yaml2obj -D CONTENT=0000000034120D00 %s -o %t.both.o
+# RUN: not %no-arg-lld -arch arm64e -dylib -platform_version ios 17.0 17.0 %t.both.o -o /dev/null 2>&1 | FileCheck %s --check-prefixes=AUTH,RESERVED
+
+## Invalid embedded signing schemas must not become unsigned pointers or have
+## their reserved bits silently discarded.
+## A schema with both problems gets both errors.
+# AUTH: error: AUTHENTICATED_POINTER relocation requires bit 63 to be set at offset 0 of __DATA,__data in
+# RESERVED: error: AUTHENTICATED_POINTER relocation requires bits 51..62 to be zero at offset 0 of __DATA,__data in
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x80000002
+  filetype:        0x1
+  ncmds:           4
+  sizeofcmds:      440
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         312
+    segname:         ''
+    vmaddr:          0
+    vmsize:          16
+    fileoff:         472
+    filesize:        16
+    maxprot:         7
+    initprot:        7
+    nsects:          3
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            0
+        offset:          0x1D8
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         ''
+      - sectname:        __const
+        segname:         __DATA
+        addr:            0x0
+        size:            8
+        offset:          0x1D8
+        align:           3
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '0000000000000000'
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x8
+        size:            8
+        offset:          0x1E0
+        align:           3
+        reloff:          0x1E8
+        nreloc:          1
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '[[CONTENT]]'
+        relocations:
+          - address:         0x0
+            symbolnum:       4
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            11
+            scattered:       false
+            value:           0
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        2
+    minos:           1114112
+    sdk:             0
+    ntools:          0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          496
+    nsyms:           5
+    stroff:          576
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       3
+    iextdefsym:      3
+    nextdefsym:      2
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
+LinkEditData:
+  NameList:
+    - n_strx:          26
+      n_type:          0xE
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          20
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         0
+    - n_strx:          14
+      n_type:          0xE
+      n_sect:          3
+      n_desc:          0
+      n_value:         8
+    - n_strx:          9
+      n_type:          0xF
+      n_sect:          3
+      n_desc:          0
+      n_value:         8
+    - n_strx:          1
+      n_type:          0xF
+      n_sect:          2
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - _target
+    - _ptr
+    - ltmp2
+    - ltmp1
+    - ltmp0
+...

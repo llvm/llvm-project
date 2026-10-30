@@ -103,6 +103,16 @@ static uint32_t cpuSubtype() {
       config->platformInfo.target.MinDeployment >= VersionTuple(10, 5))
     subtype |= CPU_SUBTYPE_LIB64;
 
+  if (config->arch() == AK_arm64e) {
+    // ld64 marks macOS and Mac Catalyst executables with ptrauth ABI version 1.
+    bool isMacExecutable = config->outputType == MH_EXECUTE &&
+                           (config->platform() == PLATFORM_MACOS ||
+                            config->platform() == PLATFORM_MACCATALYST);
+    subtype = CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(
+        /*PtrAuthABIVersion=*/isMacExecutable ? 1 : 0,
+        /*PtrAuthKernelABIVersion=*/false);
+  }
+
   return subtype;
 }
 
@@ -308,10 +318,10 @@ GotSection::GotSection()
 
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      const InputSection *isec, uint64_t offset,
-                                     int64_t addend) {
+                                     int64_t addend, bool forceOutlineAuth) {
   if (config->emitChainedFixups) {
     if (needsBinding(sym))
-      in.chainedFixups->addBinding(sym, isec, offset, addend);
+      in.chainedFixups->addBinding(sym, isec, offset, addend, forceOutlineAuth);
     else if (isa<Defined>(sym))
       in.chainedFixups->addRebase(isec, offset);
     else
@@ -346,9 +356,67 @@ void GotSection::addEntry(Symbol *sym) {
   }
 }
 
-void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
+// Reports, with ld64's message, a rebase target the pointer format can't hold.
+static void reportUnencodableRebase(const uint8_t *buf, bool isAddress,
+                                    uint64_t value) {
+  uint64_t fileOff = buf - in.bufferStart;
+  std::string loc = "<unknown>";
+  for (const OutputSegment *seg : outputSegments)
+    if (fileOff >= seg->fileOff && fileOff - seg->fileOff < seg->fileSize)
+      loc = (seg->name + "+0x" + utohexstr(fileOff - seg->fileOff)).str();
+  error(Twine(isAddress ? "vmAddress" : "vmOffset") + " (0x" +
+        utohexstr(value) + ") cannot fit in fixup at " + loc);
+}
+
+static void writeArm64eChainedRebase(uint8_t *buf, uint64_t targetVA,
+                                     const AuthInfo *auth) {
+  uint64_t imageBase = in.header->addr;
+  if (auth) {
+    auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_auth_rebase *>(buf);
+    uint64_t runtimeOffset = targetVA - imageBase;
+    if (!isUInt<32>(runtimeOffset))
+      reportUnencodableRebase(buf, /*isAddress=*/false, runtimeOffset);
+    rebase->target = runtimeOffset;
+    rebase->diversity = auth->diversity;
+    rebase->addrDiv = auth->addrDiv;
+    rebase->key = auth->key;
+    rebase->next = 0;
+    rebase->bind = 0;
+    rebase->auth = 1;
+    return;
+  }
+
+  // USERLAND24 rebases hold an offset from the image base, ARM64E rebases an
+  // address.
+  uint64_t targetValue =
+      config->chainedFixupsPointerFormat == DYLD_CHAINED_PTR_ARM64E_USERLAND24
+          ? targetVA - imageBase
+          : targetVA;
+  auto *rebase = reinterpret_cast<dyld_chained_ptr_arm64e_rebase *>(buf);
+  rebase->target = targetValue & 0x7ff'ffff'ffff;
+  rebase->high8 = targetValue >> 56;
+  rebase->next = 0;
+  rebase->bind = 0;
+  rebase->auth = 0;
+  // Reject targets that lose bits in the encoding and, like ld64, targets below
+  // the image base.
+  uint64_t encodedValue = rebase->target | (uint64_t(rebase->high8) << 56);
+  uint64_t untaggedTarget = targetVA & ((uint64_t(1) << 56) - 1);
+  if (encodedValue != targetValue || untaggedTarget < imageBase)
+    reportUnencodableRebase(buf,
+                            config->chainedFixupsPointerFormat !=
+                                DYLD_CHAINED_PTR_ARM64E_USERLAND24,
+                            targetValue);
+}
+
+void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                               const AuthInfo *auth) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    writeArm64eChainedRebase(buf, targetVA, auth);
+    return;
+  }
   auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
   rebase->target = targetVA & 0xf'ffff'ffff;
   rebase->high8 = (targetVA >> 56);
@@ -364,9 +432,57 @@ void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
           " does not fit into chained fixup. Re-link with -no_fixup_chains");
 }
 
-static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
+// Bind is dyld_chained_ptr_arm64e_bind or dyld_chained_ptr_arm64e_bind24.
+template <class Bind>
+static void writeArm64eChainedBind(uint8_t *buf, const Symbol *sym,
+                                   int64_t addend) {
+  auto *bind = reinterpret_cast<Bind *>(buf);
+  auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
+  bind->ordinal = ordinal;
+  bind->zero = 0;
+  bind->addend = inlineAddend & 0x7ffff; // signed 19 bits
+  bind->next = 0;
+  bind->bind = 1;
+  bind->auth = 0;
+}
+
+// AuthBind is dyld_chained_ptr_arm64e_auth_bind or
+// dyld_chained_ptr_arm64e_auth_bind24, neither of which has room for an
+// addend.
+template <class AuthBind>
+static void writeArm64eChainedAuthBind(uint8_t *buf, const Symbol *sym,
+                                       int64_t addend, const AuthInfo &auth) {
+  auto *bind = reinterpret_cast<AuthBind *>(buf);
+  bind->ordinal =
+      in.chainedFixups->getBinding(sym, addend, /*forceOutline=*/true).first;
+  bind->zero = 0;
+  bind->diversity = auth.diversity;
+  bind->addrDiv = auth.addrDiv;
+  bind->key = auth.key;
+  bind->next = 0;
+  bind->bind = 1;
+  bind->auth = 1;
+}
+
+static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend,
+                             const AuthInfo *auth) {
   assert(config->emitChainedFixups);
   assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  if (config->arch() == AK_arm64e) {
+    bool isUserland24 = config->chainedFixupsPointerFormat ==
+                        DYLD_CHAINED_PTR_ARM64E_USERLAND24;
+    if (auth && isUserland24)
+      writeArm64eChainedAuthBind<dyld_chained_ptr_arm64e_auth_bind24>(
+          buf, sym, addend, *auth);
+    else if (auth)
+      writeArm64eChainedAuthBind<dyld_chained_ptr_arm64e_auth_bind>(
+          buf, sym, addend, *auth);
+    else if (isUserland24)
+      writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind24>(buf, sym, addend);
+    else
+      writeArm64eChainedBind<dyld_chained_ptr_arm64e_bind>(buf, sym, addend);
+    return;
+  }
   auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
   auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
   bind->ordinal = ordinal;
@@ -376,12 +492,15 @@ static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
   bind->bind = 1;
 }
 
-void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
+void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                              const AuthInfo *auth) {
   if (needsBinding(sym))
-    writeChainedBind(buf, sym, addend);
+    writeChainedBind(buf, sym, addend, auth);
   else
-    writeChainedRebase(buf, sym->getVA() + addend);
+    writeChainedRebase(buf, sym->getVA() + addend, auth);
 }
+
+bool macho::canDisableChainedFixups() { return config->arch() != AK_arm64e; }
 
 void GotSection::writeTo(uint8_t *buf) const {
   if (config->emitChainedFixups) {
@@ -392,6 +511,28 @@ void GotSection::writeTo(uint8_t *buf) const {
       if (auto *defined = dyn_cast<Defined>(entry))
         write64le(&buf[i * target->wordSize], defined->getVA());
   }
+}
+
+AuthGotSection::AuthGotSection()
+    : SyntheticSection(segment_names::data, section_names::authGot) {
+  align = target->wordSize;
+  flags = S_NON_LAZY_SYMBOL_POINTERS;
+}
+
+void AuthGotSection::addEntry(Symbol *sym) {
+  auto [it, inserted] = indices.try_emplace(sym, entries.size());
+  if (!inserted)
+    return;
+  entries.push_back(sym);
+  addNonLazyBindingEntries(sym, isec, it->second * target->wordSize, 0,
+                           /*forceOutlineAuth=*/true);
+}
+
+void AuthGotSection::writeTo(uint8_t *buf) const {
+  static constexpr AuthInfo auth = {/*diversity=*/0, PtrAuthKeyIA,
+                                    /*addrDiv=*/true};
+  for (const auto &[i, entry] : llvm::enumerate(entries))
+    writeChainedFixup(&buf[i * target->wordSize], entry, 0, &auth);
 }
 
 BindingSection::BindingSection()
@@ -1495,19 +1636,26 @@ IndirectSymtabSection::IndirectSymtabSection()
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
   uint32_t size = in.got->getEntries().size() + in.stubs->getEntries().size();
+  if (in.authGot)
+    size += in.authGot->getEntries().size();
   if (!config->emitChainedFixups)
     size += in.stubs->getEntries().size();
   return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
-  return in.got->isNeeded() || in.stubs->isNeeded();
+  return in.got->isNeeded() || in.stubs->isNeeded() ||
+         (in.authGot && in.authGot->isNeeded());
 }
 
 void IndirectSymtabSection::finalizeContents() {
   uint32_t off = 0;
   in.got->reserved1 = off;
   off += in.got->getEntries().size();
+  if (in.authGot) {
+    in.authGot->reserved1 = off;
+    off += in.authGot->getEntries().size();
+  }
   in.stubs->reserved1 = off;
   if (in.lazyPointers) {
     off += in.stubs->getEntries().size();
@@ -1526,6 +1674,12 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
   for (const Symbol *sym : in.got->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
+  }
+  if (in.authGot) {
+    for (const Symbol *sym : in.authGot->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
   for (const Symbol *sym : in.stubs->getEntries()) {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
@@ -2363,11 +2517,28 @@ bool ChainedFixupsSection::isNeeded() const {
   return true;
 }
 
+// Whether a bind keeps its addend in its own addend field rather than in the
+// imports table. Like ld64, the arm64e formats keep addends below 256 KiB in
+// magnitude there, but DYLD_CHAINED_PTR_ARM64E no negative ones, which ld64
+// rejects for that format.
+static bool fitsInlineAddend(int64_t addend) {
+  switch (config->chainedFixupsPointerFormat) {
+  case DYLD_CHAINED_PTR_64:
+    return isUInt<8>(addend);
+  case DYLD_CHAINED_PTR_ARM64E:
+    return addend >= 0 && addend < (1 << 18);
+  case DYLD_CHAINED_PTR_ARM64E_USERLAND24:
+    return addend > -(1 << 18) && addend < (1 << 18);
+  }
+  llvm_unreachable("unexpected chained fixup pointer format");
+}
+
 void ChainedFixupsSection::addBinding(const Symbol *sym,
                                       const InputSection *isec, uint64_t offset,
-                                      int64_t addend) {
+                                      int64_t addend, bool forceOutline) {
   locations.emplace_back(isec, offset);
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  int64_t outlineAddend =
+      (forceOutline || !fitsInlineAddend(addend)) ? addend : 0;
   auto [it, inserted] = bindings.insert(
       {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
 
@@ -2381,9 +2552,11 @@ void ChainedFixupsSection::addBinding(const Symbol *sym,
   }
 }
 
-std::pair<uint32_t, uint8_t>
-ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
-  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+std::pair<uint32_t, int32_t>
+ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend,
+                                 bool forceOutline) const {
+  int64_t outlineAddend =
+      (forceOutline || !fitsInlineAddend(addend)) ? addend : 0;
   auto it = bindings.find({sym, outlineAddend});
   assert(it != bindings.end() && "binding not found in the imports table");
   if (outlineAddend == 0)
@@ -2432,8 +2605,7 @@ size_t ChainedFixupsSection::SegmentInfo::writeTo(uint8_t *buf) const {
   auto *segInfo = reinterpret_cast<dyld_chained_starts_in_segment *>(buf);
   segInfo->size = getSize();
   segInfo->page_size = target->getPageSize();
-  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
-  segInfo->pointer_format = DYLD_CHAINED_PTR_64;
+  segInfo->pointer_format = config->chainedFixupsPointerFormat;
   segInfo->segment_offset = oseg->addr - in.header->addr;
   segInfo->max_valid_pointer = 0; // not used on 64-bit
   segInfo->page_count = pageStarts.back().first + 1;
@@ -2535,6 +2707,12 @@ void ChainedFixupsSection::finalizeContents() {
     error("cannot encode chained fixups: imported symbols table size " +
           Twine(symtabSize) + " exceeds 4 GiB");
 
+  // DYLD_CHAINED_PTR_ARM64E binds have 16-bit import ordinals.
+  if (config->chainedFixupsPointerFormat == DYLD_CHAINED_PTR_ARM64E &&
+      bindings.size() > UINT16_MAX)
+    error("chained fixups, imports_count (" + Twine(bindings.size()) +
+          ") exceeds max of 65535");
+
   bool needsLargeOrdinal = any_of(bindings, [](const auto &p) {
     // 0xF1 - 0xFF are reserved for special ordinals in the 8-bit encoding.
     return ordinalForSymbol(*p.first.first) > 0xF0;
@@ -2552,9 +2730,11 @@ void ChainedFixupsSection::finalizeContents() {
     uint64_t offset =
         loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
     if (offset % pageSize + target->wordSize > pageSize) {
-      std::string msg = loc.isec->getLocation(loc.offset) +
-                        ": fixup straddles page boundary; stop packing structs "
-                        "containing pointers or link with -no_fixup_chains";
+      std::string msg =
+          loc.isec->getLocation(loc.offset) +
+          ": fixup straddles page boundary; stop packing structs "
+          "containing pointers" +
+          (canDisableChainedFixups() ? " or link with -no_fixup_chains" : "");
       std::string src = loc.isec->getSourceLocation(loc.offset);
       if (!src.empty())
         msg += "\n>>> defined at " + src;
@@ -2582,8 +2762,8 @@ void ChainedFixupsSection::finalizeContents() {
       uint64_t pageIdx = locations[i].offset / pageSize;
       if (pageIdx >= UINT16_MAX) {
         fatal("page index in " + locations[i].isec->getSegName() + "," +
-              locations[i].isec->getName() + " too large for chained fixups; " +
-              "use -no_fixup_chains");
+              locations[i].isec->getName() + " too large for chained fixups" +
+              (canDisableChainedFixups() ? "; use -no_fixup_chains" : ""));
       }
       fixupSegments.back().pageStarts.emplace_back(
           pageIdx, locations[i].offset % pageSize);

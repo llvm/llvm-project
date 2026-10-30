@@ -984,6 +984,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
+    if (config->arch() == AK_arm64e)
+      return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
@@ -1276,8 +1278,15 @@ static bool dataConstDefault(const InputArgList &args) {
 
 static bool shouldEmitChainedFixups(const InputArgList &args) {
   const Arg *arg = args.getLastArg(OPT_fixup_chains, OPT_no_fixup_chains);
-  if (arg && arg->getOption().matches(OPT_no_fixup_chains))
-    return false;
+  if (arg && arg->getOption().matches(OPT_no_fixup_chains)) {
+    if (config->arch() != AK_arm64e)
+      return false;
+    // Authenticated pointers can only be encoded as chained fixups.
+    warn("bind opcodes are no longer supported with arm64e, switching to "
+         "chained fixups");
+    config->noFixupChainsIgnored = true;
+    return true;
+  }
 
   bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
   if (!config->isPic) {
@@ -1287,7 +1296,8 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
+  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64, AK_arm64e},
+                    config->arch())) {
     if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
 
@@ -1301,7 +1311,7 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (requested)
+  if (requested || config->arch() == AK_arm64e)
     return true;
 
   static const MinVersions<9> minVersion = {{
@@ -1316,6 +1326,28 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
       {PLATFORM_XROS_SIMULATOR, VersionTuple(1, 0)},
   }};
   return greaterEqMinVersion(minVersion, false);
+}
+
+static uint16_t getChainedFixupsPointerFormat() {
+  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
+  if (config->arch() != AK_arm64e)
+    return DYLD_CHAINED_PTR_64;
+  // Like ld64, keep the original format if -no_fixup_chains was given.
+  if (config->noFixupChainsIgnored)
+    return DYLD_CHAINED_PTR_ARM64E;
+  // The releases from which arm64e uses DYLD_CHAINED_PTR_ARM64E_USERLAND24.
+  static const MinVersions<7> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(12, 0)},
+      {PLATFORM_IOS, VersionTuple(15, 0)},
+      {PLATFORM_MACCATALYST, VersionTuple(15, 0)},
+      {PLATFORM_TVOS, VersionTuple(15, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(8, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_DRIVERKIT, VersionTuple(21, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, true)
+             ? DYLD_CHAINED_PTR_ARM64E_USERLAND24
+             : DYLD_CHAINED_PTR_ARM64E;
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
@@ -2028,8 +2060,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
+  config->chainedFixupsPointerFormat = getChainedFixupsPointerFormat();
   config->emitInitOffsets =
-      config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+      (config->emitChainedFixups && !config->noFixupChainsIgnored) ||
+      args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
@@ -2519,8 +2553,14 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
     if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
-                     false))
-      objc::mergeCategories();
+                     false)) {
+      // FIXME: Merge arm64e categories too, as ld64 does by default. Merging
+      // doesn't preserve the signing schemas in arm64e category data yet.
+      if (config->arch() == AK_arm64e)
+        warn("-objc_category_merging is not supported on arm64e, ignoring");
+      else
+        objc::mergeCategories();
+    }
 
     computeColdness();
 

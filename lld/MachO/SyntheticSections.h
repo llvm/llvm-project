@@ -126,6 +126,29 @@ private:
   llvm::SetVector<const Symbol *> entries;
 };
 
+// The arm64e __auth_got section, whose pointers dyld signs with the IA key
+// and address diversity.
+class AuthGotSection final : public SyntheticSection {
+public:
+  AuthGotSection();
+  ArrayRef<const Symbol *> getEntries() const { return entries; }
+  bool isNeeded() const override { return !entries.empty(); }
+  uint64_t getSize() const override {
+    return entries.size() * target->wordSize;
+  }
+  void writeTo(uint8_t *buf) const override;
+  void addEntry(Symbol *sym);
+  bool contains(const Symbol *sym) const { return indices.contains(sym); }
+  uint64_t getVA(const Symbol *sym) const {
+    return addr + indices.at(sym) * target->wordSize;
+  }
+
+private:
+  // Kept here rather than in Symbol, so that other targets don't pay for it.
+  llvm::DenseMap<const Symbol *, uint32_t> indices;
+  std::vector<const Symbol *> entries;
+};
+
 struct Location {
   const InputSection *isec;
   uint64_t offset;
@@ -774,13 +797,15 @@ public:
     locations.emplace_back(isec, offset);
   }
   void addBinding(const Symbol *dysym, const InputSection *isec,
-                  uint64_t offset, int64_t addend = 0);
+                  uint64_t offset, int64_t addend = 0,
+                  bool forceOutline = false);
 
   void setHasNonWeakDefinition() { hasNonWeakDef = true; }
 
-  // Returns an (ordinal, inline addend) tuple used by dyld_chained_ptr_64_bind.
-  std::pair<uint32_t, uint8_t> getBinding(const Symbol *sym,
-                                          int64_t addend) const;
+  // Returns the import ordinal and the addend for the bind's own addend field,
+  // which is 0 when the import holds the addend.
+  std::pair<uint32_t, int32_t> getBinding(const Symbol *sym, int64_t addend,
+                                          bool forceOutline = false) const;
 
   const std::vector<Location> &getLocations() const { return locations; }
 
@@ -816,8 +841,14 @@ private:
   llvm::MachO::ChainedImportFormat importFormat;
 };
 
-void writeChainedRebase(uint8_t *buf, uint64_t targetVA);
-void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend);
+void writeChainedRebase(uint8_t *buf, uint64_t targetVA,
+                        const AuthInfo *auth = nullptr);
+void writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend,
+                       const AuthInfo *auth = nullptr);
+
+// Whether -no_fixup_chains can avoid a fixup that chained fixups can't encode.
+// It can't on arm64e, which always uses chained fixups.
+bool canDisableChainedFixups();
 
 struct InStruct {
   const uint8_t *bufferStart = nullptr;
@@ -834,6 +865,7 @@ struct InStruct {
   LazyBindingSection *lazyBinding = nullptr;
   ExportSection *exports = nullptr;
   GotSection *got = nullptr;
+  AuthGotSection *authGot = nullptr;
   LazyPointerSection *lazyPointers = nullptr;
   StubsSection *stubs = nullptr;
   StubHelperSection *stubHelper = nullptr;

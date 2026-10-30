@@ -258,16 +258,20 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
+      if (target->hasAttr(r.type, RelocAttrBits::GOT) && usesAuthGot(this))
+        referentVA = in.authGot->getVA(referentSym) + r.getAddend();
+      else
+        referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.getAddend());
 
-      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
-        // References from thread-local variable sections are treated as offsets
-        // relative to the start of the thread-local data memory area, which
-        // is initialized via copying all the TLV data sections (which are all
-        // contiguous).
+      // References from thread-local variable sections are treated as offsets
+      // relative to the start of the thread-local data memory area, which
+      // is initialized via copying all the TLV data sections (which are all
+      // contiguous). Authenticated pointers are pointers, not offsets.
+      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym) &&
+          !target->hasAttr(r.type, RelocAttrBits::AUTH)) {
         referentVA -= firstTLVDataSection->addr;
       } else if (needsFixup) {
-        writeChainedFixup(loc, referentSym, r.getAddend());
+        writeChainedFixup(loc, referentSym, r.getAddend(), r.getAuthInfo());
         continue;
       }
     } else if (auto *referentIsec =
@@ -276,9 +280,15 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       referentVA = referentIsec->getVA(r.getAddend());
 
       if (needsFixup) {
-        writeChainedRebase(loc, referentVA);
+        writeChainedRebase(loc, referentVA, r.getAuthInfo());
         continue;
       }
+    }
+    // Only a chained fixup can encode an authenticated pointer.
+    if (target->hasAttr(r.type, RelocAttrBits::AUTH)) {
+      error(getLocation(r.offset) +
+            ": authenticated pointer requires chained fixups");
+      continue;
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }
@@ -404,6 +414,11 @@ bool macho::isSelRefsSection(const InputSection *isec) {
 bool macho::isEhFrameSection(const InputSection *isec) {
   return isec->getName() == section_names::ehFrame &&
          isec->getSegName() == segment_names::text;
+}
+
+bool macho::usesAuthGot(const InputSection *isec) {
+  // arm64e's unwinder expects signed personality pointers.
+  return config->arch() == AK_arm64e && isEhFrameSection(isec);
 }
 
 bool macho::isGccExceptTabSection(const InputSection *isec) {
