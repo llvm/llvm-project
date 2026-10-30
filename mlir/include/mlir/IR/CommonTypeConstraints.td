@@ -379,6 +379,8 @@ def F8E8M0FNU : Type<CPred<"::llvm::isa<::mlir::Float8E8M0FNUType>($_self)">, "f
                 BuildableType<"$_builder.getType<Float8E8M0FNUType>()">;
 def F8E5M3FNU : Type<CPred<"::llvm::isa<::mlir::Float8E5M3FNUType>($_self)">, "f8E5M3FNU type">,
                 BuildableType<"$_builder.getType<Float8E5M3FNUType>()">;
+def OCPInt8 : Type<CPred<"::llvm::isa<::mlir::OCPInt8Type>($_self)">, "ocp_int8 type">,
+              BuildableType<"$_builder.getType<OCPInt8Type>()">;
 
 def AnyComplex : Type<CPred<"::llvm::isa<::mlir::ComplexType>($_self)">,
                       "complex-type", "::mlir::ComplexType">;
