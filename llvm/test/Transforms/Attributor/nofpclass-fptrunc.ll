@@ -124,7 +124,7 @@ define float @ret_fptrunc_nosub(double nofpclass(sub) %arg0) {
 }
 
 define float @ret_fptrunc_nonorm(double nofpclass(norm) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_nonorm
+; CHECK-LABEL: define nofpclass(norm) float @ret_fptrunc_nonorm
 ; CHECK-SAME: (double nofpclass(norm) [[ARG0:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[EXT:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[EXT]]
@@ -324,9 +324,9 @@ define float @ret_fptrunc_round_nosub(double nofpclass(sub) %arg0) {
 }
 
 define float @ret_fptrunc_round_nonorm(double nofpclass(norm) %arg0) {
-; CHECK-LABEL: define float @ret_fptrunc_round_nonorm
+; CHECK-LABEL: define nofpclass(norm) float @ret_fptrunc_round_nonorm
 ; CHECK-SAME: (double nofpclass(norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[EXT:%.*]] = call float @llvm.fptrunc.round.f32.f64(double nofpclass(norm) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
+; CHECK-NEXT:    [[EXT:%.*]] = call nofpclass(norm) float @llvm.fptrunc.round.f32.f64(double nofpclass(norm) [[ARG0]], metadata !"round.downward") #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[EXT]]
 ;
   %ext = call float @llvm.fptrunc.round.f32.f64(double %arg0, metadata !"round.downward")
@@ -374,7 +374,7 @@ define float @ret_fptrunc_f64_f32__negnormal__mode_ftpz_dapz(double nofpclass(na
 }
 
 define float @ret_fptrunc_f64_f32__negsubnormal__mode_dynamic_dynamic(double nofpclass(nan inf zero psub norm) %arg0) #0 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_fptrunc_f64_f32__negsubnormal__mode_dynamic_dynamic
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @ret_fptrunc_f64_f32__negsubnormal__mode_dynamic_dynamic
 ; CHECK-SAME: (double nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[TRUNC]]
@@ -384,7 +384,7 @@ define float @ret_fptrunc_f64_f32__negsubnormal__mode_dynamic_dynamic(double nof
 }
 
 define float @ret_fptrunc_f64_f32__negsubnormal__mode_ftpz_dapz(double nofpclass(nan inf zero psub norm) %arg0) #1 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @ret_fptrunc_f64_f32__negsubnormal__mode_ftpz_dapz
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @ret_fptrunc_f64_f32__negsubnormal__mode_ftpz_dapz
 ; CHECK-SAME: (double nofpclass(nan inf zero psub norm) [[ARG0:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[ARG0]] to float
 ; CHECK-NEXT:    ret float [[TRUNC]]
