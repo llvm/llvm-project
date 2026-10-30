@@ -43,29 +43,6 @@ static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
-static std::unique_ptr<TargetLoweringInfo>
-createTargetLoweringInfo(LowerModule &lm) {
-  const llvm::Triple &triple = lm.getTarget().getTriple();
-
-  switch (triple.getArch()) {
-  case llvm::Triple::amdgpu:
-    return createAMDGPUTargetLoweringInfo();
-  case llvm::Triple::nvptx:
-  case llvm::Triple::nvptx64:
-    return createNVPTXTargetLoweringInfo();
-  case llvm::Triple::spir:
-  case llvm::Triple::spir64:
-    return createCommonSPIRTargetLoweringInfo();
-  case llvm::Triple::spirv:
-  case llvm::Triple::spirv32:
-  case llvm::Triple::spirv64:
-    return createSPIRVTargetLoweringInfo();
-  default:
-    assert(!cir::MissingFeatures::targetLoweringInfo());
-    return std::make_unique<TargetLoweringInfo>();
-  }
-}
-
 LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
@@ -75,7 +52,7 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
 
 const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
   if (!targetLoweringInfo)
-    targetLoweringInfo = createTargetLoweringInfo(*this);
+    targetLoweringInfo = createTargetLoweringInfo(getTarget().getTriple());
   return *targetLoweringInfo;
 }
 
