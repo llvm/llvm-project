@@ -28,6 +28,8 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <string>
+#include <vector>
 
 #include "test_execution_policies.h"
 #include "test_iterators.h"
@@ -138,6 +140,38 @@ struct TestUnsignedCharToSize_t {
   }
 };
 
+template <class Iter1, class Iter2>
+struct TestString {
+  template <class ExecutionPolicy>
+  void operator()(ExecutionPolicy&& policy) {
+    {
+      auto op          = [](const std::string& a, const std::string& b) { return a + b; };
+      std::string init = "0";
+      for (std::size_t size : {0, 1, 2, 3, 10, 100, 1000}) {
+        std::vector<std::string> data(size);
+        for (std::size_t i = 0; i < size; ++i)
+          data[i] = std::string(1, static_cast<char>('a' + i % 26));
+
+        std::vector<std::string> expected(size);
+        std::inclusive_scan(data.begin(), data.end(), expected.begin(), op, init);
+
+        // Not in place
+        std::vector<std::string> result(size);
+        auto ret = std::inclusive_scan(
+            policy, Iter1(data.data()), Iter1(data.data() + data.size()), Iter2(result.data()), op, init);
+        assert(ret == Iter2(result.data() + size));
+        assert(result == expected);
+
+        // In place
+        ret = std::inclusive_scan(
+            policy, Iter1(data.data()), Iter1(data.data() + data.size()), Iter2(data.data()), op, init);
+        assert(ret == Iter2(data.data() + size));
+        assert(data == expected);
+      }
+    }
+  }
+};
+
 int main(int, char**) {
   types::for_each(types::forward_iterator_list<const int*>{}, types::apply_type_identity{[](auto v) {
                     using Iter = typename decltype(v)::type;
@@ -152,5 +186,11 @@ int main(int, char**) {
             types::forward_iterator_list<std::size_t*>{},
             TestIteratorWithPolicies<types::partial_instantiation<TestUnsignedCharToSize_t, Iter>::template apply>{});
       }});
+  types::for_each(types::forward_iterator_list<std::string*>{}, types::apply_type_identity{[](auto v) {
+                    using Iter = typename decltype(v)::type;
+                    types::for_each(
+                        types::forward_iterator_list<std::string*>{},
+                        TestIteratorWithPolicies<types::partial_instantiation<TestString, Iter>::template apply>{});
+                  }});
   return 0;
 }
