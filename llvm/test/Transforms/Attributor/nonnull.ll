@@ -1637,6 +1637,62 @@ if.else:
   ret ptr null
 }
 
+define ptr @sink2(ptr noundef nonnull %q) {
+; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CHECK-LABEL: define {{[^@]+}}@sink2
+; CHECK-SAME: (ptr nofree noundef nonnull readnone returned "no-capture-maybe-returned" [[Q:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret ptr [[Q]]
+;
+entry:
+ret ptr %q
+}
+
+define i32 @f(ptr %p) {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@f
+; TUNIT-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[P]], null
+; TUNIT-NEXT:    [[DOT:%.*]] = select i1 [[ISNULL]], i32 0, i32 1
+; TUNIT-NEXT:    ret i32 [[DOT]]
+;
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@f
+; CGSCC-SAME: (ptr nofree readnone [[P:%.*]]) #[[ATTR10]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[P]], null
+; CGSCC-NEXT:    [[DOT:%.*]] = select i1 [[ISNULL]], i32 0, i32 1
+; CGSCC-NEXT:    ret i32 [[DOT]]
+;
+entry:
+%q = getelementptr i8, ptr %p, i64 1
+%0 = call ptr @sink2(ptr %q)
+%isnull = icmp eq ptr %p, null
+%. = select i1 %isnull, i32 0, i32 1
+ret i32 %.
+}
+
+define i32 @main() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@main
+; TUNIT-SAME: () #[[ATTR1]] {
+; TUNIT-NEXT:  entry:
+; TUNIT-NEXT:    [[R:%.*]] = call i32 @f(ptr nofree noundef readnone null) #[[ATTR20]]
+; TUNIT-NEXT:    ret i32 [[R]]
+;
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@main
+; CGSCC-SAME: () #[[ATTR10]] {
+; CGSCC-NEXT:  entry:
+; CGSCC-NEXT:    [[R:%.*]] = call noundef i32 @f(ptr nofree noundef readnone null) #[[ATTR19]]
+; CGSCC-NEXT:    ret i32 [[R]]
+;
+entry:
+%r = call i32 @f(ptr null)
+ret i32 %r
+}
+
 attributes #0 = { null_pointer_is_valid }
 attributes #1 = { nounwind willreturn}
 ;.
