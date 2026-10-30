@@ -15,6 +15,10 @@
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/CFIInstrInserter.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/InitUndef.h"
 #include "llvm/CodeGen/InterleavedAccess.h"
@@ -63,7 +67,16 @@ public:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;
+
   Error addInstSelector(PassManagerWrapper &PMW) override;
+
+  Error addIRTranslator(PassManagerWrapper &PMW) override;
+  void addPreLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  Error addLegalizeMachineIR(PassManagerWrapper &PMW) override;
+  void addPreRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addRegBankSelect(PassManagerWrapper &PMW) override;
+  Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
+
   void addMachineSSAOptimization(PassManagerWrapper &PMW) override;
   void addILPOpts(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
@@ -129,6 +142,39 @@ void RISCVCodeGenPassBuilder::addCodeGenPrepare(PassManagerWrapper &PMW) {
 
 Error RISCVCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   addMachineFunctionPass(RISCVISelDAGToDAGPass(getTM(), getOptLevel()), PMW);
+  return Error::success();
+}
+
+Error RISCVCodeGenPassBuilder::addIRTranslator(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(IRTranslatorPass(getOptLevel()), PMW);
+  return Error::success();
+}
+
+void RISCVCodeGenPassBuilder::addPreLegalizeMachineIR(PassManagerWrapper &PMW) {
+  if (getOptLevel() == CodeGenOptLevel::None)
+    addMachineFunctionPass(RISCVO0PreLegalizerCombinerPass(), PMW);
+  else
+    addMachineFunctionPass(RISCVPreLegalizerCombinerPass(), PMW);
+}
+
+Error RISCVCodeGenPassBuilder::addLegalizeMachineIR(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(LegalizerPass(), PMW);
+  return Error::success();
+}
+
+void RISCVCodeGenPassBuilder::addPreRegBankSelect(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(RISCVPostLegalizerCombinerPass(), PMW);
+}
+
+Error RISCVCodeGenPassBuilder::addRegBankSelect(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(RegBankSelectPass(), PMW);
+  return Error::success();
+}
+
+Error RISCVCodeGenPassBuilder::addGlobalInstructionSelect(
+    PassManagerWrapper &PMW) {
+  addMachineFunctionPass(InstructionSelectPass(getOptLevel()), PMW);
   return Error::success();
 }
 
