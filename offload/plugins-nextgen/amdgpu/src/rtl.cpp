@@ -378,7 +378,8 @@ static std::optional<llvm::VersionTuple> getAMDExtensionVersion() {
 /// within an ordinary allocation of this device. On a large BAR system ROCr
 /// maps all of those for the host, which HIP relies on as well. Memory mapped
 /// through hsa_amd_vmem_* (such as the record-replay slab) is an example for
-/// something the host cannot write to directly.
+/// something the host cannot write to directly without explicit access grant
+/// (needs to be checked explicitly; not yet handled here).
 static bool isHostWritable(hsa_agent_t Agent, const void *Ptr, int64_t Size) {
   hsa_amd_pointer_info_t Info;
   Info.size = sizeof(hsa_amd_pointer_info_t);
