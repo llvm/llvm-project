@@ -1594,21 +1594,21 @@ static VPValue *createRuntimeChecks(VPlan &Plan, VPBuilder &Builder,
   SmallDenseMap<const RuntimeCheckingPtrGroup *,
                 std::tuple<VPValue *, VPValue *, const SCEV *>, 8>
       GroupToBounds;
-  for (const auto &[A, B] : Checks)
+  for (const auto &[A, B] : Checks) {
     for (const RuntimeCheckingPtrGroup *CG : {A, B}) {
-      auto &[Start, End, Stride] = GroupToBounds[CG];
-      if (Start)
+      if (GroupToBounds.contains(CG))
         continue;
-      auto [Low, High, StrideToCheck] = getRuntimeCheckBounds(
+      auto [Low, High, Stride] = getRuntimeCheckBounds(
           CG, TheLoop, SE, VectorizerParams::HoistRuntimeChecks);
-      Stride = StrideToCheck;
-      Start = Expander.expand(Low);
-      End = Expander.expand(High);
+      VPValue *Start = Expander.expand(Low);
+      VPValue *End = Expander.expand(High);
       if (CG->NeedsFreeze) {
         Start = Builder.createFreeze(Start, DL);
         End = Builder.createFreeze(End, DL);
       }
+      GroupToBounds[CG] = {Start, End, Stride};
     }
+  }
 
   VPValue *Cond = Plan.getFalse();
   SmallPtrSet<const SCEV *, 4> CheckedStrides;
