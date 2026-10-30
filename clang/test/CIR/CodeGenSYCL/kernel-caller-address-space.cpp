@@ -48,7 +48,7 @@ void test(int *p) {
 // LLVM:         store i32 42, ptr addrspace(4)
 
 struct FPKN;
-__attribute__((sycl_device)) void callee();
+void callee();
 
 void test_fp() {
   kernel_single_task<FPKN>([]() { void (*fp)() = callee; fp(); });

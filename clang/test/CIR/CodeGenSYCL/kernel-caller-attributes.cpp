@@ -41,7 +41,7 @@ void test(int *p) {
 // OGCG: attributes #[[KATTR]] = {{[{].*}}mustprogress{{.*}}norecurse{{.*}}"sycl-module-id"="{{.*}}kernel-caller-attributes.cpp"
 
 // With -fno-finite-loops, checkIfFunctionMustProgress() is false, so the kernel
-// caller must not carry mustprogress; norecurse and sycl-module-id remain.
+// caller must not carry mustprogress; norecurse and sycl-module-id remain. The
+// exact attribute set (which omits mustprogress) is verified here.
 // LLVM-NOMP: define spir_kernel void @_ZTS2KN({{.*}}) #[[KATTR:[0-9]+]]
-// LLVM-NOMP: attributes #[[KATTR]] = {{[{].*}}convergent{{.*}}noinline{{.*}}norecurse{{.*}}"sycl-module-id"="{{.*}}kernel-caller-attributes.cpp"
-// LLVM-NOMP-NOT: mustprogress
+// LLVM-NOMP: attributes #[[KATTR]] = { convergent noinline norecurse nounwind optnone "sycl-module-id"="{{.*}}kernel-caller-attributes.cpp" }

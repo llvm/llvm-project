@@ -5,15 +5,14 @@
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefixes=OGCG,LLVM-OGCG
 
-// On an ELF target such as spir64 using the static relocation model, the
-// kernel caller entry point definition is dso_local. dso_local is only
-// attached to a definition, so this also verifies that setDSOLocal() runs
-// after body emission.
-// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -mrelocation-model static -fclangir -emit-cir %s -o %t-elf.cir
+// On an ELF target such as spir64, the kernel caller entry point definition is
+// dso_local. dso_local is only attached to a definition, so this also verifies
+// that setDSOLocal() runs after body emission.
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -fclangir -emit-cir %s -o %t-elf.cir
 // RUN: FileCheck --input-file=%t-elf.cir %s -check-prefix=CIR-ELF
-// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -mrelocation-model static -fclangir -emit-llvm %s -o %t-elf-cir.ll
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -fclangir -emit-llvm %s -o %t-elf-cir.ll
 // RUN: FileCheck --input-file=%t-elf-cir.ll %s -check-prefix=LLVM-OGCG-ELF
-// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -mrelocation-model static -emit-llvm %s -o %t-elf.ll
+// RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spir64-unknown-unknown -emit-llvm %s -o %t-elf.ll
 // RUN: FileCheck --input-file=%t-elf.ll %s -check-prefix=LLVM-OGCG-ELF
 
 // On AMDGPU and NVPTX, the kernel caller entry point uses the target's device
