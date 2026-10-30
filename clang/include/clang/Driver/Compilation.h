@@ -16,7 +16,6 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <cassert>
@@ -97,12 +96,6 @@ class Compilation {
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
-
-  /// Cache of the bound architectures for a particular tool chain and device
-  /// offload kind, filled by Driver::getOffloadArchs.
-  std::map<std::pair<const ToolChain *, Action::OffloadKind>,
-           std::optional<llvm::SmallVector<BoundArch>>>
-      OffloadArchs;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -262,14 +255,6 @@ public:
   const llvm::opt::DerivedArgList &
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
-
-  /// Return the cached bound architectures for tool chain \p TC and device
-  /// offload kind \p Kind. The entry holds no value until
-  /// Driver::getOffloadArchs computes it.
-  std::optional<llvm::SmallVector<BoundArch>> &
-  getCachedOffloadArchs(const ToolChain *TC, Action::OffloadKind Kind) {
-    return OffloadArchs[{TC, Kind}];
-  }
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.

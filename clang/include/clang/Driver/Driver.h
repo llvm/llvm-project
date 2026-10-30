@@ -522,8 +522,7 @@ public:
 
   /// Returns the set of bound architectures active for this offload kind.
   /// If there are no bound architctures we return a set containing only the
-  /// empty string. The result is computed from \p Args on the first call for
-  /// a tool chain and offload kind and cached in \p C.
+  /// empty string.
   llvm::SmallVector<BoundArch>
   getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
                   Action::OffloadKind Kind, const ToolChain &TC) const;

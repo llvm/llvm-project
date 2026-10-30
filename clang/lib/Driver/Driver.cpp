@@ -3981,9 +3981,9 @@ getConflictOffloadArchCombination(const llvm::DenseSet<StringRef> &Archs,
   return getConflictTargetIDCombination(ArchSet);
 }
 
-static llvm::SmallVector<BoundArch>
-computeOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
-                    Action::OffloadKind Kind, const ToolChain &TC) {
+llvm::SmallVector<BoundArch>
+Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
+                        Action::OffloadKind Kind, const ToolChain &TC) const {
   // --offload and --offload-arch options are mutually exclusive.
   if (Args.hasArgNoClaim(options::OPT_offload_EQ) &&
       Args.hasArgNoClaim(options::OPT_offload_arch_EQ,
@@ -4106,18 +4106,6 @@ computeOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   for (StringRef Arch : Sorted)
     Result.push_back(BoundArch(Arch));
   return Result;
-}
-
-llvm::SmallVector<BoundArch>
-Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
-                        Action::OffloadKind Kind, const ToolChain &TC) const {
-  // Compute the architectures once per tool chain and offload kind, so native
-  // GPU detection runs and its diagnostics are emitted only once.
-  std::optional<llvm::SmallVector<BoundArch>> &Cached =
-      C.getCachedOffloadArchs(&TC, Kind);
-  if (!Cached)
-    Cached = computeOffloadArchs(C, Args, Kind, TC);
-  return *Cached;
 }
 
 Action *

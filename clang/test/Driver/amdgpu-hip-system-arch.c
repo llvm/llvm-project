@@ -32,25 +32,3 @@
 // RUN:     -x hip %s 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=BAD-TIMEOUT
 // BAD-TIMEOUT: clang: error: cannot determine hip architecture: CLANG_TOOLCHAIN_PROGRAM_TIMEOUT expected an integer, got 'foo'; consider passing it via '--offload-arch'; environment variable CLANG_TOOLCHAIN_PROGRAM_TIMEOUT specifies the tool timeout (integer secs, <=0 is infinite)
-
-/// With an explicit offload target, '--offload-arch=native' reaches
-/// getOffloadArchs. The tool runs once and a failure is reported once.
-// RUN: echo '#!/bin/sh' > %t/amdgpu_arch_count
-// RUN: echo 'echo run >> "$(dirname "$0")/runs"' >> %t/amdgpu_arch_count
-// RUN: echo 'echo gfx906' >> %t/amdgpu_arch_count
-// RUN: chmod +x %t/amdgpu_arch_count
-// RUN: rm -f %t/runs
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:     --offload-targets=amdgcn-amd-amdhsa --offload-arch=native \
-// RUN:     --amdgpu-arch-tool=%t/amdgpu_arch_count -fgpu-rdc -x hip %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=NATIVE-ONCE
-// RUN: count 1 < %t/runs
-// NATIVE-ONCE: "-cc1" "-triple" "amdgpu9.06-amd-amdhsa"
-// NATIVE-ONCE: clang-linker-wrapper{{.*}}"--should-extract=gfx906"
-
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib \
-// RUN:     --offload-targets=amdgcn-amd-amdhsa --offload-arch=native \
-// RUN:     --amdgpu-arch-tool=%t/amdgpu_arch_fail -x hip %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=FAIL-ONCE
-// FAIL-ONCE: error: cannot determine amdgpu architecture
-// FAIL-ONCE-NOT: error: cannot determine amdgpu architecture
