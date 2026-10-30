@@ -56,6 +56,50 @@ exit:
   ret void
 }
 
+define void @test_captured_after_loop_unrelated_load(ptr %pp, i32 %len) {
+; CHECK-LABEL: @test_captured_after_loop_unrelated_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PP:%.*]], align 8
+; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, ptr [[COUNT]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[C_INC1:%.*]] = phi i32 [ [[COUNT_PROMOTED]], [[ENTRY:%.*]] ], [ [[C_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[C_INC]] = add i32 [[C_INC1]], [[V]]
+; CHECK-NEXT:    store i32 [[C_INC]], ptr [[COUNT]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %count = alloca i32
+  store i32 0, ptr %count
+  %p = load ptr, ptr %pp
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr i32, ptr %p, i32 %i
+  %v = load i32, ptr %gep
+  %c = load i32, ptr %count
+  %c.inc = add i32 %c, %v
+  store i32 %c.inc, ptr %count
+  %i.next = add nuw i32 %i, 1
+  %cmp = icmp eq i32 %i.next, %len
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  call ptr @capture(ptr %count)
+  ret void
+}
+
 define void @test_captured_in_loop(i32 %len) {
 ; CHECK-LABEL: @test_captured_in_loop(
 ; CHECK-NEXT:  entry:
