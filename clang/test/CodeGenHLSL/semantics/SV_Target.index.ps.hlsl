@@ -38,18 +38,18 @@ PSOut main(float4 P : SV_Position) {
   return O;
 }
 
-// Each element has one row, at the row of its semantic index.
+// Each element has one row, at the row of its semantic index. The operands of
+// an element are, in order:
+//   SigId, Name, CompType, SemanticKind, SemanticIndices, Interpolation, Rows,
+//   Cols, StartRow, StartCol, UsageMask, DynIndexMask, GSStream
+// Here each element has CompType F32 (9), SemanticKind Target (16), its own
+// semantic index in the SemanticIndices node (for example ![[#IDX3]] = {3}),
+// Interpolation Undefined (0), 1 row of 4 columns, and a StartRow equal to its
+// semantic index.
 // CHECK-DXIL: !dx.semantic.signatures = !{![[#SIG:]]}
 // CHECK-DXIL: ![[#SIG]] = !{ptr @main, ![[#IN:]], ![[#OUT:]]}
 // CHECK-DXIL: ![[#OUT]] = !{![[#T3:]], ![[#T1:]], ![[#T2:]]}
 // CHECK-DXIL: ![[#T3]] = !{i32 0, !"SV_Target", i32 9, i32 16, ![[#IDX3:]], i32 0, i32 1, i8 4, i32 3, i8 0, i8 0, i8 0, i32 0}
-//                                                 |      |                 |      |      |     |       `-> StartRow: semantic index
-//                                                 |      |                 |      |      |     `-> Cols
-//                                                 |      |                 |      |      `-> Rows
-//                                                 |      |                 |      `-> Interpolation: Undefined
-//                                                 |      |                 `-> Semantic indices
-//                                                 |      `-> SemanticKind: Target
-//                                                 `-> CompType: F32
 // CHECK-DXIL: ![[#IDX3]] = !{i32 3}
 // CHECK-DXIL: ![[#T1]] = !{i32 1, !"SV_Target", i32 9, i32 16, ![[#IDX1:]], i32 0, i32 1, i8 4, i32 1, i8 0, i8 0, i8 0, i32 0}
 // CHECK-DXIL: ![[#IDX1]] = !{i32 1}
