@@ -2034,7 +2034,7 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
     const LICMDependencies &Deps,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   MemorySSA *MSSA = Deps.MSSAU.getMemorySSA();
-  BatchAAResults BatchAA(Deps.AA);
+  BatchAAResults BatchAA(Deps.AA, &Deps.EEA);
   AliasSetTracker AST(BatchAA);
 
   // Only conditionally executed stores need this, so compute it on demand to
@@ -2123,7 +2123,7 @@ static bool noConflictingReadWrites(Instruction *I, Loop *CurLoop,
 
   MemorySSA *MSSA = Deps.MSSAU.getMemorySSA();
   auto *IMD = MSSA->getMemoryAccess(I);
-  BatchAAResults BAA(Deps.AA);
+  BatchAAResults BAA(Deps.AA, &Deps.EEA);
   auto *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, IMD);
   // Make sure there are no clobbers inside the loop.
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
