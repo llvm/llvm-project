@@ -1,0 +1,33 @@
+# Test echo command with a single string.
+RUN: echo "abcdefgh" > %t.out
+RUN: FileCheck --check-prefix=CHECK-A %s < %t.out
+CHECK-A: abcdefgh
+
+# Test echo command with the -n option.
+RUN: echo -n "abcd" > %t.out
+RUN: echo "efgh" >> %t.out
+RUN: FileCheck --check-prefix=CHECK-B %s < %t.out
+CHECK-B: abcdefgh
+
+# Test echo command with the -e option.
+RUN: echo -e "abcd\n" > %t.out
+RUN: echo "efgh" >> %t.out
+RUN: FileCheck --check-prefix=CHECK-C %s < %t.out
+CHECK-C: abcd
+CHECK-C-EMPTY:
+CHECK-C-NEXT: efgh
+
+# Test echo command with a non-option.
+RUN: echo -p > %t.out
+RUN: FileCheck --check-prefix=CHECK-D %s < %t.out
+CHECK-D: -p
+
+# Test echo command with both -n and -e options, in either order.
+RUN: echo -n -e "abcd\n" > %t.out
+RUN: echo "efgh" >> %t.out
+RUN: FileCheck --check-prefix=CHECK-E %s < %t.out
+RUN: echo -e -n "abcd\n" > %t.out
+RUN: echo "efgh" >> %t.out
+RUN: FileCheck --check-prefix=CHECK-E %s < %t.out
+CHECK-E: abcd
+CHECK-E-NEXT: efgh

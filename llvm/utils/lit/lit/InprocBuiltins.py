@@ -1,3 +1,4 @@
+import codecs
 import getopt
 import os
 import pathlib
@@ -5,7 +6,7 @@ import platform
 import shutil
 import stat
 import subprocess
-from io import StringIO
+from io import StringIO, BytesIO, TextIOWrapper
 
 import lit.util
 from lit.ShellEnvironment import (
@@ -56,10 +57,13 @@ def executeBuiltinExport(cmd, shenv):
     return ShellCommandResult(cmd, "", "", 0, False)
 
 
-def executeBuiltinEcho(cmd, shenv):
+def executeBuiltinEcho(cmd, cmd_shenv):
     """Interpret a redirected echo or @echo command"""
+    args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     opened_files = []
-    stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
+    stdin, stdout, stderr = processRedirects(
+        cmd, subprocess.PIPE, cmd_shenv, opened_files
+    )
     if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
         raise InternalShellError(
             cmd, f"stdin and stderr redirects not supported for {cmd.args[0]}"
@@ -70,7 +74,7 @@ def executeBuiltinEcho(cmd, shenv):
     is_redirected = True
     if stdout == subprocess.PIPE:
         is_redirected = False
-        stdout = StringIO()
+        stdout = TextIOWrapper(BytesIO(), encoding="utf-8", newline="")
     elif kIsWindows:
         # Reopen stdout with `newline=""` to avoid CRLF translation.
         # The versions of echo we are replacing on Windows all emit plain LF,
@@ -81,7 +85,6 @@ def executeBuiltinEcho(cmd, shenv):
     # Implement echo flags. We only support -e and -n, and not yet in
     # combination. We have to ignore unknown flags, because `echo "-D FOO"`
     # prints the dash.
-    args = cmd.args[1:]
     interpret_escapes = False
     write_newline = True
     while len(args) >= 1 and args[0] in ("-e", "-n"):
@@ -92,24 +95,71 @@ def executeBuiltinEcho(cmd, shenv):
         elif flag == "-n":
             write_newline = False
 
-    def maybeUnescape(arg):
-        if not interpret_escapes:
-            return arg
-
-        return arg.encode("utf-8").decode("unicode_escape")
-
-    if args:
-        for arg in args[:-1]:
-            stdout.write(maybeUnescape(arg))
+    for idx, arg in enumerate(args):
+        if idx > 0:
             stdout.write(" ")
-        stdout.write(maybeUnescape(args[-1]))
-    if write_newline:
-        stdout.write("\n")
+        pos = 0
+        while interpret_escapes and (backslash := arg.find("\\", pos)) != -1:
+            stdout.write(arg[pos:backslash])
+            pos = backslash + 2
+            escape = arg[backslash:pos]
+            match escape:
+                case "\\a" | "\\b" | "\\f" | "\\n" | "\\r" | "\\t" | "\\v" | "\\\\":
+                    stdout.write(codecs.escape_decode(escape)[0].decode())
+                    continue
+                case "\\c":
+                    break
+                case "\\0":
+                    base = 8
+                    start = pos - 1
+                    max = pos + 3
+                case "\\1" | "\\2" | "\\3" | "\\4" | "\\5" | "\\6" | "\\7":
+                    base = 8
+                    start = pos - 1
+                    max = pos + 2
+                case "\\x":
+                    base = 16
+                    start = pos
+                    max = pos + 2
+                case _:
+                    stdout.write(escape)
+                    continue
+            end = pos
+            for n in range(pos, min(max, len(arg))):
+                if base == 8 and not ord("0") <= ord(arg[n]) <= ord("7"):
+                    break
+                if (
+                    base == 16
+                    and not ord("0") <= ord(arg[n]) <= ord("9")
+                    and not ord("A") <= (ord(arg[n]) & ~0x20) <= ord("F")
+                ):
+                    break
+                end = n + 1
+            if end == start:
+                stdout.write(escape)
+                continue
+            # Mixing text and binary I/O requires explicit flushing
+            # to prevent them from being written out of order.
+            stdout.flush()
+            # Octal escapes permit values over 0xFF. Drop the high bit.
+            stdout.buffer.write((int(arg[start:end], base) & 0o377).to_bytes())
+            stdout.buffer.flush()
+            pos = end
+        else:
+            stdout.write(arg[pos:])
+            continue
+        break
+    else:
+        if write_newline:
+            stdout.write("\n")
 
     for name, mode, f, path in opened_files:
         f.close()
 
-    output = "" if is_redirected else stdout.getvalue()
+    output = ""
+    if not is_redirected:
+        stdout.flush()
+        output = stdout.buffer.getvalue().decode()
     return ShellCommandResult(cmd, output, "", 0, False)
 
 

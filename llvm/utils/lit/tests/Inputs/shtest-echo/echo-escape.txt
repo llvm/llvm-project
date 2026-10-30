@@ -1,0 +1,99 @@
+# Test echo command with all supported escape sequences.
+RUN: echo -e '.\a.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-A --match-full-lines --strict-whitespace %s < %t.out
+CHECK-A:.{{\x07}}.
+
+RUN: echo -e '.\b.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-B --match-full-lines --strict-whitespace %s < %t.out
+CHECK-B:.{{\x08}}.
+
+RUN: echo -e '.\c.' . > %t.out
+RUN: echo . >>%t.out
+RUN: FileCheck --check-prefix=CHECK-C --match-full-lines --strict-whitespace %s < %t.out
+CHECK-C:..
+
+RUN: echo -e '.\f.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-F --match-full-lines --strict-whitespace %s < %t.out
+CHECK-F:.{{\x0C}}.
+
+RUN: echo -e '.\n.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-N --match-full-lines --strict-whitespace %s < %t.out
+CHECK-N:.
+CHECK-N:.
+
+RUN: echo -e '.\r.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-R --match-full-lines --strict-whitespace %s < %t.out
+CHECK-R:.{{\x0D}}.
+
+RUN: echo -e '.\t.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-T --match-full-lines --strict-whitespace %s < %t.out
+CHECK-T:.{{\x09}}.
+
+RUN: echo -e '.\v.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-V --match-full-lines --strict-whitespace %s < %t.out
+CHECK-V:.{{\x0B}}.
+
+RUN: echo -e '.\\.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-BSL --match-full-lines --strict-whitespace %s < %t.out
+CHECK-BSL:.\.
+
+RUN: echo -e '.\0.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-0 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-0:.{{\x00}}.
+
+RUN: echo -e '.\01.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-01 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-01:.{{\x01}}.
+
+RUN: echo -e '.\010.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-010 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-010:.{{\x08}}.
+
+RUN: echo -e '.\0100.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-0100 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-0100:.@.
+
+RUN: echo -e '.\01000.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-01000 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-01000:.@0.
+
+RUN: echo -e '.\0200.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-200 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-200:.{{\x80}}.
+
+RUN: echo -e '.\0777.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-0777 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-0777:.{{\xFF}}.
+
+# Extension supported in some shells (e.g. busybox ash) and traditionally supported in llvm-lit.
+RUN: echo -e '.\100.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-OCT-100 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-OCT-100:.@.
+
+RUN: echo -e '.\x4.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-HEX-4 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-HEX-4:.{{\x04}}.
+
+RUN: echo -e '.\x40.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-HEX-40 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-HEX-40:.@.
+
+RUN: echo -e '.\x400.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-HEX-400 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-HEX-400:.@0.
+
+RUN: echo -e '.\x80.' > %t.out
+RUN: FileCheck --check-prefix=CHECK-HEX-80 --match-full-lines --strict-whitespace %s < %t.out
+CHECK-HEX-80:.{{\x80}}.
+
+RUN: echo -e '.\x' > %t.out
+RUN: FileCheck --check-prefix=CHECK-X --match-full-lines --strict-whitespace %s < %t.out
+CHECK-X:.\x
+
+RUN: echo -e '.\' > %t.out
+RUN: FileCheck --check-prefix=CHECK-END --match-full-lines --strict-whitespace %s < %t.out
+CHECK-END:.\
+
+# Also check the case where output is not being redirected, as this is handled
+# specially in lit.
+RUN: echo -n -e 'All done.\012'
