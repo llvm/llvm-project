@@ -153,7 +153,7 @@ static bool pointerInvalidatedByLoop(const SinkAndHoistDependencies &Deps,
                                      SinkAndHoistLICMFlags &Flags,
                                      bool InvariantGroup);
 static bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
-                                      MemoryUse &MU);
+                                      MemoryUseOrDef &MUD);
 /// Aggregates various functions for hoisting computations out of loop.
 static bool hoistArithmetics(const ScalarOptions &Opts, Instruction &I, Loop &L,
                              const LICMDependencies &Deps);
@@ -2169,6 +2169,11 @@ static bool noConflictingReadWrites(Instruction *I, MemorySSA *MSSA,
       }
     }
   }
+  // When sinking, the source block may not be part of the loop so check it.
+  if (!CurLoop->contains(I->getParent()) &&
+      pointerInvalidatedByBlock(*I->getParent(), *MSSA, *IMD))
+    return false;
+
   return true;
 }
 
@@ -2225,11 +2230,26 @@ static bool pointerInvalidatedByLoop(const SinkAndHoistDependencies &Deps,
   return false;
 }
 
-bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA, MemoryUse &MU) {
+bool pointerInvalidatedByBlock(BasicBlock &BB, MemorySSA &MSSA,
+                               MemoryUseOrDef &MUD) {
+  if (isa<MemoryDef>(MUD)) {
+    if (const auto *Accesses = MSSA.getBlockAccesses(&BB))
+      for (const auto &MA : *Accesses) {
+        const auto *OtherMA = dyn_cast<MemoryUseOrDef>(&MA);
+        if (!OtherMA || OtherMA == &MUD)
+          continue;
+        if (MUD.getBlock() != OtherMA->getBlock() ||
+            !MSSA.locallyDominates(OtherMA, &MUD))
+          return true;
+      }
+    return false;
+  }
+
   if (const auto *Accesses = MSSA.getBlockDefs(&BB))
     for (const auto &MA : *Accesses)
       if (const auto *MD = dyn_cast<MemoryDef>(&MA))
-        if (MU.getBlock() != MD->getBlock() || !MSSA.locallyDominates(MD, &MU))
+        if (MUD.getBlock() != MD->getBlock() ||
+            !MSSA.locallyDominates(MD, &MUD))
           return true;
   return false;
 }
