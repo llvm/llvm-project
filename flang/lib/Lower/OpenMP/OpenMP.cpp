@@ -69,6 +69,8 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include <atomic>
+#include <tuple>
+#include <type_traits>
 
 using namespace Fortran::lower::omp;
 using namespace Fortran::common::openmp;
@@ -184,6 +186,39 @@ static bool hasPrivatizedArrayElementReduction(
       return true;
   }
   return false;
+}
+
+/// Obtain the list of clauses of the given OpenMP block, loop or sections
+/// construct evaluation. If it's not an OpenMP construct, no modifications
+/// are made to the \c clauses output argument.
+void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses,
+                    semantics::SemanticsContext &semaCtx) {
+  const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
+  if (!ompEval)
+    return;
+
+  const parser::OmpClauseList *beginClauseList{nullptr};
+  const parser::OmpClauseList *endClauseList{nullptr};
+  common::visit(
+      [&](const auto &construct) {
+        using Type = llvm::remove_cvref_t<decltype(construct)>;
+        if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
+                      std::is_same_v<Type, parser::OpenMPLoopConstruct> ||
+                      std::is_same_v<Type, parser::OpenMPSectionsConstruct>) {
+          beginClauseList = &construct.BeginDir().Clauses();
+          if (auto &endSpec{construct.EndDir()})
+            endClauseList = &endSpec->Clauses();
+        }
+      },
+      ompEval->u);
+
+  if (!beginClauseList)
+    return;
+
+  clauses.append(makeClauses(*beginClauseList, semaCtx));
+
+  if (endClauseList)
+    clauses.append(makeClauses(*endClauseList, semaCtx));
 }
 
 /// Structure holding the information needed to create and bind entry block
@@ -428,36 +463,6 @@ protected:
   virtual llvm::omp::Directives visitDirective(lower::pft::Evaluation &eval,
                                                llvm::omp::Directive dir) = 0;
 
-  /// Obtain the list of clauses of the given OpenMP block, loop or sections
-  /// construct evaluation. If it's not an OpenMP construct, no modifications
-  /// are made to the \c clauses output argument.
-  void extractClauses(lower::pft::Evaluation &eval, List<Clause> &clauses) {
-    const auto *ompEval{eval.getIf<parser::OpenMPConstruct>()};
-    if (!ompEval)
-      return;
-
-    const parser::OmpClauseList *beginClauseList{nullptr};
-    const parser::OmpClauseList *endClauseList{nullptr};
-    common::visit(
-        [&](const auto &construct) {
-          using Type = llvm::remove_cvref_t<decltype(construct)>;
-          if constexpr (std::is_same_v<Type, parser::OmpBlockConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPLoopConstruct> ||
-                        std::is_same_v<Type, parser::OpenMPSectionsConstruct>) {
-            beginClauseList = &construct.BeginDir().Clauses();
-            if (auto &endSpec{construct.EndDir()})
-              endClauseList = &endSpec->Clauses();
-          }
-        },
-        ompEval->u);
-
-    assert(beginClauseList && "expected begin directive");
-    clauses.append(makeClauses(*beginClauseList, semaCtx));
-
-    if (endClauseList)
-      clauses.append(makeClauses(*endClauseList, semaCtx));
-  }
-
 private:
   /// Decide whether an evaluation must be visited as part of the pattern.
   ///
@@ -552,7 +557,7 @@ protected:
 
   bool hasOmpxBareClause(lower::pft::Evaluation &eval) {
     List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
+    extractClauses(eval, clauses, semaCtx);
 
     return llvm::find_if(clauses, [](const Clause &clause) {
              return std::holds_alternative<clause::OmpxBare>(clause.u);
@@ -597,7 +602,7 @@ protected:
     using namespace llvm::omp;
 
     List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
+    extractClauses(eval, clauses, semaCtx);
     ClauseProcessor cp{converter, semaCtx, clauses};
 
     // Currently, we deal differently with e.g. `target parallel workshare` to
@@ -782,7 +787,7 @@ protected:
 private:
   bool canPromoteSPMDToNoLoop(lower::pft::Evaluation &eval) {
     List<lower::omp::Clause> clauses;
-    extractClauses(eval, clauses);
+    extractClauses(eval, clauses, semaCtx);
 
     // First make sure the proper module attributes are present in order to
     // perform this optimization.
@@ -2126,6 +2131,13 @@ static void genIntermediateCommonBlockAccessors(
   }
 }
 
+// Information about private list items that belong to a nested leaf construct
+// inside a target construct.
+struct TargetNestedPrivateInfo {
+  llvm::SmallVector<const semantics::Symbol *> syms;
+  bool innermostLeafIsTeams = false;
+};
+
 // This functions creates a block for the body of the targetOp's region. It adds
 // all the symbols present in mapSymbols as block arguments to this block.
 static void genBodyOfTargetOp(
@@ -2133,7 +2145,8 @@ static void genBodyOfTargetOp(
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     mlir::omp::TargetOp &targetOp, const ObjectEntryBlockArgs &args,
     const mlir::Location &currentLocation, const ConstructQueue &queue,
-    ConstructQueue::const_iterator item, DataSharingProcessor &dsp) {
+    ConstructQueue::const_iterator item, DataSharingProcessor &dsp,
+    const TargetNestedPrivateInfo &targetNestedPrivateInfo) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto argIface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(*targetOp);
 
@@ -2180,6 +2193,20 @@ static void genBodyOfTargetOp(
   // Create the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 
+  // Materialize region-local copies for the private list items of inner leaf
+  // constructs (e.g. distribute) of a combined/composite target directive,
+  // with the intent of replacing a host to device data-mapping (map info
+  // emission). Teams already performs this materialization itself as it opts
+  // out of the regular delayed privatization path for the moment, but there
+  // are plans to change this in the future. When this occurs, we must adjust
+  // this.
+  // TODO: When teams undergoes its delayed privatization update we will need
+  // to remove this edge case handling and let it proceed like all of the other
+  // cases.
+  if (!targetNestedPrivateInfo.innermostLeafIsTeams)
+    for (const semantics::Symbol *sym : targetNestedPrivateInfo.syms)
+      converter.createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
+
   bool immediatelyNestsTeams = false;
   if (std::next(item) != queue.end()) {
     immediatelyNestsTeams = llvm::omp::topTeamsSet.test(std::next(item)->id);
@@ -2203,6 +2230,15 @@ static void genBodyOfTargetOp(
   } else {
     genNestedEvaluations(converter, eval);
   }
+
+  // When materializing arrays inside of the target region for compound
+  // directives with leaf-bound private clauses, we can end up with the
+  // constants populating the shape being bound to constants external to the
+  // target region. Perform a final clone-only repair to resolve these without
+  // introducing new maps after the target operation has already been created.
+  if (!targetNestedPrivateInfo.syms.empty())
+    cloneOrMapRegionOutsiders(firOpBuilder, targetOp,
+                              RegionOutsiderHandling::CloneWholeRegionUsesOnly);
 
   dsp.processStep2(targetOp, /*isLoop=*/false);
 }
@@ -4043,6 +4079,228 @@ static void collectSymbolsWithDynamicSubstring(
   symbolsWithDynamicSubstring = visitor.symbolsWithDynamicSubstring;
 }
 
+// Reverse search a composite/combined directive and return the innermost leaf
+// carrying a private clause. The OpenMP specification dictates that the first
+// leaf that can legally have a private clause becomes the owner, except when an
+// OpenMP 6.0+ directive-name-modifier explicitly attaches clauses to another
+// leaf or construct in the compound directive.
+//
+// TODO: Extend handling to support directive-name-modifier usage placing
+// private clauses on multiple leaf nodes or constituent constructs.
+static ConstructQueue::const_iterator
+findInnermostPrivateLeaf(ConstructQueue::const_iterator begin,
+                         const ConstructQueue &queue) {
+  auto hasPrivate = [](ConstructQueue::const_iterator it) {
+    return llvm::any_of(it->clauses, [](const Clause &clause) {
+      return std::holds_alternative<clause::Private>(clause.u);
+    });
+  };
+  for (auto it = queue.end(); it != begin;) {
+    --it;
+    if (hasPrivate(it))
+      return it;
+  }
+  return queue.end();
+}
+
+static bool isSymbolUsedInClauseRange(const semantics::Symbol &target,
+                                      ConstructQueue::const_iterator begin,
+                                      ConstructQueue::const_iterator end,
+                                      bool ignorePrivateAndMap) {
+  const semantics::Symbol &ultimateTarget = target.GetUltimate();
+
+  for (ConstructQueue::const_iterator it = begin; it != end; ++it) {
+    for (const Clause &clause : it->clauses) {
+      // Do not consider private itself. Also do not consider map clauses here:
+      // explicit target-level maps are already accounted for via mapObjects,
+      // and construct decomposition may synthesize map-like clauses for nested
+      // private list items.
+      if (ignorePrivateAndMap &&
+          (clause.id == llvm::omp::Clause::OMPC_private ||
+           clause.id == llvm::omp::Clause::OMPC_map))
+        continue;
+
+      if (visitSymbolsInClause(clause, [&](const semantics::Symbol &sym) {
+            return sym.GetUltimate() == ultimateTarget;
+          }))
+        return true;
+    }
+  }
+  return false;
+}
+
+// Verify if it is safe to drop the map and materialize a target-local clone.
+// Certain cases still require a map to be OpenMP specification compliant:
+//
+//  Allocatable -
+//    1) If the status is unallocated, the private allocatable is unallocated
+//    2) If the allocation status is allocated, the private allocatable is
+//       allocated
+//    3) If it is an array, the allocatable's shape and bounds are preserved.
+//  Pointer - The initial status of a private pointer is undefined.
+//  Other - If the type of the list item has default initialization, the new
+//    list item has default initialization. Otherwise, it is undefined.
+//
+// From the above list, it is currently fine to drop maps and materialize clones
+// for scalars, pointers, and constant arrays. Their creation does not require
+// dynamic extent/shape/allocation-status values defined outside the target
+// region. Types that still need a map just to populate the initial state are
+// allocatables, derived types with allocatable or pointer ultimate components,
+// assumed-shape arrays, automatic arrays, and common block members. Currently
+// we still initialize these, but in the future we can minimize the mapping by
+// sending across exactly what is required to be specification compliant.
+static bool isTargetValueLocalCloneable(const semantics::Symbol &valueSymbol,
+                                        semantics::SemanticsContext &semaCtx) {
+  const semantics::Symbol &ult = valueSymbol.GetUltimate();
+
+  if (semantics::FindCommonBlockContaining(ult))
+    return false;
+
+  if (semantics::IsAllocatable(ult))
+    return false;
+
+  if (const semantics::DeclTypeSpec *declType = ult.GetType())
+    if (const semantics::DerivedTypeSpec *derived = declType->AsDerived())
+      if (semantics::FindAllocatableUltimateComponent(*derived) ||
+          semantics::FindPointerUltimateComponent(*derived))
+        return false;
+
+  // A private pointer's initial status is undefined, so it can be materialized
+  // with the correct type. Other non-scalar private list items must have
+  // constant extents and shape so their storage can be created target-locally.
+  if (ult.Rank() > 0 && !semantics::IsPointer(ult)) {
+    evaluate::FoldingContext &foldingContext = semaCtx.foldingContext();
+    std::optional<evaluate::Shape> shape =
+        evaluate::GetShape(foldingContext, ult);
+    std::optional<evaluate::ConstantSubscripts> extents =
+        evaluate::AsConstantExtents(foldingContext, shape);
+    if (!extents || evaluate::HasNegativeExtent(*extents))
+      return false;
+  }
+  return true;
+}
+
+static bool objectListContainsSymbol(const semantics::Symbol &sym,
+                                     llvm::ArrayRef<Object> objects) {
+  const semantics::Symbol &ult = sym.GetUltimate();
+  return llvm::any_of(objects, [&](const Object &object) {
+    return object.sym() && object.sym()->GetUltimate() == ult;
+  });
+}
+
+static bool isAlreadyPrivatized(const semantics::Symbol &sym,
+                                const DataSharingProcessor &dsp) {
+  const semantics::Symbol &ult = sym.GetUltimate();
+  return llvm::any_of(dsp.getAllSymbolsToPrivatize(),
+                      [&](const semantics::Symbol *priv) {
+                        return priv->GetUltimate() == ult;
+                      });
+}
+
+static void collectTargetNestedPrivateSymsFromLeaf(
+    ConstructQueue::const_iterator leaf, ConstructQueue::const_iterator begin,
+    ConstructQueue::const_iterator end, llvm::ArrayRef<Object> mapObjects,
+    const DataSharingProcessor &dsp, bool excludePrivatizedSyms,
+    semantics::SemanticsContext &semaCtx, TargetNestedPrivateInfo &result) {
+  result.innermostLeafIsTeams = llvm::omp::topTeamsSet.test(leaf->id);
+
+  for (const Clause &clause : leaf->clauses) {
+    if (const auto *priv = std::get_if<clause::Private>(&clause.u)) {
+      for (const Object &object : priv->v) {
+        const semantics::Symbol *sym = object.sym();
+        if (!sym)
+          continue;
+        if (objectListContainsSymbol(*sym, mapObjects))
+          continue;
+        if (excludePrivatizedSyms && isAlreadyPrivatized(*sym, dsp))
+          continue;
+        if (isSymbolUsedInClauseRange(*sym, begin, end,
+                                      /*ignorePrivateAndMap=*/true))
+          continue;
+        if (!isTargetValueLocalCloneable(*sym, semaCtx))
+          continue;
+        result.syms.push_back(sym);
+      }
+    }
+  }
+}
+
+static bool collectTargetNestedPrivateSymsFromQueue(
+    ConstructQueue::const_iterator begin, const ConstructQueue &queue,
+    llvm::ArrayRef<Object> mapObjects, const DataSharingProcessor &dsp,
+    bool excludePrivatizedSyms, semantics::SemanticsContext &semaCtx,
+    TargetNestedPrivateInfo &result) {
+  ConstructQueue::const_iterator leaf = findInnermostPrivateLeaf(begin, queue);
+  if (leaf == queue.end())
+    return false;
+
+  collectTargetNestedPrivateSymsFromLeaf(leaf, begin, queue.end(), mapObjects,
+                                         dsp, excludePrivatizedSyms, semaCtx,
+                                         result);
+  return true;
+}
+
+// Discover `private` list items on the inner leaf construct of a
+// combined/composite target construct, e.g. "s" in
+// `target teams distribute private(s)`. These symbols are not privatized on the
+// target itself and, without intervention, would usually be implicitly mapped.
+// Collect them so implicit-map generation can skip unneeded maps and target
+// body generation can materialize region-local replacements when needed.
+static TargetNestedPrivateInfo collectTargetNestedPrivateSyms(
+    mlir::ModuleOp modOp, semantics::SemanticsContext &semaCtx,
+    lower::pft::Evaluation &eval, ConstructQueue::const_iterator item,
+    const ConstructQueue &queue, llvm::ArrayRef<Object> mapObjects,
+    const DataSharingProcessor &dsp) {
+  TargetNestedPrivateInfo result;
+
+  ConstructQueue::const_iterator next = std::next(item);
+  if (next != queue.end() &&
+      collectTargetNestedPrivateSymsFromQueue(next, queue, mapObjects, dsp,
+                                              /*excludePrivatizedSyms=*/true,
+                                              semaCtx, result))
+    return result;
+
+  lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval);
+  if (!nestedEval)
+    return result;
+
+  while (lower::pft::Evaluation *nextEval =
+             extractOnlyOmpNestedEval(*nestedEval))
+    nestedEval = nextEval;
+
+  const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
+  parser::OmpDirectiveName nestedName =
+      parser::omp::GetOmpDirectiveName(ompEval);
+  List<lower::omp::Clause> nestedClauses;
+  extractClauses(*nestedEval, nestedClauses, semaCtx);
+  if (!llvm::any_of(nestedClauses, [](const Clause &clause) {
+        return std::holds_alternative<clause::Private>(clause.u);
+      }))
+    return result;
+
+  ConstructQueue nestedQueue{buildConstructQueue(modOp, semaCtx, *nestedEval,
+                                                 nestedName.source,
+                                                 nestedName.v, nestedClauses)};
+
+  TargetNestedPrivateInfo nestedResult;
+  collectTargetNestedPrivateSymsFromQueue(
+      nestedQueue.begin(), nestedQueue, mapObjects, dsp,
+      /*excludePrivatizedSyms=*/false, semaCtx, nestedResult);
+
+  // If the target already had decomposed leaf constructs (e.g.
+  // target -> teams), only optimize through an immediately nested construct
+  // when the intervening leaves do not mention the candidate symbol in any
+  // clause. This avoids suppressing a target map needed by an intervening data
+  // environment.
+  if (next != queue.end())
+    llvm::erase_if(nestedResult.syms, [&](const semantics::Symbol *sym) {
+      return isSymbolUsedInClauseRange(*sym, next, queue.end(),
+                                       /*ignorePrivateAndMap=*/false);
+    });
+
+  return nestedResult;
+}
+
 static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::StatementContext &stmtCtx,
@@ -4137,6 +4395,16 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   collectSymbolsWithDynamicSubstring(semaCtx, eval,
                                      symbolsWithDynamicSubstring);
 
+  // Collect private clause symbols on the innermost leaf that can legally own
+  // the clause for composite directives. For example, in
+  // `target teams distribute private(s)`, "s" belongs to the distribute
+  // directive and not the target region. These symbols can skip be used to
+  // skip unneeded target implicit maps.
+  TargetNestedPrivateInfo targetNestedPrivateInfo =
+      collectTargetNestedPrivateSyms(converter.getFirOpBuilder().getModule(),
+                                     semaCtx, eval, item, queue, mapObjects,
+                                     dsp);
+
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the
   // symbols used inside the region that do not have explicit data-environment
@@ -4189,6 +4457,18 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     // Skip groupprivate symbols - they don't need to be mapped because
     // groupprivate creates its own storage.
     if (sym.GetUltimate().test(semantics::Symbol::Flag::OmpGroupPrivate))
+      return;
+
+    // Skip mapping of symbols that appear in private clauses of composite
+    // directive leaf nodes. For example, in
+    // `target teams distribute private(s)`, "s" does not need a map because all
+    // user-level uses are privatized and do not require a data transfer in most
+    // cases. Assumed-shape arrays are an exception because their shape is
+    // needed to create the private copy.
+    if (llvm::any_of(
+            targetNestedPrivateInfo.syms, [&](const semantics::Symbol *s) {
+              return s == &sym || s->GetUltimate() == sym.GetUltimate();
+            }))
       return;
 
     if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
@@ -4353,7 +4633,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   args.priv.vars = clauseOps.privateVars;
 
   genBodyOfTargetOp(converter, symTable, semaCtx, eval, targetOp, args, loc,
-                    queue, item, dsp);
+                    queue, item, dsp, targetNestedPrivateInfo);
 
   // Remove the host_eval information structure created for this target region.
   if (!isTargetDevice)
