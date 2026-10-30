@@ -5174,6 +5174,10 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
 
   FixedScalableVFPair MaxFactors =
       EpilogueTfCM.computeMaxVF(EpilogueVectorizationForceVF, /*UserIC*/ 1);
+  // TODO: Validate EVF against MaxFactors.
+  // That validation is ignored for now because computeMaxVF returns 0 for
+  // max safe scalable VF when UserVF is not scalable, and at that case having
+  // scalable EVF is considered unsafe which is inaacurate.
   if (!MaxFactors || !EpilogueTfCM.foldTailByMasking()) {
     // Cases that should not be vectorized or tail-folded.
     reportVectorizationInfo("This case of epilogue loop can't be tail-folded",
@@ -5191,10 +5195,6 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
 
   auto VPlan1 = tryToBuildVPlan1(EpilogueTfCM);
 
-  // If we're here, the main loop's initial VPlan was built successfully.
-  // Building one for the tail-folded loop should therefore also succeed, since
-  // nothing tail-folding-specific happens yet at this point. Still check below
-  // to catch any unexpected failure.
   if (!VPlan1) {
     reportVectorizationInfo(
         "Failed to build initial tail-folded epilogue VPlan",
@@ -5225,6 +5225,8 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     reportVectorizationInfo(
         "Failed to build a valid tail-folded epilogue VPlan",
         "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    assert(VPlans.size() == (NumPlansBefore + 1) &&
+           "Expected a single VPlan constructed, found more");
     VPlans.pop_back();
     return false;
   }

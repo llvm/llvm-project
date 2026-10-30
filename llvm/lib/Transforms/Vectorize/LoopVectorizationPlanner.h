@@ -969,10 +969,6 @@ public:
   /// interleaving should be avoided up-front, no plans are generated.
   void plan(ElementCount UserVF, unsigned UserIC);
 
-  /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
-  /// should be avoided up-front, no tail-folded plans are generated.
-  bool planForEpilogueTF();
-
   /// Return the VPlan for \p VF. At the moment, there is always a single VPlan
   /// for each VF.
   VPlan &getPlanFor(ElementCount VF) const;
@@ -1076,6 +1072,10 @@ public:
       bool DisableRuntimeUnroll, bool UnrollVectorizedLoop);
 
 private:
+  /// Build VPlan for the forced epilogue VF. If vectorization and tail-folding
+  /// should be avoided up-front, no tail-folded plans are generated.
+  bool planForEpilogueTF();
+
   /// Build an initial VPlan, with HCFG wrapping the original scalar loop and
   /// scalar transformations applied. Returns null if an initial VPlan cannot
   /// be built. \p PlanCM is the cost model to use for decisions made while
