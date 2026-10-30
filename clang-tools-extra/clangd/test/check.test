@@ -5,7 +5,9 @@
 // CHECK: internal (cc1) args are: -cc1
 // CHECK: Building preamble...
 // CHECK: Built preamble
+// CHECK: Preamble stats: {{.*}}s total, of which {{.*}}s ({{.*}}) in the filesystem; {{[0-9]+}} bytes memory at peak, {{[0-9]+}} bytes serialized
 // CHECK: Building AST...
+// CHECK: AST stats: {{.*}}s to build
 // CHECK: Testing features at each token
 // CHECK-DAG: tweak: ExpandDeducedType
 // CHECK-DAG: hover: true
