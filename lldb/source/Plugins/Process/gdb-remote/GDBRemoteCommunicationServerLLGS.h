@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECOMMUNICATIONSERVERLLGS_H
 
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -76,6 +77,14 @@ public:
 
   void InstallPlugin(
       std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> plugin_up);
+
+  /// Return the current process ID. This must be called on this server's
+  /// main-loop thread.
+  std::optional<lldb::pid_t> GetCurrentProcessID() const;
+
+  /// Set the exit status of the current process and notify its delegate. This
+  /// must be called on this server's main-loop thread.
+  void SetCurrentProcessExitStatus(WaitStatus exit_status);
 
   // NativeProcessProtocol::NativeDelegate overrides
   void InitializeDelegate(NativeProcessProtocol *process) override;
