@@ -824,6 +824,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
+- Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 
 #### Bug Fixes to Compiler Builtins
 
