@@ -113,15 +113,21 @@ def benchmarked_commits(lnt_url: str, test_suite: str, machine: str,
 
 
 def write_lnt_report(path: pathlib.Path, machine: str, machine_fields: dict, commit: dict, tests: List[dict],
-                     measured_at: datetime.datetime, run_parameters: Optional[dict] = None) -> None:
-    """Write a LNT v5 run submission, ready to be submitted with `lnt v5 submit`."""
+                     measured_at: datetime.datetime, run_parameters: Optional[dict] = None,
+                     machine_settings: Optional[dict] = None) -> None:
+    """
+    Write a LNT v5 run submission, ready to be submitted with `lnt v5 submit`.
+
+    `machine_settings` holds the built-in attributes of the machine (e.g. `tracked`), as opposed to
+    its fields.
+    """
     report = {
         'format_version': '5',
         # Pick the UUID ourselves so that we can safely retry submitting this run if needed without
         # running the risk of storing the same run twice.
         'uuid': str(uuid.uuid4()),
         'measured_at': measured_at.astimezone(datetime.timezone.utc).strftime(LNT_TIMESTAMP_FORMAT),
-        'machine': {'name': machine, 'fields': machine_fields},
+        'machine': {'name': machine, 'fields': machine_fields, **(machine_settings or {})},
         'commit': commit,
         'run_parameters': run_parameters or {},
         'tests': tests,
