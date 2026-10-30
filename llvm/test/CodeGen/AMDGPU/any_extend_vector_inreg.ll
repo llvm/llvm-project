@@ -16,10 +16,10 @@ define amdgpu_kernel void @any_extend_vector_inreg_v16i8_to_v4i32(ptr addrspace(
 ; GFX6-NEXT:    s_load_dword s0, s[8:9], 0x8
 ; GFX6-NEXT:    s_mov_b32 s12, s10
 ; GFX6-NEXT:    s_mov_b32 s13, s11
+; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:13
 ; GFX6-NEXT:    s_lshr_b32 s3, s5, 16
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s7
-; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_lshl_b64 s[4:5], s[0:1], 8
 ; GFX6-NEXT:    s_lshr_b64 s[2:3], s[2:3], 16
 ; GFX6-NEXT:    buffer_store_byte v0, off, s[12:15], 0 offset:15
