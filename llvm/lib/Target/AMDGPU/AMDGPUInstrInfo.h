@@ -33,6 +33,10 @@ bool isUniformMMO(const MachineMemOperand *MMO);
 /// GIntrinsic::getIntrinsicID() on them.
 Intrinsic::ID getIntrinsicID(const MachineInstr &I);
 
+/// Return true for packed FP32 to FP8/BF8 conversions that preserve one half
+/// of their old destination operand.
+bool isPackedF8ConversionIntrinsic(unsigned IntrinsicID);
+
 struct RsrcIntrinsic {
   unsigned Intr;
   uint8_t RsrcArg;

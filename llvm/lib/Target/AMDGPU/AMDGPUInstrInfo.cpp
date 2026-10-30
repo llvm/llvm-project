@@ -17,12 +17,24 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Value.h"
 
 using namespace llvm;
 
 Intrinsic::ID AMDGPU::getIntrinsicID(const MachineInstr &I) {
   return I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
+}
+
+bool AMDGPU::isPackedF8ConversionIntrinsic(unsigned IntrinsicID) {
+  switch (IntrinsicID) {
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+  case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3:
+    return true;
+  default:
+    return false;
+  }
 }
 
 // TODO: Should largely merge with AMDGPUTTIImpl::isSourceOfDivergence.
