@@ -25,10 +25,9 @@ define void @vec_reduce_umin_v16i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_umin_v8i8(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_umin_v8i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA32-NEXT:    vmin.bu $vr0, $vr1, $vr0
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 2
@@ -40,8 +39,7 @@ define void @vec_reduce_umin_v8i8(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_umin_v8i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA64-NEXT:    vmin.bu $vr0, $vr1, $vr0
 ; LA64-NEXT:    vbsrl.v $vr1, $vr0, 2
@@ -59,8 +57,7 @@ define void @vec_reduce_umin_v8i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_umin_v4i8(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_umin_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
 ; CHECK-NEXT:    vmin.bu $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
@@ -76,8 +73,7 @@ define void @vec_reduce_umin_v4i8(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_umin_v2i8(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_umin_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vldrepl.h $vr0, $a0, 0
 ; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 1
 ; CHECK-NEXT:    vmin.bu $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.b $vr0, $a1, 0, 0
@@ -109,10 +105,9 @@ define void @vec_reduce_umin_v8i16(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_umin_v4i16(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_umin_v4i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA32-NEXT:    vmin.hu $vr0, $vr1, $vr0
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 2
@@ -122,8 +117,7 @@ define void @vec_reduce_umin_v4i16(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_umin_v4i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA64-NEXT:    vmin.hu $vr0, $vr1, $vr0
 ; LA64-NEXT:    vbsrl.v $vr1, $vr0, 2
@@ -139,8 +133,7 @@ define void @vec_reduce_umin_v4i16(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_umin_v2i16(ptr %src, ptr %dst) nounwind {
 ; CHECK-LABEL: vec_reduce_umin_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    vbsrl.v $vr1, $vr0, 2
 ; CHECK-NEXT:    vmin.hu $vr0, $vr1, $vr0
 ; CHECK-NEXT:    vstelm.h $vr0, $a1, 0, 0
@@ -170,10 +163,9 @@ define void @vec_reduce_umin_v4i32(ptr %src, ptr %dst) nounwind {
 define void @vec_reduce_umin_v2i32(ptr %src, ptr %dst) nounwind {
 ; LA32-LABEL: vec_reduce_umin_v2i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA32-NEXT:    vmin.wu $vr0, $vr1, $vr0
 ; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
@@ -181,8 +173,7 @@ define void @vec_reduce_umin_v2i32(ptr %src, ptr %dst) nounwind {
 ;
 ; LA64-LABEL: vec_reduce_umin_v2i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vbsrl.v $vr1, $vr0, 4
 ; LA64-NEXT:    vmin.wu $vr0, $vr1, $vr0
 ; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 0

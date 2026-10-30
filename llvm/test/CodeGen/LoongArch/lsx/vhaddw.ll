@@ -5,14 +5,12 @@
 define void @vhaddw_h_b_illegal(ptr %a, ptr %b, ptr %r) nounwind {
 ; LA32-LABEL: vhaddw_h_b_illegal:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a3, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    ld.w $a4, $a1, 0
-; LA32-NEXT:    ld.w $a1, $a1, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a4, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
+; LA32-NEXT:    ld.w $a3, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    ld.w $a0, $a1, 4
+; LA32-NEXT:    fld.s $fa1, $a1, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 1
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a0, 1
 ; LA32-NEXT:    vpickod.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickev.b $vr1, $vr1, $vr1
 ; LA32-NEXT:    vslti.b $vr2, $vr0, 0
@@ -26,10 +24,8 @@ define void @vhaddw_h_b_illegal(ptr %a, ptr %b, ptr %r) nounwind {
 ;
 ; LA64-LABEL: vhaddw_h_b_illegal:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    ld.d $a1, $a1, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr1, $a1, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
+; LA64-NEXT:    fld.d $fa1, $a1, 0
 ; LA64-NEXT:    vpickod.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickev.b $vr1, $vr1, $vr1
 ; LA64-NEXT:    vslti.b $vr2, $vr0, 0

@@ -4089,6 +4089,45 @@ LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
   SDValue Op1 = Op.getOperand(1);
   SDValue Op2 = Op.getOperand(2);
 
+  // Lower inserting a loaded integer into lane 0 of an undefined vector as a
+  // vector load that writes the whole register: FLD.{S/D} for 32/64-bit
+  // elements and [X]VLDREPL.{B/H} for 8/16-bit ones. Unlike a scalar load +
+  // [X]VINSGR2VR, it has no false dependency on the previous value of the
+  // destination and doesn't need to move the value from a GPR.
+  // For example:
+  //   %a = load i64, ptr %ptr
+  //   %b = insert_vector_elt undef, %a, 0
+  // is lowered to:
+  //   (FLD_D $a0, 0)
+  if (Op0.isUndef() && isNullConstant(Op2) && EltVT.isInteger() &&
+      Op1.getOpcode() == ISD::LOAD && Op1.hasOneUse()) {
+    auto *LN = cast<LoadSDNode>(Op1);
+    auto ExtType = LN->getExtensionType();
+    if (LN->isSimple() &&
+        (ExtType == ISD::EXTLOAD || ExtType == ISD::NON_EXTLOAD) &&
+        LN->getMemoryVT().getSizeInBits() == EltSizeInBits) {
+      // Indexed loads and stores are not supported on LoongArch.
+      assert(LN->isUnindexed() && "Unexpected indexed load.");
+      SDValue Res;
+      if (EltSizeInBits >= 32) {
+        MVT FltVT = MVT::getFloatingPointVT(EltSizeInBits);
+        SDValue Ld = DAG.getLoad(FltVT, DL, LN->getChain(), LN->getBasePtr(),
+                                 LN->getMemOperand());
+        Res = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL,
+                          MVT::getVectorVT(FltVT, NumElts), Ld);
+        Res = DAG.getBitcast(VT, Res);
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), Ld.getValue(1));
+      } else {
+        SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+        SDValue Ops[] = {LN->getChain(), LN->getBasePtr()};
+        Res = DAG.getMemIntrinsicNode(LoongArchISD::VLDREPL, DL, Tys, Ops,
+                                      LN->getMemoryVT(), LN->getMemOperand());
+        DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), Res.getValue(1));
+      }
+      return Res;
+    }
+  }
+
   if (isa<ConstantSDNode>(Op2))
     return Op;
 
