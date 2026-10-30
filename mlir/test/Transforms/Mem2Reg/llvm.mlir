@@ -1226,6 +1226,139 @@ llvm.func @indirect_blocking_use_in_different_region(%arg0 : i1) {
 
 // -----
 
+// CHECK-LABEL: @dead_ptrtoint_inttoptr
+llvm.func @dead_ptrtoint_inttoptr() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK-NOT: llvm.ptrtoint
+  // CHECK-NOT: llvm.inttoptr
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.ptrtoint %1 : !llvm.ptr to i64
+  %3 = llvm.inttoptr %2 : i64 to !llvm.ptr
+  llvm.return
+}
+
+// -----
+
+// The integer representation of the slot pointer escapes into arithmetic.
+
+// CHECK-LABEL: @ptrtoint_escapes
+llvm.func @ptrtoint_escapes() -> i64 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %[[ALLOCA]]
+  // CHECK: llvm.add %[[INT]], %[[INT]]
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.ptrtoint %1 : !llvm.ptr to i64
+  %3 = llvm.add %2, %2 : i64
+  llvm.return %3 : i64
+}
+
+// -----
+
+// A memory access through the round-tripped pointer is not recognized as an
+// access to the slot, so the slot is conservatively left alone.
+
+// CHECK-LABEL: @load_through_inttoptr_ptrtoint
+llvm.func @load_through_inttoptr_ptrtoint() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca
+  // CHECK: %[[INT:.*]] = llvm.ptrtoint %[[ALLOCA]]
+  // CHECK: %[[PTR:.*]] = llvm.inttoptr %[[INT]]
+  // CHECK: llvm.load %[[PTR]]
+  %1 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %2 = llvm.ptrtoint %1 : !llvm.ptr to i64
+  %3 = llvm.inttoptr %2 : i64 to !llvm.ptr
+  %4 = llvm.load %3 : !llvm.ptr -> i32
+  llvm.return %4 : i32
+}
+
+// -----
+
+// The round-tripped pointer is only consumed by lifetime markers, which carry
+// no information once the slot is promoted.
+
+// CHECK-LABEL: @inttoptr_ptrtoint_only_lifetime_markers
+llvm.func @inttoptr_ptrtoint_only_lifetime_markers() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  %1 = llvm.mlir.constant(42 : i32) : i32
+  // CHECK-NOT: llvm.alloca
+  // CHECK-NOT: llvm.ptrtoint
+  // CHECK-NOT: llvm.inttoptr
+  // CHECK-NOT: llvm.intr.lifetime
+  %2 = llvm.alloca %0 x i32 : (i32) -> !llvm.ptr
+  %3 = llvm.ptrtoint %2 : !llvm.ptr to i64
+  %4 = llvm.inttoptr %3 : i64 to !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
+  llvm.store %1, %2 : i32, !llvm.ptr
+  %5 = llvm.load %2 : !llvm.ptr -> i32
+  llvm.intr.lifetime.end %4 : !llvm.ptr
+  // CHECK: llvm.return %{{.*}} : i32
+  llvm.return %5 : i32
+}
+
+// -----
+
+// Shape of the program from https://github.com/llvm/llvm-project/issues/33896:
+// the addresses of `x` and of one-past-the-end of `y` are taken as integers,
+// compared, and stored into the integer variable `pi`; the final store goes
+// through `inttoptr` of whichever integer reaches it. The scalar slots `a` and
+// `pi` are promoted, but `x` and `y` must stay in memory, and the store through
+// the round-tripped pointer must not be redirected to either of them: that
+// would be exactly the provenance bug from the issue.
+
+// CHECK-LABEL: @ptrtoint_escapes_as_integer_through_compare_and_store
+llvm.func @ptrtoint_escapes_as_integer_through_compare_and_store() -> i32 {
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  %c15 = llvm.mlir.constant(15 : i32) : i32
+  %c100 = llvm.mlir.constant(100 : i32) : i32
+  // CHECK: %[[X:.*]] = llvm.alloca %{{.*}} x i32
+  // CHECK: %[[Y:.*]] = llvm.alloca %{{.*}} x !llvm.array<1 x i32>
+  // CHECK-NOT: llvm.alloca
+  %x = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %y = llvm.alloca %c1 x !llvm.array<1 x i32> : (i32) -> !llvm.ptr
+  %a = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  %pi = llvm.alloca %c1 x i64 : (i32) -> !llvm.ptr
+  llvm.store %c0, %x : i32, !llvm.ptr
+  llvm.store %c0, %a : i32, !llvm.ptr
+  // CHECK: %[[XI:.*]] = llvm.ptrtoint %[[X]]
+  %xi = llvm.ptrtoint %x : !llvm.ptr to i64
+  llvm.store %xi, %pi : i64, !llvm.ptr
+  // CHECK: %[[YEND:.*]] = llvm.getelementptr %[[Y]][1]
+  // CHECK: %[[YI:.*]] = llvm.ptrtoint %[[YEND]]
+  %yend = llvm.getelementptr %y[1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<1 x i32>
+  %yi = llvm.ptrtoint %yend : !llvm.ptr to i64
+  // CHECK: %[[N:.*]] = llvm.icmp "ne" %[[XI]], %[[YI]]
+  %n = llvm.icmp "ne" %xi, %yi : i64
+  llvm.cond_br %n, ^bb1, ^bb2
+^bb1:
+  llvm.store %c100, %a : i32, !llvm.ptr
+  llvm.store %yi, %pi : i64, !llvm.ptr
+  llvm.br ^bb2
+^bb2:
+  llvm.cond_br %n, ^bb3, ^bb4
+^bb3:
+  llvm.store %c100, %a : i32, !llvm.ptr
+  // CHECK: llvm.ptrtoint %[[Y]]
+  %yi0 = llvm.ptrtoint %y : !llvm.ptr to i64
+  llvm.store %yi0, %pi : i64, !llvm.ptr
+  llvm.br ^bb4
+^bb4:
+  // CHECK: %[[PTR:.*]] = llvm.inttoptr %{{.*}} : i64 to !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %[[PTR]] : i32, !llvm.ptr
+  // CHECK: llvm.load %[[X]]
+  %p = llvm.load %pi : !llvm.ptr -> i64
+  %pp = llvm.inttoptr %p : i64 to !llvm.ptr
+  llvm.store %c15, %pp : i32, !llvm.ptr
+  %av = llvm.load %a : !llvm.ptr -> i32
+  %xv = llvm.load %x : !llvm.ptr -> i32
+  %sum = llvm.add %av, %xv : i32
+  llvm.return %sum : i32
+}
+
+// -----
+
 // Removing an unused merge argument must skip dead predecessors, whose
 // branches carry no operand for it (else MutableOperandRange::erase asserts).
 // Depends on region-simplify=false in the RUN line: simplifying the region
