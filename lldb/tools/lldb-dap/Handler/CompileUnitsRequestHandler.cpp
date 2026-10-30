@@ -12,13 +12,13 @@
 #include "RequestHandler.h"
 #include "lldb/API/SBCompileUnit.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/Host/PosixApi.h" // Adds PATH_MAX for windows
 
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
-static std::optional<CompileUnit>
-CreateCompileUnit(const lldb::SBCompileUnit &unit) {
+static std::optional<CompileUnit> CreateCompileUnit(lldb::SBCompileUnit unit) {
   const lldb::SBFileSpec file_spec = unit.GetFileSpec();
   if (!file_spec.IsValid())
     return std::nullopt;
@@ -30,6 +30,12 @@ CreateCompileUnit(const lldb::SBCompileUnit &unit) {
   CompileUnit result;
   result.id = unit.GetIDInModule();
   result.compileUnitPath = std::string(path_buffer.data(), path_size);
+  if (const lldb::LanguageType language = unit.GetLanguage();
+      language != lldb::eLanguageTypeUnknown) {
+    if (const char *name =
+            lldb::SBLanguageRuntime::GetNameForLanguageType(language))
+      result.language = name;
+  }
   return result;
 }
 
