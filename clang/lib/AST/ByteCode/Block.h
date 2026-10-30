@@ -38,7 +38,8 @@ enum PrimType : uint8_t;
 /// │ sizeof(Block) │ MDSize           │ Desc->getSize() │
 /// └───────────────┴──────────────────┴─────────────────┘
 ///
-/// getSize() returns MDSize + Desc->getAllocSize().
+/// getSize() returns Desc->getAllocSize().
+/// getAllocSize() returns getMetadataSize() + Desc->getAllocSize().
 ///
 class Block final {
 private:
@@ -47,27 +48,47 @@ private:
   static constexpr uint8_t WeakFlag = 1 << 2;
 
 public:
-  static constexpr uint8_t InlineDescMD = sizeof(InlineDescriptor);
-  static constexpr uint8_t GlobalMD = sizeof(GlobalInlineDescriptor);
+  enum BlockKind : uint8_t { None, Local, Global };
 
   /// Creates a new block.
   Block(unsigned EvalID, UnsignedOrNone DeclID, const Descriptor *Desc,
-        unsigned MDSize = 0, bool IsStatic = false, bool IsExtern = false,
-        bool IsWeak = false)
-      : Desc(Desc), DeclID(DeclID), EvalID(EvalID), MDSize(MDSize),
-        IsStatic(IsStatic) {
+        BlockKind K, bool IsExtern, bool IsWeak)
+
+      : Desc(Desc), DescSize(Desc->getAllocSize()), DeclID(DeclID),
+        EvalID(EvalID), Kind(K), MDSize(getMetadataSize(K)) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
   }
 
-  Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize = 0,
-        bool IsStatic = false, bool IsExtern = false, bool IsWeak = false)
-      : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
+  Block(unsigned EvalID, const Descriptor *Desc, BlockKind K,
+        bool IsExtern = false, bool IsWeak = false)
+      : Desc(Desc), DescSize(Desc->getAllocSize()), EvalID(EvalID), Kind(K),
+        MDSize(getMetadataSize(K)) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (WeakFlag * IsWeak);
   }
+
+  /// Number of bytes needed to allocate the block.
+  static constexpr unsigned allocSize(const Descriptor *D, BlockKind K) {
+    return sizeof(Block) + getMetadataSize(K) + D->getAllocSize();
+  }
+
+  static constexpr unsigned getMetadataSize(BlockKind K) {
+    switch (K) {
+    case None:
+      return 0;
+    case Global:
+      return sizeof(GlobalInlineDescriptor);
+    case Local:
+      return sizeof(InlineDescriptor);
+    }
+    llvm_unreachable("Unhandled Block kind");
+  }
+
+  bool isGlobal() const { return Kind == Global; }
+  bool isLocal() const { return Kind == Local; }
 
   /// Returns the block's descriptor.
   const Descriptor *getDescriptor() const { return Desc; }
@@ -75,8 +96,6 @@ public:
   bool hasPointers() const { return Pointers; }
   /// Checks if the block is extern.
   bool isExtern() const { return AccessFlags & ExternFlag; }
-  /// Checks if the block has static storage duration.
-  bool isStatic() const { return IsStatic; }
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
   bool isWeak() const { return AccessFlags & WeakFlag; }
@@ -87,8 +106,10 @@ public:
     return Result;
   }
   bool isDead() const { return AccessFlags & DeadFlag; }
+  /// Returns the size of the block, excluding metadata.
+  unsigned getSize() const { return DescSize; }
   /// Returns the size of the block, including metadata.
-  unsigned getSize() const { return Desc->getAllocSize() + MDSize; }
+  unsigned getAllocSize() const { return DescSize + MDSize; }
   /// Returns the size of the metadata.
   unsigned getMetadataSize() const { return MDSize; }
   /// Returns the declaration ID.
@@ -123,7 +144,16 @@ public:
   template <typename T> T &deref() { return *reinterpret_cast<T *>(data()); }
 
   template <typename T> T &getBlockDesc() {
-    assert(sizeof(T) == MDSize);
+    assert(sizeof(T) == getMetadataSize());
+
+    if constexpr (std::is_same_v<T, GlobalInlineDescriptor>) {
+      assert(Kind == Global);
+    } else if constexpr (std::is_same_v<T, InlineDescriptor>) {
+      assert(Kind == Local);
+    } else {
+      assert(Kind == None);
+    }
+
     return *reinterpret_cast<T *>(rawData());
   }
   template <typename T> const T &getBlockDesc() const {
@@ -133,7 +163,7 @@ public:
   /// Invokes the constructor.
   void invokeCtor() {
     assert(!IsInitialized);
-    std::memset(rawData(), 0, getSize());
+    std::memset(rawData(), 0, getAllocSize());
     invokeCtorNoMemset();
   }
   /// The same, but won't memset() the memory first to zero.
@@ -166,9 +196,10 @@ private:
   friend class DynamicAllocator;
   friend class Program;
 
-  Block(unsigned EvalID, const Descriptor *Desc, unsigned MDSize, bool IsExtern,
-        bool IsStatic, bool IsWeak, bool IsDead)
-      : Desc(Desc), EvalID(EvalID), MDSize(MDSize), IsStatic(IsStatic) {
+  Block(unsigned EvalID, const Descriptor *Desc, BlockKind K, bool IsExtern,
+        bool IsWeak, bool IsDead)
+      : Desc(Desc), DescSize(Desc->getAllocSize()), EvalID(EvalID), Kind(K),
+        MDSize(getMetadataSize(K)) {
     assert(Desc);
     AccessFlags |= (ExternFlag * IsExtern);
     AccessFlags |= (DeadFlag * IsDead);
@@ -190,20 +221,22 @@ private:
 #endif
 
   /// Pointer to the stack slot descriptor.
-  const Descriptor *Desc;
+  const Descriptor *const Desc;
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;
+  /// Size of the data(), excluding block-level metadata.
+  const unsigned DescSize;
   /// Unique identifier of the declaration.
-  UnsignedOrNone DeclID = std::nullopt;
+  const UnsignedOrNone DeclID = std::nullopt;
   const unsigned EvalID = ~0u;
   /// Allocation ID for this dynamic allocation, if it is one.
   UnsignedOrNone DynAllocId = std::nullopt;
   /// AccessFlags containing IsExtern, IsDead and IsWeak bits.
   uint8_t AccessFlags = 0;
   /// Size of the metadata.
-  const uint8_t MDSize = 0;
-  /// Flag indicating if the block has static storage duration.
-  bool IsStatic = false;
+  const BlockKind Kind;
+  /// Size of block-level metadata.
+  const uint8_t MDSize;
   /// Flag indicating if the block contents have been initialized
   /// via invokeCtor.
   bool IsInitialized = false;

@@ -149,10 +149,9 @@ EvalEmitter::LabelTy EvalEmitter::getLabel() { return NextLabel++; }
 
 Scope::Local EvalEmitter::createLocal(const Descriptor *D) {
   // Allocate memory for a local.
-  char *Memory = reinterpret_cast<char *>(
-      S.allocate(sizeof(Block) + D->getAllocSize() + Block::InlineDescMD));
-  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::InlineDescMD,
-                               /*IsStatic=*/false);
+  char *Memory =
+      reinterpret_cast<char *>(S.allocate(Block::allocSize(D, Block::Local)));
+  auto *B = new (Memory) Block(Ctx.getEvalID(), D, Block::Local);
   B->invokeCtor();
 
   // Initialize local variable inline descriptor.
@@ -345,7 +344,7 @@ bool EvalEmitter::emitGetPtrLocal(uint32_t I, SourceInfo Info) {
     return true;
 
   Block *B = getLocal(I);
-  S.Stk.push<Pointer>(B, sizeof(InlineDescriptor));
+  S.Stk.push<Pointer>(B);
   return true;
 }
 

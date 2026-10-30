@@ -159,9 +159,8 @@ public:
 private:
   friend class DeclScope;
 
-  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsStatic,
-                              bool IsExtern, bool IsWeak,
-                              bool IsConstexprUnknown,
+  UnsignedOrNone createGlobal(DeclOrExpr D, QualType Ty, bool IsExtern,
+                              bool IsWeak, bool IsConstexprUnknown,
                               const Expr *Init = nullptr);
 
   /// Reference to the VM context.
