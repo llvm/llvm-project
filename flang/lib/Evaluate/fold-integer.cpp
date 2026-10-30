@@ -1816,27 +1816,23 @@ static std::optional<Expr<Type<TypeCategory::Integer>>> ExtractRankOneElement(
     FoldingContext &context, const Expr<Type<TypeCategory::Integer>> &base,
     int dim) {
   using T = Type<TypeCategory::Integer>;
-  const int kind{base.kind()};
   if (base.Rank() == 0) {
     return base; // a scalar operand contributes itself to every element
   }
   return common::visit(
       [&](const auto &y) -> std::optional<Expr<T>> {
         using Ty = std::decay_t<decltype(y)>;
-        const int tyKind{y.kind()};
-
-        if (kind != tyKind) {
-          return std::nullopt;
-        } else if constexpr (std::is_same_v<Ty, Constant<T>>) {
+        const int kind{y.kind()};
+        if constexpr (std::is_same_v<Ty, Constant<T>>) {
           ConstantSubscripts at{y.lbounds()};
           at[0] = y.lbounds()[0] + dim;
-          return MakeConstantExpr<T>(tyKind, y.At(at));
+          return MakeConstantExpr<T>(kind, y.At(at));
         } else if constexpr (std::is_same_v<Ty, Designator<T>>) {
           if (auto dr{ExtractDataRef(y)}) {
             if (auto elem{SubscriptRankOneElement(context, *dr, dim)}) {
               if (auto expr{AsGenericExpr(std::move(*elem))}) {
                 if (auto *ie{UnwrapExpr<Expr<SomeInteger>>(*expr)}) {
-                  return ConvertToType<T>(tyKind, std::move(*ie));
+                  return ConvertToType<T>(kind, std::move(*ie));
                 }
               }
             }
@@ -1916,7 +1912,7 @@ static std::optional<Expr<Type<TypeCategory::Integer>>> ExtractRankOneElement(
           auto l{ExtractRankOneElement(context, y.left(), dim)};
           auto r{ExtractRankOneElement(context, y.right(), dim)};
           if (l && r) {
-            return Expr<T>{Ty{tyKind, std::move(*l), std::move(*r)}};
+            return Expr<T>{Ty{kind, std::move(*l), std::move(*r)}};
           }
           return std::nullopt;
         } else if constexpr (std::is_same_v<Ty, Extremum<T>>) {
