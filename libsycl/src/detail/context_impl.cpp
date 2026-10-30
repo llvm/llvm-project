@@ -22,8 +22,9 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
                          const async_handler &AsyncHandler,
                          const property_list &PropList, PrivateTag)
     : MAsyncHandler(AsyncHandler), MDevices(std::move(DeviceList)) {
-  // TODO: Remove this when property_list is implemented
-  std::ignore = PropList;
+  // SYCL 2020 defines no context properties, so a context rejects every
+  // property and has nothing to store.
+  checkPropertyList<context>(PropList);
 
   std::vector<ol_device_handle_t> DeviceIds;
   DeviceIds.reserve(MDevices.size());
