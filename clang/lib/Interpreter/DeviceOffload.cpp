@@ -22,6 +22,12 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -79,13 +85,63 @@ IncrementalHIPDeviceParser::GenerateDeviceObject() {
   return llvm::StringRef(ObjectContent.data(), ObjectContent.size());
 }
 
+llvm::Expected<llvm::StringRef>
+IncrementalHIPDeviceParser::GenerateHSACO(llvm::StringRef Object) {
+  std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  llvm::ErrorOr<std::string> LLDPath = llvm::sys::findProgramByName(
+      "ld.lld", {llvm::sys::path::parent_path(Exe)});
+  if (!LLDPath)
+    LLDPath = llvm::sys::findProgramByName("ld.lld");
+  if (!LLDPath)
+    return llvm::make_error<llvm::StringError>(
+        "Could not find ld.lld next to the executable or on PATH.",
+        llvm::inconvertibleErrorCode());
+
+  int ObjFD = -1;
+  llvm::SmallString<128> ObjFile;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "o", ObjFD, ObjFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary object file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover ObjRemover(ObjFile);
+  {
+    llvm::raw_fd_ostream OS(ObjFD, /*shouldClose=*/true);
+    OS << Object;
+  }
+
+  llvm::SmallString<128> HSACOFile;
+  if (llvm::sys::fs::createTemporaryFile("kernel", "hsaco", HSACOFile))
+    return llvm::make_error<llvm::StringError>(
+        "Failed to create a temporary code object file.",
+        llvm::inconvertibleErrorCode());
+  llvm::FileRemover HSACORemover(HSACOFile);
+
+  llvm::StringRef Args[] = {"ld.lld", "-shared", "--no-undefined",
+                            ObjFile,  "-o",      HSACOFile};
+  if (llvm::sys::ExecuteAndWait(*LLDPath, Args) != 0)
+    return llvm::make_error<llvm::StringError>("ld.lld invocation failed.",
+                                               llvm::inconvertibleErrorCode());
+
+  auto HSACOBuf = llvm::MemoryBuffer::getFile(HSACOFile, /*IsText=*/false);
+  if (!HSACOBuf)
+    return llvm::make_error<llvm::StringError>(
+        "Failed to read the code object.", llvm::inconvertibleErrorCode());
+
+  llvm::StringRef Buffer = (*HSACOBuf)->getBuffer();
+  HSACOContent.assign(Buffer.begin(), Buffer.end());
+  return llvm::StringRef(HSACOContent.data(), HSACOContent.size());
+}
+
 llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
   llvm::Expected<llvm::StringRef> Object = GenerateDeviceObject();
   if (!Object)
     return Object.takeError();
 
-  // FIXME: Link the object into an HSACO and bundle it for the host
-  // compilation.
+  llvm::Expected<llvm::StringRef> HSACO = GenerateHSACO(*Object);
+  if (!HSACO)
+    return HSACO.takeError();
+
+  // FIXME: Bundle the HSACO and embed it into the host compilation.
   return llvm::make_error<llvm::StringError>(
       "HIP offload binary generation is not supported yet.",
       llvm::inconvertibleErrorCode());
