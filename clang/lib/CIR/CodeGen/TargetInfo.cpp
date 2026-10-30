@@ -146,21 +146,6 @@ public:
         &getABIInfo().cgt.getMLIRContext(),
         cir::LangAddressSpace::OffloadPrivate);
   }
-
-  // The null value of the local and private address spaces is non-zero on
-  // AMDGPU, so materialize it via an address space cast from null in the
-  // generic address space.
-  mlir::Value getNullPointer(CIRGenModule &cgm, cir::PointerType ptrTy,
-                             QualType qt, mlir::Location loc) const override {
-    CIRGenBuilderTy &builder = cgm.getBuilder();
-    if (cgm.getASTContext().getTargetNullPointerValue(qt) == 0)
-      return builder.getNullPtr(ptrTy, loc);
-
-    cir::PointerType genericPtrTy =
-        builder.getPointerTo(ptrTy.getPointee(), LangAS::opencl_generic);
-    return builder.createAddrSpaceCast(
-        loc, builder.getNullPtr(genericPtrTy, loc), ptrTy);
-  }
 };
 
 } // namespace
