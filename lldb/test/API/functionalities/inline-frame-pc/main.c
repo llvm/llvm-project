@@ -6,6 +6,10 @@ static inline __attribute__((always_inline)) void level3(int a) {
   g = a; // before sink
   sink(a);
   g = a + 1; // break in level3
+  while (g < a + 3) {
+    g++;
+    continue; // until jump in level3
+  }
   g = a + 2; // until in level3
 }
 
