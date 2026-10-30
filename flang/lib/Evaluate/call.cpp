@@ -110,6 +110,18 @@ bool ActualArgument::ConditionalArg::HasNilConsequent() const {
       [](const Consequent &cons) { return !cons.has_value(); });
 }
 
+bool ActualArgument::ConditionalArg::IsPolymorphic() const {
+  bool result{false};
+  ForEachConsequent([&](const Consequent &cons) {
+    if (cons) {
+      if (auto type{cons->value().GetType()}) {
+        result |= type->IsPolymorphic();
+      }
+    }
+  });
+  return result;
+}
+
 SpecificIntrinsic::SpecificIntrinsic(
     IntrinsicProcedure n, characteristics::Procedure &&chars)
     : name{n}, characteristics{
