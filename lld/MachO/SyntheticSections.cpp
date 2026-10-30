@@ -2589,7 +2589,6 @@ size_t ChainedFixupsSection::SegmentInfo::writeTo(uint8_t *buf) const {
   auto *segInfo = reinterpret_cast<dyld_chained_starts_in_segment *>(buf);
   segInfo->size = getSize();
   segInfo->page_size = target->getPageSize();
-  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
   segInfo->pointer_format = config->chainedFixupsPointerFormat;
   segInfo->segment_offset = oseg->addr - in.header->addr;
   segInfo->max_valid_pointer = 0; // not used on 64-bit
