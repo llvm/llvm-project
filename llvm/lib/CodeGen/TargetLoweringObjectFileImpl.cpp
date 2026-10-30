@@ -2151,10 +2151,6 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS, int64_t Addend,
     std::optional<int64_t> PCRelativeOffset, const TargetMachine &TM) const {
-  const Triple &T = LHS->getParent()->getTargetTriple();
-  if (T.isOSCygMing())
-    return nullptr;
-
   // Our symbols should exist in address space zero, cowardly no-op if
   // otherwise.
   if (LHS->getType()->getPointerAddressSpace() != 0 ||
