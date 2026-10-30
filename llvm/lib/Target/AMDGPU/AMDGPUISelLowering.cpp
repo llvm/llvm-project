@@ -2655,6 +2655,9 @@ AMDGPUTargetLowering::getScaledLogInput(SelectionDAG &DAG, const SDLoc SL,
   if (!needsDenormHandlingF32(DAG, Src, Flags))
     return {};
 
+  if (DAG.computeKnownFPClass(Src, fcSubnormal).isKnownNeverSubnormal())
+    return {};
+
   MVT VT = MVT::f32;
   const fltSemantics &Semantics = APFloat::IEEEsingle();
   SDValue SmallestNormal =
