@@ -868,3 +868,95 @@ define i1 @mixed_cc(i8 %x) {
   %res = and i1 %c1, %c2
   ret i1 %res
 }
+
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64)
+
+; A non-SETCC operand with only bit zero set also permits condition inversion.
+define i8 @and_not_known_boolean(i64 %a, i64 %b, i8 %c) {
+; NOBMI-LABEL: and_not_known_boolean:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    shrb $7, %dl
+; NOBMI-NEXT:    cmpq %rsi, %rdi
+; NOBMI-NEXT:    setno %al
+; NOBMI-NEXT:    andb %dl, %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: and_not_known_boolean:
+; BMI:       # %bb.0:
+; BMI-NEXT:    xorl %eax, %eax
+; BMI-NEXT:    cmpq %rsi, %rdi
+; BMI-NEXT:    seto %al
+; BMI-NEXT:    shrb $7, %dl
+; BMI-NEXT:    movzbl %dl, %ecx
+; BMI-NEXT:    andnl %ecx, %eax, %eax
+; BMI-NEXT:    # kill: def $al killed $al killed $eax
+; BMI-NEXT:    retq
+  %sub = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
+  %ov = extractvalue {i64, i1} %sub, 1
+  %ov8 = zext i1 %ov to i8
+  %not = xor i8 %ov8, -1
+  %bit = lshr i8 %c, 7
+  %r = and i8 %not, %bit
+  ret i8 %r
+}
+
+; Preserve the upper bits of NOT when the other operand can observe them.
+define i8 @and_not_arbitrary_byte(i64 %a, i64 %b, i8 %c) {
+; NOBMI-LABEL: and_not_arbitrary_byte:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    cmpq %rsi, %rdi
+; NOBMI-NEXT:    seto %al
+; NOBMI-NEXT:    notb %al
+; NOBMI-NEXT:    andb %dl, %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: and_not_arbitrary_byte:
+; BMI:       # %bb.0:
+; BMI-NEXT:    xorl %eax, %eax
+; BMI-NEXT:    cmpq %rsi, %rdi
+; BMI-NEXT:    seto %al
+; BMI-NEXT:    andnl %edx, %eax, %eax
+; BMI-NEXT:    # kill: def $al killed $al killed $eax
+; BMI-NEXT:    retq
+  %sub = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
+  %ov = extractvalue {i64, i1} %sub, 1
+  %ov8 = zext i1 %ov to i8
+  %not = xor i8 %ov8, -1
+  %r = and i8 %c, %not
+  ret i8 %r
+}
+
+; Do not duplicate an inversion that must still produce all eight bits.
+define i8 @and_not_shared_inversion(i64 %a, i64 %b, i8 %c, ptr %p) {
+; NOBMI-LABEL: and_not_shared_inversion:
+; NOBMI:       # %bb.0:
+; NOBMI-NEXT:    cmpq %rsi, %rdi
+; NOBMI-NEXT:    seto %al
+; NOBMI-NEXT:    notb %al
+; NOBMI-NEXT:    movb %al, (%rcx)
+; NOBMI-NEXT:    shrb $7, %dl
+; NOBMI-NEXT:    andb %dl, %al
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: and_not_shared_inversion:
+; BMI:       # %bb.0:
+; BMI-NEXT:    xorl %r8d, %r8d
+; BMI-NEXT:    cmpq %rsi, %rdi
+; BMI-NEXT:    seto %r8b
+; BMI-NEXT:    shrb $7, %dl
+; BMI-NEXT:    movzbl %dl, %eax
+; BMI-NEXT:    andnl %eax, %r8d, %eax
+; BMI-NEXT:    movl %r8d, %edx
+; BMI-NEXT:    notb %dl
+; BMI-NEXT:    movb %dl, (%rcx)
+; BMI-NEXT:    # kill: def $al killed $al killed $eax
+; BMI-NEXT:    retq
+  %sub = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %a, i64 %b)
+  %ov = extractvalue {i64, i1} %sub, 1
+  %ov8 = zext i1 %ov to i8
+  %not = xor i8 %ov8, -1
+  store i8 %not, ptr %p
+  %bit = lshr i8 %c, 7
+  %r = and i8 %not, %bit
+  ret i8 %r
+}
