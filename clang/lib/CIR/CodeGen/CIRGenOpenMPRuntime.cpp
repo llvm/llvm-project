@@ -175,7 +175,7 @@ bool CIRGenOpenMPRuntime::markAsGlobalTarget(GlobalDecl gd) {
 
 bool CIRGenOpenMPRuntime::hasRequiresUnifiedSharedMemory() const {
   // OGCG also sets this from '#pragma omp requires unified_shared_memory'.
-  assert(!cir::MissingFeatures::openMP());
+  assert(!cir::MissingFeatures::openMPRequiresUnifiedSharedMemory());
   return cgm.getLangOpts().OpenMPForceUSM;
 }
 

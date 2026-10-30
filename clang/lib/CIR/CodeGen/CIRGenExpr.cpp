@@ -453,19 +453,24 @@ void CIRGenFunction::emitStoreThroughLValue(RValue src, LValue dst,
   emitStoreOfScalar(src.getValue(), dst, isInit);
 }
 
-static Address emitDeclTargetVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
-                                           const VarDecl *vd) {
+static std::optional<LValue> emitDeclTargetVarDeclLValue(CIRGenFunction &cgf,
+                                                         const Expr *e,
+                                                         const VarDecl *vd) {
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(vd);
-  // MT_Local, and MT_To/MT_Enter without unified memory, use direct access.
-  if (!res || *res == OMPDeclareTargetDeclAttr::MT_Local ||
-      ((*res == OMPDeclareTargetDeclAttr::MT_To ||
-        *res == OMPDeclareTargetDeclAttr::MT_Enter) &&
-       !cgf.cgm.getOpenMPRuntime().hasRequiresUnifiedSharedMemory()))
-    return Address::invalid();
+  if (!res)
+    return std::nullopt;
+  // MT_Local uses direct access.
+  if (*res == OMPDeclareTargetDeclAttr::MT_Local)
+    return std::nullopt;
+  // MT_To/MT_Enter without unified memory use direct access.
+  if ((*res == OMPDeclareTargetDeclAttr::MT_To ||
+       *res == OMPDeclareTargetDeclAttr::MT_Enter) &&
+      !cgf.cgm.getOpenMPRuntime().hasRequiresUnifiedSharedMemory())
+    return std::nullopt;
   cgf.cgm.errorNYI(e->getSourceRange(),
                    "emitDeclTargetVarDeclLValue: indirect access");
-  return Address::invalid();
+  return std::nullopt;
 }
 
 static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
@@ -479,9 +484,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   // Check if the variable is marked as declare target with link clause in
   // device codegen.
   if (cgf.getLangOpts().OpenMPIsTargetDevice) {
-    Address addr = emitDeclTargetVarDeclLValue(cgf, e, vd);
-    if (addr.isValid())
-      return cgf.makeAddrLValue(addr, t, AlignmentSource::Decl);
+    if (std::optional<LValue> lv = emitDeclTargetVarDeclLValue(cgf, e, vd))
+      return *lv;
   }
 
   // Traditional LLVM codegen handles thread local separately, CIR handles
