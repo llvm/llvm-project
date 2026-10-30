@@ -3390,18 +3390,15 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
-      // An output tied to a larger input has the input's type, and a mask
-      // register output ("k" on X86) is a vector of i1, so store only the
-      // destination's bits.
+      // The output's type may not be an integer: an output tied to a larger
+      // input has the input's type (e.g., a pointer), and a mask register
+      // output ("k" on X86) is a vector of i1. Convert it to an integer of the
+      // same size, then store only the destination's bits.
       llvm::Type *IntTy = llvm::IntegerType::get(CTX, Size);
-      if (auto *VT = dyn_cast<llvm::FixedVectorType>(Tmp->getType()))
-        Tmp = Builder.CreateBitCast(
-            Tmp, llvm::IntegerType::get(
-                     CTX, VT->getPrimitiveSizeInBits().getFixedValue()));
-      if (Tmp->getType()->isPointerTy())
-        Tmp = Builder.CreatePtrToInt(Tmp, IntTy);
-      else
-        Tmp = Builder.CreateTrunc(Tmp, IntTy);
+      uint64_t TmpSize = CGM.getDataLayout().getTypeSizeInBits(Tmp->getType());
+      Tmp = Builder.CreateBitOrPointerCast(
+          Tmp, llvm::IntegerType::get(CTX, (unsigned)TmpSize));
+      Tmp = Builder.CreateTrunc(Tmp, IntTy);
 
       // The store writes all of the destination's members at once, so it must
       // be allowed to alias an access to any of them. A TBAA access type must

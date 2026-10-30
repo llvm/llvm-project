@@ -57,8 +57,9 @@ void test_tied_int(struct C *p, int x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = call ptr asm "", "=r,0,~{dirflag},~{fpsr},~{flags}"(ptr [[TMP1]]) #[[ATTR1]], !srcloc [[META3:![0-9]+]]
-// CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i16
-// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
+// CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i16
+// CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP0]], align 1
 // CHECK-NEXT:    ret void
 //
 void test_tied_pointer(struct C *p, void *x) {
