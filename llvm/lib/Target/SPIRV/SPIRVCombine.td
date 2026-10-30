@@ -42,7 +42,7 @@ def matrix_multiply_lowering
           (match (int_matrix_multiply $dst, $a, $b, $m, $n, $k):$root),
           (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
 
-def lerp_pattern : GICombineRule<
+def lerp_lowering : GICombineRule<
   (defs root:$root),
   (match (wip_match_opcode G_FADD):$root,
          [{ return Helper.matchFAddToLerp(*${root}); }]),
