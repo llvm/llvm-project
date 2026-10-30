@@ -968,10 +968,10 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPSingleDefRecipe *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!vputils::doesGeneratePerAllLanes(&R))
+      auto *DefR = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!DefR || !vputils::doesGeneratePerAllLanes(DefR))
         continue;
 
-      auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
       if (DefR->user_empty()) {
         // Create single-scalar version of DefR for all lanes.

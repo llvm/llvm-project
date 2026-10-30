@@ -78,8 +78,8 @@ LLVM_ABI_FOR_TEST bool isUniformAcrossVFsAndUFs(const VPValue *V);
 /// Return true if \p V is elementwise, i.e. none of the lanes are permuted.
 bool isElementwise(const VPValue *V);
 
-/// Returns true if \p R produces scalar values for all VF lanes.
-bool doesGeneratePerAllLanes(const VPRecipeBase *R);
+/// Returns true if \p V produces scalar values for all VF lanes.
+bool doesGeneratePerAllLanes(const VPValue *V);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.

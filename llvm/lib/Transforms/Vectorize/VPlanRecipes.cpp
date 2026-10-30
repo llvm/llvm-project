@@ -733,7 +733,10 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
 
 bool VPInstruction::doesGeneratePerAllLanes() const {
   return Opcode == VPInstruction::Unpack ||
-         (Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this));
+         (Opcode == VPInstruction::PtrAdd &&
+          !vputils::onlyFirstLaneUsed(this)) ||
+         (Opcode == Instruction::ExtractValue &&
+          vputils::doesGeneratePerAllLanes(getOperand(0)));
 }
 
 bool VPInstruction::doesGenerateSingleScalar() const {
@@ -1810,6 +1813,8 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case Instruction::ExtractElement:
     return Op == getOperand(1);
+  case Instruction::ExtractValue:
+    return Op != getOperand(0);
   case Instruction::InsertElement:
     return Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::ExtractLastActive:

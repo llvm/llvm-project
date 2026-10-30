@@ -40,7 +40,6 @@ bool vputils::propagatesFirstLaneUse(const VPUser *U, const VPValue *Op) {
     return false;
   unsigned Opcode = VPI->getOpcode();
   switch (Opcode) {
-  case Instruction::ExtractValue:
   case Instruction::FCmp:
   case Instruction::ICmp:
   case Instruction::Select:
@@ -48,6 +47,8 @@ bool vputils::propagatesFirstLaneUse(const VPUser *U, const VPValue *Op) {
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return true;
+  case Instruction::ExtractValue:
+    return Op == VPI->getOperand(0);
   case VPInstruction::PtrAdd:
     return Op != VPI->getOperand(0);
   default:
@@ -463,6 +464,7 @@ static bool preservesUniformity(unsigned Opcode) {
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Select:
+  case Instruction::ExtractValue:
   case VPInstruction::Not:
   case VPInstruction::Broadcast:
   case VPInstruction::MaskedCond:
@@ -574,12 +576,12 @@ bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
       });
 }
 
-bool vputils::doesGeneratePerAllLanes(const VPRecipeBase *R) {
-  if (auto *RepR = dyn_cast<VPReplicateRecipe>(R))
+bool vputils::doesGeneratePerAllLanes(const VPValue *V) {
+  if (auto *RepR = dyn_cast<VPReplicateRecipe>(V))
     return RepR->doesGeneratePerAllLanes();
-  if (auto *VPI = dyn_cast<VPInstruction>(R))
+  if (auto *VPI = dyn_cast<VPInstruction>(V))
     return VPI->doesGeneratePerAllLanes();
-  if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(R))
+  if (auto *SIVSteps = dyn_cast<VPScalarIVStepsRecipe>(V))
     return SIVSteps->doesGeneratePerAllLanes();
   return false;
 }
