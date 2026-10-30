@@ -39,7 +39,7 @@ def OpA : NS_Op<"op_for_CPred_containing_multiple_same_placeholder", []> {
 // CHECK-LABEL: OpA::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
 // CHECK: for (auto v : valueGroup0) {
-// CHECK:   if (::mlir::failed([[$INTEGER_FLOAT_CONSTRAINT]]
+// CHECK:   if (::llvm::failed([[$INTEGER_FLOAT_CONSTRAINT]]
 
 def OpB : NS_Op<"op_for_And_PredOpTrait", [
     PredOpTrait<"both first and second holds",
@@ -130,7 +130,7 @@ def OpM : NS_Op<"op_for_AnyTensorOf", []> {
 // CHECK-LABEL: OpM::verify
 // CHECK: auto valueGroup0 = getODSOperands(0);
 // CHECK: for (auto v : valueGroup0) {
-// CHECK: if (::mlir::failed([[$TENSOR_INTEGER_FLOAT_CONSTRAINT]]
+// CHECK: if (::llvm::failed([[$TENSOR_INTEGER_FLOAT_CONSTRAINT]]
 
 def OpN : NS_Op<"op_for_StringEscaping", []> {
   let arguments = (ins

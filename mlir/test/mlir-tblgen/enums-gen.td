@@ -165,7 +165,7 @@ def MyNonQuotedPrintBitEnum
 // DEF:     } else {
 // DEF:       return parser.emitError(loc, "expected one of [none, tagged, Bit1, Bit2, Bit3, BitGroup] for Example new-style bit enum, got: ") << enumKeyword;
 // DEF:     }
-// DEF:   } while (::mlir::succeeded(parser.parseOptionalVerticalBar()));
+// DEF:   } while (::llvm::succeeded(parser.parseOptionalVerticalBar()));
 // DEF:   return flags;
 // DEF: }
 

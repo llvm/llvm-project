@@ -146,14 +146,14 @@ static const char *const valueRangeReturnCode = R"(
 /// {0}: Number of elements in the segment array
 static const char *const parseTextualSegmentSizeFormat = R"(
   size_t i = 0;
-  auto parseElem = [&]() -> ::mlir::ParseResult {
+  auto parseElem = [&]() -> ::llvm::ParseResult {
     if (i >= {0})
       return $_parser.emitError($_parser.getCurrentLocation(),
         "expected `]` after {0} segment sizes");
     if (failed($_parser.parseInteger($_storage[i])))
-      return ::mlir::failure();
+      return ::llvm::failure();
     i += 1;
-    return ::mlir::success();
+    return ::llvm::success();
   };
   if (failed($_parser.parseCommaSeparatedList(
       ::mlir::AsmParser::Delimeter::Square, parseElem)))
@@ -182,10 +182,10 @@ static const char *const readBytecodeSegmentSizeLegacy = R"(
   if ($_reader.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6) {
     auto &$_storage = prop.$_propName;
     ::mlir::DenseI32ArrayAttr attr;
-    if (::mlir::failed($_reader.readAttribute(attr))) return ::mlir::failure();
+    if (::llvm::failed($_reader.readAttribute(attr))) return ::llvm::failure();
     if (attr.size() > static_cast<int64_t>(sizeof($_storage) / sizeof(int32_t))) {
       $_reader.emitError("size mismatch for operand/result_segment_size");
-      return ::mlir::failure();
+      return ::llvm::failure();
     }
     ::llvm::copy(::llvm::ArrayRef<int32_t>(attr), $_storage.begin());
   }
@@ -420,7 +420,6 @@ private:
   uint32_t operandSegmentSizesLegacyIndex = 0;
   uint32_t resultSegmentSizesLegacyIndex = 0;
 };
-
 } // namespace
 
 void OpOrAdaptorHelper::computeAttrMetadata() {
@@ -771,7 +770,6 @@ private:
   // avoid duplicates.
   llvm::StringSet<> interfaceUsingNames;
 };
-
 } // namespace
 
 // Populate the format context `ctx` with substitutions of attributes, operands
@@ -851,8 +849,8 @@ static void genAttributeVerifier(
   // {1}: Attribute variable name.
   // {2}: Attribute name.
   const char *const verifyAttrUnique = R"(
-  if (::mlir::failed({0}(*this, {1}, "{2}")))
-    return ::mlir::failure();
+  if (::llvm::failed({0}(*this, {1}, "{2}")))
+    return ::llvm::failure();
 )";
 
   // Emit the verifier for the attribute.
@@ -930,8 +928,8 @@ static void genPropertyVerifier(
   // {1}: Property variable name in interface type.
   // {2}: Property name.
   const char *const verifyPropertyUniqued = R"(
-    if (::mlir::failed({0}(*this, {1}, "{2}")))
-      return ::mlir::failure();
+    if (::llvm::failed({0}(*this, {1}, "{2}")))
+      return ::llvm::failure();
 )";
 
   // Prefix variables with `tblgen_` to avoid hiding the attribute accessor.
@@ -1313,28 +1311,28 @@ void OpEmitter::genPropertiesSupport() {
   ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
   if (!dict) {
     emitError() << "expected DictionaryAttr to set properties";
-    return ::mlir::failure();
+    return ::llvm::failure();
   }
     )decl";
   const char *propFromAttrFmt = R"decl(
       auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-               ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
+               ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::llvm::LogicalResult {{
         {0}
       };
       {1};
 )decl";
   const char *attrGetNoDefaultFmt = R"decl(;
-      if (attr && ::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+      if (attr && ::llvm::failed(setFromAttr(prop.{0}, attr, [&]() {{
             return emitError() << "for `{0}`: ";
           })))
-        return ::mlir::failure();
+        return ::llvm::failure();
 )decl";
   const char *attrGetDefaultFmt = R"decl(;
       if (attr) {{
-        if (::mlir::failed(setFromAttr(prop.{0}, attr, [&]() {{
+        if (::llvm::failed(setFromAttr(prop.{0}, attr, [&]() {{
               return emitError() << "for `{0}`: ";
             })))
-          return ::mlir::failure();
+          return ::llvm::failure();
       } else {{
         prop.{0} = {1};
       }
@@ -1400,15 +1398,15 @@ void OpEmitter::genPropertiesSupport() {
       setPropMethod << formatv(R"decl(
   {{
     {1}
-    if (::mlir::failed(::mlir::detail::setAttributeProperty(
+    if (::llvm::failed(::mlir::detail::setAttributeProperty(
             prop.{0}, attr, "{0}", emitError)))
-      return ::mlir::failure();
+      return ::llvm::failure();
   }
 )decl",
                                name, getAttr);
     }
   }
-  setPropMethod << "  return ::mlir::success();\n";
+  setPropMethod << "  return ::llvm::success();\n";
 
   // Convert the attribute form to the property.
 
@@ -1598,14 +1596,14 @@ void OpEmitter::genPropertiesSupport() {
           << formatv(R"(
     {{
       ::mlir::Attribute attr = attrs.get({0}AttrName(opName));
-      if (attr && ::mlir::failed({1}(attr, "{2}", emitError)))
-        return ::mlir::failure();
+      if (attr && ::llvm::failed({1}(attr, "{2}", emitError)))
+        return ::llvm::failure();
     }
 )",
                      name, constraintFn, namedAttr->attrName);
     }
   }
-  verifyInherentAttrsMethod << "    return ::mlir::success();";
+  verifyInherentAttrsMethod << "    return ::llvm::success();";
 
   // Generate methods to interact with bytecode.
   genPropertiesSupportForBytecode(attrOrProperties);
@@ -1679,10 +1677,10 @@ void OpEmitter::genPropertiesSupportForBytecode(
     auto &propStorage = prop.{0};
     auto readProp = [&]() {
       {1};
-      return ::mlir::success();
+      return ::llvm::success();
     };
-    if (::mlir::failed(readProp()))
-      return ::mlir::failure();
+    if (::llvm::failed(readProp()))
+      return ::llvm::failure();
   }
 )",
           name,
@@ -1701,16 +1699,16 @@ void OpEmitter::genPropertiesSupportForBytecode(
     StringRef name = namedAttr->attrName;
     if (namedAttr->isRequired) {
       readPropertiesMethod << formatv(R"(
-  if (::mlir::failed(reader.readAttribute(prop.{0})))
-    return ::mlir::failure();
+  if (::llvm::failed(reader.readAttribute(prop.{0})))
+    return ::llvm::failure();
 )",
                                       name);
       writePropertiesMethod
           << formatv("  writer.writeAttribute(prop.{0});\n", name);
     } else {
       readPropertiesMethod << formatv(R"(
-  if (::mlir::failed(reader.readOptionalAttribute(prop.{0})))
-    return ::mlir::failure();
+  if (::llvm::failed(reader.readOptionalAttribute(prop.{0})))
+    return ::llvm::failure();
 )",
                                       name);
       writePropertiesMethod << formatv(R"(
@@ -1719,7 +1717,7 @@ void OpEmitter::genPropertiesSupportForBytecode(
                                        name);
     }
   }
-  readPropertiesMethod << "  return ::mlir::success();";
+  readPropertiesMethod << "  return ::llvm::success();";
 }
 
 void OpEmitter::genPropGetters() {
@@ -2511,7 +2509,7 @@ void OpEmitter::genSeparateArgParamBuilder() {
       // inferred automatically.
       body << formatv(R"(
         ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
-        if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+        if (::llvm::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
                       {1}.location, {1}.operands,
                       {1}.attributes.getDictionary({1}.getContext()),
                       {1}.getRawProperties(),
@@ -2778,7 +2776,7 @@ void OpEmitter::genInferredTypeCollectiveParamBuilder(
   // Result types
   body << formatv(R"(
   ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
-  if (::mlir::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
+  if (::llvm::succeeded({0}::inferReturnTypes(odsBuilder.getContext(),
           {1}.location, operands,
           {1}.attributes.getDictionary({1}.getContext()),
           {1}.getRawProperties(),
@@ -3670,7 +3668,7 @@ void OpEmitter::genTypeInterfaceMethods() {
   }
   if (maxAccessedIndex != -1) {
     body << "  if (operands.size() <= " << Twine(maxAccessedIndex) << ")\n";
-    body << "    return ::mlir::failure();\n";
+    body << "    return ::llvm::failure();\n";
   }
 
   // Process the type inference graph in topological order, starting from types
@@ -3706,7 +3704,7 @@ void OpEmitter::genTypeInterfaceMethods() {
                   "get(\""
                << attr->name << "\")));\n"
                << "  if (!odsInferredTypeAttr" << inferredTypeIdx
-               << ") return ::mlir::failure();\n";
+               << ") return ::llvm::failure();\n";
           typeStr =
               ("odsInferredTypeAttr" + Twine(inferredTypeIdx) + ".getType()")
                   .str();
@@ -3732,7 +3730,7 @@ void OpEmitter::genTypeInterfaceMethods() {
   for (auto [i, index] : llvm::enumerate(constructedIndices))
     body << "  inferredReturnTypes[" << i << "] = odsInferredType" << index
          << ";\n";
-  body << "  return ::mlir::success();";
+  body << "  return ::llvm::success();";
 }
 
 void OpEmitter::genParser() {
@@ -3746,7 +3744,7 @@ void OpEmitter::genParser() {
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
   paramList.emplace_back("::mlir::OperationState &", "result");
 
-  auto *method = opClass.declareStaticMethod("::mlir::ParseResult", "parse",
+  auto *method = opClass.declareStaticMethod("::llvm::ParseResult", "parse",
                                              std::move(paramList));
   ERROR_IF_PRUNED(method, "parse", op);
 }
@@ -3786,7 +3784,7 @@ void OpEmitter::genVerifier() {
   genRegionVerifier(implBody);
   genSuccessorVerifier(implBody);
 
-  implBody << "  return ::mlir::success();\n";
+  implBody << "  return ::llvm::success();\n";
 
   // TODO: Some places use the `verifyInvariants` to do operation verification.
   // This may not act as their expectation because this doesn't call any
@@ -3796,10 +3794,10 @@ void OpEmitter::genVerifier() {
   ERROR_IF_PRUNED(method, "verifyInvariants", op);
   auto &body = method->body();
   if (def.getValueAsBit("hasVerifier")) {
-    body << "  if(::mlir::succeeded(verifyInvariantsImpl()) && "
-            "::mlir::succeeded(verify()))\n";
-    body << "    return ::mlir::success();\n";
-    body << "  return ::mlir::failure();";
+    body << "  if(::llvm::succeeded(verifyInvariantsImpl()) && "
+            "::llvm::succeeded(verify()))\n";
+    body << "    return ::llvm::success();\n";
+    body << "  return ::llvm::failure();";
   } else {
     body << "  return verifyInvariantsImpl();";
   }
@@ -3838,8 +3836,8 @@ void OpEmitter::genOperandResultVerifier(MethodBody &body,
   // {2}: "operand" or "result"
   const char *const verifyValues = R"(
     for (auto v : valueGroup{0}) {
-      if (::mlir::failed({1}(*this, v.getType(), "{2}", index++)))
-        return ::mlir::failure();
+      if (::llvm::failed({1}(*this, v.getType(), "{2}", index++)))
+        return ::llvm::failure();
     }
 )";
 
@@ -3873,9 +3871,9 @@ void OpEmitter::genOperandResultVerifier(MethodBody &body,
       body << formatv(verifyOptional, staticValue.index(), valueKind);
     } else if (isVariadicOfVariadic) {
       body << formatv(
-          "    if (::mlir::failed(::mlir::OpTrait::impl::verifyValueSizeAttr("
+          "    if (::llvm::failed(::mlir::OpTrait::impl::verifyValueSizeAttr("
           "*this, \"{0}\", \"{1}\", valueGroup{2}.size())))\n"
-          "      return ::mlir::failure();\n",
+          "      return ::llvm::failure();\n",
           value.constraint.getVariadicOfVariadicSegmentSizeAttr(), value.name,
           staticValue.index());
     }
@@ -3901,8 +3899,8 @@ void OpEmitter::genRegionVerifier(MethodBody &body) {
   /// {3}: The region description.
   const char *const verifyRegion = R"(
     for (auto &region : {0})
-      if (::mlir::failed({1}(*this, region, "{2}", index++)))
-        return ::mlir::failure();
+      if (::llvm::failed({1}(*this, region, "{2}", index++)))
+        return ::llvm::failure();
 )";
   /// Get a single region.
   ///
@@ -3942,8 +3940,8 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
   // {2}: The successor's name.
   const char *const verifyVariadicSuccessor = R"(
     for (auto *successor : {0}())
-      if (::mlir::failed({1}(*this, successor, "{2}", index++)))
-        return ::mlir::failure();
+      if (::llvm::failed({1}(*this, successor, "{2}", index++)))
+        return ::llvm::failure();
 )";
   // Code to verify a single successor. The accessor returns a `Block *` by
   // value, which can't be wrapped in a `MutableArrayRef`, so verify it
@@ -3953,8 +3951,8 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
   // {1}: The successor constraint.
   // {2}: The successor's name.
   const char *const verifySingleSuccessor = R"(
-    if (::mlir::failed({1}(*this, {0}(), "{2}", index++)))
-      return ::mlir::failure();
+    if (::llvm::failed({1}(*this, {0}(), "{2}", index++)))
+      return ::llvm::failure();
 )";
 
   // If we have no successors, there is nothing more to do.
@@ -4554,7 +4552,7 @@ void OpOperandAdaptorEmitter::addVerification() {
   genPropertyVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
   genAttributeVerifier(emitHelper, verifyCtx, body, staticVerifierEmitter);
 
-  body << "  return ::mlir::success();";
+  body << "  return ::llvm::success();";
 }
 
 void OpOperandAdaptorEmitter::emitDecl(

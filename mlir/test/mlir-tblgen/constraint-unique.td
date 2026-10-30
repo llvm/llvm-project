@@ -118,38 +118,38 @@ def OpC : NS_Op<"op_c"> {
 /// Test that the uniqued constraints are being used.
 // CHECK-LABEL: OpA::verifyInvariantsImpl
 // CHECK:         auto [[$B_ATTR:.*b]] = getProperties().b;
-// CHECK:         if (::mlir::failed([[$A_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
-// CHECK-NEXT:      return ::mlir::failure();
+// CHECK:         if (::llvm::failed([[$A_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
+// CHECK-NEXT:      return ::llvm::failure();
 // CHECK:         auto [[$A_VALUE_GROUP:.*]] = getODSOperands(0);
 // CHECK:         for (auto [[$A_VALUE:.*]] : [[$A_VALUE_GROUP]])
-// CHECK-NEXT:      if (::mlir::failed([[$A_TYPE_CONSTRAINT]](*this, [[$A_VALUE]].getType(), "operand", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
+// CHECK-NEXT:      if (::llvm::failed([[$A_TYPE_CONSTRAINT]](*this, [[$A_VALUE]].getType(), "operand", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
 // CHECK:         auto [[$RET_VALUE_GROUP:.*]] = getODSResults(0);
 // CHECK:         for (auto [[$RET_VALUE:.*]] : [[$RET_VALUE_GROUP]])
-// CHECK-NEXT:      if (::mlir::failed([[$A_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
+// CHECK-NEXT:      if (::llvm::failed([[$A_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
 // CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
-// CHECK-NEXT:      if (::mlir::failed([[$A_REGION_CONSTRAINT]](*this, region, "d", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         if (::mlir::failed([[$A_SUCCESSOR_CONSTRAINT]](*this, getC(), "c", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
+// CHECK-NEXT:      if (::llvm::failed([[$A_REGION_CONSTRAINT]](*this, region, "d", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
+// CHECK:         if (::llvm::failed([[$A_SUCCESSOR_CONSTRAINT]](*this, getC(), "c", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
 
 /// Test that the op with the same predicates but different with descriptions
 /// uses the different constraints.
 // CHECK-LABEL: OpC::verifyInvariantsImpl
 // CHECK:         auto [[$B_ATTR:.*b]] = getProperties().b;
-// CHECK:         if (::mlir::failed([[$O_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
-// CHECK-NEXT:      return ::mlir::failure();
+// CHECK:         if (::llvm::failed([[$O_ATTR_CONSTRAINT]](*this, [[$B_ATTR]], "b")))
+// CHECK-NEXT:      return ::llvm::failure();
 // CHECK:         auto [[$A_VALUE_GROUP:.*]] = getODSOperands(0);
 // CHECK:         for (auto [[$A_VALUE:.*]] : [[$A_VALUE_GROUP]])
-// CHECK-NEXT:      if (::mlir::failed([[$O_TYPE_CONSTRAINT]](*this, [[$A_VALUE]].getType(), "operand", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
+// CHECK-NEXT:      if (::llvm::failed([[$O_TYPE_CONSTRAINT]](*this, [[$A_VALUE]].getType(), "operand", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
 // CHECK:         auto [[$RET_VALUE_GROUP:.*]] = getODSResults(0);
 // CHECK:         for (auto [[$RET_VALUE:.*]] : [[$RET_VALUE_GROUP]])
-// CHECK-NEXT:      if (::mlir::failed([[$O_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
+// CHECK-NEXT:      if (::llvm::failed([[$O_TYPE_CONSTRAINT]](*this, [[$RET_VALUE]].getType(), "result", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
 // CHECK:         for (auto &region : ::llvm::MutableArrayRef((*this)->getRegion(0)))
-// CHECK-NEXT:      if (::mlir::failed([[$O_REGION_CONSTRAINT]](*this, region, "d", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
-// CHECK:         if (::mlir::failed([[$O_SUCCESSOR_CONSTRAINT]](*this, getC(), "c", index++)))
-// CHECK-NEXT:        return ::mlir::failure();
+// CHECK-NEXT:      if (::llvm::failed([[$O_REGION_CONSTRAINT]](*this, region, "d", index++)))
+// CHECK-NEXT:        return ::llvm::failure();
+// CHECK:         if (::llvm::failed([[$O_SUCCESSOR_CONSTRAINT]](*this, getC(), "c", index++)))
+// CHECK-NEXT:        return ::llvm::failure();

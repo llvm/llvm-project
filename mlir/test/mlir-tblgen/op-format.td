@@ -65,7 +65,7 @@ def PropDictStrictInferredSegmentAttr : TestStrictPropertiesFormat_Op<[{
 // CHECK-SAME: be parsed from attr-dict when strict properties in assembly
 // CHECK-SAME: format is enabled");
 // CHECK-NOT: verifyInherentAttrs
-// CHECK: return ::mlir::success();
+// CHECK: return ::llvm::success();
 def AttrDictStrictInherentAttr : TestStrictPropertiesFormat_Op<[{
   $attr attr-dict
 }]>, Arguments<(ins I64Attr:$attr)>;
@@ -326,7 +326,7 @@ def LegacyUnquotedBitEnumOp : TestFormat_Op<"$attr attr-dict">,
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: OptionalGroupA::parse
-// CHECK: if (::mlir::succeeded(parser.parseOptionalQuestion())
+// CHECK: if (::llvm::succeeded(parser.parseOptionalQuestion())
 // CHECK-NEXT: else
 // CHECK: ::mlir::detail::parseOptionalOperandInto(parser, aOperands)
 // CHECK-LABEL: OptionalGroupA::print
@@ -339,7 +339,7 @@ def OptionalGroupA : TestFormat_Op<[{
 }]>, Arguments<(ins Optional<I1>:$a)>;
 
 // CHECK-LABEL: OptionalGroupB::parse
-// CHECK: if (::mlir::succeeded(parser.parseOptionalKeyword("foo")))
+// CHECK: if (::llvm::succeeded(parser.parseOptionalKeyword("foo")))
 // CHECK-NEXT: else
 // CHECK-NEXT: result.getOrAddProperties<OptionalGroupB::Properties>().a = parser.getBuilder().getUnitAttr()
 // CHECK: parser.parseKeyword("bar")
@@ -377,10 +377,10 @@ def OptionalGroupCPropDict : TestFormat_Op<[{
 // CHECK: if (auto optResult = [&]() -> ::mlir::OptionalParseResult {
 // CHECK:   auto odsResult = parseCustom(parser, aOperand, bOperand);
 // CHECK:   if (!odsResult.has_value()) return {};
-// CHECK:   if (::mlir::failed(*odsResult)) return ::mlir::failure();
-// CHECK:   return ::mlir::success();
-// CHECK: }(); optResult.has_value() && ::mlir::failed(*optResult)) {
-// CHECK:   return ::mlir::failure();
+// CHECK:   if (::llvm::failed(*odsResult)) return ::llvm::failure();
+// CHECK:   return ::llvm::success();
+// CHECK: }(); optResult.has_value() && ::llvm::failed(*optResult)) {
+// CHECK:   return ::llvm::failure();
 // CHECK: } else if (optResult.has_value()) {
 
 // CHECK-LABEL: OptionalGroupD::print
@@ -419,7 +419,7 @@ def PropDictSegmentSizesInferred : TestFormat_Op<[{
 // CHECK-NEXT: usedKeys.insert(operandSegmentSizesAttrName);
 // CHECK-NEXT: auto attr = dict.get(operandSegmentSizesAttrName);
 // CHECK-NEXT: if (!attr) {
-// CHECK: if (::mlir::failed(::mlir::convertFromAttribute(prop.operandSegmentSizes, attr,
+// CHECK: if (::llvm::failed(::mlir::convertFromAttribute(prop.operandSegmentSizes, attr,
 def PropDictSegmentSizesRequired : TestFormat_Op<[{
   `(` operands `)` `:` type(operands) prop-dict attr-dict
 }], [AttrSizedOperandSegments]>,
@@ -427,7 +427,7 @@ def PropDictSegmentSizesRequired : TestFormat_Op<[{
 
 // CHECK-LABEL: PropDictStrictInferredSegmentAttr::setPropertiesFromParsedAttr
 // CHECK-NOT: segment_sizes
-// CHECK: return ::mlir::success();
+// CHECK: return ::llvm::success();
 // CHECK-LABEL: PropDictStrictInferredSegmentAttr::print
 // CHECK: elidedProps.push_back("segment_sizes");
 

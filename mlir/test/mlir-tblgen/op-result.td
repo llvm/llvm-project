@@ -36,7 +36,7 @@ def OpB : NS_Op<"same_input_output_type_op", [SameOperandsAndResultType]> {
 // CHECK:   odsState.addTypes(y);
 // CHECK: void OpB::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::Value x)
 // CHECK:   ::llvm::SmallVector<::mlir::Type, 2> inferredReturnTypes;
-// CHECK:   if (::mlir::succeeded(OpB::inferReturnTypes(odsBuilder.getContext(),
+// CHECK:   if (::llvm::succeeded(OpB::inferReturnTypes(odsBuilder.getContext(),
 // CHECK:             odsState.location, odsState.operands,
 // CHECK:             odsState.attributes.getDictionary(odsState.getContext()),
 // CHECK:             odsState.regions, inferredReturnTypes)))
@@ -148,7 +148,7 @@ def OpL1 : NS_Op<"op_with_all_types_constraint",
 // CHECK-LABEL: LogicalResult OpL1::inferReturnTypes
 // CHECK-NOT: }
 // CHECK: if (operands.size() <= 0)
-// CHECK-NEXT: return ::mlir::failure();
+// CHECK-NEXT: return ::llvm::failure();
 // CHECK: ::mlir::Type odsInferredType0 = operands[0].getType();
 // CHECK: inferredReturnTypes[0] = odsInferredType0;
 
@@ -161,7 +161,7 @@ def OpL2 : NS_Op<"op_with_all_types_constraint",
 // CHECK-LABEL: LogicalResult OpL2::inferReturnTypes
 // CHECK-NOT: }
 // CHECK: if (operands.size() <= 2)
-// CHECK-NEXT: return ::mlir::failure();
+// CHECK-NEXT: return ::llvm::failure();
 // CHECK-NOT: if (operands.size() <= 0)
 // CHECK: ::mlir::Type odsInferredType0 = operands[2].getType();
 // CHECK: ::mlir::Type odsInferredType1 = operands[0].getType();
@@ -189,7 +189,7 @@ def OpL4 : NS_Op<"two_inference_edges", [
 
 // CHECK-LABEL: LogicalResult OpL4::inferReturnTypes
 // CHECK: if (operands.size() <= 0)
-// CHECK-NEXT: return ::mlir::failure();
+// CHECK-NEXT: return ::llvm::failure();
 // CHECK: odsInferredType0 = fromInput(operands[0].getType())
 // CHECK: odsInferredType1 = infer0(odsInferredType0)
 // CHECK: odsInferredType2 = infer1(odsInferredType1)

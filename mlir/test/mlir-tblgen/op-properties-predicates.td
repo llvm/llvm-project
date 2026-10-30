@@ -79,30 +79,30 @@ def OpWithPredicates : NS_Op<"op_with_predicates"> {
 // CHECK-LABEL: OpWithPredicates::verifyInvariantsImpl()
 // Note: for test readability, we capture [[maybe_unused]] into the variable maybe_unused
 // CHECK: [[maybe_unused:\[\[maybe_unused\]\]]] int64_t tblgen_scalar = this->getScalar();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1(*this, tblgen_scalar, "scalar")))
-// CHECK-NEXT:  return ::mlir::failure()
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1(*this, tblgen_scalar, "scalar")))
+// CHECK-NEXT:  return ::llvm::failure()
 
 // CHECK: [[maybe_unused]] std::optional<int64_t> tblgen_optional = this->getOptional();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates2(*this, tblgen_optional, "optional")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates2(*this, tblgen_optional, "optional")))
 
 // COM: The predicates for "scalar" and "defaulted" are uniqued
 // CHECK: [[maybe_unused]] int64_t tblgen_defaulted = this->getDefaulted();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1(*this, tblgen_defaulted, "defaulted")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates1(*this, tblgen_defaulted, "defaulted")))
 
 // CHECK: [[maybe_unused]] int64_t tblgen_moreConstrained = this->getMoreConstrained();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates3(*this, tblgen_moreConstrained, "moreConstrained")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates3(*this, tblgen_moreConstrained, "moreConstrained")))
 
 // CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_array = this->getArray();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates4(*this, tblgen_array, "array")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates4(*this, tblgen_array, "array")))
 
 // CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_nonEmptyUnconstrained = this->getNonEmptyUnconstrained();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates5(*this, tblgen_nonEmptyUnconstrained, "non_empty_unconstrained")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates5(*this, tblgen_nonEmptyUnconstrained, "non_empty_unconstrained")))
 
 // CHECK: [[maybe_unused]] ::llvm::ArrayRef<int64_t> tblgen_nonEmptyConstrained = this->getNonEmptyConstrained();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates6(*this, tblgen_nonEmptyConstrained, "non_empty_constrained")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates6(*this, tblgen_nonEmptyConstrained, "non_empty_constrained")))
 
 // CHECK: [[maybe_unused]] std::optional<::llvm::ArrayRef<int64_t>> tblgen_nonEmptyOptional = this->getNonEmptyOptional();
-// CHECK: if (::mlir::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates7(*this, tblgen_nonEmptyOptional, "non_empty_optional")))
+// CHECK: if (::llvm::failed(__mlir_ods_local_prop_constraint_op2Dproperties2Dpredicates7(*this, tblgen_nonEmptyOptional, "non_empty_optional")))
 
 // CHECK-NOT: int64_t tblgen_unconstrained
-// CHECK: return ::mlir::success();
+// CHECK: return ::llvm::success();

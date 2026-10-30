@@ -49,12 +49,12 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR:   if (odsParser.parseEqual())
 // ATTR:     return {};
 // ATTR:   _result_value = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
-// ATTR:   if (::mlir::failed(_result_value))
+// ATTR:   if (::llvm::failed(_result_value))
 // ATTR:     return {};
 // ATTR:   if (odsParser.parseComma())
 // ATTR:     return {};
 // ATTR:   _result_complex = ::parseAttrParamA(odsParser, odsType);
-// ATTR:   if (::mlir::failed(_result_complex))
+// ATTR:   if (::llvm::failed(_result_complex))
 // ATTR:     return {};
 // ATTR:   if (odsParser.parseRParen())
 // ATTR:     return {};
@@ -96,13 +96,13 @@ def AttrA : TestAttr<"TestA"> {
 // ATTR:     if (!_seen_v0 && _paramKey == "v0") {
 // ATTR:       _seen_v0 = true;
 // ATTR:       _result_v0 = ::parseAttrParamA(odsParser, odsType);
-// ATTR:       if (::mlir::failed(_result_v0))
+// ATTR:       if (::llvm::failed(_result_v0))
 // ATTR:         return {};
 // ATTR:     } else if (!_seen_v1 && _paramKey == "v1") {
 // ATTR:       _seen_v1 = true;
 // ATTR:       _result_v1 = odsType ? ::parseAttrWithType(odsParser, odsType) :
 // ATTR-SAME:                         ::parseAttrWithout(odsParser);
-// ATTR:       if (::mlir::failed(_result_v1))
+// ATTR:       if (::llvm::failed(_result_v1))
 // ATTR:         return {};
 // ATTR:     } else {
 // ATTR:       return {};
@@ -144,15 +144,15 @@ def AttrB : TestAttr<"TestB"> {
 
 // ATTR: ::mlir::Attribute TestFAttr::parse(::mlir::AsmParser &odsParser,
 // ATTR:                                    ::mlir::Type odsType) {
-// ATTR:   ::mlir::FailureOr<int> _result_v0;
-// ATTR:   ::mlir::FailureOr<int> _result_v1;
+// ATTR:   ::llvm::FailureOr<int> _result_v0;
+// ATTR:   ::llvm::FailureOr<int> _result_v1;
 // ATTR:   _result_v0 = ::mlir::FieldParser<int>::parse(odsParser);
-// ATTR:   if (::mlir::failed(_result_v0))
+// ATTR:   if (::llvm::failed(_result_v0))
 // ATTR:     return {};
 // ATTR:   if (odsParser.parseComma())
 // ATTR:     return {};
 // ATTR:   _result_v1 = ::mlir::FieldParser<int>::parse(odsParser);
-// ATTR:   if (::mlir::failed(_result_v1))
+// ATTR:   if (::llvm::failed(_result_v1))
 // ATTR:     return {};
 // ATTR:   return TestFAttr::get(odsParser.getContext(),
 // ATTR:     int((*_result_v0)),
@@ -241,7 +241,7 @@ def EnumAttrC : EnumAttr<Test_Dialect, TestStructEnum, "EnumAttrC">;
 // EnumAttr parameters in a struct use the underlying enum syntax rather than
 // the EnumAttr's assembly format.
 // ATTR-LABEL: AttrWithEnumAttrStructAttr::parse
-// ATTR: _result_required = [&]() -> ::mlir::FailureOr<::TestStructEnumAttr> {
+// ATTR: _result_required = [&]() -> ::llvm::FailureOr<::TestStructEnumAttr> {
 // ATTR-NEXT: auto odsEnumValue = ::mlir::FieldParser<::TestStructEnum>::parse(odsParser);
 // ATTR: return ::TestStructEnumAttr::get(odsParser.getContext(), *odsEnumValue);
 // ATTR-LABEL: AttrWithEnumAttrStructAttr::print
@@ -302,14 +302,14 @@ def AttrWithBitEnumAttrStruct : TestAttr<"AttrWithBitEnumAttrStruct"> {
 // TYPE:  if (odsParser.parseKeyword("bar"))
 // TYPE:    return {};
 // TYPE:  _result_value = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
-// TYPE:  if (::mlir::failed(_result_value))
+// TYPE:  if (::llvm::failed(_result_value))
 // TYPE:    return {};
 // TYPE:  bool _seen_complex = false;
 // TYPE:  const auto _loop_body = [&](::llvm::StringRef _paramKey) -> bool {
 // TYPE:    if (!_seen_complex && _paramKey == "complex") {
 // TYPE:      _seen_complex = true;
 // TYPE:      _result_complex = ::parseTypeParamC(odsParser);
-// TYPE:      if (::mlir::failed(_result_complex))
+// TYPE:      if (::llvm::failed(_result_complex))
 // TYPE:        return {};
 // TYPE:    } else {
 // TYPE:      return {};
@@ -356,7 +356,7 @@ def TypeA : TestType<"TestC"> {
 
 // TYPE: ::mlir::Type TestDType::parse(::mlir::AsmParser &odsParser) {
 // TYPE:   _result_v0 = ::parseTypeParamC(odsParser);
-// TYPE:   if (::mlir::failed(_result_v0))
+// TYPE:   if (::llvm::failed(_result_v0))
 // TYPE:     return {};
 // TYPE:   bool _seen_v1 = false;
 // TYPE:   bool _seen_v2 = false;
@@ -366,12 +366,12 @@ def TypeA : TestType<"TestC"> {
 // TYPE:     if (!_seen_v1 && _paramKey == "v1") {
 // TYPE:       _seen_v1 = true;
 // TYPE:       _result_v1 = someFcnCall();
-// TYPE:       if (::mlir::failed(_result_v1))
+// TYPE:       if (::llvm::failed(_result_v1))
 // TYPE:         return {};
 // TYPE:     } else if (!_seen_v2 && _paramKey == "v2") {
 // TYPE:       _seen_v2 = true;
 // TYPE:       _result_v2 = ::parseTypeParamC(odsParser);
-// TYPE:       if (::mlir::failed(_result_v2))
+// TYPE:       if (::llvm::failed(_result_v2))
 // TYPE:         return {};
 // TYPE:     } else  {
 // TYPE:       return {};
@@ -387,7 +387,7 @@ def TypeA : TestType<"TestC"> {
 // TYPE:       return {};
 // TYPE:   }
 // TYPE:   _result_v3 = someFcnCall();
-// TYPE:   if (::mlir::failed(_result_v3))
+// TYPE:   if (::llvm::failed(_result_v3))
 // TYPE:     return {};
 // TYPE:   return TestDType::get(odsParser.getContext(),
 // TYPE:                         TestParamC((*_result_v0)),
@@ -432,12 +432,12 @@ def TypeB : TestType<"TestD"> {
 // TYPE:     if (!_seen_v0 && _paramKey == "v0") {
 // TYPE:       _seen_v0 = true;
 // TYPE:       _result_v0 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
-// TYPE:       if (::mlir::failed(_result_v0))
+// TYPE:       if (::llvm::failed(_result_v0))
 // TYPE:         return {};
 // TYPE:     } else if (!_seen_v2 && _paramKey == "v2") {
 // TYPE:       _seen_v2 = true;
 // TYPE:       _result_v2 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
-// TYPE:       if (::mlir::failed(_result_v2))
+// TYPE:       if (::llvm::failed(_result_v2))
 // TYPE:         return {};
 // TYPE:     } else  {
 // TYPE:       return {};
@@ -460,12 +460,12 @@ def TypeB : TestType<"TestD"> {
 // TYPE:     if (!_seen_v1 && _paramKey == "v1") {
 // TYPE:       _seen_v1 = true;
 // TYPE:       _result_v1 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
-// TYPE:       if (::mlir::failed(_result_v1))
+// TYPE:       if (::llvm::failed(_result_v1))
 // TYPE:         return {};
 // TYPE:     } else if (!_seen_v3 && _paramKey == "v3") {
 // TYPE:       _seen_v3 = true;
 // TYPE:       _result_v3 = ::mlir::FieldParser<IntegerAttr>::parse(odsParser);
-// TYPE:       if (::mlir::failed(_result_v3))
+// TYPE:       if (::llvm::failed(_result_v3))
 // TYPE:         return {};
 // TYPE:     } else  {
 // TYPE:       return {};
@@ -526,9 +526,9 @@ def TypeD : TestType<"TestF"> {
 }
 
 // TYPE: ::mlir::Type TestGType::parse(::mlir::AsmParser &odsParser) {
-// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:   if (::llvm::failed(_result_a))
 // TYPE:     return {};
-// TYPE:   if (::mlir::succeeded(_result_a) && !((*_result_a) == int()))
+// TYPE:   if (::llvm::succeeded(_result_a) && !((*_result_a) == int()))
 // TYPE:     if (odsParser.parseComma())
 // TYPE:       return {};
 
@@ -567,11 +567,11 @@ def TypeF : TestType<"TestH"> {
 
 // TYPE: do {
 // TYPE:   _result_a = ::mlir::FieldParser<int>::parse(odsParser);
-// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:   if (::llvm::failed(_result_a))
 // TYPE:     return {};
 // TYPE:   if (odsParser.parseOptionalComma()) break;
 // TYPE:   _result_b = ::mlir::FieldParser<int>::parse(odsParser);
-// TYPE:   if (::mlir::failed(_result_b))
+// TYPE:   if (::llvm::failed(_result_b))
 // TYPE:     return {};
 // TYPE: } while(false);
 
@@ -586,12 +586,12 @@ def TypeG : TestType<"TestI"> {
 // TYPE:     if (odsParser.parseKeyword("x")) return {};
 // TYPE:   } else {
 // TYPE:     _result_b = ::mlir::FieldParser<int>::parse(odsParser);
-// TYPE:     if (::mlir::failed(_result_b))
+// TYPE:     if (::llvm::failed(_result_b))
 // TYPE:       return {};
 // TYPE:     if (odsParser.parseRParen()) return {};
 // TYPE:   }
 // TYPE:   _result_a = ::mlir::FieldParser<int>::parse(odsParser);
-// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:   if (::llvm::failed(_result_a))
 // TYPE:     return {};
 
 // TYPE: void TestJType::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -627,8 +627,8 @@ def TypeI : TestType<"TestK"> {
 // TYPE:   auto odsCustomLoc = odsParser.getCurrentLocation()
 // TYPE:   auto odsCustomResult = parseA(odsParser,
 // TYPE-NEXT: _result_a
-// TYPE:   if (::mlir::failed(odsCustomResult)) return {}
-// TYPE:   if (::mlir::failed(_result_a))
+// TYPE:   if (::llvm::failed(odsCustomResult)) return {}
+// TYPE:   if (::llvm::failed(_result_a))
 // TYPE-NEXT: odsParser.emitError(odsCustomLoc,
 // TYPE:   auto odsCustomResult = parseB(odsParser,
 // TYPE-NEXT: _result_b
@@ -719,9 +719,9 @@ def TypeN : TestType<"TestP"> {
 // TYPE: if (auto result = [&]() -> ::mlir::OptionalParseResult {
 // TYPE:     auto odsCustomResult = parseAB(odsParser
 // TYPE:     if (!odsCustomResult.has_value()) return {};
-// TYPE:     if (::mlir::failed(*odsCustomResult)) return ::mlir::failure();
-// TYPE:   return ::mlir::success();
-// TYPE: }(); result.has_value() && ::mlir::failed(*result)) {
+// TYPE:     if (::llvm::failed(*odsCustomResult)) return ::llvm::failure();
+// TYPE:   return ::llvm::success();
+// TYPE: }(); result.has_value() && ::llvm::failed(*result)) {
 // TYPE:   return {};
 // TYPE: } else if (result.has_value()) {
 // TYPE:   // Parse literal 'y'
@@ -738,17 +738,17 @@ def TypeO : TestType<"TestQ"> {
 // TYPE: ::llvm::LogicalResult TestPType::verifyInvariantsImpl(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::Type a) {
 // TYPE:   if (!(((a.isSignlessInteger(16))) || ((a.isSignlessInteger(32))))) {
 // TYPE:     emitError() << "failed to verify 'a': 16-bit signless integer or 32-bit signless integer";
-// TYPE:     return ::mlir::failure();
+// TYPE:     return ::llvm::failure();
 // TYPE:   }
-// TYPE:   return ::mlir::success();
+// TYPE:   return ::llvm::success();
 // TYPE: }
 
 // TYPE: ::llvm::LogicalResult TestPType::verifyInvariants(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::Type a) {
-// TYPE:   if (::mlir::failed(verifyInvariantsImpl(emitError, a)))
-// TYPE:     return ::mlir::failure();
-// TYPE:   if (::mlir::failed(verify(emitError, a)))
-// TYPE:     return ::mlir::failure();
-// TYPE:   return ::mlir::success();
+// TYPE:   if (::llvm::failed(verifyInvariantsImpl(emitError, a)))
+// TYPE:     return ::llvm::failure();
+// TYPE:   if (::llvm::failed(verify(emitError, a)))
+// TYPE:     return ::llvm::failure();
+// TYPE:   return ::llvm::success();
 // TYPE: }
 
 def TypeP : TestType<"TestP"> {
@@ -761,17 +761,17 @@ def TypeP : TestType<"TestP"> {
 // ATTR: ::llvm::LogicalResult TestRAttr::verifyInvariantsImpl(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::IntegerType a) {
 // ATTR:   if (!((a.isSignlessInteger(32)))) {
 // ATTR:     emitError() << "failed to verify 'a': 32-bit signless integer";
-// ATTR:     return ::mlir::failure();
+// ATTR:     return ::llvm::failure();
 // ATTR:   }
-// ATTR:   return ::mlir::success();
+// ATTR:   return ::llvm::success();
 // ATTR: }
 
 // ATTR: ::llvm::LogicalResult TestRAttr::verifyInvariants(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::IntegerType a) {
-// ATTR:   if (::mlir::failed(verifyInvariantsImpl(emitError, a)))
-// ATTR:     return ::mlir::failure();
-// ATTR:   if (::mlir::failed(verify(emitError, a)))
-// ATTR:     return ::mlir::failure();
-// ATTR:   return ::mlir::success();
+// ATTR:   if (::llvm::failed(verifyInvariantsImpl(emitError, a)))
+// ATTR:     return ::llvm::failure();
+// ATTR:   if (::llvm::failed(verify(emitError, a)))
+// ATTR:     return ::llvm::failure();
+// ATTR:   return ::llvm::success();
 // ATTR: }
 
 def AttrR : TestAttr<"TestR"> {
@@ -784,17 +784,17 @@ def AttrR : TestAttr<"TestR"> {
 // TYPE: ::llvm::LogicalResult TestSType::verifyInvariantsImpl(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::ArrayAttr a) {
 // TYPE:   if (!((::llvm::isa<::mlir::ArrayAttr>(a)))) {
 // TYPE:     emitError() << "failed to verify 'a': A collection of other Attribute values";
-// TYPE:     return ::mlir::failure();
+// TYPE:     return ::llvm::failure();
 // TYPE:   }
-// TYPE:   return ::mlir::success();
+// TYPE:   return ::llvm::success();
 // TYPE: }
 
 // TYPE: ::llvm::LogicalResult TestSType::verifyInvariants(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, ::mlir::ArrayAttr a) {
-// TYPE:   if (::mlir::failed(verifyInvariantsImpl(emitError, a)))
-// TYPE:     return ::mlir::failure();
-// TYPE:   if (::mlir::failed(verify(emitError, a)))
-// TYPE:     return ::mlir::failure();
-// TYPE:   return ::mlir::success();
+// TYPE:   if (::llvm::failed(verifyInvariantsImpl(emitError, a)))
+// TYPE:     return ::llvm::failure();
+// TYPE:   if (::llvm::failed(verify(emitError, a)))
+// TYPE:     return ::llvm::failure();
+// TYPE:   return ::llvm::success();
 // TYPE: }
 
 def TypeS : TestType<"TestS"> {
@@ -818,15 +818,15 @@ def TypeS : TestType<"TestS"> {
 // ATTR:        if (!_seen_v0 && _paramKey == "v0") {
 // ATTR:          _seen_v0 = true;
 // ATTR:          _result_v0 = ::parseAttrParamA(odsParser, odsType);
-// ATTR:          if (::mlir::failed(_result_v0))
+// ATTR:          if (::llvm::failed(_result_v0))
 // ATTR:            return {};
 // ATTR:        } else if (!_seen_v1 && _paramKey == "v1") {
 // ATTR:          _seen_v1 = true;
 // ATTR:          {
 // ATTR:            auto odsCustomResult = parseNestedCustom(odsParser,
 // ATTR-NEXT:         ::mlir::detail::unwrapForCustomParse(_result_v1));
-// ATTR:            if (::mlir::failed(odsCustomResult)) return {};
-// ATTR:            if (::mlir::failed(_result_v1)) {
+// ATTR:            if (::llvm::failed(odsCustomResult)) return {};
+// ATTR:            if (::llvm::failed(_result_v1)) {
 // ATTR:              odsParser.emitError(odsCustomLoc, "custom parser failed to parse parameter 'v1'");
 // ATTR:              return {};
 // ATTR:            }
@@ -834,7 +834,7 @@ def TypeS : TestType<"TestS"> {
 // ATTR:        } else if (!_seen_v2 && _paramKey == "v2") {
 // ATTR:          _seen_v2 = true;
 // ATTR:          _result_v2 = ::mlir::FieldParser<AttrParamB>::parse(odsParser);
-// ATTR:          if (::mlir::failed(_result_v2)) {
+// ATTR:          if (::llvm::failed(_result_v2)) {
 // ATTR:            odsParser.emitError(odsParser.getCurrentLocation(), "failed to parse AttrT parameter 'v2' which is to be a `AttrParamB`");
 // ATTR:            return {};
 // ATTR:          }
@@ -954,5 +954,5 @@ def AttrWithOptArrayRefInStruct : TestAttr<"AttrWithOptArrayRefInStruct"> {
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)
 // DEFAULT_TYPE_PARSER: auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
 // DEFAULT_TYPE_PARSER: if (parseResult.has_value()) {
-// DEFAULT_TYPE_PARSER:   if (::mlir::succeeded(parseResult.value()))
+// DEFAULT_TYPE_PARSER:   if (::llvm::succeeded(parseResult.value()))
 // DEFAULT_TYPE_PARSER:     return genType;
