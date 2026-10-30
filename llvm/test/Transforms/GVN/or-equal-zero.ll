@@ -24,8 +24,8 @@ define void @or_zero_operands(i32 noundef %x, i32 noundef %y) {
 ; CHECK:       [[BOTH_ZERO]]:
 ; CHECK-NEXT:    call void @foo(i1 [[X_NONZERO]])
 ; CHECK-NEXT:    call void @foo(i1 [[Y_NONZERO]])
-; CHECK-NEXT:    call void @bar(i32 [[X]])
-; CHECK-NEXT:    call void @bar(i32 [[Y]])
+; CHECK-NEXT:    call void @bar(i32 0)
+; CHECK-NEXT:    call void @bar(i32 0)
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[NOPE]]:
 ; CHECK-NEXT:    call void @foo(i1 [[EITHER_NONZERO]])
@@ -40,12 +40,10 @@ define void @or_zero_operands(i32 noundef %x, i32 noundef %y) {
 ; O3:       [[COMMON_RET:.*]]:
 ; O3-NEXT:    ret void
 ; O3:       [[BOTH_ZERO]]:
-; O3-NEXT:    [[X_NONZERO:%.*]] = icmp ne i32 [[X]], 0
-; O3-NEXT:    [[Y_NONZERO:%.*]] = icmp ne i32 [[Y]], 0
-; O3-NEXT:    tail call void @foo(i1 [[X_NONZERO]])
-; O3-NEXT:    tail call void @foo(i1 [[Y_NONZERO]])
-; O3-NEXT:    tail call void @bar(i32 [[X]])
-; O3-NEXT:    tail call void @bar(i32 [[Y]])
+; O3-NEXT:    tail call void @foo(i1 false)
+; O3-NEXT:    tail call void @foo(i1 false)
+; O3-NEXT:    tail call void @bar(i32 0)
+; O3-NEXT:    tail call void @bar(i32 0)
 ; O3-NEXT:    br label %[[COMMON_RET]]
 ; O3:       [[NOPE]]:
 ; O3-NEXT:    tail call void @foo(i1 true)
@@ -92,7 +90,7 @@ define void @load_or_zero_phi(ptr %size_ptr, ptr %out, i32 %extra) {
 ; CHECK-NEXT:    [[RELOADED:%.*]] = load i32, ptr [[SIZE_PTR]], align 4
 ; CHECK-NEXT:    br label %[[JOIN]]
 ; CHECK:       [[JOIN]]:
-; CHECK-NEXT:    [[READ_SIZE:%.*]] = phi i32 [ [[SIZE]], %[[EMPTY]] ], [ [[RELOADED]], %[[CLONE]] ]
+; CHECK-NEXT:    [[READ_SIZE:%.*]] = phi i32 [ 0, %[[EMPTY]] ], [ [[RELOADED]], %[[CLONE]] ]
 ; CHECK-NEXT:    [[NEEDS_READ:%.*]] = icmp ne i32 [[READ_SIZE]], 0
 ; CHECK-NEXT:    br i1 [[NEEDS_READ]], label %[[READ:.*]], label %[[SKIP:.*]]
 ; CHECK:       [[READ]]:
@@ -114,15 +112,12 @@ define void @load_or_zero_phi(ptr %size_ptr, ptr %out, i32 %extra) {
 ; O3:       [[CLONE]]:
 ; O3-NEXT:    tail call void @clone(ptr nonnull [[SIZE_PTR]], ptr [[OUT]])
 ; O3-NEXT:    [[RELOADED:%.*]] = load i32, ptr [[SIZE_PTR]], align 4
+; O3-NEXT:    [[NEEDS_READ_NOT:%.*]] = icmp eq i32 [[RELOADED]], 0
+; O3-NEXT:    br i1 [[NEEDS_READ_NOT]], label %[[JOIN]], label %[[READ:.*]]
+; O3:       [[READ]]:
+; O3-NEXT:    tail call void @read_data(i32 [[RELOADED]])
 ; O3-NEXT:    br label %[[JOIN]]
 ; O3:       [[JOIN]]:
-; O3-NEXT:    [[READ_SIZE:%.*]] = phi i32 [ [[SIZE]], %[[EMPTY]] ], [ [[RELOADED]], %[[CLONE]] ]
-; O3-NEXT:    [[NEEDS_READ_NOT:%.*]] = icmp eq i32 [[READ_SIZE]], 0
-; O3-NEXT:    br i1 [[NEEDS_READ_NOT]], label %[[SKIP:.*]], label %[[READ:.*]]
-; O3:       [[READ]]:
-; O3-NEXT:    tail call void @read_data(i32 [[READ_SIZE]])
-; O3-NEXT:    br label %[[SKIP]]
-; O3:       [[SKIP]]:
 ; O3-NEXT:    ret void
 ;
 entry:
