@@ -1,0 +1,66 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=amdgpu-sched-gpr -o - %s | FileCheck %s
+
+# The AMDGPUSchedGPR pass attaches exact register allocation hints (not
+# printed in MIR) and lowers each schedule pseudo to a plain COPY.
+
+---
+# CHECK-LABEL: name: lower_sched_vgpr_b32
+# CHECK: %1:vgpr_32 = COPY %0
+# CHECK-NOT: V_SCHEDULE_VGPR_B32
+name: lower_sched_vgpr_b32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = V_SCHEDULE_VGPR_B32 %0, 42, 1, implicit $exec
+    %2:vgpr_32 = V_ADD_U32_e32 1, %1, implicit $exec
+    $vgpr0 = COPY %2
+    SI_RETURN_TO_EPILOG $vgpr0
+...
+
+---
+# CHECK-LABEL: name: lower_sched_vgpr_b64
+# CHECK: %1:vreg_64_align2 = COPY %0
+# CHECK-NOT: V_SCHEDULE_VGPR_B64
+name: lower_sched_vgpr_b64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0_vgpr1
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vreg_64_align2 = V_SCHEDULE_VGPR_B64 %0, 100, 0, implicit $exec
+    $vgpr0_vgpr1 = COPY %1
+    SI_RETURN_TO_EPILOG $vgpr0_vgpr1
+...
+
+---
+# CHECK-LABEL: name: lower_sched_sgpr_b32
+# CHECK: %1:sgpr_32 = COPY %0
+# CHECK-NOT: S_SCHEDULE_SGPR_B32
+name: lower_sched_sgpr_b32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0
+    %0:sgpr_32 = COPY $sgpr0
+    %1:sgpr_32 = S_SCHEDULE_SGPR_B32 %0, 10, 1
+    %2:sgpr_32 = S_ADD_I32 %1, 1, implicit-def $scc
+    $sgpr0 = COPY %2
+    SI_RETURN_TO_EPILOG $sgpr0
+...
+
+---
+# CHECK-LABEL: name: lower_sched_sgpr_b64
+# CHECK: %1:sgpr_64 = COPY %0
+# CHECK-NOT: S_SCHEDULE_SGPR_B64
+name: lower_sched_sgpr_b64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    %0:sgpr_64 = COPY $sgpr0_sgpr1
+    %1:sgpr_64 = S_SCHEDULE_SGPR_B64 %0, 20, 0
+    $sgpr0_sgpr1 = COPY %1
+    SI_RETURN_TO_EPILOG $sgpr0_sgpr1
+...

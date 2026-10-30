@@ -4329,6 +4329,26 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     }
     return false;
   }
+  case AMDGPURI::VGPRRegHint:
+  case AMDGPURI::StrictVGPRRegHint:
+  case AMDGPURI::SGPRRegHint:
+  case AMDGPURI::StrictSGPRRegHint:
+  case AMDGPURI::AGPRRegHint:
+  case AMDGPURI::StrictAGPRRegHint: {
+    // Exact register preference from llvm.amdgcn.sched.{vgpr,sgpr,agpr}.
+    // The target HW register index is carried in Hint.second. Prefer the
+    // physreg whose HW index matches.
+    unsigned TargetIdx = Hint.second;
+    for (MCPhysReg PhysReg : Order) {
+      if (MRI.isReserved(PhysReg))
+        continue;
+      if (getHWRegIndex(PhysReg) == TargetIdx)
+        Hints.insert(PhysReg);
+    }
+    return Hint.first == AMDGPURI::StrictVGPRRegHint ||
+           Hint.first == AMDGPURI::StrictSGPRRegHint ||
+           Hint.first == AMDGPURI::StrictAGPRRegHint;
+  }
   default:
     return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
                                                      VRM);

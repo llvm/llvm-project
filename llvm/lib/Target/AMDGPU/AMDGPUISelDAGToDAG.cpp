@@ -3360,6 +3360,93 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_interp_p1_f16:
     SelectInterpP1F16(N);
     return;
+  case Intrinsic::amdgcn_sched_vgpr:
+  case Intrinsic::amdgcn_sched_sgpr:
+  case Intrinsic::amdgcn_sched_agpr: {
+    SDValue Src = N->getOperand(1);
+    auto *RegNumC = dyn_cast<ConstantSDNode>(N->getOperand(2));
+    auto *StrictC = dyn_cast<ConstantSDNode>(N->getOperand(3));
+    if (!RegNumC || !StrictC) {
+      SelectCode(N);
+      return;
+    }
+    unsigned Bits = N->getValueType(0).getSizeInBits();
+    unsigned PseudoOpc;
+    if (IntrID == Intrinsic::amdgcn_sched_vgpr) {
+      switch (Bits) {
+      case 32:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B32;
+        break;
+      case 64:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B64;
+        break;
+      case 128:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B128;
+        break;
+      case 256:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B256;
+        break;
+      case 512:
+        PseudoOpc = AMDGPU::V_SCHEDULE_VGPR_B512;
+        break;
+      default:
+        ReplaceUses(SDValue(N, 0), Src);
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+    } else if (IntrID == Intrinsic::amdgcn_sched_sgpr) {
+      switch (Bits) {
+      case 32:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B32;
+        break;
+      case 64:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B64;
+        break;
+      case 128:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B128;
+        break;
+      case 256:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B256;
+        break;
+      case 512:
+        PseudoOpc = AMDGPU::S_SCHEDULE_SGPR_B512;
+        break;
+      default:
+        ReplaceUses(SDValue(N, 0), Src);
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+    } else {
+      switch (Bits) {
+      case 32:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B32;
+        break;
+      case 64:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B64;
+        break;
+      case 128:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B128;
+        break;
+      case 256:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B256;
+        break;
+      case 512:
+        PseudoOpc = AMDGPU::A_SCHEDULE_AGPR_B512;
+        break;
+      default:
+        ReplaceUses(SDValue(N, 0), Src);
+        CurDAG->RemoveDeadNode(N);
+        return;
+      }
+    }
+    SDValue RegNumImm =
+        CurDAG->getTargetConstant(RegNumC->getZExtValue(), SDLoc(N), MVT::i32);
+    SDValue StrictImm =
+        CurDAG->getTargetConstant(StrictC->getZExtValue(), SDLoc(N), MVT::i32);
+    CurDAG->SelectNodeTo(N, PseudoOpc, N->getVTList(),
+                         {Src, RegNumImm, StrictImm});
+    return;
+  }
   case Intrinsic::amdgcn_permlane16_swap:
   case Intrinsic::amdgcn_permlane32_swap: {
     if ((IntrID == Intrinsic::amdgcn_permlane16_swap &&
