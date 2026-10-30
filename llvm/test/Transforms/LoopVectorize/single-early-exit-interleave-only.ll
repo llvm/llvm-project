@@ -80,18 +80,13 @@ define i32 @iv_used_in_exit_with_loads(ptr align 4 dereferenceable(128) %src) {
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[INDEX]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze i1 [[TMP8]]
-; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP12]], [[TMP13]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP13]], [[TMP13]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
@@ -102,17 +97,17 @@ define i32 @iv_used_in_exit_with_loads(ptr align 4 dereferenceable(128) %src) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp eq i1 [[TMP13]], false
 ; CHECK-NEXT:    [[TMP21:%.*]] = zext i1 [[TMP20]] to i64
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i64 1, [[TMP21]]
-; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i1 [[TMP12]], false
+; CHECK-NEXT:    [[TMP23:%.*]] = icmp eq i1 [[TMP13]], false
 ; CHECK-NEXT:    [[TMP24:%.*]] = zext i1 [[TMP23]] to i64
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 0, [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = icmp ne i64 [[TMP24]], 1
 ; CHECK-NEXT:    [[TMP27:%.*]] = select i1 [[TMP26]], i64 [[TMP25]], i64 [[TMP22]]
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[TMP27]] to i32
-; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[INDEX]], [[TMP28]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP0]], [[TMP28]]
 ; CHECK-NEXT:    br label %[[RETURN]]
 ; CHECK:       [[RETURN]]:
-; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i32 [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VECTOR_EARLY_EXIT]] ]
-; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i32 [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP29]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV1:%.*]] = phi i32 [ 32, %[[MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RES_IV2:%.*]] = phi i32 [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[RES_IV1]], [[RES_IV2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;

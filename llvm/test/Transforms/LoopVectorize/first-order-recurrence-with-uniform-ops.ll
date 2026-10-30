@@ -320,12 +320,13 @@ define i32 @uniform_widened_recurrence_resume(ptr %src, ptr %dst, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; UNROLL-NO-VF:       [[VECTOR_BODY]]:
 ; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; UNROLL-NO-VF-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP2]], %[[VECTOR_BODY]] ]
 ; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; UNROLL-NO-VF:       [[MIDDLE_BLOCK]]:
 ; UNROLL-NO-VF-NEXT:    store i8 0, ptr [[DST]], align 1, !alias.scope [[META10:![0-9]+]], !noalias [[META6]]
-; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP2]] to i8
+; UNROLL-NO-VF-NEXT:    [[TMP7:%.*]] = trunc i32 [[VECTOR_RECUR]] to i8
 ; UNROLL-NO-VF-NEXT:    [[TMP5:%.*]] = or i32 1, [[TMP1]]
 ; UNROLL-NO-VF-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
 ; UNROLL-NO-VF-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
@@ -348,7 +349,7 @@ define i32 @uniform_widened_recurrence_resume(ptr %src, ptr %dst, i64 %n) {
 ; UNROLL-NO-VF-NEXT:    br i1 [[ICMP]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
 ; UNROLL-NO-VF:       [[EXIT]]:
 ; UNROLL-NO-VF-NEXT:    [[OR_LCSSA:%.*]] = phi i32 [ [[OR]], %[[LOOP]] ], [ [[TMP5]], %[[MIDDLE_BLOCK]] ]
-; UNROLL-NO-VF-NEXT:    [[TRUNC_LCSSA:%.*]] = phi i8 [ [[TRUNC]], %[[LOOP]] ], [ [[TMP4]], %[[MIDDLE_BLOCK]] ]
+; UNROLL-NO-VF-NEXT:    [[TRUNC_LCSSA:%.*]] = phi i8 [ [[TRUNC]], %[[LOOP]] ], [ [[TMP7]], %[[MIDDLE_BLOCK]] ]
 ; UNROLL-NO-VF-NEXT:    [[EXT:%.*]] = zext i8 [[TRUNC_LCSSA]] to i32
 ; UNROLL-NO-VF-NEXT:    [[RES:%.*]] = add i32 [[OR_LCSSA]], [[EXT]]
 ; UNROLL-NO-VF-NEXT:    ret i32 [[RES]]
