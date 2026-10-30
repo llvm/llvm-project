@@ -543,3 +543,37 @@ cir.func @bitint_array_elements(%arr: !cir.ptr<!cir.array<!cir.int<s, 19, bitint
              {test.ptr = "db_plus_four"}
   cir.return
 }
+
+// -----
+
+// The member offset of cir.get_runtime_member is only known at run time, so
+// members of the same record may alias, but members of distinct records may
+// not.
+
+// CHECK-LABEL: Testing : "get_runtime_member_distinct_allocas"
+// CHECK-DAG: s1#0 <-> s2#0: NoAlias
+// CHECK-DAG: s1#0 <-> r1_a#0: MayAlias
+// CHECK-DAG: s1#0 <-> r1_b#0: MayAlias
+// CHECK-DAG: s1#0 <-> r2_a#0: NoAlias
+// CHECK-DAG: s2#0 <-> r1_a#0: NoAlias
+// CHECK-DAG: s2#0 <-> r1_b#0: NoAlias
+// CHECK-DAG: s2#0 <-> r2_a#0: MayAlias
+// CHECK-DAG: r1_a#0 <-> r1_b#0: MayAlias
+// CHECK-DAG: r1_a#0 <-> r2_a#0: NoAlias
+// CHECK-DAG: r1_b#0 <-> r2_a#0: NoAlias
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !s32i}>
+cir.func @get_runtime_member_distinct_allocas(
+    %ma: !cir.data_member<!s32i in !rec_S>,
+    %mb: !cir.data_member<!s32i in !rec_S>) {
+  %s1 = cir.alloca "s1" align(4) : !cir.ptr<!rec_S> {test.ptr = "s1"}
+  %s2 = cir.alloca "s2" align(4) : !cir.ptr<!rec_S> {test.ptr = "s2"}
+  %r1_a = cir.get_runtime_member %s1[%ma : !cir.data_member<!s32i in !rec_S>]
+            {test.ptr = "r1_a"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  %r1_b = cir.get_runtime_member %s1[%mb : !cir.data_member<!s32i in !rec_S>]
+            {test.ptr = "r1_b"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  %r2_a = cir.get_runtime_member %s2[%ma : !cir.data_member<!s32i in !rec_S>]
+            {test.ptr = "r2_a"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+  cir.return
+}

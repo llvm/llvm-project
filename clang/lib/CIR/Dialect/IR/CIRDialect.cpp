@@ -5865,6 +5865,34 @@ bool cir::StdFindOp::signatureMatches(mlir::TypeRange operands,
 }
 
 //===----------------------------------------------------------------------===//
+// ViewLikeOpInterface
+//===----------------------------------------------------------------------===//
+
+mlir::Value cir::PtrStrideOp::getViewSource() { return getBase(); }
+mlir::Value cir::GetMemberOp::getViewSource() { return getAddr(); }
+mlir::Value cir::GetElementOp::getViewSource() { return getBase(); }
+mlir::Value cir::GetRuntimeMemberOp::getViewSource() { return getAddr(); }
+mlir::Value cir::BaseClassAddrOp::getViewSource() { return getSrcAddr(); }
+mlir::Value cir::DerivedClassAddrOp::getViewSource() { return getSrcAddr(); }
+mlir::Value cir::ComplexRealPtrOp::getViewSource() { return getOperand(); }
+mlir::Value cir::ComplexImagPtrOp::getViewSource() { return getOperand(); }
+
+// The offset of these ops depends on runtime values or on the data layout.
+bool cir::PtrStrideOp::mayHaveNonZeroOffset() { return true; }
+bool cir::GetMemberOp::mayHaveNonZeroOffset() { return true; }
+bool cir::GetElementOp::mayHaveNonZeroOffset() { return true; }
+bool cir::GetRuntimeMemberOp::mayHaveNonZeroOffset() { return true; }
+bool cir::BaseClassAddrOp::mayHaveNonZeroOffset() {
+  return !getOffset().isZero();
+}
+bool cir::DerivedClassAddrOp::mayHaveNonZeroOffset() {
+  return !getOffset().isZero();
+}
+
+bool cir::ComplexRealPtrOp::mayHaveNonZeroOffset() { return false; }
+bool cir::ComplexImagPtrOp::mayHaveNonZeroOffset() { return true; }
+
+//===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
 
