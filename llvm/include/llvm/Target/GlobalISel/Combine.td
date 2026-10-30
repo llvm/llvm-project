@@ -1779,14 +1779,17 @@ def udiv_by_shifted_pow2 : GICombineRule<
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 // Convert signed division or remainder of nonnegative operands to unsigned.
-class signed_divrem_to_unsigned<Instruction opcode> : GICombineRule<
-  (defs root:$root, build_fn_matchinfo:$matchinfo),
-  (match (opcode $dst, $x, $y):$root,
-   [{ return Helper.matchSignedDivRemToUnsigned(*${root}, ${matchinfo}); }]),
-  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+class signed_divrem_to_unsigned<Instruction signedOpcode,
+                               Instruction unsignedOpcode> : GICombineRule<
+  (defs root:$root),
+  (match (signedOpcode $dst, $x, $y):$root,
+   [{ return Helper.matchSignedDivRemToUnsigned(*${root}); }]),
+  (apply (unsignedOpcode $dst, $x, $y, (MIFlags $root)))>;
 
-def sdiv_to_unsigned : signed_divrem_to_unsigned<G_SDIV>;
-def srem_to_unsigned : signed_divrem_to_unsigned<G_SREM>;
+// Fold (sdiv x, y) -> (udiv x, y) when both operands are nonnegative.
+def sdiv_to_unsigned : signed_divrem_to_unsigned<G_SDIV, G_UDIV>;
+// Fold (srem x, y) -> (urem x, y) when both operands are nonnegative.
+def srem_to_unsigned : signed_divrem_to_unsigned<G_SREM, G_UREM>;
 
 def intdiv_combines : GICombineGroup<[udiv_by_pow2, udiv_by_shifted_pow2,
                                       sdiv_by_pow2,
