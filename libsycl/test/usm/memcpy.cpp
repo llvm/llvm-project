@@ -126,5 +126,35 @@ int main() {
     });
   });
 
+  // copy takes (src, dest, count) in elements rather than memcpy's
+  // (dest, src, numBytes).
+  runTestsForMemCpyFunc<false>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        (void)Dep;
+        return Q.copy(Src, Dst, Bytes / sizeof(int));
+      });
+  runTestsForMemCpyFunc<true>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        return Q.copy(Src, Dst, Bytes / sizeof(int), Dep);
+      });
+  runTestsForMemCpyFunc<true>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        return Q.copy(Src, Dst, Bytes / sizeof(int), std::vector<event>({Dep}));
+      });
+  runTestsForMemCpyFunc<false>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        (void)Dep;
+        return Q.submit([&](sycl::handler &CGH) {
+          CGH.copy(Src, Dst, Bytes / sizeof(int));
+        });
+      });
+  runTestsForMemCpyFunc<true>(
+      [&](queue &Q, event Dep, int *Dst, const int *Src, std::size_t Bytes) {
+        return Q.submit([&](sycl::handler &CGH) {
+          CGH.depends_on(Dep);
+          CGH.copy(Src, Dst, Bytes / sizeof(int));
+        });
+      });
+
   return 0;
 }

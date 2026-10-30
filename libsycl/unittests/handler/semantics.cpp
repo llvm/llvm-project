@@ -168,6 +168,7 @@ TEST(Handler, QueueShortcutsCannotBeNested) {
   int Dst = 0;
   expectNestedQueueOpThrows(
       [&](queue &Q) { Q.memcpy(&Dst, &Src, sizeof(int)); });
+  expectNestedQueueOpThrows([&](queue &Q) { Q.copy(&Src, &Dst, 1); });
   expectNestedQueueOpThrows([&](queue &Q) { Q.memset(&Dst, 0, sizeof(int)); });
   expectNestedQueueOpThrows([&](queue &Q) { Q.prefetch(&Dst, sizeof(int)); });
   expectNestedQueueOpThrows([](queue &Q) {
