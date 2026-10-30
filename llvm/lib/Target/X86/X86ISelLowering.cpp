@@ -24615,8 +24615,8 @@ static SDValue incDecVectorConstant(SDValue V, SelectionDAG &DAG, bool IsInc,
     if (NSW && ((IsInc && EltC.isMaxSignedValue()) ||
                 (!IsInc && EltC.isMinSignedValue())))
       return SDValue();
-
-    NewVecC.push_back(EltC + (IsInc ? 1 : -1));
+    APInt NewEltC = EltC;
+    NewVecC.push_back(IsInc ? ++NewEltC : --NewEltC);
   }
   return getConstVector(NewVecC, VT, DAG, SDLoc(V));
 }
