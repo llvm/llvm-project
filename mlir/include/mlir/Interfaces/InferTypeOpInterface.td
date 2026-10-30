@@ -119,7 +119,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
       /*defaultImplementation=*/[{
         /// Returns whether two arrays are equal as strongest check for
         /// compatibility by default.
-        return lhs == rhs;
+        return llvm::equal(lhs, rhs);
       }]
     >,
   ];
