@@ -400,6 +400,8 @@ struct AssumeSimplify {
             CleanupToDo.insert(Assume);
             continue;
           }
+          if (bundleHasOffset(BOI))
+            continue;
           RetainedKnowledge RK =
             getKnowledgeFromBundle(cast<AssumeInst>(*Assume), BOI);
           if (auto *Arg = dyn_cast_or_null<Argument>(RK.WasOn)) {
@@ -408,22 +410,18 @@ struct AssumeSimplify {
               if (!Attribute::isIntAttrKind(RK.AttrKind) ||
                   Arg->getAttribute(RK.AttrKind).getValueAsInt() >=
                       RK.ArgValue) {
-                if (!bundleHasOffset(BOI)) {
-                  RemoveFromAssume();
-                  continue;
-                }
+                RemoveFromAssume();
+                continue;
               }
             if (isValidAssumeForContext(
                     Assume, &*F.getEntryBlock().getFirstInsertionPt()) ||
                 Assume == &*F.getEntryBlock().getFirstInsertionPt()) {
-              if (!bundleHasOffset(BOI)) {
-                if (HasSameKindAttr)
-                  Arg->removeAttr(RK.AttrKind);
-                Arg->addAttr(Attribute::get(C, RK.AttrKind, RK.ArgValue));
-                MadeChange = true;
-                RemoveFromAssume();
-                continue;
-              }
+              if (HasSameKindAttr)
+                Arg->removeAttr(RK.AttrKind);
+              Arg->addAttr(Attribute::get(C, RK.AttrKind, RK.ArgValue));
+              MadeChange = true;
+              RemoveFromAssume();
+              continue;
             }
           }
           auto &Lookup = Knowledge[{RK.WasOn, RK.AttrKind}];
@@ -431,13 +429,9 @@ struct AssumeSimplify {
             if (!isValidAssumeForContext(Elem.Assume, Assume, DT))
               continue;
             if (Elem.ArgValue >= RK.ArgValue) {
-              if (!bundleHasOffset(BOI)) {
-                RemoveFromAssume();
-                continue;
-              }
+              RemoveFromAssume();
+              continue;
             } else if (isValidAssumeForContext(Assume, Elem.Assume, DT)) {
-              if (bundleHasOffset(*Elem.BOI) || bundleHasOffset(BOI))
-                continue;
               Elem.Assume->op_begin()[Elem.BOI->Begin + ABA_Argument].set(
                   ConstantInt::get(Type::getInt64Ty(C), RK.ArgValue));
               MadeChange = true;

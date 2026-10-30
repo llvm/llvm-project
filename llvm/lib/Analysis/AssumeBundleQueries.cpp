@@ -58,6 +58,12 @@ void llvm::fillMapFromAssume(AssumeInst &Assume, RetainedKnowledgeMap &Result) {
     if (!CI)
       continue;
     uint64_t Val = CI->getZExtValue();
+    if (Key.second == Attribute::Alignment &&
+        bundleHasArgument(Bundles, ABA_Argument + 1)) {
+      auto *OffsetCI = dyn_cast<ConstantInt>(
+          getValueFromBundleOpInfo(Assume, Bundles, ABA_Argument + 1));
+      Val = MinAlign(Val, OffsetCI ? OffsetCI->getZExtValue() : 1);
+    }
     auto [It, Inserted] = Result[Key].try_emplace(&Assume);
     if (Inserted) {
       It->second = {Val, Val};

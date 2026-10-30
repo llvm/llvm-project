@@ -343,4 +343,18 @@ define void @test_align_with_offset(ptr %q) {
   ret void
 }
 
+define void @test_reverse_align_with_offset(ptr %q) {
+; CHECK-LABEL: define {{[^@]+}}@test_reverse_align_with_offset
+; CHECK-SAME: (ptr [[Q:%.*]]) {
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr [[Q]], i64 0
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8, i64 1) ]
+; CHECK-NEXT:    ret void
+;
+  %p = getelementptr i8, ptr %q, i64 0
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 4) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %p, i64 8, i64 1) ]
+  ret void
+}
+
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
