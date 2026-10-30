@@ -63,51 +63,51 @@ class unexpected {
                 "array type, a specialization of unexpected, or a cv-qualified type is ill-formed.");
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr unexpected(const unexpected&) = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr unexpected(unexpected&&)      = default;
+  constexpr unexpected(const unexpected&) = default;
+  constexpr unexpected(unexpected&&)      = default;
 
   template <class _Error = _Err>
     requires(!is_same_v<remove_cvref_t<_Error>, unexpected> && //
              !is_same_v<remove_cvref_t<_Error>, in_place_t> && //
              is_constructible_v<_Err, _Error>)
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit unexpected(_Error&& __error) //
-      noexcept(is_nothrow_constructible_v<_Err, _Error>)                // strengthened
+  constexpr explicit unexpected(_Error&& __error)        //
+      noexcept(is_nothrow_constructible_v<_Err, _Error>) // strengthened
       : __unex_(std::forward<_Error>(__error)) {}
 
   template <class... _Args>
     requires is_constructible_v<_Err, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit unexpected(in_place_t, _Args&&... __args) //
-      noexcept(is_nothrow_constructible_v<_Err, _Args...>)                           // strengthened
+  constexpr explicit unexpected(in_place_t, _Args&&... __args) //
+      noexcept(is_nothrow_constructible_v<_Err, _Args...>)     // strengthened
       : __unex_(std::forward<_Args>(__args)...) {}
 
   template <class _Up, class... _Args>
     requires is_constructible_v<_Err, initializer_list<_Up>&, _Args...>
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit unexpected(in_place_t, initializer_list<_Up> __il, _Args&&... __args) //
-      noexcept(is_nothrow_constructible_v<_Err, initializer_list<_Up>&, _Args...>) // strengthened
+  constexpr explicit unexpected(in_place_t, initializer_list<_Up> __il, _Args&&... __args) //
+      noexcept(is_nothrow_constructible_v<_Err, initializer_list<_Up>&, _Args...>)         // strengthened
       : __unex_(__il, std::forward<_Args>(__args)...) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr unexpected& operator=(const unexpected&) = default;
-  _LIBCPP_HIDE_FROM_ABI constexpr unexpected& operator=(unexpected&&)      = default;
+  constexpr unexpected& operator=(const unexpected&) = default;
+  constexpr unexpected& operator=(unexpected&&)      = default;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept { return __unex_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept { return __unex_; }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept { return std::move(__unex_); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept { return std::move(__unex_); }
+  [[nodiscard]] constexpr const _Err& error() const& noexcept { return __unex_; }
+  [[nodiscard]] constexpr _Err& error() & noexcept { return __unex_; }
+  [[nodiscard]] constexpr const _Err&& error() const&& noexcept { return std::move(__unex_); }
+  [[nodiscard]] constexpr _Err&& error() && noexcept { return std::move(__unex_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void swap(unexpected& __other) noexcept(is_nothrow_swappable_v<_Err>) {
+  constexpr void swap(unexpected& __other) noexcept(is_nothrow_swappable_v<_Err>) {
     static_assert(is_swappable_v<_Err>, "unexpected::swap requires is_swappable_v<E> to be true");
     using std::swap;
     swap(__unex_, __other.__unex_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void swap(unexpected& __x, unexpected& __y) noexcept(noexcept(__x.swap(__y)))
+  friend constexpr void swap(unexpected& __x, unexpected& __y) noexcept(noexcept(__x.swap(__y)))
     requires is_swappable_v<_Err>
   {
     __x.swap(__y);
   }
 
   template <class _Err2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const unexpected& __x, const unexpected<_Err2>& __y) {
+  friend constexpr bool operator==(const unexpected& __x, const unexpected<_Err2>& __y) {
     return __x.__unex_ == __y.error();
   }
 

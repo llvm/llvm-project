@@ -78,32 +78,24 @@ inline constexpr char32_t __replacement_character = U'\ufffd';
 // ignore the error status and always use the code point.
 inline constexpr __consume_result __consume_result_error{__replacement_character, __consume_result::__error};
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __is_high_surrogate(char32_t __value) {
-  return __value >= 0xd800 && __value <= 0xdbff;
-}
+[[nodiscard]] constexpr bool __is_high_surrogate(char32_t __value) { return __value >= 0xd800 && __value <= 0xdbff; }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool __is_low_surrogate(char32_t __value) {
-  return __value >= 0xdc00 && __value <= 0xdfff;
-}
+[[nodiscard]] constexpr bool __is_low_surrogate(char32_t __value) { return __value >= 0xdc00 && __value <= 0xdfff; }
 
 // https://www.unicode.org/glossary/#surrogate_code_point
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool __is_surrogate(char32_t __value) {
-  return __value >= 0xd800 && __value <= 0xdfff;
-}
+[[nodiscard]] inline constexpr bool __is_surrogate(char32_t __value) { return __value >= 0xd800 && __value <= 0xdfff; }
 
 // https://www.unicode.org/glossary/#code_point
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool __is_code_point(char32_t __value) {
-  return __value <= 0x10ffff;
-}
+[[nodiscard]] inline constexpr bool __is_code_point(char32_t __value) { return __value <= 0x10ffff; }
 
 // https://www.unicode.org/glossary/#unicode_scalar_value
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline constexpr bool __is_scalar_value(char32_t __value) {
+[[nodiscard]] inline constexpr bool __is_scalar_value(char32_t __value) {
   return __unicode::__is_code_point(__value) && !__unicode::__is_surrogate(__value);
 }
 
 template <class _Iterator>
   requires same_as<iter_value_t<_Iterator>, char>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __is_continuation(_Iterator __char, int __count) {
+constexpr bool __is_continuation(_Iterator __char, int __count) {
   do {
     if ((*__char & 0b1100'0000) != 0b1000'0000)
       return false;
@@ -126,11 +118,10 @@ class __code_point_view<char> {
   using _Iterator _LIBCPP_NODEBUG = basic_string_view<char>::const_iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __code_point_view(_Iterator __first, _Iterator __last)
-      : __first_(__first), __last_(__last) {}
+  constexpr explicit __code_point_view(_Iterator __first, _Iterator __last) : __first_(__first), __last_(__last) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const noexcept { return __first_ == __last_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __position() const noexcept { return __first_; }
+  constexpr bool __at_end() const noexcept { return __first_ == __last_; }
+  constexpr _Iterator __position() const noexcept { return __first_; }
 
   // https://www.unicode.org/versions/latest/ch03.pdf#G7404
   // Based on Table 3-7, Well-Formed UTF-8 Byte Sequences
@@ -154,7 +145,7 @@ public:
   // Unlike other parsers, these invalid entries are tested after decoding.
   // - The parser always needs to consume these code units
   // - The code is optimized for well-formed UTF-8
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __consume_result __consume() noexcept {
+  [[nodiscard]] constexpr __consume_result __consume() noexcept {
     _LIBCPP_ASSERT_INTERNAL(__first_ != __last_, "can't move beyond the end of input");
 
     // Based on the number of leading 1 bits the number of code units in the
@@ -236,13 +227,9 @@ private:
 };
 
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_HIDE_FROM_ABI constexpr bool __is_surrogate_pair_high(wchar_t __value) {
-  return __value >= 0xd800 && __value <= 0xdbff;
-}
+constexpr bool __is_surrogate_pair_high(wchar_t __value) { return __value >= 0xd800 && __value <= 0xdbff; }
 
-_LIBCPP_HIDE_FROM_ABI constexpr bool __is_surrogate_pair_low(wchar_t __value) {
-  return __value >= 0xdc00 && __value <= 0xdfff;
-}
+constexpr bool __is_surrogate_pair_low(wchar_t __value) { return __value >= 0xdc00 && __value <= 0xdfff; }
 
 /// This specialization depends on the size of wchar_t
 /// - 2 UTF-16 (for example Windows and AIX)
@@ -254,13 +241,12 @@ class __code_point_view<wchar_t> {
 public:
   static_assert(sizeof(wchar_t) == 2 || sizeof(wchar_t) == 4, "sizeof(wchar_t) has a not implemented value");
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __code_point_view(_Iterator __first, _Iterator __last)
-      : __first_(__first), __last_(__last) {}
+  constexpr explicit __code_point_view(_Iterator __first, _Iterator __last) : __first_(__first), __last_(__last) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __position() const noexcept { return __first_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const noexcept { return __first_ == __last_; }
+  constexpr _Iterator __position() const noexcept { return __first_; }
+  constexpr bool __at_end() const noexcept { return __first_ == __last_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __consume_result __consume() noexcept {
+  [[nodiscard]] constexpr __consume_result __consume() noexcept {
     _LIBCPP_ASSERT_INTERNAL(__first_ != __last_, "can't move beyond the end of input");
 
     char32_t __value = static_cast<char32_t>(*__first_++);
@@ -304,7 +290,7 @@ class __extended_grapheme_cluster_break {
   using __inCB_property _LIBCPP_NODEBUG = __indic_conjunct_break::__property;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __extended_grapheme_cluster_break(char32_t __first_code_point)
+  constexpr explicit __extended_grapheme_cluster_break(char32_t __first_code_point)
       : __prev_code_point_(__first_code_point),
         __prev_property_(__extended_grapheme_custer_property_boundary::__get_property(__first_code_point)) {
     // Initializes the active rule.
@@ -316,7 +302,7 @@ public:
       __active_rule_ = __rule::__GB9c_indic_conjunct_break;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(char32_t __next_code_point) {
+  [[nodiscard]] constexpr bool operator()(char32_t __next_code_point) {
     __EGC_property __next_property = __extended_grapheme_custer_property_boundary::__get_property(__next_code_point);
     bool __result                  = __evaluate(__next_code_point, __next_property);
     __prev_code_point_             = __next_code_point;
@@ -326,14 +312,13 @@ public:
 
   // The code point whose break propery are considered during the next
   // evaluation cyle.
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr char32_t __current_code_point() const { return __prev_code_point_; }
+  [[nodiscard]] constexpr char32_t __current_code_point() const { return __prev_code_point_; }
 
 private:
   // The naming of the identifiers matches the Unicode standard.
   // NOLINTBEGIN(readability-identifier-naming)
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  __evaluate(char32_t __next_code_point, __EGC_property __next_property) {
+  [[nodiscard]] constexpr bool __evaluate(char32_t __next_code_point, __EGC_property __next_property) {
     switch (__active_rule_) {
     case __rule::__none:
       return __evaluate_none(__next_code_point, __next_property);
@@ -347,7 +332,7 @@ private:
     __libcpp_unreachable();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __evaluate_none(char32_t __next_code_point, __EGC_property __next_property) {
+  constexpr bool __evaluate_none(char32_t __next_code_point, __EGC_property __next_property) {
     // *** Break at the start and end of text, unless the text is empty. ***
 
     _LIBCPP_ASSERT_INTERNAL(__prev_property_ != __EGC_property::__sot, "should be handled in the constructor"); // GB1
@@ -417,7 +402,7 @@ private:
     return true; // GB999
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
+  [[nodiscard]] constexpr bool
   __evaluate_GB9c_indic_conjunct_break(char32_t __next_code_point, __EGC_property __next_property) {
     __inCB_property __break = __indic_conjunct_break::__get_property(__next_code_point);
     if (__break == __inCB_property::__none) {
@@ -454,8 +439,7 @@ private:
     __libcpp_unreachable();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  __evaluate_GB11_emoji(char32_t __next_code_point, __EGC_property __next_property) {
+  [[nodiscard]] constexpr bool __evaluate_GB11_emoji(char32_t __next_code_point, __EGC_property __next_property) {
     switch (__GB11_emoji_state_) {
     case __GB11_emoji_state::__Extended_Pictographic:
       if (__next_property == __EGC_property::__Extend) {
@@ -484,7 +468,7 @@ private:
     __libcpp_unreachable();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
+  [[nodiscard]] constexpr bool
   __evaluate_GB12_GB13_regional_indicator(char32_t __next_code_point, __EGC_property __next_property) {
     __active_rule_ = __rule::__none;
     if (__next_property == __EGC_property::__Regional_Indicator)
@@ -530,7 +514,7 @@ class __extended_grapheme_cluster_view {
   using _Iterator _LIBCPP_NODEBUG = typename basic_string_view<_CharT>::const_iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __extended_grapheme_cluster_view(_Iterator __first, _Iterator __last)
+  constexpr explicit __extended_grapheme_cluster_view(_Iterator __first, _Iterator __last)
       : __code_point_view_(__first, __last), __at_break_(__code_point_view_.__consume().__code_point) {}
 
   struct __cluster {
@@ -547,7 +531,7 @@ public:
     _Iterator __last_;
   };
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __cluster __consume() {
+  [[nodiscard]] constexpr __cluster __consume() {
     char32_t __code_point = __at_break_.__current_code_point();
     _Iterator __position  = __code_point_view_.__position();
     while (!__code_point_view_.__at_end()) {
@@ -575,13 +559,12 @@ class __code_point_view {
   using _Iterator _LIBCPP_NODEBUG = typename basic_string_view<_CharT>::const_iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __code_point_view(_Iterator __first, _Iterator __last)
-      : __first_(__first), __last_(__last) {}
+  constexpr explicit __code_point_view(_Iterator __first, _Iterator __last) : __first_(__first), __last_(__last) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const noexcept { return __first_ == __last_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __position() const noexcept { return __first_; }
+  constexpr bool __at_end() const noexcept { return __first_ == __last_; }
+  constexpr _Iterator __position() const noexcept { return __first_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __consume_result __consume() noexcept {
+  [[nodiscard]] constexpr __consume_result __consume() noexcept {
     _LIBCPP_ASSERT_INTERNAL(__first_ != __last_, "can't move beyond the end of input");
     return {static_cast<char32_t>(*__first_++)};
   }

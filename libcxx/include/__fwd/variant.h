@@ -38,28 +38,28 @@ using variant_alternative_t = typename variant_alternative<_Ip, _Tp>::type;
 inline constexpr size_t variant_npos = static_cast<size_t>(-1);
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(variant<_Types...>&);
+constexpr variant_alternative_t<_Ip, variant<_Types...>>& get(variant<_Types...>&);
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(variant<_Types...>&&);
+constexpr variant_alternative_t<_Ip, variant<_Types...>>&& get(variant<_Types...>&&);
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const variant_alternative_t<_Ip, variant<_Types...>>& get(const variant<_Types...>&);
+constexpr const variant_alternative_t<_Ip, variant<_Types...>>& get(const variant<_Types...>&);
 
 template <size_t _Ip, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const variant_alternative_t<_Ip, variant<_Types...>>&& get(const variant<_Types...>&&);
+constexpr const variant_alternative_t<_Ip, variant<_Types...>>&& get(const variant<_Types...>&&);
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp& get(variant<_Types...>&);
+constexpr _Tp& get(variant<_Types...>&);
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp&& get(variant<_Types...>&&);
+constexpr _Tp&& get(variant<_Types...>&&);
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp& get(const variant<_Types...>&);
+constexpr const _Tp& get(const variant<_Types...>&);
 
 template <class _Tp, class... _Types>
-_LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& get(const variant<_Types...>&&);
+constexpr const _Tp&& get(const variant<_Types...>&&);
 
 _LIBCPP_END_NAMESPACE_STD
 

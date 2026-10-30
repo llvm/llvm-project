@@ -24,22 +24,22 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <__fmt_char_type _CharT, class _ParseContext>
-_LIBCPP_HIDE_FROM_ABI constexpr
+constexpr
     typename _ParseContext::iterator __formatter_bool_parse(__format_spec::__parser_data<_CharT>&, _ParseContext&);
 
 template <__fmt_char_type _CharT, class _FormatContext>
-_LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+typename _FormatContext::iterator
 __formatter_bool_format(bool __value, __format_spec::__parser_data<_CharT>, _FormatContext&);
 
 template <__fmt_char_type _CharT>
 struct formatter<bool, _CharT> {
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     return std::__formatter_bool_parse(__parser_, __ctx);
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(bool __value, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(bool __value, _FormatContext& __ctx) const {
     return std::__formatter_bool_format(__value, __parser_, __ctx);
   }
 
