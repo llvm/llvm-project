@@ -7318,6 +7318,12 @@ def mno_hexagon_hvx : Flag<["-"], "mno-hvx">,
 def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
   Group<m_hexagon_Features_HVX_Group>, HelpText<"Set Hexagon Vector Length">,
   Values<"64B,128B">;
+def mhexagon_hmx : Flag<["-"], "mhmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Enable Hexagon Matrix eXtensions (HMX)">;
+def mno_hexagon_hmx : Flag<["-"], "mno-hmx">,
+  Group<m_hexagon_Features_Group>,
+  HelpText<"Disable Hexagon Matrix eXtensions (HMX)">;
 def mhexagon_hvx_qfloat : Flag<["-"], "mhvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon HVX QFloat instructions">;
