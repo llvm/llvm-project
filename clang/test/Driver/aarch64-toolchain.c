@@ -16,7 +16,7 @@
 // LLD-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtbegin.o"
 // LLD-AARCH64-BAREMETAL: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1"
 // LLD-AARCH64-BAREMETAL: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf/lib"
-// LLD-AARCH64-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// LLD-AARCH64-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // LLD-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -35,7 +35,7 @@
 // C-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtbegin.o"
 // C-AARCH64-BAREMETAL: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1"
 // C-AARCH64-BAREMETAL: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf/lib"
-// C-AARCH64-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-AARCH64-BAREMETAL: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // C-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
@@ -52,7 +52,7 @@
 // C-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtbegin.o"
 // C-AARCH64-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1"
 // C-AARCH64-BAREMETAL-NOSYSROOT: "-L{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/../../../../aarch64-none-elf/lib"
-// C-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}.o" "--start-group" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// C-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}.o" "--start-group" "-lgcc" "--push-state" "--as-needed" "-lgcc_s" "--pop-state" "-lc" "-lgloss" "--end-group"
 // C-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
@@ -155,7 +155,7 @@
 
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}crt0.o"
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtbegin.o"
-// AARCH64-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins{{.*}}.a" "--as-needed" "-lunwind" "--no-as-needed" "-lc" "-lgloss" "--end-group"
+// AARCH64-BAREMETAL-UNWINDLIB: "--start-group" "{{.*}}libclang_rt.builtins{{.*}}.a" "--push-state" "--as-needed" "-lunwind" "--pop-state" "-lc" "-lgloss" "--end-group"
 // AARCH64-BAREMETAL-UNWINDLIB: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -static-pie -### %s -fuse-ld= \
