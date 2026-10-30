@@ -11,7 +11,7 @@
 define void @backdep_type_size_equivalence(ptr nocapture %vec, i64 %n) {
 ; CHECK-LABEL: 'backdep_type_size_equivalence'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 3200 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 100
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Forward:
 ; CHECK-NEXT:            %ld.f32 = load float, ptr %gep.iv, align 8 ->
