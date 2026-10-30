@@ -331,7 +331,6 @@ TEST_F(ScudoWrappersCTest, AlignedAlloc) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wnon-power-of-two-alignment"
 #endif
-
 }
 
 TEST_F(ScudoWrappersCDeathTest, Realloc) {
