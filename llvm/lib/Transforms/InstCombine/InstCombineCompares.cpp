@@ -2095,6 +2095,26 @@ static Value *foldICmpOrXorSubChain(ICmpInst &Cmp, BinaryOperator *Or,
   // (X1 != X2) || (X3 != X4) || (X5 != X6)
   SmallVector<std::pair<Value *, Value *>, 2> CmpValues;
   SmallVector<Value *, 16> WorkList(1, Or);
+  bool SawBorrowSub = false;
+
+  // Return true if `L - R` participates in a sub-with-borrow chain, i.e. its
+  // operands are also compared with an unsigned `icmp`. Folding such a
+  // subtraction away destroys the borrow chain and forces the backend to
+  // recompute the comparison with a longer setcc/cmov sequence.
+  auto HasBorrowICmpUser = [](Value *L, Value *R) {
+    for (User *U : L->users()) {
+      auto *IC = dyn_cast<ICmpInst>(U);
+      if (!IC || IC->use_empty())
+        continue;
+      if (IC->getPredicate() == ICmpInst::ICMP_ULT &&
+          IC->getOperand(0) == L && IC->getOperand(1) == R)
+        return true;
+      if (IC->getPredicate() == ICmpInst::ICMP_UGT &&
+          IC->getOperand(0) == R && IC->getOperand(1) == L)
+        return true;
+    }
+    return false;
+  };
 
   while (!WorkList.empty()) {
     auto MatchOrOperatorArgument = [&](Value *OrOperatorArgument) {
@@ -2108,6 +2128,10 @@ static Value *foldICmpOrXorSubChain(ICmpInst &Cmp, BinaryOperator *Or,
 
       if (match(OrOperatorArgument,
                 m_OneUse(m_Sub(m_Value(Lhs), m_Value(Rhs))))) {
+        if (HasBorrowICmpUser(Lhs, Rhs)) {
+          SawBorrowSub = true;
+          return;
+        }
         CmpValues.emplace_back(Lhs, Rhs);
         return;
       }
@@ -2125,6 +2149,8 @@ static Value *foldICmpOrXorSubChain(ICmpInst &Cmp, BinaryOperator *Or,
 
     MatchOrOperatorArgument(OrOperatorRhs);
     MatchOrOperatorArgument(OrOperatorLhs);
+    if (SawBorrowSub)
+      return nullptr;
   }
 
   ICmpInst::Predicate Pred = Cmp.getPredicate();
