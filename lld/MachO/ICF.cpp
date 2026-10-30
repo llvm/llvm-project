@@ -487,7 +487,7 @@ void ICF::run() {
 
   // When using safe_thunks, we need to create thunks for all keepUnique
   // functions that can be deduplicated. Since we're creating / adding new
-  // InputSections, we can't paralellize this.
+  // InputSections, we can't parallelize this.
   if (useSafeThunks)
     forEachClassRange(0, icfInputs.size(), [&](size_t begin, size_t end) {
       applySafeThunksToRange(begin, end);

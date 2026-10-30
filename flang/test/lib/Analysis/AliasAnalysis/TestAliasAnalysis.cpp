@@ -46,6 +46,10 @@ struct TestFIRAliasAnalysisModRefPass
       PassWrapper<TestFIRAliasAnalysisModRefPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFIRAliasAnalysisModRefPass)
 
+  TestFIRAliasAnalysisModRefPass() = default;
+  TestFIRAliasAnalysisModRefPass(const TestFIRAliasAnalysisModRefPass &pass)
+      : PassWrapper(pass) {}
+
   StringRef getArgument() const final {
     return "test-fir-alias-analysis-modref";
   }
@@ -54,9 +58,16 @@ struct TestFIRAliasAnalysisModRefPass
   }
   void runOnOperation() override {
     mlir::AliasAnalysis aliasAnalysis(getOperation());
-    aliasAnalysis.addAnalysisImplementation(fir::AliasAnalysis());
+    fir::AliasAnalysis firAliasAnalysis;
+    if (noSymbolLookups)
+      firAliasAnalysis.disableSymbolLookups();
+    aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
     runAliasAnalysisOnOperation(getOperation(), aliasAnalysis);
   }
+
+  Option<bool> noSymbolLookups{*this, "no-symbol-lookups",
+      llvm::cl::desc("Do not look up symbols in the enclosing symbol table"),
+      llvm::cl::init(false)};
 };
 //===----------------------------------------------------------------------===//
 // Testing ModRefResult with MemoryEffectOpInterface attached to fir.call
