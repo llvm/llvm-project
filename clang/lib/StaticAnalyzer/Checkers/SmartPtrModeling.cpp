@@ -837,6 +837,12 @@ void SmartPtrModeling::handleBoolConversion(const CallEvent &Call,
   const MemRegion *ThisRegion =
       cast<CXXInstanceCall>(&Call)->getCXXThisVal().getAsRegion();
 
+  // `getCXXThisVal` does not model explicit object parameters and
+  // in case of an explicit object parameter it can be null.
+  // TODO: Instead of the early return the checker should support
+  // explicit object parameters.
+  if (!ThisRegion)
+    return;
   QualType ThisType = cast<CXXMethodDecl>(Call.getDecl())->getThisType();
 
   SVal InnerPointerVal;
