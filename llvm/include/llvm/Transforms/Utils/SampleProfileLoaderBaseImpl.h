@@ -95,7 +95,14 @@ public:
                         ->getZExtValue();
         auto Hash = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))
                         ->getZExtValue();
-        GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
+        // Descriptors in older IR have no attributes operand.
+        uint64_t Attributes = 0;
+        if (MD->getNumOperands() > 3)
+          if (auto *AttrCI =
+                  mdconst::dyn_extract_or_null<ConstantInt>(MD->getOperand(3)))
+            Attributes = AttrCI->getZExtValue();
+        GUIDToProbeDescMap.try_emplace(
+            GUID, PseudoProbeDescriptor(GUID, Hash, Attributes));
       }
       for (const auto &Func : M) {
         if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
