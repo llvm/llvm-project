@@ -492,7 +492,16 @@ static std::string OverlapErrorMessage(const std::string &func) {
   return func + "-param-overlap";
 }
 
-TEST(AddressSanitizer, StrArgsOverlapTest) {
+// Waiting for https://github.com/llvm/llvm-project/pull/237000: Android 17
+// Bionic strcat calls strcpy@plt(dst + strlen(dst), src), triggering
+// strcpy-param-overlap on strcat(str, str + 10).
+#if defined(__ANDROID__)
+#  define MAYBE_StrArgsOverlapTest DISABLED_StrArgsOverlapTest
+#else
+#  define MAYBE_StrArgsOverlapTest StrArgsOverlapTest
+#endif
+
+TEST(AddressSanitizer, MAYBE_StrArgsOverlapTest) {
   size_t size = Ident(100);
   char *str = Ident((char*)malloc(size));
 
