@@ -74,6 +74,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -9133,9 +9134,14 @@ Expected<BitcodeLTOInfo> llvm::getBitcodeLTOInfo(MemoryBufferRef Buffer) {
 
 Expected<std::unique_ptr<ModuleSummaryIndex>>
 llvm::getModuleSummaryIndexForFile(StringRef Path,
-                                   bool IgnoreEmptyThinLTOIndexFile) {
+                                   bool IgnoreEmptyThinLTOIndexFile,
+                                   vfs::FileSystem *FS) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(Path);
+      FS && Path != "-"
+          ? FS->getBufferForFile(Path, /*FileSize=*/-1,
+                                 /*RequiresNullTerminator=*/true,
+                                 /*IsVolatile=*/false, /*IsText=*/false)
+          : MemoryBuffer::getFileOrSTDIN(Path);
   if (!FileOrErr)
     return errorCodeToError(FileOrErr.getError());
   if (IgnoreEmptyThinLTOIndexFile && !(*FileOrErr)->getBufferSize())

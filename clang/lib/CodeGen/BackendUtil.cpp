@@ -1335,7 +1335,7 @@ static void
 runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
                   llvm::Module *M, std::unique_ptr<raw_pwrite_stream> OS,
                   std::string SampleProfile, std::string ProfileRemapping,
-                  BackendAction Action) {
+                  BackendAction Action, llvm::vfs::FileSystem &FS) {
   DiagnosticsEngine &Diags = CI.getDiagnostics();
   const auto &CGOpts = CI.getCodeGenOpts();
   const auto &TOpts = CI.getTargetOpts();
@@ -1446,7 +1446,7 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
           Conf, -1, AddStream, *M, *CombinedIndex, ImportList,
           ModuleToDefinedGVSummaries[M->getModuleIdentifier()],
           /*ModuleMap=*/nullptr, Conf.CodeGenOnly, /*BitcodeLibFuncs=*/{},
-          /*IRAddStream=*/nullptr, CGOpts.CmdArgs)) {
+          /*IRAddStream=*/nullptr, CGOpts.CmdArgs, &FS)) {
     handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
       errs() << "Error running ThinLTO backend: " << EIB.message() << '\n';
     });
@@ -1556,7 +1556,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
     std::unique_ptr<ModuleSummaryIndex> CombinedIndex;
     if (Error E = llvm::getModuleSummaryIndexForFile(
                       CGOpts.ThinLTOIndexFile,
-                      /*IgnoreEmptyThinLTOIndexFile*/ true)
+                      /*IgnoreEmptyThinLTOIndexFile*/ true, VFS.get())
                       .moveInto(CombinedIndex)) {
       logAllUnhandledErrors(std::move(E), errs(),
                             "Error loading index file '" +
@@ -1571,7 +1571,7 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
       if (!CombinedIndex->skipModuleByDistributedBackend()) {
         runThinLTOBackend(CI, CombinedIndex.get(), M, std::move(OS),
                           CGOpts.SampleProfileFile, CGOpts.ProfileRemappingFile,
-                          Action);
+                          Action, *VFS);
         return;
       }
       // Distributed indexing detected that nothing from the module is needed

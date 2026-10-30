@@ -455,6 +455,12 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
         Bm->parseModule(*VMContext);
     if (!MOrErr)
       return DiagErrors(MOrErr.takeError());
+    // Set module identifier to the command-line path.
+    // The ThinLTO index identifies modules by their command-line paths, a VFS
+    // overlay can change this module's identifier, and then it cannot be found
+    // in the index.
+    if (getCurrentInput().isFile() && getCurrentFile() != "-")
+      (*MOrErr)->setModuleIdentifier(getCurrentFile());
     return std::move(*MOrErr);
   }
 
