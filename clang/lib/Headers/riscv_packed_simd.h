@@ -179,6 +179,24 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __builtin_elementwise_fshr(__rs1, __rd, (ty)__shamt);               \
   }
 
+#define __packed_slideupx(name, ty, bits_ty, log2_elt_bits)                    \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __rs2) {     \
+    bits_ty __bits = __builtin_elementwise_fshl(                               \
+        __builtin_bit_cast(bits_ty, __rd), __builtin_bit_cast(bits_ty, __rs1), \
+        (bits_ty)__rs2 << (log2_elt_bits));                                    \
+    return __builtin_bit_cast(ty, __bits);                                     \
+  }
+
+#define __packed_slidedownx(name, ty, bits_ty, log2_elt_bits)                  \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __rs2) {     \
+    bits_ty __bits = __builtin_elementwise_fshr(                               \
+        __builtin_bit_cast(bits_ty, __rs1), __builtin_bit_cast(bits_ty, __rd), \
+        (bits_ty)__rs2 << (log2_elt_bits));                                    \
+    return __builtin_bit_cast(ty, __bits);                                     \
+  }
+
 #define __packed_widen_convert(name, rty, ty)                                  \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_convertvector(__rs1, rty);                                \
@@ -1473,6 +1491,30 @@ __packed_slide1(pslide1down_u16x4, uint16x4_t, uint16_t, 1, 2, 3, 4)
 __packed_slide1(pslide1down_i32x2, int32x2_t, int32_t, 1, 2)
 __packed_slide1(pslide1down_u32x2, uint32x2_t, uint32_t, 1, 2)
 
+/* Packed Slide (32-bit) */
+__packed_slideupx(pslideupx_i8x4, int8x4_t, uint32_t, 3)
+__packed_slideupx(pslideupx_u8x4, uint8x4_t, uint32_t, 3)
+__packed_slideupx(pslideupx_i16x2, int16x2_t, uint32_t, 4)
+__packed_slideupx(pslideupx_u16x2, uint16x2_t, uint32_t, 4)
+__packed_slidedownx(pslidedownx_i8x4, int8x4_t, uint32_t, 3)
+__packed_slidedownx(pslidedownx_u8x4, uint8x4_t, uint32_t, 3)
+__packed_slidedownx(pslidedownx_i16x2, int16x2_t, uint32_t, 4)
+__packed_slidedownx(pslidedownx_u16x2, uint16x2_t, uint32_t, 4)
+
+/* Packed Slide (64-bit) */
+__packed_slideupx(pslideupx_i8x8, int8x8_t, uint64_t, 3)
+__packed_slideupx(pslideupx_u8x8, uint8x8_t, uint64_t, 3)
+__packed_slideupx(pslideupx_i16x4, int16x4_t, uint64_t, 4)
+__packed_slideupx(pslideupx_u16x4, uint16x4_t, uint64_t, 4)
+__packed_slideupx(pslideupx_i32x2, int32x2_t, uint64_t, 5)
+__packed_slideupx(pslideupx_u32x2, uint32x2_t, uint64_t, 5)
+__packed_slidedownx(pslidedownx_i8x8, int8x8_t, uint64_t, 3)
+__packed_slidedownx(pslidedownx_u8x8, uint8x8_t, uint64_t, 3)
+__packed_slidedownx(pslidedownx_i16x4, int16x4_t, uint64_t, 4)
+__packed_slidedownx(pslidedownx_u16x4, uint16x4_t, uint64_t, 4)
+__packed_slidedownx(pslidedownx_i32x2, int32x2_t, uint64_t, 5)
+__packed_slidedownx(pslidedownx_u32x2, uint32x2_t, uint64_t, 5)
+
 /* Packed Subvector Extract */
 __packed_subvector_extract8(pget_i8x8_i8x4, int8x4_t, int8x8_t)
 __packed_subvector_extract8(pget_u8x8_u8x4, uint8x4_t, uint8x8_t)
@@ -1674,6 +1716,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_cls
 #undef __packed_slx
 #undef __packed_srx
+#undef __packed_slideupx
+#undef __packed_slidedownx
 #undef __packed_widen_convert
 #undef __packed_widen_binary_op
 #undef __packed_widen_binary_acc_op

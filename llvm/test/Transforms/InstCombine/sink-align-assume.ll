@@ -42,8 +42,7 @@ define void @test_sink_some_align_assumes(ptr %p, i32 %offset, i1 %cond) {
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[OFFSET]] to i64
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[P]], i64 [[TMP0]]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i32 8) ]
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i32 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[GEP]], i32 8), "align"(ptr [[GEP]], i32 16) ]
 ; CHECK-NEXT:    store i8 0, ptr [[GEP]], align 8
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[ELSE]]:

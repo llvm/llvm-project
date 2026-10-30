@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -run-pass=pipeliner -debug-only=pipeliner -aarch64-enable-pipeliner -pipeliner-mve-cg %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64 -run-pass=pipeliner -debug-only=pipeliner -enable-pipeliner -pipeliner-mve-cg %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
 # Test a case where fenv is enabled, there are instructions that may raise a

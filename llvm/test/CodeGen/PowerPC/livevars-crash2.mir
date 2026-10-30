@@ -106,17 +106,17 @@ body:             |
     %2:f4rc = COPY killed $f3
     %1:f4rc = COPY killed $f2
     %0:f4rc = COPY killed $f1
-    %6:crrc = FCMPUS killed %2, killed %3
-    %7:crbitrc = COPY killed %6.sub_eq
-    BC killed %7, %bb.2
+    %6:crrc = FCMPUS %2, %3
+    %7:crbitrc = COPY %6.sub_eq
+    BC %7, %bb.2
     B %bb.1
 
   bb.1.entry:
     successors: %bb.2(0x2aaaaaab), %bb.3(0x55555555)
 
-    %8:crrc = FCMPUS killed %0, killed %1
-    %9:crbitrc = COPY killed %8.sub_eq
-    BC killed %9, %bb.3
+    %8:crrc = FCMPUS %0, %1
+    %9:crbitrc = COPY %8.sub_eq
+    BC %9, %bb.3
 
   bb.2.entry:
     successors: %bb.3(0x80000000)
@@ -124,7 +124,7 @@ body:             |
 
   bb.3.entry:
     %11:f4rc = PHI %5, %bb.2, %4, %bb.1
-    $f1 = COPY killed %11
+    $f1 = COPY %11
     BLR8 implicit $lr8, implicit $rm, implicit killed $f1
 
 ...
@@ -229,26 +229,26 @@ body:             |
 
     %1:g8rc_and_g8rc_nox0 = PHI %0, %bb.0, %2, %bb.1, %3, %bb.3, %2, %bb.2
     %5:gprc = LBZ 0, %1 :: (load (s8) from %ir.0)
-    %6:crrc = CMPWI killed %5, 0
-    %7:crbitrc = COPY killed %6.sub_eq
+    %6:crrc = CMPWI %5, 0
+    %7:crbitrc = COPY %6.sub_eq
     %2:g8rc = nuw ADDI8 %1, 1
     STD %2, 0, %4 :: (store (s64) into %ir.p)
     %8:gprc = LBZ 1, %1 :: (load (s8) from %ir.incdec.ptr)
-    BCn killed %7, %bb.1
+    BCn %7, %bb.1
     B %bb.2
 
   bb.2.loop:
     successors: %bb.3(0x55555555), %bb.1(0x2aaaaaab)
 
-    %9:crrc = CMPWI killed %8, 0
-    %10:crbitrc = COPY killed %9.sub_eq
-    BC killed %10, %bb.1
+    %9:crrc = CMPWI %8, 0
+    %10:crbitrc = COPY %9.sub_eq
+    BC %10, %bb.1
     B %bb.3
 
   bb.3.if.then3:
     successors: %bb.1(0x80000000)
 
-    %3:g8rc = nuw ADDI8 killed %1, 2
+    %3:g8rc = nuw ADDI8 %1, 2
     STD %3, 0, %4 :: (store (s64) into %ir.p)
     B %bb.1
 

@@ -115,31 +115,37 @@ getSymbolStrings(Ctx &ctx, ArrayRef<Defined *> syms) {
 // both in input file and output file. Such pieces are squashed before
 // being displayed to make output compact.
 static void printEhFrame(Ctx &ctx, raw_ostream &os, const EhFrameSection *sec) {
-  std::vector<EhSectionPiece> pieces;
-
-  auto add = [&](const EhSectionPiece &p) {
+  struct Piece {
+    const EhInputSection *sec;
+    uint64_t inputOff, outputOff, size;
+  };
+  SmallVector<Piece, 0> pieces;
+  auto add = [&](const EhInputSection *s, const EhSectionPiece &p) {
+    if (p.outputOff == -1)
+      return;
     // If P is adjacent to Last, squash the two.
     if (!pieces.empty()) {
-      EhSectionPiece &last = pieces.back();
-      if (last.sec == p.sec && last.inputOff + last.size == p.inputOff &&
-          last.outputOff + last.size == (unsigned)p.outputOff) {
+      Piece &last = pieces.back();
+      if (last.sec == s && last.inputOff + last.size == p.inputOff &&
+          last.outputOff + last.size == uint64_t(p.outputOff)) {
         last.size += p.size;
         return;
       }
     }
-    pieces.push_back(p);
+    pieces.push_back({s, p.inputOff, uint64_t(p.outputOff), p.size});
   };
 
-  // Gather section pieces.
-  for (const CieRecord *rec : sec->getCieRecords()) {
-    add(*rec->cie);
-    for (const EhSectionPiece *fde : rec->fdes)
-      add(*fde);
-  }
+  // Gather section pieces in output order.
+  for (const EhInputSection *s : sec->sections)
+    for (const EhSectionPiece &cie : s->cies)
+      add(s, cie);
+  for (const EhInputSection *s : sec->sections)
+    for (const EhSectionPiece &fde : s->fdes)
+      add(s, fde);
 
   // Print out section pieces.
   const OutputSection *osec = sec->getOutputSection();
-  for (EhSectionPiece &p : pieces) {
+  for (const Piece &p : pieces) {
     writeHeader(ctx, os, osec->addr + p.outputOff, osec->getLMA() + p.outputOff,
                 p.size, 1);
     os << indent8 << toStr(ctx, p.sec->file) << ":(" << p.sec->name << "+0x"

@@ -41,6 +41,7 @@ define i32 @minloc1(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp sge i32 [[TMP26]], [[TMP22]]
 ; CHECK-NEXT:    [[DOTNOT33:%.*]] = and i1 [[DOT045]], [[TMP28]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP27]], i1 true, i1 [[DOTNOT33]]
+; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[OR_COND_FROZEN:%.*]] = freeze i1 [[OR_COND]]
 ; CHECK-NEXT:    br i1 [[OR_COND_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
 ; CHECK:       select.false:
@@ -49,7 +50,6 @@ define i32 @minloc1(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP29]] = phi i32 [ [[DOTLCSSA364144]], [[DOTPREHEADER35]] ], [ 1, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[DOT2]] = phi i1 [ [[DOT045]], [[DOTPREHEADER35]] ], [ true, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[TMP30]] = phi i32 [ [[TMP22]], [[DOTPREHEADER35]] ], [ [[TMP20]], [[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[IV_N]] = add nuw nsw i64 [[TMP23]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_N]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[DOTPREHEADER]], label [[DOTPREHEADER35]]
@@ -190,6 +190,7 @@ define i32 @minloc1_otherunusednot(ptr nocapture readonly %0, ptr nocapture read
 ; CHECK-FORCED-NEXT:    [[TMP28:%.*]] = icmp sge i32 [[TMP26]], [[TMP22]]
 ; CHECK-FORCED-NEXT:    [[DOTNOT33:%.*]] = and i1 [[DOT045]], [[TMP28]]
 ; CHECK-FORCED-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP27]], i1 true, i1 [[DOTNOT33]]
+; CHECK-FORCED-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-FORCED-NEXT:    [[OR_COND_FROZEN:%.*]] = freeze i1 [[OR_COND]]
 ; CHECK-FORCED-NEXT:    br i1 [[OR_COND_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
 ; CHECK-FORCED:       select.false:
@@ -198,7 +199,6 @@ define i32 @minloc1_otherunusednot(ptr nocapture readonly %0, ptr nocapture read
 ; CHECK-FORCED-NEXT:    [[TMP29]] = phi i32 [ [[DOTLCSSA364144]], [[DOTPREHEADER35]] ], [ 1, [[SELECT_FALSE]] ]
 ; CHECK-FORCED-NEXT:    [[DOT2]] = phi i1 [ [[DOT045]], [[DOTPREHEADER35]] ], [ true, [[SELECT_FALSE]] ]
 ; CHECK-FORCED-NEXT:    [[TMP30]] = phi i32 [ [[TMP22]], [[DOTPREHEADER35]] ], [ [[TMP20]], [[SELECT_FALSE]] ]
-; CHECK-FORCED-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-FORCED-NEXT:    [[IV_N]] = add nuw nsw i64 [[TMP23]], 1
 ; CHECK-FORCED-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_N]], [[TMP9]]
 ; CHECK-FORCED-NEXT:    br i1 [[EXITCOND_NOT]], label [[DOTPREHEADER]], label [[DOTPREHEADER35]]
@@ -295,6 +295,7 @@ define i32 @minloc1_twonot(ptr nocapture readonly %0, ptr nocapture readonly %1,
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp sge i32 [[TMP26]], [[TMP22]]
 ; CHECK-NEXT:    [[DOTNOT33:%.*]] = and i1 [[DOT045]], [[TMP28]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP27]], i1 true, i1 [[DOTNOT33]]
+; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[OR_COND_FROZEN:%.*]] = freeze i1 [[OR_COND]]
 ; CHECK-NEXT:    br i1 [[OR_COND_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
 ; CHECK:       select.false:
@@ -304,7 +305,6 @@ define i32 @minloc1_twonot(ptr nocapture readonly %0, ptr nocapture readonly %1,
 ; CHECK-NEXT:    [[DOT2:%.*]] = phi i1 [ [[DOT045]], [[DOTPREHEADER35]] ], [ true, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[DOT3]] = phi i1 [ [[DOT045]], [[DOTPREHEADER35]] ], [ true, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[TMP30]] = phi i32 [ [[TMP22]], [[DOTPREHEADER35]] ], [ [[TMP20]], [[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[IV_N]] = add nuw nsw i64 [[TMP23]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_N]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[DOTPREHEADER]], label [[DOTPREHEADER35]]
@@ -398,6 +398,7 @@ define i32 @minloc1_onenotdependent(ptr nocapture readonly %0, ptr nocapture rea
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp sge i32 [[TMP26]], [[TMP22]]
 ; CHECK-NEXT:    [[DOTNOT33:%.*]] = and i1 [[DOT045]], [[TMP28]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP27]], i1 true, i1 [[DOTNOT33]]
+; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[OR_COND_FROZEN:%.*]] = freeze i1 [[OR_COND]]
 ; CHECK-NEXT:    br i1 [[OR_COND_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]]
 ; CHECK:       select.false:
@@ -407,7 +408,6 @@ define i32 @minloc1_onenotdependent(ptr nocapture readonly %0, ptr nocapture rea
 ; CHECK-NEXT:    [[DOT2:%.*]] = phi i1 [ true, [[DOTPREHEADER35]] ], [ [[DOT045]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[DOT3]] = phi i1 [ true, [[DOTPREHEADER35]] ], [ true, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[TMP30]] = phi i32 [ [[TMP22]], [[DOTPREHEADER35]] ], [ [[TMP20]], [[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[IV_N]] = add nuw nsw i64 [[TMP23]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_N]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[DOTPREHEADER]], label [[DOTPREHEADER35]]
@@ -509,6 +509,7 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP28:%.*]] = icmp sge i32 [[TMP26]], [[TMP22]]
 ; CHECK-NEXT:    [[DOTNOT33:%.*]] = and i1 [[DOT045]], [[TMP28]]
 ; CHECK-NEXT:    [[OR_COND:%.*]] = select i1 [[TMP27]], i1 true, i1 [[DOTNOT33]]
+; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[OR_COND_FROZEN:%.*]] = freeze i1 [[OR_COND]]
 ; CHECK-NEXT:    br i1 [[OR_COND_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
 ; CHECK:       select.false:
@@ -517,13 +518,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP29:%.*]] = phi i32 [ [[DOTLCSSA364144]], [[DOTPREHEADER35]] ], [ 1, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[DOT2:%.*]] = phi i1 [ [[DOT045]], [[DOTPREHEADER35]] ], [ true, [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[TMP30:%.*]] = phi i32 [ [[TMP22]], [[DOTPREHEADER35]] ], [ [[TMP20]], [[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[NOT_OR_COND:%.*]] = xor i1 [[OR_COND]], true
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[TMP21]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP31]], align 4
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp ne i32 [[TMP32]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp sge i32 [[TMP32]], [[TMP30]]
 ; CHECK-NEXT:    [[DOTNOT33_1:%.*]] = and i1 [[DOT2]], [[TMP34]]
 ; CHECK-NEXT:    [[OR_COND_1:%.*]] = select i1 [[TMP33]], i1 true, i1 [[DOTNOT33_1]]
+; CHECK-NEXT:    [[NOT_OR_COND_1:%.*]] = xor i1 [[OR_COND_1]], true
 ; CHECK-NEXT:    [[OR_COND_1_FROZEN:%.*]] = freeze i1 [[OR_COND_1]]
 ; CHECK-NEXT:    br i1 [[OR_COND_1_FROZEN]], label [[SELECT_END1:%.*]], label [[SELECT_FALSE2:%.*]]
 ; CHECK:       select.false2:
@@ -532,13 +533,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP35:%.*]] = phi i32 [ [[TMP29]], [[SELECT_END]] ], [ 2, [[SELECT_FALSE2]] ]
 ; CHECK-NEXT:    [[DOT2_1:%.*]] = phi i1 [ [[DOT2]], [[SELECT_END]] ], [ true, [[SELECT_FALSE2]] ]
 ; CHECK-NEXT:    [[TMP36:%.*]] = phi i32 [ [[TMP30]], [[SELECT_END]] ], [ [[TMP20]], [[SELECT_FALSE2]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_1:%.*]] = xor i1 [[OR_COND_1]], true
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG]]
 ; CHECK-NEXT:    [[TMP38:%.*]] = load i32, ptr [[TMP37]], align 4
 ; CHECK-NEXT:    [[TMP39:%.*]] = icmp ne i32 [[TMP38]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = icmp sge i32 [[TMP38]], [[TMP36]]
 ; CHECK-NEXT:    [[DOTNOT33_2:%.*]] = and i1 [[DOT2_1]], [[TMP40]]
 ; CHECK-NEXT:    [[OR_COND_2:%.*]] = select i1 [[TMP39]], i1 true, i1 [[DOTNOT33_2]]
+; CHECK-NEXT:    [[NOT_OR_COND_2:%.*]] = xor i1 [[OR_COND_2]], true
 ; CHECK-NEXT:    [[OR_COND_2_FROZEN:%.*]] = freeze i1 [[OR_COND_2]]
 ; CHECK-NEXT:    br i1 [[OR_COND_2_FROZEN]], label [[SELECT_END3:%.*]], label [[SELECT_FALSE4:%.*]]
 ; CHECK:       select.false4:
@@ -547,13 +548,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP41:%.*]] = phi i32 [ [[TMP35]], [[SELECT_END1]] ], [ 3, [[SELECT_FALSE4]] ]
 ; CHECK-NEXT:    [[DOT2_2:%.*]] = phi i1 [ [[DOT2_1]], [[SELECT_END1]] ], [ true, [[SELECT_FALSE4]] ]
 ; CHECK-NEXT:    [[TMP42:%.*]] = phi i32 [ [[TMP36]], [[SELECT_END1]] ], [ [[TMP20]], [[SELECT_FALSE4]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_2:%.*]] = xor i1 [[OR_COND_2]], true
 ; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG50]]
 ; CHECK-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
 ; CHECK-NEXT:    [[TMP45:%.*]] = icmp ne i32 [[TMP44]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP46:%.*]] = icmp sge i32 [[TMP44]], [[TMP42]]
 ; CHECK-NEXT:    [[DOTNOT33_3:%.*]] = and i1 [[DOT2_2]], [[TMP46]]
 ; CHECK-NEXT:    [[OR_COND_3:%.*]] = select i1 [[TMP45]], i1 true, i1 [[DOTNOT33_3]]
+; CHECK-NEXT:    [[NOT_OR_COND_3:%.*]] = xor i1 [[OR_COND_3]], true
 ; CHECK-NEXT:    [[OR_COND_3_FROZEN:%.*]] = freeze i1 [[OR_COND_3]]
 ; CHECK-NEXT:    br i1 [[OR_COND_3_FROZEN]], label [[SELECT_END5:%.*]], label [[SELECT_FALSE6:%.*]]
 ; CHECK:       select.false6:
@@ -562,13 +563,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP47:%.*]] = phi i32 [ [[TMP41]], [[SELECT_END3]] ], [ 4, [[SELECT_FALSE6]] ]
 ; CHECK-NEXT:    [[DOT2_3:%.*]] = phi i1 [ [[DOT2_2]], [[SELECT_END3]] ], [ true, [[SELECT_FALSE6]] ]
 ; CHECK-NEXT:    [[TMP48:%.*]] = phi i32 [ [[TMP42]], [[SELECT_END3]] ], [ [[TMP20]], [[SELECT_FALSE6]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_3:%.*]] = xor i1 [[OR_COND_3]], true
 ; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG51]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = load i32, ptr [[TMP49]], align 4
 ; CHECK-NEXT:    [[TMP51:%.*]] = icmp ne i32 [[TMP50]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = icmp sge i32 [[TMP50]], [[TMP48]]
 ; CHECK-NEXT:    [[DOTNOT33_4:%.*]] = and i1 [[DOT2_3]], [[TMP52]]
 ; CHECK-NEXT:    [[OR_COND_4:%.*]] = select i1 [[TMP51]], i1 true, i1 [[DOTNOT33_4]]
+; CHECK-NEXT:    [[NOT_OR_COND_4:%.*]] = xor i1 [[OR_COND_4]], true
 ; CHECK-NEXT:    [[OR_COND_4_FROZEN:%.*]] = freeze i1 [[OR_COND_4]]
 ; CHECK-NEXT:    br i1 [[OR_COND_4_FROZEN]], label [[SELECT_END7:%.*]], label [[SELECT_FALSE8:%.*]]
 ; CHECK:       select.false8:
@@ -577,13 +578,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP53:%.*]] = phi i32 [ [[TMP47]], [[SELECT_END5]] ], [ 5, [[SELECT_FALSE8]] ]
 ; CHECK-NEXT:    [[DOT2_4:%.*]] = phi i1 [ [[DOT2_3]], [[SELECT_END5]] ], [ true, [[SELECT_FALSE8]] ]
 ; CHECK-NEXT:    [[TMP54:%.*]] = phi i32 [ [[TMP48]], [[SELECT_END5]] ], [ [[TMP20]], [[SELECT_FALSE8]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_4:%.*]] = xor i1 [[OR_COND_4]], true
 ; CHECK-NEXT:    [[TMP55:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG52]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = load i32, ptr [[TMP55]], align 4
 ; CHECK-NEXT:    [[TMP57:%.*]] = icmp ne i32 [[TMP56]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP58:%.*]] = icmp sge i32 [[TMP56]], [[TMP54]]
 ; CHECK-NEXT:    [[DOTNOT33_5:%.*]] = and i1 [[DOT2_4]], [[TMP58]]
 ; CHECK-NEXT:    [[OR_COND_5:%.*]] = select i1 [[TMP57]], i1 true, i1 [[DOTNOT33_5]]
+; CHECK-NEXT:    [[NOT_OR_COND_5:%.*]] = xor i1 [[OR_COND_5]], true
 ; CHECK-NEXT:    [[OR_COND_5_FROZEN:%.*]] = freeze i1 [[OR_COND_5]]
 ; CHECK-NEXT:    br i1 [[OR_COND_5_FROZEN]], label [[SELECT_END9:%.*]], label [[SELECT_FALSE10:%.*]]
 ; CHECK:       select.false10:
@@ -592,13 +593,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP59:%.*]] = phi i32 [ [[TMP53]], [[SELECT_END7]] ], [ 6, [[SELECT_FALSE10]] ]
 ; CHECK-NEXT:    [[DOT2_5:%.*]] = phi i1 [ [[DOT2_4]], [[SELECT_END7]] ], [ true, [[SELECT_FALSE10]] ]
 ; CHECK-NEXT:    [[TMP60:%.*]] = phi i32 [ [[TMP54]], [[SELECT_END7]] ], [ [[TMP20]], [[SELECT_FALSE10]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_5:%.*]] = xor i1 [[OR_COND_5]], true
 ; CHECK-NEXT:    [[TMP61:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG53]]
 ; CHECK-NEXT:    [[TMP62:%.*]] = load i32, ptr [[TMP61]], align 4
 ; CHECK-NEXT:    [[TMP63:%.*]] = icmp ne i32 [[TMP62]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP64:%.*]] = icmp sge i32 [[TMP62]], [[TMP60]]
 ; CHECK-NEXT:    [[DOTNOT33_6:%.*]] = and i1 [[DOT2_5]], [[TMP64]]
 ; CHECK-NEXT:    [[OR_COND_6:%.*]] = select i1 [[TMP63]], i1 true, i1 [[DOTNOT33_6]]
+; CHECK-NEXT:    [[NOT_OR_COND_6:%.*]] = xor i1 [[OR_COND_6]], true
 ; CHECK-NEXT:    [[OR_COND_6_FROZEN:%.*]] = freeze i1 [[OR_COND_6]]
 ; CHECK-NEXT:    br i1 [[OR_COND_6_FROZEN]], label [[SELECT_END11:%.*]], label [[SELECT_FALSE12:%.*]]
 ; CHECK:       select.false12:
@@ -607,13 +608,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP65:%.*]] = phi i32 [ [[TMP59]], [[SELECT_END9]] ], [ 7, [[SELECT_FALSE12]] ]
 ; CHECK-NEXT:    [[DOT2_6:%.*]] = phi i1 [ [[DOT2_5]], [[SELECT_END9]] ], [ true, [[SELECT_FALSE12]] ]
 ; CHECK-NEXT:    [[TMP66:%.*]] = phi i32 [ [[TMP60]], [[SELECT_END9]] ], [ [[TMP20]], [[SELECT_FALSE12]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_6:%.*]] = xor i1 [[OR_COND_6]], true
 ; CHECK-NEXT:    [[TMP67:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG54]]
 ; CHECK-NEXT:    [[TMP68:%.*]] = load i32, ptr [[TMP67]], align 4
 ; CHECK-NEXT:    [[TMP69:%.*]] = icmp ne i32 [[TMP68]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP70:%.*]] = icmp sge i32 [[TMP68]], [[TMP66]]
 ; CHECK-NEXT:    [[DOTNOT33_7:%.*]] = and i1 [[DOT2_6]], [[TMP70]]
 ; CHECK-NEXT:    [[OR_COND_7:%.*]] = select i1 [[TMP69]], i1 true, i1 [[DOTNOT33_7]]
+; CHECK-NEXT:    [[NOT_OR_COND_7:%.*]] = xor i1 [[OR_COND_7]], true
 ; CHECK-NEXT:    [[OR_COND_7_FROZEN:%.*]] = freeze i1 [[OR_COND_7]]
 ; CHECK-NEXT:    br i1 [[OR_COND_7_FROZEN]], label [[SELECT_END13:%.*]], label [[SELECT_FALSE14:%.*]]
 ; CHECK:       select.false14:
@@ -622,13 +623,13 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP71:%.*]] = phi i32 [ [[TMP65]], [[SELECT_END11]] ], [ 8, [[SELECT_FALSE14]] ]
 ; CHECK-NEXT:    [[DOT2_7:%.*]] = phi i1 [ [[DOT2_6]], [[SELECT_END11]] ], [ true, [[SELECT_FALSE14]] ]
 ; CHECK-NEXT:    [[TMP72:%.*]] = phi i32 [ [[TMP66]], [[SELECT_END11]] ], [ [[TMP20]], [[SELECT_FALSE14]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_7:%.*]] = xor i1 [[OR_COND_7]], true
 ; CHECK-NEXT:    [[TMP73:%.*]] = getelementptr i8, ptr [[TMP25]], i64 [[DOTNEG55]]
 ; CHECK-NEXT:    [[TMP74:%.*]] = load i32, ptr [[TMP73]], align 4
 ; CHECK-NEXT:    [[TMP75:%.*]] = icmp ne i32 [[TMP74]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP76:%.*]] = icmp sge i32 [[TMP74]], [[TMP72]]
 ; CHECK-NEXT:    [[DOTNOT33_8:%.*]] = and i1 [[DOT2_7]], [[TMP76]]
 ; CHECK-NEXT:    [[OR_COND_8:%.*]] = select i1 [[TMP75]], i1 true, i1 [[DOTNOT33_8]]
+; CHECK-NEXT:    [[NOT_OR_COND_8:%.*]] = xor i1 [[OR_COND_8]], true
 ; CHECK-NEXT:    [[OR_COND_8_FROZEN:%.*]] = freeze i1 [[OR_COND_8]]
 ; CHECK-NEXT:    br i1 [[OR_COND_8_FROZEN]], label [[SELECT_END15]], label [[SELECT_FALSE16:%.*]]
 ; CHECK:       select.false16:
@@ -637,7 +638,6 @@ define i32 @minloc9(ptr nocapture readonly %0, ptr nocapture readonly %1, ptr no
 ; CHECK-NEXT:    [[TMP77]] = phi i32 [ [[TMP71]], [[SELECT_END13]] ], [ 9, [[SELECT_FALSE16]] ]
 ; CHECK-NEXT:    [[DOT2_8]] = phi i1 [ [[DOT2_7]], [[SELECT_END13]] ], [ true, [[SELECT_FALSE16]] ]
 ; CHECK-NEXT:    [[TMP78]] = phi i32 [ [[TMP72]], [[SELECT_END13]] ], [ [[TMP20]], [[SELECT_FALSE16]] ]
-; CHECK-NEXT:    [[NOT_OR_COND_8:%.*]] = xor i1 [[OR_COND_8]], true
 ; CHECK-NEXT:    [[TMP79]] = add nuw nsw i64 [[TMP23]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[TMP79]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[DOTPREHEADER]], label [[DOTPREHEADER35]]

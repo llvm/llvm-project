@@ -1,5 +1,5 @@
 ! REQUIRES: x86-registered-target
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -triple x86_64-unknown-linux-gnu
 ! C712 The value of scalar-int-constant-expr shall be nonnegative and
 ! shall specify a representation method that exists on the processor.
 ! C714 The value of kind-param shall be nonnegative.

@@ -577,6 +577,21 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
     return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
 
+  case OL_DEVICE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+  case OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getMaxNumBlocks());
+
+  case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
+  case OL_DEVICE_INFO_PREFERRED_LOCATION_HOST:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
+
   default:
     break;
   }
@@ -787,6 +802,12 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
     return Info.writeArray(Context->Devices.data(), Context->Devices.size());
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
+  case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Context->PluginCtx->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetContextInfo enum '%i' is invalid",
@@ -1042,6 +1063,13 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
     if (auto Err = Pending.takeError())
       return Err;
     return Info.write<bool>(!*Pending);
+  }
+  case OL_QUEUE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr =
+        Queue->Device->Device->getNativeQueueHandle(Queue->AsyncInfo);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -1500,6 +1528,16 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
     if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+      return Err;
+    return Info.write<uint32_t>(std::get<GenericKernelTy *>(Symbol->PluginImpl)
+                                    ->getStaticBlockMemSize());
+  case OL_SYMBOL_INFO_KERNEL_MAX_THREADS:
+    if (auto Err = CheckKind(OL_SYMBOL_KIND_KERNEL))
+      return Err;
+    return Info.write<uint32_t>(
+        std::get<GenericKernelTy *>(Symbol->PluginImpl)->getMaxThreads());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetSymbolInfo enum '%i' is invalid", PropName);
@@ -1605,13 +1643,14 @@ __tgt_async_info *__ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
   return Queue ? Queue->AsyncInfo : nullptr;
 }
 
-GenericKernelTy *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
-  return std::get<GenericKernelTy *>(Symbol->PluginImpl);
-}
-
 DeviceImageTy *__ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program) {
   return Program->Image;
 }
+
+RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_impl_t *Device) {
+  return Device->Device->getRecordReplay();
+}
+
 } // namespace tmp
 
 } // namespace offload

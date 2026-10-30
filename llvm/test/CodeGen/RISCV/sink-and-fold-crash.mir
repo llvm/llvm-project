@@ -23,7 +23,7 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $f10_f
     ; CHECK-NEXT: [[ReadFFLAGS:%[0-9]+]]:gpr = ReadFFLAGS implicit $fflags
     ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = nofpexcept FLE_S [[COPY1]], [[COPY]]
-    ; CHECK-NEXT: WriteFFLAGS killed [[ReadFFLAGS]], implicit-def $fflags
+    ; CHECK-NEXT: WriteFFLAGS [[ReadFFLAGS]], implicit-def $fflags
     ; CHECK-NEXT: $x0 = nofpexcept FEQ_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -31,7 +31,7 @@ body:             |
     %0:fpr32 = COPY $f10_f
     %3:gpr = ReadFFLAGS implicit $fflags
     %2:gpr = nofpexcept FLE_S %0, %1
-    WriteFFLAGS killed %3, implicit-def $fflags
+    WriteFFLAGS %3, implicit-def $fflags
     $x0 = nofpexcept FEQ_S %0, %1
     $x10 = COPY %2
     PseudoRET implicit $x10
