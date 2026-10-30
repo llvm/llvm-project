@@ -194,6 +194,7 @@ def StaticMemoryPlannerAnalysisPass
     envelope:
     - Static memref shape.
     - Integer or floating-point element type.
+    - Identity layout.
     - The allocation lives directly in the function's entry block
       (allocations nested in a region are skipped for now).
     - Every `memref.dealloc` that may free the buffer is anchored in the entry
@@ -270,6 +271,8 @@ def StaticMemoryPlannerAnalysisPass
                  "Number of allocations skipped: dynamic shape">,
        Statistic<"numSkipUnsupportedType", "num-skipped-unsupported-type",
                  "Number of allocations skipped: unsupported element type">,
+       Statistic<"numSkipUnsupportedLayout", "num-skipped-unsupported-layout",
+                 "Number of allocations skipped: unsupported layout">,
        Statistic<
            "numSkipNested", "num-skipped-nested",
            "Number of allocations skipped: nested in loop or conditional">,
