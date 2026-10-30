@@ -30,6 +30,8 @@
 #include <iterator>
 #include <limits>
 #include <numeric>
+#include <vector>
+#include <string>
 
 #include "test_execution_policies.h"
 #include "test_iterators.h"
@@ -169,6 +171,62 @@ struct TestInt {
         }
         std::fill(std::begin(ib), std::begin(ib) + i, -1);
       });
+    }
+    { // Check against the non-pstl version
+      for (int size : {0, 1, 2, 100, 350, 10'000}) {
+        std::vector<int> data(size);
+        std::iota(data.begin(), data.end(), 7);
+        int init = 42;
+
+        std::vector<int> expected(size);
+        auto binary_op = [check = std::string("Banane")](int i, int j) {
+          assert(check == "Banane"); // ensure that no double-moves happen
+          return i + j;
+        };
+        auto unary_op = [check = std::string("Banane")](int i) {
+          assert(check == "Banane"); // ensure that no double-moves happen
+          return i + 1;
+        };
+
+        std::transform_inclusive_scan(data.begin(), data.end(), expected.begin(), binary_op, unary_op, init);
+
+        std::vector<int> result(size);
+        auto ret = std::transform_inclusive_scan(
+            policy,
+            Iter1(data.data()),
+            Iter1(data.data() + data.size()),
+            Iter2(result.data()),
+            binary_op,
+            unary_op,
+            init);
+        assert(ret == Iter2(result.data() + size));
+        assert(result == expected);
+      }
+    }
+    { // binary_op whose identity element is not int{}
+      for (int size : {0, 1, 2, 100, 350, 10'000}) {
+        std::vector<int> data(size);
+        std::iota(data.begin(), data.end(), 7);
+        int init = 42;
+
+        auto binary_op = std::multiplies{};
+        auto unary_op  = [](int x) { return (x % 1'000 == 0) ? 2 : 1; }; // keeps product below 2^10
+
+        std::vector<int> expected(size);
+        std::transform_inclusive_scan(data.begin(), data.end(), expected.begin(), binary_op, unary_op, init);
+
+        std::vector<int> result(size);
+        auto ret = std::transform_inclusive_scan(
+            policy,
+            Iter1(data.data()),
+            Iter1(data.data() + data.size()),
+            Iter2(result.data()),
+            binary_op,
+            unary_op,
+            init);
+        assert(ret == Iter2(result.data() + size));
+        assert(result == expected);
+      }
     }
   }
 };
