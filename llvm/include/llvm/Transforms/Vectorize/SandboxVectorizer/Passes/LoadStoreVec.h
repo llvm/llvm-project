@@ -95,6 +95,15 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// nullopt otherwise.
   std::optional<Type *> canVectorize(BndlRef<Instruction *> Bndl);
 
+  /// \returns true if each of \p Loads can be unpacked from a vector load of
+  /// type \p VecTy, i.e., the lanes it occupies can be reinterpreted as the
+  /// type of the load.
+  bool canUnpackLoads(BndlRef<Instruction *> Loads, FixedVectorType *VecTy);
+
+  /// Replaces the remaining uses of each of \p Loads with the lanes of
+  /// \p VecLoad it occupies, cast back to the type of the load if needed.
+  void unpackLoads(LoadInst *VecLoad, BndlRef<Instruction *> Loads);
+
   /// Builds a single vector load out of \p Loads. A chain of mixed types is
   /// loaded as a vector of integers. \returns the new load, or nullptr if
   /// \p Loads are not vectorizable.
@@ -110,7 +119,8 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
   /// Vectorizes \p Stores and their operands if constants or consecutive
-  /// loads. \returns true on success.
+  /// loads. Loads with uses other than \p Stores are unpacked from the vector
+  /// load. \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load and unpacks each original load
