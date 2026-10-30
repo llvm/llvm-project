@@ -2589,8 +2589,6 @@ if.end.icp:                                       ; preds = %if.false.orig_indir
   ret void
 ```
 
-This feature is temporarily ignored at the LLVM side when LTO is enabled.
-TODO: Update the comment when the LLVM side supports this feature for LTO.
 This feature is turned off by default.
 :::
 

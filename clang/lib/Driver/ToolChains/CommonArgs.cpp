@@ -1222,6 +1222,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         (A->getOption().matches(options::OPT_fglobal_isel) ? "1" : "0")));
   }
 
+  if (Arg *A = Args.getLastArg(options::OPT_fdevirtualize_speculatively,
+                               options::OPT_fno_devirtualize_speculatively))
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-devirtualize-speculatively=" +
+        (A->getOption().matches(options::OPT_fdevirtualize_speculatively)
+             ? "1"
+             : "0")));
+
   // If an explicit debugger tuning argument appeared, pass it along.
   if (Arg *A =
           Args.getLastArg(options::OPT_gTune_Group, options::OPT_ggdbN_Group)) {

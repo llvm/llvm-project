@@ -8512,8 +8512,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasFlag(options::OPT_fdevirtualize_speculatively,
                    options::OPT_fno_devirtualize_speculatively,
-                   /*Default value*/ false))
+                   /*Default value*/ false)) {
     CmdArgs.push_back("-fdevirtualize-speculatively");
+    CmdArgs.append({"-mllvm", "-devirtualize-speculatively"});
+  }
 
   bool VirtualFunctionElimination =
       Args.hasFlag(options::OPT_fvirtual_function_elimination,

@@ -1621,8 +1621,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
     MPM.addPass(AssignGUIDPass());
     MPM.addPass(WholeProgramDevirtPass(
         /*ExportSummary*/ nullptr,
-        /*ImportSummary*/ nullptr,
-        /*DevirtSpeculatively*/ PTO.DevirtualizeSpeculatively));
+        /*ImportSummary*/ nullptr));
     MPM.addPass(DropTypeTestsPass());
     // Given that the devirtualization creates more opportunities for inlining,
     // we run the Inliner again here to maximize the optimization gain we

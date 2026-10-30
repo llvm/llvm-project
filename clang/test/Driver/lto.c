@@ -127,6 +127,14 @@
 // CHECK-NO-SLP: "-plugin-opt=-vectorize-slp=0"
 // CHECK-SLP:    "-plugin-opt=-vectorize-slp=1"
 
+// RUN: %clang --target=x86_64-unknown-linux -### %s -flto -fno-devirtualize-speculatively 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-DEVIRTUALIZE-SPECULATIVELY < %t %s
+// RUN: %clang --target=x86_64-unknown-linux -### %s -flto -fdevirtualize-speculatively 2> %t
+// RUN: FileCheck --check-prefix=CHECK-DEVIRTUALIZE-SPECULATIVELY < %t %s
+//
+// CHECK-NO-DEVIRTUALIZE-SPECULATIVELY: "-plugin-opt=-devirtualize-speculatively=0"
+// CHECK-DEVIRTUALIZE-SPECULATIVELY:    "-plugin-opt=-devirtualize-speculatively=1"
+
 // -flto passes -time-passes when -ftime-report is passed
 // RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -ftime-report 2> %t
 // RUN: FileCheck --check-prefix=CHECK-TIME-REPORT < %t %s
