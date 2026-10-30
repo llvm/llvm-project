@@ -25,6 +25,7 @@
 #include <iterator>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 template <class Container>
