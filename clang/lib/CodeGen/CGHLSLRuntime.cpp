@@ -1240,12 +1240,12 @@ void CGHLSLRuntime::emitSPIRVUserSemanticStore(
     llvm::IRBuilder<> &B, llvm::Value *Source,
     const clang::DeclaratorDecl *Decl, HLSLAppliedSemanticAttr *Semantic,
     std::optional<unsigned> Index, llvm::hlsl::InterpolationMode InterpMode,
-    bool LocationFromIndex) {
+    bool UseLocationFromIndex) {
   Twine BaseName = Twine(Semantic->getAttrName()->getName());
   Twine VariableName = BaseName.concat(Twine(Index.value_or(0)));
 
   unsigned Location;
-  if (LocationFromIndex) {
+  if (UseLocationFromIndex) {
     Location = Index.value_or(0);
   } else {
     Location = SPIRVLastAssignedOutputSemanticLocation;
@@ -1849,7 +1849,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
       emitSPIRVUserSemanticStore(B, Source, Decl, Semantic, Index, InterpMode,
-                                 /*LocationFromIndex=*/true);
+                                 /*UseLocationFromIndex=*/true);
       return;
     }
     break;

@@ -382,7 +382,7 @@ private:
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index,
                                   llvm::hlsl::InterpolationMode InterpMode,
-                                  bool LocationFromIndex = false);
+                                  bool UseLocationFromIndex = false);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
