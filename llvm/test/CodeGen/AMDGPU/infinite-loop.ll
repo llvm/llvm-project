@@ -135,6 +135,7 @@ define amdgpu_kernel void @infinite_loop_ret_callbr(ptr addrspace(1) %out) {
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
+; SI-NEXT:    v_readfirstlane_b32 s0, v0
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:  ; %bb.1: ; %loop.preheader
@@ -395,6 +396,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret_callbr(ptr addrspace(1) %out) 
 ; SI:       ; %bb.0: ; %entry
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; SI-NEXT:    v_readfirstlane_b32 s0, v1
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:  ; %bb.1: ; %outer_loop.preheader
@@ -421,6 +423,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret_callbr(ptr addrspace(1) %out) 
 ; SI-NEXT:    s_cbranch_vccnz .LBB7_6
 ; SI-NEXT:  ; %bb.4: ; %TransitionBlock
 ; SI-NEXT:    ; in Loop: Header=BB7_3 Depth=2
+; SI-NEXT:    v_readfirstlane_b32 s2, v0
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    ;;#ASMEND
 ; SI-NEXT:    s_branch .LBB7_3

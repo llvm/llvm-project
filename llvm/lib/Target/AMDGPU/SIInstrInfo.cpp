@@ -7891,6 +7891,15 @@ extractRsrcPtr(const SIInstrInfo &TII, MachineInstr &MI, MachineOperand &Rsrc) {
   return std::tuple(RsrcPtr, NewSRsrc);
 }
 
+// Returns true if register operand OpIdx of inline asm MI is constrained
+// to SGPRs.
+static bool isInlineAsmSGPROperand(const MachineInstr &MI, unsigned OpIdx,
+                                   const SIInstrInfo &TII,
+                                   const SIRegisterInfo &TRI) {
+  const TargetRegisterClass *RC = MI.getRegClassConstraint(OpIdx, &TII, &TRI);
+  return RC && TRI.isSGPRClass(RC);
+}
+
 MachineBasicBlock *
 SIInstrInfo::legalizeOperands(MachineInstr &MI,
                               MachineDominatorTree *MDT) const {
@@ -8010,6 +8019,22 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     MachineOperand &Src = MI.getOperand(1);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
+    return CreatedBB;
+  }
+
+  // Legalize INLINEASM
+  // Inline asm register constraints cannot be changed, so an SGPR operand that
+  // now holds a VGPR must be read back with v_readfirstlane.
+  if (MI.isInlineAsm()) {
+    for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+         I != E; ++I) {
+      MachineOperand &Op = MI.getOperand(I);
+      if (Op.isReg() && Op.isUse() && !Op.isImplicit() &&
+          Op.getReg().isVirtual() &&
+          RI.hasVectorRegisters(MRI.getRegClass(Op.getReg())) &&
+          isInlineAsmSGPROperand(MI, I, *this, RI))
+        Op.setReg(readlaneVGPRToSGPR(Op.getReg(), MI, MRI));
+    }
     return CreatedBB;
   }
 
@@ -9990,7 +10015,10 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     const TargetRegisterClass *OpRC = getOpRegClass(UseMI, OpNo);
     MRI.constrainRegClass(DstReg, OpRC);
 
-    if (!RI.hasVectorRegisters(OpRC))
+    // The operand class of inline asm is the class of its current register,
+    // so check the asm constraint itself.
+    if (!RI.hasVectorRegisters(OpRC) ||
+        (UseMI.isInlineAsm() && isInlineAsmSGPROperand(UseMI, OpNo, *this, RI)))
       Worklist.insert(&UseMI);
     else
       // Legalization could change user list.
