@@ -2566,6 +2566,9 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
   assert(type->isVariablyModifiedType() &&
          "Must pass variably modified type to EmitVLASizes!");
 
+  // Checks in the sizes trap: a branch would skip the allocation.
+  OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
+
   EnsureInsertPoint();
 
   // We're going to walk down into the type and look for VLA

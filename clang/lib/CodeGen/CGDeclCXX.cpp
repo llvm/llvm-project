@@ -396,6 +396,8 @@ void CodeGenFunction::EmitCXXGuardedInit(const VarDecl &D,
               "this initialization requires a guard variable, which "
               "the kernel does not support");
 
+  // Checks in the initializer trap: a branch out would leave the guard held.
+  OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
   CGM.getCXXABI().EmitGuardedInit(*this, D, DeclPtr, PerformInit);
 }
 

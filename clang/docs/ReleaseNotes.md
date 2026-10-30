@@ -336,6 +336,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-fdiagnostics-format=sarif` is passed
   (#GH233241).
 
+- Overflow behavior types: a failed `__ob_trap` check now branches to a label
+  named `__overflow` in the enclosing function instead of trapping, when one
+  is in scope. A GNU local label (`__label__ __overflow;`) overrides it for a
+  block. Jumps into protected scopes are diagnosed as for `goto`. See [OverflowBehaviorTypes](OverflowBehaviorTypes.md).
+
 - Updates Unicode Names data to Unicode 18.0 (from Unicode 18.0 Beta).
 
 - `clang-scan-deps` now reports the directories whose listing a module depends

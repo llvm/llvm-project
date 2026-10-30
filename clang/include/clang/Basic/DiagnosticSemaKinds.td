@@ -2613,7 +2613,8 @@ def warn_sometimes_uninit_var : Warning<
   "'%3' loop %select{condition is true|exits because its condition is false}4|"
   "switch %3 is taken|"
   "its declaration is reached|"
-  "%3 is called}2">,
+  "%3 is called|"
+  "an overflow check %select{passes|fails}4}2">,
   InGroup<UninitializedSometimes>, DefaultIgnore;
 def warn_maybe_uninit_var : Warning<
   "variable %0 may be uninitialized when "
@@ -6994,6 +6995,17 @@ def warn_cxx98_compat_goto_into_protected_scope : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cpp_compat_goto_into_protected_scope : Warning<
   "jump from this goto statement to its label is incompatible with C++">,
+  InGroup<JumpBypassesInit>, DefaultIgnore;
+def err_overflow_handler_into_protected_scope : Error<
+  "cannot jump from this overflow-checked operation to its overflow handler "
+  "label">;
+def warn_cxx98_compat_overflow_handler_into_protected_scope : Warning<
+  "jump from this overflow-checked operation to its overflow handler label is "
+  "incompatible with C++98">,
+  InGroup<CXX98Compat>, DefaultIgnore;
+def warn_cpp_compat_overflow_handler_into_protected_scope : Warning<
+  "jump from this overflow-checked operation to its overflow handler label is "
+  "incompatible with C++">,
   InGroup<JumpBypassesInit>, DefaultIgnore;
 def err_switch_into_protected_scope : Error<
   "cannot jump from switch statement to this case label">;

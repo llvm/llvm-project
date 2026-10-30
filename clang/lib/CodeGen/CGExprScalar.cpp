@@ -27,6 +27,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/MatrixUtils.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/ParentMapContext.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -4442,6 +4443,24 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   Value *resultAndOverflow = Builder.CreateCall(intrinsic, {Ops.LHS, Ops.RHS});
   Value *result = Builder.CreateExtractValue(resultAndOverflow, 0);
   Value *overflow = Builder.CreateExtractValue(resultAndOverflow, 1);
+
+  // A failed trap overflow behavior type check branches to the overflow
+  // handler label, if one is visible, instead of trapping. A recoverable
+  // sanitizer still reports the overflow first; -fsanitize-trap is replaced by
+  // the branch.
+  if (const LabelDecl *Handler =
+          Ops.Ty.isTrapType() ? CGF.getOverflowHandler() : nullptr) {
+    // Sema checked jumps to the handler from exactly these operations.
+    assert(isOverflowHandlerCheckedOp(CGF.getContext(), Ops.E) &&
+           "overflow handler branch from an operation Sema did not check");
+    SanitizerKind::SanitizerOrdinal Kind =
+        isSigned ? SanitizerKind::SO_SignedIntegerOverflow
+                 : SanitizerKind::SO_UnsignedIntegerOverflow;
+    if (CGF.shouldReportBeforeOverflowHandler(Kind))
+      EmitBinOpCheck(std::make_pair(Builder.CreateNot(overflow), Kind), Ops);
+    CGF.EmitOverflowHandlerBranch(overflow, Handler);
+    return result;
+  }
 
   // Handle overflow with llvm.trap if no custom handler has been specified.
   const std::string *handlerName =

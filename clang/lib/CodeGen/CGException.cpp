@@ -300,6 +300,8 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
     return;
   }
   if (const Expr *SubExpr = E->getSubExpr()) {
+    // Checks in the operand trap: a branch would leak the exception object.
+    OverflowHandlerScope NoHandler(LocalOverflowHandlers, nullptr);
     QualType ThrowType = SubExpr->getType();
     if (ThrowType->isObjCObjectPointerType()) {
       const Stmt *ThrowStmt = E->getSubExpr();

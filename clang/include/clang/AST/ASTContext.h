@@ -322,6 +322,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
   mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable bool HasTrapOverflowBehaviorType = false;
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
@@ -2073,6 +2074,12 @@ public:
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;
+
+  /// Returns true if a trap overflow behavior type has been created. Until
+  /// then, no operation has a trap overflow behavior check.
+  bool hasTrapOverflowBehaviorType() const {
+    return HasTrapOverflowBehaviorType;
+  }
 
   QualType getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
                                    QualType Wrapped) const;

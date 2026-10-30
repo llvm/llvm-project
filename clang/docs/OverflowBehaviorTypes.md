@@ -790,6 +790,60 @@ The format string checker uses the underlying type to determine compatibility,
 so `int __ob_wrap` is fully compatible with `%d`, `%i`, `%x`, etc.,
 just like a regular `int` would be.
 
+### Overflow Handler Labels
+
+A failed `trap` overflow check branches to a label named `__overflow`, if the
+enclosing function defines one, instead of trapping. This lets a function
+recover from overflow locally, much like an error path reached with `goto`.
+
+```c
+int scale(int __ob_trap count, int __ob_trap size) {
+  int __ob_trap bytes = count * size; // overflow branches to __overflow
+  return bytes + HEADER_SIZE;         // so does this
+__overflow:
+  return -EOVERFLOW;
+}
+```
+
+The handler is a property of the function, not of the type, so the same
+`__ob_trap` type traps in a function without the label and branches in a
+function with it.
+
+- The branch is taken before the overflowing result is stored, so the
+  destination keeps its previous value.
+- Lookup follows the scoping of `goto`. A GNU local label
+  (`__label__ __overflow;`) declared in a block redirects checks within that
+  block. Lambdas and blocks are separate functions with their own handlers.
+- The branch obeys the same rules as `goto`: it is an error if it would enter
+  the scope of a variable length array, a variable with
+  `__attribute__((cleanup))`, or (in C++) bypass a non-trivial initialization.
+  Leaving such a scope is fine; cleanups run before the handler. A check in
+  the initializer of such a variable runs before the variable is initialized,
+  so a handler later in the variable's scope is an error.
+- Only code written in the function body reaches its handler. Checks trap,
+  whatever handler is in scope, in variable length array sizes, the
+  initializers of `static` and `thread_local` local variables, C++ constructor
+  initializers, default member initializers, default arguments, the
+  initializer of a `new` expression, the operand of a `throw` expression,
+  `__finally` blocks, `__except` filters, `defer` statements, and OpenMP and
+  OpenACC regions.
+- Operands that are not evaluated, such as that of `sizeof`, never branch.
+- Arithmetic checks branch: `+`, `-`, `*`, unary `-`, `++`, `--`, and
+  compound assignment.
+- When the matching sanitizer (for example
+  `-fsanitize=signed-integer-overflow`) is in recoverable mode, the
+  overflow is reported and then the branch is taken. With `-fsanitize-trap`,
+  the branch replaces the trap. With `-fno-sanitize-recover`, the program
+  aborts after the report.
+- `wrap` types never branch.
+- Flow-sensitive warnings, such as `-Wsometimes-uninitialized`, and the static
+  analyzer follow the branch.
+- `-foverflow-behavior-label=<name>` (a `-cc1` option) changes the label name.
+
+When overflow behavior types are disabled, a handler label is never used and
+`-Wunused-label` reports it. Mark the label `__attribute__((unused))` in code
+that must build either way.
+
 ### Incompatibility With Non-Integer Types
 
 An error is issued when attempting to create an overflow behavior type from

@@ -21,6 +21,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
@@ -548,6 +549,20 @@ class CFGBuilder {
   using LabelSetTy = llvm::SmallSetVector<LabelDecl *, 8>;
   LabelSetTy AddressTakenLabels;
 
+  // Overflow handler labels in scope, innermost last. A failed trap overflow
+  // behavior check branches to the innermost one; a null entry means it traps.
+  SmallVector<LabelDecl *, 2> OverflowHandlers = {nullptr};
+
+  // A block that ends with an overflow checked operation whose handler label
+  // was not yet known, to be backpatched like a goto.
+  struct OverflowJump {
+    CFGBlock *Block;
+    LocalScope::const_iterator ScopePos;
+    LabelDecl *Handler;
+    Expr *Op;
+  };
+  std::vector<OverflowJump> OverflowBackpatch;
+
   // Information about the currently visited C++ object construction site.
   // This is set in the construction trigger and read when the constructor
   // or a function that returns an object by value is being visited.
@@ -656,6 +671,13 @@ private:
 
   CFGBlock *Visit(Stmt *S, AddStmtChoice asc = AddStmtChoice::NotAlwaysAdd,
                   bool ExternallyDestructed = false);
+  CFGBlock *VisitStmtByClass(Stmt *S, AddStmtChoice asc,
+                             bool ExternallyDestructed);
+  CFGBlock *VisitOverflowCheckedOp(Expr *E, AddStmtChoice asc,
+                                   bool ExternallyDestructed);
+  void addOverflowHandlerSuccessor(CFGBlock *Src,
+                                   LocalScope::const_iterator SrcPos,
+                                   JumpTarget Handler, Expr *Op);
   CFGBlock *VisitStmt(Stmt *S, AddStmtChoice asc);
   CFGBlock *VisitChildren(Stmt *S);
   CFGBlock *VisitCallExprChildren(CallExpr *C);
@@ -1697,8 +1719,14 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
 
+  // Overflow checks in the body branch to the function's handler label.
+  // Constructor initializers cannot reach it.
+  OverflowHandlers.push_back(findFunctionOverflowHandler(*Context, D));
+
   // Visit the statements and create the CFG.
   CFGBlock *B = addStmt(Statement);
+
+  OverflowHandlers.pop_back();
 
   if (badCFG)
     return nullptr;
@@ -1776,6 +1804,15 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
       }
       I++;
     }
+  }
+
+  // Backpatch the overflow checked operations whose handler label followed
+  // them.
+  for (const OverflowJump &J : OverflowBackpatch) {
+    LabelMapTy::iterator LI = LabelMap.find(J.Handler);
+    // An incomplete AST may lack the label.
+    if (LI != LabelMap.end())
+      addOverflowHandlerSuccessor(J.Block, J.ScopePos, LI->second, J.Op);
   }
 
   // Add successors to the Indirect Goto Dispatch block (if we have one).
@@ -2343,6 +2380,21 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
   if (Expr *E = dyn_cast<Expr>(S))
     S = E->IgnoreParens();
 
+  if (auto *E = dyn_cast<Expr>(S);
+      E && OverflowHandlers.back() && isOverflowHandlerCheckedOp(*Context, E))
+    return VisitOverflowCheckedOp(E, asc, ExternallyDestructed);
+
+  // Statements whose checks trap; see getOverflowHandlerIntroducedBy.
+  std::optional<OverflowHandlerScope> NoHandler;
+  if (std::optional<LabelDecl *> Handler =
+          getOverflowHandlerIntroducedBy(*Context, S);
+      Handler && !*Handler)
+    NoHandler.emplace(OverflowHandlers, nullptr);
+  return VisitStmtByClass(S, asc, ExternallyDestructed);
+}
+
+CFGBlock *CFGBuilder::VisitStmtByClass(Stmt *S, AddStmtChoice asc,
+                                       bool ExternallyDestructed) {
   if (Context->getLangOpts().OpenMP)
     if (auto *D = dyn_cast<OMPExecutableDirective>(S))
       return VisitOMPExecutableDirective(D, asc);
@@ -2620,6 +2672,54 @@ CFGBlock *CFGBuilder::VisitInitListExpr(InitListExpr *ILE, AddStmtChoice asc) {
     }
   }
   return B;
+}
+
+CFGBlock *CFGBuilder::VisitOverflowCheckedOp(Expr *E, AddStmtChoice asc,
+                                             bool ExternallyDestructed) {
+  // A failed check branches to the handler once the operands are evaluated,
+  // so the operation ends its block. The continuation is the first successor
+  // and the handler the second. An empty block, such as the one a logical
+  // operator opens for its right operand, is used as is: the analyzer expects
+  // the operation to be the last statement on that path.
+  if (!Block || !Block->empty() || Block->getTerminator().isValid() ||
+      Block->succ_size() != 1) {
+    if (Block) {
+      Succ = Block;
+      if (badCFG)
+        return nullptr;
+    }
+    Block = createBlock();
+  }
+  Block->setTerminator(CFGTerminator(nullptr, CFGTerminator::OverflowBranch));
+
+  LabelDecl *Handler = OverflowHandlers.back();
+  LabelMapTy::iterator LI = LabelMap.find(Handler);
+  if (LI == LabelMap.end())
+    OverflowBackpatch.push_back({Block, ScopePos, Handler, E});
+  else
+    addOverflowHandlerSuccessor(Block, ScopePos, LI->second, E);
+
+  return VisitStmtByClass(E, asc, ExternallyDestructed);
+}
+
+void CFGBuilder::addOverflowHandlerSuccessor(CFGBlock *Src,
+                                             LocalScope::const_iterator SrcPos,
+                                             JumpTarget Handler, Expr *Op) {
+  if (SrcPos == Handler.scopePosition ||
+      (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime &&
+       (!BuildOpts.AddScopes ||
+        SrcPos.inSameLocalScope(Handler.scopePosition)))) {
+    addSuccessor(Src, Handler.block);
+    return;
+  }
+
+  // Leaving scopes on the way to the handler runs their cleanups, as for a
+  // goto; put them in a block of their own.
+  SaveAndRestore SaveBlock(Block), SaveSucc(Succ);
+  Block = createBlock(false);
+  addSuccessor(Block, Handler.block);
+  addScopeChangesHandling(SrcPos, Handler.scopePosition, Op);
+  addSuccessor(Src, Block);
 }
 
 CFGBlock *CFGBuilder::VisitAddrLabelExpr(AddrLabelExpr *A,
@@ -3002,6 +3102,8 @@ CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C,
   LocalScope::const_iterator scopeBeginPos = ScopePos;
   addLocalScopeForStmt(C);
 
+  OverflowHandlerScope HandlerScope(OverflowHandlers, *Context, C);
+
   if (!C->body_empty() && !isa<ReturnStmt>(*C->body_rbegin())) {
     // If the body ends with a ReturnStmt, the dtors will be added in
     // VisitReturnStmt.
@@ -3141,6 +3243,8 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
     appendStmt(Block, DS);
 
     CFGBlock *LastBlock = Block;
+    // Checks in variable length array sizes trap; see CodeGen.
+    OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
     for (const VariableArrayType *VA = FindVA(T); VA != nullptr;
          VA = FindVA(VA->getElementType().getTypePtr())) {
       if (CFGBlock *NewBlock = addStmt(VA->getSizeExpr()))
@@ -3223,6 +3327,9 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   CFGBlock *LastBlock = Block;
 
   if (Init) {
+    std::optional<OverflowHandlerScope> NoHandler;
+    if (initializerIgnoresOverflowHandler(VD))
+      NoHandler.emplace(OverflowHandlers, nullptr);
     if (HasTemporaries) {
       // For expression with temporaries go directly to subexpression to omit
       // generating destructors for the second time.
@@ -3239,6 +3346,7 @@ CFGBlock *CFGBuilder::VisitDeclSubExpr(DeclStmt *DS) {
   // If the type of VD is a VLA, then we must process its size expressions.
   // FIXME: This does not find the VLA if it is embedded in other types,
   // like here: `int (*p_vla)[x];`
+  OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
   for (const VariableArrayType* VA = FindVA(VD->getType().getTypePtr());
        VA != nullptr; VA = FindVA(VA->getElementType().getTypePtr())) {
     if (CFGBlock *newBlock = addStmt(VA->getSizeExpr()))
@@ -4345,6 +4453,7 @@ CFGBlock *CFGBuilder::VisitCXXThrowExpr(CXXThrowExpr *T) {
 
   // Add the statement to the block.  This may create new blocks if S contains
   // control-flow (short-circuit operations).
+  OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
   return VisitStmt(T, AddStmtChoice::AlwaysAdd);
 }
 
@@ -4508,6 +4617,7 @@ CFGBlock *CFGBuilder::VisitUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *E,
   CFGBlock *lastBlock = Block;
 
   if (E->isArgumentType()) {
+    OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
     for (const VariableArrayType *VA =FindVA(E->getArgumentType().getTypePtr());
          VA != nullptr; VA = FindVA(VA->getElementType().getTypePtr()))
       lastBlock = addStmt(VA->getSizeExpr());
@@ -5053,8 +5163,10 @@ CFGBlock *CFGBuilder::VisitCXXNewExpr(CXXNewExpr *NE,
       ConstructionContextLayer::create(cfg->getBumpVectorContext(), NE),
       const_cast<CXXConstructExpr *>(NE->getConstructExpr()));
 
-  if (NE->getInitializer())
+  if (NE->getInitializer()) {
+    OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
     Block = Visit(NE->getInitializer());
+  }
 
   if (BuildOpts.AddCXXNewAllocator)
     appendNewAllocator(Block, NE);
@@ -5436,8 +5548,10 @@ CFGBlock *CFGBuilder::VisitOMPExecutableDirective(OMPExecutableDirective *D,
     if (CFGBlock *R = Visit(S))
       B = R;
   }
-  // Visit associated structured block if any.
+  // Visit associated structured block if any. Checks within it cannot leave
+  // it for an overflow handler.
   if (!D->isStandaloneDirective()) {
+    OverflowHandlerScope NoHandler(OverflowHandlers, nullptr);
     Stmt *S = D->getRawStmt();
     if (!isa<CompoundStmt>(S))
       addLocalScopeAndDtors(S);
@@ -5880,6 +5994,9 @@ public:
       break;
     case CFGTerminator::VirtualBaseBranch:
       OS << "(See if most derived ctor has already initialized vbases)";
+      break;
+    case CFGTerminator::OverflowBranch:
+      OS << "(Branch to the overflow handler if the check fails)";
       break;
     }
   }

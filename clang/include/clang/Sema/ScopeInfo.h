@@ -131,6 +131,10 @@ public:
   /// Whether a statement was dropped because it was invalid.
   bool HasDroppedStmt : 1;
 
+  /// Whether this function contains an operation with a trap overflow
+  /// behavior type check, which may branch to an overflow handler label.
+  bool HasOverflowCheckedOp : 1;
+
   /// True if current scope is for OpenMP declare reduction combiner.
   bool HasOMPDeclareReductionCombiner : 1;
 
@@ -393,13 +397,13 @@ public:
   FunctionScopeInfo(DiagnosticsEngine &Diag)
       : Kind(SK_Function), HasBranchProtectedScope(false),
         HasBranchIntoScope(false), HasIndirectGoto(false), HasMustTail(false),
-        HasDroppedStmt(false), HasOMPDeclareReductionCombiner(false),
-        HasFallthroughStmt(false), UsesFPIntrin(false),
-        HasPotentialAvailabilityViolations(false), ObjCShouldCallSuper(false),
-        ObjCIsDesignatedInit(false), ObjCWarnForNoDesignatedInitChain(false),
-        ObjCIsSecondaryInit(false), ObjCWarnForNoInitDelegation(false),
-        NeedsCoroutineSuspends(true), FoundImmediateEscalatingExpression(false),
-        ErrorTrap(Diag) {}
+        HasDroppedStmt(false), HasOverflowCheckedOp(false),
+        HasOMPDeclareReductionCombiner(false), HasFallthroughStmt(false),
+        UsesFPIntrin(false), HasPotentialAvailabilityViolations(false),
+        ObjCShouldCallSuper(false), ObjCIsDesignatedInit(false),
+        ObjCWarnForNoDesignatedInitChain(false), ObjCIsSecondaryInit(false),
+        ObjCWarnForNoInitDelegation(false), NeedsCoroutineSuspends(true),
+        FoundImmediateEscalatingExpression(false), ErrorTrap(Diag) {}
 
   virtual ~FunctionScopeInfo();
 

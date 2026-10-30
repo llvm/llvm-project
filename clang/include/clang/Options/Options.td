@@ -2633,6 +2633,14 @@ defm experimental_overflow_behavior_types
                   NegFlag<SetFalse, [], [CC1Option], "Disable">,
                   BothFlags<[], [CC1Option],
                             " the experimental overflow behavior types">>;
+def foverflow_behavior_label_EQ
+    : Joined<["-"], "foverflow-behavior-label=">,
+      Group<f_Group>,
+      Visibility<[CC1Option]>,
+      MetaVarName<"<name>">,
+      HelpText<"Name of the label that overflowing '__ob_trap' arithmetic "
+               "jumps to when such a label is visible (default: __overflow)">,
+      MarshallingInfoString<LangOpts<"OverflowBehaviorLabel">, [{"__overflow"}]>;
 def cxx_static_destructors_EQ : Joined<["-"], "fc++-static-destructors=">, Group<f_Group>,
   HelpText<"Controls which variables C++ static destructors are registered for">,
   Values<"all,thread-local,none">,

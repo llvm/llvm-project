@@ -18,6 +18,7 @@
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/OverflowHandler.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtSYCL.h"
 #include "clang/AST/StmtVisitor.h"
@@ -584,6 +585,7 @@ Address
 CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
                                               bool GetLast,
                                               AggValueSlot AggSlot) {
+  OverflowHandlerScope HandlerScope(LocalOverflowHandlers, getContext(), &S);
 
   for (CompoundStmt::const_body_iterator I = S.body_begin(),
                                          E = S.body_end() - GetLast;
@@ -628,6 +630,30 @@ CodeGenFunction::EmitCompoundStmtWithoutScope(const CompoundStmt &S,
   }
 
   return RetAlloca;
+}
+
+const LabelDecl *CodeGenFunction::getOverflowHandler() {
+  if (!LocalOverflowHandlers.empty())
+    return LocalOverflowHandlers.back();
+  if (!FunctionOverflowHandler)
+    FunctionOverflowHandler =
+        findFunctionOverflowHandler(getContext(), CurCodeDecl);
+  return *FunctionOverflowHandler;
+}
+
+void CodeGenFunction::EmitOverflowHandlerBranch(llvm::Value *Failed,
+                                                const LabelDecl *Handler) {
+  llvm::BasicBlock *HandlerBB = createBasicBlock("overflow.handler");
+  llvm::BasicBlock *ContBB = createBasicBlock("nooverflow");
+  Builder.CreateCondBr(Failed, HandlerBB, ContBB);
+  EmitBlock(HandlerBB);
+  EmitBranchThroughCleanup(getJumpDestForLabel(Handler));
+  EmitBlock(ContBB);
+}
+
+bool CodeGenFunction::shouldReportBeforeOverflowHandler(
+    SanitizerKind::SanitizerOrdinal Kind) const {
+  return SanOpts.has(Kind) && !CGM.getCodeGenOpts().SanitizeTrap.has(Kind);
 }
 
 void CodeGenFunction::SimplifyForwardingBlocks(llvm::BasicBlock *BB) {
@@ -1965,6 +1991,10 @@ struct EmitDeferredStatement final : EHScopeStack::Cleanup {
   EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
 
   void Emit(CodeGenFunction &CGF, Flags) override {
+    // The body runs as a cleanup, on every path out of the scope; its checks
+    // trap.
+    OverflowHandlerScope NoHandler(CGF.LocalOverflowHandlers, nullptr);
+
     // Take care that any cleanups pushed by the body of a '_Defer' statement
     // don't clobber the current cleanup slot value.
     //

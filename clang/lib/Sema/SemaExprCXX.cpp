@@ -7893,6 +7893,9 @@ ExprResult Sema::ActOnFinishFullExpr(Expr *FE, SourceLocation CC,
 
   CheckCompletedExpr(FullExpr.get(), CC, IsConstexpr);
 
+  if (getLangOpts().OverflowBehaviorTypes)
+    NoteOverflowCheckedOps(FullExpr.get());
+
   // At the end of this full expression (which could be a deeply nested
   // lambda), if there is a potential capture within the nested lambda,
   // have the outer capture-able lambda try and capture it.
