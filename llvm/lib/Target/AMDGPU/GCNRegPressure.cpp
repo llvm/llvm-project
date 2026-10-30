@@ -720,6 +720,7 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   // Kill all defs.
   GCNRegPressure DefPressure, ECDefPressure;
   bool HasECDefs = false;
+  BitVector DefUnits;
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
 
@@ -744,11 +745,19 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
       if (LiveMask.none())
         VirtLiveRegs.erase(I);
     } else if (shouldTrackPhysReg(Reg)) {
-      if (MO.isEarlyClobber()) {
-        for (MCRegUnit Unit : SRI->regunits(Reg.asMCReg()))
+      if (DefUnits.empty())
+        DefUnits.resize(SRI->getNumRegUnits());
+      for (MCRegUnit Unit : SRI->regunits(Reg.asMCReg())) {
+        unsigned U = static_cast<unsigned>(Unit);
+        if (DefUnits.test(U))
+          continue;
+        DefUnits.set(U);
+        if (MO.isEarlyClobber())
           ECDefPressure.inc(Unit, *SRI);
-        HasECDefs = true;
+        else
+          DefPressure.inc(Unit, *SRI);
       }
+      HasECDefs |= MO.isEarlyClobber();
 
       removeUnitsAndDecPressure(Reg.asMCReg(), CurPressure);
     }
@@ -871,11 +880,26 @@ void GCNDownwardRPTrackerBase::retireDeadUses(const MachineInstr &MI) {
 
   // Mirror ECDefPressure handling from GCNUpwardRPTracker::recede().
   GCNRegPressure ECDefPressure;
+  BitVector ECDefUnits;
   for (const MachineOperand &MO : MI.all_defs()) {
     Register Reg = MO.getReg();
-    if (Reg.isVirtual() && MO.isEarlyClobber())
+    if (!MO.isEarlyClobber())
+      continue;
+    if (Reg.isVirtual()) {
       ECDefPressure.inc(Reg, LaneBitmask::getNone(), getDefRegMask(MO, *MRI),
                         *MRI);
+    } else if (shouldTrackPhysReg(Reg)) {
+      // Units that are already live are accounted in CurPressure.
+      if (ECDefUnits.empty())
+        ECDefUnits.resize(SRI->getNumRegUnits());
+      for (MCRegUnit Unit : SRI->regunits(Reg.asMCReg())) {
+        unsigned U = static_cast<unsigned>(Unit);
+        if (!PhysLiveRegUnits.test(U) && !ECDefUnits.test(U)) {
+          ECDefUnits.set(U);
+          ECDefPressure.inc(Unit, *SRI);
+        }
+      }
+    }
   }
 
   MaxPressure = max(MaxPressure, CurPressure + ECDefPressure);
@@ -925,8 +949,9 @@ void GCNDownwardRPTrackerBase::addDefs(const MachineInstr &MI) {
       LiveMask |= getDefRegMask(MO, *MRI);
       CurPressure.inc(Reg, PrevMask, LiveMask, *MRI);
     } else if (shouldTrackPhysReg(Reg)) {
-      if (!MO.isDead())
-        addUnitsAndIncPressure(Reg.asMCReg(), CurPressure);
+      // Dead flags on physical register defs are unreliable. Add every def and
+      // let retireDeadDefs() drop the ones LIS reports dead.
+      addUnitsAndIncPressure(Reg.asMCReg(), CurPressure);
     }
   }
   MaxPressure = max(MaxPressure, CurPressure);
