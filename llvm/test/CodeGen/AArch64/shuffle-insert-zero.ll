@@ -410,10 +410,7 @@ entry:
 define <4 x i16> @testv4i16_1(<4 x i16> noundef %vec) #0 {
 ; CHECK-SD-LABEL: testv4i16_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    mov v1.h[0], v0.h[0]
-; CHECK-SD-NEXT:    fmov d0, d1
+; CHECK-SD-NEXT:    fmov h0, h0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4i16_1:
