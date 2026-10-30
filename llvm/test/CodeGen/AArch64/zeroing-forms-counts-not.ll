@@ -2004,9 +2004,8 @@ entry:
 define <vscale x 16 x i8> @test_svnot_nxv16i8_ptrue_u(double %z0, <vscale x 16 x i8> %x) {
 ; CHECK-LABEL: test_svnot_nxv16i8_ptrue_u:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    not z0.b, p0/m, z1.b
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv16i8_ptrue_u:
@@ -2022,9 +2021,8 @@ entry:
 define <vscale x 16 x i8> @test_svnot_nxv16i8_ptrue(double %z0, <vscale x 16 x i8> %x, <vscale x 16 x i8> %y) {
 ; CHECK-LABEL: test_svnot_nxv16i8_ptrue:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    movprfx z0, z2
-; CHECK-NEXT:    not z0.b, p0/m, z2.b
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv16i8_ptrue:
@@ -2040,9 +2038,8 @@ entry:
 define <vscale x 8 x i16> @test_svnot_nxv8i16_ptrue_u(double %z0, <vscale x 8 x i16> %x) {
 ; CHECK-LABEL: test_svnot_nxv8i16_ptrue_u:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    not z0.h, p0/m, z1.h
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv8i16_ptrue_u:
@@ -2058,9 +2055,8 @@ entry:
 define <vscale x 8 x i16> @test_svnot_nxv8i16_ptrue(double %z0, <vscale x 8 x i16> %x, <vscale x 8 x i16> %y) {
 ; CHECK-LABEL: test_svnot_nxv8i16_ptrue:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    movprfx z0, z2
-; CHECK-NEXT:    not z0.h, p0/m, z2.h
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv8i16_ptrue:
@@ -2076,9 +2072,8 @@ entry:
 define <vscale x 4 x i32> @test_svnot_nxv4i32_ptrue_u(double %z0, <vscale x 4 x i32> %x) {
 ; CHECK-LABEL: test_svnot_nxv4i32_ptrue_u:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    not z0.s, p0/m, z1.s
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv4i32_ptrue_u:
@@ -2094,9 +2089,8 @@ entry:
 define <vscale x 4 x i32> @test_svnot_nxv4i32_ptrue(double %z0, <vscale x 4 x i32> %x, <vscale x 4 x i32> %y) {
 ; CHECK-LABEL: test_svnot_nxv4i32_ptrue:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    movprfx z0, z2
-; CHECK-NEXT:    not z0.s, p0/m, z2.s
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv4i32_ptrue:
@@ -2112,9 +2106,8 @@ entry:
 define <vscale x 2 x i64> @test_svnot_nxv2i64_ptrue_u(double %z0, <vscale x 2 x i64> %x) {
 ; CHECK-LABEL: test_svnot_nxv2i64_ptrue_u:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    movprfx z0, z1
-; CHECK-NEXT:    not z0.d, p0/m, z1.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv2i64_ptrue_u:
@@ -2130,9 +2123,8 @@ entry:
 define <vscale x 2 x i64> @test_svnot_nxv2i64_ptrue(double %z0, <vscale x 2 x i64> %x, <vscale x 2 x i64> %y) {
 ; CHECK-LABEL: test_svnot_nxv2i64_ptrue:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    movprfx z0, z2
-; CHECK-NEXT:    not z0.d, p0/m, z2.d
+; CHECK-NEXT:    subr z0.b, z0.b, #255 // =0xff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-2p2-LABEL: test_svnot_nxv2i64_ptrue:
