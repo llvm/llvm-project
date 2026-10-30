@@ -14628,8 +14628,10 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
       *TTI, *DL, SPtrInfo.StrideVal, StridedLoadTy, VecTy, ScalarTy,
       LI0->getPointerOperand(), CommonAlignment,
       TTI::CastContextHint::GatherScatter, CostKind, /*IsReverse=*/false);
-  if (StridedCost >= CompressedCost && !Opts.slp_force_strided_loads)
+  if (StridedCost >= CompressedCost && !Opts.slp_force_strided_loads) {
+    CompressEntryToData.try_emplace(&E, std::move(CompressInfo)).first;
     return;
+  }
 
   LLVM_DEBUG({
     dbgs() << "SLP: Converted TreeEntry at Idx " << E.Idx
@@ -14639,7 +14641,6 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   });
   E.State = TreeEntry::StridedVectorize;
   TreeEntryToStridedPtrInfoMap[&E] = SPtrInfo;
-  CompressEntryToData.erase(&E);
 }
 
 void BoUpSLP::transformNodes() {
@@ -17952,22 +17953,26 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         break;
       }
       case TreeEntry::CompressVectorize: {
-        SmallVector<Value *> Scalars(VL);
-        if (!E->ReorderIndices.empty()) {
-          SmallVector<int> Mask(E->ReorderIndices.begin(),
-                                E->ReorderIndices.end());
-          reorderScalars(Scalars, Mask);
+        auto It = CompressEntryToData.find(E);
+        if (It == CompressEntryToData.end()) {
+          SmallVector<Value *> Scalars(VL);
+          if (!E->ReorderIndices.empty()) {
+            SmallVector<int> Mask(E->ReorderIndices.begin(),
+                                  E->ReorderIndices.end());
+            reorderScalars(Scalars, Mask);
+          }
+          SmallVector<Value *> PointerOps(Scalars.size());
+          for (auto [I, V] : enumerate(Scalars))
+            PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
+
+          CompressedLoadInfo CompressInfo;
+          (void)isMaskedLoadCompress(
+              Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
+              *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
+              CompressInfo, Cache);
+          It = CompressEntryToData.try_emplace(E, CompressInfo).first;
         }
-        SmallVector<Value *> PointerOps(Scalars.size());
-        for (auto [I, V] : enumerate(Scalars))
-          PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-        CompressedLoadInfo CompressInfo;
-        (void)isMaskedLoadCompress(
-            Scalars, PointerOps, E->ReorderIndices, *TTI, *DL, *SE, *AC, *DT,
-            *TLI, CostKind, [](Value *) { return true; }, Opts.slp_revec,
-            CompressInfo, Cache);
-        CompressEntryToData.try_emplace(E, CompressInfo);
-        VecLdCost = getCompressedLoadCost(*TTI, LI0, CompressInfo, CostKind);
+        VecLdCost = getCompressedLoadCost(*TTI, LI0, It->second, CostKind);
         break;
       }
       case TreeEntry::ScatterVectorize: {
