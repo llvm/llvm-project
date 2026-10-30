@@ -1205,7 +1205,7 @@ bool VectorCombine::foldStoreOfShuffle(Instruction &I) {
   // Selecting a store(shuffle(load)) sequence.
   if (!match(Store->getValueOperand(),
              m_OneUse(m_Shuffle(m_Value(V0, Load), m_Value(V1, LoadOrUndef),
-                               m_Mask(Mask)))))
+                                m_Mask(Mask)))))
     return false;
   auto *SrcTy = dyn_cast<FixedVectorType>(V0->getType());
   if (!SrcTy || !SrcTy->getElementType()->isIntegerTy())
