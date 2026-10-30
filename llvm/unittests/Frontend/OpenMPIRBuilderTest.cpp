@@ -27,6 +27,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <array>
 #include <cstdlib>
 #include <optional>
 
@@ -8865,6 +8866,470 @@ TEST_F(OpenMPIRBuilderTest, FuseLoopRangeNoDeadBlocks) {
     EXPECT_TRUE(Block.hasNPredecessorsOrMore(1))
         << "Dead block found: " << Block.getName().str();
   }
+}
+
+/// Build empty 3x5 source loops for Virtual API tests, in outer-to-inner order.
+static Expected<std::array<CanonicalLoopInfo *, 2>>
+createEmptyNest(OpenMPIRBuilder &OMP, OpenMPIRBuilder::LocationDescription Loc,
+                unsigned Bits = 32) {
+  auto *Ty = IntegerType::get(Loc.IP.getNodeParent()->getContext(), Bits);
+  std::array<CanonicalLoopInfo *, 2> Loops{};
+  auto Empty = [](OpenMPIRBuilder::InsertPointTy, Value *) {
+    return Error::success();
+  };
+  auto Body = [&](OpenMPIRBuilder::InsertPointTy IP, Value *) -> Error {
+    auto Inner = OMP.createCanonicalLoop({IP, Loc.DL}, Empty,
+                                         ConstantInt::get(Ty, 5), "inner");
+    if (!Inner)
+      return Inner.takeError();
+    Loops[1] = *Inner;
+    return Error::success();
+  };
+  auto Outer =
+      OMP.createCanonicalLoop(Loc, Body, ConstantInt::get(Ty, 3), "outer");
+  if (!Outer)
+    return Outer.takeError();
+  Loops[0] = *Outer;
+  return Loops;
+}
+
+// Preserve the outer condition and repeated direct edges through scheduling.
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseRepeatedEdges) {
+  OpenMPIRBuilder OMP(*M);
+  OMP.Config.IsTargetDevice = false;
+  OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.initialize();
+  IRBuilder<> B(BB);
+  ASSERT_EXPECTED_INIT(auto, Loops, createEmptyNest(OMP, {B.saveIP(), DL}));
+  auto [Outer, Inner] = Loops;
+  BasicBlock *Header = Outer->getHeader();
+  BasicBlock *Body = Outer->getBody();
+  BasicBlock *Preheader = Inner->getPreheader();
+  Body->getTerminator()->eraseFromParent();
+  B.SetInsertPoint(Body);
+  auto *Switch = B.CreateSwitch(F->getArg(0), Preheader, 1);
+  Switch->addCase(B.getInt32(0), Preheader);
+  B.restoreIP(Outer->getAfterIP());
+  B.CreateRetVoid();
+  Outer->assertOK();
+  Inner->assertOK();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_EQ(Body->getSingleSuccessor(), nullptr);
+  EXPECT_EQ(Body->getUniqueSuccessor(), Preheader);
+
+  BasicBlock *Cond = Outer->getCond();
+  Value *BoundValue = cast<CondBrInst>(Cond->getTerminator())->getCondition();
+  B.restoreIP(Inner->getBodyIP());
+  B.SetCurrentDebugLocation(DL);
+  auto Observe =
+      M->getOrInsertFunction("observe_condition", B.getVoidTy(), B.getInt1Ty());
+  CallInst *Use = B.CreateCall(Observe, {BoundValue});
+  auto *Collapsed = OMP.collapseLoops(DL, {Outer, Inner}, {});
+  EXPECT_EQ(Collapsed->getHeader(), Header);
+  EXPECT_EQ(Body->getTerminator(), Switch);
+  Collapsed->assertOK();
+  BasicBlock *Init = Collapsed->getPreheader()->getSingleSuccessor();
+  BasicBlock *Decode = cast<CondBrInst>(Init->getTerminator())->getSuccessor(0);
+  ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop({}, Collapsed, BB->begin(), false,
+                                              omp::OMP_SCHEDULE_Static),
+                       Succeeded());
+  auto *Branch = dyn_cast<CondBrInst>(Cond->getTerminator());
+  ASSERT_NE(Branch, nullptr);
+  EXPECT_EQ(Branch->getCondition(), BoundValue);
+  EXPECT_TRUE(isa<ICmpInst>(Cond->front()));
+  EXPECT_EQ(Use->getArgOperand(0), BoundValue);
+  // Division and remainder only decode the range start, before the loop nest.
+  unsigned DivRemCount = 0;
+  for (Instruction &I : instructions(F)) {
+    if (!I.isIntDivRem())
+      continue;
+    EXPECT_EQ(I.getParent(), Decode);
+    ++DivRemCount;
+  }
+  EXPECT_EQ(DivRemCount, 2u);
+  OMP.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseGuards) {
+  OpenMPIRBuilder OMP(*M);
+  OMP.Config.IsTargetDevice = false;
+  OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.initialize();
+  IRBuilder<> B(BB);
+  ASSERT_EXPECTED_INIT(auto, Loops, createEmptyNest(OMP, {B.saveIP(), DL}));
+  auto [Outer, Inner] = Loops;
+  B.restoreIP(Outer->getAfterIP());
+  B.CreateRetVoid();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_DEATH_IF_SUPPORTED(
+      OMP.collapseLoops(DL, {Outer, Inner, Inner}, {}),
+      "Virtual collapse requires two constant-count loops");
+  auto *Cmp = cast<CmpInst>(&Outer->getCond()->front());
+  Value *TC = Cmp->getOperand(1);
+  Cmp->setOperand(1, F->getArg(0));
+  EXPECT_DEATH_IF_SUPPORTED(
+      OMP.collapseLoops(DL, {Outer, Inner}, {}),
+      "Virtual collapse requires two constant-count loops");
+  Cmp->setOperand(1, TC);
+  // Isolate both direct-nesting edges using valid CFGs.
+  for (BasicBlock *From : {Outer->getBody(), Inner->getAfter()}) {
+    auto *Br = cast<UncondBrInst>(From->getTerminator());
+    BasicBlock *To = Br->getSuccessor();
+    auto *Bridge = BasicBlock::Create(Ctx, "bridge", F, To);
+    B.SetInsertPoint(Bridge);
+    B.CreateBr(To);
+    Br->setSuccessor(Bridge);
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+    EXPECT_DEATH_IF_SUPPORTED(OMP.collapseLoops(DL, {Outer, Inner}, {}),
+                              "Virtual collapse requires direct nesting");
+    Br->setSuccessor(To);
+    Bridge->eraseFromParent();
+  }
+  // Address-taking alone is supported; an indirect transfer must not bypass
+  // the guard inserted before the outer latch.
+  BasicBlock *Latch = Outer->getLatch();
+  BasicBlock *After = Inner->getAfter();
+  BlockAddress *Address = BlockAddress::get(F, Latch);
+  B.SetInsertPoint(After->getTerminator());
+  auto *Indirect = B.CreateIndirectBr(Address, 1);
+  Indirect->addDestination(Latch);
+  Indirect->getNextNode()->eraseFromParent();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  EXPECT_DEATH_IF_SUPPORTED(
+      OMP.collapseLoops(DL, {Outer, Inner}, {}),
+      "Virtual collapse requires unobserved canonical loop controls");
+  Indirect->eraseFromParent();
+  B.SetInsertPoint(After);
+  B.CreateBr(Latch);
+  B.restoreIP(Inner->getBodyIP());
+  auto Ignore =
+      M->getOrInsertFunction("ignore_address", B.getVoidTy(), B.getPtrTy());
+  CallInst *AddressUse = B.CreateCall(Ignore, {Address});
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+  // Existing source-loop metadata remains supported.
+  OMP.unrollLoopFull(DL, Inner);
+  BasicBlock *InnerLatch = Inner->getLatch();
+  BasicBlock *InnerBody = Inner->getBody();
+  auto *Collapsed = OMP.collapseLoops(DL, {Outer, Inner}, {});
+  EXPECT_EQ(AddressUse->getArgOperand(0), Address);
+  ASSERT_NE(Latch->getSinglePredecessor(), nullptr);
+  auto *Guard =
+      dyn_cast<CondBrInst>(Latch->getSinglePredecessor()->getTerminator());
+  ASSERT_NE(Guard, nullptr);
+  EXPECT_EQ(Guard->getSuccessor(1), Latch);
+  EXPECT_NE(InnerLatch->getTerminator()->getMetadata(LLVMContext::MD_loop),
+            nullptr);
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  constexpr char Transform[] =
+      "virtual collapse must be the final structural loop transformation";
+  EXPECT_DEATH_IF_SUPPORTED(Collapsed->getBody(), Transform);
+  EXPECT_DEATH_IF_SUPPORTED(Collapsed->getIndVar(), Transform);
+  EXPECT_DEATH_IF_SUPPORTED(OMP.applySimd(Collapsed, {}, nullptr,
+                                          OrderKind::OMP_ORDER_unknown, nullptr,
+                                          nullptr),
+                            Transform);
+  EXPECT_DEATH_IF_SUPPORTED(OMP.tileLoops(DL, {Collapsed}, {B.getInt32(2)}),
+                            Transform);
+  EXPECT_DEATH_IF_SUPPORTED(OMP.unrollLoopFull(DL, Collapsed),
+                            "unrolling must precede Virtual collapse");
+  EXPECT_DEATH_IF_SUPPORTED(OMP.unrollLoopHeuristic(DL, Collapsed),
+                            "unrolling must precede Virtual collapse");
+  EXPECT_DEATH_IF_SUPPORTED(OMP.unrollLoopPartial(DL, Collapsed, 2, nullptr),
+                            "unrolling must precede Virtual collapse");
+  EXPECT_DEATH_IF_SUPPORTED(OMP.fuseLoops(DL, {Collapsed}), Transform);
+  CanonicalLoopInfo *Unrolled = nullptr;
+  OMP.unrollLoopPartial(DL, Collapsed, 1, &Unrolled);
+  EXPECT_EQ(Unrolled, Collapsed);
+  EXPECT_DEATH_IF_SUPPORTED(OMP.unrollLoopPartial(DL, Collapsed, 0, &Unrolled),
+                            Transform);
+  EXPECT_DEATH_IF_SUPPORTED(OMP.unrollLoopPartial(DL, Collapsed, 2, &Unrolled),
+                            Transform);
+  // Supply a valid nested CLI while rejecting the enclosing Virtual input.
+  auto Nested = OMP.createCanonicalLoop(
+      {InnerBody->getFirstInsertionPt(), DL},
+      [](OpenMPIRBuilder::InsertPointTy, Value *) { return Error::success(); },
+      B.getInt32(2));
+  ASSERT_THAT_EXPECTED(Nested, Succeeded());
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+  for (auto Mapping : {OpenMPIRBuilder::CollapseIVMapping::DivMod,
+                       OpenMPIRBuilder::CollapseIVMapping::Virtual}) {
+    OMP.Config.CollapseMapping = Mapping;
+    EXPECT_EQ(OMP.collapseLoops(DL, {Collapsed}, {}), Collapsed);
+    EXPECT_DEATH_IF_SUPPORTED(OMP.collapseLoops(DL, {Collapsed, *Nested}, {}),
+                              Transform);
+  }
+  OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  for (auto Schedule : {omp::OMP_SCHEDULE_Dynamic, omp::OMP_SCHEDULE_Guided,
+                        omp::OMP_SCHEDULE_Runtime, omp::OMP_SCHEDULE_Auto})
+    EXPECT_DEATH_IF_SUPPORTED(
+        (void)OMP.applyWorkshareLoop(DL, Collapsed, BB->begin(), false,
+                                     Schedule),
+        "Virtual collapse requires unchunked static worksharing");
+  EXPECT_DEATH_IF_SUPPORTED(
+      (void)OMP.applyWorkshareLoop(DL, Collapsed, BB->begin(), false,
+                                   omp::OMP_SCHEDULE_Static, B.getInt32(1)),
+      "Virtual collapse requires unchunked static worksharing");
+  // Isolate the remaining guard inputs before scheduler dispatch.
+  auto RejectWorkshare = [&](bool Ordered, omp::WorksharingLoopType Type,
+                             bool DistSchedule, Value *DistChunk) {
+    SCOPED_TRACE(testing::Message()
+                 << OMP.Config.isTargetDevice() << " " << Ordered << " "
+                 << static_cast<unsigned>(Type) << " " << DistSchedule << " "
+                 << (DistChunk != nullptr));
+    EXPECT_DEATH_IF_SUPPORTED(
+        (void)OMP.applyWorkshareLoop(
+            DL, Collapsed, BB->begin(), false, omp::OMP_SCHEDULE_Static,
+            /*ChunkSize=*/nullptr, /*HasSimdModifier=*/false,
+            /*HasMonotonicModifier=*/false, /*HasNonmonotonicModifier=*/false,
+            Ordered, Type, /*NoLoop=*/false, DistSchedule, DistChunk),
+        "Virtual collapse requires unchunked static worksharing");
+  };
+  auto Static = omp::WorksharingLoopType::ForStaticLoop;
+  RejectWorkshare(true, Static, false, nullptr);
+  for (auto Type : {omp::WorksharingLoopType::DistributeStaticLoop,
+                    omp::WorksharingLoopType::DistributeForStaticLoop})
+    RejectWorkshare(false, Type, false, nullptr);
+  RejectWorkshare(false, Static, true, nullptr);
+  RejectWorkshare(false, Static, false, B.getInt32(1));
+  OMP.Config.IsTargetDevice = true;
+  RejectWorkshare(false, Static, false, nullptr);
+  OMP.Config.IsTargetDevice = false;
+  EXPECT_EQ(Collapsed->getIndVarType(), B.getInt32Ty());
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseRejectsTaskloop) {
+  OpenMPIRBuilder OMP(*M);
+  OMP.Config.IsTargetDevice = false;
+  OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.initialize();
+  IRBuilder<> B(BB);
+  BasicBlock *Entry = BasicBlock::Create(Ctx, "task.entry", F);
+  auto *Enter = B.CreateBr(Entry);
+  OpenMPIRBuilder::InsertPointTy AllocaIP(Enter->getIterator());
+  B.SetInsertPoint(Entry);
+  B.CreateRetVoid();
+  B.SetInsertPoint(Entry->getTerminator());
+  CanonicalLoopInfo *Collapsed = nullptr;
+  // Construct the nest inside the task body through the documented callbacks.
+  auto Body = [&](OpenMPIRBuilder::InsertPointTy,
+                  OpenMPIRBuilder::InsertPointTy IP,
+                  ArrayRef<BasicBlock *>) -> Error {
+    auto Loops = createEmptyNest(OMP, {IP, DL});
+    if (!Loops)
+      return Loops.takeError();
+    Collapsed = OMP.collapseLoops(DL, *Loops, {});
+    if (verifyModule(*M, &errs()))
+      return createStringError(inconvertibleErrorCode(),
+                               "invalid Virtual taskloop fixture");
+    return Error::success();
+  };
+  EXPECT_DEATH_IF_SUPPORTED(
+      (void)OMP.createTaskloop(
+          {B.saveIP(), DL}, AllocaIP, {}, Body,
+          [&]() -> Expected<CanonicalLoopInfo *> { return Collapsed; },
+          B.getInt32(1), B.getInt32(15), B.getInt32(1), /*Untied=*/false,
+          /*IfCond=*/nullptr, /*GrainSize=*/nullptr, /*NoGroup=*/true,
+          /*Sched=*/0, /*Final=*/nullptr, /*Mergeable=*/false,
+          /*Priority=*/nullptr, /*NumOfCollapseLoops=*/2),
+      "virtual collapse must be the final structural loop transformation");
+}
+
+TEST_P(OpenMPIRBuilderTestWithIVBits, VirtualCollapseAssertOK) {
+  unsigned Bits = GetParam();
+  OpenMPIRBuilder OMP(*M);
+  OMP.Config.IsTargetDevice = false;
+  OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.initialize();
+  IRBuilder<> B(BB);
+  ASSERT_EXPECTED_INIT(auto, Loops,
+                       createEmptyNest(OMP, {B.saveIP(), DL}, Bits));
+  auto [Outer, Inner] = Loops;
+  B.restoreIP(Outer->getAfterIP());
+  B.CreateRetVoid();
+  // New executor instructions use the collapse location, not the source loops'.
+  DebugLoc CollapseDL =
+      DILocation::get(Ctx, DL.getLine() + 1, DL.getCol(), DL.getScope());
+  auto *Collapsed = OMP.collapseLoops(CollapseDL, {Outer, Inner}, {});
+  unsigned Checked = 0;
+  for (Instruction &I : instructions(F))
+    if (I.getName().starts_with("omp_collapsed.") ||
+        I.getParent()->getName().starts_with("omp_collapsed.")) {
+      EXPECT_EQ(I.getDebugLoc(), CollapseDL);
+      ++Checked;
+    }
+  EXPECT_GT(Checked, 0u);
+  auto *Init = Collapsed->getPreheader()->getSingleSuccessor();
+  auto *Begin = cast<BinaryOperator>(&Init->front());
+  auto *Count = cast<BinaryOperator>(Begin->getNextNode());
+  EXPECT_TRUE(Init->phis().empty());
+  EXPECT_EQ(Begin->getOpcode(), Instruction::Add);
+  EXPECT_EQ(Count->getOpcode(), Instruction::Add);
+  EXPECT_EQ(cast<ConstantInt>(Begin->getOperand(1))->getZExtValue(), 0u);
+  EXPECT_EQ(cast<ConstantInt>(Count->getOperand(1))->getZExtValue(), 0u);
+  // The range starts in row 1 and has a count distinct from the outer extent.
+  Begin->setOperand(0, B.getIntN(Bits, 7));
+  Count->setOperand(0, B.getIntN(Bits, 2));
+  Collapsed->assertOK();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+
+#ifndef NDEBUG
+  auto *IV = cast<PHINode>(&Collapsed->getHeader()->front());
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        Begin->setOperand(1, B.getIntN(Bits, 1));
+        Collapsed->assertOK();
+      },
+      "Virtual range copies must add zero");
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        Count->setOperand(1, B.getIntN(Bits, 1));
+        Collapsed->assertOK();
+      },
+      "Virtual range copies must add zero");
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        cast<UncondBrInst>(Collapsed->getHeader()->getTerminator())
+            ->setSuccessor(Collapsed->getExit());
+        Collapsed->assertOK();
+      },
+      "Header must jump to exiting block");
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        IV->setIncomingBlock(0, Init);
+        Collapsed->assertOK();
+      },
+      "getIncomingBlock\\(0\\) == IndVarEntry");
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        cast<BinaryOperator>(IV->getIncomingValue(1))
+            ->setOperand(1, B.getIntN(Bits, 2));
+        Collapsed->assertOK();
+      },
+      "isOne");
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        cast<CmpInst>(&Collapsed->getCond()->front())
+            ->setPredicate(CmpInst::ICMP_ULE);
+        Collapsed->assertOK();
+      },
+      "Exit condition must be a signed less-than comparison");
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        auto *Guard = cast<CondBrInst>(Init->getTerminator());
+        cast<ICmpInst>(Guard->getCondition())->setPredicate(ICmpInst::ICMP_EQ);
+        Collapsed->assertOK();
+      },
+      "Collapsed guard must skip empty ranges");
+#endif
+
+  Count->setOperand(0, B.getIntN(Bits, 0));
+  Collapsed->assertOK();
+  ASSERT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(OpenMPIRBuilderTest, VirtualCollapseSavedPreheader) {
+  OpenMPIRBuilder OMP(*M);
+  OMP.Config.IsTargetDevice = false;
+  OMP.Config.CollapseMapping = OpenMPIRBuilder::CollapseIVMapping::Virtual;
+  OMP.initialize();
+  IRBuilder<> B(BB);
+  auto Empty = [](OpenMPIRBuilder::InsertPointTy, Value *) {
+    return Error::success();
+  };
+  ASSERT_EXPECTED_INIT(auto, Loops, createEmptyNest(OMP, {B.saveIP(), DL}));
+  auto [Outer, Inner] = Loops;
+  // Two predecessor blocks supply three edges to this join inside Virtual.
+  BasicBlock *Body = Inner->getBody();
+  BasicBlock *Join = BasicBlock::Create(Ctx, "join", F);
+  BasicBlock *JoinEntry = BasicBlock::Create(Ctx, "join.entry", F);
+  Body->getTerminator()->eraseFromParent();
+  B.SetInsertPoint(Body);
+  auto *Switch = B.CreateSwitch(B.getInt32(0), Join, 2);
+  Switch->addCase(B.getInt32(0), Join);
+  Switch->addCase(B.getInt32(1), JoinEntry);
+  B.SetInsertPoint(JoinEntry);
+  auto *JoinBranch = B.CreateBr(Join);
+  B.SetInsertPoint(Join);
+  auto *JoinPhi = B.CreatePHI(B.getInt32Ty(), 3);
+  JoinPhi->addIncoming(B.getInt32(0), Body);
+  JoinPhi->addIncoming(B.getInt32(0), Body);
+  JoinPhi->addIncoming(B.getInt32(1), JoinEntry);
+  auto *SmallEntry = BasicBlock::Create(Ctx, "small.entry", F);
+  auto *SmallJoin = BasicBlock::Create(Ctx, "small.join", F);
+  B.CreateCondBr(B.getFalse(), SmallJoin, SmallEntry);
+  B.SetInsertPoint(SmallEntry);
+  auto *SmallBranch = B.CreateBr(SmallJoin);
+  B.SetInsertPoint(SmallJoin);
+  auto *SmallPhi = B.CreatePHI(B.getInt32Ty(), 2);
+  SmallPhi->addIncoming(B.getInt32(0), Join);
+  SmallPhi->addIncoming(B.getInt32(1), SmallEntry);
+  B.CreateBr(Inner->getLatch());
+  ASSERT_TRUE(Join->hasNPredecessors(3));
+  auto Saved = Outer->getPreheaderIP();
+  auto SavedInner = Inner->getPreheaderIP();
+  B.restoreIP(Outer->getAfterIP());
+  B.CreateRetVoid();
+  auto *Collapsed = OMP.collapseLoops(DL, {Outer, Inner}, {});
+  auto CheckControls = [&](OpenMPIRBuilder::InsertPointTy, Value *) {
+    Collapsed->assertOK();
+    return Error::success();
+  };
+  // Saved preheaders remain usable by the creating builder and another builder.
+  OpenMPIRBuilder Other(*M);
+  Other.Config.IsTargetDevice = false;
+  Other.initialize();
+  for (OpenMPIRBuilder *InsertBuilder : {&OMP, &Other}) {
+    BasicBlock *OldJoinPred = JoinBranch->getParent();
+    auto RepairJoin = [&](OpenMPIRBuilder::InsertPointTy, Value *) {
+      // Large joins retain caller-managed PHI updates.
+      EXPECT_EQ(JoinPhi->getIncomingBlock(2), OldJoinPred);
+      JoinPhi->setIncomingBlock(2, JoinBranch->getParent());
+      return Error::success();
+    };
+    ASSERT_THAT_EXPECTED(
+        InsertBuilder->createCanonicalLoop({JoinBranch->getIterator(), DL},
+                                           RepairJoin, B.getInt32(2)),
+        Succeeded());
+    // User PHIs stay caller-managed even in a small join inside Virtual.
+    BasicBlock *OldSmallPred = SmallBranch->getParent();
+    auto RepairSmall = [&](OpenMPIRBuilder::InsertPointTy, Value *) {
+      int Index = SmallPhi->getBasicBlockIndex(OldSmallPred);
+      EXPECT_GE(Index, 0);
+      if (Index >= 0)
+        SmallPhi->setIncomingBlock(Index, SmallBranch->getParent());
+      return Error::success();
+    };
+    ASSERT_THAT_EXPECTED(
+        InsertBuilder->createCanonicalLoop({SmallBranch->getIterator(), DL},
+                                           RepairSmall, B.getInt32(2)),
+        Succeeded());
+    // A legacy caller may also perform its predecessor lookup after return.
+    OldSmallPred = SmallBranch->getParent();
+    ASSERT_THAT_EXPECTED(
+        InsertBuilder->createCanonicalLoop({SmallBranch->getIterator(), DL},
+                                           Empty, B.getInt32(2)),
+        Succeeded());
+    int Index = SmallPhi->getBasicBlockIndex(OldSmallPred);
+    ASSERT_GE(Index, 0);
+    SmallPhi->setIncomingBlock(Index, SmallBranch->getParent());
+    ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
+                             {Saved, DL}, CheckControls, B.getInt32(2)),
+                         Succeeded());
+    ASSERT_THAT_EXPECTED(InsertBuilder->createCanonicalLoop(
+                             {SavedInner, DL}, CheckControls, B.getInt32(2)),
+                         Succeeded());
+    ASSERT_FALSE(verifyModule(*M, &errs()));
+    Collapsed->assertOK();
+  }
+  // Default scheduling also binds the Virtual range.
+  ASSERT_THAT_EXPECTED(OMP.applyWorkshareLoop(DL, Collapsed, BB->begin(), false,
+                                              omp::OMP_SCHEDULE_Default),
+                       Succeeded());
+  Other.finalize();
+  OMP.finalize();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
 } // namespace

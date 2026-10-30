@@ -36,9 +36,11 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -57,6 +59,12 @@ getPrivateDataAddress(llvm::IRBuilderBase &builder,
                       omp::PrivateClauseOp privatizer, llvm::Value *var);
 
 namespace {
+/// Stores the option value so the OpenMP-to-LLVM IR translation can read it
+/// outside registerOpenMPTranslationCLOptions(). The local cl::opt avoids a
+/// global constructor in MLIR and writes to this variable through cl::location.
+/// Without registration, false keeps Virtual enabled for eligible loops.
+static bool disableVirtualCollapse = false;
+
 static llvm::omp::ScheduleKind
 convertToScheduleKind(std::optional<omp::ClauseScheduleKind> schedKind) {
   if (!schedKind.has_value())
@@ -5491,6 +5499,31 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             privateVarsInfo);
 }
 
+/// Select Virtual only for two constant-count host worksharing loops.
+static llvm::OpenMPIRBuilder::CollapseIVMapping
+selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
+                        ArrayRef<llvm::CanonicalLoopInfo *> loops) {
+  using Mapping = llvm::OpenMPIRBuilder::CollapseIVMapping;
+  if (isTargetDevice || loopOp.getCollapseNumLoops() != 2 ||
+      disableVirtualCollapse)
+    return Mapping::DivMod;
+  auto wsloop = dyn_cast<omp::WsloopOp>(loopOp->getParentOp());
+  if (!wsloop || isa<omp::LoopWrapperInterface>(wsloop->getParentOp()) ||
+      wsloop.getScheduleKind().value_or(omp::ClauseScheduleKind::Static) !=
+          omp::ClauseScheduleKind::Static ||
+      wsloop.getScheduleChunk() || wsloop.getOrdered().has_value() ||
+      !wsloop.getLinearVars().empty())
+    return Mapping::DivMod;
+  // Use the existing normalized counts; the builder also validates direct
+  // API callers.
+  if (llvm::any_of(loops, [](llvm::CanonicalLoopInfo *loop) {
+        auto *count = llvm::dyn_cast<llvm::ConstantInt>(loop->getTripCount());
+        return !count;
+      }))
+    return Mapping::DivMod;
+  return Mapping::Virtual;
+}
+
 /// Converts an OpenMP loop nest into LLVM IR using OpenMPIRBuilder.
 static LogicalResult
 convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
@@ -5599,6 +5632,10 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::CanonicalLoopInfo *> collapseLoopInfos(
       loopInfos.begin(), loopInfos.begin() + (numCollapse));
 
+  llvm::SaveAndRestore<llvm::OpenMPIRBuilder::CollapseIVMapping> mappingGuard(
+      ompBuilder->Config.CollapseMapping,
+      selectCollapseIVMapping(loopOp, ompBuilder->Config.isTargetDevice(),
+                              collapseLoopInfos));
   auto newTopLoopInfo =
       ompBuilder->collapseLoops(ompLoc.DL, collapseLoopInfos, {});
 
@@ -11092,6 +11129,13 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
     moduleTranslation.stackPop();
 
   return result;
+}
+
+void mlir::registerOpenMPTranslationCLOptions() {
+  static llvm::cl::opt<bool, /*ExternalStorage=*/true> option(
+      "openmp-disable-virtual-collapse", llvm::cl::Hidden,
+      llvm::cl::desc("Disable virtual collapse of eligible host loops"),
+      llvm::cl::location(disableVirtualCollapse));
 }
 
 void mlir::registerOpenMPDialectTranslation(DialectRegistry &registry) {
