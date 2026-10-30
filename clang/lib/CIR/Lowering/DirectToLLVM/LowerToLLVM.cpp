@@ -16,6 +16,7 @@
 #include <array>
 #include <optional>
 
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -579,14 +580,11 @@ createCallLLVMIntrinsicOp(mlir::ConversionPatternRewriter &rewriter,
       mlir::StringAttr::get(rewriter.getContext(), intrinsicName);
   auto fmfAttr =
       mlir::LLVM::FastmathFlagsAttr::get(rewriter.getContext(), fastmathFlags);
-  // CallIntrinsicOp has distinct void / result create overloads. The FMF
-  // builders take a TypeRange for results.
-  if (resultTy)
-    return mlir::LLVM::CallIntrinsicOp::create(
-        rewriter, loc, mlir::TypeRange{resultTy}, intrinsicNameAttr, operands,
-        fmfAttr);
-  return mlir::LLVM::CallIntrinsicOp::create(rewriter, loc, intrinsicNameAttr,
-                                             operands, fmfAttr);
+  return mlir::LLVM::CallIntrinsicOp::create(
+      rewriter, loc, resultTy ? mlir::TypeRange{resultTy} : mlir::TypeRange{},
+      intrinsicNameAttr,
+      mlir::LLVM::getIntrinsicArguments(intrinsicNameAttr.getValue(), operands),
+      fmfAttr);
 }
 
 static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(

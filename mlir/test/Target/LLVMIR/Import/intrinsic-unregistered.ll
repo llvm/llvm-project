@@ -275,3 +275,15 @@ define i32 @read_pointer_constants_in_node() {
 }
 
 !0 = !{ptr null, ptr addrspacecast (ptr addrspace(1) @nested_global to ptr)}
+
+; // -----
+
+declare <4 x float> @llvm.x86.sse41.round.ss(<4 x float>, <4 x float>, i32 immarg)
+
+; CHECK-LABEL: llvm.func @round_ss
+; CHECK-NOT: llvm.mlir.constant
+; CHECK: llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%arg0, %arg0) {fastmathFlags = #llvm.fastmath<reassoc>, immarg_positions = array<i32: 2>, immarg_values = [1 : i32]} : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+define <4 x float> @round_ss(<4 x float> %x) {
+  %r = call reassoc <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %x, <4 x float> %x, i32 1)
+  ret <4 x float> %r
+}

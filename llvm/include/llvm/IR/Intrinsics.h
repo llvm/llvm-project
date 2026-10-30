@@ -111,6 +111,10 @@ LLVM_ABI bool isTargetIntrinsic(ID IID);
 
 LLVM_ABI ID lookupIntrinsicID(StringRef Name);
 
+/// Return true if the argument at the zero-based index ArgNo has the immarg
+/// attribute. This does not depend on the intrinsic's overloaded types.
+LLVM_ABI bool isImmArg(ID id, unsigned ArgNo);
+
 /// Return the attributes for an intrinsic.
 LLVM_ABI AttributeList getAttributes(LLVMContext &C, ID id, FunctionType *FT);
 

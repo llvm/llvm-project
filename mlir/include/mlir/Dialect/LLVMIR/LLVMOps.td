@@ -2725,7 +2725,21 @@ def LLVM_CallIntrinsicOp
   let summary = "Call to an LLVM intrinsic function.";
   let description = [{
     Call the specified llvm intrinsic. If the intrinsic is overloaded, use
-    the MLIR function type of this op to determine which intrinsic to call.
+    the argument and result types to determine which intrinsic to call.
+
+    LLVM `immarg` parameters can be supplied as integer or floating-point
+    attributes in `immarg_values`. `immarg_positions` contains the corresponding
+    sorted, unique, zero-based indices in the full argument list, excluding
+    operand bundles. These arguments are omitted from SSA operands, the printed
+    function type, and `arg_attrs`.
+
+    For example:
+
+    ```mlir
+    %r = llvm.call_intrinsic "llvm.x86.sse41.round.ss"(%a, %b) {
+      immarg_positions = array<i32: 2>, immarg_values = [1 : i32]
+    } : (vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+    ```
   }];
   let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args,
                        DefaultValuedAttr<LLVM_FastmathFlagsAttr,
@@ -2735,7 +2749,9 @@ def LLVM_CallIntrinsicOp
                        DenseI32ArrayAttr:$op_bundle_sizes,
                        OptionalAttr<ArrayAttr>:$op_bundle_tags,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
-                       OptionalAttr<DictArrayAttr>:$res_attrs);
+                       OptionalAttr<DictArrayAttr>:$res_attrs,
+                       DefaultValuedAttr<DenseI32ArrayAttr, "{}">:$immarg_positions,
+                       DefaultValuedAttr<ArrayAttr, "{}">:$immarg_values);
   let results = (outs Optional<LLVM_Type>:$results);
   let llvmBuilder = [{
     return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
@@ -2746,8 +2762,17 @@ def LLVM_CallIntrinsicOp
     OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args)>,
     OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>,
     OpBuilder<(ins "Type": $resultType, "StringAttr":$intrin, "ValueRange":$args)>,
-    OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>
+    OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "StringAttr":$intrin,
+      "ArrayRef<OpFoldResult>":$args,
+      CArg<"FastmathFlagsAttr", "{}">:$fastMathFlags)>
   ];
+
+  let extraClassDeclaration = [{
+    /// Returns the LLVM intrinsic arguments in order, combining SSA operands
+    /// and immediate attributes. Operand bundles are not included.
+    SmallVector<OpFoldResult> getMixedArgs();
+  }];
 
   let hasVerifier = 1;
 }
