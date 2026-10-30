@@ -37879,7 +37879,7 @@ X86TargetLowering::EmitLoweredProbedAlloca(MachineInstr &MI,
 
   const unsigned XORMIOpc =
       TFI.Uses64BitFramePtr ? X86::XOR64mi32 : X86::XOR32mi;
-  addRegOffset(BuildMI(blockMBB, MIMD, TII->get(XORMIOpc)), physSPReg, false, 0)
+  addRegOffset(BuildMI(blockMBB, MIMD, TII->get(XORMIOpc)), physSPReg, 0)
       .addImm(0);
 
   BuildMI(blockMBB, MIMD, TII->get(getSUBriOpcode(TFI.Uses64BitFramePtr)),
@@ -38465,9 +38465,9 @@ X86TargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
     Register FramePtr = RegInfo->getFrameRegister(*MF);
     Register BasePtr = RegInfo->getBaseRegister();
     unsigned Opm = Uses64BitFramePtr ? X86::MOV64rm : X86::MOV32rm;
-    addRegOffset(BuildMI(restoreMBB, MIMD, TII->get(Opm), BasePtr),
-                 FramePtr, true, X86FI->getRestoreBasePointerOffset())
-      .setMIFlag(MachineInstr::FrameSetup);
+    addRegOffset(BuildMI(restoreMBB, MIMD, TII->get(Opm), BasePtr), FramePtr,
+                 X86FI->getRestoreBasePointerOffset())
+        .setMIFlag(MachineInstr::FrameSetup);
   }
   BuildMI(restoreMBB, MIMD, TII->get(X86::MOV32ri), restoreDstReg).addImm(1);
   BuildMI(restoreMBB, MIMD, TII->get(X86::JMP_1)).addMBB(sinkMBB);
@@ -38896,7 +38896,7 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
     Register FP = RI.getFrameRegister(*MF);
     Register BP = RI.getBaseRegister();
     unsigned Op = FPIs64Bit ? X86::MOV64rm : X86::MOV32rm;
-    addRegOffset(BuildMI(DispatchBB, MIMD, TII->get(Op), BP), FP, true,
+    addRegOffset(BuildMI(DispatchBB, MIMD, TII->get(Op), BP), FP,
                  MFI->getRestoreBasePointerOffset())
         .addRegMask(RI.getNoPreservedMask());
   } else {
@@ -39442,7 +39442,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // stack pointer + offset
     addRegOffset(BuildMI(*BB, MI, MIMD, TII->get(X86::LEA32r),
                          MI.getOperand(0).getReg()),
-                 X86::ESP, false, ArgOffset);
+                 X86::ESP, ArgOffset);
     MI.eraseFromParent();
     return BB;
   }
