@@ -2900,31 +2900,46 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
   }
 
   unsigned FirstPreprocessorEntityID = NUM_PREDEF_PP_ENTITY_IDS;
-  unsigned NextPreprocessorEntityID = FirstPreprocessorEntityID;
   RecordData Record;
+
+  // A reader binary searches this table by location, so it has to be written in
+  // that order. Reusing a loaded module's entries for a duplicate input file
+  // redirects some of these locations into that module, which a reader orders
+  // before any of this module's own, so those entities go first.
+  SmallVector<std::pair<PreprocessedEntity *, SourceRange>, 32> Entities;
   for (PreprocessingRecord::iterator E = PPRec.local_begin(),
-                                  EEnd = PPRec.local_end();
-       E != EEnd;
-       (void)++E, ++NumPreprocessingRecords, ++NextPreprocessorEntityID) {
+                                     EEnd = PPRec.local_end();
+       E != EEnd; ++E)
+    Entities.emplace_back(*E, getAdjustedRange((*E)->getSourceRange()));
+  std::stable_partition(
+      Entities.begin(), Entities.end(), [this](const auto &E) {
+        return getRedirectedLocation(E.first->getSourceRange().getBegin())
+            .isValid();
+      });
+
+  // A macro expansion names its definition by entity ID, so every ID has to be
+  // known before the first record is written.
+  for (unsigned I = 0, N = Entities.size(); I != N; ++I)
+    if (auto *MD = dyn_cast<MacroDefinitionRecord>(Entities[I].first))
+      MacroDefinitions[MD] = FirstPreprocessorEntityID + I;
+
+  for (auto &[Entity, R] : Entities) {
+    ++NumPreprocessingRecords;
     Record.clear();
 
     uint64_t Offset = Stream.GetCurrentBitNo() - MacroOffsetsBase;
     assert((Offset >> 32) == 0 && "Preprocessed entity offset too large");
-    SourceRange R = getAdjustedRange((*E)->getSourceRange());
     PreprocessedEntityOffsets.emplace_back(
         getRawSourceLocationEncoding(R.getBegin()),
         getRawSourceLocationEncoding(R.getEnd()), Offset);
 
-    if (auto *MD = dyn_cast<MacroDefinitionRecord>(*E)) {
-      // Record this macro definition's ID.
-      MacroDefinitions[MD] = NextPreprocessorEntityID;
-
+    if (auto *MD = dyn_cast<MacroDefinitionRecord>(Entity)) {
       AddIdentifierRef(MD->getName(), Record);
       Stream.EmitRecord(PPD_MACRO_DEFINITION, Record);
       continue;
     }
 
-    if (auto *ME = dyn_cast<MacroExpansion>(*E)) {
+    if (auto *ME = dyn_cast<MacroExpansion>(Entity)) {
       Record.push_back(ME->isBuiltinMacro());
       if (ME->isBuiltinMacro())
         AddIdentifierRef(ME->getName(), Record);
@@ -2934,7 +2949,7 @@ void ASTWriter::WritePreprocessorDetail(PreprocessingRecord &PPRec,
       continue;
     }
 
-    if (auto *ID = dyn_cast<InclusionDirective>(*E)) {
+    if (auto *ID = dyn_cast<InclusionDirective>(Entity)) {
       Record.push_back(PPD_INCLUSION_DIRECTIVE);
       Record.push_back(ID->getFileName().size());
       Record.push_back(ID->wasInQuotes());
