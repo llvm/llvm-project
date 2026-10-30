@@ -359,9 +359,8 @@ struct ConcatOpInterface
                                   getDimSize(input, concatDim));
     Value resultSize = arith::ConstantIndexOp::create(
         builder, loc, resultType.getDimSize(concatDim));
-    Value isEqual = arith::CmpIOp::create(builder, loc,
-                                          arith::CmpIPredicate::eq, sum,
-                                          resultSize);
+    Value isEqual = arith::CmpIOp::create(
+        builder, loc, arith::CmpIPredicate::eq, sum, resultSize);
     cf::AssertOp::create(
         builder, loc, isEqual,
         generateErrorMessage(op, "sum of input sizes along concatenated "
@@ -394,8 +393,8 @@ struct ReshapeOpInterface
       Value shapeValue =
           ExtractOp::create(builder, loc, reshapeOp.getShape(), idx);
       if (shapeValue.getType() != indexType)
-        shapeValue = arith::IndexCastOp::create(builder, loc, indexType,
-                                                shapeValue);
+        shapeValue =
+            arith::IndexCastOp::create(builder, loc, indexType, shapeValue);
       shapeValues.push_back(shapeValue);
     }
 
@@ -410,9 +409,9 @@ struct ReshapeOpInterface
           continue;
         Value expectedSize = arith::ConstantIndexOp::create(
             builder, loc, resultType.getDimSize(i));
-        Value isEqual = arith::CmpIOp::create(
-            builder, loc, arith::CmpIPredicate::eq, shapeValues[i],
-            expectedSize);
+        Value isEqual =
+            arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                                  shapeValues[i], expectedSize);
         cf::AssertOp::create(
             builder, loc, isEqual,
             generateErrorMessage(op, "shape operand value does not match "
@@ -444,23 +443,22 @@ struct ReshapeOpInterface
     std::optional<Value> shapeProduct;
     for (Value shapeValue : shapeValues) {
       shapeProduct =
-          shapeProduct ? arith::MulIOp::create(builder, loc, *shapeProduct,
-                                               shapeValue)
-                       : shapeValue;
+          shapeProduct
+              ? arith::MulIOp::create(builder, loc, *shapeProduct, shapeValue)
+              : shapeValue;
     }
     if (!shapeProduct)
       shapeProduct = arith::ConstantIndexOp::create(builder, loc, 1);
 
-    Value isEqual = arith::CmpIOp::create(
-        builder, loc, arith::CmpIPredicate::eq, *shapeProduct,
-        sourceNumElements);
+    Value isEqual =
+        arith::CmpIOp::create(builder, loc, arith::CmpIPredicate::eq,
+                              *shapeProduct, sourceNumElements);
     cf::AssertOp::create(
         builder, loc, isEqual,
         generateErrorMessage(op, "product of shape operand values does not "
                                  "equal number of elements in source"));
   }
 };
-
 } // namespace
 } // namespace tensor
 } // namespace mlir
