@@ -494,6 +494,7 @@
 #include "math/tanhf16.h"
 #include "math/tanpif.h"
 #include "math/tanpif16.h"
+#include "math/tgammabf16.h"
 #include "math/totalorder.h"
 #include "math/totalorderbf16.h"
 #include "math/totalorderf.h"
