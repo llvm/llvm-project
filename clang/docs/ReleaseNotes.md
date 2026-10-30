@@ -1167,6 +1167,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   in a statement expression within a `switch` condition. (#GH184060)
 
 #### Miscellaneous Bug Fixes
+- Fixed incorrect header search when filename starts with two path separators.
+  Clang now treats path in `#include <//foo.h>` as `/foo.h` instead of `foo.h`.
+  (GH#133174)
 
 - Fixed `clang-cl` optimization options such as `/O1`, `/O2`, and
   `/Ox` being ignored when compiling HIP device code or using a non-MSVC
