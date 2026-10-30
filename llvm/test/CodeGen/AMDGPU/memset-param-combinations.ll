@@ -71,9 +71,9 @@ define void @memset_p0_varsize_align_4_varsetval(ptr addrspace(0) align 4 %dst, 
 ; GFX942-GISEL-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v2
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v6, v5, 8, v5
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v5
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
-; GFX942-GISEL-NEXT:    v_or3_b32 v6, v6, v7, v5
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 24, v2
+; GFX942-GISEL-NEXT:    v_or3_b32 v6, v6, v5, v7
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v6
@@ -193,9 +193,9 @@ define void @memset_p1_varsize_align_4_varsetval(ptr addrspace(1) align 4 %dst, 
 ; GFX942-GISEL-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v5, 0xff, v2
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v6, v5, 8, v5
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 16, v5
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 24, v5
-; GFX942-GISEL-NEXT:    v_or3_b32 v6, v6, v7, v5
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v5
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v7, 24, v2
+; GFX942-GISEL-NEXT:    v_or3_b32 v6, v6, v5, v7
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v6
@@ -313,9 +313,9 @@ define void @memset_p3_varsize_align_4_varsetval(ptr addrspace(3) align 4 %dst, 
 ; GFX942-GISEL-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v8, 0xff, v1
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v9, v8, 8, v8
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 16, v8
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 24, v8
-; GFX942-GISEL-NEXT:    v_or3_b32 v8, v9, v10, v8
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v10, 24, v1
+; GFX942-GISEL-NEXT:    v_or3_b32 v8, v9, v8, v10
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v8
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v10, v8
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v11, v8
@@ -429,9 +429,9 @@ define void @memset_p5_varsize_align_4_varsetval(ptr addrspace(5) align 4 %dst, 
 ; GFX942-GISEL-NEXT:  ; %bb.1: ; %dynamic-memset-expansion-main-body.preheader
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v1
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v5, v4, 8, v4
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 16, v4
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 24, v4
-; GFX942-GISEL-NEXT:    v_or3_b32 v4, v5, v6, v4
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v6, 24, v1
+; GFX942-GISEL-NEXT:    v_or3_b32 v4, v5, v4, v6
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v6, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v7, v4
@@ -553,7 +553,7 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v2
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 8, v3
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v3
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v2
 ; GFX942-GISEL-NEXT:    v_or3_b32 v4, v4, v5, v3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v6, v4
@@ -588,13 +588,12 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    flat_store_dwordx4 v[10:11], v[4:7] offset:240
 ; GFX942-GISEL-NEXT:    s_cbranch_scc1 .LBB4_1
 ; GFX942-GISEL-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v2
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 8, v3
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v3
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
-; GFX942-GISEL-NEXT:    v_or3_b32 v6, v4, v5, v3
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, 8
-; GFX942-GISEL-NEXT:    v_lshlrev_b16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v2
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v5, v4, 8, v4
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX942-GISEL-NEXT:    v_or3_b32 v6, v5, v4, v3
+; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
@@ -675,11 +674,11 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-GISEL-LABEL: memset_p0_sz2048_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v2
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v2
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 8, v3
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v4, v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
@@ -775,7 +774,7 @@ define void @memset_p1_sz1055_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v2
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 8, v3
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v3
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v2
 ; GFX942-GISEL-NEXT:    v_or3_b32 v4, v4, v5, v3
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v4
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v6, v4
@@ -810,13 +809,12 @@ define void @memset_p1_sz1055_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    global_store_dwordx4 v[10:11], v[4:7], off offset:240
 ; GFX942-GISEL-NEXT:    s_cbranch_scc1 .LBB6_1
 ; GFX942-GISEL-NEXT:  ; %bb.2: ; %static-memset-post-expansion
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v2
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 8, v3
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v5, 16, v3
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 24, v3
-; GFX942-GISEL-NEXT:    v_or3_b32 v6, v4, v5, v3
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, 8
-; GFX942-GISEL-NEXT:    v_lshlrev_b16_sdwa v3, v3, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xff, v2
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v5, v4, 8, v4
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
+; GFX942-GISEL-NEXT:    v_or3_b32 v6, v5, v4, v3
+; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v2
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
@@ -876,11 +874,11 @@ define void @memset_p1_sz2048_align_4_varsetval(ptr addrspace(1) align 4 %dst, i
 ; GFX942-GISEL-LABEL: memset_p1_sz2048_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v2
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v3, 0xff, v2
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v3, 8, v3
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v4, v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
@@ -991,51 +989,49 @@ define void @memset_p3_sz1055_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v1
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 24, v1
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v2, v8
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 0x400
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v0
 ; GFX942-GISEL-NEXT:  .LBB8_1: ; %static-memset-expansion-main-body
 ; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[6:7]
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset1:1
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:2 offset1:3
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:4 offset1:5
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:6 offset1:7
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:8 offset1:9
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:10 offset1:11
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:12 offset1:13
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:14 offset1:15
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:16 offset1:17
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:18 offset1:19
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:20 offset1:21
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:22 offset1:23
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:24 offset1:25
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:26 offset1:27
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:28 offset1:29
-; GFX942-GISEL-NEXT:    ds_write2_b64 v8, v[2:3], v[4:5] offset0:30 offset1:31
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset1:1
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:2 offset1:3
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:4 offset1:5
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:6 offset1:7
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:8 offset1:9
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:10 offset1:11
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:12 offset1:13
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:14 offset1:15
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:16 offset1:17
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:18 offset1:19
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:20 offset1:21
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:22 offset1:23
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:24 offset1:25
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:26 offset1:27
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:28 offset1:29
+; GFX942-GISEL-NEXT:    ds_write2_b64 v9, v[2:3], v[4:5] offset0:30 offset1:31
 ; GFX942-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v8, 0x100, v8
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v9, 0x100, v9
 ; GFX942-GISEL-NEXT:    s_cbranch_scc1 .LBB8_1
 ; GFX942-GISEL-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v1
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v2, v8
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-GISEL-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset0:128 offset1:129
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, 8
-; GFX942-GISEL-NEXT:    v_lshlrev_b16_sdwa v3, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
@@ -1105,11 +1101,11 @@ define void @memset_p3_sz2048_align_4_varsetval(ptr addrspace(3) align 4 %dst, i
 ; GFX942-GISEL-LABEL: memset_p3_sz2048_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v2, v1, 8, v1
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v1
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v2, v3, v1
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v2, v1
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
@@ -1203,52 +1199,50 @@ define void @memset_p5_sz1055_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v1
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v8, 24, v1
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v2, v8
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-GISEL-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], 0x400
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v8, v0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v9, v0
 ; GFX942-GISEL-NEXT:  .LBB10_1: ; %static-memset-expansion-main-body
 ; GFX942-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-GISEL-NEXT:    s_add_u32 s0, s0, 0x100
 ; GFX942-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX942-GISEL-NEXT:    v_cmp_lt_u64_e32 vcc, s[0:1], v[6:7]
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:16
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:32
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:48
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:64
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:80
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:96
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:112
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:128
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:144
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:160
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:176
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:192
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:208
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:224
-; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v8, v[2:5], off offset:240
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:16
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:32
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:48
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:64
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:80
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:96
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:112
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:128
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:144
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:160
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:176
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:192
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:208
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:224
+; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v9, v[2:5], off offset:240
 ; GFX942-GISEL-NEXT:    s_cmp_lg_u64 vcc, 0
-; GFX942-GISEL-NEXT:    v_add_u32_e32 v8, 0x100, v8
+; GFX942-GISEL-NEXT:    v_add_u32_e32 v9, 0x100, v9
 ; GFX942-GISEL-NEXT:    s_cbranch_scc1 .LBB10_1
 ; GFX942-GISEL-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v1
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v4, 16, v2
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 24, v2
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v4, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v2, v8
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
 ; GFX942-GISEL-NEXT:    scratch_store_dwordx4 v0, v[2:5], off offset:1024
 ; GFX942-GISEL-NEXT:    s_nop 1
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, 8
-; GFX942-GISEL-NEXT:    v_lshlrev_b16_sdwa v3, v3, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_0
+; GFX942-GISEL-NEXT:    v_lshlrev_b16_e32 v3, 8, v1
 ; GFX942-GISEL-NEXT:    v_or_b32_sdwa v3, v1, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GFX942-GISEL-NEXT:    v_and_b32_e32 v4, 0xffff, v3
 ; GFX942-GISEL-NEXT:    v_lshl_or_b32 v4, v4, 16, v4
@@ -1305,11 +1299,11 @@ define void @memset_p5_sz2048_align_4_varsetval(ptr addrspace(5) align 4 %dst, i
 ; GFX942-GISEL-LABEL: memset_p5_sz2048_align_4_varsetval:
 ; GFX942-GISEL:       ; %bb.0: ; %entry
 ; GFX942-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_and_b32_e32 v1, 0xff, v1
-; GFX942-GISEL-NEXT:    v_lshl_or_b32 v2, v1, 8, v1
-; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v3, 16, v1
+; GFX942-GISEL-NEXT:    v_and_b32_e32 v2, 0xff, v1
+; GFX942-GISEL-NEXT:    v_lshl_or_b32 v3, v2, 8, v2
+; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX942-GISEL-NEXT:    v_lshlrev_b32_e32 v1, 24, v1
-; GFX942-GISEL-NEXT:    v_or3_b32 v2, v2, v3, v1
+; GFX942-GISEL-NEXT:    v_or3_b32 v2, v3, v2, v1
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v5, v2
