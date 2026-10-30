@@ -62,7 +62,7 @@ void MipsCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
 
 void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   // Expand pseudo instructions that are sensitive to register allocation.
-  // TODO(boomanaiden154): Add MipsExpandPseudosPass
+  addMachineFunctionPass(MipsExpandPseudoPass(), PMW);
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.

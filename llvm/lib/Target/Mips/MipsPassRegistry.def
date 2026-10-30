@@ -24,6 +24,7 @@ MODULE_PASS("mips-os16", MipsOs16Pass())
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("mips-16-isel", Mips16ISelDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("mips-expand-pseudo", MipsExpandPseudoPass())
 MACHINE_FUNCTION_PASS("mips-optimize-pic-call", MipsOptimizePICCallPass())
 MACHINE_FUNCTION_PASS("mips-se-isel", MipsSEISelDAGPass(*this, getOptLevel()))
 #undef MACHINE_FUNCTION_PASS

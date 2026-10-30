@@ -248,7 +248,7 @@ MachineFunctionInfo *MipsTargetMachine::createMachineFunctionInfo(
 // machine code is emitted.
 void MipsPassConfig::addPreEmitPass() {
   // Expand pseudo instructions that are sensitive to register allocation.
-  addPass(createMipsExpandPseudoPass());
+  addPass(createMipsExpandPseudoLegacyPass());
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
