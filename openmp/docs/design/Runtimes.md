@@ -602,6 +602,10 @@ Enables (`true`) or disables (`false`) the copying of the floating-point
 control settings of the primary thread to the floating-point control settings
 of the OpenMP worker threads at the start of each parallel region.
 
+On RISC-V Linux hardware-FP targets, this controls dynamic scalar rounding
+through `frm`. Each thread retains its own accrued exception flags; vector
+fixed-point rounding (`vxrm`) is outside this control.
+
 **Default:** `true`
 
 #### KMP_LIBRARY

@@ -16,6 +16,13 @@
 
 #include "kmp_config.h"
 
+// Floating-point CSR access is available only for a declared hardware FP target.
+#if KMP_ARCH_RISCV64 && KMP_OS_LINUX && defined(__riscv_flen) && __riscv_flen >= 32
+#define KMP_RISCV_FP_CONTROL 1
+#else
+#define KMP_RISCV_FP_CONTROL 0
+#endif
+
 /* #define BUILD_PARALLEL_ORDERED 1 */
 
 /* This fix replaces gettimeofday with clock_gettime for better scalability on
@@ -3167,7 +3174,10 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
   kmp_int8 t_pad2b;
   kmp_int16 t_x87_fpu_control_word; // FP control regs
   kmp_uint32 t_mxcsr;
-#endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
+#elif KMP_RISCV_FP_CONTROL
+  kmp_int8 t_fp_control_saved;
+  kmp_uint32 t_riscv_rounding;
+#endif /* FP control */
 
   void *t_inline_argv[KMP_INLINE_ARGV_ENTRIES];
 
@@ -3517,8 +3527,10 @@ extern KMP_THREAD_LOCAL int __kmp_gtid;
 #endif
 extern int __kmp_tls_gtid_min; /* #threads below which use sp search for gtid */
 extern int __kmp_foreign_tp; // If true, separate TP var for each foreign thread
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_RISCV_FP_CONTROL
 extern int __kmp_inherit_fp_control; // copy fp creg(s) parent->workers at fork
+#endif
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
 extern kmp_int16 __kmp_init_x87_fpu_control_word; // init thread's FP ctrl reg
 extern kmp_uint32 __kmp_init_mxcsr; /* init thread's mxscr */
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */

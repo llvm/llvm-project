@@ -791,7 +791,7 @@ static void __kmp_stg_print_duplicate_lib_ok(kmp_str_buf_t *buffer,
 // -----------------------------------------------------------------------------
 // KMP_INHERIT_FP_CONTROL
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_RISCV_FP_CONTROL
 
 static void __kmp_stg_parse_inherit_fp_control(char const *name,
                                                char const *value, void *data) {
@@ -5575,7 +5575,7 @@ static kmp_setting_t __kmp_stg_table[] = {
      __kmp_stg_print_handle_signals, NULL, 0, 0},
 #endif
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_RISCV_FP_CONTROL
     {"KMP_INHERIT_FP_CONTROL", __kmp_stg_parse_inherit_fp_control,
      __kmp_stg_print_inherit_fp_control, NULL, 0, 0},
 #endif /* KMP_ARCH_X86 || KMP_ARCH_X86_64 */
