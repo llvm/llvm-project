@@ -52,6 +52,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/InstructionCost.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -2133,6 +2134,31 @@ static void unswitchNontrivialInvariants(
     // First wire up the moved terminator to the preheaders.
     if (BI) {
       BasicBlock *ClonedPH = ClonedPHs.begin()->second;
+      // The terminator we just hoisted out of the loop keeps the branch weights
+      // it had inside the loop body. If it was a loop-exiting branch, those
+      // weights were collected per loop *iteration*: the edge that stays in the
+      // loop is inflated by (roughly) the loop's trip count relative to the
+      // exiting edge, which is taken at most once per loop entry. As a
+      // per-entry guard in the preheader those weights are wrong, so rescale
+      // the in-loop edge by the estimated trip count. If we have no trip count
+      // estimate we leave the metadata alone rather than guess. A zero in-loop
+      // weight means the loop was never entered on that side; that is already a
+      // correct per-entry count, so it is kept as is (the clamp to 1 below only
+      // stops rounding from turning a taken edge into a never-taken one).
+      bool Succ0Exits = !L.contains(BI->getSuccessor(0));
+      bool Succ1Exits = !L.contains(BI->getSuccessor(1));
+      unsigned InLoopIdx = Succ0Exits ? 1 : 0;
+      SmallVector<uint32_t, 2> Weights;
+      if (EstimateProfile && !ProfcheckDisableMetadataFixes &&
+          (Succ0Exits != Succ1Exits) && extractBranchWeights(*BI, Weights) &&
+          Weights[InLoopIdx] != 0) {
+        if (std::optional<unsigned> TC = getLoopEstimatedTripCount(&L);
+            TC && *TC > 1) {
+          Weights[InLoopIdx] =
+              std::max<uint32_t>(1, divideNearest(Weights[InLoopIdx], *TC));
+          setBranchWeights(*BI, Weights, /*IsExpected=*/false);
+        }
+      }
       BI->setSuccessor(ClonedSucc, ClonedPH);
       BI->setSuccessor(1 - ClonedSucc, LoopPH);
       Value *Cond = skipTrivialSelect(BI->getCondition());
