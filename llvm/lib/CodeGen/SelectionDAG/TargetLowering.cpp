@@ -11736,7 +11736,6 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     if (DAG.willNotOverflowSub(/*IsSigned=*/true, RHS, LHS))
       return DAG.getNode(ISD::ABS, dl, VT,
                          DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
-
   } else if (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS)) {
     return DAG.getNode(ISD::ABS, dl, VT,
                        DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
