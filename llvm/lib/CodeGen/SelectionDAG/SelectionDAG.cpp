@@ -13178,6 +13178,7 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
       TypeSize ToSize = N.getValueSizeInBits(0);
 
       DIExpression *DbgExpression = DV->getExpression();
+      bool StackValue = !DV->isIndirect() && !DbgExpression->isComplex();
       auto ExtOps = DIExpression::getExtOps(FromSize, ToSize, false);
       auto NewLocOps = DV->copyLocationOps();
       bool Changed = false;
@@ -13187,7 +13188,8 @@ void SelectionDAG::salvageDebugInfo(SDNode &N) {
           continue;
 
         NewLocOps[i] = GetLocationOperand(N0.getNode(), N0.getResNo());
-        DbgExpression = DIExpression::appendOpsToArg(DbgExpression, ExtOps, i);
+        DbgExpression =
+            DIExpression::appendOpsToArg(DbgExpression, ExtOps, i, StackValue);
         Changed = true;
       }
       assert(Changed && "Salvage target doesn't use N");
