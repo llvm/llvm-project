@@ -569,7 +569,6 @@ void RISCVPassConfig::addPreRegAlloc() {
   addPass(createRISCVExpandPseudoPreRALegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetLegacyPass());
-    // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptLegacyPass());
   }
 

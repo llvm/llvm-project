@@ -1,0 +1,5 @@
+# Verify lldb-dap doesn't contain undefined 'lldb_private' symbols.
+
+# UNSUPPORTED: system-windows
+
+# RUN: llvm-nm --undefined-only --demangle lldb-dap | not grep 'lldb_private::'

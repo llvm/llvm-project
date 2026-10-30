@@ -23,7 +23,17 @@ import shlex
 import textwrap
 from copy import copy
 from dataclasses import dataclass
-from typing import Any, BinaryIO, Optional, Sequence, TextIO, Tuple, Union, cast
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Optional,
+    Sequence,
+    TextIO,
+    Tuple,
+    Union,
+    cast,
+)
 
 BINARY_VERSION = 2
 
@@ -403,7 +413,7 @@ def assemble_tokens(tokens: list[str]) -> bytes:
             emit(op_begin)
             emit(len(block))  # FIXME: uleb
             bytecode[-1].extend(block)
-        elif tok[0].isdigit():
+        elif tok[0].isdigit() or (tok[0] == "-" and tok[1:2].isdigit()):
             if tok[-1] == "u":
                 emit(op_lit_uint)
                 emit(int(tok[:-1]))  # FIXME
@@ -411,7 +421,7 @@ def assemble_tokens(tokens: list[str]) -> bytes:
                 # With the introduction of op_lit_integer, op_lit_int is no
                 # longer emitted by the assembler.
                 emit(op_lit_integer)
-                emit(int(tok))  # FIXME
+                bytecode[-1].extend(_to_sleb(int(tok)))
         elif tok[0] == "@":
             emit(op_lit_selector)
             emit(selector[tok])
@@ -487,8 +497,7 @@ def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
             b = next_byte()
             asm += str(b)
         elif b == op_lit_integer:
-            b = next_byte()
-            asm += str(b)
+            asm += str(_from_sleb(next_byte))
         elif b == op_lit_selector:
             b = next_byte()
             asm += selector[b]
@@ -694,8 +703,7 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
             b = next_byte()  # FIXME uleb
             data.append(int(b))
         elif b == op_lit_integer:
-            b = next_byte()  # FIXME sleb
-            data.append(int(b))
+            data.append(_from_sleb(next_byte))
         elif b == op_lit_selector:
             b = next_byte()
             data.append(b)
@@ -742,7 +750,7 @@ def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False)
         elif b == op_xor:
             data.append(data.pop() ^ data.pop())
         elif b == op_not:
-            data.append(not data.pop())
+            data.append(~int(data.pop()))
         elif b == op_eq:
             data.append(data.pop() == data.pop())
         elif b == op_neq:
@@ -876,6 +884,20 @@ _BUILTINS = {
     "GetValueAsUnsigned": "@get_value_as_unsigned",
 }
 
+_BINOPS = {
+    ast.Add: "+",
+    ast.Sub: "-",
+    ast.Mult: "*",
+    # The bytecode has only integer division, which truncates.
+    ast.FloorDiv: "/",
+    ast.Mod: "%",
+    ast.LShift: "<<",
+    ast.RShift: ">>",
+    ast.BitAnd: "&",
+    ast.BitOr: "|",
+    ast.BitXor: "^",
+}
+
 _COMPS = {
     ast.Eq: "=",
     ast.NotEq: "!=",
@@ -929,8 +951,9 @@ class Compiler(ast.NodeVisitor):
     [x] Return statements
     [x] String, integer, float, boolean, and None literals
     [x] Binary comparisons
-    [ ] Boolean operators
-    [ ] Math operations
+    [x] Unary operators (-, +, ~)
+    [x] Boolean operators (and, or, not)
+    [x] Math operations (+, -, *, //, %, <<, >>, &, |, ^)
 
     # Unsupported Features
 
@@ -1096,6 +1119,72 @@ class Compiler(ast.NodeVisitor):
             self.visit(node.value)
         self._output("return")
 
+    def visit_BoolOp(self, node: ast.BoolOp) -> None:
+        """
+        Compile `and` / `or` with short-circuit evaluation. The result is
+        normalized to 0 or 1 (rather than one of the operands, as in Python).
+
+            a and b  =>  a { b 0 != } { 0 } ifelse
+            a or b   =>  a { 1 } { b 0 != } ifelse
+        """
+        if isinstance(node.op, ast.And):
+            prefix = "{"
+            suffix = "} { 0 } ifelse"
+        elif isinstance(node.op, ast.Or):
+            prefix = "{ 1 } {"
+            suffix = "} ifelse"
+        else:
+            raise CompilerError(
+                f"unknown boolean operator: {type(node.op).__name__}", node
+            )
+
+        # Each operand but the last opens a nested ifelse, which is closed after
+        # the last operand.
+        *operands, last = node.values
+        for value in operands:
+            self.visit(value)
+            self._output(prefix)
+        self.visit(last)
+        self._output("0 !=")
+        for _ in operands:
+            self._output(suffix)
+
+    def visit_BinOp(self, node: ast.BinOp) -> None:
+        if op := _BINOPS.get(type(node.op)):
+            self.visit(node.left)
+            self.visit(node.right)
+            self._output(op)
+        else:
+            raise CompilerError(
+                f"unsupported binary operator: {type(node.op).__name__}", node
+            )
+
+    def visit_UnaryOp(self, node: ast.UnaryOp) -> None:
+        operand = node.operand
+        if isinstance(node.op, ast.USub):
+            # Fold negative integer literals.
+            if (
+                isinstance(operand, ast.Constant)
+                and isinstance(operand.value, int)
+                and not isinstance(operand.value, bool)
+            ):
+                self._output(-operand.value)
+                return
+            self._output(0)
+            self.visit(operand)
+            self._output("-")
+        elif isinstance(node.op, ast.UAdd):
+            self.visit(operand)
+        elif isinstance(node.op, ast.Invert):
+            self.visit(operand)
+            self._output("~")
+        elif isinstance(node.op, ast.Not):
+            # Logical not; the bytecode `~` is a bitwise not.
+            self.visit(operand)
+            self._output("0 =")
+        else:
+            raise CompilerError("unsupported unary operator", node)
+
     def visit_Constant(self, node: ast.Constant) -> None:
         if isinstance(node.value, str):
             self._output(_string_literal(node.value))
@@ -1255,6 +1344,32 @@ def _to_uleb(value: int) -> bytes:
     return bytes(result)
 
 
+def _to_sleb(value: int) -> bytes:
+    """Encode an integer to SLEB128 bytes."""
+    result = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        done = (value == 0 and not byte & 0x40) or (value == -1 and byte & 0x40)
+        result.append(byte if done else byte | 0x80)
+        if done:
+            return bytes(result)
+
+
+def _from_sleb(next_byte: Callable[[], int]) -> int:
+    """Decode a SLEB128 integer, fetching bytes with next_byte."""
+    result = 0
+    shift = 0
+    while True:
+        byte = next_byte()
+        result |= (byte & 0x7F) << shift
+        shift += 7
+        if not (byte & 0x80):
+            if byte & 0x40:
+                result -= 1 << shift
+            return result
+
+
 def _from_uleb(stream: BinaryIO) -> int:
     """Decode a ULEB128 integer by reading bytes from the stream."""
     result = 0
@@ -1378,6 +1493,7 @@ if __name__ == "__main__":
     ############################################################################
     # Tests.
     ############################################################################
+    import itertools
     import tempfile
     import unittest
 
@@ -1642,6 +1758,61 @@ if __name__ == "__main__":
             self.assertEqual(interpret(methods["update"], [], [self_dict]), 0)
             self.assertEqual(interpret(methods["get_num_children"], [], [self_dict]), 3)
 
+        def test_unary(self):
+            methods = self.compile_methods(
+                """
+                class Synthetic:
+                    def get_child_index(self, name):
+                        return -1
+
+                    def num_children(self):
+                        return -(-5) + ~0 + +1
+                """
+            )
+            self.assertEqual(interpret(methods["get_child_index"], [], [{}, "x"]), -1)
+            self.assertEqual(interpret(methods["get_num_children"], [], [{}]), 5)
+
+        def test_boolean(self):
+            def run(expr, *args, valobj=None):
+                methods = self.compile_methods(
+                    f"""
+                    class Synthetic:
+                        def get_child_index(self, a, b, c):
+                            return {expr}
+                    """
+                )
+                data = [{"valobj": valobj}, *args]
+                return interpret(methods["get_child_index"], [], data)
+
+            # The result is normalized to 0 or 1, unlike Python's operands.
+            exprs = [
+                "a and b",
+                "a or b",
+                "not a",
+                "a and b and c",
+                "a or b or c",
+                "a and b or c",
+                "a or b and c",
+                "not (a or b)",
+                "a > 0 and b > 0 or a == 5",
+            ]
+            for a, b, c in itertools.product((0, 1, 2, 5), repeat=3):
+                for expr in exprs:
+                    self.assertEqual(
+                        run(expr, a, b, c), int(bool(eval(expr))), (expr, a, b, c)
+                    )
+
+            # The bytecode `~` is bitwise, `not` is logical.
+            self.assertEqual(run("not a", 1, 0, 0), 0)
+            self.assertEqual(run("~a", 1, 0, 0), -2)
+
+            # The right operand is not evaluated if the left decides the result.
+            # A valobj of None would raise if it were evaluated.
+            self.assertEqual(run("a and self.valobj.GetValueAsUnsigned()", 0, 0, 0), 0)
+            self.assertEqual(run("a or self.valobj.GetValueAsUnsigned()", 1, 0, 0), 1)
+            with self.assertRaises(AttributeError):
+                run("a and self.valobj.GetValueAsUnsigned()", 1, 0, 0)
+
         def test_fstring(self):
             def compile_fstring(expr):
                 methods = self.compile_methods(
@@ -1714,6 +1885,14 @@ if __name__ == "__main__":
                         def num_children(self):
                             self.count = 1
                             return 1
+                    """
+                )
+            with self.assertRaisesRegex(CompilerError, "unsupported binary operator"):
+                self.compile_methods(
+                    """
+                    class Synthetic:
+                        def num_children(self):
+                            return 1 / 2
                     """
                 )
 

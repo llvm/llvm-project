@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
@@ -23,7 +24,6 @@
 #include "llvm/IR/PassManagerImpl.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -40,11 +40,6 @@ STATISTIC(LargestCGSCC, "Number of functions in the largest SCC");
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
-static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
-    "abort-on-max-devirt-iterations-reached",
-    cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
-             "pass is reached"));
-
 AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
@@ -488,7 +483,8 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
 
     // Otherwise, if we've already hit our max, we're done.
     if (Iteration >= MaxIterations) {
-      if (AbortOnMaxDevirtIterationsReached)
+      if (getAnalysisOptions(C->begin()->getFunction())
+              .abort_on_max_devirt_iterations_reached)
         report_fatal_error("Max devirtualization iterations reached");
       LLVM_DEBUG(
           dbgs() << "Found another devirtualization after hitting the max "

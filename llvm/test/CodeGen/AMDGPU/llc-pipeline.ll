@@ -321,8 +321,7 @@
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
-; GCN-O1-NEXT:        Machine Cycle Info Analysis
-; GCN-O1-NEXT:        Machine Block Frequency Analysis
+; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
@@ -637,8 +636,7 @@
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
-; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
-; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
+; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
@@ -653,6 +651,7 @@
 ; GCN-O1-OPTS-NEXT:        GCN DPP Combine
 ; GCN-O1-OPTS-NEXT:        SI Load Store Optimizer
 ; GCN-O1-OPTS-NEXT:        SI Peephole SDWA
+; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
@@ -965,8 +964,7 @@
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
-; GCN-O2-NEXT:        Machine Cycle Info Analysis
-; GCN-O2-NEXT:        Machine Block Frequency Analysis
+; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
@@ -981,6 +979,7 @@
 ; GCN-O2-NEXT:        GCN DPP Combine
 ; GCN-O2-NEXT:        SI Load Store Optimizer
 ; GCN-O2-NEXT:        SI Peephole SDWA
+; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
@@ -1309,8 +1308,7 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
-; GCN-O3-NEXT:        Machine Cycle Info Analysis
-; GCN-O3-NEXT:        Machine Block Frequency Analysis
+; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
@@ -1325,6 +1323,7 @@
 ; GCN-O3-NEXT:        GCN DPP Combine
 ; GCN-O3-NEXT:        SI Load Store Optimizer
 ; GCN-O3-NEXT:        SI Peephole SDWA
+; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Early Machine Loop Invariant Code Motion
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
