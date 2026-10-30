@@ -24847,7 +24847,7 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
 // store(concat_vector(truncate, truncate))
 // --> store(truncate)
 //     store(truncate)
-// truncstore(concat_vector(truncate, truncate))
+// truncstore(concat_vector(truncate(x), truncate(y)))
 // --> truncstore(x)
 //     truncstore(y)
 SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
@@ -24872,7 +24872,7 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   if (!HalfMemVT.isFixedLengthVector())
     return SDValue();
 
-  // For a truncating store, each half is stored with the store's element type.
+  // For a truncating store, the memory element type remains unchanged.
   if (ST->isTruncatingStore())
     HalfMemVT = HalfMemVT.changeVectorElementType(
         *DAG.getContext(), ST->getMemoryVT().getScalarType());
