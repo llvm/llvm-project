@@ -943,8 +943,11 @@ bool AArch64ExpandPseudoImpl::expandSetTagLoopVar(
   DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
   DoneBB->transferSuccessors(&MBB);
 
-  BuildMI(&MBB, DL, TII->get(AArch64::TBZX))
-      .addReg(SizeReg)
+  // The size is a multiple of 16, so if bit 4 is set it is an odd multiple and
+  // the OddBB peels one granule to make it a multiple of 32 for the st2g loop.
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  BuildMI(&MBB, DL, TII->get(AArch64::TBZW))
+      .addReg(TRI.getSubReg(SizeReg, AArch64::sub_32))
       .addImm(4)
       .addMBB(CheckBB);
 

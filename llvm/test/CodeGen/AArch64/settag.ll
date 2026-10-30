@@ -231,7 +231,7 @@ define void @test_slh() speculative_load_hardening {
 define void @stg_var(ptr %p, i64 %n) {
 ; CHECK-LABEL: stg_var:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz x1, #4, .LBB14_2
+; CHECK-NEXT:    tbz w1, #4, .LBB14_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    stg x0, [x0], #16
 ; CHECK-NEXT:    sub x1, x1, #16
@@ -252,7 +252,7 @@ entry:
 define void @stzg_var(ptr %p, i64 %n) {
 ; CHECK-LABEL: stzg_var:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    tbz x1, #4, .LBB15_2
+; CHECK-NEXT:    tbz w1, #4, .LBB15_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    stzg x0, [x0], #16
 ; CHECK-NEXT:    sub x1, x1, #16
@@ -279,7 +279,7 @@ define void @stg_var_reuse(ptr %p, i64 %n) {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    mov x9, x1
-; CHECK-NEXT:    tbz x9, #4, .LBB16_2
+; CHECK-NEXT:    tbz w9, #4, .LBB16_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    stg x8, [x8], #16
 ; CHECK-NEXT:    sub x9, x9, #16
@@ -309,7 +309,7 @@ define void @stg_var_alloca(i64 %n) {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    tbz x0, #4, .LBB17_2
+; CHECK-NEXT:    tbz w0, #4, .LBB17_2
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    stg x8, [x8], #16
 ; CHECK-NEXT:    sub x0, x0, #16
