@@ -124,6 +124,7 @@ private:
   bool foldBitOpOfCastops(Instruction &I);
   bool foldBitOpOfCastConstant(Instruction &I);
   bool foldBitcastShuffle(Instruction &I);
+  bool foldStoreOfShuffle(Instruction &I);
   bool scalarizeOpOrCmp(Instruction &I);
   bool foldExtractedCmps(Instruction &I);
   bool foldSelectsFromBitcast(Instruction &I);
@@ -1175,6 +1176,122 @@ bool VectorCombine::foldBitcastShuffle(Instruction &I) {
   Value *CastV1 = Builder.CreateBitCast(peekThroughBitcasts(V1), NewShuffleTy);
   Value *Shuf = Builder.CreateShuffleVector(CastV0, CastV1, NewMask);
   replaceValue(I, *Shuf);
+  return true;
+}
+
+// Try to widen the lane-type of a shuffle by combining adjacent groups of
+// smaller elements. For example, the following selects every other 4-bytes:
+//
+// load <64 x i4>
+// shuffle [0..7, 16..23, 32..39, 48..55]
+// store <32 x i4>
+//
+// But this won't lead to good codegen for a target that doesn't support a
+// native i4. SelectionDAG lowers to individual i4 extract_elements. Try to
+// fold this to:
+
+// load <8 x i32>
+// shuffle [0, 2, 4, 6]
+// store <4 x i32>
+bool VectorCombine::foldStoreOfShuffle(Instruction &I) {
+  auto *Store = cast<StoreInst>(&I);
+  if (!Store->isSimple())
+    return false;
+
+  Value *V0, *V1;
+  ArrayRef<int> Mask;
+  auto Load = m_OneUse(m_LoadSimple(m_Value()));
+  auto LoadOrUndef = m_CombineOr(Load, m_UndefValue());
+  // Selecting a store(shuffle(load)) sequence.
+  if (!match(Store->getValueOperand(),
+             m_OneUse(m_Shuffle(m_Value(V0, Load), m_Value(V1, LoadOrUndef),
+                               m_Mask(Mask)))))
+    return false;
+  auto *SrcTy = dyn_cast<FixedVectorType>(V0->getType());
+  if (!SrcTy || !SrcTy->getElementType()->isIntegerTy())
+    return false;
+
+  bool IsUnary = isa<UndefValue>(V1);
+  SmallVector<LoadInst *, 2> Loads = {cast<LoadInst>(V0)};
+  if (!IsUnary)
+    Loads.push_back(cast<LoadInst>(V1));
+
+  auto *DstTy = cast<FixedVectorType>(Store->getValueOperand()->getType());
+  TTI::ShuffleKind SK =
+      IsUnary ? TTI::SK_PermuteSingleSrc : TTI::SK_PermuteTwoSrc;
+  // Get the target's cost of the store(shuffle(load)) sequence, given vector
+  // types and a shuffle mask.
+  auto getCost = [&](VectorType *LoadedTy, VectorType *StoredTy,
+                     ArrayRef<int> ShuffleMask) {
+    InstructionCost Cost =
+        TTI.getMemoryOpCost(Instruction::Store, StoredTy, Store->getAlign(),
+                            Store->getPointerAddressSpace(), CostKind);
+    for (LoadInst *Load : Loads)
+      Cost += TTI.getMemoryOpCost(Instruction::Load, LoadedTy, Load->getAlign(),
+                                  Load->getPointerAddressSpace(), CostKind);
+    return Cost +
+           TTI.getShuffleCost(SK, StoredTy, LoadedTy, CostKind, ShuffleMask);
+  };
+
+  InstructionCost BestCost = getCost(SrcTy, DstTy, Mask);
+  if (!BestCost.isValid())
+    return false;
+
+  unsigned EltBits = SrcTy->getScalarSizeInBits();
+  FixedVectorType *WideSrcTy = nullptr;
+  SmallVector<int, 16> WideMask;
+
+  // Now try to widen the element type, starting at the largest legal integer
+  // type for the target, and decreasing. The new element type size must have a
+  // whole-byte width, contain a whole number of original elements, and divide
+  // both the source and dest vectors' total bit width.
+  for (unsigned Bits = DL->getLargestLegalIntTypeSizeInBits();
+       Bits >= 8 && Bits > EltBits; Bits /= 2) {
+    if (Bits % 8 || Bits % EltBits || SrcTy->getPrimitiveSizeInBits() % Bits ||
+        DstTy->getPrimitiveSizeInBits() % Bits)
+      continue;
+    // The new element type must be legal.
+    auto *EltTy = IntegerType::get(I.getContext(), Bits);
+    if (!TTI.isTypeLegal(EltTy))
+      continue;
+    // Make sure the shuffle can operate on the larger element type.
+    SmallVector<int, 16> NewMask;
+    if (!widenShuffleMaskElts(Bits / EltBits, Mask, NewMask))
+      continue;
+    auto *NewSrcTy =
+        FixedVectorType::get(EltTy, SrcTy->getPrimitiveSizeInBits() / Bits);
+    auto *NewDstTy = FixedVectorType::get(EltTy, NewMask.size());
+    // Is performing the store(shuffle(load)) on the wider element type cheaper?
+    InstructionCost NewCost = getCost(NewSrcTy, NewDstTy, NewMask);
+    if (!NewCost.isValid() || NewCost >= BestCost)
+      continue;
+    BestCost = NewCost;
+    WideSrcTy = NewSrcTy;
+    WideMask = std::move(NewMask);
+  }
+  if (!WideSrcTy)
+    return false;
+
+  SmallVector<Value *, 2> WideLoads;
+  for (LoadInst *Load : Loads) {
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(Load);
+    auto *WideLoad = Builder.CreateLoad(WideSrcTy, Load->getPointerOperand(),
+                                        Load->getProperties());
+    copyMetadataForLoad(*WideLoad, *Load);
+    WideLoad->takeName(Load);
+    WideLoads.push_back(WideLoad);
+  }
+  // Preserve undef versus poison when retyping the second operand.
+  if (IsUnary)
+    WideLoads.push_back(Builder.CreateBitCast(V1, WideSrcTy));
+  Value *WideShuffle =
+      Builder.CreateShuffleVector(WideLoads[0], WideLoads[1], WideMask);
+  auto *OldShuffle = cast<Instruction>(Store->getValueOperand());
+  if (auto *NewShuffle = dyn_cast<Instruction>(WideShuffle))
+    NewShuffle->takeName(OldShuffle);
+  Store->setOperand(0, WideShuffle);
+  Worklist.push(OldShuffle);
   return true;
 }
 
@@ -7060,6 +7177,10 @@ bool VectorCombine::run() {
     // If this is an early pipeline invocation of this pass, we are done.
     if (TryEarlyFoldsOnly)
       return false;
+
+    if (Opcode == Instruction::Store)
+      if (foldStoreOfShuffle(I))
+        return true;
 
     if (Opcode == Instruction::Call)
       if (foldBitOrderReverseAndSwap(I))

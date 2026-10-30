@@ -3,9 +3,9 @@
 
 define void @shuffle_i1_groups16(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_i1_groups16(
-; CHECK-NEXT:    [[V:%.*]] = load <128 x i1>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <128 x i1> [[V]], <128 x i1> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111>
-; CHECK-NEXT:    store <64 x i1> [[S]], ptr addrspace(1) [[DST:%.*]], align 8
+; CHECK-NEXT:    [[V:%.*]] = load <8 x i16>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i16> [[V]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i16> [[S]], ptr addrspace(1) [[DST:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %v = load <128 x i1>, ptr addrspace(1) %src, align 8
@@ -16,9 +16,9 @@ define void @shuffle_i1_groups16(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 
 define void @shuffle_i2_groups32(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_i2_groups32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <112 x i2>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <112 x i2> [[TMP1]], <112 x i2> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111>
-; CHECK-NEXT:    store <64 x i2> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i32>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %v = load <128 x i2>, ptr addrspace(1) %src, align 8
@@ -29,9 +29,9 @@ define void @shuffle_i2_groups32(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 
 define void @shuffle_i4_groups16(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_i4_groups16(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <28 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <28 x i4> [[TMP1]], <28 x i4> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
-; CHECK-NEXT:    store <16 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i16>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i16> [[TMP1]], <7 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i16> [[S]], ptr addrspace(1) [[DST:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %v = load <32 x i4>, ptr addrspace(1) %src, align 8
@@ -42,9 +42,9 @@ define void @shuffle_i4_groups16(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 
 define void @shuffle_i4_groups32(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_i4_groups32(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <56 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <56 x i4> [[TMP1]], <56 x i4> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i32>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %v = load <64 x i4>, ptr addrspace(1) %src, align 8
@@ -55,9 +55,9 @@ define void @shuffle_i4_groups32(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 
 define void @shuffle_i4_groups64(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_i4_groups64(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <112 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <112 x i4> [[TMP1]], <112 x i4> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 72, i32 73, i32 74, i32 75, i32 76, i32 77, i32 78, i32 79, i32 96, i32 97, i32 98, i32 99, i32 100, i32 101, i32 102, i32 103, i32 104, i32 105, i32 106, i32 107, i32 108, i32 109, i32 110, i32 111>
-; CHECK-NEXT:    store <64 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i64>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i64> [[TMP1]], <7 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i64> [[S]], ptr addrspace(1) [[DST:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %v = load <128 x i4>, ptr addrspace(1) %src, align 8
@@ -68,9 +68,9 @@ define void @shuffle_i4_groups64(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 
 define void @shuffle_i8_groups64(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_i8_groups64(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <56 x i8>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <56 x i8> [[TMP1]], <56 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    store <32 x i8> [[S]], ptr addrspace(1) [[DST:%.*]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i64>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i64> [[TMP1]], <7 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i64> [[S]], ptr addrspace(1) [[DST:%.*]], align 32
 ; CHECK-NEXT:    ret void
 ;
   %v = load <64 x i8>, ptr addrspace(1) %src, align 8
@@ -81,10 +81,10 @@ define void @shuffle_i8_groups64(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 
 define void @shuffle_two_sources(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_two_sources(
-; CHECK-NEXT:    [[AV:%.*]] = load <64 x i4>, ptr addrspace(1) [[A:%.*]], align 8
-; CHECK-NEXT:    [[BV:%.*]] = load <64 x i4>, ptr addrspace(1) [[B:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <64 x i4> [[AV]], <64 x i4> [[BV]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[AV:%.*]] = load <8 x i32>, ptr addrspace(1) [[A:%.*]], align 8
+; CHECK-NEXT:    [[BV:%.*]] = load <8 x i32>, ptr addrspace(1) [[B:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[AV]], <8 x i32> [[BV]], <4 x i32> <i32 0, i32 6, i32 8, i32 14>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %av = load <64 x i4>, ptr addrspace(1) %a, align 8
@@ -96,9 +96,9 @@ define void @shuffle_two_sources(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr a
 
 define void @shuffle_poison_group(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_poison_group(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <56 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <56 x i4> [[TMP1]], <56 x i4> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i32>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %v = load <64 x i4>, ptr addrspace(1) %src, align 8
@@ -109,9 +109,9 @@ define void @shuffle_poison_group(ptr addrspace(1) %src, ptr addrspace(1) %dst) 
 
 define void @shuffle_poison_input(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_poison_input(
-; CHECK-NEXT:    [[V:%.*]] = load <64 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <64 x i4> [[V]], <64 x i4> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[V:%.*]] = load <8 x i32>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[V]], <8 x i32> poison, <4 x i32> <i32 0, i32 8, i32 4, i32 7>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %v = load <64 x i4>, ptr addrspace(1) %src, align 8
@@ -206,9 +206,9 @@ define void @shuffle_and_lane_user(ptr addrspace(1) %src, ptr addrspace(1) %dst,
 
 define void @shuffle_cache_hint(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_cache_hint(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <56 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8, !mem.cache_hint [[META0:![0-9]+]]
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <56 x i4> [[TMP1]], <56 x i4> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 16, !mem.cache_hint [[META2:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i32>, ptr addrspace(1) [[SRC:%.*]], align 8, !mem.cache_hint [[META0:![0-9]+]]
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16, !mem.cache_hint [[META2:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %v = load <64 x i4>, ptr addrspace(1) %src, align 8, !mem.cache_hint !0
@@ -234,11 +234,11 @@ define void @shuffle_two_store_users(ptr addrspace(1) %src, ptr addrspace(1) %ds
 
 define void @shuffle_chained_loads(ptr addrspace(1) %src, ptr addrspace(1) %dst) {
 ; CHECK-LABEL: @shuffle_chained_loads(
-; CHECK-NEXT:    [[AV:%.*]] = load <64 x i4>, ptr addrspace(1) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[AV:%.*]] = load <8 x i32>, ptr addrspace(1) [[SRC:%.*]], align 8
 ; CHECK-NEXT:    store i32 42, ptr addrspace(1) [[SRC]], align 8
-; CHECK-NEXT:    [[BV:%.*]] = load <64 x i4>, ptr addrspace(1) [[SRC]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <64 x i4> [[AV]], <64 x i4> [[BV]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 64, i32 65, i32 66, i32 67, i32 68, i32 69, i32 70, i32 71, i32 112, i32 113, i32 114, i32 115, i32 116, i32 117, i32 118, i32 119>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[BV:%.*]] = load <8 x i32>, ptr addrspace(1) [[SRC]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <8 x i32> [[AV]], <8 x i32> [[BV]], <4 x i32> <i32 0, i32 6, i32 8, i32 14>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(1) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %av = load <64 x i4>, ptr addrspace(1) %src, align 8
@@ -251,9 +251,9 @@ define void @shuffle_chained_loads(ptr addrspace(1) %src, ptr addrspace(1) %dst)
 
 define void @shuffle_shared(ptr addrspace(3) %src, ptr addrspace(3) %dst) {
 ; CHECK-LABEL: @shuffle_shared(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <56 x i4>, ptr addrspace(3) [[SRC:%.*]], align 8
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <56 x i4> [[TMP1]], <56 x i4> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    store <32 x i4> [[S]], ptr addrspace(3) [[DST:%.*]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x i32>, ptr addrspace(3) [[SRC:%.*]], align 8
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <7 x i32> [[TMP1]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr addrspace(3) [[DST:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %v = load <64 x i4>, ptr addrspace(3) %src, align 8
@@ -265,7 +265,7 @@ define void @shuffle_shared(ptr addrspace(3) %src, ptr addrspace(3) %dst) {
 define ptx_kernel void @cross_block(ptr addrspace(1) nofree readonly captures(none) %src, ptr addrspace(1) nofree captures(address) %dst, i32 %c) local_unnamed_addr {
 ; CHECK-LABEL: @cross_block(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <56 x i4>, ptr addrspace(1) [[SRC:%.*]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = load <7 x i32>, ptr addrspace(1) [[SRC:%.*]], align 32
 ; CHECK-NEXT:    [[T:%.*]] = icmp eq i32 [[C:%.*]], 0
 ; CHECK-NEXT:    br i1 [[T]], label [[SIDE:%.*]], label [[NEXT:%.*]]
 ; CHECK:       side:
@@ -273,8 +273,8 @@ define ptx_kernel void @cross_block(ptr addrspace(1) nofree readonly captures(no
 ; CHECK-NEXT:    store volatile i32 0, ptr addrspace(1) [[PS]], align 4
 ; CHECK-NEXT:    br label [[NEXT]]
 ; CHECK:       next:
-; CHECK-NEXT:    [[V:%.*]] = shufflevector <56 x i4> [[TMP0]], <56 x i4> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55>
-; CHECK-NEXT:    store <32 x i4> [[V]], ptr addrspace(1) [[DST]], align 16
+; CHECK-NEXT:    [[V:%.*]] = shufflevector <7 x i32> [[TMP0]], <7 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    store <4 x i32> [[V]], ptr addrspace(1) [[DST]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
