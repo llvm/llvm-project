@@ -847,6 +847,39 @@ bool xegpu::hasStaticShapeAndStrides(MemRefType type) {
          llvm::none_of(strides, ShapedType::isDynamic);
 }
 
+Value xegpu::addElemOffsetInBytes(OpBuilder &builder, Location loc,
+                                  Value baseAddr, Value elemOffset,
+                                  MemRefType memrefTy) {
+  Type type = elemOffset.getType();
+  assert(baseAddr.getType() == type &&
+         "expected base address and offset of the same type");
+  auto makeConst = [&](int64_t value) -> Value {
+    return arith::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
+  };
+
+  // finalAddr = baseAddr + elemOffset * bitWidth / 8
+  unsigned elemBits = memrefTy.getElementTypeBitWidth();
+  Value byteOffset;
+  if (elemBits % 8 == 0) {
+    // For byte-sized elements divide by 8 statically so that the division is
+    // folded into the constant:
+    //   finalAddr = baseAddr + elemOffset * (bitWidth / 8)
+    byteOffset = arith::MulIOp::create(builder, loc, elemOffset,
+                                       makeConst(elemBits / 8));
+  } else {
+    // For sub-byte elements multiply first and then divide by 8, otherwise the
+    // byte size would be zero (e.g. 4 / 8 == 0 for i4):
+    //   finalAddr = baseAddr + (elemOffset * bitWidth) / 8
+    Value bitSize = makeConst(elemBits);
+    Value eight = makeConst(8);
+    byteOffset = arith::DivUIOp::create(
+        builder, loc, arith::MulIOp::create(builder, loc, elemOffset, bitSize),
+        eight);
+  }
+  return arith::AddIOp::create(builder, loc, baseAddr, byteOffset);
+}
+
 // Check if dst shape is an expansion of src shape by inserting unit dimensions.
 // Returns true if all dimensions in src match corresponding dimensions in dst
 // (after skipping unit dimensions), and populates expandedUnitDims with the

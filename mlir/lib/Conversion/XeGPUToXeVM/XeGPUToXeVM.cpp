@@ -1968,17 +1968,9 @@ struct ConvertXeGPUToXeVMPass
         auto offsetCasted =
             arith::IndexCastUIOp::create(builder, loc, type, offset);
 
-        // Compute the final address: base address + byte offset
-        auto byteSize = arith::ConstantOp::create(
-            builder, loc, type,
-            builder.getIntegerAttr(type,
-                                   memrefTy.getElementTypeBitWidth() / 8));
-        auto byteOffset =
-            arith::MulIOp::create(builder, loc, offsetCasted, byteSize);
-        auto addrWithOffset =
-            arith::AddIOp::create(builder, loc, addrCasted, byteOffset);
-
-        return addrWithOffset.getResult();
+        // Compute the final address: base address + byte offset.
+        return xegpu::addElemOffsetInBytes(builder, loc, addrCasted,
+                                           offsetCasted, memrefTy);
       }
       return {};
     };
