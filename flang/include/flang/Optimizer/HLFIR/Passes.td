@@ -50,6 +50,8 @@ def LowerHLFIROrderedAssignments : Pass<"lower-hlfir-ordered-assignments", "::ml
 
 def SimplifyHLFIRIntrinsics : Pass<"simplify-hlfir-intrinsics"> {
   let summary = "Simplify HLFIR intrinsic operations that don't need to result in runtime calls";
+  // The TRIM inlining sizes its temporary through the module data layout.
+  let dependentDialects = ["mlir::DLTIDialect", "mlir::LLVM::LLVMDialect"];
   let options = [Option<"allowNewSideEffects", "allow-new-side-effects", "bool",
                         /*default=*/"false",
                         "If enabled, then the HLFIR operations simplification "
