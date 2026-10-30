@@ -44,7 +44,7 @@ void compare_different_symbol_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
-  clang_analyzer_express(x == y); // expected-warning {{$x - $y == 0}}
+  clang_analyzer_express(x == y); // expected-warning {{$x == $y}}
 }
 
 void compare_different_symbol_plus_left_int_equal(void) {
@@ -204,7 +204,7 @@ void compare_different_symbol_less_or_equal(void) {
   int x = f(), y = f();
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
-  clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 0}}
+  clang_analyzer_express(x <= y); // expected-warning {{$x <= $y}}
 }
 
 void compare_different_symbol_plus_left_int_less_or_equal(void) {
@@ -365,7 +365,7 @@ void compare_different_symbol_less(void) {
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(y); // expected-warning {{$y}}
-  clang_analyzer_express(x < y); // expected-warning {{$x - $y < 0}}
+  clang_analyzer_express(x < y); // expected-warning {{$x < $y}}
 }
 
 void compare_different_symbol_plus_left_int_less(void) {
@@ -541,7 +541,7 @@ void compare_different_symbol_equal_unsigned(void) {
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(y); // expected-warning {{$y}}
-  clang_analyzer_express(x == y); // expected-warning {{$x - $y == 0}}
+  clang_analyzer_express(x == y); // expected-warning {{$x == $y}}
 }
 
 void compare_different_symbol_plus_left_int_equal_unsigned(void) {
@@ -694,7 +694,7 @@ void compare_different_symbol_less_or_equal_unsigned(void) {
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(y); // expected-warning {{$y}}
-  clang_analyzer_express(x <= y); // expected-warning {{$x - $y <= 0}}
+  clang_analyzer_express(x <= y); // expected-warning {{$x <= $y}}
 }
 
 void compare_different_symbol_plus_left_int_less_or_equal_unsigned(void) {
@@ -847,7 +847,7 @@ void compare_different_symbol_less_unsigned(void) {
   clang_analyzer_denote(x, "$x");
   clang_analyzer_denote(y, "$y");
   clang_analyzer_express(y); // expected-warning {{$y}}
-  clang_analyzer_express(x < y); // expected-warning {{$x - $y < 0}}
+  clang_analyzer_express(x < y); // expected-warning {{$x < $y}}
 }
 
 void compare_different_symbol_plus_left_int_less_unsigned(void) {

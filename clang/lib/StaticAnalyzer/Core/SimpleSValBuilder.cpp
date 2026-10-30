@@ -333,6 +333,9 @@ static std::optional<NonLoc> tryRearrange(ProgramStateRef State,
   std::tie(LSym, LInt) = decomposeSymbol(LSym, BV);
   std::tie(RSym, RInt) = decomposeSymbol(RSym, BV);
 
+  if (LInt.isZero() && RInt.isZero())
+    return std::nullopt;
+
   if (LSym->getType() != CommonTy || RSym->getType() != CommonTy)
     return std::nullopt;
 

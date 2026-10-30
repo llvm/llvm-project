@@ -793,32 +793,14 @@ ProgramStateRef relateSymbols(ProgramStateRef State, SymbolRef Sym1,
                               SymbolRef Sym2, bool Equal) {
   auto &SVB = State->getStateManager().getSValBuilder();
 
-  // FIXME: This code should be reworked as follows:
-  // 1. Subtract the operands using evalBinOp().
-  // 2. Assume that the result doesn't overflow.
-  // 3. Compare the result to 0.
-  // 4. Assume the result of the comparison.
-  const auto comparison =
-    SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
-                  nonloc::SymbolVal(Sym2), SVB.getConditionType());
+  const SVal Cmp =
+      SVB.evalBinOp(State, BO_EQ, nonloc::SymbolVal(Sym1),
+                    nonloc::SymbolVal(Sym2), SVB.getConditionType());
 
-  assert(isa<DefinedSVal>(comparison) &&
-         "Symbol comparison must be a `DefinedSVal`");
-
-  auto NewState = State->assume(comparison.castAs<DefinedSVal>(), Equal);
-  if (!NewState)
+  if (!isa<DefinedSVal>(Cmp))
     return nullptr;
 
-  if (const auto CompSym = comparison.getAsSymbol()) {
-    assert(isa<SymIntExpr>(CompSym) &&
-           "Symbol comparison must be a `SymIntExpr`");
-    assert(BinaryOperator::isComparisonOp(
-               cast<SymIntExpr>(CompSym)->getOpcode()) &&
-           "Symbol comparison must be a comparison");
-    return assumeNoOverflow(NewState, cast<SymIntExpr>(CompSym)->getLHS(), 2);
-  }
-
-  return NewState;
+  return State->assume(Cmp.castAs<DefinedSVal>(), Equal);
 }
 
 bool isBoundThroughLazyCompoundVal(const Environment &Env,
