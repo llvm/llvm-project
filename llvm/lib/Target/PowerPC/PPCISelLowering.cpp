@@ -13749,6 +13749,8 @@ PPCTargetLowering::emitEHSjLjSetJmp(MachineInstr &MI,
 
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
+  PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+  FuncInfo->setHasBuiltinSetJmp();
 
   const BasicBlock *BB = MBB->getBasicBlock();
   MachineFunction::iterator I = ++MBB->getIterator();
