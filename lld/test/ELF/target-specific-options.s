@@ -21,11 +21,13 @@
 # CHECK-AARCH64-NEXT: error: -z gcs-report-dynamic only supported on AArch64
 # CHECK-AARCH64-NEXT: error: -z gcs only supported on AArch64
 
-# RUN: not ld.lld a.o --relax-gp -z zicfilp-unlabeled-report=warning \
+# RUN: not ld.lld a.o --relax-gp --riscv-relax-zcmt \
+# RUN:   -z zicfilp-unlabeled-report=warning \
 # RUN:   -z zicfilp-func-sig-report=warning -z zicfiss-report=warning \
 # RUN:   -z zicfilp=unlabeled -z zicfiss=always 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=ERR-RISCV
 # ERR-RISCV:      error: --relax-gp is only supported on RISC-V targets
+# ERR-RISCV-NEXT: error: --riscv-relax-zcmt is only supported on RISC-V targets
 # ERR-RISCV-NEXT: error: -z zicfilip-unlabeled-report is only supported on RISC-V targets
 # ERR-RISCV-NEXT: error: -z zicfilip-func-sig-report is only supported on RISC-V targets
 # ERR-RISCV-NEXT: error: -z zicfiss-report is only supported on RISC-V targets
