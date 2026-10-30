@@ -11,7 +11,7 @@ include "llvm/Option/LibraryOptions.td"
 def CodeGenOptions : OptionsStruct;
 
 // BasicBlockMatchingAndInference.cpp
-defm : ValueField<"propeller-infer-threshold", "float", "0.6",
+defm : ValueField<"propeller-infer-threshold", "float", "0.6f",
   "Threshold for infer stale profile">;
 defm : BoolField<"propeller-match-bbid", "false",
   "Match basic blocks using BBIDs instead of hashes for Propeller inference">;

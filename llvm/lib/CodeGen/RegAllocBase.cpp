@@ -57,15 +57,17 @@ bool RegAllocBase::VerifyEnabled = false;
 // Pin the vtable to this file.
 void RegAllocBase::anchor() {}
 
-void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis,
-                        LiveRegMatrix &mat) {
+void RegAllocBase::init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+                        RegisterClassInfo &rci) {
   TRI = &vrm.getTargetRegInfo();
   MRI = &vrm.getRegInfo();
   VRM = &vrm;
   LIS = &lis;
   Matrix = &mat;
+  RegClassInfo = &rci;
   MRI->freezeReservedRegs();
-  RegClassInfo.runOnMachineFunction(vrm.getMachineFunction());
+  // Keep the shared analysis in step with the set just frozen.
+  RegClassInfo->updateReservedRegs(MRI->getReservedRegs());
   FailedVRegs.clear();
 }
 
@@ -118,7 +120,7 @@ void RegAllocBase::allocatePhysRegs() {
     if (AvailablePhysReg == ~0u) {
       // selectOrSplit failed to find a register! Probably caused by an inline
       // asm. Keep going after reporting the error.
-      assignFailedVirtReg(VirtReg->reg(), RegClassInfo, *LIS, *VRM);
+      assignFailedVirtReg(VirtReg->reg(), *RegClassInfo, *LIS, *VRM);
     } else if (AvailablePhysReg) {
       Matrix->assign(*VirtReg, AvailablePhysReg);
     }

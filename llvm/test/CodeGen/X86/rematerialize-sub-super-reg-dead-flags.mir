@@ -78,8 +78,8 @@ body:             |
     $rsi = COPY %0
     $rdx = COPY %0
     CALL64pcrel32 &use64, csr_64, implicit $rsp, implicit $ssp, implicit $rsi, implicit $rdx, implicit-def $rsp, implicit-def $ssp
-    %1:gr8 = COPY killed %0.sub_8bit
-    $al = COPY killed %1
+    %1:gr8 = COPY %0.sub_8bit
+    $al = COPY %1
     CALL64pcrel32 &use8, csr_64, implicit $rsp, implicit $ssp, implicit $al, implicit-def $rsp, implicit-def $ssp
     RET 0
 ...

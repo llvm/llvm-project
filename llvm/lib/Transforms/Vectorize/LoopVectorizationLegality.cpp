@@ -724,7 +724,7 @@ void LoopVectorizationLegality::addInductionPhi(PHINode *Phi,
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
-      ID.getConstIntStepValue() && ID.getConstIntStepValue()->isOne() &&
+      ID.getConstStepValue() && ID.getConstStepValue()->isOne() &&
       isa<Constant>(ID.getStartValue()) &&
       cast<Constant>(ID.getStartValue())->isNullValue()) {
 
@@ -771,7 +771,7 @@ static bool isDisallowedStridedPointerInduction(const InductionDescriptor &ID,
   if (Opts.lv_strided_pointer_ivs)
     return false;
   return ID.getKind() == InductionDescriptor::IK_PtrInduction &&
-         ID.getConstIntStepValue() == nullptr;
+         !ID.getConstStepValue();
 }
 
 bool LoopVectorizationLegality::setupOuterLoopInductions() {
@@ -1752,7 +1752,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   Predicates.clear();
 
   if (UncountableExitingBlocks.empty()) {
-    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits");
+    LLVM_DEBUG(dbgs() << "LV: Could not find any uncountable exits\n");
     return false;
   }
 

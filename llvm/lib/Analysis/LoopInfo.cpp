@@ -441,7 +441,7 @@ bool Loop::isCanonical(ScalarEvolution &SE) const {
   if (IndDesc.getInductionOpcode() != Instruction::Add)
     return false;
 
-  ConstantInt *Step = IndDesc.getConstIntStepValue();
+  std::optional<APInt> Step = IndDesc.getConstStepValue();
   if (!Step || !Step->isOne())
     return false;
 

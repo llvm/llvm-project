@@ -779,8 +779,6 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
   LLVM_DEBUG(dbgs() << '\n');
 #endif
 
-  BitVector RegAliases(TRI->getNumRegs());
-
   // Attempt to break anti-dependence edges. Walk the instructions
   // from the bottom up, tracking information about liveness as we go
   // to help determine which registers are available.
