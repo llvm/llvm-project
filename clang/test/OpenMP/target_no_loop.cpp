@@ -271,7 +271,7 @@ void promotable_after_reduction(int *array) {
 // NOLOOP-NEXT: @__kmpc_free_shared(ptr %last{{.*}})
 // NOLOOP-NEXT: ret void
 // NOLOOP: @__kmpc_distribute_for_static_loop_4u({{.*}}_l101_{{.*}}, i32 0, i32 0, i8 1)
-// NOLOOP: @__kmpc_barrier
+// NOLOOP-NOT: @__kmpc_barrier
 // NOLOOP: store {{.*}}, ptr %last.
 // NOLOOP-NEXT: %.omp.lastprivate.done
 

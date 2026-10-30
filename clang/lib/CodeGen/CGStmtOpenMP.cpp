@@ -4036,8 +4036,7 @@ emitInnerParallelForWhenCombined(CodeGenFunction &CGF,
 
       cantFail(OMPBuilder.applyWorkshareLoop(
           CGF.Builder.getCurrentDebugLocation(), CLI, AllocaIP,
-          /*NeedsBarrier=*/!S.getSingleClause<OMPNowaitClause>() ||
-              NeedsLastprivateFinalCopy,
+          /*NeedsBarrier=*/!S.getSingleClause<OMPNowaitClause>(),
           llvm::omp::OMP_SCHEDULE_Default,
           /*ChunkSize=*/nullptr, /*HasSimdModifier=*/false,
           /*HasMonotonicModifier=*/false, /*HasNonmonotonicModifier=*/false,
