@@ -70,9 +70,8 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
-  if (getTM().getCLOpts().mfix4300) {
-    // TODO(boomanaiden154): Add MipsMulMulBugPass
-  }
+  if (getTM().getCLOpts().mfix4300)
+    addMachineFunctionPass(MipsMulMulBugFixPass(), PMW);
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.

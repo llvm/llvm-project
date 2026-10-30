@@ -65,7 +65,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsMicroSizeReduceLegacyPass(*PR);
   initializeMipsPreLegalizerCombinerPass(*PR);
   initializeMipsPostLegalizerCombinerPass(*PR);
-  initializeMipsMulMulBugFixPass(*PR);
+  initializeMipsMulMulBugFixLegacyPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
 }
 
@@ -257,7 +257,7 @@ void MipsPassConfig::addPreEmitPass() {
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
   if (getMipsTargetMachine().getCLOpts().mfix4300)
-    addPass(createMipsMulMulBugPass());
+    addPass(createMipsMulMulBugFixLegacyPass());
 
   // The delay slot filler pass can potientially create forbidden slot hazards
   // for MIPSR6 and therefore it should go before MipsBranchExpansion pass.

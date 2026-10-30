@@ -273,6 +273,7 @@
 ; MIPS-MFIX4300-NEXT:     patchable-function
 ; MIPS-MFIX4300-NEXT:     mips-expand-pseudo
 ; MIPS-MFIX4300-NEXT:     mips-micro-size-reduce
+; MIPS-MFIX4300-NEXT:     mips-mul-mul-bug-fix
 ; MIPS-MFIX4300-NEXT:     funclet-layout
 ; MIPS-MFIX4300-NEXT:     remove-loads-into-fake-uses
 ; MIPS-MFIX4300-NEXT:     StackMapLivenessPass
