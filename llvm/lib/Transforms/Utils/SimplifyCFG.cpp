@@ -2799,6 +2799,22 @@ bool CompatibleSets::shouldBelongToSameSet(ArrayRef<InvokeInst *> Invokes) {
             NormalBB, {Invokes[0]->getParent(), Invokes[1]->getParent()},
             &EquivalenceSet))
       return false;
+
+    // Merging replaces all uses of each `invoke`'s result with the result of
+    // the merged `invoke`. This is only correct if each result is used solely
+    // by PHI nodes in the normal destination, on the edge from that same
+    // `invoke`. For example, if the second `invoke` is inside a loop that is
+    // entered through the first `invoke`'s normal destination, a use of the
+    // first result inside that loop would see the second result after merging.
+    auto HasOnlyIncomingPHIUses = [NormalBB](InvokeInst *II) {
+      return all_of(II->uses(), [NormalBB, II](const Use &U) {
+        auto *PN = dyn_cast<PHINode>(U.getUser());
+        return PN && PN->getParent() == NormalBB &&
+               PN->getIncomingBlock(U) == II->getParent();
+      });
+    };
+    if (!all_of(Invokes, HasOnlyIncomingPHIUses))
+      return false;
   }
 
 #ifndef NDEBUG
