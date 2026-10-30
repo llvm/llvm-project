@@ -774,7 +774,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         }
         unsigned realUses = 0;
-        for (const MachineInstr &UseMI : MRI.use_instructions(reg)) {
+        for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(reg)) {
           // Check if there are any uses that occur only in the original
           // loop.  If so, that's not a real use.
           if (UseMI.getParent() != BB) {
@@ -788,6 +788,9 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
         used = false;
       }
       if (!used) {
+        for (const MachineOperand &MO : MI->all_defs())
+          if (MO.getReg().isVirtual())
+            MRI.markUsesInDebugValueAsUndef(MO.getReg());
         LIS.RemoveMachineInstrFromMaps(*MI);
         MI++->eraseFromParent();
         continue;

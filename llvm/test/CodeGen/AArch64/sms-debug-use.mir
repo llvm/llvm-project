@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=aarch64 -mcpu=neoverse-n1 -run-pass=pipeliner \
+# RUN:   -enable-pipeliner -pipeliner-force-ii=3 -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s
+
+# A debug-only use outside the loop must not keep dead epilog instructions.
+
+# CHECK-LABEL: name: func
+# CHECK: FMULDrr
+# CHECK-NOT: FMULDrr
+# CHECK: DBG_VALUE $noreg, $noreg, !{{[0-9]+}}, !DIExpression()
+# CHECK-NEXT: {{%[0-9]+}}:fpr64 = FMULDrr
+# CHECK-NOT: FMULDrr
+
+--- |
+  define void @func() !dbg !5 {
+    ret void
+  }
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "t", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !5 = distinct !DISubprogram(name: "func", scope: !1, file: !1, line: 1, type: !6, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{null}
+  !8 = !DILocalVariable(name: "v", scope: !5, file: !1, line: 2, type: !9)
+  !9 = !DIBasicType(name: "double", size: 64, encoding: DW_ATE_float)
+  !10 = !DILocation(line: 2, column: 1, scope: !5)
+...
+---
+name:            func
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+    %10:gpr64 = COPY $x0
+    %11:gpr64 = COPY $x1
+    %20:fpr64 = FMOVDi 1
+
+  bb.1:
+    %12:gpr64 = PHI %11, %bb.0, %13, %bb.1
+    %24:fpr64 = PHI %20, %bb.0, %21, %bb.1
+    %30:fpr64 = PHI %20, %bb.0, %31, %bb.1
+    %13:gpr64 = ADDXrr %12, %11
+    dead $xzr = SUBSXrr %10, %13, implicit-def $nzcv
+    %21:fpr64 = FADDDrr %20, %24, implicit $fpcr
+    %22:fpr64 = FADDDrr %21, %24, implicit $fpcr
+    %23:fpr64 = FADDDrr %22, %24, implicit $fpcr
+    %31:fpr64 = nofpexcept FMULDrr %30, %23, implicit $fpcr
+    Bcc 1, %bb.1, implicit $nzcv
+    B %bb.2
+
+  bb.2:
+    DBG_VALUE %31, $noreg, !8, !DIExpression(), debug-location !10
+    %25:fpr64 = FMULDrr %21, %23, implicit $fpcr
+    $d0 = COPY %25
+    RET_ReallyLR implicit $d0
+...
