@@ -523,7 +523,8 @@ int main(int argc, char **argv) {
     // If needsDwarfSectionOffsetDirective is true, we would eventually call
     // MCStreamer::emitSymbolValue() with IsSectionRelative = true, but that
     // is supported only for 4-byte long references.
-    if (MAI->needsDwarfSectionOffsetDirective()) {
+    if (MAI->needsDwarfSectionOffsetDirective() &&
+        !TheTriple.isOSBinFormatGOFF()) {
       errs() << ProgName << ": the 64-bit DWARF format is not supported for "
              << TheTriple.normalize() << "\n";
       return 1;

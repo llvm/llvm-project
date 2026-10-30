@@ -594,8 +594,6 @@ void SystemZHLASMAsmStreamer::finishImpl() {
       continue;
     auto &Sym = static_cast<MCSymbolGOFF &>(const_cast<MCSymbol &>(Symbol));
     if (Sym.getCodeData() == GOFF::ESD_EXE_DATA) {
-      if (!Sym.getADA())
-        continue;
       OS << Sym.getADA()->getParent()->getExternalName() << " CATTR PART("
          << Sym.getName() << ")";
       EmitEOL();

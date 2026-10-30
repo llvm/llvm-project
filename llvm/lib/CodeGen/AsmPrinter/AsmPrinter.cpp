@@ -3879,9 +3879,9 @@ void AsmPrinter::emitLabelPlusOffset(const MCSymbol *Label, uint64_t Offset,
                                      unsigned Size,
                                      bool IsSectionRelative) const {
   if (MAI.needsDwarfSectionOffsetDirective() && IsSectionRelative) {
-    OutStreamer->emitCOFFSecRel32(Label, Offset);
-    if (Size > 4)
-      OutStreamer->emitZeros(Size - 4);
+    unsigned Emitted = OutStreamer->emitDwarfSectionOffset(Label, Offset, Size);
+    if (Size > Emitted)
+      OutStreamer->emitZeros(Size - Emitted);
     return;
   }
 

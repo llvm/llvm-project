@@ -489,6 +489,12 @@ public:
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const;
 
+  virtual const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym,
+                                                  uint64_t Offset,
+                                                  MCContext &Ctx) const {
+    return nullptr;
+  }
+
   /// Return true if C is an acceptable character inside a symbol name.
   bool isAcceptableChar(char C) const;
 
