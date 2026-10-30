@@ -34,6 +34,7 @@ class PredicatedScalarEvolution;
 class RuntimePointerChecking;
 class TargetLibraryInfo;
 class TargetTransformInfo;
+class VFSelectionContext;
 class VPRecipeBuilder;
 struct VFRange;
 
@@ -577,6 +578,12 @@ struct VPlanTransforms {
   /// Predicate and linearize the control-flow in the only loop region of
   /// \p Plan.
   static void introduceMasksAndLinearize(VPlan &Plan);
+
+  /// If its accesses can't be masked natively, convert a masked early-exit
+  /// loop to skip the body if any lane exits and re-execute in the scalar loop.
+  static void convertMaskedEarlyExitToBailToScalar(
+      VPlan &Plan, const VFSelectionContext &Config,
+      PredicatedScalarEvolution &PSE, const Loop *L);
 
   /// Replace a VPWidenCanonicalIVRecipe if it is present in \p Plan, with a
   /// VPWidenIntOrFpInductionRecipe, provided it would not cause additional
