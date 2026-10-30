@@ -635,17 +635,15 @@ define <2 x i64> @vec_fptosi_64(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-SD-NEXT:    bl __fixtfdi
+; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    bl __fixtfdi
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    bl __fixtfdi
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], x0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;
@@ -719,17 +717,15 @@ define <2 x i64> @vec_fptoui_64(<2 x fp128> %val) {
 ; CHECK-SD-NEXT:    str x30, [sp, #32] // 8-byte Spill
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; CHECK-SD-NEXT:    bl __fixunstfdi
+; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    bl __fixunstfdi
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    bl __fixunstfdi
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #32] // 8-byte Reload
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov v0.d[1], x0
 ; CHECK-SD-NEXT:    add sp, sp, #48
 ; CHECK-SD-NEXT:    ret
 ;

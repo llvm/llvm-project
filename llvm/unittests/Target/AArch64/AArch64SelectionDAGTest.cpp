@@ -8,6 +8,7 @@
 #include "AArch64SelectionDAGInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -81,6 +82,25 @@ protected:
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<SelectionDAG> DAG;
 };
+
+TEST_F(AArch64SelectionDAGTest, CombineConcatScalableScalarToVectors) {
+  FunctionLoweringInfo FuncInfo;
+  FuncInfo.MBB = MF->CreateMachineBasicBlock(&F->getEntryBlock());
+  MF->push_back(FuncInfo.MBB);
+  DAG->setFunctionLoweringInfo(&FuncInfo);
+  SDLoc Loc;
+  SDValue Lo = DAG->getNode(ISD::SCALAR_TO_VECTOR, Loc, MVT::nxv2i64,
+                            DAG->getRegister(0, MVT::i64));
+  SDValue Hi = DAG->getNode(ISD::SCALAR_TO_VECTOR, Loc, MVT::nxv2i64,
+                            DAG->getRegister(1, MVT::i64));
+  SDValue Concat = DAG->getNode(ISD::CONCAT_VECTORS, Loc, MVT::nxv4i64, Lo, Hi);
+  DAG->setRoot(DAG->getCopyToReg(DAG->getEntryNode(), Loc, 2, Concat));
+
+  // Scalable SCALAR_TO_VECTOR nodes must not be folded into a BUILD_VECTOR.
+  DAG->Combine(BeforeLegalizeTypes, nullptr, CodeGenOptLevel::Default);
+
+  EXPECT_EQ(DAG->getRoot().getOperand(2), Concat);
+}
 
 TEST_F(AArch64SelectionDAGTest, computeKnownBits_ZERO_EXTEND_VECTOR_INREG) {
   SDLoc Loc;
