@@ -4317,6 +4317,52 @@ such as applying different hotness cutoffs to different check kinds.
 
 Query for this feature with `__has_builtin(__builtin_allow_runtime_check)`.
 
+### `__builtin_sanitizer_instrumentation_begin` and `__builtin_sanitizer_instrumentation_end`
+
+`__builtin_sanitizer_instrumentation_begin()` and
+`__builtin_sanitizer_instrumentation_end()` delimit a region of a function that
+is otherwise not instrumented by a sanitizer, inside which the sanitizer's
+instrumentation is enabled again.
+
+**Syntax**:
+
+```c
+void __builtin_sanitizer_instrumentation_begin(void);
+void __builtin_sanitizer_instrumentation_end(void);
+```
+
+**Example of use**:
+
+```c
+__attribute__((disable_sanitizer_instrumentation))
+void handle_irq(struct pt_regs *regs) {
+  enter_irq_context(regs);       // not instrumented
+  __builtin_sanitizer_instrumentation_begin();
+  dispatch_irq(regs);            // instrumented
+  __builtin_sanitizer_instrumentation_end();
+  exit_irq_context(regs);        // not instrumented
+}
+```
+
+**Description**:
+
+The builtins are meant for code like the Linux kernel's `noinstr` functions,
+which must not be instrumented as a whole but call instrumented code between
+`instrumentation_begin()` and `instrumentation_end()`. Regions nest, and should
+be balanced on every path through the function; Clang warns about unbalanced
+regions with `-Wsanitizer-instrumentation-region`. Which functions count as
+uninstrumented, and what gets instrumented inside regions, is up to each
+sanitizer; sanitizers that support regions describe this in their own
+documentation.
+
+The builtins are lowered to the
+[llvm.sanitizer.instrumentation.begin and llvm.sanitizer.instrumentation.end](https://llvm.org/docs/LangRef.html#llvm-sanitizer-instrumentation-begin-and-llvm-sanitizer-instrumentation-end-intrinsics)
+intrinsics only when a sanitizer that supports regions is enabled, and to
+nothing otherwise, so that they do not constrain optimization in other builds.
+
+Query for this feature with
+`__has_builtin(__builtin_sanitizer_instrumentation_begin)`.
+
 ### `__builtin_nondeterministic_value`
 
 `__builtin_nondeterministic_value` returns a valid nondeterministic value of the same type as the provided argument.

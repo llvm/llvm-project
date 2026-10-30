@@ -2556,6 +2556,20 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty],
 def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
+// Sanitizer instrumentation regions in functions that are otherwise not
+// instrumented.
+//
+// The markers have the semantics of an `asm volatile` with no operands or
+// clobbers, which is what the Linux kernel's instrumentation_begin()/end() are:
+// they are not deleted and not reordered with other side-effecting operations,
+// but they are not memory barriers. Clang lowers such an asm to a call with
+// unknown memory effects, and the markers are declared the same way, so that
+// calls which may access memory stay on their side of a boundary. Region
+// membership is positional; an ordinary load or store the optimizer moves
+// across a marker is simply instrumented or not depending on where it lands.
+def int_sanitizer_instrumentation_begin : DefaultAttrsIntrinsic<[], [], []>;
+def int_sanitizer_instrumentation_end : DefaultAttrsIntrinsic<[], [], []>;
+
 // Spin in an infinite loop (using instructions specified by the target) iff the
 // argument is true. Used to implement efficient conditional traps.
 def int_cond_loop : Intrinsic<[], [llvm_i1_ty],

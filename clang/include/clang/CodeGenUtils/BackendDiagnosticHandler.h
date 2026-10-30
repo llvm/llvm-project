@@ -22,6 +22,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticHandler.h"
 #include <memory>
 #include <optional>
@@ -35,6 +36,7 @@ class DiagnosticInfoMisExpect;
 class DiagnosticInfoOptimizationBase;
 class DiagnosticInfoOptimizationFailure;
 class DiagnosticInfoResourceLimit;
+class DiagnosticInfoSanitizerInstrumentationRegion;
 class DiagnosticInfoSrcMgr;
 class DiagnosticInfoStackSize;
 class DiagnosticInfoUnsupported;
@@ -134,6 +136,9 @@ private:
   /// Specialized handler for misexpect warnings.
   /// Note that misexpect remarks are emitted through ORE
   void MisExpectDiagHandler(const llvm::DiagnosticInfoMisExpect &D);
+  /// Specialized handler for unbalanced sanitizer instrumentation regions.
+  void SanitizerInstrumentationRegionDiagHandler(
+      const llvm::DiagnosticInfoSanitizerInstrumentationRegion &D);
 
   DiagnosticsEngine &Diags;
   const CodeGenOptions &CodeGenOpts;
@@ -149,6 +154,10 @@ private:
   // because we optimize for time building this map rather than time
   // retrieving an entry, as backend diagnostics are uncommon.
   std::vector<std::pair<llvm::hash_code, FullSourceLoc>> ManglingFullSourceLocs;
+
+  /// Functions for which an unbalanced sanitizer instrumentation region has
+  /// already been reported.
+  llvm::StringSet<> SanitizerRegionsDiagnosed;
 };
 
 } // namespace clang
