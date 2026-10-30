@@ -11,7 +11,6 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.stdint_proxy
     libc.hdr.sys_eventfd_macros
-    libc.src.errno.errno
     libc.src.fcntl.fcntl
     libc.src.sys.eventfd.eventfd
     libc.src.unistd.close
@@ -30,7 +29,6 @@ add_libc_test(
     libc.hdr.errno_macros
     libc.hdr.sys_eventfd_macros
     libc.hdr.types.eventfd_t
-    libc.src.errno.errno
     libc.src.sys.eventfd.eventfd
     libc.src.sys.eventfd.eventfd_read
     libc.src.unistd.close
@@ -47,7 +45,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.sys_eventfd_macros
-    libc.src.errno.errno
     libc.src.sys.eventfd.eventfd
     libc.src.sys.eventfd.eventfd_write
     libc.src.unistd.close

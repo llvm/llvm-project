@@ -11736,6 +11736,7 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
     if (DAG.willNotOverflowSub(/*IsSigned=*/true, RHS, LHS))
       return DAG.getNode(ISD::ABS, dl, VT,
                          DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
+
   } else if (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS)) {
     return DAG.getNode(ISD::ABS, dl, VT,
                        DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
@@ -13833,10 +13834,6 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
       return DAG.getNode(ISD::FP_TO_BF16, dl, VT, Node->getOperand(0));
     }
     EVT OperandVT = Op.getValueType();
-    SDValue IsNaN = DAG.getSetCC(
-        dl,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT),
-        Op, Op, ISD::SETUO);
 
     // We are rounding binary64/binary128 -> binary32 -> bfloat16. This
     // can induce double-rounding which may alter the results. We can
@@ -13847,11 +13844,6 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     EVT I32 = F32.changeTypeToInteger();
     Op = expandRoundInexactToOdd(F32, Op, dl, DAG);
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
-
-    // Conversions should set NaN's quiet bit. This also prevents NaNs from
-    // turning into infinities.
-    SDValue NaN =
-        DAG.getNode(ISD::OR, dl, I32, Op, DAG.getConstant(0x400000, dl, I32));
 
     // Factor in the contribution of the low 16 bits.
     SDValue One = DAG.getConstant(1, dl, I32);
@@ -13864,10 +13856,22 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
 
     // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
     // 0x80000000.
-    Op = DAG.getSelect(dl, I32, IsNaN, NaN, Add);
+    if (!Node->getFlags().hasNoNaNs() &&
+        !DAG.isKnownNeverNaN(Node->getOperand(0))) {
+      // Conversions should set NaN's quiet bit. This also prevents NaNs from
+      // turning into infinities.
+      SDValue NaN =
+          DAG.getNode(ISD::OR, dl, I32, Op, DAG.getConstant(0x400000, dl, I32));
+
+      SDValue IsNaN = DAG.getSetCC(
+          dl,
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT),
+          Node->getOperand(0), Node->getOperand(0), ISD::SETUO);
+      Add = DAG.getSelect(dl, I32, IsNaN, NaN, Add);
+    }
 
     // Now that we have rounded, shift the bits into position.
-    Op = DAG.getNode(ISD::SRL, dl, I32, Op,
+    Op = DAG.getNode(ISD::SRL, dl, I32, Add,
                      DAG.getShiftAmountConstant(16, I32, dl));
     EVT I16 = I32.changeElementType(*DAG.getContext(), MVT::i16);
     Op = DAG.getNode(ISD::TRUNCATE, dl, I16, Op);
