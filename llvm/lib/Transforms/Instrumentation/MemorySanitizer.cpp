@@ -4573,13 +4573,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // e.g., i32 @llvm.experimental.vector.extract.last.active.v4i32(
-  //           <4 x i32> %data, <4 x i1> %mask, i32 %default)
+  //           <4 x i32> %data, <4 x i1> %mask, i32 %passthru)
   void handleVectorExtractLastActive(IntrinsicInst &I) {
     assert(I.arg_size() == 3);
     IRBuilder<> IRB(&I);
     Value *Data = I.getArgOperand(0);
     Value *Mask = I.getArgOperand(1);
-    Value *Default = I.getArgOperand(2);
+    Value *PassThru = I.getArgOperand(2);
+
+    assert(isa<VectorType>(Data->getType()));
+    assert(isa<VectorType>(Mask->getType()));
+    assert(!isa<VectorType>(PassThru->getType()));
+    assert(!isa<VectorType>(I.getType()));
+    assert(I.getType() == PassThru->getType());
+    assert(cast<VectorType>(Data->getType())->getElementType() == I.getType());
+    assert(cast<VectorType>(Mask->getType())->getElementType() ==
+           IRB.getInt1Ty());
+    assert(cast<VectorType>(Data->getType())->getElementCount() ==
+           cast<VectorType>(Mask->getType())->getElementCount());
 
     insertCheckShadowOf(Mask, &I);
 
@@ -4590,18 +4601,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     }
 
     Value *DataShadow = getShadow(Data);
-    Value *DefaultShadow = getShadow(Default);
     Value *Shadow = IRB.CreateIntrinsic(
         Intrinsic::experimental_vector_extract_last_active,
-        {DataShadow->getType()},
-        {DataShadow, Mask, DefaultShadow},
-        /*FMFSource=*/{}, "_msprop");
+        {DataShadow->getType()}, {DataShadow, Mask, getShadow(PassThru)},
+        /*FMFSource=*/{}, "_msprop_vector_extract_last_active");
     setShadow(&I, Shadow);
 
     if (MS.TrackOrigins) {
       Value *AnyActive = IRB.CreateOrReduce(Mask);
       setOrigin(&I, IRB.CreateSelect(AnyActive, getOrigin(Data),
-                                     getOrigin(Default)));
+                                     getOrigin(PassThru)));
     }
   }
 
