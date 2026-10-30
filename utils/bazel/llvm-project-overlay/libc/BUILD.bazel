@@ -6340,6 +6340,17 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_asinhbf16",
+    hdrs = ["src/__support/math/asinhbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_cast",
+        ":__support_macros_config",
+        ":__support_math_asinhf",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_asinhf",
     hdrs = ["src/__support/math/asinhf.h"],
     deps = [
@@ -12878,6 +12889,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_asinf16",
     ],
+)
+
+libc_math_function(
+    name = "asinhbf16",
+    additional_deps = [":__support_math_asinhbf16"],
 )
 
 libc_math_function(

@@ -173,6 +173,17 @@ add_header_library(
 )
 
 add_header_library(
+  asinhbf16
+  HDRS
+    asinhbf16.h
+  DEPENDS
+    .asinhf
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   asinhf
   HDRS
     asinhf.h

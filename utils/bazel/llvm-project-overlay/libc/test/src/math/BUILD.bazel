@@ -38,6 +38,13 @@ math_mpfr_test(
 
 math_mpfr_test(name = "asinf")
 
+math_mpfr_test(
+    name = "asinhbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_mpfr_test(name = "asinhf")
 
 math_mpfr_test(name = "asinpif")

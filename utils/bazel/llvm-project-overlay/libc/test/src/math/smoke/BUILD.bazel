@@ -44,6 +44,13 @@ math_test(name = "asinf")
 
 math_test(name = "asinf16")
 
+math_test(
+    name = "asinhbf16",
+    deps = [
+        "//libc:__support_fputil_bfloat16",
+    ],
+)
+
 math_test(name = "asinhf")
 
 math_test(name = "asinhf16")

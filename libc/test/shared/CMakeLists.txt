@@ -39,6 +39,7 @@ else()
       libc.src.__support.math.asinbf16
       libc.src.__support.math.asinf
       libc.src.__support.math.asinf16
+      libc.src.__support.math.asinhbf16
       libc.src.__support.math.asinhf
       libc.src.__support.math.asinhf16
       libc.src.__support.math.asinpi
