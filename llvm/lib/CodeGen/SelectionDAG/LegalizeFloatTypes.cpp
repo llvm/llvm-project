@@ -2904,7 +2904,11 @@ SDValue DAGTypeLegalizer::SoftPromoteHalfRes_XINT_TO_FP(SDNode *N) {
   EVT OVT = N->getValueType(0);
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), OVT);
   SDLoc dl(N);
-
+  EVT SVT = N->getOperand(N->isStrictFPOpcode() ? 1 : 0).getValueType();
+  bool UseF64 = isTypeLegal(MVT::f64);
+  unsigned Width = SVT.getScalarSizeInBits();
+  if (OVT == MVT::bf16 && Width > 23 && Width <= 53 && UseF64)
+    NVT = MVT::f64;
   if (N->isStrictFPOpcode()) {
     SDValue Op = DAG.getNode(N->getOpcode(), dl, {NVT, MVT::Other},
                              {N->getOperand(0), N->getOperand(1)});

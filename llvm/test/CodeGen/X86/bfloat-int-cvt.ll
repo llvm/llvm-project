@@ -9,8 +9,12 @@
 define bfloat @sitofp_i32_to_bf16(i32 %a) {
 ; CHECK-LABEL: sitofp_i32_to_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
-; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %cvt = sitofp i32 %a to bfloat
   ret bfloat %cvt
@@ -198,8 +202,12 @@ define <8 x bfloat> @sitofp_v8i64_to_v8bf16(<8 x i64> %a) {
 define bfloat @uitofp_i32_to_bf16(i32 %a) {
 ; CHECK-LABEL: uitofp_i32_to_bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
-; CHECK-NEXT:    vcvtneps2bf16 %xmm0, %xmm0
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
+; CHECK-NEXT:    callq __truncdfbf2@PLT
+; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %cvt = uitofp i32 %a to bfloat
   ret bfloat %cvt
