@@ -258,20 +258,20 @@ define i64 @i64_sum_reduction_scaled_partial_reduce(ptr noalias %a, i64 %n) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE4:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = load <vscale x 8 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[TMP13]], i64 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[TMP13]], i64 2)
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[TMP13]], i64 4)
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.vector.extract.nxv2i64.nxv8i64(<vscale x 8 x i64> [[TMP13]], i64 6)
-; CHECK-NEXT:    [[TMP8]] = add <vscale x 2 x i64> [[VEC_PHI]], [[TMP4]]
-; CHECK-NEXT:    [[TMP9]] = add <vscale x 2 x i64> [[VEC_PHI1]], [[TMP5]]
-; CHECK-NEXT:    [[TMP10]] = add <vscale x 2 x i64> [[VEC_PHI2]], [[TMP6]]
-; CHECK-NEXT:    [[TMP11]] = add <vscale x 2 x i64> [[VEC_PHI3]], [[TMP7]]
+; CHECK-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[VEC_PHI]], <vscale x 2 x i64> [[TMP4]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE4]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[VEC_PHI1]], <vscale x 2 x i64> [[TMP5]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE5]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[VEC_PHI2]], <vscale x 2 x i64> [[TMP6]])
+; CHECK-NEXT:    [[PARTIAL_REDUCE6]] = call <vscale x 2 x i64> @llvm.vector.partial.reduce.add.nxv2i64.nxv2i64(<vscale x 2 x i64> [[VEC_PHI3]], <vscale x 2 x i64> [[TMP7]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]

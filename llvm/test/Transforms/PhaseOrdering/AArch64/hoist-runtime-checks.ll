@@ -39,10 +39,10 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD16:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8]] = add <4 x i32> [[WIDE_LOAD15]], [[VEC_PHI12]]
-; CHECK-NEXT:    [[TMP9]] = add <4 x i32> [[WIDE_LOAD16]], [[VEC_PHI13]]
-; CHECK-NEXT:    [[TMP10]] = add <4 x i32> [[WIDE_LOAD17]], [[VEC_PHI14]]
+; CHECK-NEXT:    [[TMP7]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP8]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI12]], <4 x i32> [[WIDE_LOAD15]])
+; CHECK-NEXT:    [[TMP9]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI13]], <4 x i32> [[WIDE_LOAD16]])
+; CHECK-NEXT:    [[TMP10]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI14]], <4 x i32> [[WIDE_LOAD17]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -67,7 +67,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[VEC_PHI22:%.*]] = phi <4 x i32> [ [[TMP13]], [[VEC_EPILOG_PH]] ], [ [[TMP15:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[ARRAY]], i64 [[INDEX21]]
 ; CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <4 x i32>, ptr [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP15]] = add <4 x i32> [[WIDE_LOAD23]], [[VEC_PHI22]]
+; CHECK-NEXT:    [[TMP15]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI22]], <4 x i32> [[WIDE_LOAD23]])
 ; CHECK-NEXT:    [[INDEX_NEXT24]] = add nuw i64 [[INDEX21]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT24]], [[N_VEC20]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -75,7 +75,7 @@ define i32 @read_only_loop_with_runtime_check(ptr noundef %array, i32 noundef %c
 ; CHECK-NEXT:    [[TMP17:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP15]])
 ; CHECK-NEXT:    [[CMP_N25:%.*]] = icmp eq i64 [[N_VEC20]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[CMP_N25]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER27]]
-; CHECK:       for.body.preheader27:
+; CHECK:       for.body.preheader31:
 ; CHECK-NEXT:    [[INDVARS_IV_PH:%.*]] = phi i64 [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC20]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[SUM_07_PH:%.*]] = phi i32 [ 0, [[ITER_CHECK]] ], [ [[TMP12]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP17]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -190,10 +190,10 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[WIDE_LOAD13:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD15:%.*]] = load <4 x i32>, ptr [[TMP5]], align 4
-; CHECK-NEXT:    [[TMP6]] = add <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP7]] = add <4 x i32> [[WIDE_LOAD13]], [[VEC_PHI10]]
-; CHECK-NEXT:    [[TMP8]] = add <4 x i32> [[WIDE_LOAD14]], [[VEC_PHI11]]
-; CHECK-NEXT:    [[TMP9]] = add <4 x i32> [[WIDE_LOAD15]], [[VEC_PHI12]]
+; CHECK-NEXT:    [[TMP6]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
+; CHECK-NEXT:    [[TMP7]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI10]], <4 x i32> [[WIDE_LOAD13]])
+; CHECK-NEXT:    [[TMP8]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI11]], <4 x i32> [[WIDE_LOAD14]])
+; CHECK-NEXT:    [[TMP9]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI12]], <4 x i32> [[WIDE_LOAD15]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
@@ -218,7 +218,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[VEC_PHI20:%.*]] = phi <4 x i32> [ [[TMP12]], [[VEC_EPILOG_PH]] ], [ [[TMP14:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [4 x i8], ptr [[S_COERCE0]], i64 [[INDEX19]]
 ; CHECK-NEXT:    [[WIDE_LOAD21:%.*]] = load <4 x i32>, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[TMP14]] = add <4 x i32> [[WIDE_LOAD21]], [[VEC_PHI20]]
+; CHECK-NEXT:    [[TMP14]] = tail call <4 x i32> @llvm.vector.partial.reduce.add.v4i32.v4i32(<4 x i32> [[VEC_PHI20]], <4 x i32> [[WIDE_LOAD21]])
 ; CHECK-NEXT:    [[INDEX_NEXT22]] = add nuw i64 [[INDEX19]], 4
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT22]], [[N_VEC18]]
 ; CHECK-NEXT:    br i1 [[TMP15]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
@@ -226,7 +226,7 @@ define dso_local noundef i32 @sum_prefix_with_sum(ptr %s.coerce0, i64 %s.coerce1
 ; CHECK-NEXT:    [[TMP16:%.*]] = tail call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP14]])
 ; CHECK-NEXT:    [[CMP_N23:%.*]] = icmp eq i64 [[N]], [[N_VEC18]]
 ; CHECK-NEXT:    br i1 [[CMP_N23]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER25]]
-; CHECK:       for.body.preheader25:
+; CHECK:       for.body.preheader29:
 ; CHECK-NEXT:    [[I_07_PH:%.*]] = phi i64 [ 0, [[ITER_CHECK]] ], [ [[N_VEC]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[N_VEC18]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[RET_06_PH:%.*]] = phi i32 [ 0, [[ITER_CHECK]] ], [ [[TMP11]], [[VEC_EPILOG_ITER_CHECK]] ], [ [[TMP16]], [[VEC_EPILOG_MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
