@@ -178,6 +178,11 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         match(Rdx->getCondOp(), m_RemoveMask(HeaderMask, Mask)))
       return new VPReductionEVLRecipe(*Rdx, EVL, Mask);
 
+  if (match(&CurRecipe, m_AnyOf(m_RemoveMask(HeaderMask, Mask))))
+    return new VPReductionEVLRecipe(
+        RecurKind::Or, {}, Plan->getFalse(), Mask ? Mask : Plan->getTrue(),
+        nullptr, &EVL, getReductionStyle(true, false, 1), DL);
+
   if (auto *Interleave = dyn_cast<VPInterleaveRecipe>(&CurRecipe))
     if (Interleave->getMask() &&
         match(Interleave->getMask(), m_RemoveMask(HeaderMask, Mask)))
