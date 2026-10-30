@@ -33,11 +33,13 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include <limits>
 
 using namespace clang;
 
@@ -1087,7 +1089,16 @@ InitListChecker::InitListChecker(
       TreatUnavailableAsInvalid(TreatUnavailableAsInvalid),
       InOverloadResolution(InOverloadResolution),
       AggrDeductionCandidateParamTypes(AggrDeductionCandidateParamTypes) {
-  if (!VerifyOnly || hasAnyDesignatedInits(IL)) {
+  // In C, omitted integer array elements can always be zero-initialized and
+  // overlapping designators do not affect initialization viability. There is
+  // no need to build a dense semantic list merely to verify such an array.
+  // The performing pass still builds the list and diagnoses overrides. Keep
+  // the existing C++ path, where overrides can affect overload resolution.
+  bool NeedsStructuredList = true;
+  if (VerifyOnly && !SemaRef.getLangOpts().CPlusPlus)
+    if (const auto *CAT = SemaRef.Context.getAsConstantArrayType(T))
+      NeedsStructuredList = !CAT->getElementType()->isIntegerType();
+  if (!VerifyOnly || (NeedsStructuredList && hasAnyDesignatedInits(IL))) {
     FullyStructuredList = createInitListExpr(
         T, IL->getSourceRange(), IL->getNumInits(), IL->isExplicit());
 
@@ -2154,6 +2165,39 @@ void InitListChecker::CheckArrayType(const InitializedEntity &Entity,
                                             SemaRef.Context)) {
     EmbedExpr *Embed = cast<EmbedExpr>(IList->inits()[0]);
     IList->setInit(0, Embed->getDataStringLiteral());
+  }
+
+  // A sparse list of array designators can touch most of an array even when
+  // it contains few explicit initializers. Growing its semantic initializer
+  // incrementally retains every old buffer in the AST arena. Reserve the
+  // required extent once, without allocating space for trailing zeroes.
+  if (StructuredList && Index == 0 && StructuredIndex == 0 &&
+      IList->getNumInits() > 1 && arrayType->getElementType()->isScalarType()) {
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(arrayType)) {
+      uint64_t Extent = 0;
+      const uint64_t Bound = CAT->getZExtSize();
+      if (llvm::all_of(IList->inits(), [&](const Expr *Init) {
+            const auto *DIE = dyn_cast<DesignatedInitExpr>(Init);
+            if (!DIE || DIE->size() != 1 ||
+                !DIE->getDesignator(0)->isArrayDesignator())
+              return false;
+            const Expr *IndexExpr = DIE->getArrayIndex(*DIE->getDesignator(0));
+            if (IndexExpr->isValueDependent())
+              return false;
+            // Sema has already checked that this is a nonnegative integer
+            // constant expression. Leave invalid bounds to the usual path.
+            uint64_t ArrayIndex =
+                IndexExpr->EvaluateKnownConstInt(SemaRef.Context)
+                    .getLimitedValue();
+            if (ArrayIndex >= Bound ||
+                ArrayIndex >= std::numeric_limits<unsigned>::max())
+              return false;
+            Extent = std::max(Extent, ArrayIndex + 1);
+            return true;
+          }))
+        StructuredList->reserveInits(SemaRef.Context,
+                                     static_cast<unsigned>(Extent));
+    }
   }
 
   // Check for the special-case of initializing an array with a string.
