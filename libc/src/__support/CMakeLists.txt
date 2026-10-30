@@ -240,7 +240,6 @@ add_header_library(
     .big_int
     .common
     .ctype_utils
-    .wctype_utils
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
