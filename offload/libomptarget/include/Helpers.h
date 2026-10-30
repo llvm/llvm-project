@@ -50,9 +50,9 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
                      const int64_t *ArgTypes, const map_var_info_t *ArgNames,
                      const char *RegionType) {
   SourceInfo Info(Loc);
-  INFO(OMP_INFOTYPE_ALL, DeviceId, "%s at %s:%d:%d with %d arguments:\n",
-       RegionType, Info.getFilename(), Info.getLine(), Info.getColumn(),
-       ArgNum);
+  INFO(1, OMP_INFOTYPE_KERNEL_ARGS, DeviceId,
+       "%s at %s:%d:%d with %d arguments:\n", RegionType, Info.getFilename(),
+       Info.getLine(), Info.getColumn(), ArgNum);
 
   for (int32_t I = 0; I < ArgNum; ++I) {
     const map_var_info_t VarName = (ArgNames) ? ArgNames[I] : nullptr;
@@ -81,8 +81,8 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
     else
       Type = "use_address";
 
-    INFO(OMP_INFOTYPE_ALL, DeviceId, "%s(%s)[%" PRId64 "] %s\n", Type,
-         getNameFromMapping(VarName).c_str(), ArgSizes[I], Implicit);
+    INFO(1, OMP_INFOTYPE_KERNEL_ARGS, DeviceId, "%s(%s)[%" PRId64 "] %s\n",
+         Type, getNameFromMapping(VarName).c_str(), ArgSizes[I], Implicit);
   }
 }
 
@@ -91,7 +91,7 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 /// asynchronous operations (data transfers and kernels) to complete.
 static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
                                  const AsyncInfoTy &AsyncInfo) {
-  if (!(getInfoLevel() & OMP_INFOTYPE_DATA_TRANSFER))
+  if (!INFO_VERBOSITY(OMP_INFOTYPE_DATA_TRANSFER))
     return;
   if (AsyncInfo.SyncType != AsyncInfoTy::SyncTy::BLOCKING)
     return;
@@ -101,7 +101,7 @@ static inline void printSyncInfo(const ident_t *Loc, const int64_t DeviceId,
     LocStr = " at " + std::string(Info.getFilename()) + ":" +
              std::to_string(Info.getLine()) + ":" +
              std::to_string(Info.getColumn());
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
+  INFO(1, OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
        "Waiting for asynchronous operations to complete%s\n", LocStr.c_str());
 }
 

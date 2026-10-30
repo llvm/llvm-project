@@ -23,22 +23,22 @@ void dumpTargetPointerMappings(const ident_t *Loc, DeviceTy &Device,
   MappingInfoTy::HDTTMapAccessorTy HDTTMap =
       Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
   if (HDTTMap->empty()) {
-    DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
               "OpenMP Host-Device pointer mappings table empty\n");
     return;
   }
 
   SourceInfo Kernel(Loc);
-  DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+  DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
             "OpenMP Host-Device pointer mappings after block at %s:%d:%d:\n",
             Kernel.getFilename(), Kernel.getLine(), Kernel.getColumn());
-  DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+  DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
             "%-18s %-18s %s %s %s %s\n", "Host Ptr", "Target Ptr", "Size (B)",
             "DynRefCount", "HoldRefCount", "Declaration");
   for (const auto &It : *HDTTMap) {
     HostDataToTargetTy &HDTT = *It.HDTT;
     SourceInfo Info(HDTT.HstPtrName);
-    DUMP_INFO(toStdOut, OMP_INFOTYPE_ALL, Device.DeviceID,
+    DUMP_INFO(toStdOut, OMP_INFOTYPE_DUMP_TABLE, Device.DeviceID,
               DPxMOD " " DPxMOD " %-8" PRIuPTR " %-11s %-12s %s at %s:%d:%d\n",
               DPxPTR(HDTT.HstPtrBegin), DPxPTR(HDTT.TgtPtrBegin),
               HDTT.HstPtrEnd - HDTT.HstPtrBegin,
@@ -242,7 +242,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     const char *HoldRefCountAction = HasHoldModifier ? RefCountAction : "";
     uintptr_t Ptr = LR.TPR.getEntry()->TgtPtrBegin +
                     ((uintptr_t)HstPtrBegin - LR.TPR.getEntry()->HstPtrBegin);
-    INFO(OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID,
+    INFO(1, OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID,
          "Mapping exists%s with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
          ", Size=%" PRId64 ", DynRefCount=%s%s, HoldRefCount=%s%s, Name=%s\n",
          (IsImplicit ? " (implicit)" : ""), DPxPTR(HstPtrBegin), DPxPTR(Ptr),
@@ -273,7 +273,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
     // In addition to the mapping rules above, the close map modifier forces the
     // mapping of the variable to the device.
     if (Size) {
-      INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+      INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
            "Return HstPtrBegin " DPxMOD " Size=%" PRId64 " for unified shared "
            "memory\n",
            DPxPTR((uintptr_t)HstPtrBegin), Size);
@@ -304,7 +304,7 @@ TargetPointerResultTy MappingInfoTy::getTargetPointer(
                             (uintptr_t)HstPtrBegin + Size, TgtAllocBegin,
                             TgtPtrBegin, HasHoldModifier, HstPtrName))
                         .first->HDTT);
-    INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+    INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
          "Creating new map entry with HstPtrBase=" DPxMOD
          ", HstPtrBegin=" DPxMOD ", TgtAllocBegin=" DPxMOD
          ", TgtPtrBegin=" DPxMOD
@@ -466,7 +466,7 @@ TargetPointerResultTy MappingInfoTy::getTgtPtrBegin(
     const char *HoldRefCountAction = UseHoldRefCount ? RefCountAction : "";
     uintptr_t TP = LR.TPR.getEntry()->TgtPtrBegin +
                    ((uintptr_t)HstPtrBegin - LR.TPR.getEntry()->HstPtrBegin);
-    INFO(OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID,
+    INFO(1, OMP_INFOTYPE_MAPPING_EXISTS, Device.DeviceID,
          "Mapping exists with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD ", "
          "Size=%" PRId64 ", DynRefCount=%s%s, HoldRefCount=%s%s\n",
          DPxPTR(HstPtrBegin), DPxPTR(TP), Size,
@@ -515,7 +515,7 @@ int MappingInfoTy::eraseMapEntry(HDTTMapAccessorTy &HDTTMap,
          Entry->getDataEndThreadCount() == 0 &&
          "Trying to delete entry that is in use or owned by another thread.");
 
-  INFO(OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
+  INFO(1, OMP_INFOTYPE_MAPPING_CHANGED, Device.DeviceID,
        "Removing map entry with HstPtrBegin=" DPxMOD ", TgtPtrBegin=" DPxMOD
        ", Size=%" PRId64 ", Name=%s\n",
        DPxPTR(Entry->HstPtrBegin), DPxPTR(Entry->TgtPtrBegin), Size,
@@ -567,7 +567,7 @@ static void printCopyInfoImpl(int DeviceId, bool H2D, void *SrcPtrBegin,
              std::to_string(Info.getLine()) + ":" +
              std::to_string(Info.getColumn());
 
-  INFO(OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
+  INFO(1, OMP_INFOTYPE_DATA_TRANSFER, DeviceId,
        "Copying data from %s to %s, %sPtr=" DPxMOD ", %sPtr=" DPxMOD
        ", Size=%" PRId64 ", Name=%s%s\n",
        H2D ? "host" : "device", H2D ? "device" : "host", H2D ? "Hst" : "Tgt",
