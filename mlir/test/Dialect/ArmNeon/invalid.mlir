@@ -1,6 +1,8 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-// -----
+//===----------------------------------------------------------------------===//
+// Dot Ops
+//===----------------------------------------------------------------------===//
 
 func.func @a_is_2d(%a : vector<2x2xi32>, %b : vector<4x4xi8>) -> vector<2x2xi32> {
     // expected-error@+1 {{operand `a` should be 1-dimensional}}
@@ -33,6 +35,10 @@ func.func @b_has_2_rows_but_a_has_length_4(%a : vector<4xi32>, %b : vector<2x4xi
 }
 
 // -----
+
+//===----------------------------------------------------------------------===//
+// MMLA Ops (integer)
+//===----------------------------------------------------------------------===//
 
 func.func @smmla_invalid_input_types(%a: vector<4xi32>,
                                      %b: vector<16xi4>,
@@ -93,6 +99,20 @@ func.func @usmmla_invalid_dimensions(%a: vector<8xi32>,
 }
 
 // -----
+
+func.func @usmmla_not_rank_1(%a: vector<1x4xi32>,
+                             %b: vector<1x16xi8>,
+                             %c: vector<1x16xi8>) -> vector<1x4xi32> {
+  // expected-error@+1 {{op operand #0 must be a 1D vector with length 4 of 32-bit signless integer values, but got 'vector<1x4xi32>'}}
+  %0 = arm_neon.intr.usmmla %a, %b, %c : vector<1x16xi8> to vector<1x4xi32>
+  return %0 : vector<1x4xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// MMLA Ops (fp)
+//===----------------------------------------------------------------------===//
 
 func.func @bfmmla_invalid_element_type_lhs_rhs(%acc: vector<4xf32>,
                                                %lhs: vector<8xf16>,
