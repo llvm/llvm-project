@@ -617,20 +617,11 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       });
     }
   } else if (Fortran::evaluate::IsCoarray(sym)) {
-    if (oeDetails && oeDetails->init()) {
-      auto expr = *oeDetails->init();
-      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
-        mlir::Value box =
-            Fortran::lower::genInitialDataTarget(converter, loc, symTy, expr);
-        fir::HasValueOp::create(b, loc, box);
-      });
-    } else {
-      createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
-        mlir::Value box =
-            genCoarrayDefaultInitializerValue(converter, loc, sym, symTy);
-        fir::HasValueOp::create(b, loc, box);
-      });
-    }
+    createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
+      mlir::Value box =
+          genCoarrayDefaultInitializerValue(converter, loc, sym, symTy);
+      fir::HasValueOp::create(b, loc, box);
+    });
   } else if (oeDetails) {
     if (oeDetails->init()) {
       createGlobalInitialization(
@@ -771,10 +762,6 @@ static void instantiateGlobal(Fortran::lower::AbstractConverter &converter,
           loc,
           "coarray: coarray with a pointer/allocatable direct component and/or "
           "requiring finalization.");
-    const auto *details =
-        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
-    if (details && details->init())
-      TODO(loc, "coarray: initialization");
   }
 
   if (var.isModuleOrSubmoduleVariable()) {
@@ -3506,14 +3493,21 @@ void Fortran::lower::mapSymbolAttributes(
   if (Fortran::evaluate::IsCoarray(sym) && !isHostAssociated) {
     assert(Fortran::semantics::IsSaved(sym) &&
            "Non-ALLOCATABLE coarray variable must be save.");
-    if (sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
-        var.isModuleOrSubmoduleVariable())
+    bool isNonAllocatableSaveCoarray =
+        sym.owner().kind() != Fortran::semantics::Scope::Kind::MainProgram ||
+        var.isModuleOrSubmoduleVariable();
+    if (isNonAllocatableSaveCoarray)
       Fortran::lower::genAllocateNonAllocatableSaveCoarray(converter, loc, sym,
                                                            addr);
     else
       Fortran::lower::genAllocateCoarray(converter, loc, sym, addr);
     ::genDeclareSymbol(converter, symMap, sym, addr, len, extents, lbounds,
                        replace);
+    // Default Initialization if needed.
+    if (std::optional<fir::FortranVariableOpInterface> varDef =
+            symMap.lookupVariableDefinition(sym))
+      Fortran::lower::initializeCoarrayAfterDeclare(
+          converter, loc, sym, *varDef, isNonAllocatableSaveCoarray);
     return;
   }
 
