@@ -226,11 +226,13 @@ struct VPlanTransforms {
   /// Model the blocks the executed \p MainPlan generated for the main vector
   /// loop in \p EpiPlan during epilogue vectorization, wrapping each in a
   /// VPIRBasicBlock. Bypass edges are redirected to \p EpiPlan's scalar
-  /// preheader, or its vector preheader if only bypassing the main vector loop.
-  /// Returns the block wrapping \p MainPlan's scalar preheader, which becomes
-  /// the epilogue iteration check.
+  /// preheader, or its vector preheader for \p MainCheck, which only bypasses
+  /// the main vector loop. The main vector loop's back-edge is not modeled.
+  /// Returns the block wrapping \p MainPlan's scalar
+  /// preheader, which becomes the epilogue iteration check.
   static VPIRBasicBlock *modelGeneratedMainLoopBlocks(VPlan &EpiPlan,
-                                                      VPlan &MainPlan);
+                                                      VPlan &MainPlan,
+                                                      VPBasicBlock *MainCheck);
 
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
@@ -444,10 +446,6 @@ struct VPlanTransforms {
   /// Perform common-subexpression-elimination on \p Plan.
   static void cse(VPlan &Plan, const VPDominatorTree &VPDT);
 
-  /// Replace each VPExpandSCEVRecipe in \p Plan's entry block with an earlier
-  /// VPExpandSCEVRecipe there expanding the same SCEV, if any.
-  static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
-
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
@@ -491,11 +489,6 @@ struct VPlanTransforms {
       VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
       bool RequiresScalarEpilogue, VPValue *Step,
       std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
-
-  /// Materialize the backedge-taken count to be computed explicitly using
-  /// VPInstructions.
-  static void materializeBackedgeTakenCount(VPlan &Plan,
-                                            VPBasicBlock *VectorPH);
 
   /// Add explicit Unpack recipes to extract scalars from vectors as needed.
   static void materializeUnpacks(VPlan &Plan);

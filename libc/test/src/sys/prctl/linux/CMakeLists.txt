@@ -14,7 +14,6 @@ if(NOT (LIBC_TARGET_ARCHITECTURE_IS_ARM OR
     DEPENDS
       libc.include.sys_prctl
       libc.src.sys.prctl.prctl
-      libc.src.errno.errno
       libc.test.UnitTest.ErrnoCheckingTest
       libc.test.UnitTest.ErrnoSetterMatcher
   )

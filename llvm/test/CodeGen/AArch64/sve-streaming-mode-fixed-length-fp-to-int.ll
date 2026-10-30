@@ -1215,13 +1215,11 @@ define <4 x i16> @fcvtzu_v4f64_v4i16(ptr %a) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    mov z2.s, z1.s[1]
-; CHECK-NEXT:    mov z3.s, z0.s[1]
-; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -1264,21 +1262,17 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) {
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
-; CHECK-NEXT:    mov z4.s, z0.s[1]
-; CHECK-NEXT:    mov z5.s, z1.s[1]
-; CHECK-NEXT:    mov z6.s, z3.s[1]
-; CHECK-NEXT:    mov z7.s, z2.s[1]
-; CHECK-NEXT:    zip1 z0.h, z0.h, z4.h
-; CHECK-NEXT:    zip1 z1.h, z1.h, z5.h
-; CHECK-NEXT:    zip1 z3.h, z3.h, z6.h
-; CHECK-NEXT:    zip1 z2.h, z2.h, z7.h
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    zip1 z1.s, z2.s, z3.s
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z2.h, z2.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -1336,50 +1330,40 @@ define <8 x i16> @fcvtzu_v8f64_v8i16(ptr %a) {
 define void @fcvtzu_v16f64_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvtzu_v16f64_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldp q2, q3, [x0, #96]
+; CHECK-NEXT:    ptrue p1.s, vl4
 ; CHECK-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ldp q6, q7, [x0]
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
-; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
 ; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.d
 ; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.d
 ; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.d
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-NEXT:    uzp1 z5.s, z5.s, z5.s
 ; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
 ; CHECK-NEXT:    uzp1 z7.s, z7.s, z7.s
 ; CHECK-NEXT:    uzp1 z6.s, z6.s, z6.s
-; CHECK-NEXT:    mov z17.s, z1.s[1]
-; CHECK-NEXT:    mov z16.s, z3.s[1]
-; CHECK-NEXT:    mov z18.s, z0.s[1]
-; CHECK-NEXT:    mov z21.s, z2.s[1]
-; CHECK-NEXT:    mov z19.s, z5.s[1]
-; CHECK-NEXT:    mov z20.s, z4.s[1]
-; CHECK-NEXT:    mov z22.s, z7.s[1]
-; CHECK-NEXT:    mov z23.s, z6.s[1]
-; CHECK-NEXT:    zip1 z1.h, z1.h, z17.h
-; CHECK-NEXT:    zip1 z3.h, z3.h, z16.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z18.h
-; CHECK-NEXT:    zip1 z2.h, z2.h, z21.h
-; CHECK-NEXT:    zip1 z5.h, z5.h, z19.h
-; CHECK-NEXT:    zip1 z4.h, z4.h, z20.h
-; CHECK-NEXT:    zip1 z7.h, z7.h, z22.h
-; CHECK-NEXT:    zip1 z6.h, z6.h, z23.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z2.s, z2.s, z3.s
-; CHECK-NEXT:    zip1 z1.s, z4.s, z5.s
-; CHECK-NEXT:    zip1 z3.s, z6.s, z7.s
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-NEXT:    stp q1, q0, [x1]
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z5.s
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    st1h { z0.s }, p1, [x1, x8, lsl #1]
+; CHECK-NEXT:    mov x8, #12 // =0xc
+; CHECK-NEXT:    st1h { z2.s }, p1, [x1, x8, lsl #1]
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    st1h { z4.s }, p1, [x1, x8, lsl #1]
+; CHECK-NEXT:    st1h { z6.s }, p1, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzu_v16f64_v16i16:
@@ -2913,13 +2897,11 @@ define <4 x i16> @fcvtzs_v4f64_v4i16(ptr %a) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    mov z2.s, z1.s[1]
-; CHECK-NEXT:    mov z3.s, z0.s[1]
-; CHECK-NEXT:    zip1 z1.h, z1.h, z2.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -2962,21 +2944,17 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) {
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
-; CHECK-NEXT:    mov z4.s, z0.s[1]
-; CHECK-NEXT:    mov z5.s, z1.s[1]
-; CHECK-NEXT:    mov z6.s, z3.s[1]
-; CHECK-NEXT:    mov z7.s, z2.s[1]
-; CHECK-NEXT:    zip1 z0.h, z0.h, z4.h
-; CHECK-NEXT:    zip1 z1.h, z1.h, z5.h
-; CHECK-NEXT:    zip1 z3.h, z3.h, z6.h
-; CHECK-NEXT:    zip1 z2.h, z2.h, z7.h
-; CHECK-NEXT:    zip1 z0.s, z1.s, z0.s
-; CHECK-NEXT:    zip1 z1.s, z2.s, z3.s
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
+; CHECK-NEXT:    splice z1.s, p0, z1.s, z0.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 z0.h, z2.h, z2.h
+; CHECK-NEXT:    splice z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
 ;
@@ -3034,50 +3012,40 @@ define <8 x i16> @fcvtzs_v8f64_v8i16(ptr %a) {
 define void @fcvtzs_v16f64_v16i16(ptr %a, ptr %b) {
 ; CHECK-LABEL: fcvtzs_v16f64_v16i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
 ; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    ldp q2, q3, [x0, #96]
+; CHECK-NEXT:    ptrue p1.s, vl4
 ; CHECK-NEXT:    ldp q4, q5, [x0, #64]
+; CHECK-NEXT:    mov x8, #4 // =0x4
 ; CHECK-NEXT:    ldp q6, q7, [x0]
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.d
-; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.d
+; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.d
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.d
 ; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.d
 ; CHECK-NEXT:    fcvtzs z4.d, p0/m, z4.d
 ; CHECK-NEXT:    fcvtzs z7.d, p0/m, z7.d
 ; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.d
+; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
-; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z3.s, z3.s, z3.s
 ; CHECK-NEXT:    uzp1 z2.s, z2.s, z2.s
 ; CHECK-NEXT:    uzp1 z5.s, z5.s, z5.s
 ; CHECK-NEXT:    uzp1 z4.s, z4.s, z4.s
 ; CHECK-NEXT:    uzp1 z7.s, z7.s, z7.s
 ; CHECK-NEXT:    uzp1 z6.s, z6.s, z6.s
-; CHECK-NEXT:    mov z17.s, z1.s[1]
-; CHECK-NEXT:    mov z16.s, z3.s[1]
-; CHECK-NEXT:    mov z18.s, z0.s[1]
-; CHECK-NEXT:    mov z21.s, z2.s[1]
-; CHECK-NEXT:    mov z19.s, z5.s[1]
-; CHECK-NEXT:    mov z20.s, z4.s[1]
-; CHECK-NEXT:    mov z22.s, z7.s[1]
-; CHECK-NEXT:    mov z23.s, z6.s[1]
-; CHECK-NEXT:    zip1 z1.h, z1.h, z17.h
-; CHECK-NEXT:    zip1 z3.h, z3.h, z16.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z18.h
-; CHECK-NEXT:    zip1 z2.h, z2.h, z21.h
-; CHECK-NEXT:    zip1 z5.h, z5.h, z19.h
-; CHECK-NEXT:    zip1 z4.h, z4.h, z20.h
-; CHECK-NEXT:    zip1 z7.h, z7.h, z22.h
-; CHECK-NEXT:    zip1 z6.h, z6.h, z23.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
-; CHECK-NEXT:    zip1 z2.s, z2.s, z3.s
-; CHECK-NEXT:    zip1 z1.s, z4.s, z5.s
-; CHECK-NEXT:    zip1 z3.s, z6.s, z7.s
-; CHECK-NEXT:    zip1 z0.d, z1.d, z0.d
-; CHECK-NEXT:    zip1 z1.d, z3.d, z2.d
-; CHECK-NEXT:    stp q1, q0, [x1]
+; CHECK-NEXT:    splice z0.s, p0, z0.s, z1.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
+; CHECK-NEXT:    splice z4.s, p0, z4.s, z5.s
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    st1h { z0.s }, p1, [x1, x8, lsl #1]
+; CHECK-NEXT:    mov x8, #12 // =0xc
+; CHECK-NEXT:    st1h { z2.s }, p1, [x1, x8, lsl #1]
+; CHECK-NEXT:    mov x8, #8 // =0x8
+; CHECK-NEXT:    st1h { z4.s }, p1, [x1, x8, lsl #1]
+; CHECK-NEXT:    st1h { z6.s }, p1, [x1]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: fcvtzs_v16f64_v16i16:

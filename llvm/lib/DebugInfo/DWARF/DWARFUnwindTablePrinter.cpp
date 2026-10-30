@@ -80,7 +80,7 @@ static void printUnwindLocation(const UnwindLocation &UL, raw_ostream &OS,
   case UnwindLocation::DWARFExpr: {
     if (UL.getDWARFExpressionBytes()) {
       auto Expr = *UL.getDWARFExpressionBytes();
-      printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+      printDwarfExpression(&Expr, OS, DumpOpts);
     }
     break;
   }

@@ -488,7 +488,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // If two .gcc_except_table have identical semantics (usually identical
   // content with PC-relative encoding), we will lose folding opportunity.
   uint32_t uniqueId = 1;
-  ctx.in.ehFrame->iterateFDEWithLSDA<ELFT>(
+  ctx.in.ehFrame->iterateFDEWithLSDA(
       [&](InputSection &s) { s.eqClass[0] = s.eqClass[1] = uniqueId++; });
 
   // Assign a temporary class ID (eqClassBase) to eligible sections and assign

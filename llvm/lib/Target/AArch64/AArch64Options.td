@@ -279,8 +279,6 @@ defm : BoolField<"aarch64-enable-loop-data-prefetch", "true",
   "Enable the loop data prefetch pass">;
 defm : BoolField<"aarch64-enable-mcr", "true",
   "Enable the machine combiner pass">;
-defm : BoolField<"aarch64-enable-pipeliner", "false",
-  "Enable Machine Pipeliner for AArch64">;
 defm : BoolField<"aarch64-enable-predicate-as-counter-loop-rewrites", "true",
   "Enable rewriting loops with wide loop-carried masks to use predicate-as-counter">;
 defm : BoolField<"aarch64-enable-promote-const", "true",
