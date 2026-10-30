@@ -779,8 +779,7 @@ public:
                                        BuildFnTy &MatchInfo) const;
 
   /// Convert signed division or remainder of nonnegative operands to unsigned.
-  LLVM_ABI bool matchSignedDivRemToUnsigned(MachineInstr &MI,
-                                            BuildFnTy &MatchInfo) const;
+  LLVM_ABI bool matchSignedDivRemToUnsigned(MachineInstr &MI) const;
 
   /// Combine G_SREM x, (+/-2^k) to a bias-and-mask sequence.
   LLVM_ABI void applySimplifySRemByPow2(MachineInstr &MI) const;

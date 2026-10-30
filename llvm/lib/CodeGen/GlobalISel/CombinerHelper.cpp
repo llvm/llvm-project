@@ -5930,8 +5930,7 @@ bool CombinerHelper::matchUDivByShiftedPow2(MachineInstr &MI,
   return true;
 }
 
-bool CombinerHelper::matchSignedDivRemToUnsigned(MachineInstr &MI,
-                                                 BuildFnTy &MatchInfo) const {
+bool CombinerHelper::matchSignedDivRemToUnsigned(MachineInstr &MI) const {
   assert((MI.getOpcode() == TargetOpcode::G_SDIV ||
           MI.getOpcode() == TargetOpcode::G_SREM) &&
          "Expected SDIV or SREM");
@@ -5945,14 +5944,7 @@ bool CombinerHelper::matchSignedDivRemToUnsigned(MachineInstr &MI,
                         ? TargetOpcode::G_UDIV
                         : TargetOpcode::G_UREM;
   LLT Ty = MRI.getType(Dst);
-  if (!isLegalOrBeforeLegalizer({Opcode, {Ty}}))
-    return false;
-
-  unsigned Flags = MI.getFlags();
-  MatchInfo = [=](MachineIRBuilder &B) {
-    B.buildInstr(Opcode, {Dst}, {LHS, RHS}, Flags);
-  };
-  return true;
+  return isLegalOrBeforeLegalizer({Opcode, {Ty}});
 }
 
 void CombinerHelper::applySimplifySRemByPow2(MachineInstr &MI) const {
