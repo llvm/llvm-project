@@ -31,7 +31,7 @@ using namespace lldb_private::lldb_server;
 using namespace lldb_private::process_gdb_remote;
 
 // Read a mock-accelerator setting from an environment variable so tests can
-// configure the connection the mock advertises; falls back to default_value.
+// configure the mock; falls back to default_value.
 static std::string GetMockEnvSetting(const char *env_var,
                                      std::string default_value) {
   if (const char *value = ::getenv(env_var))
@@ -60,6 +60,16 @@ llvm::StringRef LLDBServerMockAcceleratorPlugin::GetPluginName() {
   return "mock";
 }
 
+std::optional<LLDBSettings> LLDBServerMockAcceleratorPlugin::GetLLDBSettings() {
+  LLDBSettings settings;
+  settings.dyld_plugin_name = "accelerator-gdb-remote";
+  settings.accelerator_plugin_name = GetPluginName();
+  settings.send_dyld_packet_to_accelerator =
+      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_DYLD_CONNECTION",
+                        "accelerator") != "native";
+  return settings;
+}
+
 std::optional<AcceleratorActions>
 LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
   AcceleratorActions actions = GetNewAcceleratorAction();
@@ -67,6 +77,7 @@ LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
   // Set a breakpoint by function name (no shared library scope) on the
   // dedicated "mock_gpu_accelerator_initialize" hook and ask for the load
   // address of "mock_gpu_accelerator_compute" to be delivered when it is hit.
+  // The native-memory test also requests its image buffer's load address.
   // Using a dedicated, uniquely named function (rather than "main") keeps this
   // mock from affecting other inferiors that lldb-server launches when the
   // plugin is compiled in.
@@ -75,6 +86,9 @@ LLDBServerMockAcceleratorPlugin::GetInitializeActions() {
   bp.by_name = AcceleratorBreakpointByName{std::nullopt,
                                            "mock_gpu_accelerator_initialize"};
   bp.symbol_names.push_back("mock_gpu_accelerator_compute");
+  if (!GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_NATIVE_MEMORY_SIZE", "")
+           .empty())
+    bp.symbol_names.push_back("mock_gpu_accelerator_image");
   actions.breakpoints.push_back(std::move(bp));
 
   return actions;
@@ -87,6 +101,8 @@ LLDBServerMockAcceleratorPlugin::BreakpointWasHit(
 
   switch (args.breakpoint.identifier) {
   case kBreakpointIDInitialize: {
+    m_native_memory_address = args.GetSymbolValue("mock_gpu_accelerator_image");
+
     // The initialize breakpoint was hit. Arm the remaining test breakpoints:
     // two more breakpoint types, plus the connection hook now that the
     // accelerator has initialized.
@@ -150,12 +166,27 @@ std::optional<AcceleratorConnectionInfo>
 LLDBServerMockAcceleratorPlugin::CreateConnection() {
   Log *log = GetLog(GDBRLog::Plugin);
 
+  std::string triple =
+      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_TRIPLE",
+                        HostInfo::GetArchitecture().GetTriple().str());
+  std::string dynamic_loader_library_path = GetMockEnvSetting(
+      "LLDB_MOCK_ACCELERATOR_LIBRARY_PATH", "/path/to/lib.so");
+  std::optional<uint64_t> native_memory_size;
+  std::string native_memory_size_str =
+      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_NATIVE_MEMORY_SIZE", "");
+  uint64_t size;
+  if (!native_memory_size_str.empty() &&
+      !llvm::StringRef(native_memory_size_str).getAsInteger(0, size))
+    native_memory_size = size;
+
   // An in-process gdb-remote server backed by a synthetic
   // ProcessMockAccelerator; no real process is launched.
-  m_process_manager_up =
-      std::make_unique<ProcessMockAccelerator::Manager>(m_mock_main_loop);
+  m_process_manager_up = std::make_unique<ProcessMockAccelerator::Manager>(
+      m_mock_main_loop, ArchSpec(triple), dynamic_loader_library_path,
+      m_native_memory_address, native_memory_size);
   m_accelerator_gdb_server = std::make_unique<GDBRemoteCommunicationServerLLGS>(
       m_mock_main_loop, *m_process_manager_up);
+  m_accelerator_gdb_server->SetConnectionAcceleratorPlugin(*this);
 
   // LLGS creates its current process from a launch; the manager ignores the
   // path but requires a non-empty argument list.
@@ -217,9 +248,7 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
   // invalid-platform and incompatible-triple failures.
   info.platform_name =
       GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_PLATFORM", "host");
-  info.triple =
-      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_TRIPLE",
-                        HostInfo::GetArchitecture().GetTriple().str());
+  info.triple = std::move(triple);
   info.synchronous = true;
   return info;
 }
@@ -229,7 +258,8 @@ LLDBServerMockAcceleratorPlugin::GetDynamicLoaderLibraryInfos(
     const AcceleratorDynamicLoaderArgs &args) {
   AcceleratorDynamicLoaderResponse response;
   AcceleratorDynamicLoaderLibraryInfo lib;
-  lib.pathname = "/path/to/lib.so";
+  lib.pathname = GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_NATIVE_LIBRARY_PATH",
+                                   "/path/to/lib.so");
   lib.load = true;
   lib.load_address = 0x7f000000;
   response.library_infos.push_back(std::move(lib));
