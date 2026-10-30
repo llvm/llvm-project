@@ -18,6 +18,7 @@
 #include <array>
 #include <cstdint>
 #include <tuple>
+#include <vector>
 
 using namespace sycl;
 using namespace ::testing;
@@ -47,6 +48,56 @@ TEST(PlatformTest, APIGetPlatformsDefaultMock) {
   ASSERT_EQ(CtxDevices.size(), 1u);
   ASSERT_EQ(CtxDevices[0], Devices[0]);
 #endif
+}
+
+TEST(PlatformTest, APIGetPlatformsSkipsUnsupportedBackends) {
+  unittests::UnittestsHelper Helper;
+
+  ol_platform_handle_t LevelZeroPlatform =
+      mock::createDummyHandle<ol_platform_handle_t>();
+  ol_platform_handle_t CudaPlatform =
+      mock::createDummyHandle<ol_platform_handle_t>();
+  ol_device_handle_t LevelZeroDevice =
+      mock::createDummyHandleWithData<ol_device_handle_t>(
+          reinterpret_cast<unsigned char *>(&LevelZeroPlatform),
+          sizeof(LevelZeroPlatform));
+  ol_device_handle_t CudaDevice =
+      mock::createDummyHandleWithData<ol_device_handle_t>(
+          reinterpret_cast<unsigned char *>(&CudaPlatform),
+          sizeof(CudaPlatform));
+
+  EXPECT_CALL(Helper.Mock.get(), olIterateDevices(_, _))
+      .WillRepeatedly(
+          [&](ol_device_iterate_cb_t Callback, void *UserData) -> ol_result_t {
+            for (ol_device_handle_t Device : {CudaDevice, LevelZeroDevice})
+              std::ignore = Callback(Device, UserData);
+            return OL_SUCCESS;
+          });
+  ON_CALL(Helper.Mock.get(),
+          olGetPlatformInfo(_, OL_PLATFORM_INFO_BACKEND, _, _))
+      .WillByDefault([&](ol_platform_handle_t Platform,
+                         ol_platform_info_t /*PropName*/, size_t PropSize,
+                         void *PropValue) -> ol_result_t {
+        EXPECT_EQ(PropSize, sizeof(ol_platform_backend_t));
+        *static_cast<ol_platform_backend_t *>(PropValue) =
+            Platform == CudaPlatform ? OL_PLATFORM_BACKEND_CUDA
+                                     : OL_PLATFORM_BACKEND_LEVEL_ZERO;
+        return OL_SUCCESS;
+      });
+
+  std::vector<platform> Platforms;
+  ASSERT_NO_THROW(Platforms = sycl::platform::get_platforms());
+  ASSERT_EQ(Platforms.size(), 1u);
+  EXPECT_EQ(Platforms[0].get_backend(), sycl::backend::level_zero);
+  EXPECT_EQ(detail::getSyclObjImpl(Platforms[0])->getOLHandleRef(),
+            LevelZeroPlatform);
+
+  auto Devices = Platforms[0].get_devices();
+  ASSERT_EQ(Devices.size(), 1u);
+  EXPECT_EQ(detail::getSyclObjImpl(Devices[0])->getOLHandle(), LevelZeroDevice);
+
+  mock::releaseDummyHandles(LevelZeroDevice, CudaDevice, LevelZeroPlatform,
+                            CudaPlatform);
 }
 
 namespace {

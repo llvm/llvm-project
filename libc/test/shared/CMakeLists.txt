@@ -1,5 +1,11 @@
 add_libc_testsuite(libc-shared-tests)
 
+if(NOT LLVM_LIBC_FULL_BUILD AND "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_MODE_DEFAULT")
+  set(shared_test_errno_options "")
+  libc_add_definition(shared_test_errno_options "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE")
+  add_compile_options(${shared_test_errno_options})
+endif()
+
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated
 # precommit CIs to build and test shared tests.  So we provide a cmake option
@@ -193,6 +199,7 @@ else()
       libc.src.__support.math.fmaxf
       libc.src.__support.math.fmaxf128
       libc.src.__support.math.fmaxf16
+      libc.src.__support.math.fmaxf80
       libc.src.__support.math.fmaximum
       libc.src.__support.math.fmaximum_mag
       libc.src.__support.math.fmaximum_mag_num
@@ -216,6 +223,7 @@ else()
       libc.src.__support.math.fmaximumf
       libc.src.__support.math.fmaximumf128
       libc.src.__support.math.fmaximumf16
+      libc.src.__support.math.fmaximumf80
       libc.src.__support.math.fmaximuml
       libc.src.__support.math.fmaxl
       libc.src.__support.math.fmin
@@ -223,6 +231,7 @@ else()
       libc.src.__support.math.fminf
       libc.src.__support.math.fminf128
       libc.src.__support.math.fminf16
+      libc.src.__support.math.fminf80
       libc.src.__support.math.fminimum
       libc.src.__support.math.fminimum_mag
       libc.src.__support.math.fminimum_mag_num
@@ -246,6 +255,7 @@ else()
       libc.src.__support.math.fminimumf
       libc.src.__support.math.fminimumf128
       libc.src.__support.math.fminimumf16
+      libc.src.__support.math.fminimumf80
       libc.src.__support.math.fminimuml
       libc.src.__support.math.fminl
       libc.src.__support.math.fmod
@@ -579,6 +589,9 @@ else()
       libc.src.__support.math.fdiv
       libc.src.__support.math.fdivf128
       libc.src.__support.math.fdivl
+      libc.src.__support.math.ffma
+      libc.src.__support.math.ffmal
+      libc.src.__support.math.ffmaf128
       libc.src.__support.math.floor
       libc.src.__support.math.floorbf16
       libc.src.__support.math.floorf
@@ -615,12 +628,14 @@ else()
       libc.src.__support.math.fmaximumf
       libc.src.__support.math.fmaximumf128
       libc.src.__support.math.fmaximumf16
+      libc.src.__support.math.fmaximumf80
       libc.src.__support.math.fmaximuml
       libc.src.__support.math.fmin
       libc.src.__support.math.fminbf16
       libc.src.__support.math.fminf
       libc.src.__support.math.fminf128
       libc.src.__support.math.fminf16
+      libc.src.__support.math.fminf80
       libc.src.__support.math.fminimum
       libc.src.__support.math.fminimum_mag
       libc.src.__support.math.fminimum_mag_num
@@ -644,6 +659,7 @@ else()
       libc.src.__support.math.fminimumf
       libc.src.__support.math.fminimumf128
       libc.src.__support.math.fminimumf16
+      libc.src.__support.math.fminimumf80
       libc.src.__support.math.fminimuml
       libc.src.__support.math.fminl
       libc.src.__support.math.fmod

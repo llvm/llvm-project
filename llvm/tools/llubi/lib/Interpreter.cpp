@@ -1679,6 +1679,25 @@ public:
       Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
       return std::move(Res);
     }
+    case Intrinsic::mask_beforefirst: {
+      const auto &Mask = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Mask.size());
+      bool SeenActive = false;
+      for (const AnyValue &Lane : Mask) {
+        switch (Lane.asBoolean()) {
+        case BooleanKind::True:
+          SeenActive = true;
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+        Res.push_back(AnyValue::boolean(!SeenActive));
+      }
+      return std::move(Res);
+    }
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:
