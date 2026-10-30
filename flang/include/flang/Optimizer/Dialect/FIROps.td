@@ -655,7 +655,8 @@ class fir_SwitchTerminatorOp<string mnemonic, list<Trait> traits = []> :
   let arguments = (ins
     AnyType:$selector,
     Variadic<AnyType>:$compareArgs,
-    Variadic<AnyType>:$targetArgs
+    Variadic<AnyType>:$targetArgs,
+    DenseI32ArrayAttr:$target_operand_offsets
   );
 
   let results = (outs);
