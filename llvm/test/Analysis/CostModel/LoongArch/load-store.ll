@@ -19,18 +19,18 @@ define void @load(ptr %p) {
 ; LA32-LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; LA64-LSX-LABEL: 'load'
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v2i8 = load <2 x i8>, ptr %p, align 2
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %v4i8 = load <4 x i8>, ptr %p, align 4
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:4 SizeLat:1 for: %v8i8 = load <8 x i8>, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v2i8 = load <2 x i8>, ptr %p, align 2
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v4i8 = load <4 x i8>, ptr %p, align 4
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v8i8 = load <8 x i8>, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v16i8 = load <16 x i8>, ptr %p, align 16
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v2i16 = load <2 x i16>, ptr %p, align 4
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %v4i16 = load <4 x i16>, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v2i16 = load <2 x i16>, ptr %p, align 4
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v4i16 = load <4 x i16>, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v8i16 = load <8 x i16>, ptr %p, align 16
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v2i32 = load <2 x i32>, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v2i32 = load <2 x i32>, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v4i32 = load <4 x i32>, ptr %p, align 16
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:4 SizeLat:1 for: %v2f32 = load <2 x float>, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v2f32 = load <2 x float>, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:4 SizeLat:1 for: %v3i16 = load <3 x i16>, ptr %p, align 8
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:4 SizeLat:1 for: %v4i16.align1 = load <4 x i16>, ptr %p, align 1
+; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:1 Lat:4 SizeLat:1 for: %v4i16.align1 = load <4 x i16>, ptr %p, align 1
 ; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
   %v2i8 = load <2 x i8>, ptr %p
@@ -65,18 +65,18 @@ define void @store(ptr %p) {
 ; LA32-LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
 ; LA64-LSX-LABEL: 'store'
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i8> poison, ptr %p, align 2
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <4 x i8> poison, ptr %p, align 4
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: store <8 x i8> poison, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <2 x i8> poison, ptr %p, align 2
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <4 x i8> poison, ptr %p, align 4
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <8 x i8> poison, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <16 x i8> poison, ptr %p, align 16
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i16> poison, ptr %p, align 4
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <4 x i16> poison, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <2 x i16> poison, ptr %p, align 4
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <4 x i16> poison, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <8 x i16> poison, ptr %p, align 16
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x i32> poison, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <2 x i32> poison, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <4 x i32> poison, ptr %p, align 16
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: store <2 x float> poison, ptr %p, align 8
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <2 x float> poison, ptr %p, align 8
 ; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x i16> poison, ptr %p, align 8
-; LA64-LSX-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: store <4 x i16> poison, ptr %p, align 1
+; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: store <4 x i16> poison, ptr %p, align 1
 ; LA64-LSX-NEXT:  Cost Model: Found costs of 1 for: ret void
 ;
   store <2 x i8> poison, ptr %p
