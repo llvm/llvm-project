@@ -40,9 +40,9 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-NEXT:    v_writelane_b32 v39, s9, 7
 ; GFX906-NEXT:    v_writelane_b32 v39, s6, 8
 ; GFX906-NEXT:    v_writelane_b32 v39, s7, 9
-; GFX906-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX906-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:140 ; 4-byte Folded Spill
 ; GFX906-NEXT:    s_nop 0
-; GFX906-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:16 ; 4-byte Folded Spill
+; GFX906-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:144 ; 4-byte Folded Spill
 ; GFX906-NEXT:    v_writelane_b32 v39, s4, 10
 ; GFX906-NEXT:    v_mov_b32_e32 v32, v31
 ; GFX906-NEXT:    v_writelane_b32 v39, s5, 11
@@ -420,9 +420,9 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX908-NEXT:    v_writelane_b32 v39, s9, 7
 ; GFX908-NEXT:    v_writelane_b32 v39, s6, 8
 ; GFX908-NEXT:    v_writelane_b32 v39, s7, 9
-; GFX908-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:20 ; 4-byte Folded Spill
+; GFX908-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:148 ; 4-byte Folded Spill
 ; GFX908-NEXT:    s_nop 0
-; GFX908-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:24 ; 4-byte Folded Spill
+; GFX908-NEXT:    buffer_store_dword v1, off, s[0:3], s33 offset:152 ; 4-byte Folded Spill
 ; GFX908-NEXT:    v_writelane_b32 v39, s4, 10
 ; GFX908-NEXT:    v_mov_b32_e32 v32, v31
 ; GFX908-NEXT:    v_writelane_b32 v39, s5, 11
