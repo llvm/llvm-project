@@ -1484,6 +1484,7 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
+    // These VPInstruction can be (optionally) masked.
     if (Opcode == VPInstruction::MaskedCond ||
         Opcode == VPInstruction::WideVectorLoad ||
         Opcode == VPInstruction::WideVectorStore)
@@ -1499,10 +1500,10 @@ private:
            Opcode == Instruction::ExtractValue;
   }
 
-  /// Returns true if it is possible to execute this VPInstruction.
-  bool canExecute() const {
-    return !isMasked() || Opcode == VPInstruction::WideVectorLoad ||
-           Opcode == VPInstruction::WideVectorStore;
+  /// Returns true if this is an abstract instruction that can't be executed.
+  bool isAbstract() const {
+    return isMasked() && Opcode != VPInstruction::WideVectorLoad &&
+           Opcode != VPInstruction::WideVectorStore;
   }
 
 public:

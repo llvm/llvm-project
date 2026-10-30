@@ -1060,7 +1060,7 @@ using ActiveLaneMaskPHIRecipe_match =
 
 template <typename Op0_t, typename Op1_t>
 ActiveLaneMaskPHIRecipe_match<Op0_t, Op1_t>
-m_ActiveLaneMaskPHIRecipe(const Op0_t &Op0, const Op1_t &Op1) {
+m_ActiveLaneMaskPhi(const Op0_t &Op0, const Op1_t &Op1) {
   return ActiveLaneMaskPHIRecipe_match<Op0_t, Op1_t>(Op0, Op1);
 }
 

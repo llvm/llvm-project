@@ -1730,7 +1730,7 @@ void VPInstruction::addOperand(VPValue *Op) {
 }
 
 void VPInstruction::execute(VPTransformState &State) {
-  assert(canExecute() && "cannot execute this VPInstruction");
+  assert(!isAbstract() && "cannot execute this VPInstruction");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");

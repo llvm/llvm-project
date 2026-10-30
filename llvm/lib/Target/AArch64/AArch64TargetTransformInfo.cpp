@@ -6248,8 +6248,13 @@ bool AArch64TTIImpl::hasMultiVectorLoadStore(
   if (NumVectors <= 1 || !ST->enableSubRegLiveness() || !ST->hasSVE2p1())
     return false;
 
-  if (Mask != TTI::MaskSource::None && Mask != TTI::MaskSource::ActiveLaneMask)
+  switch (Mask) {
+  case TTI::MaskSource::ArbitraryPredicate:
     return false;
+  case TTI::MaskSource::None:
+  case TTI::MaskSource::ActiveLaneMask:
+    break;
+  }
 
   // A null vector type queries whether the target supports multi-vector memory
   // operations in general.
