@@ -514,7 +514,7 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
 }
 
 /// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
-/// A must be a positive Y or a non-negative abs(Y).
+/// A must be a non-negative Y or abs(Y).
 static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
                                              KnownBits &KnownOut,
                                              const SimplifyQuery &Q,
@@ -545,17 +545,12 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
   if (!Match(Op0, Op1) && !Match(Op1, Op0))
     return;
 
-  // Accept Y itself if positive, or abs(Y) if Y is not signed minimum.
+  // Accept Y itself if non-negative, or abs(Y).
   bool IsPositiveDivisorCase =
-      Divisor == AdjustmentValue && isKnownPositive(Divisor, Q, Depth + 1);
-
-  unsigned BitWidth = Divisor->getType()->getIntegerBitWidth();
-  APInt SignedMin = APInt::getSignedMinValue(BitWidth);
-  Constant *MinValue = ConstantInt::get(Divisor->getType(), SignedMin);
+      Divisor == AdjustmentValue && isKnownNonNegative(Divisor, Q, Depth + 1);
   bool IsAbsoluteValueCase =
       match(AdjustmentValue,
-            m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value())) &&
-      isKnownNonEqual(Divisor, MinValue, Q, Depth + 1);
+            m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value()));
 
   if (!IsPositiveDivisorCase && !IsAbsoluteValueCase)
     return;
@@ -565,8 +560,7 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
       !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
     return;
 
-  // The remainder's magnitude is less than abs(Y). Adding abs(Y) to a
-  // negative remainder therefore gives a non-negative result without overflow.
+  // For Y other than signed minimum, adding abs(Y) to a negative remainder gives a non-negative result without overflow. For signed minimum, the wrapping addition clears the remainder's sign bit. Poison-producing cases do not invalidate this deduction.
   KnownOut.makeNonNegative();
 }
 
@@ -578,11 +572,12 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op1, DemandedElts, KnownOut, Q, Depth + 1);
 
   if (KnownOut.isUnknown() && !NSW && !NUW) {
-    if (Add)
+    if (Add) {
       // Independent operand bits give no result, but the Euclidean remainder
       // pattern can establish non-negativity through the operands'
       // relationship.
       computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+    }
     return;
   }
 

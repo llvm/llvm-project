@@ -2,6 +2,32 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @llvm.assume(i1)
+declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
+declare i8 @llvm.abs.i8(i8, i1 immarg)
+
+define <2 x i1> @vector_bailout(<2 x i8> noundef %x, <2 x i8> noundef %y) {
+; CHECK-LABEL: @vector_bailout(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[Y:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i1> [[TMP1]] to i2
+; CHECK-NEXT:    [[ALL_POSITIVE:%.*]] = icmp eq i2 [[TMP2]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ALL_POSITIVE]])
+; CHECK-NEXT:    [[REM:%.*]] = srem <2 x i8> [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt <2 x i8> [[REM]], zeroinitializer
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = select <2 x i1> [[NEGATIVE]], <2 x i8> [[Y]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    [[EUCLID:%.*]] = add <2 x i8> [[REM]], [[ADJUSTED]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt <2 x i8> [[EUCLID]], splat (i8 -1)
+; CHECK-NEXT:    ret <2 x i1> [[RESULT]]
+;
+  %positive = icmp sgt <2 x i8> %y, zeroinitializer
+  %all_positive = call i1 @llvm.vector.reduce.and.v2i1(<2 x i1> %positive)
+  call void @llvm.assume(i1 %all_positive)
+  %rem = srem <2 x i8> %x, %y
+  %negative = icmp slt <2 x i8> %rem, zeroinitializer
+  %adjusted = add <2 x i8> %rem, %y
+  %euclid = select <2 x i1> %negative, <2 x i8> %adjusted, <2 x i8> %rem
+  %result = icmp sge <2 x i8> %euclid, zeroinitializer
+  ret <2 x i1> %result
+}
 
 define i1 @positive_divisor(i8 noundef %x, i8 noundef %y) {
 ; CHECK-LABEL: @positive_divisor(
@@ -30,6 +56,90 @@ define i1 @positive_divisor_commuted(i8 noundef %x, i8 noundef %y) {
   %rem = srem i8 %x, %y
   %negative = icmp slt i8 %rem, 0
   %adjustment = select i1 %negative, i8 %y, i8 0
+  %euclid = add i8 %adjustment, %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
+define i1 @x_not_noundef(i8 %x, i8 noundef %y) {
+; CHECK-LABEL: @x_not_noundef(
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
+; CHECK-NEXT:    [[ADJUSTED:%.*]] = select i1 [[NEGATIVE]], i8 [[Y]], i8 0
+; CHECK-NEXT:    [[EUCLID:%.*]] = add i8 [[REM]], [[ADJUSTED]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[EUCLID]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %positive = icmp sgt i8 %y, 0
+  call void @llvm.assume(i1 %positive)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjusted = add i8 %rem, %y
+  %euclid = select i1 %negative, i8 %adjusted, i8 %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
+define i1 @false_arm_one(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @false_arm_one(
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
+; CHECK-NEXT:    [[ADJUSTMENT:%.*]] = select i1 [[NEGATIVE]], i8 [[Y]], i8 1
+; CHECK-NEXT:    [[EUCLID:%.*]] = add i8 [[ADJUSTMENT]], [[REM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[EUCLID]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %positive = icmp sgt i8 %y, 0
+  call void @llvm.assume(i1 %positive)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjustment = select i1 %negative, i8 %y, i8 1
+  %euclid = add i8 %adjustment, %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
+define i1 @false_arm_minus_one(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @false_arm_minus_one(
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[NEGATIVE_INV:%.*]] = icmp sgt i8 [[REM]], -1
+; CHECK-NEXT:    [[ADJUSTMENT:%.*]] = select i1 [[NEGATIVE_INV]], i8 -1, i8 [[Y]]
+; CHECK-NEXT:    [[EUCLID:%.*]] = add i8 [[ADJUSTMENT]], [[REM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[EUCLID]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %positive = icmp sgt i8 %y, 0
+  call void @llvm.assume(i1 %positive)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjustment = select i1 %negative, i8 %y, i8 -1
+  %euclid = add i8 %adjustment, %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
+define i1 @false_arm_signed_max(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @false_arm_signed_max(
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i8 [[Y:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
+; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
+; CHECK-NEXT:    [[ADJUSTMENT:%.*]] = select i1 [[NEGATIVE]], i8 [[Y]], i8 127
+; CHECK-NEXT:    [[EUCLID:%.*]] = add i8 [[ADJUSTMENT]], [[REM]]
+; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[EUCLID]], -1
+; CHECK-NEXT:    ret i1 [[RESULT]]
+;
+  %positive = icmp sgt i8 %y, 0
+  call void @llvm.assume(i1 %positive)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjustment = select i1 %negative, i8 %y, i8 127
   %euclid = add i8 %adjustment, %rem
   %result = icmp sge i8 %euclid, 0
   ret i1 %result
@@ -98,6 +208,45 @@ define i1 @absolute_divisor(i8 noundef %x, i8 noundef %y) {
   ret i1 %result
 }
 
+define i1 @absolute_divisor_nsw(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @absolute_divisor_nsw(
+; CHECK-NEXT:    ret i1 true
+;
+  %abs_y = call i8 @llvm.abs.i8(i8 %y, i1 false)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjustment = select i1 %negative, i8 %abs_y, i8 0
+  %euclid = add nsw i8 %rem, %adjustment
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
+define i1 @absolute_divisor_poison(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @absolute_divisor_poison(
+; CHECK-NEXT:    ret i1 true
+;
+  %abs_y = call i8 @llvm.abs.i8(i8 %y, i1 true)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjusted = add i8 %rem, %abs_y
+  %euclid = select i1 %negative, i8 %adjusted, i8 %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
+define i1 @absolute_divisor_wrapping(i8 noundef %x, i8 noundef %y) {
+; CHECK-LABEL: @absolute_divisor_wrapping(
+; CHECK-NEXT:    ret i1 true
+;
+  %abs_y = call i8 @llvm.abs.i8(i8 %y, i1 false)
+  %rem = srem i8 %x, %y
+  %negative = icmp slt i8 %rem, 0
+  %adjusted = add i8 %rem, %abs_y
+  %euclid = select i1 %negative, i8 %adjusted, i8 %rem
+  %result = icmp sge i8 %euclid, 0
+  ret i1 %result
+}
+
 define i1 @absolute_of_different_divisor(i8 noundef %x, i8 noundef %y, i8 noundef %z) {
 ; CHECK-LABEL: @absolute_of_different_divisor(
 ; CHECK-NEXT:    [[NOT_MIN:%.*]] = icmp ne i8 [[Y:%.*]], -128
@@ -137,13 +286,7 @@ define i1 @absolute_divisor_without_min_exclusion(i8 noundef %x, i8 noundef %y) 
 ; CHECK-LABEL: @absolute_divisor_without_min_exclusion(
 ; CHECK-NEXT:    [[NOT_MINUS_ONE:%.*]] = icmp ne i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT_MINUS_ONE]])
-; CHECK-NEXT:    [[ABS_Y:%.*]] = call i8 @llvm.abs.i8(i8 [[Y]], i1 false)
-; CHECK-NEXT:    [[REM:%.*]] = srem i8 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[NEGATIVE:%.*]] = icmp slt i8 [[REM]], 0
-; CHECK-NEXT:    [[ADJUSTED:%.*]] = select i1 [[NEGATIVE]], i8 [[ABS_Y]], i8 0
-; CHECK-NEXT:    [[EUCLID:%.*]] = add i8 [[REM]], [[ADJUSTED]]
-; CHECK-NEXT:    [[RESULT:%.*]] = icmp sgt i8 [[EUCLID]], -1
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 true
 ;
   %not_minus_one = icmp ne i8 %y, -1
   call void @llvm.assume(i1 %not_minus_one)
