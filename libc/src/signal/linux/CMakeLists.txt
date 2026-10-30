@@ -96,6 +96,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sigsuspend
+  SRCS
+    sigsuspend.cpp
+  HDRS
+    ../sigsuspend.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigsuspend
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   pthread_sigmask
   SRCS
     pthread_sigmask.cpp
