@@ -18,7 +18,7 @@ define void @test(ptr %p, i16 %load794) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i32> [[TMP12]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul nuw nsw <2 x i64> [[TMP9]], splat (i64 5039)
 ; CHECK-NEXT:    [[TMP11:%.*]] = lshr <2 x i64> [[TMP22]], splat (i64 24)
-; CHECK-NEXT:    [[TMP13:%.*]] = trunc <2 x i64> [[TMP11]] to <2 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc nuw nsw <2 x i64> [[TMP11]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP20:%.*]] = mul <2 x i32> [[TMP13]], splat (i32 62207)
 ; CHECK-NEXT:    [[TMP21:%.*]] = add <2 x i32> [[TMP20]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = trunc <2 x i32> [[TMP21]] to <2 x i16>
