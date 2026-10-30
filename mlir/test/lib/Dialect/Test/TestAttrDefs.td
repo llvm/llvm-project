@@ -460,6 +460,13 @@ def TestConstMemorySpaceAttr : Test_Attr<"TestConstMemorySpace", [
   let assemblyFormat = "(`<` $addressSpace^ `>`)?";
 }
 
+// Test an attribute used as the default of a `DefaultValuedAttr`.
+def TestDefaultValuedAttrDefAttr : Test_Attr<"TestDefaultValuedAttrDef"> {
+  let mnemonic = "default_valued_attr_def";
+  let parameters = (ins "int64_t":$value);
+  let assemblyFormat = "`<` $value `>`";
+}
+
 // Test custom location handling.
 def TestCustomLocationAttr : Test_LocAttr<"TestCustomLocation"> {
   let mnemonic = "custom_location";

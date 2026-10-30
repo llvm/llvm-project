@@ -292,6 +292,10 @@ instead of `DefaultValuedAttr`. This allows specifying the default value using a
 TableGen `EnumCase` variable instead of a raw string. For example 
 `DefaultValuedEnumAttr<SomeI64Enum, I64Case5>`.
 
+An attribute defined with `AttrDef` can be used directly in `DefaultValuedAttr`,
+with a default value that builds the attribute, e.g.
+`DefaultValuedAttr<SomeAttr, "SomeAttr::get($_builder.getContext())">`.
+
 #### Confining attributes
 
 `ConfinedAttr` is provided as a general mechanism to help modelling further

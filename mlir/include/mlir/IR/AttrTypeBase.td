@@ -283,6 +283,11 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   // expand to `getAttrOfType<IntegerAttr>("val").getValue().getSExtValue()`.
   let convertFromStorage = "::llvm::cast<" # cppType # ">($_self)";
 
+  // The attribute is its own constant value, so it can be used directly, e.g.
+  // as the default of a `DefaultValuedAttr`. Defs that return a different C++
+  // type than the attribute class must provide their own builder.
+  let constBuilderCall = !if(!eq(returnType, storageType), "$0", ?);
+
   // The predicate for when this def is used as a constraint.
   let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }

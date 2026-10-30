@@ -697,7 +697,6 @@ def LLVM_DIGlobalVariableExpressionAttr
     OptionalParameter<"DIExpressionAttr">:$expr
   );
   let assemblyFormat = "`<` struct(params) `>`";
-  let constBuilderCall = "$0";
 
   // Generate mnemonic alias for the attribute.
   let genMnemonicAlias = 1;

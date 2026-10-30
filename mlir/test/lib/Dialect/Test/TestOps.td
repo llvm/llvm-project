@@ -4353,6 +4353,15 @@ def TestOpWithDefaultValuedProperties : TEST_Op<"with_default_valued_properties"
     UnitProp:$unit);
 }
 
+def TestOpWithDefaultValuedAttrDef
+    : TEST_Op<"with_default_valued_attr_def"> {
+  let arguments = (ins
+    DefaultValuedAttr<TestDefaultValuedAttrDefAttr,
+      "$_builder.getAttr<::test::TestDefaultValuedAttrDefAttr>(0)">:$attr
+  );
+  let assemblyFormat = "(`attr` $attr^)? attr-dict";
+}
+
 def TestOpWithOptionalProperties : TEST_Op<"with_optional_properties"> {
   let assemblyFormat = [{
     (`anAttr` `=` $anAttr^)?
