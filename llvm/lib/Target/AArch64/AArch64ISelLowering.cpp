@@ -15845,6 +15845,48 @@ static SDValue tryToConvertShuffleOfTbl2ToTbl4(SDValue Op,
                       Tbl2->getOperand(1), Tbl2->getOperand(2), TBLMask});
 }
 
+// Recognises shuffles that preserves lane 0 and clear all remaining lanes
+static bool shuffleClearsUpperLanes(const ShuffleVectorSDNode &Op,
+                                    unsigned NumElts,
+                                    ArrayRef<int> &ShuffleMask,
+                                    SDValue &DataVec, SDValue &ZeroVec) {
+  const SDValue &LHS = Op.getOperand(0);
+  const SDValue &RHS = Op.getOperand(1);
+
+  bool Op0IsZero = ISD::isBuildVectorAllZeros(LHS.getNode());
+  bool Op1IsZero = ISD::isBuildVectorAllZeros(RHS.getNode());
+
+  if (Op0IsZero == Op1IsZero)
+    return false;
+
+  bool LHSZero = true;
+  ZeroVec = LHS;
+  DataVec = RHS;
+
+  if (Op1IsZero) {
+    LHSZero = false;
+    std::swap(DataVec, ZeroVec);
+  }
+
+  // A non-zero value must be at lane 0 of
+  // the resulting vector
+  int ExpectedDataIndex = LHSZero ? NumElts : 0;
+  if (ShuffleMask.front() != ExpectedDataIndex)
+    return false;
+
+  for (unsigned i = 1; i < NumElts; ++i) {
+    int MaskElt = ShuffleMask[i];
+
+    // The mask must select from the zero vector operand
+    bool SelectsZero =
+        LHSZero ? (MaskElt < int(NumElts)) : (MaskElt >= int(NumElts));
+    if (!SelectsZero)
+      return false;
+  }
+
+  return true;
+}
+
 SDValue
 AArch64TargetLowering::LowerEXTEND_VECTOR_INREG(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -15930,6 +15972,28 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   if (SDValue Res = tryToConvertShuffleOfTbl2ToTbl4(Op, ShuffleMask, DAG))
     return Res;
 
+  unsigned NumElts = VT.getVectorNumElements();
+
+  {
+    SDValue ZeroVec;
+    SDValue DataVec;
+    int EltSize = VT.getVectorElementType().getFixedSizeInBits();
+    if (EltSize != 8 &&
+        shuffleClearsUpperLanes(*SVN, NumElts, ShuffleMask, DataVec, ZeroVec)) {
+      EVT EltVT = VT.getVectorElementType();
+      if (!isTypeLegal(EltVT))
+        EltVT = getTypeToTransformTo(*DAG.getContext(), EltVT);
+
+      if (NumElts == 2)
+        // We can just insert zero into the second lane of the vector
+        return DAG.getInsertVectorElt(DL, DataVec,
+                                      DAG.getConstant(0, DL, EltVT), 1);
+
+      return DAG.getInsertVectorElt(
+          DL, ZeroVec, DAG.getExtractVectorElt(DL, EltVT, DataVec, 0), 0);
+    }
+  }
+
   if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
     // If this is undef splat, generate it via "just" vdup, if possible.
@@ -15969,7 +16033,6 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
     }
   }
 
-  unsigned NumElts = VT.getVectorNumElements();
   unsigned EltSize = VT.getScalarSizeInBits();
   if (isREVMask(ShuffleMask, EltSize, NumElts, 64))
     return DAG.getNode(AArch64ISD::REV64, DL, V1.getValueType(), V1);
