@@ -42,14 +42,10 @@ define void @callbr_self_loop(i1 %c) {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:  ; %bb.2: ; %callbr.target.callbr
-; CHECK-NEXT:    ; in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    s_cbranch_execnz .LBB1_1
-; CHECK-NEXT:    s_branch .LBB1_4
-; CHECK-NEXT:  .LBB1_3: ; Inline asm indirect target
-; CHECK-NEXT:    ; %callbr.target.callbr.target.ret
+; CHECK-NEXT:    s_branch .LBB1_1
+; CHECK-NEXT:  .LBB1_2: ; Inline asm indirect target
+; CHECK-NEXT:    ; %callbr.target.ret
 ; CHECK-NEXT:    ; Label of block must be emitted
-; CHECK-NEXT:  .LBB1_4: ; %ret
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   br label %callbr
 callbr:
