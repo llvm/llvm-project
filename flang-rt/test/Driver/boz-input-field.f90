@@ -3,22 +3,17 @@
 ! descriptor starts after the field.  READ(SIZE=) should count each character
 ! of the field once.
 !
-! The CHECK lines below record the current, incorrect behavior: the field
-! is left positioned just after its last significant digit, so the following
-! A2 reads the trailing blanks (or the I2 reads ",2"), and SIZE= counts the
-! significant digits twice.
-
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
 ! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
 
-! CHECK: int4: 1F "  "
-! CHECK: int8: 1F "  "
-! CHECK: int16: 1F "  "
-! CHECK: char: 4142 "  "
-! CHECK: comma: 1F 0
-! CHECK: octal: 17 "  "
-! CHECK: binary: 5 "  "
-! CHECK: size: 1F 8
+! CHECK: int4: 1F "XY"
+! CHECK: int8: 1F "XY"
+! CHECK: int16: 1F "XY"
+! CHECK: char: 4142 "XY"
+! CHECK: comma: 1F 2
+! CHECK: octal: 17 "XY"
+! CHECK: binary: 5 "XY"
+! CHECK: size: 1F 6
 ! CHECK: PASS
 
 program boz_input_field

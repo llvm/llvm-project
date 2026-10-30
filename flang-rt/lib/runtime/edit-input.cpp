@@ -109,6 +109,7 @@ static RT_API_ATTRS bool EditBOZInput(
     return false;
   }
   // Reset to start of significant digits
+  auto end{connection.positionInRecord - leftTabLimit};
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
@@ -151,6 +152,11 @@ static RT_API_ATTRS bool EditBOZInput(
     *data |= digit << shift;
     shift -= LOG2_BASE;
   }
+  // The second pass re-read characters already counted for SIZE=; resume
+  // after the whole field, including any trailing blanks or separator.
+  io.GotChar(
+      -static_cast<int>(connection.positionInRecord - leftTabLimit - start));
+  io.HandleAbsolutePosition(end);
   return CheckCompleteListDirectedField(io, edit);
 }
 
