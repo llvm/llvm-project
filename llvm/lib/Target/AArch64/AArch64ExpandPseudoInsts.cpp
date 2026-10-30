@@ -1361,6 +1361,7 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
       transferImpOps(MI, I, I);
     } else {
       // Expand to BSL, use additional move if required
+      const auto &ST = MBB.getParent()->getSubtarget<AArch64Subtarget>();
       if (DstReg == MI.getOperand(1).getReg()) {
         auto I =
             BuildMI(MBB, MBBI, MI.getDebugLoc(),
@@ -1371,9 +1372,50 @@ bool AArch64ExpandPseudoImpl::expandMI(MachineBasicBlock &MBB,
                 .add(MI.getOperand(2))
                 .add(MI.getOperand(3));
         transferImpOps(MI, I, I);
+      } else if (Opcode == AArch64::BSPv16i8 &&
+                 ST.isSVEorStreamingSVEAvailable() &&
+                 (ST.hasSVE2() || ST.hasSME())) {
+        // Expand BSPv16i8 with MOVPRFX + BSL. Don't expand BSPv8i8 as FPR64
+        // defs are assumed to zero the upper bits.
+        const TargetRegisterInfo &TRI = TII->getRegisterInfo();
+        auto getZReg = [&TRI](const MachineOperand &MO) -> Register {
+          return TRI.getMatchingSuperReg(MO.getReg(), AArch64::zsub,
+                                         &AArch64::ZPRRegClass);
+        };
+        const MachineOperand &Dst = MI.getOperand(0);
+        const MachineOperand &Mask = MI.getOperand(1);
+        const MachineOperand &TVal = MI.getOperand(2);
+        const MachineOperand &FVal = MI.getOperand(3);
+        Register DOPReg = getZReg(Dst);
+        auto PRFX =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::MOVPRFX_ZZ))
+                .addDef(DOPReg, getRenamableRegState(Dst.isRenamable()))
+                .addReg(getZReg(TVal),
+                        getRenamableRegState(TVal.isRenamable()) |
+                            getUndefRegState(TVal.isUndef()) |
+                            getKillRegState(TVal.isKill() &&
+                                            TVal.getReg() != Mask.getReg() &&
+                                            TVal.getReg() != FVal.getReg()));
+        auto DOP =
+            BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::BSL_ZZZZ))
+                .addDef(DOPReg, getDeadRegState(Dst.isDead()) |
+                                    getRenamableRegState(Dst.isRenamable()))
+                .addReg(DOPReg, RegState::Kill |
+                                    getRenamableRegState(Dst.isRenamable()))
+                .addReg(getZReg(FVal),
+                        getRenamableRegState(FVal.isRenamable()) |
+                            getUndefRegState(FVal.isUndef()) |
+                            getKillRegState(FVal.isKill()))
+                .addReg(getZReg(Mask),
+                        getRenamableRegState(Mask.isRenamable()) |
+                            getUndefRegState(Mask.isUndef()) |
+                            getKillRegState(Mask.isKill()));
+        transferImpOps(MI, PRFX, DOP);
+        finalizeBundle(MBB, PRFX->getIterator(), MBBI->getIterator());
       } else {
         RegState RegState =
             getRenamableRegState(MI.getOperand(1).isRenamable()) |
+            getUndefRegState(MI.getOperand(1).isUndef()) |
             getKillRegState(
                 MI.getOperand(1).isKill() &&
                 MI.getOperand(1).getReg() != MI.getOperand(2).getReg() &&
