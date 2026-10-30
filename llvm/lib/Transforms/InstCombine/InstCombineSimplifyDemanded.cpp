@@ -2369,6 +2369,15 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   FastMathFlags FMF, FPClassTest DemandedMask,
                                   KnownFPClass &Known, const SimplifyQuery &SQ,
                                   unsigned Depth) {
+  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
+  const fltSemantics &SrcTy =
+      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+  const Function *Fn = I.getFunction();
+  DenormalMode DstMode =
+      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
+  DenormalMode SrcMode =
+      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
   FPClassTest SrcDemandedMask = DemandedMask;
   if (DemandedMask & fcNan)
@@ -2391,20 +2400,21 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
   if (DemandedMask & fcNegInf)
     SrcDemandedMask |= fcNegNormal;
 
+  // TODO: This is a conservative approach for determining the actual input and
+  // output denormal mode used by fptrunc.
+  if (DstMode != DenormalMode::getIEEE() ||
+      SrcMode != DenormalMode::getIEEE()) {
+    // Input subnormals may flush to zero, and output subnormals may also flush
+    // to zero. The result can be subnormal (and flushed to zero) even if the
+    // input is normal.
+    if ((DemandedMask & fcZero) != fcNone)
+      SrcDemandedMask |= fcSubnormal | fcNormal;
+  }
+
   KnownFPClass KnownSrc;
   if (IC.SimplifyDemandedFPClass(&I, 0, SrcDemandedMask, KnownSrc, SQ,
                                  Depth + 1))
     return &I;
-
-  const fltSemantics &DstTy = I.getType()->getScalarType()->getFltSemantics();
-  const fltSemantics &SrcTy =
-      I.getOperand(0)->getType()->getScalarType()->getFltSemantics();
-
-  const Function *Fn = I.getFunction();
-  DenormalMode DstMode =
-      Fn ? Fn->getDenormalMode(DstTy) : DenormalMode::getDynamic();
-  DenormalMode SrcMode =
-      Fn ? Fn->getDenormalMode(SrcTy) : DenormalMode::getDynamic();
 
   Known = KnownFPClass::fptrunc(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
   Known.knownNot(~DemandedMask);
@@ -2894,6 +2904,13 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     return simplifyDemandedUseFPClassFPTrunc(*this, *I, FMF, DemandedMask,
                                              Known, SQ, Depth);
   case Instruction::FPExt: {
+    const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
+    const fltSemantics &SrcTy =
+        I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
+
+    const DenormalMode DstMode = F.getDenormalMode(DstTy);
+    const DenormalMode SrcMode = F.getDenormalMode(SrcTy);
+
     FPClassTest SrcDemandedMask = DemandedMask;
     if (DemandedMask & fcNan)
       SrcDemandedMask |= fcNan;
@@ -2904,6 +2921,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if ((DemandedMask & fcPosNormal) != fcNone)
       SrcDemandedMask |= fcPosSubnormal;
 
+    // TODO: This is a conservative approach for determining the actual input
+    // and output denormal mode used by fpext.
+    if (DstMode != DenormalMode::getIEEE() ||
+        SrcMode != DenormalMode::getIEEE()) {
+      // We are assuming that normal values will never produce subnormal results
+      // for fpext. This assumption is incorrect for ppcf128 = fpext(f80).
+      if ((DemandedMask & fcZero) != fcNone)
+        SrcDemandedMask |= fcSubnormal;
+    }
+
     // TODO: Properly handle ppcf128 = fpext(f80) (since f80 has a larger
     // exponent range than ppcf128).
 
@@ -2911,13 +2938,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     if (SimplifyDemandedFPClass(I, 0, SrcDemandedMask, KnownSrc, SQ, Depth + 1))
       return I;
 
-    const fltSemantics &DstTy = VTy->getScalarType()->getFltSemantics();
-    const fltSemantics &SrcTy =
-        I->getOperand(0)->getType()->getScalarType()->getFltSemantics();
-
-    Known =
-        KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, F.getDenormalMode(DstTy),
-                            F.getDenormalMode(SrcTy));
+    Known = KnownFPClass::fpext(KnownSrc, DstTy, SrcTy, DstMode, SrcMode);
     Known.knownNot(~DemandedMask);
 
     return simplifyDemandedFPClassResult(I, FMF, DemandedMask, Known,

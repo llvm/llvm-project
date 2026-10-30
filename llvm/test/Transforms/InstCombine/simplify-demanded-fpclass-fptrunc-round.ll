@@ -630,3 +630,51 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
   %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
   ret half %result
 }
+
+; Remove select
+define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_round_f32_f16__mode_ieee_ieee(i1 %cond, float %unknown) #0 {
+; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_round_f32_f16__mode_ieee_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
+; CHECK-NEXT:    [[RESULT:%.*]] = call ninf half @llvm.fptrunc.round.f16.f32(float [[UNKNOWN]], metadata !"round.downward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nnorm = call float @returns_nnorm_f32()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
+  ret half %result
+}
+
+; Do not delete select
+define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_round_f32_f16__mode_ftz_daz(i1 %cond, float %unknown) #1 {
+; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_round_f32_f16__mode_ftz_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ninf half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.downward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nnorm = call float @returns_nnorm_f32()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
+  ret half %result
+}
+
+; Do not delete select
+define nofpclass(inf norm sub nzero) half @pzero_demands_nnorm_source__fptrunc_round_f32_f16__mode_ftpz_dapz(i1 %cond, float %unknown) #2 {
+; CHECK-LABEL: define nofpclass(inf nzero sub norm) half @pzero_demands_nnorm_source__fptrunc_round_f32_f16__mode_ftpz_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[NNORM:%.*]] = call float @returns_nnorm_f32()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call ninf half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.downward")
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %nnorm = call float @returns_nnorm_f32()
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %result = call half @llvm.fptrunc.round.f16.f32(float %select, metadata !"round.downward")
+  ret half %result
+}
+
+attributes #0 = { denormal_fpenv(ieee|ieee) }
+attributes #1 = { denormal_fpenv(preservesign|preservesign) }
+attributes #2 = { denormal_fpenv(positivezero|positivezero) }
