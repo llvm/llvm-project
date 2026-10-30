@@ -14,6 +14,8 @@ program main
   call test2()
   call test4()
   call test8()
+  call testComplex()
+  call testDerived()
   print *,'PASS'
 
 end program main
@@ -91,3 +93,60 @@ subroutine test8()
      stop
   endif
 end subroutine
+subroutine testComplex()
+  implicit none
+  complex(8) z(2)
+  integer(1) i32(32)
+
+  z = (/ (1.0_8, 2.0_8), (3.0_8, 4.0_8) /)
+
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
+  write(10) z
+  close(10)
+
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown')
+  read(10) i32
+  close(10)
+
+  ! Each complex(8) value consists of two real(8) components.
+  call SwapEndianness(i32, 32_8, 8_8)
+
+  if (.not. all (z == transfer(i32, z))) then
+     stop
+  endif
+end subroutine
+subroutine testDerived()
+  implicit none
+  integer k
+  type :: t
+     integer(4) :: i
+     real(8) :: x
+  end type t
+  type(t) :: a(2)
+  integer(1) i4(4)
+  integer(1) i8(8)
+
+  a = (/ t(1_4, 2.0_8), t(3_4, 4.0_8) /)
+
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
+  write(10) a
+  close(10)
+
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown')
+  do k=1,2
+     read(10) i4
+     call SwapEndianness(i4, 4_8, 4_8)
+
+     if (.not. (a(k)%i == transfer(i4, a(k)%i))) then
+        stop
+     endif
+     read(10) i8
+     call SwapEndianness(i8, 8_8, 8_8)
+
+     if (.not. (a(k)%x == transfer(i8, a(k)%x))) then
+        stop
+     endif
+  enddo
+
+  close(10)
+end subroutine testDerived

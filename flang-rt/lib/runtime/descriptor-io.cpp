@@ -567,10 +567,7 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
       auto *externalUnf{io_.get_if<ExternalUnformattedIoStatementState<DIR>>()};
       ChildUnformattedIoStatementState<DIR> *childUnf{nullptr};
       InquireIOLengthState *inq{nullptr};
-      bool swapEndianness{false};
-      if (externalUnf) {
-        swapEndianness = externalUnf->unit().swapEndianness();
-      } else {
+      if (!externalUnf) {
         childUnf = io_.get_if<ChildUnformattedIoStatementState<DIR>>();
         if (!childUnf) {
           inq = DIR == Direction::Output ? io_.get_if<InquireIOLengthState>()
@@ -604,8 +601,7 @@ RT_API_ATTRS int DescriptorIoTicket<DIR>::Begin(WorkQueue &workQueue) {
               : childUnf->Receive(&x, totalBytes, swappingBytes);
         }
       }};
-      if (!swapEndianness &&
-          instance_.IsContiguous()) { // contiguous unformatted I/O
+      if (instance_.IsContiguous()) { // contiguous unformatted I/O
         char &x{ExtractElement<char>(io_, instance_, subscripts_)};
         if (Transfer(x, elements_ * elementBytes)) {
           anyIoTookPlace_ = true;
