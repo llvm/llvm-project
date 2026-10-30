@@ -73,8 +73,10 @@ protected:
   }
 
   // Find modulemaps for module \p Name without loading the module.
-  std::string findModuleMap(StringRef Name) {
-    OptionalFileEntryRef File = Search.lookupModuleMapFileForModule(Name);
+  std::string findModuleMap(StringRef Name,
+                            bool AllowExtraModuleMapSearch = false) {
+    OptionalFileEntryRef File =
+        Search.lookupModuleMapFileForModule(Name, AllowExtraModuleMapSearch);
     return File ? llvm::sys::path::convert_to_slash(File->getName()) : "";
   }
 
@@ -476,6 +478,21 @@ TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleSubDir) {
   addFile("/a/A/module.modulemap", "module A {}");
 
   EXPECT_EQ(findModuleMap("A"), "/a/A/module.modulemap");
+}
+
+// Verify a module defined in an arbitrary subdirectory's modulemap is found
+// only when searching subdirectories is allowed.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleSubdirectorySearch) {
+  enableLazyModuleMaps();
+  HSOpts.AllowModuleMapSubdirectorySearch = true;
+
+  addSearchDir("/a");
+  addFile("/a/Sub/module.modulemap", "module A {}");
+
+  EXPECT_EQ(findModuleMap("A"), "");
+  EXPECT_EQ(findModuleMap("A", /*AllowExtraModuleMapSearch=*/true),
+            "/a/Sub/module.modulemap");
+  EXPECT_EQ(Search.getModuleMap().findModule("A"), nullptr);
 }
 
 // Verify a module declared with `extern module` resolves to the modulemap that

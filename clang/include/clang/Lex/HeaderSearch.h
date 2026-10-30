@@ -815,8 +815,13 @@ public:
   /// without loading it.
   /// Requires lazily loaded module maps.
   ///
+  /// \param AllowExtraModuleMapSearch Whether we allow to search modulemaps
+  /// in subdirectories.
+  ///
   /// \returns The module map file, or std::nullopt if not found.
-  OptionalFileEntryRef lookupModuleMapFileForModule(StringRef ModuleName);
+  OptionalFileEntryRef
+  lookupModuleMapFileForModule(StringRef ModuleName,
+                               bool AllowExtraModuleMapSearch = false);
 
 private:
   /// Lookup a module by name, with retry support for private counterparts of
@@ -888,9 +893,9 @@ private:
   void parseFrameworkModuleMap(DirectoryEntryRef Dir, bool IsSystem,
                                bool ImplicitlyDiscovered, bool Load);
 
-  /// Load all of the module maps within the immediate subdirectories
+  /// Parse all of the module maps within the immediate subdirectories
   /// of the given search directory.
-  void loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir);
+  void parseSubdirectoryModuleMaps(DirectoryLookup &SearchDir, bool Load);
 
   /// Diagnose headers that are a symlink and not covered by a module map.
   void diagnoseUncoveredSymlink(FileEntryRef File,

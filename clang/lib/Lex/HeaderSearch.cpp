@@ -312,7 +312,8 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName,
 }
 
 OptionalFileEntryRef
-HeaderSearch::lookupModuleMapFileForModule(StringRef ModuleName) {
+HeaderSearch::lookupModuleMapFileForModule(StringRef ModuleName,
+                                           bool AllowExtraModuleMapSearch) {
   assert(HSOpts.LazyLoadModuleMaps &&
          "module map lookup requires lazy loading support");
   if (!ModMap.isModuleKnown(ModuleName)) {
@@ -320,7 +321,7 @@ HeaderSearch::lookupModuleMapFileForModule(StringRef ModuleName) {
       return std::nullopt;
     // If the module map has not already been parsed, look it up.
     if (!lookupModuleWithPrivateFallbacks(ModuleName, SourceLocation(),
-                                          /*AllowExtraModuleMapSearch=*/false,
+                                          AllowExtraModuleMapSearch,
                                           /*Load=*/false))
       return std::nullopt;
   }
@@ -422,10 +423,10 @@ bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
       if (Dir.haveLoadedAllModuleMaps())
         continue;
 
-      // Load all module maps in the immediate subdirectories of this search
+      // Look up all module maps in the immediate subdirectories of this search
       // directory if ModuleName was from @import.
       if (AllowExtraModuleMapSearch)
-        loadSubdirectoryModuleMaps(Dir);
+        parseSubdirectoryModuleMaps(Dir, Load);
 
       // Look again for the module.
       if (FindModule())
@@ -2436,7 +2437,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
 
       // Try to load module map files for immediate subdirectories of this
       // search directory.
-      loadSubdirectoryModuleMaps(DL);
+      parseSubdirectoryModuleMaps(DL, /*Load=*/true);
     }
   }
 
@@ -2460,7 +2461,8 @@ void HeaderSearch::loadTopLevelSystemModules() {
   }
 }
 
-void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
+void HeaderSearch::parseSubdirectoryModuleMaps(DirectoryLookup &SearchDir,
+                                               bool Load) {
   assert(HSOpts.ImplicitModuleMaps &&
          "Should not be loading subdirectory module maps");
 
@@ -2478,13 +2480,20 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
     if (Dir->type() == llvm::sys::fs::file_type::regular_file)
       continue;
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
-    if (IsFramework == SearchDir.isFramework())
+    if (IsFramework != SearchDir.isFramework())
+      continue;
+    if (Load)
       parseAndLoadModuleMapFile(
           Dir->path(), SearchDir.isSystemHeaderDirectory(),
           /*ImplicitlyDiscovered=*/true, SearchDir.isFramework());
+    else
+      parseModuleMapFile(Dir->path(), SearchDir.isSystemHeaderDirectory(),
+                         /*ImplicitlyDiscovered=*/true,
+                         SearchDir.isFramework());
   }
 
-  SearchDir.setLoadedAllModuleMaps(true);
+  if (Load)
+    SearchDir.setLoadedAllModuleMaps(true);
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(
