@@ -737,6 +737,52 @@ static bool promoteSingleBlockAlloca(
     LBI.deleteValue(LI);
   }
 
+  // A #dbg_value with a deref can be cloned and rewritten at each store.
+  // Any other kind is left to be poisoned.
+  SmallPtrSet<DbgVariableRecord *, 4> ClonableDbgRecords;
+  for (DbgVariableRecord *DbgItem : Info.DPUsers)
+    if (DbgItem->isDbgValue() && DbgItem->getExpression()->startsWithDeref() &&
+        DbgItem->getParent() == Info.OnlyBlock)
+      ClonableDbgRecords.insert(DbgItem);
+
+  // Collect which records are valid at each store.
+  SmallDenseMap<StoreInst *, SmallVector<DbgVariableRecord *, 1>>
+      DerefValuesAtStore;
+  if (!ClonableDbgRecords.empty() && !StoresByIndex.empty()) {
+    // Only walk from the first clonable record to the last store.
+    Instruction *First = nullptr;
+    for (DbgVariableRecord *DbgItem : ClonableDbgRecords) {
+      Instruction *I = DbgItem->getInstruction();
+      if (!First || I->comesBefore(First))
+        First = I;
+    }
+    StoreInst *Last = StoresByIndex.back().second;
+    if (First == Last || First->comesBefore(Last)) {
+      SmallVector<DbgVariableRecord *, 4> Live;
+      for (Instruction &I :
+           make_range(First->getIterator(), std::next(Last->getIterator()))) {
+        for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange())) {
+          // Only #dbg_values have a meaningful location.
+          if (!DVR.isDbgValue())
+            continue;
+          // Remove overridden records from Live.
+          DebugVariableAggregate Var(&DVR);
+          llvm::erase_if(Live, [&](DbgVariableRecord *L) {
+            return DebugVariableAggregate(L) == Var &&
+                   L->getExpression()->fragmentsOverlap(DVR.getExpression());
+          });
+          // The record is alive when it appears.
+          if (ClonableDbgRecords.contains(&DVR))
+            Live.push_back(&DVR);
+        }
+        // Save the records alive at this point.
+        auto *SI = dyn_cast<StoreInst>(&I);
+        if (SI && SI->getPointerOperand() == AI && !Live.empty())
+          DerefValuesAtStore[SI].assign(Live.begin(), Live.end());
+      }
+    }
+  }
+
   // Remove the (now dead) stores and alloca.
   DIBuilder DIB(*AI->getModule(), /*AllowUnresolved*/ false);
   while (!AI->use_empty()) {
@@ -747,8 +793,16 @@ static bool promoteSingleBlockAlloca(
     for (DbgVariableRecord *DbgItem : Info.DPUsers) {
       if (DbgItem->isAddressOfVariable()) {
         ConvertDebugDeclareToDebugValue(DbgItem, SI, DIB);
+      } else if (DbgItem->isDbgDeclareValue() &&
+                 DbgItem->getExpression()->startsWithDeref()) {
+        // A #dbg_declare_value is converted to a #dbg_value at each store,
+        // with its deref stripped.
+        InsertDebugValueAtStoreLoc(DbgItem, SI, DIB);
       }
     }
+    // Each live #dbg_value is cloned at each store with its deref stripped.
+    for (DbgVariableRecord *DbgItem : DerefValuesAtStore.lookup(SI))
+      InsertDebugValueAtStoreLoc(DbgItem, SI, DIB);
 
     SI->eraseFromParent();
     LBI.deleteValue(SI);
