@@ -153,24 +153,6 @@ SourceLocation getLocBeforeSplit(SourceLocation Loc, const SourceManager &SM) {
   return Loc;
 }
 
-// Returns the length of the text in [Loc, Loc + Length) after removing
-// trailing escaped newlines.
-unsigned lengthWithoutTrailingEscapedNewlines(SourceLocation Loc,
-                                              unsigned Length,
-                                              const SourceManager &SM,
-                                              const LangOptions &LangOpts) {
-  const char *Text = SM.getCharacterData(Loc);
-  unsigned End = 0;
-  while (End < Length) {
-    // Size includes the escaped newlines before the character.
-    unsigned Size = Lexer::getCharAndSizeNoWarn(Text + End, LangOpts).Size;
-    if (End + Size > Length)
-      break; // Only escaped newlines are left.
-    End += Size;
-  }
-  return End;
-}
-
 // Returns the kind of the token that remains when a token of kind SplitKind is
 // split from the front of a token of kind Kind, e.g. returns `equal` for a '>'
 // split from a '>='. Returns std::nullopt if the spelling of SplitKind is not a
@@ -183,7 +165,7 @@ std::optional<tok::TokenKind> getRemainderKind(tok::TokenKind Kind,
   if (!Spelling || !SplitSpelling)
     return std::nullopt;
   llvm::StringRef Rest = Spelling;
-  if (!Rest.consume_front(SplitSpelling) || Rest.empty())
+  if (!Rest.consume_front(SplitSpelling))
     return std::nullopt;
 #define PUNCTUATOR(X, Y)                                                       \
   if (Rest == Y)                                                               \
@@ -862,8 +844,8 @@ private:
       return std::nullopt;
     // The parser includes trailing escaped newlines which we don't want.
     Piece Split{syntax::Token(S.SplitLoc,
-                              lengthWithoutTrailingEscapedNewlines(
-                                  S.SplitLoc, S.Length, SM, LangOpts),
+                              Lexer::MeasureTokenLength(
+                                  SM.getSpellingLoc(S.SplitLoc), SM, LangOpts),
                               S.SplitKind),
                 Old.Offset};
     if (S.Length == Old.Tok.length()) {
@@ -945,9 +927,7 @@ private:
     // Find the spelled token: the expanded token itself, or the token in a
     // macro argument that it was expanded from. The spelled token of a token
     // from a macro body is in the #define, which is not split.
-    SourceLocation Spelled = Orig.location();
-    while (Spelled.isMacroID() && SM.isMacroArgExpansion(Spelled))
-      Spelled = SM.getImmediateSpellingLoc(Spelled);
+    SourceLocation Spelled = SM.getTopMacroCallerLoc(Orig.location());
     if (!Spelled.isFileID())
       return;
     llvm::SmallVector<syntax::Token, 2> SpelledPieces;
@@ -971,9 +951,10 @@ private:
 
     auto &Expanded = Result.ExpandedTokens;
     size_t Added = 0;
-    for (const auto &[TokenIndex, TokenPieces] : PiecesByToken)
-      Added += TokenPieces.size() -
-               1; // A token split into N pieces adds N - 1 tokens.
+    for (const auto &[TokenIndex, TokenPieces] : PiecesByToken) {
+      // A token split into N pieces adds N - 1 tokens.
+      Added += TokenPieces.size() - 1;
+    }
     std::vector<syntax::Token> NewExpanded;
     NewExpanded.reserve(Expanded.size() + Added);
     for (unsigned TokenIndex = 0; TokenIndex < Expanded.size(); ++TokenIndex) {
