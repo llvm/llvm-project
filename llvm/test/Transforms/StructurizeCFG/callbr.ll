@@ -815,6 +815,151 @@ exit:
   ret void
 }
 
+; A subregion (s => cb) exits to the island, which also has an in-region
+; predecessor outside the subregion (other). Putting a Flow block in front of
+; the island moves the subregion's exit edge, so the subregion's exit has to be
+; updated to that Flow block.
+define void @subregion_exits_into_island(i1 %c, i1 %d) {
+; CHECK-LABEL: define void @subregion_exits_into_island(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[C_INV:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[D_INV:%.*]] = xor i1 [[D]], true
+; CHECK-NEXT:    br i1 [[C_INV]], label %[[OTHER:.*]], label %[[FLOW4:.*]]
+; CHECK:       [[FLOW4]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, %[[OTHER]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[D]], %[[OTHER]] ], [ false, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[OTHER]] ], [ true, %[[ENTRY]] ]
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[S:.*]], label %[[FLOW5:.*]]
+; CHECK:       [[S]]:
+; CHECK-NEXT:    br i1 [[D_INV]], label %[[FLOW:.*]], label %[[S]]
+; CHECK:       [[OTHER]]:
+; CHECK-NEXT:    br label %[[FLOW4]]
+; CHECK:       [[FLOW]]:
+; CHECK-NEXT:    br label %[[FLOW5]]
+; CHECK:       [[FLOW5]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ true, %[[FLOW]] ], [ [[TMP1]], %[[FLOW4]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FLOW2:.*]], label %[[FLOW6:.*]]
+; CHECK:       [[FLOW2]]:
+; CHECK-NEXT:    br label %[[CB:.*]]
+; CHECK:       [[FLOW6]]:
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[ISLAND_SEL_INV:%.*]], %[[FLOW3:.*]] ], [ [[TMP0]], %[[FLOW5]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[T:.*]], label %[[EXIT:.*]]
+; CHECK:       [[CB]]:
+; CHECK-NEXT:    callbr void asm "", "!i"()
+; CHECK-NEXT:            to label %[[CB_TARGET_EXIT:.*]] [label %[[CB_TARGET_T:.*]]]
+; CHECK:       [[T]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[FLOW3]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[CB_TARGET_EXIT]] ], [ false, %[[CB_TARGET_T]] ]
+; CHECK-NEXT:    [[ISLAND_SEL_INV]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br label %[[FLOW6]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[CB_TARGET_EXIT]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+; CHECK:       [[CB_TARGET_T]]:
+; CHECK-NEXT:    br label %[[FLOW3]]
+;
+entry:
+  br i1 %c, label %s, label %other
+s:
+  br i1 %d, label %s, label %cb
+other:
+  br i1 %d, label %cb, label %t
+cb:
+  callbr void asm "", "!i"() to label %exit [label %t]
+t:
+  br label %exit
+exit:
+  ret void
+}
+
+; Same as above with a self-loop subregion (b6 => b1) exiting to an island
+; whose targets share the region exit with other islands.
+define void @subregion_loop_exits_into_island_targets_share_exit(i1 %c) {
+; CHECK-LABEL: define void @subregion_loop_exits_into_island_targets_share_exit(
+; CHECK-SAME: i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[B0:.*:]]
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[B0_TARGET_B1:.*]] [label %[[B0_TARGET_B6:.*]], label %[[B0_TARGET_B4:.*]]]
+; CHECK:       [[FLOW:.*]]:
+; CHECK-NEXT:    br label %[[FLOW14:.*]]
+; CHECK:       [[FLOW14]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, %[[FLOW]] ], [ false, %[[FLOW13:.*]] ]
+; CHECK-NEXT:    br label %[[FLOW12:.*]]
+; CHECK:       [[FLOW5:.*]]:
+; CHECK-NEXT:    br label %[[B1:.*]]
+; CHECK:       [[FLOW15:.*]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[ISLAND_SEL7_INV:%.*]], %[[FLOW6:.*]] ], [ [[TMP2:%.*]], %[[FLOW12]] ]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[B2:.*]], label %[[EXIT:.*]]
+; CHECK:       [[B1]]:
+; CHECK-NEXT:    callbr void asm "", "!i,!i"()
+; CHECK-NEXT:            to label %[[B1_TARGET_EXIT:.*]] [label %[[B1_TARGET_EXIT]], label %[[B1_TARGET_B2:.*]]]
+; CHECK:       [[B2]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[FLOW12]]:
+; CHECK-NEXT:    [[TMP2]] = phi i1 [ [[TMP4:%.*]], %[[FLOW14]] ], [ false, %[[FLOW1:.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP0]], %[[FLOW14]] ], [ true, %[[FLOW1]] ]
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FLOW5]], label %[[FLOW15]]
+; CHECK:       [[FLOW9:.*]]:
+; CHECK-NEXT:    br label %[[B4:.*]]
+; CHECK:       [[FLOW13]]:
+; CHECK-NEXT:    [[TMP4]] = phi i1 [ [[ISLAND_SEL11_INV:%.*]], %[[FLOW10:.*]] ], [ false, %[[FLOW3:.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ false, %[[FLOW10]] ], [ true, %[[FLOW3]] ]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[B6:.*]], label %[[FLOW14]]
+; CHECK:       [[B4]]:
+; CHECK-NEXT:    callbr void asm "", "!i"()
+; CHECK-NEXT:            to label %[[B4_TARGET_EXIT:.*]] [label %[[B4_TARGET_B2:.*]]]
+; CHECK:       [[B6]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[FLOW]], label %[[B6]]
+; CHECK:       [[FLOW1]]:
+; CHECK-NEXT:    [[ISLAND_SEL:%.*]] = phi i1 [ true, %[[B0_TARGET_B1]] ], [ false, %[[B0_TARGET_B6]] ], [ false, %[[B0_TARGET_B4]] ]
+; CHECK-NEXT:    [[ISLAND_SEL2:%.*]] = phi i1 [ false, %[[B0_TARGET_B1]] ], [ true, %[[B0_TARGET_B6]] ], [ false, %[[B0_TARGET_B4]] ]
+; CHECK-NEXT:    [[ISLAND_SEL2_INV:%.*]] = xor i1 [[ISLAND_SEL2]], true
+; CHECK-NEXT:    [[ISLAND_SEL_INV:%.*]] = xor i1 [[ISLAND_SEL]], true
+; CHECK-NEXT:    br i1 [[ISLAND_SEL_INV]], label %[[FLOW3]], label %[[FLOW12]]
+; CHECK:       [[FLOW3]]:
+; CHECK-NEXT:    br i1 [[ISLAND_SEL2_INV]], label %[[FLOW9]], label %[[FLOW13]]
+; CHECK:       [[FLOW6]]:
+; CHECK-NEXT:    [[ISLAND_SEL7:%.*]] = phi i1 [ true, %[[B1_TARGET_EXIT]] ], [ false, %[[B1_TARGET_B2]] ]
+; CHECK-NEXT:    [[ISLAND_SEL7_INV]] = xor i1 [[ISLAND_SEL7]], true
+; CHECK-NEXT:    br label %[[FLOW15]]
+; CHECK:       [[FLOW10]]:
+; CHECK-NEXT:    [[ISLAND_SEL11:%.*]] = phi i1 [ true, %[[B4_TARGET_EXIT]] ], [ false, %[[B4_TARGET_B2]] ]
+; CHECK-NEXT:    [[ISLAND_SEL11_INV]] = xor i1 [[ISLAND_SEL11]], true
+; CHECK-NEXT:    br label %[[FLOW13]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[B0_TARGET_B1]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
+; CHECK:       [[B0_TARGET_B6]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
+; CHECK:       [[B0_TARGET_B4]]:
+; CHECK-NEXT:    br label %[[FLOW1]]
+; CHECK:       [[B1_TARGET_EXIT]]:
+; CHECK-NEXT:    br label %[[FLOW6]]
+; CHECK:       [[B1_TARGET_B2]]:
+; CHECK-NEXT:    br label %[[FLOW6]]
+; CHECK:       [[B4_TARGET_EXIT]]:
+; CHECK-NEXT:    br label %[[FLOW10]]
+; CHECK:       [[B4_TARGET_B2]]:
+; CHECK-NEXT:    br label %[[FLOW10]]
+;
+b0:
+  callbr void asm "", "!i,!i"() to label %b1 [label %b6, label %b4]
+b1:
+  callbr void asm "", "!i,!i"() to label %exit [label %exit, label %b2]
+b2:
+  br label %exit
+b4:
+  callbr void asm "", "!i"() to label %exit [label %b2]
+b6:
+  br i1 %c, label %b1, label %b6
+exit:
+  ret void
+}
+
 ; ===== Structurizing the callbr targets' own subgraphs =====
 
 ; a callbr fallthrough target contains its own if-diamond.
