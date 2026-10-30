@@ -331,8 +331,9 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
 
     - `bool_to_float`
 
-    The optional `fenv` attribute describes constraints on the floating-point
-    handling of the operation. It is only valid for floating-point cast kinds:
+    The `fenv` attribute describes constraints on the floating-point handling
+    of the operation. A non-empty `fenv` is only valid for floating-point cast
+    kinds:
     `floating`, `int_to_float`, `float_to_int`, `float_to_bool`,
     `bool_to_float`, `float_to_complex`, `float_complex_to_real`,
     `float_complex_to_bool`, `float_complex`, `float_complex_to_int_complex`,
@@ -2672,8 +2673,8 @@ def CIR_CmpOp : CIR_Op<"cmp",
     The `one` and `uno` predicates are floating-point specific: `one` is
     ordered not-equal (false for NaN), `uno` tests if either operand is NaN.
 
-    The optional `fenv` attribute describes constraints on the floating-point
-    handling of the operation. It is only valid for floating-point
+    The `fenv` attribute describes constraints on the floating-point handling
+    of the operation. A non-empty `fenv` is only valid for floating-point
     comparisons.
 
     ```
@@ -3008,8 +3009,8 @@ def CIR_RemOp : CIR_BinaryOp<"rem", CIR_AnyIntOrVecOfIntType> {
 // Base class for floating-point binary arithmetic operations. The lhs, rhs,
 // and result must all be the same floating-point scalar or vector type.
 //
-// The optional `fenv` attribute describes constraints on the floating-point
-// handling of the operation. The optional `fastmath_flags` attribute holds the
+// The `fenv` attribute describes constraints on the floating-point handling
+// of the operation. The optional `fastmath_flags` attribute holds the
 // fast-math flags of the operation.
 class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
                      Type type = CIR_AnyFloatOrVecOfFloatType>
@@ -6534,9 +6535,9 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp",
     whose element type is the signed integral type that is the same size as the
     element type of the operands. The values in the result are 0 or -1.
 
-    The optional `fenv` attribute describes constraints on the floating-point
-    handling of the operation. It is only valid for floating-point vector
-    comparisons.
+    The `fenv` attribute describes constraints on the floating-point handling
+    of the operation. A non-empty `fenv` is only valid for floating-point
+    vector comparisons.
 
     ```
     %eq = cir.vec.cmp(eq, %vec_a, %vec_b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
@@ -8258,8 +8259,8 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 // Floating Point Ops
 //===----------------------------------------------------------------------===//
 
-// The optional `fenv` attribute describes constraints on the floating-point
-// handling of the operation.
+// The `fenv` attribute describes constraints on the floating-point handling
+// of the operation.
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
     : CIR_Op<mnemonic,
              !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>

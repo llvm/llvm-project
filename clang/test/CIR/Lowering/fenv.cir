@@ -15,7 +15,7 @@ module {
     %1 = cir.fadd %a, %b : !cir.float
 
     // The empty fenv attribute does not constrain the operation.
-    // CHECK: llvm.fadd %{{.*}}, %{{.*}} : f32
+    // CHECK-NEXT: llvm.fadd %{{.*}}, %{{.*}} : f32
     %2 = cir.fadd %a, %b : !cir.float fenv<>
 
     // CHECK: %[[RM2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
