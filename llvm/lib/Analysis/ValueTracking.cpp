@@ -636,6 +636,50 @@ void llvm::computeKnownBitsFromRangeMetadata(const MDNode &Ranges,
   }
 }
 
+/// Return true if \p U only feeds llvm.assume calls. Each user visited costs
+/// one unit of \p Budget; \p Known caches the users already proven.
+static bool onlyFeedsAssumes(const User *U, unsigned &Budget,
+                             SmallPtrSetImpl<const User *> &Known) {
+  if (Budget == 0)
+    return false;
+  --Budget;
+  if (isa<AssumeInst>(U) || Known.contains(U))
+    return true;
+  const auto *I = dyn_cast<Instruction>(U);
+  // PHIs could form cycles; values without users are not assume-only either.
+  if (!I || isa<PHINode>(I) || I->isTerminator() || I->mayHaveSideEffects() ||
+      I->use_empty())
+    return false;
+  for (const User *UU : I->users())
+    if (!onlyFeedsAssumes(UU, Budget, Known))
+      return false;
+  Known.insert(U);
+  return true;
+}
+
+bool llvm::hasNUsesOrMoreIgnoringAssumes(const Use &U, unsigned N) {
+  // U itself always counts.
+  if (N <= 1)
+    return true;
+  const Value *V = U.get();
+  if (!V->hasNUsesOrMore(N))
+    return false;
+  // Enough for several facts about V, each a comparison combined with a few
+  // others before reaching the assume. Once exhausted, every remaining use
+  // counts, so a query costs O(N + Budget).
+  unsigned Budget = 16;
+  SmallPtrSet<const User *, 8> Known;
+  // Rewriting a use that only feeds assumes would only reshape the facts.
+  if (onlyFeedsAssumes(U.getUser(), Budget, Known))
+    return true;
+  unsigned Count = 0;
+  for (const Use &VU : V->uses())
+    if ((&VU == &U || !onlyFeedsAssumes(VU.getUser(), Budget, Known)) &&
+        ++Count == N)
+      return true;
+  return false;
+}
+
 static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
   // The instruction defining an assumption's condition itself is always
   // considered ephemeral to that assumption (even if it has other

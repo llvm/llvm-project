@@ -640,6 +640,20 @@ LLVM_ABI bool mayHaveNonDefUseDependency(const Instruction &I);
 /// cannot trap.
 LLVM_ABI bool isAssumeLikeIntrinsic(const Instruction *I);
 
+/// Return true if the value used by \p U has at least \p N uses, counting
+/// \p U itself, but not the other uses that only feed llvm.assume calls (unless
+/// \p U does so too, in which case all uses count). Such uses are those
+/// by an assume (its condition or its operand bundles), or by side-effect-free
+/// instructions other than PHIs whose users all only feed assumes. The walk is
+/// bounded; uses it cannot classify count as real.
+///
+/// This is meant for use limits that are a profitability heuristic, where \p U
+/// is the use a transform would rewrite, and a fact stated through an assume
+/// should not change whether that pays off. The uses that are not counted stay
+/// in place: a transform that relies on this must leave the value and its
+/// assume-only users intact, rather than mutate or erase them.
+LLVM_ABI bool hasNUsesOrMoreIgnoringAssumes(const Use &U, unsigned N);
+
 /// Return true if it is valid to use the assumptions provided by an
 /// assume intrinsic, I, at the point in the control-flow identified by the
 /// context instruction, CtxI. By default, ephemeral values of the assumption
