@@ -1403,7 +1403,6 @@ void arith::SubFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 }
 
 namespace {
-
 /// Narrow an extremum whose operands were extended from the result type:
 ///
 ///   trunc(extremum(ext(lhs), ext(rhs))) -> extremum(lhs, rhs)
@@ -1466,7 +1465,6 @@ struct NarrowExtremum final : OpRewritePattern<TruncOp> {
     return success();
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -2310,6 +2308,38 @@ static bool checkIntFloatCast(TypeRange inputs, TypeRange outputs) {
 }
 
 //===----------------------------------------------------------------------===//
+// NOTE: TO BE WRITTEN
+//===----------------------------------------------------------------------===//
+template <typename IntToFPOp, bool IsSigned>
+static Value foldIntToFPToInt(Value input, Type resultType) {
+  auto conversion = input.getDefiningOp<IntToFPOp>();
+  if (!conversion || conversion.getIn().getType() != resultType) {
+    return {};
+  }
+
+  auto integer = llvm::cast<IntegerType>(getElementTypeOrSelf(resultType));
+  auto floating = llvm::cast<FloatType>(getElementTypeOrSelf(input.getType()));
+  const auto &semantics = floating.getFloatSemantics();
+  unsigned width = integer.getWidth();
+
+  // Every source integer must be representable, including zero and,
+  // for signed conversions, negative values.
+  if (width == 0 || !APFloat::semanticsHasZero(semantics) ||
+      (IsSigned && !APFloat::semanticsHasSignedRepr(semantics))) {
+    return {};
+  }
+
+  unsigned precisionNeeded = width - (IsSigned ? 1U : 0U);
+  if (precisionNeeded > APFloat::semanticsPrecision(semantics) ||
+      static_cast<int64_t>(width - 1) >
+          APFloat::semanticsMaxExponent(semantics)) {
+    return {};
+  }
+
+  return conversion.getIn();
+}
+
+//===----------------------------------------------------------------------===//
 // UIToFPOp
 //===----------------------------------------------------------------------===//
 
@@ -2377,6 +2407,11 @@ bool arith::FPToUIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult arith::FPToUIOp::fold(FoldAdaptor adaptor) {
+  if (auto original =
+          foldIntToFPToInt<arith::UIToFPOp, false>(getIn(), getType())) {
+    return original;
+  }
+
   Type resType = getElementTypeOrSelf(getType());
   unsigned bitWidth = llvm::cast<IntegerType>(resType).getWidth();
   return constFoldCastOp<FloatAttr, IntegerAttr>(
@@ -2399,6 +2434,11 @@ bool arith::FPToSIOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
 }
 
 OpFoldResult arith::FPToSIOp::fold(FoldAdaptor adaptor) {
+  if (auto original =
+          foldIntToFPToInt<arith::SIToFPOp, true>(getIn(), getType())) {
+    return original;
+  }
+
   Type resType = getElementTypeOrSelf(getType());
   unsigned bitWidth = llvm::cast<IntegerType>(resType).getWidth();
   return constFoldCastOp<FloatAttr, IntegerAttr>(
