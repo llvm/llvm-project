@@ -1003,6 +1003,14 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      options::OPT_fno_sanitize_cfi_canonical_jump_tables, true);
   }
 
+  // The call graph section (-fexperimental-call-graph-section) encodes the
+  // type identifiers of indirect calls and their potential targets like CFI
+  // does, so integer normalization applies to it as well, with or without CFI.
+  if (Args.hasFlag(options::OPT_fexperimental_call_graph_section,
+                   options::OPT_fno_experimental_call_graph_section, false))
+    CfiICallNormalizeIntegers |=
+        Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
+
   if (AllAddedKinds & SanitizerKind::KCFI) {
     CfiICallGeneralizePointers =
         Args.hasArg(options::OPT_fsanitize_cfi_icall_generalize_pointers);
@@ -1537,6 +1545,12 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     addIncludeLinkerOption(TC, Args, CmdArgs, "__sanitizer_stats_register");
   }
 
+  // Integer normalization also applies to the type identifiers of the call
+  // graph section (-fexperimental-call-graph-section), which does not require
+  // any sanitizer to be enabled.
+  if (CfiICallNormalizeIntegers)
+    CmdArgs.push_back("-fsanitize-cfi-icall-experimental-normalize-integers");
+
   if (Sanitizers.empty())
     return;
   CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + toString(Sanitizers)));
@@ -1614,9 +1628,6 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
 
   if (CfiICallGeneralizePointers)
     CmdArgs.push_back("-fsanitize-cfi-icall-generalize-pointers");
-
-  if (CfiICallNormalizeIntegers)
-    CmdArgs.push_back("-fsanitize-cfi-icall-experimental-normalize-integers");
 
   if (KcfiArity) {
     if (!TC.getTriple().isOSLinux() || !TC.getTriple().isArch64Bit()) {
