@@ -2148,6 +2148,10 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
   // edges (say, PredBB1 and PredBB2), we know the value of %var in each copy of
   // PredBB.  Then we can thread edges PredBB1->BB and PredBB2->BB through BB.
 
+  // Duplicating PredBB adds a basic block; let the target opt out.
+  if (!TTI->shouldThreadThroughTwoBasicBlocks())
+    return false;
+
   // Require that BB end with a Branch for simplicity.
   CondBrInst *CondBr = dyn_cast<CondBrInst>(BB->getTerminator());
   if (!CondBr)

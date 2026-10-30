@@ -489,6 +489,8 @@ public:
 
   virtual unsigned getRegUsageForType(Type *Ty) const { return 1; }
 
+  virtual bool shouldThreadThroughTwoBasicBlocks() const { return true; }
+
   virtual bool shouldBuildLookupTables() const { return true; }
 
   virtual bool shouldBuildLookupTablesForConstant(Constant *C) const {

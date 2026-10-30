@@ -1090,6 +1090,11 @@ public:
   /// Returns the estimated number of registers required to represent \p Ty.
   LLVM_ABI unsigned getRegUsageForType(Type *Ty) const;
 
+  /// Return true if JumpThreading may thread through two successive basic
+  /// blocks, which duplicates the intermediate block. Targets with divergent
+  /// control flow may prefer the branch to the extra block.
+  LLVM_ABI bool shouldThreadThroughTwoBasicBlocks() const;
+
   /// Return true if switches should be turned into lookup tables for the
   /// target.
   LLVM_ABI bool shouldBuildLookupTables() const;
