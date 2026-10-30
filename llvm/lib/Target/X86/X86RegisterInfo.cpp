@@ -1037,10 +1037,13 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   if (MF->callsEHReturn())
     return 0;
 
-  if (MBBI == MBB.end())
+  // Debug instructions do not affect liveness and emit no code.
+  MachineBasicBlock::iterator NextI =
+      skipDebugInstructionsForward(MBBI, MBB.end());
+  if (NextI == MBB.end())
     return 0;
 
-  switch (MBBI->getOpcode()) {
+  switch (NextI->getOpcode()) {
   default:
     return 0;
   case TargetOpcode::PATCHABLE_RET:
@@ -1063,13 +1066,16 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::EH_RETURN64: {
     LiveRegUnits LRU(*this);
     LRU.addLiveOuts(MBB);
-    LRU.stepBackward(*MBBI);
+    LRU.stepBackward(*NextI);
 
     const TargetRegisterClass &RC =
         Is64Bit ? X86::GR64_NOSPRegClass : X86::GR32_NOSPRegClass;
     for (MCRegister Reg : RC) {
-      if (LRU.available(Reg) && !MRI.isReserved(Reg))
+      if (LRU.available(Reg) && !MRI.isReserved(Reg)) {
+        // Insert after the debug locations that the pop may clobber.
+        MBBI = NextI;
         return Reg;
+      }
     }
   }
   }
