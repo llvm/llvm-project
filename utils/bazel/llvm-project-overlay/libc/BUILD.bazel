@@ -12526,6 +12526,20 @@ libc_support_library(
 ############################### __support/net #################################
 
 libc_support_library(
+    name = "__support_net_hex",
+    hdrs = ["src/__support/net/hex.h"],
+    deps = [
+        ":__support_common",
+        ":__support_cpp_optional",
+        ":__support_cpp_string_view",
+        ":__support_cpp_type_traits",
+        ":__support_ctype_utils",
+        ":__support_macros_config",
+        ":types_size_t",
+    ],
+)
+
+libc_support_library(
     name = "__support_net_address",
     srcs = ["src/__support/net/address.cpp"],
     hdrs = ["src/__support/net/address.h"],
@@ -12538,6 +12552,7 @@ libc_support_library(
         ":__support_fixedvector",
         ":__support_libc_assert",
         ":__support_macros_config",
+        ":__support_net_hex",
         ":__support_str_to_integer",
         ":hdr_inet_address_macros",
         ":hdr_stdint_proxy",
