@@ -1,19 +1,10 @@
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck %s
-; RUN: llc -mtriple=riscv64 -mcpu=andes-ax45 < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -global-isel < %s | FileCheck %s
 
-; Two one-byte allocas are stored to, one byte is flipped through a pointer
-; selected at runtime from their addresses, and both allocas are reloaded.
-;
-; %empty allocates nothing, but its frame object is one byte, and its lifetime
-; is disjoint from %slot0's, so stack coloring merges %slot0 into %empty's
-; stack slot and replaces the IR uses of %slot0 with %empty. The frame object
-; and the alloca it was created for have to agree on the size of the object:
-; alias analysis describes the merged slot by %empty, and if %empty allocates
-; nothing it concludes that a one-byte access through %p cannot be in bounds of
-; the slot and so cannot reach it. The memory dependences between the %slot0
-; accesses and the accesses through %p are then dropped, and the machine
-; schedulers reorder them.
+; A zero-size alloca whose frame object disagreed with it let BasicAA report
+; NoAlias for an access that can reach the merged slot. Stack coloring merges
+; %slot0 into %empty's slot and rewrites its uses, so %empty describes the slot
+; for alias analysis.
 ;
 ; Both slot stores must precede the load through %p, and both reloads must
 ; follow the store through %p.

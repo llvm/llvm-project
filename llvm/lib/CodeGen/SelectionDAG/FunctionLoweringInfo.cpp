@@ -150,7 +150,8 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           // Don't create zero-sized stack objects.
           if (TySize == 0) {
             TySize = 1;
-            // The frame object links to original AllocaInst for alias analysis, so adjust that as well.
+            // The frame object links to original AllocaInst for alias analysis,
+            // so adjust that as well.
             auto *MutableAI = const_cast<AllocaInst *>(AI);
             MutableAI->setAllocatedType(Type::getInt8Ty(Fn->getContext()));
             MutableAI->setOperand(

@@ -1033,7 +1033,8 @@ int IRTranslatorImpl::getOrCreateFrameIndex(const AllocaInst &AI) {
   // Always allocate at least one byte.
   if (Size == 0) {
     Size = 1;
-    // The frame object links to original AllocaInst for alias analysis, so adjust that as well.
+    // The frame object links to original AllocaInst for alias analysis, so
+    // adjust that as well.
     auto &MutableAI = const_cast<AllocaInst &>(AI);
     MutableAI.setAllocatedType(Type::getInt8Ty(AI.getContext()));
     MutableAI.setOperand(
