@@ -8,7 +8,7 @@
 !
 ! This test is for non-x86_64, where exponent-letter 'q' is for
 ! 16-byte quadruple precision
-! UNSUPPORTED: x86-registered-target
+! UNSUPPORTED: target-x86, target-x86_64
 subroutine s(var)
   real :: realvar1 = 4.0E6_4
   real :: realvar2 = 4.0D6
