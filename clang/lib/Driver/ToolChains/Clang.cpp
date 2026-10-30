@@ -2602,7 +2602,8 @@ static void AddARMImplicitITArgs(const ArgList &Args, ArgStringList &CmdArgs,
 static void CollectArgsForIntegratedAssembler(Compilation &C,
                                               const ArgList &Args,
                                               ArgStringList &CmdArgs,
-                                              const Driver &D) {
+                                              const Driver &D,
+                                              bool IsUsingLTO) {
   // Default to -mno-relax-all.
   //
   // Note: RISC-V requires an indirect jump for offsets larger than 1MiB. This
@@ -2955,9 +2956,9 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
     CmdArgs.push_back(Feature);
   }
 
-  // forward -fembed-bitcode to assmebler
-  if (C.getDriver().embedBitcodeEnabled() ||
-      C.getDriver().embedBitcodeMarkerOnly())
+  // LTO handles bitcode emission, including embedding it in fat objects.
+  if (!IsUsingLTO && (C.getDriver().embedBitcodeEnabled() ||
+                      C.getDriver().embedBitcodeMarkerOnly()))
     Args.AddLastArg(CmdArgs, options::OPT_fembed_bitcode_EQ);
 
   if (const char *AsSecureLogFile = getenv("AS_SECURE_LOG_FILE")) {
@@ -5549,7 +5550,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   } else if (isa<AssembleJobAction>(JA)) {
     CmdArgs.push_back("-emit-obj");
 
-    CollectArgsForIntegratedAssembler(C, Args, CmdArgs, D);
+    CollectArgsForIntegratedAssembler(C, Args, CmdArgs, D, IsUsingLTO);
 
     // Also ignore explicit -force_cpusubtype_ALL option.
     (void)Args.hasArg(options::OPT_force__cpusubtype__ALL);
@@ -9556,7 +9557,8 @@ void ClangAs::ConstructJob(Compilation &C, const JobAction &JA,
   Args.ClaimAllArgs(options::OPT_W_Group);
 
   CollectArgsForIntegratedAssembler(C, Args, CmdArgs,
-                                    getToolChain().getDriver());
+                                    getToolChain().getDriver(),
+                                    /*IsUsingLTO=*/false);
 
   // Forward -Xclangas arguments to -cc1as
   for (auto Arg : Args.filtered(options::OPT_Xclangas)) {
