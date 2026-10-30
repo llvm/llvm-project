@@ -598,3 +598,30 @@ func.func @scf_for_reads_entry_block_bufs(%lb: index, %ub: index, %step: index) 
   memref.dealloc %b : memref<1024xf32>
   return
 }
+
+// -----
+
+// Preserve allocations with unsupported element types instead of asserting.
+// An independent allocation with a supported element type can still be planned.
+// CHECK-LABEL: func.func @unsupported_element_types(
+// CHECK-NEXT: %[[INDEX:.*]] = memref.alloc() : memref<4xindex>
+// CHECK-NEXT: %[[COMPLEX:.*]] = memref.alloc() : memref<4xcomplex<f32>>
+// CHECK-NEXT: %[[VECTOR:.*]] = memref.alloc() : memref<4xvector<2xf32>>
+// CHECK-NEXT: memref.dealloc %[[INDEX]] : memref<4xindex>
+// CHECK-NEXT: memref.dealloc %[[COMPLEX]] : memref<4xcomplex<f32>>
+// CHECK-NEXT: memref.dealloc %[[VECTOR]] : memref<4xvector<2xf32>>
+// CHECK-NEXT: %[[ARENA:.*]] = memref.alloc() alignment = 1 : memref<32xi8>
+// CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-NEXT: %{{.*}} = memref.view %[[ARENA]][%[[C0]]][] : memref<32xi8> to memref<8xi32>
+// CHECK-NEXT: return
+func.func @unsupported_element_types() {
+  %index = memref.alloc() : memref<4xindex>
+  %complex = memref.alloc() : memref<4xcomplex<f32>>
+  %vector = memref.alloc() : memref<4xvector<2xf32>>
+  memref.dealloc %index : memref<4xindex>
+  memref.dealloc %complex : memref<4xcomplex<f32>>
+  memref.dealloc %vector : memref<4xvector<2xf32>>
+  %supported = memref.alloc() : memref<8xi32>
+  memref.dealloc %supported : memref<8xi32>
+  return
+}

@@ -138,6 +138,7 @@ static int64_t buildAllocInfos(
 /// through `arith.select`, `scf.if`/`scf.for` results, `cf` branches, or view
 /// ops are handled uniformly. An allocation is eligible when:
 ///   - it has a static shape (dynamic shapes are silently skipped), and
+///   - its element type is an integer or float, and
 ///   - it lives directly in the function's entry block (allocs nested in a
 ///     region are skipped for now), and
 ///   - every dealloc that may free it is anchored in that same entry block --
@@ -150,12 +151,11 @@ static int64_t buildAllocInfos(
 /// free (per the reverse alias set) are themselves candidates in this block;
 /// otherwise erasing it during the rewrite could leak or double-free a buffer
 /// that is not managed by the arena.
-static LogicalResult
-collectCandidates(FunctionOpInterface funcOp,
-                  const BufferViewFlowAnalysis &analysis,
-                  llvm::Statistic &numSkipDynamic,
-                  llvm::Statistic &numSkipNested, llvm::Statistic &numEligible,
-                  SmallVector<AllocationCandidate> &candidates) {
+static LogicalResult collectCandidates(
+    FunctionOpInterface funcOp, const BufferViewFlowAnalysis &analysis,
+    llvm::Statistic &numSkipDynamic, llvm::Statistic &numSkipUnsupportedType,
+    llvm::Statistic &numSkipNested, llvm::Statistic &numEligible,
+    SmallVector<AllocationCandidate> &candidates) {
   // All candidates are planned relative to the function's entry block.
   if (funcOp.getFunctionBody().empty())
     return success();
@@ -173,6 +173,12 @@ collectCandidates(FunctionOpInterface funcOp,
     // a region (loop/conditional body) are skipped for now.
     if (allocOp->getBlock() != planBlock) {
       ++numSkipNested;
+      return WalkResult::advance();
+    }
+
+    // computeSizeInBytes only supports integer and floating-point elements.
+    if (!memrefType.getElementType().isIntOrFloat()) {
+      ++numSkipUnsupportedType;
       return WalkResult::advance();
     }
 
@@ -322,7 +328,8 @@ void StaticMemoryPlannerAnalysisPass::runOnOperation() {
   // and view ops so we can find deallocs and freed allocs uniformly.
   BufferViewFlowAnalysis analysis(funcOp);
   SmallVector<AllocationCandidate> candidates;
-  if (failed(collectCandidates(funcOp, analysis, numSkipDynamic, numSkipNested,
+  if (failed(collectCandidates(funcOp, analysis, numSkipDynamic,
+                               numSkipUnsupportedType, numSkipNested,
                                numEligible, candidates)))
     return signalPassFailure();
 

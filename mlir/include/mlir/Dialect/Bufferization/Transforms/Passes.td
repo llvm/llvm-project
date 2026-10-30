@@ -193,6 +193,7 @@ def StaticMemoryPlannerAnalysisPass
     For each `memref.alloc` the pass checks a conservative eligibility
     envelope:
     - Static memref shape.
+    - Integer or floating-point element type.
     - The allocation lives directly in the function's entry block
       (allocations nested in a region are skipped for now).
     - Every `memref.dealloc` that may free the buffer is anchored in the entry
@@ -261,6 +262,8 @@ def StaticMemoryPlannerAnalysisPass
                  "Number of alloc/dealloc pairs eligible for static planning">,
        Statistic<"numSkipDynamic", "num-skipped-dynamic",
                  "Number of allocations skipped: dynamic shape">,
+       Statistic<"numSkipUnsupportedType", "num-skipped-unsupported-type",
+                 "Number of allocations skipped: unsupported element type">,
        Statistic<
            "numSkipNested", "num-skipped-nested",
            "Number of allocations skipped: nested in loop or conditional">,
