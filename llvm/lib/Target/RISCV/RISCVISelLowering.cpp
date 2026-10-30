@@ -17601,12 +17601,43 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
            N->getValueType(0) == MVT::i64 &&
            "Unexpected custom funnel shift legalization");
 
-    // The generic expansion folds its selects for constant shifts.
-    if (isa<ConstantSDNode>(N->getOperand(2)))
-      return;
-
     auto [XLo, XHi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
     auto [YLo, YHi] = DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+
+    if (auto *C = dyn_cast<ConstantSDNode>(N->getOperand(2))) {
+      unsigned Amt = C->getZExtValue() % 64;
+      // Use default expansion for 0 and 32.
+      if (Amt == 0 || Amt == 32)
+        return;
+      // Normalize to a funnel shift right by Amt. One result word is a
+      // narrowing shift of a single input pair (XLo/XHi or YLo/YHi), which
+      // needs no copies to form the register pair. The other word straddles X
+      // and Y and uses a 32-bit funnel shift. SLX ties its first funnel
+      // operand and SRX ties its second, so the direction used for each branch
+      // was chosen empirically to minimize the copies in the generated code.
+      if (N->getOpcode() == ISD::FSHL)
+        Amt = 64 - Amt;
+
+      auto Nsrl = [&](SDValue Lo, SDValue Hi, unsigned Imm) {
+        return DAG.getNode(RISCVISD::NSRL, DL, MVT::i32, Lo, Hi,
+                           DAG.getConstant(Imm, DL, MVT::i32));
+      };
+
+      SDValue Lo, Hi;
+      if (Amt < 32) {
+        Lo = Nsrl(YLo, YHi, Amt);
+        Hi = DAG.getNode(ISD::FSHL, DL, MVT::i32, XLo, YHi,
+                         DAG.getConstant(32 - Amt, DL, MVT::i32));
+      } else {
+        assert(Amt > 32);
+        Lo = DAG.getNode(ISD::FSHR, DL, MVT::i32, XLo, YHi,
+                         DAG.getConstant(Amt - 32, DL, MVT::i32));
+        Hi = Nsrl(XLo, XHi, Amt - 32);
+      }
+      Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi));
+      return;
+    }
+
     SDValue Shamt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, N->getOperand(2));
     unsigned Opc = N->getOpcode();
     auto Funnel = [&](SDValue Lo, SDValue Hi) {
