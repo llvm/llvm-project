@@ -17995,6 +17995,35 @@ libc_function(
 )
 
 libc_function(
+    name = "sigaction",
+    srcs = ["src/signal/linux/sigaction.cpp"],
+    hdrs = ["src/signal/sigaction.h"],
+    # Full-build only, since it depends on __signal_utils.
+    full_build_only = True,
+    deps = [
+        ":__signal_utils",
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":types_struct_sigaction",
+    ],
+)
+
+libc_function(
+    name = "signal",
+    srcs = ["src/signal/linux/signal.cpp"],
+    hdrs = ["src/signal/signal.h"],
+    # Full-build only, since it depends on sigaction.
+    full_build_only = True,
+    deps = [
+        ":__support_common",
+        ":__support_macros_config",
+        ":hdr_signal_macros",
+        ":sigaction",
+    ],
+)
+
+libc_function(
     name = "waitpid",
     srcs = ["src/sys/wait/linux/waitpid.cpp"],
     hdrs = ["src/sys/wait/waitpid.h"],
