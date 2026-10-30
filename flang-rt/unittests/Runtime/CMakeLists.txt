@@ -11,6 +11,7 @@ add_flangrt_unittest(RuntimeTests
   Allocatable.cpp
   ArrayConstructor.cpp
   Assign.cpp
+  MemoryMap.cpp
   BufferTest.cpp
   CharacterTest.cpp
   ChildIO.cpp
