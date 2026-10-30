@@ -8096,7 +8096,7 @@ bool AArch64TTIImpl::isProfitableToSinkOperands(Instruction *I,
     if (!SI->isSimple() || !II)
       break;
 
-    if (LI &&
+    if (!LI ||
         LI->getLoopFor(SI->getParent()) != LI->getLoopFor(II->getParent()))
       break;
 
