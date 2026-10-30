@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -verify=expected,escape %s
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
 
 #include "Inputs/lifetime-analysis.h"
@@ -402,3 +402,27 @@ struct HasField {
   }
 };
 } // namespace LambdaCaptureReset
+
+// Methods instantiated eagerly are analyzed while their class is being defined.
+namespace GH236616 {
+template <class T> struct NoFields {
+  __attribute__((used)) constexpr int get() const { return 0; }
+};
+NoFields<int> no_fields;
+
+// Taking the address of a method with a deduced return type instantiates it.
+template <class T> struct DeducedReturn {
+  constexpr auto get() const { return 0; }
+  using R = decltype(&DeducedReturn::get);
+};
+DeducedReturn<int> deduced_return;
+
+template <class T> struct WithField {
+  const int *p;                                            // escape-note {{if field 'p' is owned by the class}}
+  __attribute__((used)) constexpr const int *get() const { // escape-warning {{depends on the object referenced by field 'p'}}
+    return p;                                              // escape-note {{returned here}}
+  }
+};
+WithField<int> with_field; // escape-note {{in instantiation of member function}} \
+                           // escape-note {{in instantiation of template class}}
+} // namespace GH236616

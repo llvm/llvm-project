@@ -17,8 +17,8 @@ body: |
     %1 = COPY %0
 
   bb.3:
-    NOOP implicit killed %0
-    NOOP implicit killed %1
+    NOOP implicit %0
+    NOOP implicit %1
 ...
 
 # We should have a setting of both sub_32bit and sub_16bit. The first one

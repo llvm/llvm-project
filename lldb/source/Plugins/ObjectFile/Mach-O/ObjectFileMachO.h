@@ -88,7 +88,7 @@ public:
 
   bool IsDynamicLoader() const;
 
-  bool IsSharedCacheBinary() const;
+  bool IsSharedCacheBinary() const override;
 
   bool IsKext() const;
 
