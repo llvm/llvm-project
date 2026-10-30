@@ -729,7 +729,7 @@ DebuggerKind Module::getDebuggerTuning() const {
       return *Tuning;
   }
 
-  return DebuggerKind::Default;
+  return getTargetTriple().getDefaultDebuggerTuning();
 }
 
 void Module::setDebuggerTuning(DebuggerKind Tuning) {
