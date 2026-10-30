@@ -861,6 +861,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Bug Fixes to Attribute Support
 
+- Fixed a crash when using a zero-argument call to an undeclared
+  `__CFStringMakeConstantString` as a format string. (#GH225034)
+
 - Fixed an assertion failure when parsing malformed GNU `__attribute__`
   syntax followed by a parenthesized expression list in C code. (#GH225045)
 
@@ -1135,6 +1138,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   init-captures in default member initializers used during aggregate
   initialization. (#GH196469)
 
+- Fixed incorrect evaluation of compound requirements when a return-type
+  requirement contains a lambda with constrained template parameters.
+
+- Fixed a bug where Clang could ignore lambda constraints in return-type
+  requirements.
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1146,6 +1155,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added missed information to the AST node representing the member function
   when calling a explicit object member function. (#GH218829)
+
+- Fixed a crash when encountering C2y labeled `break`/`continue` statements
+  in a statement expression within a `switch` condition. (#GH184060)
 
 #### Miscellaneous Bug Fixes
 

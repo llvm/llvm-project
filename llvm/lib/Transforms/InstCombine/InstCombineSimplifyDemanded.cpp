@@ -3252,33 +3252,44 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                            KnownSrc);
     }
     case Intrinsic::sqrt: {
-      FPClassTest DemandedSrcMask =
-          DemandedMask & (fcNegZero | fcPositive | fcNan);
+      Type *EltTy = VTy->getScalarType();
+      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
-      if (DemandedMask & fcNan)
-        DemandedSrcMask |= fcNan | (fcNegative & ~fcNegZero);
-
-      // sqrt(max_subnormal) is a normal value
+      // Be explicit about the DemandedSrcMask so we do not miss anything.
+      FPClassTest DemandedSrcMask = fcNone;
+      if (DemandedMask & fcSNan)
+        DemandedSrcMask |= fcSNan;
+      if (DemandedMask & fcQNan)
+        DemandedSrcMask |=
+            fcQNan | fcSNan | fcNegInf | fcNegNormal | fcNegSubnormal;
+      if (DemandedMask & fcNegZero) {
+        DemandedSrcMask |= fcNegZero;
+        if (Mode.Input == DenormalMode::PreserveSign ||
+            Mode.Input == DenormalMode::Dynamic)
+          DemandedSrcMask |= fcNegSubnormal;
+      }
+      if (DemandedMask & fcPosZero) {
+        DemandedSrcMask |= fcPosZero;
+        if (Mode.inputsMayBeZero())
+          DemandedSrcMask |= fcPosSubnormal;
+        if (Mode.inputsMayBePositiveZero())
+          DemandedSrcMask |= fcNegSubnormal;
+      }
       if (DemandedMask & fcPosNormal)
-        DemandedSrcMask |= fcPosSubnormal;
+        DemandedSrcMask |= fcPosSubnormal | fcPosNormal;
+      if (DemandedMask & fcPosInf)
+        DemandedSrcMask |= fcPosInf;
 
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(I, 0, DemandedSrcMask, KnownSrc, SQ,
                                   Depth + 1))
         return I;
 
-      // Infer the source cannot be negative if the result cannot be nan.
-      if ((DemandedMask & fcNan) == fcNone)
-        KnownSrc.knownNot((fcNegative & ~fcNegZero) | fcNan);
-
-      // Infer the source cannot be +inf if the result is not +nf
-      if ((DemandedMask & fcPosInf) == fcNone)
-        KnownSrc.knownNot(fcPosInf);
-
-      Type *EltTy = VTy->getScalarType();
-      DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      KnownSrc.knownNot(~DemandedSrcMask);
 
       // sqrt(-x) = nan, but be careful of negative subnormals flushed to 0.
+      // TODO: This becomes redundant if KnownFPClass::sqrt rules out
+      // fcPosNormal.
       if (KnownSrc.isKnownNever(fcPositive) &&
           KnownSrc.isKnownNeverLogicalZero(Mode))
         return ConstantFP::getQNaN(VTy);
@@ -3297,6 +3308,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         Copysign->takeName(CI);
         return Copysign;
       }
+
+      // TODO: fold sqrt(x) -> x when x is nan | pinf | zero
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
                                            {KnownSrc});

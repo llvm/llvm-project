@@ -1,5 +1,6 @@
 // Tests that the SYCL toolchain links libclang_rt.builtins.bc for spirv64
-// via -mlink-builtin-bitcode, that --no-offloadlib suppresses it, and that
+// via -mlink-builtin-bitcode when it is present, that a missing library is
+// skipped without a diagnostic, that --no-offloadlib suppresses it, and that
 // -nolibsycl does not suppress it (builtins are target infrastructure, not
 // SYCL runtime).
 
@@ -37,21 +38,21 @@
 // CHECK-FLAT-LAYOUT-BC: "-triple" "spirv64-unknown-unknown"
 // CHECK-FLAT-LAYOUT-BC: "-mlink-builtin-bitcode" "{{.*}}lib{{[/\\]+}}linux{{[/\\]+}}libclang_rt.builtins-spirv64.bc"
 
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
+// A missing library is skipped without a diagnostic.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   -resource-dir=%t/nonexistent %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-MISSING
-// CHECK-MISSING: error: no compiler-rt builtins bitcode library '{{.*}}libclang_rt.builtins{{.*}}.bc' found in the clang resource directory
+// CHECK-MISSING-NOT: error:
+// CHECK-MISSING: "-cc1" "-triple" "spirv64-unknown-unknown"
+// CHECK-MISSING-NOT: "-mlink-builtin-bitcode"
 
-// Compilations that stop at or before the compile phase never link bitcode, so
-// a missing builtins library is not an error for them.
+// Compilations that stop at or before the compile phase produce no device LLVM
+// IR module, so the library is not linked even when it is present.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -E \
-// RUN:   -resource-dir=%t/nonexistent %s 2>&1 \
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl -fsyntax-only \
-// RUN:   -resource-dir=%t/nonexistent %s 2>&1 \
+// RUN:   -resource-dir=%S/Inputs/spirv64-sycl %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl --precompile \
-// RUN:   -resource-dir=%t/nonexistent -x c++-header %s 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=CHECK-NO-CODEGEN
-// CHECK-NO-CODEGEN-NOT: error:
+// CHECK-NO-CODEGEN: "-triple" "spirv64-unknown-unknown"
 // CHECK-NO-CODEGEN-NOT: "-mlink-builtin-bitcode"

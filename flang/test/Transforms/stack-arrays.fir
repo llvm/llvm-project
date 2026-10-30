@@ -15,6 +15,21 @@ func.func @simple() {
 // CHECK: fir.alloca !fir.array<42xi32>
 // CHECK: return
 
+// A requested alignment survives the move to the stack
+func.func @aligned() {
+  %0 = fir.allocmem !fir.array<42xi32> {alignment = 64 : i64}
+  %c0_a = arith.constant 0 : index
+  %c0_i32_a = arith.constant 0 : i32
+  %ref_a = fir.convert %0 : (!fir.heap<!fir.array<42xi32>>) -> !fir.ref<!fir.array<42xi32>>
+  %elt_a = fir.coordinate_of %ref_a, %c0_a : (!fir.ref<!fir.array<42xi32>>, index) -> !fir.ref<i32>
+  fir.store %c0_i32_a to %elt_a : !fir.ref<i32>
+  fir.freemem %0 : !fir.heap<!fir.array<42xi32>>
+  return
+}
+// CHECK-LABEL: func.func @aligned()
+// CHECK: fir.alloca !fir.array<42xi32> <{alignment = 64 : i64}>
+// CHECK: return
+
 // Check fir.must_be_heap allocations are not moved
 func.func @must_be_heap() {
   %0 = fir.allocmem !fir.array<42xi32> {fir.must_be_heap = true}

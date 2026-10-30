@@ -3979,6 +3979,10 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
 
+  case AArch64::SEH_EndC:
+    TS->emitARM64WinCFIEndC();
+    return;
+
   case AArch64::SEH_StackAlloc:
     TS->emitARM64WinCFIAllocStack(MI->getOperand(0).getImm());
     return;

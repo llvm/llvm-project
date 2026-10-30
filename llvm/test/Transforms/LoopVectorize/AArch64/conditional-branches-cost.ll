@@ -1187,8 +1187,8 @@ define void @pred_udiv_select_cost(ptr %A, ptr %B, ptr %C, i64 %n, i8 %y) #1 {
 ; DEFAULT-LABEL: define void @pred_udiv_select_cost(
 ; DEFAULT-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]], i8 [[Y:%.*]]) #[[ATTR1]] {
 ; DEFAULT-NEXT:  [[ENTRY:.*:]]
-; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i64
+; DEFAULT-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
