@@ -223,11 +223,19 @@ static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
     return reportMismatch(getArchitectureName(
         getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype)));
 
-  // Dynamic links, like ld64's, only take objects with userland ABI version 0,
-  // even though macOS executables are marked version 1.
-  if (isArm64e && hdr->filetype == MH_OBJECT && !config->staticLink &&
-      hdr->cpusubtype != CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
-    return reportMismatch(getArm64eVariantName(hdr->cpusubtype));
+  // Like ld64, dynamic links only take objects with userland ABI version 0,
+  // even though macOS executables are marked version 1. Static links also take
+  // unversioned and kernel objects.
+  if (isArm64e && hdr->filetype == MH_OBJECT) {
+    uint32_t sub = hdr->cpusubtype;
+    bool takesObject =
+        sub == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false) ||
+        (config->staticLink &&
+         (sub == CPU_SUBTYPE_ARM64E ||
+          sub == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true)));
+    if (!takesObject)
+      return reportMismatch(getArm64eVariantName(sub));
+  }
 
   return checkCompatibility(file);
 }
