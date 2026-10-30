@@ -8108,6 +8108,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       case SC_Auto:
       case SC_Register:
       case SC_Extern:
+      case SC_PrivateExtern:
         // [dcl.stc] p2: The auto or register specifiers shall be applied only
         // to names of variables declared in a block or to function parameters.
         // [dcl.stc] p6: The extern specifier cannot be used in the declaration
@@ -8118,8 +8119,6 @@ NamedDecl *Sema::ActOnVariableDeclarator(
             << FixItHint::CreateRemoval(
                    D.getDeclSpec().getStorageClassSpecLoc());
         break;
-      case SC_PrivateExtern:
-        llvm_unreachable("C storage class in c++!");
       }
     }
 

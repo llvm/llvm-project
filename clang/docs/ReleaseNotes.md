@@ -766,6 +766,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Bug Fixes in This Version
 
+- Fixed a crash when using `__private_extern__` on an out-of-line static data
+  member definition after undefining the predefined macro. (#GH42973)
 - Fixed an assertion failure when a token followed an `#embed` parameter whose
   expression evaluated `defined`, such as `#embed <f> limit(defined(x)),`.
   (#GH212075)
