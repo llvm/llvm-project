@@ -106,3 +106,29 @@ TEST(LlvmLibcSetbufTest, InvalidBufferMode) {
 
   ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
 }
+
+TEST_F(LlvmLibcSetvbufTest, ReplaceTheBufferTheStreamAllocated) {
+  // The stream allocates its own buffer. It is resized, which allocates a new
+  // one, and then replaced by one of ours, which releases the allocated one.
+  constexpr char FILENAME[] = "testdata/setvbuf_replace.test";
+  constexpr char CONTENT[] = "abcdef";
+
+  ::FILE *f = LIBC_NAMESPACE::fopen(FILENAME, "w");
+  ASSERT_FALSE(f == nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(f, nullptr, _IOFBF, 4096), 0);
+  char buffer[BUFSIZ];
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(f, buffer, _IOFBF, BUFSIZ), 0);
+  ASSERT_EQ(sizeof(CONTENT),
+            LIBC_NAMESPACE::fwrite(CONTENT, 1, sizeof(CONTENT), f));
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
+
+  // A stream that keeps the buffer it allocated releases it when it is closed.
+  f = LIBC_NAMESPACE::fopen(FILENAME, "r");
+  ASSERT_FALSE(f == nullptr);
+  ASSERT_EQ(LIBC_NAMESPACE::setvbuf(f, nullptr, _IOFBF, 4096), 0);
+  char data[sizeof(CONTENT)];
+  ASSERT_EQ(sizeof(CONTENT),
+            LIBC_NAMESPACE::fread(data, 1, sizeof(CONTENT), f));
+  ASSERT_STREQ(CONTENT, data);
+  ASSERT_EQ(0, LIBC_NAMESPACE::fclose(f));
+}

@@ -20,7 +20,6 @@ add_object_library(
   DEPENDS
     .file_io_result
     libc.hdr.errno_macros
-    libc.hdr.func.realloc
     libc.hdr.stdint_proxy
     libc.hdr.stdio_macros
     libc.hdr.types.char32_t

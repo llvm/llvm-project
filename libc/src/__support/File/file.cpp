@@ -16,7 +16,6 @@
 #include "file_io_result.h"
 #include "file_mode.h"
 #include "hdr/errno_macros.h"
-#include "hdr/func/realloc.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/stdio_macros.h"
 #include "hdr/types/char32_t.h"
@@ -522,7 +521,7 @@ int File::close() {
   // implementation. The platform close should not need to access the buffer
   // and we need to clean it up before the entire structure is removed.
   if (own_buf)
-    delete buf;
+    delete[] buf;
 
   // Platform close is expected to cleanup the file data structure which
   // includes the file mutex. Hence, we call platform_close after releasing
@@ -549,24 +548,19 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
   if (buffer == nullptr && size != 0 && buffer_mode != _IONBF) {
     // We exclude the case of buffer_mode == _IONBF in this branch
     // because we don't need to allocate buffer in such a case.
-    if (own_buf) {
-      // This is one of the places where a C allocation function is used
-      // as C++ does not have an equivalent of realloc.
-      buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
-      if (buf == nullptr)
-        return ENOMEM;
-    } else {
-      AllocChecker ac;
-      buf = new (ac) uint8_t[size];
-      if (!ac)
-        return ENOMEM;
-      own_buf = true;
-    }
+    AllocChecker ac;
+    uint8_t *new_buf = new (ac) uint8_t[size];
+    if (!ac)
+      return ENOMEM;
+    // The buffer is allocated with new[], so it is released with delete[].
+    if (own_buf)
+      delete[] buf;
+    buf = new_buf;
+    own_buf = true;
     bufsize = size;
-    // TODO: Handle allocation failures.
   } else {
     if (own_buf)
-      delete buf;
+      delete[] buf;
     if (buffer_mode != _IONBF) {
       buf = static_cast<uint8_t *>(buffer);
       bufsize = size;
