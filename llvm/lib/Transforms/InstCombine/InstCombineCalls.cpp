@@ -34,6 +34,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/ConstantFPRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
@@ -2029,6 +2030,83 @@ static Value *foldCmpIntrinsicOfExtended(IntrinsicInst *II,
   return Builder.CreateIntrinsic(II->getType(), NewIID, {X, Y});
 }
 
+/// The range assumes \p I is rounded once as written. Clear the flags that
+/// allow a later combine to change that: reassoc, arcp except on fdiv (its
+/// range covers x * (1 / C)), and contract on fadd/fsub (fusion with an fmul).
+static void dropRewriteFlags(Instruction &I, InstCombinerImpl &IC) {
+  auto *FPOp = dyn_cast<FPMathOperator>(&I);
+  if (!FPOp)
+    return;
+  FastMathFlags FMF = FPOp->getFastMathFlags();
+  FMF.setAllowReassoc(false);
+  if (I.getOpcode() != Instruction::FDiv)
+    FMF.setAllowReciprocal(false);
+  if (I.getOpcode() == Instruction::FAdd || I.getOpcode() == Instruction::FSub)
+    FMF.setAllowContract(false);
+  if (FMF != FPOp->getFastMathFlags()) {
+    I.copyFastMathFlags(FMF);
+    IC.addToWorklist(&I);
+  }
+}
+
+/// minnum/maxnum/minimumnum/maximumnum(X, K) --> X if the range of X makes the
+/// call a no-op.
+static Value *foldMinMaxByFPRange(IntrinsicInst &II, InstCombinerImpl &IC) {
+  Type *Ty = II.getType();
+  if (Ty->isVectorTy())
+    return nullptr;
+  Intrinsic::ID IID = II.getIntrinsicID();
+  bool IsMax = IID == Intrinsic::maxnum || IID == Intrinsic::maximumnum;
+
+  Value *X = II.getArgOperand(0);
+  const APFloat *K;
+  if (!match(II.getArgOperand(1), m_APFloat(K))) {
+    X = II.getArgOperand(1);
+    if (!match(II.getArgOperand(0), m_APFloat(K)))
+      return nullptr;
+  }
+
+  const fltSemantics &Sem = Ty->getFltSemantics();
+  DenormalMode Mode = II.getFunction()->getDenormalMode(Sem);
+  if (K->isNaN() || (K->isDenormal() && Mode.Input != DenormalMode::IEEE))
+    return nullptr;
+
+  SmallVector<const Instruction *, 8> Used;
+  ConstantFPRange R =
+      computeConstantFPRange(X, IC.getSimplifyQuery().getWithInstruction(&II),
+                             /*Depth=*/0, &Used);
+  if (R.containsNaN() || R.isEmptySet())
+    return nullptr;
+
+  ConstantFPRange InputR = R;
+  InputR.flushDenormals(Mode.Input);
+
+  // With nsz, a +0/-0 tie may return either zero.
+  APFloat Bound = *K;
+  if (II.hasNoSignedZeros() && Bound.isZero())
+    Bound = APFloat::getZero(Sem, /*Negative=*/IsMax);
+  APFloat Inf = APFloat::getInf(Sem, /*Negative=*/!IsMax);
+  ConstantFPRange Allowed =
+      IsMax ? ConstantFPRange::getNonNaN(std::move(Bound), std::move(Inf))
+            : ConstantFPRange::getNonNaN(std::move(Inf), std::move(Bound));
+  if (!Allowed.contains(InputR))
+    return nullptr;
+
+  for (const Instruction *UI : Used)
+    dropRewriteFlags(*const_cast<Instruction *>(UI), IC);
+
+  // With input flushing the call returns a subnormal X as zero. Preserve that
+  // with a canonicalize unless every user already flushes.
+  auto IsCanonicalize = [](const Value *V) {
+    return match(V, m_Intrinsic<Intrinsic::canonicalize>());
+  };
+  if (Mode.Input != DenormalMode::IEEE && (R.classify() & fcSubnormal) &&
+      !IsCanonicalize(X) && !all_of(II.users(), IsCanonicalize))
+    return IC.Builder.CreateUnaryIntrinsic(Intrinsic::canonicalize, X, {},
+                                           II.getName());
+  return X;
+}
+
 /// CallInst simplification. This mostly only handles folding of intrinsic
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
@@ -3184,6 +3262,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         R = Builder.CreateFNegFMF(R, II);
       return replaceInstUsesWith(*II, R);
     }
+
+    if (IID != Intrinsic::minimum && IID != Intrinsic::maximum)
+      if (Value *V = foldMinMaxByFPRange(*II, *this))
+        return replaceInstUsesWith(*II, V);
 
     break;
   }
