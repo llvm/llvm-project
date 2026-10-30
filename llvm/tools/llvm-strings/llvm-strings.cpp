@@ -176,7 +176,7 @@ static size_t crtomb(char *S, char_t Ch, std::mbstate_t *MBState) {
 
   char Cvt[MB_LEN_MAX];
   std::mbstate_t CvtMBState{};
-  char *PIn = reinterpret_cast<char *>(Ch);
+  char *PIn = reinterpret_cast<char *>(&Ch);
   size_t NIn = sizeof(char_t);
   char *POut = Cvt;
   size_t NOut = MB_LEN_MAX;
