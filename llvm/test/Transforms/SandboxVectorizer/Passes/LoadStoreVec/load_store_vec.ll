@@ -170,7 +170,8 @@ define void @load_store_vec_mixed_int_float_vectors(ptr %ptr) {
   ret void
 }
 
-; Don't cross BBs (for now).
+; Loads in another BB are not vectorized (for now), so the loaded values are
+; packed instead.
 define ptr @load_store_vec_dont_cross_bbs(ptr %ptr) {
 ; CHECK-LABEL: define ptr @load_store_vec_dont_cross_bbs(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
@@ -181,8 +182,9 @@ define ptr @load_store_vec_dont_cross_bbs(ptr %ptr) {
 ; CHECK-NEXT:    [[LD1:%.*]] = load i8, ptr [[PTR1]], align 1
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    store i8 [[LD0]], ptr [[PTR0]], align 1, !sandboxvec [[META9:![0-9]+]]
-; CHECK-NEXT:    store i8 [[LD1]], ptr [[PTR1]], align 1, !sandboxvec [[META9]]
+; CHECK-NEXT:    [[VPACK:%.*]] = insertelement <2 x i8> poison, i8 [[LD0]], i32 0, !sandboxvec [[META9:![0-9]+]]
+; CHECK-NEXT:    [[VPACK1:%.*]] = insertelement <2 x i8> [[VPACK]], i8 [[LD1]], i32 1, !sandboxvec [[META9]]
+; CHECK-NEXT:    store <2 x i8> [[VPACK1]], ptr [[PTR0]], align 1, !sandboxvec [[META9]]
 ; CHECK-NEXT:    ret ptr [[PTR1]]
 ;
 entry:

@@ -118,9 +118,17 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// as a ConstantExpr or a global's address.
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
-  /// Vectorizes \p Stores and their operands if constants or consecutive
-  /// loads. Loads with uses other than \p Stores are unpacked from the vector
-  /// load. \returns true on success.
+  /// Packs \p Operands into a vector of type \p VecTy with insertelements
+  /// placed before \p WhereIt. Each operand is first reinterpreted as the
+  /// lanes of \p VecTy it occupies, so operands may have mixed types.
+  /// \returns the packed vector.
+  Value *createPack(BndlRef<Value *> Operands, FixedVectorType *VecTy,
+                    BasicBlock::iterator WhereIt);
+
+  /// Vectorizes \p Stores. Operands that are consecutive loads become a
+  /// single vector load (unpacked for any users other than \p Stores),
+  /// constants a constant vector, and any other operands are packed with
+  /// createPack(). \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load and unpacks each original load
