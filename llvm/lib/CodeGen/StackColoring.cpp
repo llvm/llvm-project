@@ -946,6 +946,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
     // somehow, is to directly update the IR to reflect the change being made
     // here.
     Instruction *Inst = const_cast<AllocaInst *>(To);
+    // Inherit maximum alignment.
+    if (From->getAlign() > To->getAlign())
+      cast<AllocaInst>(Inst)->setAlignment(From->getAlign());
+    // Fix-up types.
     if (From->getType() != To->getType()) {
       BitCastInst *Cast = new BitCastInst(Inst, From->getType());
       Cast->insertAfter(Inst->getIterator());
