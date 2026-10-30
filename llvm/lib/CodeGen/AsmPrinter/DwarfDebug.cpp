@@ -380,6 +380,32 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   if (!DwarfVersion)
     DwarfVersion = dwarf::DWARF_VERSION;
 
+  UseRangesSection = !NoDwarfRangesSection;
+
+  if (DwarfSectionsAsReferences != Default)
+    UseSectionsAsReferences = (DwarfSectionsAsReferences == Enable);
+
+  // Don't generate type units for unsupported object file formats.
+  GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
+                       A->TM.getTargetTriple().isOSBinFormatWasm()) &&
+                      GenerateDwarfTypeUnits;
+
+  // Emit call-site-param debug info for GDB and LLDB, if the target supports
+  // the debug entry values feature. It can also be enabled explicitly.
+  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
+
+  if (DwarfOpConvert == Default)
+    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) ||
+                        (tuneForLLDB() && !TT.isOSBinFormatMachO()));
+  else
+    EnableOpConvert = (DwarfOpConvert == Enable);
+
+  applyDwarfVersion(DwarfVersion);
+}
+
+void DwarfDebug::applyDwarfVersion(unsigned DwarfVersion) {
+  const Triple &TT = Asm->TM.getTargetTriple();
+
   bool Dwarf64 = DwarfVersion >= 3 && // DWARF64 was introduced in DWARFv3.
                  TT.isArch64Bit();    // DWARF64 requires 64-bit relocations.
 
@@ -396,18 +422,8 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   if (!Dwarf64 && TT.isArch64Bit() && TT.isOSBinFormatXCOFF())
     report_fatal_error("XCOFF requires DWARF64 for 64-bit mode!");
 
-  UseRangesSection = !NoDwarfRangesSection;
-
-  if (DwarfSectionsAsReferences != Default)
-    UseSectionsAsReferences = DwarfSectionsAsReferences == Enable;
-
-  // Don't generate type units for unsupported object file formats.
-  GenerateTypeUnits = (A->TM.getTargetTriple().isOSBinFormatELF() ||
-                       A->TM.getTargetTriple().isOSBinFormatWasm()) &&
-                      GenerateDwarfTypeUnits;
-
-  TheAccelTableKind = computeAccelTableKind(
-      DwarfVersion, GenerateTypeUnits, DebuggerTuning, A->TM.getTargetTriple());
+  TheAccelTableKind = computeAccelTableKind(DwarfVersion, GenerateTypeUnits,
+                                            DebuggerTuning, TT);
 
   // Work around a GDB bug. GDB doesn't support the standard opcode;
   // SCE doesn't support GNU's; LLDB prefers the standard opcode, which
@@ -424,23 +440,15 @@ DwarfDebug::DwarfDebug(AsmPrinter *A)
   // a monolithic string offsets table without any header.
   UseSegmentedStringOffsetsTable = DwarfVersion >= 5;
 
-  // Emit call-site-param debug info for GDB and LLDB, if the target supports
-  // the debug entry values feature. It can also be enabled explicitly.
-  EmitDebugEntryValues = Asm->TM.shouldEmitDebugEntryValues();
-
   // It is unclear if the GCC .debug_macro extension is well-specified
   // for split DWARF. For now, do not allow LLVM to emit it.
   UseDebugMacroSection =
       DwarfVersion >= 5 || (UseGNUDebugMacro && !useSplitDwarf());
-  if (DwarfOpConvert == Default)
-    EnableOpConvert = !((tuneForGDB() && useSplitDwarf()) || (tuneForLLDB() && !TT.isOSBinFormatMachO()));
-  else
-    EnableOpConvert = (DwarfOpConvert == Enable);
 
   // Split DWARF would benefit object size significantly by trading reductions
   // in address pool usage for slightly increased range list encodings.
-  if (DwarfVersion >= 5)
-    MinimizeAddr = MinimizeAddrInV5Option;
+  MinimizeAddr =
+      DwarfVersion >= 5 ? MinimizeAddrInV5Option : MinimizeAddrInV5::Disabled;
 
   Asm->OutStreamer->getContext().setDwarfVersion(DwarfVersion);
   Asm->OutStreamer->getContext().setDwarfFormat(Dwarf64 ? dwarf::DWARF64
