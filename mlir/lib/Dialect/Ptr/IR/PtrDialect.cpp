@@ -354,6 +354,10 @@ OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   return nullptr;
 }
 
+bool PtrAddOp::mayHaveNonZeroOffset() {
+  return !matchPattern(getOffset(), m_Zero());
+}
+
 LogicalResult PtrAddOp::inferReturnTypes(
     MLIRContext *context, std::optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, PropertyRef properties, RegionRange regions,

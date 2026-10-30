@@ -33,6 +33,7 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ValueBoundsOpInterface.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.td"
 include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.td"
 
@@ -3513,6 +3514,28 @@ def TestDefaultAttrPrintOp : TEST_Op<"default_value_print"> {
   let arguments = (ins DefaultValuedAttr<I32Attr, "0">:$value_with_default,
                    I32:$operand);
   let assemblyFormat = "prop-dict attr-dict $operand";
+}
+
+//===----------------------------------------------------------------------===//
+// Test ViewLikeOpInterface
+//===----------------------------------------------------------------------===//
+
+def TestOffsetViewOp : TEST_Op<"offset_view", [Pure, ViewLikeOpInterface]> {
+  let summary = "view that may start at an offset from its source";
+  let description = [{
+    A view of `source` that may start at an offset from it, like a pointer to a
+    struct member. With `zero_offset`, the view is known to start at `source`.
+  }];
+  let arguments = (ins AnyMemRef:$source, UnitAttr:$zero_offset);
+  let results = (outs AnyMemRef:$result);
+  let assemblyFormat = [{
+    $source (`zero_offset` $zero_offset^)? attr-dict `:` type($source) `->`
+    type($result)
+  }];
+  let extraClassDeclaration = [{
+    ::mlir::Value getViewSource() { return getSource(); }
+    bool mayHaveNonZeroOffset() { return !getZeroOffset(); }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

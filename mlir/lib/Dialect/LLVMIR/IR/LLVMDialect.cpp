@@ -4106,6 +4106,8 @@ OpFoldResult LLVM::AddrSpaceCastOp::fold(FoldAdaptor adaptor) {
 
 Value LLVM::AddrSpaceCastOp::getViewSource() { return getArg(); }
 
+bool LLVM::AddrSpaceCastOp::mayHaveNonZeroOffset() { return false; }
+
 //===----------------------------------------------------------------------===//
 // Folder for LLVM::GEPOp
 //===----------------------------------------------------------------------===//
@@ -4161,6 +4163,14 @@ OpFoldResult LLVM::GEPOp::fold(FoldAdaptor adaptor) {
 }
 
 Value LLVM::GEPOp::getViewSource() { return getBase(); }
+
+bool LLVM::GEPOp::mayHaveNonZeroOffset() {
+  return llvm::any_of(getIndices(), [](auto index) {
+    if (auto value = llvm::dyn_cast<Value>(index))
+      return !matchPattern(value, m_Zero());
+    return !llvm::cast<IntegerAttr>(index).getValue().isZero();
+  });
+}
 
 //===----------------------------------------------------------------------===//
 // ShlOp
