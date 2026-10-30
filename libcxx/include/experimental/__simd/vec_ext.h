@@ -39,11 +39,11 @@ template <class _Tp, int _Np>
 struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
   _Tp __data __attribute__((__vector_size__(std::__bit_ceil((sizeof(_Tp) * _Np)))));
 
-  _LIBCPP_HIDE_FROM_ABI _Tp __get(size_t __idx) const noexcept {
+  _Tp __get(size_t __idx) const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < _Np, "Index is out of bounds");
     return __data[__idx];
   }
-  _LIBCPP_HIDE_FROM_ABI void __set(size_t __idx, _Tp __v) noexcept {
+  void __set(size_t __idx, _Tp __v) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__idx < _Np, "Index is out of bounds");
     __data[__idx] = __v;
   }
@@ -58,7 +58,7 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   using _SimdStorage _LIBCPP_NODEBUG = __simd_storage<_Tp, simd_abi::__vec_ext<_Np>>;
   using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
-  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __broadcast(_Tp __v) noexcept {
+  static _SimdStorage __broadcast(_Tp __v) noexcept {
     _SimdStorage __result;
     for (int __i = 0; __i < _Np; ++__i) {
       __result.__set(__i, __v);
@@ -67,43 +67,43 @@ struct __simd_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   }
 
   template <class _Generator, size_t... _Is>
-  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate_init(_Generator&& __g, std::index_sequence<_Is...>) {
+  static _SimdStorage __generate_init(_Generator&& __g, std::index_sequence<_Is...>) {
     return _SimdStorage{{__g(std::integral_constant<size_t, _Is>())...}};
   }
 
   template <class _Generator>
-  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __generate(_Generator&& __g) noexcept {
+  static _SimdStorage __generate(_Generator&& __g) noexcept {
     return __generate_init(std::forward<_Generator>(__g), std::make_index_sequence<_Np>());
   }
 
   template <class _Up>
-  static _LIBCPP_HIDE_FROM_ABI void __load(_SimdStorage& __s, const _Up* __mem) noexcept {
+  static void __load(_SimdStorage& __s, const _Up* __mem) noexcept {
     for (size_t __i = 0; __i < _Np; __i++)
       __s.__data[__i] = static_cast<_Tp>(__mem[__i]);
   }
 
   template <class _Up>
-  static _LIBCPP_HIDE_FROM_ABI void __store(_SimdStorage __s, _Up* __mem) noexcept {
+  static void __store(_SimdStorage __s, _Up* __mem) noexcept {
     for (size_t __i = 0; __i < _Np; __i++)
       __mem[__i] = static_cast<_Up>(__s.__data[__i]);
   }
 
-  static _LIBCPP_HIDE_FROM_ABI void __increment(_SimdStorage& __s) noexcept { __s.__data = __s.__data + 1; }
+  static void __increment(_SimdStorage& __s) noexcept { __s.__data = __s.__data + 1; }
 
-  static _LIBCPP_HIDE_FROM_ABI void __decrement(_SimdStorage& __s) noexcept { __s.__data = __s.__data - 1; }
+  static void __decrement(_SimdStorage& __s) noexcept { __s.__data = __s.__data - 1; }
 
-  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __negate(_SimdStorage __s) noexcept { return {!__s.__data}; }
+  static _MaskStorage __negate(_SimdStorage __s) noexcept { return {!__s.__data}; }
 
-  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __bitwise_not(_SimdStorage __s) noexcept { return {~__s.__data}; }
+  static _SimdStorage __bitwise_not(_SimdStorage __s) noexcept { return {~__s.__data}; }
 
-  static _LIBCPP_HIDE_FROM_ABI _SimdStorage __unary_minus(_SimdStorage __s) noexcept { return {-__s.__data}; }
+  static _SimdStorage __unary_minus(_SimdStorage __s) noexcept { return {-__s.__data}; }
 };
 
 template <class _Tp, int _Np>
 struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
   using _MaskStorage _LIBCPP_NODEBUG = __mask_storage<_Tp, simd_abi::__vec_ext<_Np>>;
 
-  static _LIBCPP_HIDE_FROM_ABI _MaskStorage __broadcast(bool __v) noexcept {
+  static _MaskStorage __broadcast(bool __v) noexcept {
     _MaskStorage __result;
     auto __all_bits_v = experimental::__set_all_bits<_Tp>(__v);
     for (int __i = 0; __i < _Np; ++__i) {
@@ -112,12 +112,12 @@ struct __mask_operations<_Tp, simd_abi::__vec_ext<_Np>> {
     return __result;
   }
 
-  static _LIBCPP_HIDE_FROM_ABI void __load(_MaskStorage& __s, const bool* __mem) noexcept {
+  static void __load(_MaskStorage& __s, const bool* __mem) noexcept {
     for (size_t __i = 0; __i < _Np; __i++)
       __s.__data[__i] = experimental::__set_all_bits<_Tp>(__mem[__i]);
   }
 
-  static _LIBCPP_HIDE_FROM_ABI void __store(_MaskStorage __s, bool* __mem) noexcept {
+  static void __store(_MaskStorage __s, bool* __mem) noexcept {
     for (size_t __i = 0; __i < _Np; __i++)
       __mem[__i] = static_cast<bool>(__s.__data[__i]);
   }

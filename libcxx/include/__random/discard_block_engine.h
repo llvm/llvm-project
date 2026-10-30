@@ -54,43 +54,43 @@ public:
   static constexpr result_type _Max = _Engine::max();
 #endif
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
 
   // constructors and seeding functions
-  _LIBCPP_HIDE_FROM_ABI discard_block_engine() : __n_(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(const _Engine& __e) : __e_(__e), __n_(0) {}
+  discard_block_engine() : __n_(0) {}
+  explicit discard_block_engine(const _Engine& __e) : __e_(__e), __n_(0) {}
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Engine&& __e) : __e_(std::move(__e)), __n_(0) {}
+  explicit discard_block_engine(_Engine&& __e) : __e_(std::move(__e)), __n_(0) {}
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
+  explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
   template <class _Sseq,
             __enable_if_t<__is_seed_sequence_v<_Sseq, discard_block_engine> && !is_convertible<_Sseq, _Engine>::value,
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Sseq& __q) : __e_(__q), __n_(0) {}
-  _LIBCPP_HIDE_FROM_ABI void seed() {
+  explicit discard_block_engine(_Sseq& __q) : __e_(__q), __n_(0) {}
+  void seed() {
     __e_.seed();
     __n_ = 0;
   }
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd) {
+  void seed(result_type __sd) {
     __e_.seed(__sd);
     __n_ = 0;
   }
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, discard_block_engine>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
+  void seed(_Sseq& __q) {
     __e_.seed(__q);
     __n_ = 0;
   }
 
   // generating functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()();
-  _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
+  [[__nodiscard__]] result_type operator()();
+  void discard(unsigned long long __z) {
     for (; __z; --__z)
       (void)operator()();
   }
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
+  [[__nodiscard__]] const _Engine& base() const _NOEXCEPT { return __e_; }
 
   template <class _Eng, size_t _Pp, size_t _Rp>
   friend bool
@@ -120,19 +120,19 @@ typename discard_block_engine<_Engine, __p, __r>::result_type discard_block_engi
 }
 
 template <class _Eng, size_t _Pp, size_t _Rp>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 operator==(const discard_block_engine<_Eng, _Pp, _Rp>& __x, const discard_block_engine<_Eng, _Pp, _Rp>& __y) {
   return __x.__n_ == __y.__n_ && __x.__e_ == __y.__e_;
 }
 
 template <class _Eng, size_t _Pp, size_t _Rp>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 operator!=(const discard_block_engine<_Eng, _Pp, _Rp>& __x, const discard_block_engine<_Eng, _Pp, _Rp>& __y) {
   return !(__x == __y);
 }
 
 template <class _CharT, class _Traits, class _Eng, size_t _Pp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const discard_block_engine<_Eng, _Pp, _Rp>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _Ostream;
@@ -143,7 +143,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const discard_block_engine<_Eng
 }
 
 template <class _CharT, class _Traits, class _Eng, size_t _Pp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, discard_block_engine<_Eng, _Pp, _Rp>& __x) {
   __save_flags<_CharT, _Traits> __lx(__is);
   typedef basic_istream<_CharT, _Traits> _Istream;

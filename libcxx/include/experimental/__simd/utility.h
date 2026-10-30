@@ -37,7 +37,7 @@ inline constexpr bool __is_vectorizable_v =
     is_arithmetic_v<_Tp> && !is_const_v<_Tp> && !is_volatile_v<_Tp> && !is_same_v<_Tp, bool>;
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI auto __choose_mask_type() {
+auto __choose_mask_type() {
   if constexpr (sizeof(_Tp) == 1) {
     return uint8_t{};
   } else if constexpr (sizeof(_Tp) == 2) {
@@ -57,7 +57,7 @@ _LIBCPP_HIDE_FROM_ABI auto __choose_mask_type() {
 }
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI auto constexpr __set_all_bits(bool __v) {
+auto constexpr __set_all_bits(bool __v) {
   return __v ? (numeric_limits<decltype(experimental::__choose_mask_type<_Tp>())>::max()) : 0;
 }
 
@@ -86,7 +86,7 @@ inline constexpr bool
         __can_broadcast_v<_Tp, decltype(std::declval<_Generator>()(integral_constant<size_t, _Idx>()))>;
 
 template <class _Tp, class _Generator, std::size_t... _Idxes>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __can_generate(index_sequence<_Idxes...>) {
+constexpr bool __can_generate(index_sequence<_Idxes...>) {
   return (true && ... && __is_well_formed<_Tp, _Generator, _Idxes>);
 }
 

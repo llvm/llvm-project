@@ -177,7 +177,7 @@ namespace __pstl {
 template <class _ExecutionPolicy>
 struct __find<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
     return _FindIf()(
@@ -190,7 +190,7 @@ struct __find<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __find_if_not<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
     return _FindIf()(__policy, __first, __last, std::not_fn(std::forward<_Pred>(__pred)));
@@ -200,7 +200,7 @@ struct __find_if_not<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __any_of<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
     auto __res    = _FindIf()(__policy, __first, __last, std::forward<_Pred>(__pred));
@@ -213,7 +213,7 @@ struct __any_of<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __all_of<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _AnyOf = __dispatch<__any_of, __current_configuration, _ExecutionPolicy>;
     auto __res   = _AnyOf()(__policy, __first, __last, [&](__iterator_reference<_ForwardIterator> __value) {
@@ -228,7 +228,7 @@ struct __all_of<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __none_of<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _AnyOf = __dispatch<__any_of, __current_configuration, _ExecutionPolicy>;
     auto __res   = _AnyOf()(__policy, __first, __last, std::forward<_Pred>(__pred));
@@ -241,7 +241,7 @@ struct __none_of<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred) const noexcept {
     using _FindIfNot   = __dispatch<__find_if_not, __current_configuration, _ExecutionPolicy>;
     auto __maybe_first = _FindIfNot()(__policy, std::move(__first), __last, __pred);
@@ -260,7 +260,7 @@ struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
+  [[nodiscard]] optional<_ForwardIterator1>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
@@ -308,7 +308,7 @@ struct __max_element<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __lexicographical_compare<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Comp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
@@ -405,7 +405,7 @@ struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __is_heap<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _RandomAccessIterator, class _Comp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool> operator()(
+  [[nodiscard]] optional<bool> operator()(
       _Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
     using _IsHeapUntil = __dispatch<__is_heap_until, __current_configuration, _ExecutionPolicy>;
     auto __res         = _IsHeapUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
@@ -441,7 +441,7 @@ struct __is_sorted_until<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Comp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
     using _IsSortedUntil = __dispatch<__is_sorted_until, __current_configuration, _ExecutionPolicy>;
     auto __res           = _IsSortedUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
@@ -483,7 +483,7 @@ struct __destroy_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __for_each_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Function>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __size, _Function __func) const noexcept {
     if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       using _ForEach          = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
@@ -503,7 +503,7 @@ struct __for_each_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __fill<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp const& __value) const noexcept {
     using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
     using _Ref     = __iterator_reference<_ForwardIterator>;
@@ -514,7 +514,7 @@ struct __fill<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __fill_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, _Tp const& __value) const noexcept {
     if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
@@ -530,7 +530,7 @@ struct __fill_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __replace<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp const& __old, _Tp const& __new)
       const noexcept {
     using _ReplaceIf = __dispatch<__replace_if, __current_configuration, _ExecutionPolicy>;
@@ -543,7 +543,7 @@ struct __replace<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __replace_if<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Pred, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty> operator()(
+  [[nodiscard]] optional<__empty> operator()(
       _Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Pred&& __pred, _Tp const& __new_value)
       const noexcept {
     using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
@@ -558,7 +558,7 @@ struct __replace_if<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __generate<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Generator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Generator&& __gen) const noexcept {
     using _ForEach = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
     using _Ref     = __iterator_reference<_ForwardIterator>;
@@ -569,7 +569,7 @@ struct __generate<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __generate_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Generator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, _Generator&& __gen) const noexcept {
     using _ForEachN = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _Ref      = __iterator_reference<_ForwardIterator>;
@@ -580,7 +580,7 @@ struct __generate_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __uninitialized_default_construct<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
     using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -594,7 +594,7 @@ struct __uninitialized_default_construct<__default_backend_tag, _ExecutionPolicy
 template <class _ExecutionPolicy>
 struct __uninitialized_default_construct_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
     using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -608,7 +608,7 @@ struct __uninitialized_default_construct_n<__default_backend_tag, _ExecutionPoli
 template <class _ExecutionPolicy>
 struct __uninitialized_value_construct<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last) const noexcept {
     using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -622,7 +622,7 @@ struct __uninitialized_value_construct<__default_backend_tag, _ExecutionPolicy> 
 template <class _ExecutionPolicy>
 struct __uninitialized_value_construct_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept {
     using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -636,7 +636,7 @@ struct __uninitialized_value_construct_n<__default_backend_tag, _ExecutionPolicy
 template <class _ExecutionPolicy>
 struct __uninitialized_fill<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
     using _ForEach   = __dispatch<__for_each, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -650,7 +650,7 @@ struct __uninitialized_fill<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __uninitialized_fill_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, const _Tp& __value) const noexcept {
     using _ForEachN  = __dispatch<__for_each_n, __current_configuration, _ExecutionPolicy>;
     using _ValueType = __iterator_value_type<_ForwardIterator>;
@@ -667,7 +667,7 @@ struct __uninitialized_fill_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __sort<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _RandomAccessIterator, class _Comp>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty> operator()(
+  optional<__empty> operator()(
       _Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
     using _StableSort = __dispatch<__stable_sort, __current_configuration, _ExecutionPolicy>;
     return _StableSort()(__policy, std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
@@ -680,7 +680,7 @@ struct __sort<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __count_if<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iterator_difference_type<_ForwardIterator>> operator()(
+  [[nodiscard]] optional<__iterator_difference_type<_ForwardIterator>> operator()(
       _Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate&& __pred) const noexcept {
     using _TransformReduce = __dispatch<__transform_reduce, __current_configuration, _ExecutionPolicy>;
     using _DiffT           = __iterator_difference_type<_ForwardIterator>;
@@ -695,7 +695,7 @@ struct __count_if<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __count<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__iterator_difference_type<_ForwardIterator>>
+  [[nodiscard]] optional<__iterator_difference_type<_ForwardIterator>>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp const& __value) const noexcept {
     using _CountIf = __dispatch<__count_if, __current_configuration, _ExecutionPolicy>;
     using _Ref     = __iterator_reference<_ForwardIterator>;
@@ -708,7 +708,7 @@ struct __count<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __equal_3leg<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
@@ -729,7 +729,7 @@ struct __equal_3leg<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __equal<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  [[nodiscard]] optional<bool>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
@@ -759,7 +759,7 @@ struct __equal<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __reduce<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp, class _BinaryOperation>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_Tp>
+  [[nodiscard]] optional<_Tp>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Tp __init, _BinaryOperation&& __op)
       const noexcept {
     using _TransformReduce = __dispatch<__transform_reduce, __current_configuration, _ExecutionPolicy>;
@@ -779,7 +779,7 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __replace_copy_if<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Pred, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __last,
@@ -801,7 +801,7 @@ struct __replace_copy_if<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __replace_copy<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  [[nodiscard]] optional<__empty>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __last,
@@ -827,7 +827,7 @@ struct __replace_copy<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __move<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  [[nodiscard]] optional<_ForwardOutIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out_it)
       const noexcept {
     using _Transform = __dispatch<__transform, __current_configuration, _ExecutionPolicy>;
@@ -841,7 +841,7 @@ struct __move<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __copy<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  [[nodiscard]] optional<_ForwardOutIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out_it)
       const noexcept {
     using _Transform = __dispatch<__transform, __current_configuration, _ExecutionPolicy>;
@@ -852,7 +852,7 @@ struct __copy<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __copy_n<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Size, class _ForwardOutIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  [[nodiscard]] optional<_ForwardOutIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n, _ForwardOutIterator __out_it) const noexcept {
     if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
       using _Copy             = __dispatch<__copy, __current_configuration, _ExecutionPolicy>;
@@ -868,7 +868,7 @@ struct __copy_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __rotate_copy<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  [[nodiscard]] optional<_ForwardOutIterator>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __middle,
@@ -885,7 +885,7 @@ struct __rotate_copy<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __reverse_copy<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _BidirectionalIterator, class _ForwardIterator>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  [[nodiscard]] optional<_ForwardIterator>
   operator()(_Policy&& __policy,
              _BidirectionalIterator __first,
              _BidirectionalIterator __last,
@@ -901,7 +901,7 @@ struct __reverse_copy<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  [[nodiscard]] optional<_ForwardIterator2>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,

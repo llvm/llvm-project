@@ -119,11 +119,11 @@ class concat_view : public view_interface<concat_view<_Views...>> {
   class __iterator;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI constexpr concat_view() = default;
+  constexpr concat_view() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit concat_view(_Views... __views) : __views_(std::move(__views)...) {}
+  constexpr explicit concat_view(_Views... __views) : __views_(std::move(__views)...) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<false> begin()
+  [[nodiscard]] constexpr __iterator<false> begin()
     requires(!(__simple_view<_Views> && ...))
   {
     __iterator<false> __it(this, in_place_index<0>, ranges::begin(std::get<0>(__views_)));
@@ -131,7 +131,7 @@ public:
     return __it;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<true> begin() const
+  [[nodiscard]] constexpr __iterator<true> begin() const
     requires((range<const _Views> && ...) && __concatable<const _Views...>)
   {
     __iterator<true> __it(this, in_place_index<0>, ranges::begin(std::get<0>(__views_)));
@@ -139,7 +139,7 @@ public:
     return __it;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end()
+  [[nodiscard]] constexpr auto end()
     requires(!(__simple_view<_Views> && ...))
   {
     if constexpr (__all_forward<false, _Views...> && common_range<__maybe_const<false, __extract_last<_Views...>>>) {
@@ -150,7 +150,7 @@ public:
     }
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] constexpr auto end() const
     requires((range<const _Views> && ...) && __concatable<const _Views...>)
   {
     if constexpr (__all_forward<true, _Views...> && common_range<__maybe_const<true, __extract_last<_Views...>>>) {
@@ -161,7 +161,7 @@ public:
     }
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] constexpr auto size()
     requires(sized_range<_Views> && ...)
   {
     return std::apply(
@@ -169,7 +169,7 @@ public:
         std::__tuple_transform(ranges::size, __views_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires(sized_range<const _Views> && ...)
   {
     return std::apply(
@@ -232,7 +232,7 @@ private:
   __maybe_const<_Const, concat_view>* __parent_ = nullptr;
 
   template <size_t _Idx>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __satisfy() {
+  constexpr void __satisfy() {
     if constexpr (_Idx < (sizeof...(_Views) - 1)) {
       if (std::get<_Idx>(__it_) == ranges::end(std::get<_Idx>(__parent_->__views_))) {
         __it_.template emplace<_Idx + 1>(ranges::begin(std::get<_Idx + 1>(__parent_->__views_)));
@@ -242,7 +242,7 @@ private:
   }
 
   template <size_t _Idx>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __prev() {
+  constexpr void __prev() {
     if constexpr (_Idx == 0) {
       --std::get<0>(__it_);
     } else {
@@ -256,7 +256,7 @@ private:
   }
 
   template <size_t _Idx>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __advance_fwd(difference_type __offset, difference_type __steps) {
+  constexpr void __advance_fwd(difference_type __offset, difference_type __steps) {
     using __underlying_diff_type = iter_difference_t<variant_alternative_t<_Idx, __base_iter>>;
     if constexpr (_Idx == sizeof...(_Views) - 1) {
       std::get<_Idx>(__it_) += static_cast<__underlying_diff_type>(__steps);
@@ -272,7 +272,7 @@ private:
   }
 
   template <size_t _Idx>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __advance_bwd(difference_type __offset, difference_type __steps) {
+  constexpr void __advance_bwd(difference_type __offset, difference_type __steps) {
     using __underlying_diff_type = iter_difference_t<variant_alternative_t<_Idx, __base_iter>>;
     if constexpr (_Idx == 0) {
       std::get<_Idx>(__it_) -= static_cast<__underlying_diff_type>(__steps);
@@ -288,7 +288,7 @@ private:
   }
 
   template <typename _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto __invoke_at_index(_Func&& __func) const {
+  constexpr auto __invoke_at_index(_Func&& __func) const {
     return [&__func, this]<std::size_t _Is>(this auto&& __self) {
       if (_Is == __it_.index()) {
         return __func.template operator()<_Is>();
@@ -301,17 +301,17 @@ private:
   }
 
   template <size_t... _Is, typename _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func, index_sequence<_Is...>) const {
+  constexpr void __apply_at_index(size_t __index, _Func&& __func, index_sequence<_Is...>) const {
     ((__index == _Is ? (static_cast<void>(__func(integral_constant<size_t, _Is>{})), 0) : 0), ...);
   }
 
   template <size_t _Idx, typename _Func>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __apply_at_index(size_t __index, _Func&& __func) const {
+  constexpr void __apply_at_index(size_t __index, _Func&& __func) const {
     __apply_at_index(__index, std::forward<_Func>(__func), make_index_sequence<_Idx>{});
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr __iterator(__maybe_const<_Const, concat_view>* __parent, _Args&&... __args)
+  explicit constexpr __iterator(__maybe_const<_Const, concat_view>* __parent, _Args&&... __args)
     requires constructible_from<__base_iter, _Args&&...>
       : __it_(std::forward<_Args>(__args)...), __parent_(__parent) {}
 
@@ -319,9 +319,9 @@ private:
   friend class __iterator<!_Const>;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __iterator() = default;
+  __iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
+  constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && (convertible_to<iterator_t<_Views>, iterator_t<const _Views>> && ...)
       : __it_([&__src = __i.__it_]<size_t... _Indices>(size_t __idx, index_sequence<_Indices...>) -> __base_iter {
           _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -335,14 +335,14 @@ public:
         }(__i.__it_.index(), make_index_sequence<variant_size_v<__base_iter>>{})),
         __parent_(__i.__parent_) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
+  [[nodiscard]] constexpr decltype(auto) operator*() const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__it_.valueless_by_exception(), "Trying to dereference a valueless iterator of concat_view.");
     return __variant_detail::__visitation::__variant::__visit_value(
         [](auto&& __it) -> __concat_reference_t<__maybe_const<_Const, _Views>...> { return *__it; }, __it_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__it_.valueless_by_exception(), "Trying to increment a valueless iterator of concat_view.");
     size_t __active_index = __it_.index();
@@ -354,9 +354,9 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+  constexpr void operator++(int) { ++*this; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  constexpr __iterator operator++(int)
     requires(__all_forward<_Const, _Views...>)
   {
     auto __tmp = *this;
@@ -364,7 +364,7 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+  constexpr __iterator& operator--()
     requires __concat_is_bidirectional<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -377,7 +377,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  constexpr __iterator operator--(int)
     requires __concat_is_bidirectional<_Const, _Views...>
   {
     auto __tmp = *this;
@@ -385,7 +385,7 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires(equality_comparable<iterator_t<__maybe_const<_Const, _Views>>> && ...)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
@@ -393,13 +393,13 @@ public:
     return __x.__it_ == __y.__it_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
+  [[nodiscard]] constexpr decltype(auto) operator[](difference_type __n) const
     requires __concat_is_random_access<_Const, _Views...>
   {
     return *((*this) + __n);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __it, difference_type __n)
+  [[nodiscard]] friend constexpr __iterator operator+(const __iterator& __it, difference_type __n)
     requires __concat_is_random_access<_Const, _Views...>
   {
     auto __temp = __it;
@@ -407,13 +407,13 @@ public:
     return __temp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, const __iterator& __it)
+  [[nodiscard]] friend constexpr __iterator operator+(difference_type __n, const __iterator& __it)
     requires __concat_is_random_access<_Const, _Views...>
   {
     return __it + __n;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
+  constexpr __iterator& operator+=(difference_type __n)
     requires __concat_is_random_access<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -441,14 +441,14 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
+  constexpr __iterator& operator-=(difference_type __n)
     requires __concat_is_random_access<_Const, _Views...>
   {
     *this += -__n;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __it, default_sentinel_t) {
+  friend constexpr bool operator==(const __iterator& __it, default_sentinel_t) {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         !__it.__it_.valueless_by_exception(),
         "Trying to compare a valueless iterator of concat_view with the default sentinel.");
@@ -457,7 +457,7 @@ public:
            std::__unchecked_get<__last_idx>(__it.__it_) == ranges::end(std::get<__last_idx>(__it.__parent_->__views_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
     requires(__all_random_access<_Const, _Views> && ...)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
@@ -465,7 +465,7 @@ public:
     return __x.__it_ < __y.__it_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
     requires(__all_random_access<_Const, _Views> && ...)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
@@ -473,7 +473,7 @@ public:
     return __x.__it_ > __y.__it_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
     requires(__all_random_access<_Const, _Views> && ...)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
@@ -481,7 +481,7 @@ public:
     return __x.__it_ <= __y.__it_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
     requires(__all_random_access<_Const, _Views> && ...)
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__x.__it_.valueless_by_exception() && !__y.__it_.valueless_by_exception(),
@@ -489,7 +489,7 @@ public:
     return __x.__it_ >= __y.__it_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
+  friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
     requires((__all_random_access<_Const, _Views> && ...) &&
              (three_way_comparable<iterator_t<__maybe_const<_Const, _Views>>> && ...))
   {
@@ -498,7 +498,7 @@ public:
     return __x.__it_ <=> __y.__it_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr decltype(auto) iter_move(const __iterator& __it) noexcept(
+  [[nodiscard]] friend constexpr decltype(auto) iter_move(const __iterator& __it) noexcept(
 
       ((is_nothrow_invocable_v< decltype(ranges::iter_move), const iterator_t<__maybe_const<_Const, _Views>>& > &&
         is_nothrow_convertible_v< range_rvalue_reference_t<__maybe_const<_Const, _Views>>,
@@ -515,7 +515,7 @@ public:
         __it.__it_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr void iter_swap(const __iterator& __x, const __iterator& __y)
+  friend constexpr void iter_swap(const __iterator& __x, const __iterator& __y)
 
       noexcept((noexcept(ranges::swap(*__x, *__y))) &&
                (noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_Const, _Views>>>(),
@@ -540,8 +540,7 @@ public:
         __y.__it_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(const __iterator& __x, const __iterator& __y)
+  [[nodiscard]] friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
     requires __concat_is_random_access<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -571,7 +570,7 @@ public:
     });
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __it, difference_type __n)
+  [[nodiscard]] friend constexpr __iterator operator-(const __iterator& __it, difference_type __n)
     requires __concat_is_random_access<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
@@ -581,8 +580,7 @@ public:
     return __temp;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(const __iterator& __x, default_sentinel_t)
+  [[nodiscard]] friend constexpr difference_type operator-(const __iterator& __x, default_sentinel_t)
     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
              ...) &&
             (__all_but_first_model_sized_range<_Const, _Views...>::value)
@@ -604,8 +602,7 @@ public:
     });
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(default_sentinel_t, const __iterator& __x)
+  [[nodiscard]] friend constexpr difference_type operator-(default_sentinel_t, const __iterator& __x)
     requires(sized_sentinel_for<sentinel_t<__maybe_const<_Const, _Views>>, iterator_t<__maybe_const<_Const, _Views>>> &&
              ...) &&
             (__all_but_first_model_sized_range<_Const, _Views...>::value)
@@ -618,15 +615,14 @@ namespace views {
 namespace __concat {
 struct __fn {
   template <input_range _Range>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  [[nodiscard]] static constexpr auto
   operator()(_Range&& __range) noexcept(noexcept(views::all((std::forward<_Range>(__range)))))
       -> decltype(views::all((std::forward<_Range>(__range)))) {
     return views::all(std::forward<_Range>(__range));
   }
 
   template <class _FirstRange, class... _TailRanges>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  operator()(_FirstRange&& __first, _TailRanges&&... __tail) noexcept(
+  [[nodiscard]] static constexpr auto operator()(_FirstRange&& __first, _TailRanges&&... __tail) noexcept(
       noexcept(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)))
       -> decltype(concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...)) {
     return concat_view(std::forward<_FirstRange>(__first), std::forward<_TailRanges>(__tail)...);

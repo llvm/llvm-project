@@ -37,11 +37,11 @@ class __simd_reference {
   _Storage& __s_;
   size_t __idx_;
 
-  _LIBCPP_HIDE_FROM_ABI __simd_reference(_Storage& __s, size_t __idx) : __s_(__s), __idx_(__idx) {}
+  __simd_reference(_Storage& __s, size_t __idx) : __s_(__s), __idx_(__idx) {}
 
-  _LIBCPP_HIDE_FROM_ABI _Vp __get() const noexcept { return __s_.__get(__idx_); }
+  _Vp __get() const noexcept { return __s_.__get(__idx_); }
 
-  _LIBCPP_HIDE_FROM_ABI void __set(_Vp __v) {
+  void __set(_Vp __v) {
     if constexpr (is_same_v<_Vp, bool>)
       __s_.__set(__idx_, experimental::__set_all_bits<_Tp>(__v));
     else
@@ -54,10 +54,10 @@ public:
   __simd_reference()                        = delete;
   __simd_reference(const __simd_reference&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI operator value_type() const noexcept { return __get(); }
+  operator value_type() const noexcept { return __get(); }
 
   template <class _Up, enable_if_t<is_assignable_v<value_type&, _Up&&>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator=(_Up&& __v) && noexcept {
+  __simd_reference operator=(_Up&& __v) && noexcept {
     __set(static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
@@ -75,61 +75,61 @@ public:
   friend void swap(__simd_reference<_Tp1, _Storage1, _Vp1>&& __a, _Vp1& __b) noexcept;
 
   template <class _Up, class = decltype(std::declval<value_type&>() += std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator+=(_Up&& __v) && noexcept {
+  __simd_reference operator+=(_Up&& __v) && noexcept {
     __set(__get() + static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() -= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator-=(_Up&& __v) && noexcept {
+  __simd_reference operator-=(_Up&& __v) && noexcept {
     __set(__get() - static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() *= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator*=(_Up&& __v) && noexcept {
+  __simd_reference operator*=(_Up&& __v) && noexcept {
     __set(__get() * static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() /= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator/=(_Up&& __v) && noexcept {
+  __simd_reference operator/=(_Up&& __v) && noexcept {
     __set(__get() / static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() %= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator%=(_Up&& __v) && noexcept {
+  __simd_reference operator%=(_Up&& __v) && noexcept {
     __set(__get() % static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() &= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator&=(_Up&& __v) && noexcept {
+  __simd_reference operator&=(_Up&& __v) && noexcept {
     __set(__get() & static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() |= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator|=(_Up&& __v) && noexcept {
+  __simd_reference operator|=(_Up&& __v) && noexcept {
     __set(__get() | static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() ^= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator^=(_Up&& __v) && noexcept {
+  __simd_reference operator^=(_Up&& __v) && noexcept {
     __set(__get() ^ static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() <<= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator<<=(_Up&& __v) && noexcept {
+  __simd_reference operator<<=(_Up&& __v) && noexcept {
     __set(__get() << static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
 
   template <class _Up, class = decltype(std::declval<value_type&>() >>= std::declval<_Up>())>
-  _LIBCPP_HIDE_FROM_ABI __simd_reference operator>>=(_Up&& __v) && noexcept {
+  __simd_reference operator>>=(_Up&& __v) && noexcept {
     __set(__get() >> static_cast<value_type>(std::forward<_Up>(__v)));
     return {__s_, __idx_};
   }
@@ -137,23 +137,23 @@ public:
   // Note: All legal vectorizable types support operator++/--.
   // There doesn't seem to be a way to trigger the constraint.
   // Therefore, no SFINAE check is added here.
-  __simd_reference _LIBCPP_HIDE_FROM_ABI operator++() && noexcept {
+  __simd_reference operator++() && noexcept {
     __set(__get() + 1);
     return {__s_, __idx_};
   }
 
-  value_type _LIBCPP_HIDE_FROM_ABI operator++(int) && noexcept {
+  value_type operator++(int) && noexcept {
     auto __r = __get();
     __set(__get() + 1);
     return __r;
   }
 
-  __simd_reference _LIBCPP_HIDE_FROM_ABI operator--() && noexcept {
+  __simd_reference operator--() && noexcept {
     __set(__get() - 1);
     return {__s_, __idx_};
   }
 
-  value_type _LIBCPP_HIDE_FROM_ABI operator--(int) && noexcept {
+  value_type operator--(int) && noexcept {
     auto __r = __get();
     __set(__get() - 1);
     return __r;
@@ -161,22 +161,21 @@ public:
 };
 
 template <class _Tp, class _Storage, class _Vp>
-_LIBCPP_HIDE_FROM_ABI void
-swap(__simd_reference<_Tp, _Storage, _Vp>&& __a, __simd_reference<_Tp, _Storage, _Vp>&& __b) noexcept {
+void swap(__simd_reference<_Tp, _Storage, _Vp>&& __a, __simd_reference<_Tp, _Storage, _Vp>&& __b) noexcept {
   _Vp __tmp(std::move(__a));
   std::move(__a) = std::move(__b);
   std::move(__b) = std::move(__tmp);
 }
 
 template <class _Tp, class _Storage, class _Vp>
-_LIBCPP_HIDE_FROM_ABI void swap(_Vp& __a, __simd_reference<_Tp, _Storage, _Vp>&& __b) noexcept {
+void swap(_Vp& __a, __simd_reference<_Tp, _Storage, _Vp>&& __b) noexcept {
   _Vp __tmp(std::move(__a));
   __a            = std::move(__b);
   std::move(__b) = std::move(__tmp);
 }
 
 template <class _Tp, class _Storage, class _Vp>
-_LIBCPP_HIDE_FROM_ABI void swap(__simd_reference<_Tp, _Storage, _Vp>&& __a, _Vp& __b) noexcept {
+void swap(__simd_reference<_Tp, _Storage, _Vp>&& __a, _Vp& __b) noexcept {
   _Vp __tmp(std::move(__a));
   std::move(__a) = std::move(__b);
   __b            = std::move(__tmp);
