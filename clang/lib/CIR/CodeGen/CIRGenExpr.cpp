@@ -2843,8 +2843,10 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
 
   if (md->isStatic()) {
-    cgm.errorNYI(ce->getSourceRange(), "emitCXXMemberCallExpr: static method");
-    return RValue::get(nullptr);
+    emitIgnoredExpr(me->getBase());
+    CIRGenCallee callee = emitDirectCallee(md);
+    return emitCall(getContext().getPointerType(md->getType()), callee, ce,
+                    returnValue);
   }
 
   bool hasQualifier = me->hasQualifier();
