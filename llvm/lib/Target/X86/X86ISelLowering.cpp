@@ -45098,6 +45098,22 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       }
     }
 
+    // If we don't need to zero the upper elements, attempt to peek through to a
+    // larger vector.
+    if (Src.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        DemandedElts.countLeadingZeros() >= ShiftAmt) {
+      SDValue Inner = Src.getOperand(0);
+      EVT InnerVT = Inner.getValueType();
+      uint64_t NewAmt = ShiftAmt + Src.getConstantOperandVal(1);
+      if (isTypeLegal(InnerVT) && NewAmt < InnerVT.getVectorNumElements()) {
+        SDLoc DL(Op);
+        SDValue Shift =
+            TLO.DAG.getNode(X86ISD::KSHIFTR, DL, InnerVT, Inner,
+                            TLO.DAG.getTargetConstant(NewAmt, DL, MVT::i8));
+        return TLO.CombineTo(Op, TLO.DAG.getExtractSubvector(DL, VT, Shift, 0));
+      }
+    }
+
     APInt DemandedSrc = DemandedElts.shl(ShiftAmt);
     if (SimplifyDemandedVectorElts(Src, DemandedSrc, KnownUndef, KnownZero, TLO,
                                    Depth + 1))

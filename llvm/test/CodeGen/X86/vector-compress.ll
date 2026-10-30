@@ -4506,11 +4506,11 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    andq $-64, %rsp
 ; AVX512VL-NEXT:    subq $512, %rsp # imm = 0x200
 ; AVX512VL-NEXT:    vpsllw $7, %zmm0, %zmm0
-; AVX512VL-NEXT:    vpmovb2m %zmm0, %k2
-; AVX512VL-NEXT:    kshiftrq $32, %k2, %k1
-; AVX512VL-NEXT:    vpcompressd %zmm1, %zmm0 {%k2} {z}
+; AVX512VL-NEXT:    vpmovb2m %zmm0, %k3
+; AVX512VL-NEXT:    kshiftrq $48, %k3, %k1
+; AVX512VL-NEXT:    vpcompressd %zmm1, %zmm0 {%k3} {z}
 ; AVX512VL-NEXT:    vmovdqa64 %zmm0, (%rsp)
-; AVX512VL-NEXT:    vpmovm2d %k2, %zmm0
+; AVX512VL-NEXT:    vpmovm2d %k3, %zmm0
 ; AVX512VL-NEXT:    vpsrld $31, %zmm0, %zmm1
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm5
 ; AVX512VL-NEXT:    vpaddd %ymm5, %ymm1, %ymm1
@@ -4522,13 +4522,13 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    vmovd %xmm1, %ecx
 ; AVX512VL-NEXT:    addl %eax, %ecx
 ; AVX512VL-NEXT:    andl $31, %ecx
-; AVX512VL-NEXT:    kshiftrd $16, %k2, %k2
+; AVX512VL-NEXT:    kshiftrq $16, %k3, %k2
 ; AVX512VL-NEXT:    vpcompressd %zmm2, %zmm1 {%k2} {z}
 ; AVX512VL-NEXT:    vmovdqa64 %zmm1, (%rsp,%rcx,4)
-; AVX512VL-NEXT:    kshiftrd $16, %k1, %k3
-; AVX512VL-NEXT:    vpcompressd %zmm3, %zmm1 {%k1} {z}
+; AVX512VL-NEXT:    kshiftrq $32, %k3, %k3
+; AVX512VL-NEXT:    vpcompressd %zmm3, %zmm1 {%k3} {z}
 ; AVX512VL-NEXT:    vmovdqa64 %zmm1, {{[0-9]+}}(%rsp)
-; AVX512VL-NEXT:    vpmovm2d %k1, %zmm1
+; AVX512VL-NEXT:    vpmovm2d %k3, %zmm1
 ; AVX512VL-NEXT:    vpsrld $31, %zmm1, %zmm1
 ; AVX512VL-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
 ; AVX512VL-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
@@ -4540,7 +4540,7 @@ define <64 x i32> @test_compress_large(<64 x i1> %mask, <64 x i32> %vec, <64 x i
 ; AVX512VL-NEXT:    vmovd %xmm1, %ecx
 ; AVX512VL-NEXT:    addl %eax, %ecx
 ; AVX512VL-NEXT:    andl $31, %ecx
-; AVX512VL-NEXT:    vpcompressd %zmm4, %zmm1 {%k3} {z}
+; AVX512VL-NEXT:    vpcompressd %zmm4, %zmm1 {%k1} {z}
 ; AVX512VL-NEXT:    vmovdqa64 %zmm1, 128(%rsp,%rcx,4)
 ; AVX512VL-NEXT:    vmovaps (%rsp), %zmm1
 ; AVX512VL-NEXT:    vmovaps {{[0-9]+}}(%rsp), %zmm2
