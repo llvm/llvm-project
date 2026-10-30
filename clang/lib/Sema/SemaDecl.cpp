@@ -273,6 +273,82 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
   return S.CreateParsedType(T, Builder.getTypeSourceInfo(Context, T));
 }
 
+/// A dependent qualified type written without the 'typename' keyword (accepted
+/// as the C++20 / extension "implicit typename" recovery) has its
+/// nested-name-specifier parsed while "entering" a context. As a side effect,
+/// intermediate dependent members -- e.g. 'B' in 'A<T>::B::C' -- are
+/// speculatively resolved against the template pattern instead of being left as
+/// dependent names. Such a resolved nested-name-specifier does not survive
+/// template instantiation: the member is never re-resolved against the
+/// instantiated parent, so a spuriously dependent type leaks into otherwise
+/// non-dependent code (and later crashes e.g. CTAD / codegen).
+///
+/// Rebuild the qualifier so that every component resolved against a dependent
+/// (non current-instantiation) context becomes a DependentNameType, matching
+/// the type produced when 'typename' is written explicitly.
+static NestedNameSpecifierLoc
+rebuildDependentlyResolvedQualifier(Sema &S, NestedNameSpecifierLoc QLoc) {
+  if (!QLoc || QLoc.getNestedNameSpecifier().getKind() !=
+                   NestedNameSpecifier::Kind::Type)
+    return QLoc;
+
+  TypeLoc TL = QLoc.castAsTypeLoc();
+
+  // Only members that were resolved to a concrete declaration (typedef, tag, or
+  // using) carry a qualifier + name we could re-express as a dependent name.
+  NestedNameSpecifierLoc PrefixLoc;
+  SourceLocation KeywordLoc, NameLoc;
+  const IdentifierInfo *II = nullptr;
+  if (auto T = TL.getAs<TypedefTypeLoc>()) {
+    PrefixLoc = T.getQualifierLoc();
+    KeywordLoc = T.getElaboratedKeywordLoc();
+    NameLoc = T.getNameLoc();
+    II = T.getDecl()->getIdentifier();
+  } else if (auto T = TL.getAs<TagTypeLoc>()) {
+    PrefixLoc = T.getQualifierLoc();
+    KeywordLoc = T.getElaboratedKeywordLoc();
+    NameLoc = T.getNameLoc();
+    II = T.getDecl()->getIdentifier();
+  } else if (auto T = TL.getAs<UsingTypeLoc>()) {
+    PrefixLoc = T.getQualifierLoc();
+    KeywordLoc = T.getElaboratedKeywordLoc();
+    NameLoc = T.getNameLoc();
+    II = T.getDecl()->getIdentifier();
+  } else if (auto T = TL.getAs<UnresolvedUsingTypeLoc>()) {
+    PrefixLoc = T.getQualifierLoc();
+    KeywordLoc = T.getElaboratedKeywordLoc();
+    NameLoc = T.getNameLoc();
+    II = T.getDecl()->getIdentifier();
+  } else {
+    return QLoc;
+  }
+
+  if (!II || !PrefixLoc)
+    return QLoc;
+
+  NestedNameSpecifierLoc NewPrefixLoc =
+      rebuildDependentlyResolvedQualifier(S, PrefixLoc);
+
+  // The member can only be left unresolved (a dependent name) if its prefix is
+  // itself dependent; otherwise the original resolution is correct.
+  if (!NewPrefixLoc.getNestedNameSpecifier().isDependent())
+    return QLoc;
+
+  ASTContext &Ctx = S.Context;
+  QualType DNT = Ctx.getDependentNameType(
+      ElaboratedTypeKeyword::None, NewPrefixLoc.getNestedNameSpecifier(), II);
+
+  TypeLocBuilder TLB;
+  auto DTL = TLB.push<DependentNameTypeLoc>(DNT);
+  DTL.setElaboratedKeywordLoc(KeywordLoc);
+  DTL.setQualifierLoc(NewPrefixLoc);
+  DTL.setNameLoc(NameLoc);
+
+  CXXScopeSpec Rebuilt;
+  Rebuilt.Make(Ctx, TLB.getTypeLocInContext(Ctx, DNT), QLoc.getEndLoc());
+  return Rebuilt.getWithLocInContext(Ctx);
+}
+
 ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              Scope *S, CXXScopeSpec *SS, bool isClassName,
                              bool HasTrailingDot, ParsedType ObjectTypePtr,
@@ -298,6 +374,21 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
 
     if (!LookupCtx) {
       if (isDependentScopeSpecifier(*SS)) {
+        // The qualifier is dependent and we now know (from the grammar) that
+        // this names a type. If it was parsed while entering a context, an
+        // intermediate dependent member may have been speculatively resolved
+        // against the template pattern; rebuild it as a dependent name so it
+        // survives instantiation. See rebuildDependentlyResolvedQualifier.
+        if (NestedNameSpecifierLoc QLoc = SS->getWithLocInContext(Context)) {
+          NestedNameSpecifierLoc NewQLoc =
+              rebuildDependentlyResolvedQualifier(*this, QLoc);
+          if (NewQLoc.getNestedNameSpecifier() !=
+              QLoc.getNestedNameSpecifier()) {
+            SS->clear();
+            SS->Adopt(NewQLoc);
+          }
+        }
+
         // C++ [temp.res]p3:
         //   A qualified-id that refers to a type and in which the
         //   nested-name-specifier depends on a template-parameter (14.6.2)
