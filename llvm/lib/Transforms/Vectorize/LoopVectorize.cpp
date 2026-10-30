@@ -5895,10 +5895,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findSingleUser<VPBlendRecipe>(Val))
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+          VPlanPatternMatch::findSingleUser<VPReductionPHIRecipe>(Val);
       assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
@@ -6554,8 +6554,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
-          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
+      auto *AnyOfSelect = findSingleUser<VPSingleDefRecipe>(
+          PhiR,
+          m_Select(m_Unless(m_Specific(HeaderMask)), m_VPValue(), m_VPValue()));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
@@ -6736,17 +6737,11 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
-    // The VPlan expander cannot hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    if (OrigLoop->getParentLoop())
-      return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
-                            MemCheckCond, MemCheckBlock, HasBranchWeights);
-
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
     RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
-                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
-                   HasBranchWeights);
+                   OrigLoop, *PSE.getSE(), VF, UF, HasBranchWeights);
   }
 }
 

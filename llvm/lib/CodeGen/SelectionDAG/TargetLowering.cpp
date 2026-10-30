@@ -860,32 +860,6 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       return DAG.getConstant(0, SDLoc(Op), VT);
     break;
   }
-  case ISD::TRUNCATE:
-  case ISD::ZERO_EXTEND:
-  case ISD::SIGN_EXTEND:
-  case ISD::ANY_EXTEND: {
-    SDValue Src = Op.getOperand(0);
-    // Preserve shared casts unless the cast is free and its source is not
-    // shared, or the truncate cancels an extension.
-    bool FreeAnyExt = Op.getOpcode() == ISD::ANY_EXTEND &&
-                      isAnyExtFree(Src.getValueType(), VT) && Src.hasOneUse();
-    bool CancelsExt = Op.getOpcode() == ISD::TRUNCATE &&
-                      ISD::isExtOpcode(Src.getOpcode()) &&
-                      Src.getOperand(0).getValueType() == VT;
-    if (!Op.hasOneUse() && !FreeAnyExt && !CancelsExt)
-      break;
-    unsigned SrcBits = Src.getScalarValueSizeInBits();
-    APInt SrcDemandedBits = DemandedBits.zextOrTrunc(SrcBits);
-    if (Op.getOpcode() == ISD::SIGN_EXTEND &&
-        DemandedBits.getActiveBits() > SrcBits)
-      SrcDemandedBits.setSignBit();
-
-    // Do not preserve flags that the simplified source may invalidate.
-    if (SDValue NewSrc = SimplifyMultipleUseDemandedBits(
-            Src, SrcDemandedBits, DemandedElts, DAG, Depth + 1))
-      return DAG.getNode(Op.getOpcode(), SDLoc(Op), VT, NewSrc);
-    break;
-  }
   case ISD::BITCAST: {
     if (VT.isScalableVector())
       return SDValue();
@@ -11752,18 +11726,15 @@ SDValue TargetLowering::expandABD(SDNode *N, SelectionDAG &DAG) const {
   }
 
   // abds, or abdu with non-negative operands: if the sub is nsw, abs(sub).
-  // Otherwise abdu: if the sub is nuw then lhs >= rhs, so just sub.
-  bool UseSigned =
-      IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS));
+  // The abdu case where the sub is nuw is handled in DAGCombine.
+  if (IsSigned || (DAG.SignBitIsZero(LHS) && DAG.SignBitIsZero(RHS))) {
+    if (DAG.willNotOverflowSub(/*IsSigned=*/true, LHS, RHS))
+      return DAG.getNode(ISD::ABS, dl, VT,
+                         DAG.getNode(ISD::SUB, dl, VT, LHS, RHS));
 
-  if (DAG.willNotOverflowSub(UseSigned, LHS, RHS)) {
-    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, LHS, RHS);
-    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
-  }
-
-  if (DAG.willNotOverflowSub(UseSigned, RHS, LHS)) {
-    SDValue Sub = DAG.getNode(ISD::SUB, dl, VT, RHS, LHS);
-    return UseSigned ? DAG.getNode(ISD::ABS, dl, VT, Sub) : Sub;
+    if (DAG.willNotOverflowSub(/*IsSigned=*/true, RHS, LHS))
+      return DAG.getNode(ISD::ABS, dl, VT,
+                         DAG.getNode(ISD::SUB, dl, VT, RHS, LHS));
   }
 
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
@@ -13858,10 +13829,6 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
       return DAG.getNode(ISD::FP_TO_BF16, dl, VT, Node->getOperand(0));
     }
     EVT OperandVT = Op.getValueType();
-    SDValue IsNaN = DAG.getSetCC(
-        dl,
-        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT),
-        Op, Op, ISD::SETUO);
 
     // We are rounding binary64/binary128 -> binary32 -> bfloat16. This
     // can induce double-rounding which may alter the results. We can
@@ -13872,11 +13839,6 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
     EVT I32 = F32.changeTypeToInteger();
     Op = expandRoundInexactToOdd(F32, Op, dl, DAG);
     Op = DAG.getNode(ISD::BITCAST, dl, I32, Op);
-
-    // Conversions should set NaN's quiet bit. This also prevents NaNs from
-    // turning into infinities.
-    SDValue NaN =
-        DAG.getNode(ISD::OR, dl, I32, Op, DAG.getConstant(0x400000, dl, I32));
 
     // Factor in the contribution of the low 16 bits.
     SDValue One = DAG.getConstant(1, dl, I32);
@@ -13889,10 +13851,22 @@ SDValue TargetLowering::expandFP_ROUND(SDNode *Node, SelectionDAG &DAG) const {
 
     // Don't round if we had a NaN, we don't want to turn 0x7fffffff into
     // 0x80000000.
-    Op = DAG.getSelect(dl, I32, IsNaN, NaN, Add);
+    if (!Node->getFlags().hasNoNaNs() &&
+        !DAG.isKnownNeverNaN(Node->getOperand(0))) {
+      // Conversions should set NaN's quiet bit. This also prevents NaNs from
+      // turning into infinities.
+      SDValue NaN =
+          DAG.getNode(ISD::OR, dl, I32, Op, DAG.getConstant(0x400000, dl, I32));
+
+      SDValue IsNaN = DAG.getSetCC(
+          dl,
+          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT),
+          Node->getOperand(0), Node->getOperand(0), ISD::SETUO);
+      Add = DAG.getSelect(dl, I32, IsNaN, NaN, Add);
+    }
 
     // Now that we have rounded, shift the bits into position.
-    Op = DAG.getNode(ISD::SRL, dl, I32, Op,
+    Op = DAG.getNode(ISD::SRL, dl, I32, Add,
                      DAG.getShiftAmountConstant(16, I32, dl));
     EVT I16 = I32.changeElementType(*DAG.getContext(), MVT::i16);
     Op = DAG.getNode(ISD::TRUNCATE, dl, I16, Op);

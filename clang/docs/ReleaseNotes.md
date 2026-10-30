@@ -235,8 +235,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   now diagnosed as a C++26 extension under `-Wc++26-extensions` (previously it
   was diagnosed as a Clang extension under `-Wc23-extensions`), and a new
   `-Wpre-c++26-compat` warning is available in C++26 mode. The
-  `__cpp_pp_embed` feature-test macro is not yet defined because of known
-  issues in the implementation.
+  `__cpp_pp_embed` feature-test macro is now defined.
 
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
@@ -463,6 +462,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   A requirement naming a parameter of the pointee, such as
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
+
+- Fixed thread safety attributes on a member of a nested struct or union, named
+  or anonymous, naming a member of the enclosing struct, such as
+  `struct Dst { unsigned len GUARDED_BY(lock); } dst;` after `Mutex lock;`.
+  The requirement is resolved on the enclosing object, `s->lock` for
+  `s->dst.len`, and is reported as `dst->Scratch::lock` when no enclosing
+  object is reachable.
 
 ### Improvements to Clang's diagnostics
 
@@ -818,6 +824,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
+- Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 
 #### Bug Fixes to Compiler Builtins
 

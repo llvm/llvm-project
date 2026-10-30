@@ -47,7 +47,7 @@ define i8 @f1(i8 signext %i) nounwind {
 ; STATIC32MM: {{[0-9a-z]}}: 00 d4 00 00 j 0
 
 ; PIC32R6:    {{[0-9a-z]}}: 00 00 19 d8  jrc $25
-; STATIC32R6: {{[0-9a-z]}}: 00 00 00 08  j 0
+; STATIC32R6: {{[0-9a-z]}}: fd ff ff cb  bc 0
 
 ; PIC64R6:    {{[0-9a-z]+}}: 00 00 19 d8  jrc $25
-; STATIC64R6: {{[0-9]}}: 00 00 00 08  j 0
+; STATIC64R6: {{[0-9]}}: fd ff ff cb bc 0

@@ -2532,15 +2532,19 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_LG :  {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
   case SPCC::FCC_UE : {
-    SDValue Mask   = DAG.getConstant(3, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
+    SDValue One = DAG.getConstant(1, DL, Result.getValueType());
+    SDValue Two = DAG.getConstant(2, DL, Result.getValueType());
+    Result = DAG.getNode(ISD::ADD, DL, Result.getValueType(), Result, One);
+    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Two);
     SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
@@ -3804,11 +3808,9 @@ SparcTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
     return FPImmAction::ConstantPool;
   if (Subtarget->isVIS() && Imm.isZero())
     return FPImmAction::Legal;
-  if (Subtarget->isVIS3())
-    return Imm.isExactlyValue(+0.5) || Imm.isExactlyValue(-0.5) ||
-                   Imm.getExactLog2Abs() == -1
-               ? FPImmAction::Legal
-               : FPImmAction::ConstantPool;
+  // Check for +/-0.5.
+  if (Subtarget->isVIS3() && Imm.getExactLog2Abs() == -1)
+    return FPImmAction::Legal;
   return FPImmAction::ConstantPool;
 }
 

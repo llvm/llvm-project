@@ -21,6 +21,9 @@
 ; CHECK-DAG: OpName [[F16toU16v2:%.*]] "f16tou16v2"
 ; CHECK-DAG: OpName [[F16toU8v2:%.*]] "f16tou8v2"
 
+; CHECK-DAG: OpName [[F32toS1:%.*]] "f32tos1"
+; CHECK-DAG: OpName [[F32toU1v2:%.*]] "f32tou1v2"
+
 ; CHECK-DAG: [[F32:%.*]] = OpTypeFloat 32
 ; CHECK-DAG: [[F16:%.*]] = OpTypeFloat 16
 ; CHECK-DAG: [[F32v2:%.*]] = OpTypeVector [[F32]] 2
@@ -33,6 +36,8 @@
 ; CHECK-DAG: [[U32v2:%.*]] = OpTypeVector [[U32]] 2
 ; CHECK-DAG: [[U16v2:%.*]] = OpTypeVector [[U16]] 2
 ; CHECK-DAG: [[U8v2:%.*]] = OpTypeVector [[U8]] 2
+; CHECK-DAG: [[BOOL:%.*]] = OpTypeBool
+; CHECK-DAG: [[BOOLv2:%.*]] = OpTypeVector [[BOOL]] 2
 
 
 ; CHECK:      [[TRUNC32_16]] = OpFunction [[F16]]
@@ -209,4 +214,30 @@ define <2 x i16> @f16tou16v2(<2 x half> %a) {
 define <2 x i8> @f16tou8v2(<2 x half> %a) {
   %r = fptoui <2 x half> %a to <2 x i8>
   ret <2 x i8> %r
+}
+
+; CHECK:      [[F32toS1]] = OpFunction [[BOOL]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[F32]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.*]] = OpConvertFToS [[U32]] [[A]]
+; CHECK:      [[M:%.*]] = OpBitwiseAnd [[U32]] [[C]]
+; CHECK:      [[R:%.*]] = OpINotEqual [[BOOL]] [[M]]
+; CHECK:      OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define i1 @f32tos1(float %a) {
+  %r = fptosi float %a to i1
+  ret i1 %r
+}
+
+; CHECK:      [[F32toU1v2]] = OpFunction [[BOOLv2]]
+; CHECK-NEXT: [[A:%.*]] = OpFunctionParameter [[F32v2]]
+; CHECK:      OpLabel
+; CHECK:      [[C:%.*]] = OpConvertFToU [[U32v2]] [[A]]
+; CHECK:      [[M:%.*]] = OpBitwiseAnd [[U32v2]] [[C]]
+; CHECK:      [[R:%.*]] = OpINotEqual [[BOOLv2]] [[M]]
+; CHECK:      OpReturnValue [[R]]
+; CHECK-NEXT: OpFunctionEnd
+define <2 x i1> @f32tou1v2(<2 x float> %a) {
+  %r = fptoui <2 x float> %a to <2 x i1>
+  ret <2 x i1> %r
 }
