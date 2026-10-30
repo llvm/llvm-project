@@ -405,8 +405,15 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   // necessarily produce the value 0 (if the code is above 4GB).
   // Same for the tiny code model, where we have a pc relative LDR.
   if ((useSmallAddressing() || TM.getCodeModel() == CodeModel::Tiny) &&
-      GV->hasExternalWeakLinkage())
+      GV->hasExternalWeakLinkage()) {
+    // On COFF, GOT entries are emulated with .refptr stubs. A bare MO_GOT has
+    // no meaning there: MCInstLower would reference the symbol itself, and a
+    // PC-relative reference to a weak symbol the linker resolves to null
+    // cannot be encoded.
+    if (getTargetTriple().isOSBinFormatCOFF())
+      return AArch64II::MO_GOT | AArch64II::MO_COFFSTUB;
     return AArch64II::MO_GOT;
+  }
 
   // References to tagged globals are marked with MO_NC | MO_TAGGED to indicate
   // that their nominal addresses are tagged and outside of the code model. In
@@ -426,12 +433,8 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       !GV->hasInternalLinkage())
     return AArch64II::MO_GOT;
 
-  // NonLazyBind goes via GOT unless we know it's available locally.
-  auto *F = dyn_cast<Function>(GV);
-  if ((!isTargetMachO() || CLOpts.macho_enable_nonlazybind) && F &&
-      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
-    return AArch64II::MO_GOT;
-
+  // On COFF, classify the reference before considering NonLazyBind: COFF has
+  // no lazy binding, and MO_GOT on its own is not a valid COFF reference.
   if (getTargetTriple().isOSWindowsOrUEFI()) {
     if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
       if (GV->hasDLLImportStorageClass()) {
@@ -447,9 +450,22 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       }
     }
 
+    // DSO-local functions are called directly, matching the X86 and ARM COFF
+    // handling. In particular this covers extern_weak dso_local functions:
+    // delegating to ClassifyGlobalReference would turn the callee into an
+    // address load, which is right for taking its address but not for a call.
+    if (TM.shouldAssumeDSOLocal(GV))
+      return AArch64II::MO_NO_FLAG;
+
     // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
     return ClassifyGlobalReference(GV, TM);
   }
+
+  // NonLazyBind goes via GOT unless we know it's available locally.
+  auto *F = dyn_cast<Function>(GV);
+  if ((!isTargetMachO() || CLOpts.macho_enable_nonlazybind) && F &&
+      F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
+    return AArch64II::MO_GOT;
 
   return AArch64II::MO_NO_FLAG;
 }
