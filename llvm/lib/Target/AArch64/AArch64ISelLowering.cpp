@@ -27164,6 +27164,22 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
   if (!DAG.getDataLayout().isLittleEndian())
     return SDValue();
 
+  // uzp1(bitcast(zip1(a, b)), bitcast(zip2(a, b)))
+  //     -> trn1(bitcast(a), bitcast(b)).
+  // Viewed with half-sized elements, zip1/zip2 interleave the elements of a and
+  // b, and uzp1 selects the even (low) halves of the interleaved elements.
+  {
+    using namespace llvm::SDPatternMatch;
+    SDValue A, B;
+    if (sd_match(Op0,
+                 m_BitCast(m_Node(AArch64ISD::ZIP1, m_Value(A), m_Value(B)))) &&
+        sd_match(Op1, m_BitCast(m_Node(AArch64ISD::ZIP2, m_Specific(A),
+                                       m_Specific(B)))) &&
+        A.getScalarValueSizeInBits() == 2 * ResVT.getScalarSizeInBits())
+      return DAG.getNode(AArch64ISD::TRN1, DL, ResVT, DAG.getBitcast(ResVT, A),
+                         DAG.getBitcast(ResVT, B));
+  }
+
   // uzp1(x, undef) -> concat(truncate(x), undef)
   if (Op1.isUndef()) {
     EVT BCVT = MVT::Other, HalfVT = MVT::Other;
