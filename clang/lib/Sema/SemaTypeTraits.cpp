@@ -2312,6 +2312,59 @@ static void DiagnoseNonTriviallyCopyableReason(Sema &SemaRef,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonTriviallyDestructibleReason(Sema &SemaRef,
+                                                   SourceLocation Loc,
+                                                   const CXXRecordDecl *D) {
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.getType().isDestructedType() != QualType::DK_none)
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTDBase << B.getType()
+          << B.getSourceRange();
+  }
+
+  for (const FieldDecl *Field : D->fields()) {
+    if (Field->getType().isDestructedType() != QualType::DK_none)
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::NTDField << Field
+          << Field->getType() << Field->getSourceRange();
+  }
+
+  CXXDestructorDecl *Dtr = D->getDestructor();
+  if (!Dtr)
+    return;
+
+  if (Dtr->isDeleted() || Dtr->isUserProvided()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::DeletedDtr << Dtr->isUserProvided();
+
+    if (!Dtr->isImplicit())
+      SemaRef.Diag(Dtr->getLocation(), diag::note_entity_declared_at) << Dtr;
+  }
+}
+
+static void DiagnoseNonTriviallyDestructibleReason(Sema &SemaRef,
+                                                   SourceLocation Loc,
+                                                   QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::TriviallyDestructible;
+
+  if (T->isVoidType()) {
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+    return;
+  }
+
+  ASTContext &C = SemaRef.Context;
+  const CXXRecordDecl *D = C.getBaseElementType(T)->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonTriviallyDestructibleReason(SemaRef, Loc, D);
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 static void DiagnoseNonAssignableReason(Sema &SemaRef, SourceLocation Loc,
                                         QualType T, QualType U) {
   const CXXRecordDecl *D = T->getAsCXXRecordDecl();
@@ -2766,6 +2819,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case UTT_IsTriviallyCopyable:
     DiagnoseNonTriviallyCopyableReason(*this, E->getBeginLoc(), Args[0]);
+    break;
+  case UTT_IsTriviallyDestructible:
+    DiagnoseNonTriviallyDestructibleReason(*this, E->getBeginLoc(), Args[0]);
     break;
   case BTT_IsAssignable:
     DiagnoseNonAssignableReason(*this, E->getBeginLoc(), Args[0], Args[1]);

@@ -329,6 +329,61 @@ static_assert(__is_trivially_copyable(S12));
 // expected-note@#tc-S12 {{'S12' defined here}}
 }
 
+namespace trivially_destructible {
+    struct A { // #td-A
+        ~A() {} // #td-A-dtor
+    };
+    static_assert(__is_trivially_destructible(A));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_trivially_destructible(trivially_destructible::A)'}} \
+    // expected-note@-1 {{'A' is not trivially destructible}} \
+    // expected-note@-1 {{because it has a user-provided destructor}} \
+    // expected-note@#td-A {{'A' defined here}}
+    // expected-note@#td-A-dtor {{'~A' declared here}}
+
+    struct B { // #td-B
+        ~B() = delete; // #td-B-dtor
+    };
+    static_assert(__is_trivially_destructible(B));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_trivially_destructible(trivially_destructible::B)'}} \
+    // expected-note@-1 {{'B' is not trivially destructible}} \
+    // expected-note@-1 {{because it has a deleted destructor}} \
+    // expected-note@#td-B {{'B' defined here}}
+    // expected-note@#td-B-dtor {{'~B' declared here}}
+
+    struct C { // #td-C
+        A a;
+    };
+    static_assert(__is_trivially_destructible(C));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_trivially_destructible(trivially_destructible::C)'}} \
+    // expected-note@-1 {{'C' is not trivially destructible}} \
+    // expected-note@-1 {{because it has a non-trivially-destructible member 'a' of type 'A'}} \
+    // expected-note@#td-C {{'C' defined here}}
+
+    struct D : A { // #td-D
+        int x;
+    };
+    static_assert(__is_trivially_destructible(D));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_trivially_destructible(trivially_destructible::D)'}} \
+    // expected-note@-1 {{'D' is not trivially destructible}} \
+    // expected-note@-1 {{because it has a non-trivially-destructible base 'A'}} \
+    // expected-note@#td-D {{'D' defined here}}
+
+    static_assert(__is_trivially_destructible(A[2]));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_trivially_destructible(trivially_destructible::A[2])'}} \
+    // expected-note@-1 {{'A[2]' is not trivially destructible}} \
+    // expected-note@-1 {{because it has a user-provided destructor}} \
+    // expected-note@#td-A {{'A' defined here}}
+    // expected-note@#td-A-dtor {{'~A' declared here}}
+
+    static_assert(__is_trivially_destructible(int));
+
+    static_assert(__is_trivially_destructible(void));
+    // expected-error@-1 {{static assertion failed due to requirement '__is_trivially_destructible(void)'}} \
+    // expected-note@-1 {{'void' is not trivially destructible}} \
+    // expected-note@-1 {{because it is a cv void type}}
+
+}
+
 namespace constructible {
 
 struct S1 {  // #c-S1
