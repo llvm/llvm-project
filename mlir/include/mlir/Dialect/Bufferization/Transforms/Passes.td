@@ -203,6 +203,12 @@ def StaticMemoryPlannerAnalysisPass
       (e.g. an `scf.if` body) is accepted and bounds the lifetime
       conservatively.
 
+    If a dealloc may also free an ineligible allocation, all candidates that
+    share that dealloc are skipped to preserve the ineligible allocation's
+    release. This exclusion propagates through other shared deallocs until
+    the remaining candidates can be rewritten together safely. Independent
+    eligible allocations can still be planned.
+
     Eligible allocations are packed into a single arena using a configurable
     planning algorithm (see the `algorithm` option). The arena is an i8 byte
     buffer (`memref<Nxi8>`) that can hold allocations of different element
@@ -267,6 +273,9 @@ def StaticMemoryPlannerAnalysisPass
        Statistic<
            "numSkipNested", "num-skipped-nested",
            "Number of allocations skipped: nested in loop or conditional">,
+       Statistic<"numSkipSharedDealloc", "num-skipped-shared-dealloc",
+                 "Number of allocations skipped: dealloc shared with an "
+                 "ineligible allocation">,
        Statistic<"numSkipNoDealloc", "num-skipped-no-dealloc",
                  "Number of allocations skipped: no unique same-block dealloc">,
        Statistic<
