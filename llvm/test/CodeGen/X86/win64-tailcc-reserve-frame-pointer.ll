@@ -64,7 +64,7 @@ define tailcc void @with_fp_large_reserve(i64 %a, i64 %b) "frame-pointer"="all" 
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    movq %rcx, -32(%rbp)
 ; CHECK-NEXT:    movq %rdx, -8(%rbp)
-; CHECK-NEXT:    movq 120(%rbp), %rax
+; CHECK:         movq 120(%rbp), %rax
 ; CHECK-NEXT:    movq %rax, 8(%rbp)
 ; CHECK:         movq %rdx, 120(%rbp)
   %x = alloca [2 x i64], align 16

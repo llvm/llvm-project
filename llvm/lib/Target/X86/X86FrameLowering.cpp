@@ -2698,7 +2698,7 @@ static bool isWin64ReserveExitTerminator(const MachineInstr &MI) {
          MI.getOpcode() == X86::RET64 || MI.getOpcode() == X86::RETI64;
 }
 
-// Whether MI is a volatile store (as emitted for a tail call) that writes the
+// Whether MI is a store (as emitted for a tail call) that writes the
 // caller's return address slot, which is [-SlotSize, 0) in fixed-object
 // coordinates.
 static bool storesToOldReturnAddress(const MachineInstr &MI,
@@ -2707,7 +2707,7 @@ static bool storesToOldReturnAddress(const MachineInstr &MI,
   if (!MI.mayStore())
     return false;
   for (const MachineMemOperand *MMO : MI.memoperands()) {
-    if (!MMO->isStore() || !MMO->isVolatile() || !MMO->getSize().hasValue())
+    if (!MMO->isStore() || !MMO->getSize().hasValue())
       continue;
     const auto *PSV =
         dyn_cast_or_null<FixedStackPseudoSourceValue>(MMO->getPseudoValue());

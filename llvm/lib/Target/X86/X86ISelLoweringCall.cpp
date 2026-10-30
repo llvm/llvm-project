@@ -2023,15 +2023,9 @@ static SDValue EmitTailCallStoreRetAddr(SelectionDAG &DAG, MachineFunction &MF,
     MF.getFrameInfo().CreateFixedObject(SlotSize, (int64_t)FPDiff - SlotSize,
                                          false);
   SDValue NewRetAddrFrIdx = DAG.getFrameIndex(NewReturnAddrFI, PtrVT);
-
-  // This is volatile to prevent re-ordering relative to the outgoing stack
-  // argument stores, to avoid situations where the return address isn't on
-  // the stack.
-  Chain =
-      DAG.getStore(Chain, dl, RetAddrFrIdx, NewRetAddrFrIdx,
-                   MachinePointerInfo::getFixedStack(DAG.getMachineFunction(),
-                                                     NewReturnAddrFI),
-                   /*Alignment=*/MaybeAlign(), MachineMemOperand::MOVolatile);
+  Chain = DAG.getStore(Chain, dl, RetAddrFrIdx, NewRetAddrFrIdx,
+                       MachinePointerInfo::getFixedStack(
+                           DAG.getMachineFunction(), NewReturnAddrFI));
   return Chain;
 }
 
@@ -2519,21 +2513,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       Chain =
           DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Chain, ByValTempChain);
 
-    // Store the return address before writing stack arguments, so that a
-    // valid copy is always somewhere on the stack.
-    Chain = EmitTailCallStoreRetAddr(DAG, MF, Chain, RetAddrFrIdx,
-                                     getPointerTy(DAG.getDataLayout()),
-                                     RegInfo->getSlotSize(), FPDiff, dl);
-
     SmallVector<SDValue, 8> MemOpChains2;
     SDValue FIN;
     int FI = 0;
 
-    // On Win64, route a value through a vreg that the tail call also uses, so
-    // it stays live until the terminator and its store can be sunk there.
+    // Route a value through a vreg that the tail call also uses, so it stays
+    // live until the terminator and its store can be sunk there.
     auto KeepLive = [&](SDValue InChain, SDValue Val) {
-      if (!Subtarget.isTargetWin64())
-        return std::make_pair(InChain, Val);
       EVT VT = Val.getValueType();
       Register VR = MF.getRegInfo().createVirtualRegister(
           getRegClassFor(VT.getSimpleVT()));
@@ -2575,83 +2561,29 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         if (SDValue ByValSrc = ByValTemporaries[OutsIndex]) {
           auto PtrVT = getPointerTy(DAG.getDataLayout());
           SDValue DstAddr = DAG.getFrameIndex(FI, PtrVT);
-          int64_t SlotSize = RegInfo->getSlotSize();
-          int64_t CopySize = Flags.getByValSize();
-          Align BaseAlign = Flags.getNonZeroByValAlign();
 
-          // Bytes of this copy that land on the old return-address slot,
-          // relative to the start of the destination.
-          int64_t OvLo = std::max<int64_t>(Offset, -SlotSize) - Offset;
-          int64_t OvHi = std::min<int64_t>(Offset + CopySize, 0) - Offset;
-
-          auto CopyBytes = [&](int64_t Lo, int64_t Hi) {
-            if (Lo >= Hi)
-              return;
-            Align A = commonAlignment(BaseAlign, Lo);
-            SDValue Src =
-                DAG.getMemBasePlusOffset(ByValSrc, TypeSize::getFixed(Lo), dl);
-            SDValue Dst =
-                DAG.getMemBasePlusOffset(DstAddr, TypeSize::getFixed(Lo), dl);
-            MemOpChains2.push_back(DAG.getMemcpy(
-                Chain, dl, Dst, Src, DAG.getIntPtrConstant(Hi - Lo, dl), A, A,
-                /*isVolatile*/ false, /*AlwaysInline=*/true,
-                /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
-                MachinePointerInfo()));
-          };
-
-          if (OvLo >= OvHi) {
-            CopyBytes(0, CopySize);
-          } else {
-            CopyBytes(0, OvLo);
-            CopyBytes(OvHi, CopySize);
-            // The overlapping bytes get volatile stores so they stay ordered
-            // after the new return-address store.
-            for (int64_t Pos = OvLo; Pos < OvHi;) {
-              int64_t Remaining = OvHi - Pos;
-              unsigned PieceSize = Remaining >= 8   ? 8
-                                   : Remaining >= 4 ? 4
-                                   : Remaining >= 2 ? 2
-                                                    : 1;
-              MVT PieceVT = MVT::getIntegerVT(PieceSize * 8);
-              Align A = commonAlignment(BaseAlign, Pos);
-              SDValue Src = DAG.getMemBasePlusOffset(
-                  ByValSrc, TypeSize::getFixed(Pos), dl);
-              SDValue Ld =
-                  DAG.getLoad(PieceVT, dl, Chain, Src, MachinePointerInfo(), A);
-              auto [LdChain, Val] = KeepLive(Ld.getValue(1), Ld);
-              SDValue Dst = DAG.getMemBasePlusOffset(
-                  DstAddr, TypeSize::getFixed(Pos), dl);
-              MemOpChains2.push_back(
-                  DAG.getStore(LdChain, dl, Val, Dst,
-                               MachinePointerInfo::getFixedStack(MF, FI, Pos),
-                               A, MachineMemOperand::MOVolatile));
-              Pos += PieceSize;
-            }
-          }
+          MemOpChains2.push_back(CreateCopyOfByValArgument(
+              ByValSrc, DstAddr, Chain, Flags, DAG, dl));
         }
       } else {
         // Store relative to framepointer.
-        //
-        // If this slot overlaps the original return address, mark it as
-        // volatile to prevent it being reordered ahead of the store to the
-        // new return address slot.
-        bool OverlapsOldRetAddr = FPDiff && (int64_t)Offset < 0 &&
-                                  (int64_t)Offset + (int64_t)OpSize >
-                                      -(int64_t)RegInfo->getSlotSize();
         SDValue StoreChain = Chain;
-        if (OverlapsOldRetAddr)
+        if (Subtarget.isTargetWin64() && FPDiff && Offset < 0 &&
+            Offset + (int64_t)OpSize > -(int64_t)RegInfo->getSlotSize())
           std::tie(StoreChain, Arg) = KeepLive(Chain, Arg);
         MemOpChains2.push_back(DAG.getStore(
             StoreChain, dl, Arg, FIN,
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
-            /*Alignment=*/MaybeAlign(),
-            OverlapsOldRetAddr ? MachineMemOperand::MOVolatile
-                               : MachineMemOperand::MONone));
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI)));
       }
     }
 
     if (!MemOpChains2.empty())
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOpChains2);
+
+    // Store the return address to the appropriate stack slot.
+    Chain = EmitTailCallStoreRetAddr(DAG, MF, Chain, RetAddrFrIdx,
+                                     getPointerTy(DAG.getDataLayout()),
+                                     RegInfo->getSlotSize(), FPDiff, dl);
   }
 
   // Build a sequence of copy-to-reg nodes chained together with token chain
