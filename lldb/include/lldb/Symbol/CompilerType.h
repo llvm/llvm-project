@@ -206,6 +206,8 @@ public:
 
   bool HasPointerAuthQualifier() const;
 
+  std::optional<uint32_t> GetTargetAddressSpace() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 
@@ -399,6 +401,11 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
+  /// Return a new CompilerType that qualifies this type with the given target
+  /// address space if this type is valid and the type system supports target
+  /// address spaces.
+  CompilerType AddAddressSpaceModifier(uint32_t address_space) const;
   /// \}
 
   /// Exploring the type.
