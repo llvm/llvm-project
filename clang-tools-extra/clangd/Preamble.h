@@ -125,6 +125,10 @@ struct PreambleData {
   // Cache of FS operations performed when building the preamble.
   // When reusing a preamble, this cache can be consumed to save IO.
   std::shared_ptr<PreambleFileStatusCache> StatCache;
+  // Deprecated macros defined in the preamble (including included headers).
+  // Clang's PCH serialization does not preserve isDeprecatedMacro or
+  // deprecation messages, so we propagate them by hand to subsequent parses.
+  std::vector<std::pair<std::string, std::string>> DeprecatedMacros;
   // Whether there was a (possibly-incomplete) include-guard on the main file.
   // We need to propagate this information "by hand" to subsequent parses.
   bool MainIsIncludeGuarded = false;

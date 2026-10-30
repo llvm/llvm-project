@@ -1104,12 +1104,20 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
       },
       AST.getHeuristicResolver());
   // Add highlightings for macro references.
+  const auto &SM = C.getSourceManager();
+  StringRef Buffer = SM.getBufferData(SM.getMainFileID());
   auto AddMacro = [&](const MacroOccurrence &M) {
-    auto &T = Builder.addToken(M.toRange(C.getSourceManager()),
-                               HighlightingKind::Macro);
+    auto &T = Builder.addToken(M.toRange(SM), HighlightingKind::Macro);
     T.addModifier(HighlightingModifier::GlobalScope);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);
+    if (M.EndOffset <= Buffer.size()) {
+      const auto &Identifiers = AST.getPreprocessor().getIdentifierTable();
+      auto It = Identifiers.find(
+          Buffer.substr(M.StartOffset, M.EndOffset - M.StartOffset));
+      if (It != Identifiers.end() && It->second->isDeprecatedMacro())
+        T.addModifier(HighlightingModifier::Deprecated);
+    }
   };
   for (const auto &SIDToRefs : AST.getMacros().MacroRefs)
     for (const auto &M : SIDToRefs.second)
