@@ -335,8 +335,9 @@ void test_complex_char_tied_int(_Complex char *p, int x) {
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // CHECK-NEXT:    [[TMP2:%.*]] = call ptr asm "", "=r,0,~{dirflag},~{fpsr},~{flags}"(ptr [[TMP1]]) #[[ATTR2]], !srcloc [[META14:![0-9]+]]
-// CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i16
-// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[TMP2]] to i64
+// CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[TMP3]] to i16
+// CHECK-NEXT:    store i16 [[TMP4]], ptr [[TMP0]], align 1
 // CHECK-NEXT:    ret void
 //
 void test_complex_char_tied_pointer(_Complex char *p, void *x) {
