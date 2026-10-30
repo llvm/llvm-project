@@ -95,3 +95,33 @@ entry:
 ; CHECK-LABEL: @atomic_float(
 ; CHECK: call void @__csan_read4(ptr %p, i32 1)
 ; CHECK-NEXT: %v = load atomic float, ptr %p monotonic, align 4
+
+define void @plain_read_before_volatile_write(ptr %p) sanitize_concurrency {
+entry:
+  %v = load i32, ptr %p, align 4
+  store volatile i32 %v, ptr %p, align 4
+  ret void
+}
+; CHECK-LABEL: @plain_read_before_volatile_write(
+; CHECK: call void @__csan_read4(ptr %p, i32 0)
+; CHECK: call void @__csan_write4(ptr %p, i32 1)
+
+define void @volatile_read_before_plain_write(ptr %p) sanitize_concurrency {
+entry:
+  %v = load volatile i32, ptr %p, align 4
+  store i32 %v, ptr %p, align 4
+  ret void
+}
+; CHECK-LABEL: @volatile_read_before_plain_write(
+; CHECK: call void @__csan_read4(ptr %p, i32 1)
+; CHECK: call void @__csan_write4(ptr %p, i32 0)
+
+define void @volatile_read_before_volatile_write(ptr %p) sanitize_concurrency {
+entry:
+  %v = load volatile i32, ptr %p, align 4
+  store volatile i32 %v, ptr %p, align 4
+  ret void
+}
+; CHECK-LABEL: @volatile_read_before_volatile_write(
+; CHECK: call void @__csan_read4(ptr %p, i32 1)
+; CHECK: call void @__csan_write4(ptr %p, i32 1)

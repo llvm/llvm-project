@@ -14,7 +14,7 @@
 
 #include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/bit.h"
@@ -139,18 +139,27 @@ static int getAccessSizeIndex(Type *Ty, const DataLayout &DL) {
 // A later write of the same pointer drops an earlier read in this window.
 static void selectMemoryAccesses(SmallVectorImpl<Instruction *> &Local,
                                  SmallVectorImpl<Instruction *> &Out) {
-  DenseSet<Value *> WriteTargets;
+  DenseMap<Value *, StoreInst *> WriteTargets;
   for (Instruction *Inst : reverse(Local)) {
-    const bool IsWrite = isa<StoreInst>(Inst);
     Value *Addr = getLoadStorePointerOperand(Inst);
-    if (!IsWrite && WriteTargets.contains(Addr)) {
+    if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
+      WriteTargets[Addr] = Store;
+      Out.push_back(Inst);
+      continue;
+    }
+
+    // A volatile write is reported as atomic when distinguished, so it does
+    // not cover a plain read. Keep the read if either access is volatile.
+    StoreInst *LaterWrite = WriteTargets.lookup(Addr);
+    bool AnyVolatile =
+        LaterWrite && ClDistinguishVolatile &&
+        (cast<LoadInst>(Inst)->isVolatile() || LaterWrite->isVolatile());
+    if (LaterWrite && !AnyVolatile) {
       ++NumOmittedReadsBeforeWrite;
       continue;
     }
 
     Out.push_back(Inst);
-    if (IsWrite)
-      WriteTargets.insert(Addr);
   }
   Local.clear();
 }
