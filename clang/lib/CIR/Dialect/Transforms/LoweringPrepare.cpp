@@ -2591,17 +2591,39 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
     return;
 
   std::optional<cir::CtorKind> ctorKind = funcOp.getCxxConstructorKind();
-  if (ctorKind && *ctorKind == cir::CtorKind::Copy &&
-      funcOp.isCxxTrivialMemberFunction()) {
-    // Replace the trivial copy constructor call with a `CopyOp`
-    CIRBaseBuilderTy builder(getContext());
-    mlir::ValueRange operands = op.getOperands();
-    mlir::Value dest = operands[0];
-    mlir::Value src = operands[1];
-    builder.setInsertionPoint(op);
-    builder.createCopy(dest, src);
-    op.erase();
+  bool isCopyCtor = ctorKind && *ctorKind == cir::CtorKind::Copy;
+  bool isSpecialAssign = funcOp.getCxxSpecialAssignKind().has_value();
+
+  if ((!isCopyCtor && !isSpecialAssign) || !funcOp.isCxxTrivialMemberFunction())
+    return;
+
+  // Replace trivial copy constructor and trivial copy/move assignment calls
+  // with a CopyOp.
+  CIRBaseBuilderTy builder(getContext());
+  mlir::ValueRange operands = op.getOperands();
+  mlir::Value dest = operands[0];
+  mlir::Value src = operands[1];
+  builder.setInsertionPoint(op);
+
+  // OGCG keeps the call if AddressSanitizer pads the class.
+  assert(!cir::MissingFeatures::sanitizers());
+
+  bool skipTailPadding = false;
+  bool isVolatile = false;
+  if (isSpecialAssign) {
+    if (auto structTy = mlir::dyn_cast<cir::StructType>(
+            mlir::cast<cir::PointerType>(dest.getType()).getPointee())) {
+      cir::CIRDataLayout dataLayout(mlirModule);
+      skipTailPadding = structTy.computeStructDataSize(dataLayout.layout) !=
+                        dataLayout.layout.getTypeSize(structTy);
+    }
+    // OGCG makes the copy volatile if the class has a volatile member.
+    assert(!cir::MissingFeatures::trivialAssignVolatileMember());
   }
+  builder.createCopy(dest, src, isVolatile, skipTailPadding);
+  if (op->getNumResults())
+    op->getResult(0).replaceAllUsesWith(dest);
+  op.erase();
 }
 
 cir::GlobalOp LoweringPreparePass::getOrCreateConstAggregateGlobal(
