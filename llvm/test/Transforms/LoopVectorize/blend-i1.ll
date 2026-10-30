@@ -55,3 +55,72 @@ latch:
 exit:
   ret void
 }
+
+define void @blend_of_i1_false_nested(ptr noalias %a, ptr noalias %dst) {
+; CHECK-LABEL: define void @blend_of_i1_false_nested(
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[A]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 100)
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp sge <4 x i32> [[WIDE_LOAD]], splat (i32 50)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i1> [[TMP1]], splat (i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = xor <4 x i1> [[TMP2]], splat (i1 true)
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP1]], <4 x i1> [[TMP7]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP3]], <4 x i1> [[TMP4]], <4 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP9]], [[TMP8]]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <4 x i1> [[TMP10]], [[TMP6]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i1> zeroinitializer, <4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP12:%.*]] = zext <4 x i1> [[PREDPHI]] to <4 x i8>
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x i8> [[TMP12]], ptr [[TMP13]], align 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep.a = getelementptr i32, ptr %a, i64 %iv
+  %x = load i32, ptr %gep.a
+  %c0 = icmp sgt i32 %x, 0
+  br i1 %c0, label %if.0, label %latch
+
+if.0:
+  %c1 = icmp slt i32 %x, 100
+  br i1 %c1, label %if.1, label %latch
+
+if.1:
+  %c2 = icmp slt i32 %x, 50
+  br i1 %c2, label %then, label %latch
+
+then:
+  %c3 = icmp eq i32 %x, 42
+  br label %latch
+
+latch:
+  %p = phi i1 [ %c3, %then ], [ false, %loop ], [ false, %if.0 ], [ false, %if.1 ]
+  %zext = zext i1 %p to i8
+  %gep.dst = getelementptr i8, ptr %dst, i64 %iv
+  store i8 %zext, ptr %gep.dst
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 128
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
