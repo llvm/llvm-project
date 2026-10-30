@@ -9,11 +9,11 @@ define void @callee_with_metadata(ptr nocapture %a, ptr nocapture %b, ptr nocapt
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META0:![0-9]+]])
 ; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META3:![0-9]+]])
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C:%.*]], align 4, !noalias !5
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C:%.*]], align 4, !noalias [[META5:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 5
-; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I]], align 4, !alias.scope !0, !noalias !3
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 8
-; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX1_I]], align 4, !alias.scope !3, !noalias !0
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX1_I]], align 4, !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 7
 ; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX]], align 4
@@ -64,43 +64,43 @@ entry:
 define void @caller(ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c_ptr) #0 {
 ; CHECK-LABEL: @caller(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[C_PTR:%.*]], align 8, !alias.scope !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META9:![0-9]+]]), !noalias !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META12:![0-9]+]]), !noalias !6
-; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !noalias !14
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[C_PTR:%.*]], align 8, !alias.scope [[META6:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META9:![0-9]+]]), !noalias [[META6]]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META12:![0-9]+]]), !noalias [[META6]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4, !noalias [[META14:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 5
-; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I_I]], align 4, !alias.scope !9, !noalias !15
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX_I_I]], align 4, !alias.scope [[META9]], !noalias [[META15:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 8
-; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX1_I_I]], align 4, !alias.scope !12, !noalias !16
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[C]], align 4, !noalias !6
+; CHECK-NEXT:    store float [[TMP0]], ptr [[ARRAYIDX1_I_I]], align 4, !alias.scope [[META12]], !noalias [[META16:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[C]], align 4, !noalias [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, ptr [[A]], i64 7
-; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_I]], align 4, !noalias !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]]), !alias.scope !6
-; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META20:![0-9]+]]), !alias.scope !6
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[A]], align 4, !alias.scope !6, !noalias !22
+; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_I]], align 4, !noalias [[META6]]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META17:![0-9]+]]), !alias.scope [[META6]]
+; CHECK-NEXT:    call void @llvm.experimental.noalias.scope.decl(metadata [[META20:![0-9]+]]), !alias.scope [[META6]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[A]], align 4, !alias.scope [[META6]], !noalias [[META22:![0-9]+]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 5
-; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX_I_I1]], align 4, !alias.scope !23, !noalias !20
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX_I_I1]], align 4, !alias.scope [[META23:![0-9]+]], !noalias [[META20]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
-; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX1_I_I2]], align 4, !alias.scope !24, !noalias !17
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[A]], align 4, !alias.scope !6
+; CHECK-NEXT:    store float [[TMP2]], ptr [[ARRAYIDX1_I_I2]], align 4, !alias.scope [[META24:![0-9]+]], !noalias [[META17]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr [[A]], align 4, !alias.scope [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I3:%.*]] = getelementptr inbounds float, ptr [[B]], i64 7
-; CHECK-NEXT:    store float [[TMP3]], ptr [[ARRAYIDX_I3]], align 4, !alias.scope !6
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[C]], align 4, !noalias !6
+; CHECK-NEXT:    store float [[TMP3]], ptr [[ARRAYIDX_I3]], align 4, !alias.scope [[META6]]
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr [[C]], align 4, !noalias [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I4:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
-; CHECK-NEXT:    store float [[TMP4]], ptr [[ARRAYIDX_I_I4]], align 4, !noalias !6
+; CHECK-NEXT:    store float [[TMP4]], ptr [[ARRAYIDX_I_I4]], align 4, !noalias [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I5:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
-; CHECK-NEXT:    store float [[TMP4]], ptr [[ARRAYIDX1_I_I5]], align 4, !noalias !6
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[C]], align 4, !noalias !6
+; CHECK-NEXT:    store float [[TMP4]], ptr [[ARRAYIDX1_I_I5]], align 4, !noalias [[META6]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr [[C]], align 4, !noalias [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I6:%.*]] = getelementptr inbounds float, ptr [[A]], i64 7
-; CHECK-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX_I6]], align 4, !noalias !6
-; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4, !alias.scope !6
+; CHECK-NEXT:    store float [[TMP5]], ptr [[ARRAYIDX_I6]], align 4, !noalias [[META6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[A]], align 4, !alias.scope [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I_I7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 5
-; CHECK-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX_I_I7]], align 4, !alias.scope !6
+; CHECK-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX_I_I7]], align 4, !alias.scope [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX1_I_I8:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
-; CHECK-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX1_I_I8]], align 4, !alias.scope !6
-; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[A]], align 4, !alias.scope !6
+; CHECK-NEXT:    store float [[TMP6]], ptr [[ARRAYIDX1_I_I8]], align 4, !alias.scope [[META6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[A]], align 4, !alias.scope [[META6]]
 ; CHECK-NEXT:    [[ARRAYIDX_I9:%.*]] = getelementptr inbounds float, ptr [[B]], i64 7
-; CHECK-NEXT:    store float [[TMP7]], ptr [[ARRAYIDX_I9]], align 4, !alias.scope !6
+; CHECK-NEXT:    store float [[TMP7]], ptr [[ARRAYIDX_I9]], align 4, !alias.scope [[META6]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -116,26 +116,26 @@ attributes #0 = { nounwind uwtable }
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"hello: %a"}
-!2 = distinct !{!2, !"hello"}
+!2 = distinct !{!2, i1 false, !"hello"}
 !3 = !{!4, !6}
 !4 = distinct !{!4, !5, !"hello2: %a"}
-!5 = distinct !{!5, !"hello2"}
+!5 = distinct !{!5, i1 false, !"hello2"}
 !6 = distinct !{!6, !5, !"hello2: %b"}
 !7 = !{!4}
 !8 = !{!6}
 
 ; CHECK: !0 = !{!1}
 ; CHECK: !1 = distinct !{!1, !2, !"hello2: %a"}
-; CHECK: !2 = distinct !{!2, !"hello2"}
+; CHECK: !2 = distinct !{!2, i1 false, !"hello2"}
 ; CHECK: !3 = !{!4}
 ; CHECK: !4 = distinct !{!4, !2, !"hello2: %b"}
 ; CHECK: !5 = !{!1, !4}
 ; CHECK: !6 = !{!7}
 ; CHECK: !7 = distinct !{!7, !8, !"hello: %a"}
-; CHECK: !8 = distinct !{!8, !"hello"}
+; CHECK: !8 = distinct !{!8, i1 false, !"hello"}
 ; CHECK: !9 = !{!10}
 ; CHECK: !10 = distinct !{!10, !11, !"hello2: %a"}
-; CHECK: !11 = distinct !{!11, !"hello2"}
+; CHECK: !11 = distinct !{!11, i1 false, !"hello2"}
 ; CHECK: !12 = !{!13}
 ; CHECK: !13 = distinct !{!13, !11, !"hello2: %b"}
 ; CHECK: !14 = !{!10, !13, !7}
@@ -143,7 +143,7 @@ attributes #0 = { nounwind uwtable }
 ; CHECK: !16 = !{!10, !7}
 ; CHECK: !17 = !{!18}
 ; CHECK: !18 = distinct !{!18, !19, !"hello2: %a"}
-; CHECK: !19 = distinct !{!19, !"hello2"}
+; CHECK: !19 = distinct !{!19, i1 false, !"hello2"}
 ; CHECK: !20 = !{!21}
 ; CHECK: !21 = distinct !{!21, !19, !"hello2: %b"}
 ; CHECK: !22 = !{!18, !21}

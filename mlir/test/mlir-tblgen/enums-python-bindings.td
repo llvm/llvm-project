@@ -108,8 +108,8 @@ def TestBitEnum_Attr : EnumAttr<Test_Dialect, TestBitEnum, "testbitenum">;
 
 // CHECK: @register_attribute_builder("TestDialect.TestBitEnum_Attr")
 // CHECK: def _testbitenum_attr(x, context):
-// CHECK:     return _ods_ir.Attribute.parse(f'#TestDialect<testbitenum {str(x)}>', context=context)
+// CHECK:     return _ods_ir.Attribute.parse(f'#TestDialect.testbitenum<{str(x)}>', context=context)
 
 // CHECK: @register_attribute_builder("TestDialect.TestMyEnum_Attr")
 // CHECK: def _testmyenum_attr(x, context):
-// CHECK:     return _ods_ir.Attribute.parse(f'#TestDialect<enum {str(x)}>', context=context)
+// CHECK:     return _ods_ir.Attribute.parse(f'#TestDialect.enum<{str(x)}>', context=context)

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify=expected,c2y,c -pedantic -std=c2y -Wno-gnu-line-marker %s
-// RUN: %clang_cc1 -verify=expected,c2y,compat -Wpre-c2y-compat -std=c2y -Wno-gnu-line-marker %s
+// RUN: %clang_cc1 -verify=expected,c2y,compat -Wpre-c2y-compat-pedantic -std=c2y -Wno-gnu-line-marker %s
 // RUN: %clang_cc1 -verify=expected,ext,c -pedantic -std=c23 -Wno-gnu-line-marker %s
 // RUN: %clang_cc1 -verify=expected,cpp -pedantic -x c++ -Wno-c11-extensions -Wno-gnu-line-marker %s
 

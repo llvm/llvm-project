@@ -14,4 +14,5 @@ functions:
       - gnu
   - name: ptrfunc
     return_type: int *
-    arguments: []
+    arguments:
+      - type: int (*)(struct type_b **, struct type_c **)

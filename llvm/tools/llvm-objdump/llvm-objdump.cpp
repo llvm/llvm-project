@@ -64,10 +64,10 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
@@ -92,21 +92,17 @@ using namespace llvm::opt;
 
 namespace {
 
-class CommonOptTable : public opt::GenericOptTable {
+class CommonOptTable : public opt::OptTable {
 public:
-  CommonOptTable(const StringTable &StrTable,
-                 ArrayRef<StringTable::Offset> PrefixesTable,
-                 ArrayRef<Info> OptionInfos, const char *Usage,
-                 const char *Description)
-      : opt::GenericOptTable(StrTable, PrefixesTable, OptionInfos),
-        Usage(Usage), Description(Description) {
+  CommonOptTable(const Tables &T, const char *Usage, const char *Description)
+      : opt::OptTable(T), Usage(Usage), Description(Description) {
     setGroupedShortOptions(true);
   }
 
   void printHelp(StringRef Argv0, bool ShowHidden = false) const {
     Argv0 = sys::path::filename(Argv0);
-    opt::GenericOptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(),
-                                    Description, ShowHidden, ShowHidden);
+    opt::OptTable::printHelp(outs(), (Argv0 + Usage).str().c_str(), Description,
+                             ShowHidden, ShowHidden);
     // TODO Replace this with OptTable API once it adds extrahelp support.
     outs() << "\nPass @FILE as argument to read options from FILE.\n";
   }
@@ -118,29 +114,16 @@ private:
 
 // ObjdumpOptID is in ObjdumpOptID.h
 namespace objdump_opt {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "ObjdumpOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "ObjdumpOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info ObjdumpInfoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OBJDUMP_, __VA_ARGS__),
-#include "ObjdumpOpts.inc"
-#undef OPTION
-};
 } // namespace objdump_opt
 
 class ObjdumpOptTable : public CommonOptTable {
 public:
   ObjdumpOptTable()
-      : CommonOptTable(
-            objdump_opt::OptionStrTable, objdump_opt::OptionPrefixesTable,
-            objdump_opt::ObjdumpInfoTable, " [options] <input object files>",
-            "llvm object file dumper") {}
+      : CommonOptTable(objdump_opt::optionTables(),
+                       " [options] <input object files>",
+                       "llvm object file dumper") {}
 };
 
 enum OtoolOptID {
@@ -151,26 +134,14 @@ enum OtoolOptID {
 };
 
 namespace otool {
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "OtoolOpts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "OtoolOpts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info OtoolInfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(OTOOL_, __VA_ARGS__),
-#include "OtoolOpts.inc"
-#undef OPTION
-};
 } // namespace otool
 
 class OtoolOptTable : public CommonOptTable {
 public:
   OtoolOptTable()
-      : CommonOptTable(otool::OptionStrTable, otool::OptionPrefixesTable,
-                       otool::OtoolInfoTable, " [option...] [file...]",
+      : CommonOptTable(otool::optionTables(), " [option...] [file...]",
                        "Mach-O object file displaying tool") {}
 };
 
@@ -1477,16 +1448,13 @@ class RISCVISATargetCache {
 public:
   explicit RISCVISATargetCache(StringRef FileName) : FileName(FileName) {}
 
-  // Returns a DisassemblerTarget configured for ISAStr.  Feature priority in
-  // the returned target is (low -> high): Tag_RISCV_arch, the mapping-symbol
-  // ISA, then --mattr, so an explicit --mattr on the command line overrides
-  // both the attribute-recorded arch and the mapping symbol.  If appending
-  // --mattr on top of the mapping symbol would create a conflicting feature
-  // set (e.g. mapping symbol rv64if combined with --mattr=+zfinx), the
-  // --mattr layer is dropped for this region and only the mapping symbol
-  // (layered on Tag_RISCV_arch) is used.  Falls back to &Base when ISAStr is
-  // empty or cannot be parsed; a parse failure is cached so the same bad
-  // string is consumed only once.
+  // Returns a DisassemblerTarget configured for ISAStr.  A "$x<ISA>" mapping
+  // symbol specifies the full ISA for its region rather than a delta on top of
+  // Base.  An explicit --mattr on the command line is layered on top unless it
+  // conflicts with the mapping symbol (e.g. mapping symbol rv64if combined with
+  // --mattr=+zfinx), in which case --mattr is dropped for this region.  Falls
+  // back to &Base when ISAStr is empty or cannot be parsed; a parse failure is
+  // cached so the same bad string is consumed only once.
   DisassemblerTarget *get(DisassemblerTarget &Base, StringRef ISAStr) {
     if (ISAStr.empty())
       return &Base;
@@ -1497,11 +1465,11 @@ public:
       auto ParseResult = RISCVISAInfo::parseNormalizedArchString(ISAStr);
       if (ParseResult) {
         std::vector<std::string> ISAFeatures = (*ParseResult)->toFeatures();
-        // Base's feature string already contains Tag_RISCV_arch followed by
-        // --mattr.  Appending the mapping-symbol features here puts the
-        // mapping symbol above both; the --mattr re-layering below then puts
-        // --mattr back on top as the highest-priority source.
-        SubtargetFeatures Features(Base.SubtargetInfo->getFeatureString());
+        // Start from an empty feature set rather than Base: "$x<ISA>" encodes
+        // the full ISA for this region, and toFeatures() only emits "+ext" for
+        // enabled extensions, so starting from Base would keep extensions from
+        // Tag_RISCV_arch or conflicting --mattr flags enabled.
+        SubtargetFeatures Features;
         // toFeatures() only emits the extensions from Exts (i, m, f, ...),
         // not the base-ISA XLEN.  Derive 64bit from getXLen() so mapping
         // symbols that switch XLEN (e.g. rv64 inside an rv32 triple) reach
@@ -3684,16 +3652,19 @@ static void dumpInput(StringRef file) {
   OwningBinary<Binary> OBinary = unwrapOrError(createBinary(file), file);
   Binary &Binary = *OBinary.getBinary();
 
-  if (Archive *A = dyn_cast<Archive>(&Binary))
+  if (Archive *A = dyn_cast<Archive>(&Binary)) {
     dumpArchive(A);
-  else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary))
+  } else if (ObjectFile *O = dyn_cast<ObjectFile>(&Binary)) {
     dumpObject(O);
-  else if (MachOUniversalBinary *UB = dyn_cast<MachOUniversalBinary>(&Binary))
+  } else if (MachOUniversalBinary *UB =
+                 dyn_cast<MachOUniversalBinary>(&Binary)) {
     parseInputMachO(UB);
-  else if (OffloadBinary *OB = dyn_cast<OffloadBinary>(&Binary))
+  } else if (isa<OffloadBinary>(&Binary)) {
+    std::unique_ptr<MemoryBuffer> OB = OBinary.takeBinary().second;
     dumpOffloadSections(*OB);
-  else
+  } else {
     reportError(errorCodeToError(object_error::invalid_file_type), file);
+  }
 }
 
 template <typename T>

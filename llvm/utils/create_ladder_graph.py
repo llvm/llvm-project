@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """A ladder graph creation program.
 
 This is a python program that creates c source code that will generate

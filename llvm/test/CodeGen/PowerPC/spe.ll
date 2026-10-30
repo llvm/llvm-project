@@ -2254,23 +2254,23 @@ define void @d(ptr %e, ptr %f) #0 {
 ; EFPU2-NEXT:    stw 30, 24(1) # 4-byte Folded Spill
 ; EFPU2-NEXT:    mr 30, 4
 ; EFPU2-NEXT:    bl __extendsfdf2
-; EFPU2-NEXT:    mr 28, 3
+; EFPU2-NEXT:    mr 29, 3
 ; EFPU2-NEXT:    lwz 3, 0(30)
-; EFPU2-NEXT:    mr 29, 4
+; EFPU2-NEXT:    mr 28, 4
 ; EFPU2-NEXT:    bl __extendsfdf2
-; EFPU2-NEXT:    mr 30, 4
-; EFPU2-NEXT:    mr 27, 3
+; EFPU2-NEXT:    mr 30, 3
+; EFPU2-NEXT:    mr 27, 4
 ; EFPU2-NEXT:    bl foo
 ; EFPU2-NEXT:    mr 26, 3
-; EFPU2-NEXT:    mr 3, 28
-; EFPU2-NEXT:    mr 4, 29
+; EFPU2-NEXT:    mr 3, 29
+; EFPU2-NEXT:    mr 4, 28
 ; EFPU2-NEXT:    bl foo
 ; EFPU2-NEXT:    mr 3, 26
 ; EFPU2-NEXT:    bl __floatsidf
-; EFPU2-NEXT:    mr 6, 4
 ; EFPU2-NEXT:    mr 5, 3
-; EFPU2-NEXT:    mr 3, 27
-; EFPU2-NEXT:    mr 4, 30
+; EFPU2-NEXT:    mr 6, 4
+; EFPU2-NEXT:    mr 3, 30
+; EFPU2-NEXT:    mr 4, 27
 ; EFPU2-NEXT:    bl __muldf3
 ; EFPU2-NEXT:    bl __truncdfsf2
 ; EFPU2-NEXT:    stw 3, 0(3)

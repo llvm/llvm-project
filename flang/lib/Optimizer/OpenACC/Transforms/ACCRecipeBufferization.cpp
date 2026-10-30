@@ -93,6 +93,42 @@ static void bufferizeRegionArgsAndYields(mlir::Region &region,
   }
 }
 
+/// Positions \p builder where the memory holding the bufferized descriptor of
+/// \p clauseOp should be created.
+///
+/// Device code reads the descriptor through this memory, so the memory and the
+/// value stored into it must end up on the same side of the host/device
+/// boundary. Placing it next to the variable - the default - satisfies that for
+/// a host variable, whose memory a data clause can then map.
+///
+/// Device memory is required, and legal, only when all three conditions hold:
+///   - there is an enclosing compute construct, whose region is device memory
+///     needing no data clause of its own. A clause on an orphaned loop or on
+///     the construct itself has none.
+///   - the variable comes from a data entry operation, so the value stored is
+///     a device address rather than a host one.
+///   - that operation is outside the construct, so the value is a legal live-in
+///     and its definition dominates the region entry block.
+///
+/// The entry block is used rather than the clause operation so that a clause on
+/// a nested loop does not allocate on every iteration.
+static void setDescriptorInsertionPoint(mlir::OpBuilder &builder,
+                                        mlir::Operation *clauseOp,
+                                        mlir::Value var) {
+  mlir::Operation *varOp = var.getDefiningOp();
+  mlir::Operation *construct =
+      clauseOp->getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
+  if (construct && llvm::isa_and_nonnull<ACC_DATA_ENTRY_OPS>(varOp) &&
+      !construct->isProperAncestor(varOp)) {
+    mlir::Region &region = construct->getRegion(0);
+    if (!region.empty()) {
+      builder.setInsertionPointToStart(&region.front());
+      return;
+    }
+  }
+  builder.setInsertionPointAfterValue(var);
+}
+
 template <typename OpTy>
 static void updateRecipeUse(mlir::ValueRange operands,
                             llvm::StringRef recipeSymName,
@@ -106,7 +142,7 @@ static void updateRecipeUse(mlir::ValueRange operands,
     mlir::Location loc = op->getLoc();
 
     mlir::OpBuilder builder(op);
-    builder.setInsertionPointAfterValue(op.getVar());
+    setDescriptorInsertionPoint(builder, op, op.getVar());
     mlir::Value alloca =
         BufferizeInterface::placeInMemory(builder, loc, op.getVar());
     op.getVarMutable().assign(alloca);

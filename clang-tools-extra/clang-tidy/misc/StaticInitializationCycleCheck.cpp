@@ -51,25 +51,24 @@ static bool shouldIgnoreRef(const DeclRefExpr *DRE, const Decl *ParentD) {
         if (ParentLambda)
           return true;
         ParentLambda = LambdaE;
-      } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(E)) {
+      } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(E);
+                 OpCallE && ParentLambda &&
+                 OpCallE->getOperator() == OverloadedOperatorKind::OO_Call &&
+                 OpCallE->getCalleeDecl() == ParentLambda->getCallOperator()) {
         // Check if the last found lambda is called with this 'operator ()'.
-        if (ParentLambda &&
-            OpCallE->getOperator() == OverloadedOperatorKind::OO_Call &&
-            OpCallE->getCalleeDecl() == ParentLambda->getCallOperator())
-          ParentLambda = nullptr;
+        ParentLambda = nullptr;
       }
-    } else if (const Decl *D = Parents[0].get<Decl>()) {
+    } else if (const Decl *D = Parents[0].get<Decl>(); D && [D, ParentD]() {
+                 if (const auto *ParentF = dyn_cast<FunctionDecl>(ParentD)) {
+                   if (const auto *FD = dyn_cast<FunctionDecl>(D))
+                     return FD == ParentF->getDefinition();
+                   return false;
+                 }
+                 return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
+               }()) {
       // Check if we reached the root of the context (variable or function
       // declaration) to check.
-      if ([D, ParentD]() {
-            if (const auto *ParentF = dyn_cast<FunctionDecl>(ParentD)) {
-              if (const auto *FD = dyn_cast<FunctionDecl>(D))
-                return FD == ParentF->getDefinition();
-              return false;
-            }
-            return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
-          }())
-        return ParentLambda != nullptr;
+      return ParentLambda != nullptr;
     }
     Parents = PMC.getParents(Parents[0]);
   }
@@ -200,8 +199,8 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
     if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
-        VarD && (!shouldIgnoreRef(DRE, Node->getDecl()) &&
-                 (VarD->hasGlobalStorage() || VarD->isStaticLocal())))
+        VarD && VarD->hasGlobalStorage() &&
+        !shouldIgnoreRef(DRE, Node->getDecl()))
       Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
     return true;
   }
@@ -241,7 +240,8 @@ public:
   }
 
   bool VisitFunctionDecl(FunctionDecl *FD) override {
-    if (FD->isGlobal() || FD->isStatic()) {
+    if ((FD->isGlobal() || FD->isStatic()) &&
+        FD->doesThisDeclarationHaveABody()) {
       if (Stmt *Body = FD->getBody()) {
         VarUseNode *N = G.addNode(FD);
         VarUseCollector Collector(N, G);

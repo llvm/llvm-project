@@ -1,5 +1,7 @@
 ; RUN: llc -mtriple=aarch64-windows -verify-machineinstrs %s -o - \
 ; RUN:  | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-uefi -verify-machineinstrs %s -o - \
+; RUN:  | FileCheck %s
 
 define void @check_watermark() "no-stack-arg-probe" {
 entry:

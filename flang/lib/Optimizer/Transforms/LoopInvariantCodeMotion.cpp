@@ -19,11 +19,13 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
+#include <optional>
 #include <utility>
 
 namespace fir {
@@ -56,6 +58,27 @@ struct LoopInvariantCodeMotion
 };
 
 } // namespace
+
+/// Returns 'loc' with its line and column cleared but the file and surrounding
+/// structure kept. Line zero marks the location as compiler-generated; the
+/// file is kept for consumers that require a file:line.
+static Location dropLineInfo(Location loc) {
+  if (auto fileLoc = dyn_cast<FileLineColRange>(loc)) {
+    return FileLineColLoc::get(fileLoc.getFilename(), /*line=*/0, /*column=*/0);
+  }
+  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+    llvm::SmallVector<Location> locs;
+    for (Location nested : fusedLoc.getLocations()) {
+      locs.push_back(dropLineInfo(nested));
+    }
+    return FusedLoc::get(locs, fusedLoc.getMetadata(), loc.getContext());
+  }
+  if (auto callSiteLoc = dyn_cast<CallSiteLoc>(loc)) {
+    return CallSiteLoc::get(dropLineInfo(callSiteLoc.getCallee()),
+                            callSiteLoc.getCaller());
+  }
+  return loc;
+}
 
 /// 'location' is a memory reference used by a memory access.
 /// The type of 'location' defines the data type of the access
@@ -90,6 +113,12 @@ static bool isNonOptionalScalar(Value location) {
     }
     Operation *defOp = location.getDefiningOp();
     if (!defOp) {
+      // A compute-region argument forwards a mapped input. Recover its storage
+      // provenance before checking whether a speculative scalar read is safe.
+      if (Value operand = acc::getACCOperandForBlockArg(location)) {
+        location = operand;
+        continue;
+      }
       // If this is a function argument
       auto blockArg = cast<BlockArgument>(location);
       Block *block = blockArg.getOwner();
@@ -287,20 +316,66 @@ void LoopInvariantCodeMotion::runOnOperation() {
 
   LDBG() << "Enter [HL]FIR LoopInvariantCodeMotion()";
 
+  // Build a recursive-effects cache scoped to this pass run and link it to
+  // a fir::AliasAnalysis that will live inside the mlir::AliasAnalysis
+  // aggregator. Every query against that AliasAnalysis (direct, or via the
+  // aggregator) now routes recursive-effect ops through the cache. The
+  // cache's destructor nulls the back-pointer on the registered
+  // AliasAnalysis when LICM exits, so the aggregator never dereferences a
+  // dead cache.
+  //
+  // LICM only hoists pure-read ops out of loops; writes are never moved,
+  // ops are never erased, and SSA values are not RAUW'd. That matches the
+  // cache's safety invariant for the whole pass run on this function.
+  fir::AliasAnalysisRecursiveEffectsCache cachedAA;
   auto &aliasAnalysis = getAnalysis<AliasAnalysis>();
-  // Enable getSource() memoization on the FIR AliasAnalysis for the duration
-  // of this pass. This is a frozen-snapshot cache with no automatic
-  // invalidation, but it is sound here because LICM only moves operations, so
-  // getSource()'s inputs are unchanged across the hoists. The cache lives no
-  // longer than this analysis instance, which the pass manager drops when the
-  // analysis is invalidated after the pass.
-  fir::AliasAnalysis firAliasAnalysis;
+  // Two independent, complementary caches are enabled for this pass:
+  //
+  //   * the recursive-effects cache (`cachedAA`), which memoizes per-operation
+  //     read/write summaries so mod-ref queries do not re-walk the regions of
+  //     ops with HasRecursiveMemoryEffects, and
+  //   * getSource() memoization, which memoizes source classification keyed on
+  //     (value, flags).
+  //
+  // Both are frozen-snapshot caches with no automatic invalidation, and both
+  // are sound here for the same reason: LICM only hoists pure-read ops, never
+  // moves writes, erases ops, or RAUWs values, so neither the effects of an
+  // operation nor the source of a value changes across the hoists. They live
+  // no longer than this analysis instance, which the pass manager drops when
+  // the analysis is invalidated after the pass.
+  fir::AliasAnalysis firAliasAnalysis{cachedAA};
   firAliasAnalysis.enableSourceCache();
   aliasAnalysis.addAnalysisImplementation(std::move(firAliasAnalysis));
 
   std::function<bool(Operation *, LoopLikeOpInterface, bool)>
       shouldMoveOutOfLoop = [&](Operation *op, LoopLikeOpInterface loopLike,
                                 bool maybeConditionallyExecuted) {
+        // Never hoist a producer of a !fir.field. Lowering a consumer of a
+        // field value inspects its defining operation: for a record whose
+        // layout is known at compile time the field becomes an LLVM GEP struct
+        // index, which must be a constant. Hoisting fir.field_index out of the
+        // arms of a construct (e.g. the CASEs of a SELECT CASE, each passing a
+        // different component of the same derived type) leaves those arms as
+        // otherwise-identical blocks differing only in this operand, which lets
+        // block merging thread it through a new block argument -- destroying
+        // the defining operation that codegen needs.
+        if (llvm::any_of(op->getResultTypes(),
+                         [](mlir::Type t) { return isa<fir::FieldType>(t); })) {
+          LDBG() << "Not hoisting producer of a field value: " << *op;
+          return false;
+        }
+
+        // Never hoist a loop. Moving it out of the loop it is nested in
+        // changes how it is scheduled relative to the iterations of that loop
+        // (e.g. an inner loop of an OpenACC parallel loop that ends up outside
+        // of the parallel region is no longer executed by every iteration of
+        // the parallel loop).
+        // TODO This is a workaround, we should find a better solution here.
+        if (isa<LoopLikeOpInterface>(op)) {
+          LDBG() << "Not hoisting loop-like operation: " << *op;
+          return false;
+        }
+
         if (isPure(op)) {
           LDBG() << "Pure operation: " << *op;
           return true;
@@ -339,7 +414,22 @@ void LoopInvariantCodeMotion::runOnOperation() {
                             maybeConditionallyExecuted);
       };
 
-  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+  // Resolve the name once: ancestor checks compare interned operation names,
+  // not strings. Keep analysis scope independent of the selected loop scope.
+  std::optional<OperationName> scopeOpName;
+  if (!onlyInside.empty())
+    scopeOpName.emplace(onlyInside, &getContext());
+  Operation *function = getOperation();
+  function->walk([&](LoopLikeOpInterface loopLike) {
+    if (scopeOpName) {
+      Operation *scope = loopLike->getParentOp();
+      while (scope != function && scope->getName() != *scopeOpName)
+        scope = scope->getParentOp();
+      if (scope->getName() != *scopeOpName) {
+        LDBG() << "Skipping loop-like without " << *scopeOpName << " parent";
+        return;
+      }
+    }
     if (!fir::canMoveOutOf(loopLike, nullptr)) {
       LDBG() << "Cannot hoist anything out of loop operation: ";
       LDBG_OS([&](llvm::raw_ostream &os) {
@@ -373,6 +463,13 @@ void LoopInvariantCodeMotion::runOnOperation() {
     // restrictions like cuf.kernel blocking !fir.ref operands must be
     // checked transitively.
     auto canMoveOutOfOp = [&](Operation *regionOwner, Operation *candidate) {
+      // fir::canMoveOutOf() consults only the region owner's
+      // OperationMoveOpInterface. Without it, the candidate and everything
+      // nested in it may move, so skip the walk over the candidate's
+      // regions: repeating it for every nested candidate and every
+      // intermediate ancestor is quadratic in the size of the loop body.
+      if (!isa<fir::OperationMoveOpInterface>(regionOwner))
+        return true;
       if (!fir::canMoveOutOf(regionOwner, candidate))
         return false;
       bool blocked = false;
@@ -396,6 +493,9 @@ void LoopInvariantCodeMotion::runOnOperation() {
     };
     auto moveOutOfRegion = [&](Operation *op, Region *) {
       loopLike.moveOutOfLoop(op);
+      // A hoisted operation no longer belongs to the statement it was written
+      // in. Clear its debug location to avoid reporting that line early.
+      op->setLoc(dropLineInfo(op->getLoc()));
     };
 
     moveLoopInvariantCode(

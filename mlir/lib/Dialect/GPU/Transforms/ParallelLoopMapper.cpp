@@ -44,8 +44,9 @@ gpu::setMappingAttr(ParallelOp ploopOp,
     specifiedMappings.insert(processor);
   }
   ArrayRef<Attribute> mappingAsAttrs(mapping.data(), mapping.size());
-  ploopOp->setAttr(getMappingAttrName(),
-                   ArrayAttr::get(ploopOp.getContext(), mappingAsAttrs));
+  ploopOp->setDiscardableAttr(
+      getMappingAttrName(),
+      ArrayAttr::get(ploopOp.getContext(), mappingAsAttrs));
   return success();
 }
 
@@ -126,7 +127,7 @@ static void
 mapParallelOp(ParallelOp parallelOp, MappingLevel mappingLevel = MapGrid,
               MappingPolicy mappingPolicy = MappingPolicy::OutermostFirst) {
   // Do not try to add a mapping to already mapped loops or nested loops.
-  if (parallelOp->getAttr(getMappingAttrName()) ||
+  if (parallelOp->getDiscardableAttr(getMappingAttrName()) ||
       ((mappingLevel == MapGrid) && parallelOp->getParentOfType<ParallelOp>()))
     return;
 

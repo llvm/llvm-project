@@ -21,6 +21,7 @@
 #include "flang/Semantics/semantics.h"
 #include "flang/Support/StringOstream.h"
 #include "llvm/Plugins/PassPlugin.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -58,6 +59,9 @@ class CompilerInstance {
   std::unique_ptr<Fortran::semantics::RuntimeDerivedTypeTables> rtTyTables;
 
   std::unique_ptr<Fortran::semantics::SemanticsContext> semaContext;
+
+  /// The library options set by -mllvm.
+  llvm::cl::LibraryOptionsContext libraryOptions;
 
   std::unique_ptr<llvm::TargetMachine> targetMachine;
 
@@ -111,20 +115,15 @@ class CompilerInstance {
   /// @}
 
 public:
-  explicit CompilerInstance();
+  CompilerInstance();
+  explicit CompilerInstance(std::shared_ptr<CompilerInvocation> invocation);
 
   ~CompilerInstance();
 
   /// @name Compiler Invocation
   /// {
 
-  CompilerInvocation &getInvocation() {
-    assert(invocation && "Compiler instance has no invocation!");
-    return *invocation;
-  };
-
-  /// Replace the current invocation.
-  void setInvocation(std::shared_ptr<CompilerInvocation> value);
+  CompilerInvocation &getInvocation() { return *invocation; };
 
   /// }
   /// @name File manager
@@ -278,6 +277,13 @@ public:
   }
 
   /// }
+  llvm::cl::LibraryOptionsContext &getLibraryOptions() {
+    return libraryOptions;
+  }
+  const llvm::cl::LibraryOptionsContext &getLibraryOptions() const {
+    return libraryOptions;
+  }
+
   /// @name Target Machine
   /// {
 

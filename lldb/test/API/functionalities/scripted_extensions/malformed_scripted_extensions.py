@@ -267,10 +267,16 @@ class ExceptionScriptedBreakpointResolver:
 
 
 class ExceptionInitScriptedBreakpointResolver:
-    """`__init__` raises."""
+    """`__init__` raises. Everything else is implemented, so `__init__` is the
+    only thing wrong with this class: LLDB validates the class before it
+    constructs an instance, and a missing abstract method would otherwise be
+    reported first."""
 
     def __init__(self, bkpt, args):
         raise RuntimeError("intentional exception from __init__()")
+
+    def __callback__(self, sym_ctx):
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +291,18 @@ class ExceptionScriptedStopHook:
 
     def handle_stop(self, exe_ctx, stream):
         raise RuntimeError("intentional exception from handle_stop()")
+
+
+class NoneReturningScriptedStopHook:
+    """`handle_stop` returns None, which is not an error: it means the hook
+    has no opinion on whether to stay stopped."""
+
+    def __init__(self, target, args):
+        self.target = target
+        self.args = args
+
+    def handle_stop(self, exe_ctx, stream):
+        stream.Print("NoneReturningScriptedStopHook ran\n")
 
 
 # ---------------------------------------------------------------------------

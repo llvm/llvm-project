@@ -42,6 +42,8 @@ public:
 
   std::string GetStopDescription(lldb::StackFrameSP frame_sp) override;
 
+  lldb::ThreadPlanSP GetStepThroughPlan(lldb::ThreadSP thread_sp) override;
+
   static void Initialize();
 
   static void Terminate();

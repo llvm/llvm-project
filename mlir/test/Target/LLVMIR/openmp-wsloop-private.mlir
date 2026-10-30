@@ -24,7 +24,7 @@ omp.declare_reduction @max_f32 : f32 init {
   omp.yield(%0 : f32)
 } combiner {
 ^bb0(%arg0: f32, %arg1: f32):
-  %0 = llvm.intr.maxnum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<contract>} : (f32, f32) -> f32
+  %0 = llvm.intr.maxnum(%arg0, %arg1) fastmath<contract> : (f32, f32) -> f32
   omp.yield(%0 : f32)
 }
 

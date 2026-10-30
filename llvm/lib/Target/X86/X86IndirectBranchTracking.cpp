@@ -29,10 +29,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "x86-indirect-branch-tracking"
 
-cl::opt<bool> IndirectBranchTracking(
-    "x86-indirect-branch-tracking", cl::init(false), cl::Hidden,
-    cl::desc("Enable X86 indirect branch tracking pass."));
-
 STATISTIC(NumEndBranchAdded, "Number of ENDBR instructions added");
 
 namespace {
@@ -125,8 +121,11 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
 #else
   bool isJITwithCET = false;
 #endif
-  if (!isCFProtectionSupported && !IndirectBranchTracking && !isJITwithCET)
+  if (!isCFProtectionSupported && !TM->getCLOpts().indirect_branch_tracking &&
+      !isJITwithCET)
     return false;
+
+  const bool IsSjLj = M->getExceptionModel() == ExceptionHandling::SjLj;
 
   // True if the current MF was changed and false otherwise.
   bool Changed = false;
@@ -153,7 +152,7 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
     // Exception handle may indirectly jump to catch pad, So we should add
     // ENDBR before catch pad instructions. For SjLj exception model, it will
     // create a new BB(new landingpad) indirectly jump to the old landingpad.
-    if (TM->Options.ExceptionModel == ExceptionHandling::SjLj) {
+    if (IsSjLj) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
         // New Landingpad BB without EHLabel.
         if (MBB.isEHPad()) {
@@ -171,7 +170,7 @@ static bool runIndirectBranchTracking(MachineFunction &MF) {
           break;
         }
       }
-    } else if (MBB.isEHPad()){
+    } else if (MBB.isEHPad()) {
       for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ++I) {
         if (!I->isEHLabel())
           continue;

@@ -298,6 +298,29 @@ const char *SBBreakpoint::GetCondition() {
   return ConstString(cond.GetText()).GetCString();
 }
 
+void SBBreakpoint::SetConditionMode(lldb::BreakpointConditionMode mode) {
+  LLDB_INSTRUMENT_VA(this, mode);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    TargetAPIMutex api_lock = bkpt_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
+    bkpt_sp->GetCondition().SetMode(mode);
+  }
+}
+
+lldb::BreakpointConditionMode SBBreakpoint::GetConditionMode() {
+  LLDB_INSTRUMENT_VA(this);
+
+  BreakpointSP bkpt_sp = GetSP();
+  if (bkpt_sp) {
+    TargetAPIMutex api_lock = bkpt_sp->GetTarget().GetAPIMutex();
+    std::lock_guard<TargetAPIMutex> guard(api_lock);
+    return bkpt_sp->GetCondition().GetMode();
+  }
+  return BreakpointConditionMode::eBreakpointConditionModeDefault;
+}
+
 void SBBreakpoint::SetAutoContinue(bool auto_continue) {
   LLDB_INSTRUMENT_VA(this, auto_continue);
 
@@ -627,18 +650,16 @@ SBError SBBreakpoint::SetScriptCallbackFunction(
   BreakpointSP bkpt_sp = GetSP();
 
   if (bkpt_sp) {
-    Status error;
     TargetAPIMutex api_lock = bkpt_sp->GetTarget().GetAPIMutex();
     std::lock_guard<TargetAPIMutex> guard(api_lock);
     BreakpointOptions &bp_options = bkpt_sp->GetOptions();
-    error = bkpt_sp->GetTarget()
-        .GetDebugger()
-        .GetScriptInterpreter()
-        ->SetBreakpointCommandCallbackFunction(bp_options,
-                                               callback_function_name,
-                                               extra_args.m_impl_up
-                                                   ->GetObjectSP());
-    sb_error.SetError(std::move(error));
+    llvm::Error error = bkpt_sp->GetTarget()
+                            .GetDebugger()
+                            .GetScriptInterpreter()
+                            ->SetBreakpointCommandCallbackFunction(
+                                bp_options, callback_function_name,
+                                extra_args.m_impl_up->GetObjectSP());
+    sb_error.SetError(Status::FromError(std::move(error)));
   } else
     sb_error = Status::FromErrorString("invalid breakpoint");
 
@@ -655,13 +676,13 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
     TargetAPIMutex api_lock = bkpt_sp->GetTarget().GetAPIMutex();
     std::lock_guard<TargetAPIMutex> guard(api_lock);
     BreakpointOptions &bp_options = bkpt_sp->GetOptions();
-    Status error =
+    llvm::Error error =
         bkpt_sp->GetTarget()
             .GetDebugger()
             .GetScriptInterpreter()
             ->SetBreakpointCommandCallback(bp_options, callback_body_text,
                                            /*is_callback=*/false);
-    sb_error.SetError(std::move(error));
+    sb_error.SetError(Status::FromError(std::move(error)));
   } else
     sb_error = Status::FromErrorString("invalid breakpoint");
 

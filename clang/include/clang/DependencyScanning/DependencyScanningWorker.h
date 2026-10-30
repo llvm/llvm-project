@@ -47,7 +47,9 @@ public:
   /// Construct a dependency scanning worker.
   ///
   /// @param Service The parent service. Must outlive the worker.
-  DependencyScanningWorker(DependencyScanningService &Service);
+  DependencyScanningWorker(
+      DependencyScanningService &Service,
+      IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS = nullptr);
 
   ~DependencyScanningWorker();
 
@@ -89,6 +91,8 @@ public:
   llvm::vfs::TracingFileSystem *getTracingVFS() const {
     return TracingFS.get();
   }
+
+  DependencyScanningService &getService() const { return Service; }
 
   // MaxNumOfByNameQueries is the upper limit of the number of names the by-name
   // scanning API (computeDependenciesByName) can drain per call. At the time of

@@ -769,10 +769,11 @@ static void allUsesOfLoadAndStores(GlobalVariable *GV,
   }
 }
 
-static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
+static bool OptimizeAwayTrappingUsesOfValue(Instruction *V, Constant *NewV) {
   bool Changed = false;
-  for (auto UI = V->user_begin(), E = V->user_end(); UI != E; ) {
-    Instruction *I = cast<Instruction>(*UI++);
+  SmallVector<User *, 8> Users(V->user_begin(), V->user_end());
+  for (User *U : Users) {
+    Instruction *I = cast<Instruction>(U);
     // Uses are non-trapping if null pointer is considered valid.
     // Non address-space 0 globals are already pruned by the caller.
     if (NullPointerIsDefined(I->getFunction()))
@@ -792,17 +793,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
         // that the pointer is not also being passed as an argument.
         CB->setCalledOperand(NewV);
         Changed = true;
-        bool PassedAsArg = false;
         for (unsigned i = 0, e = CB->arg_size(); i != e; ++i)
-          if (CB->getArgOperand(i) == V) {
-            PassedAsArg = true;
+          if (CB->getArgOperand(i) == V)
             CB->setArgOperand(i, NewV);
-          }
-
-        if (PassedAsArg) {
-          // Being passed as an argument also.  Be careful to not invalidate UI!
-          UI = V->user_begin();
-        }
       }
     } else if (AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(I)) {
       Changed |= OptimizeAwayTrappingUsesOfValue(
@@ -821,10 +814,11 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
           Idxs.push_back(C);
         else
           break;
-      if (Idxs.size() == GEPI->getNumOperands()-1)
-        Changed |= OptimizeAwayTrappingUsesOfValue(
-            GEPI, ConstantExpr::getGetElementPtr(GEPI->getSourceElementType(),
-                                                 NewV, Idxs));
+      if (Idxs.size() == GEPI->getNumOperands() - 1) {
+        if (Constant *NewGEP = ConstantExpr::getGetElementPtr(
+                V->getDataLayout(), GEPI->getSourceElementType(), NewV, Idxs))
+          Changed |= OptimizeAwayTrappingUsesOfValue(GEPI, NewGEP);
+      }
       if (GEPI->use_empty()) {
         Changed = true;
         GEPI->eraseFromParent();
@@ -865,15 +859,6 @@ static bool OptimizeAwayTrappingUsesOfLoads(
              "Must be storing *to* the global");
     } else {
       AllNonStoreUsesGone = false;
-
-      // If we get here we could have other crazy uses that are transitively
-      // loaded.
-      assert((isa<PHINode>(GlobalUser) || isa<SelectInst>(GlobalUser) ||
-              isa<ConstantExpr>(GlobalUser) || isa<CmpInst>(GlobalUser) ||
-              isa<BitCastInst>(GlobalUser) ||
-              isa<GetElementPtrInst>(GlobalUser) ||
-              isa<AddrSpaceCastInst>(GlobalUser)) &&
-             "Only expect load and stores!");
     }
   }
 
@@ -1355,7 +1340,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
-  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
+  ReplaceableUses::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;
@@ -1652,6 +1637,13 @@ processGlobal(GlobalValue &GV,
   if (GV.getName().starts_with("llvm."))
     return false;
 
+  // The only transformation performed here on functions is setting
+  // unnamed_addr. Avoid scanning uses when its value cannot be strengthened.
+  if (isa<Function>(GV) &&
+      (GV.hasGlobalUnnamedAddr() ||
+       (!GV.hasLocalLinkage() && GV.hasAtLeastLocalUnnamedAddr())))
+    return false;
+
   GlobalStatus GS;
 
   if (GlobalStatus::analyzeGlobal(&GV, GS))
@@ -1767,12 +1759,12 @@ static bool isColdCallSite(CallBase &CB, BlockFrequencyInfo &CallerBFI) {
 
 // This function checks if the input function F is cold at all call sites. It
 // also looks each call site's containing function, returning false if the
-// caller function contains other non cold calls. The input vector AllCallsCold
-// contains a list of functions that only have call sites in cold blocks.
+// caller function contains other non cold calls. HasOnlyColdCalls returns
+// whether a function only has call sites in cold blocks.
 static bool
 isValidCandidateForColdCC(Function &F,
                           function_ref<BlockFrequencyInfo &(Function &)> GetBFI,
-                          const std::vector<Function *> &AllCallsCold) {
+                          function_ref<bool(Function &)> HasOnlyColdCalls) {
 
   if (F.user_empty())
     return false;
@@ -1785,7 +1777,7 @@ isValidCandidateForColdCC(Function &F,
     BlockFrequencyInfo &CallerBFI = GetBFI(*CallerFunc);
     if (!isColdCallSite(*CB, CallerBFI))
       return false;
-    if (!llvm::is_contained(AllCallsCold, CallerFunc))
+    if (!HasOnlyColdCalls(*CallerFunc))
       return false;
   }
   return true;
@@ -1855,15 +1847,11 @@ static void RemovePreallocated(Function *F) {
 
   auto *M = F->getParent();
 
-  IRBuilder<> Builder(M->getContext());
+  IRBuilder<> Builder(*M);
 
   // Cannot modify users() while iterating over it, so make a copy.
   SmallVector<User *, 4> PreallocatedCalls(F->users());
-  for (User *U : PreallocatedCalls) {
-    CallBase *CB = dyn_cast<CallBase>(U);
-    if (!CB)
-      continue;
-
+  for (CallBase *CB : make_isa_range<CallBase>(PreallocatedCalls)) {
     assert(
         !CB->isMustTailCall() &&
         "Shouldn't call RemotePreallocated() on a musttail preallocated call");
@@ -1944,10 +1932,15 @@ OptimizeFunctions(Module &M,
   bool Changed = false;
 
   ChangeableCCCacheTy ChangeableCCCache;
-  std::vector<Function *> AllCallsCold;
-  for (Function &F : llvm::make_early_inc_range(M))
-    if (hasOnlyColdCalls(F, GetBFI, ChangeableCCCache))
-      AllCallsCold.push_back(&F);
+  // Whether each function only has cold calls. This is only needed for
+  // functions the target wants to use coldcc for, so compute it lazily.
+  DenseMap<Function *, bool> AllCallsColdCache;
+  auto HasOnlyColdCalls = [&](Function &Caller) {
+    auto Res = AllCallsColdCache.try_emplace(&Caller, false);
+    if (Res.second)
+      Res.first->second = hasOnlyColdCalls(Caller, GetBFI, ChangeableCCCache);
+    return Res.first->second;
+  };
 
   // Optimize functions.
   for (Function &F : llvm::make_early_inc_range(M)) {
@@ -2021,7 +2014,7 @@ OptimizeFunctions(Module &M,
       // calls.
       if (EnableColdCCStressTest ||
           (TTI.useColdCCForColdCall(F) &&
-           isValidCandidateForColdCC(F, GetBFI, AllCallsCold))) {
+           isValidCandidateForColdCC(F, GetBFI, HasOnlyColdCalls))) {
         ChangeableCCCache.erase(&F);
         F.setCallingConv(CallingConv::Cold);
         changeCallSitesToColdCC(&F);
@@ -2392,7 +2385,7 @@ static bool IsEmptyAtExitFunction(const Function &Fn) {
     return false;
 
   for (const auto &I : Fn.getEntryBlock()) {
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
     if (isa<ReturnInst>(I))
       return true;
@@ -2418,12 +2411,12 @@ static bool OptimizeEmptyGlobalAtExitDtors(Function *CXAAtExitFn, bool isCXX) {
   // is trivial and remove them.
   bool Changed = false;
 
-  for (User *U : llvm::make_early_inc_range(CXAAtExitFn->users())) {
-    // We're only interested in calls. Theoretically, we could handle invoke
-    // instructions as well, but neither llvm-gcc nor clang generate invokes
-    // to __cxa_atexit.
-    CallInst *CI = dyn_cast<CallInst>(U);
-    if (!CI)
+  for (Use &U : llvm::make_early_inc_range(CXAAtExitFn->uses())) {
+    // We're only interested in calls to the atexit function. Theoretically, we
+    // could handle invoke instructions as well, but neither llvm-gcc nor clang
+    // generate invokes to __cxa_atexit.
+    CallInst *CI = dyn_cast<CallInst>(U.getUser());
+    if (!CI || !CI->isCallee(&U))
       continue;
 
     Function *DtorFn =
@@ -2580,7 +2573,7 @@ static bool OptimizeNonTrivialIFuncs(
     SmallVector<Function *> Versions;
     // Discover the versioned functions.
     if (any_of(*Resolver, [&](BasicBlock &BB) {
-          if (auto *Ret = dyn_cast_or_null<ReturnInst>(BB.getTerminator()))
+          if (auto *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
             if (!collectVersions(Ret->getReturnValue(), Versions, GetTTI))
               return true;
           return false;

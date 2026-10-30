@@ -24,53 +24,53 @@ body:             |
     ; ALL-LABEL: name: foldDForm
     ; ALL: liveins: $x3
     ; ALL-NEXT: {{  $}}
-    ; ALL-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
-    ; ALL-NEXT: dead [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
+    ; ALL-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
+    ; ALL-NEXT: [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
     ; ALL-NEXT: [[LI8_:%[0-9]+]]:g8rc = LI8 0
     ; ALL-NEXT: STD [[LI8_]], 160, [[COPY]]
-    ; ALL-NEXT: dead [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
+    ; ALL-NEXT: [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
     ; ALL-NEXT: STD [[LI8_]], 176, [[COPY]]
-    ; ALL-NEXT: dead [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 176
-    ; ALL-NEXT: STD killed [[LI8_]], 192, killed [[COPY]]
+    ; ALL-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 176
+    ; ALL-NEXT: STD [[LI8_]], 192, [[COPY]]
     ; ALL-NEXT: BLR8 implicit $lr8, implicit $rm
     ;
     ; ONE-FIRSTSTORE-LABEL: name: foldDForm
     ; ONE-FIRSTSTORE: liveins: $x3
     ; ONE-FIRSTSTORE-NEXT: {{  $}}
-    ; ONE-FIRSTSTORE-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
-    ; ONE-FIRSTSTORE-NEXT: dead [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
+    ; ONE-FIRSTSTORE-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
+    ; ONE-FIRSTSTORE-NEXT: [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
     ; ONE-FIRSTSTORE-NEXT: [[LI8_:%[0-9]+]]:g8rc = LI8 0
     ; ONE-FIRSTSTORE-NEXT: STD [[LI8_]], 160, [[COPY]]
     ; ONE-FIRSTSTORE-NEXT: [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
-    ; ONE-FIRSTSTORE-NEXT: STD [[LI8_]], 16, killed [[ADDI8_1]]
-    ; ONE-FIRSTSTORE-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 killed [[COPY]], 176
-    ; ONE-FIRSTSTORE-NEXT: STD killed [[LI8_]], 16, killed [[ADDI8_2]]
+    ; ONE-FIRSTSTORE-NEXT: STD [[LI8_]], 16, [[ADDI8_1]]
+    ; ONE-FIRSTSTORE-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 176
+    ; ONE-FIRSTSTORE-NEXT: STD [[LI8_]], 16, [[ADDI8_2]]
     ; ONE-FIRSTSTORE-NEXT: BLR8 implicit $lr8, implicit $rm
     ;
     ; ONE-SECONDSTORE-LABEL: name: foldDForm
     ; ONE-SECONDSTORE: liveins: $x3
     ; ONE-SECONDSTORE-NEXT: {{  $}}
-    ; ONE-SECONDSTORE-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
+    ; ONE-SECONDSTORE-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
     ; ONE-SECONDSTORE-NEXT: [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
     ; ONE-SECONDSTORE-NEXT: [[LI8_:%[0-9]+]]:g8rc = LI8 0
-    ; ONE-SECONDSTORE-NEXT: STD [[LI8_]], 16, killed [[ADDI8_]]
-    ; ONE-SECONDSTORE-NEXT: dead [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
+    ; ONE-SECONDSTORE-NEXT: STD [[LI8_]], 16, [[ADDI8_]]
+    ; ONE-SECONDSTORE-NEXT: [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
     ; ONE-SECONDSTORE-NEXT: STD [[LI8_]], 176, [[COPY]]
-    ; ONE-SECONDSTORE-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 killed [[COPY]], 176
-    ; ONE-SECONDSTORE-NEXT: STD killed [[LI8_]], 16, killed [[ADDI8_2]]
+    ; ONE-SECONDSTORE-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 176
+    ; ONE-SECONDSTORE-NEXT: STD [[LI8_]], 16, [[ADDI8_2]]
     ; ONE-SECONDSTORE-NEXT: BLR8 implicit $lr8, implicit $rm
     ;
     ; TWO-LABEL: name: foldDForm
     ; TWO: liveins: $x3
     ; TWO-NEXT: {{  $}}
-    ; TWO-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY killed $x3
-    ; TWO-NEXT: dead [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
+    ; TWO-NEXT: [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x3
+    ; TWO-NEXT: [[ADDI8_:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 144
     ; TWO-NEXT: [[LI8_:%[0-9]+]]:g8rc = LI8 0
     ; TWO-NEXT: STD [[LI8_]], 160, [[COPY]]
-    ; TWO-NEXT: dead [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
+    ; TWO-NEXT: [[ADDI8_1:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 160
     ; TWO-NEXT: STD [[LI8_]], 176, [[COPY]]
-    ; TWO-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 killed [[COPY]], 176
-    ; TWO-NEXT: STD killed [[LI8_]], 16, killed [[ADDI8_2]]
+    ; TWO-NEXT: [[ADDI8_2:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[COPY]], 176
+    ; TWO-NEXT: STD [[LI8_]], 16, [[ADDI8_2]]
     ; TWO-NEXT: BLR8 implicit $lr8, implicit $rm
     %0:g8rc_and_g8rc_nox0 = COPY $x3
     %1:g8rc_and_g8rc_nox0 = ADDI8 %0:g8rc_and_g8rc_nox0, 144

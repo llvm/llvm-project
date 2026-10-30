@@ -39,3 +39,5 @@ void f(void) {}
 // HOTPATCH: attributes #1 = { {{.*}} "patchable-function"="prologue-short-redirect"
 // HOTPATCH: attributes #2 = { {{.*}} "patchable-function"="prologue-short-redirect"
 // HOTPATCH: attributes #3 = { {{.*}} "patchable-function"="prologue-short-redirect"
+// HOTPATCH: !{i32 8, !"ms-hotpatch", i32 1}
+// CHECK-NOT: "ms-hotpatch"

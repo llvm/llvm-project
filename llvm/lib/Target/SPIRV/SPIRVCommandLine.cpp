@@ -17,11 +17,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/TargetParser/Triple.h"
 
-#include <functional>
-#include <iterator>
 #include <string>
-#include <utility>
-#include <vector>
 
 #define DEBUG_TYPE "spirv-commandline"
 
@@ -99,6 +95,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
     {"SPV_KHR_shader_draw_parameters",
      SPIRV::Extension::Extension::SPV_KHR_shader_draw_parameters},
     {"SPV_KHR_ray_tracing", SPIRV::Extension::Extension::SPV_KHR_ray_tracing},
+    {"SPV_KHR_storage_buffer_storage_class",
+     SPIRV::Extension::Extension::SPV_KHR_storage_buffer_storage_class},
     {"SPV_KHR_uniform_group_instructions",
      SPIRV::Extension::Extension::SPV_KHR_uniform_group_instructions},
     {"SPV_KHR_no_integer_wrap_decoration",
@@ -132,6 +130,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_KHR_cooperative_matrix},
     {"SPV_KHR_non_semantic_info",
      SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
+    {"SPV_KHR_relaxed_extended_instruction",
+     SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction},
     {"SPV_KHR_ray_query", SPIRV::Extension::Extension::SPV_KHR_ray_query},
     {"SPV_EXT_shader_image_int64",
      SPIRV::Extension::Extension::SPV_EXT_shader_image_int64},

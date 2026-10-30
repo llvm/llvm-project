@@ -215,8 +215,6 @@ HexagonRegisterInfo::getBaseReservedRegs(const MachineFunction &MF) const {
   Reserved.set(Hexagon::PC);          // C9
   Reserved.set(Hexagon::UGP);         // C10
   Reserved.set(Hexagon::GP);          // C11
-  Reserved.set(Hexagon::CS0);         // C12
-  Reserved.set(Hexagon::CS1);         // C13
   Reserved.set(Hexagon::UPCYCLELO);   // C14
   Reserved.set(Hexagon::UPCYCLEHI);   // C15
   Reserved.set(Hexagon::FRAMELIMIT);  // C16
@@ -290,7 +288,7 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       break;
   }
 
-  if (!HII.isValidOffset(Opc, RealOffset, this)) {
+  if (!HII.isValidOffset(Opc, RealOffset)) {
     // If the offset is not valid, calculate the address in a temporary
     // register and use it with offset 0.
     int InstOffset = 0;
@@ -478,6 +476,7 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
   switch (RC.getID()) {
     case Hexagon::CtrRegs64RegClassID:
     case Hexagon::DoubleRegsRegClassID:
+    case Hexagon::CircRegsRegClassID:
       return ISub[GenIdx];
     case Hexagon::HvxWRRegClassID:
       return VSub[GenIdx];
@@ -495,9 +494,4 @@ unsigned HexagonRegisterInfo::getHexagonSubRegIndex(
 bool HexagonRegisterInfo::useFPForScavengingIndex(const MachineFunction &MF)
       const {
   return MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF);
-}
-
-const TargetRegisterClass *
-HexagonRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  return &Hexagon::IntRegsRegClass;
 }

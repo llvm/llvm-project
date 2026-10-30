@@ -29,6 +29,8 @@
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/Debug/Options.h"
@@ -46,6 +48,7 @@
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstdlib>
+#include <limits>
 #include <memory>
 #include <optional>
 
@@ -318,7 +321,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.EnableSafeTrampoline = 1;
 
   if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
-                   clang::options::OPT_fno_fp_sum_reassociation, false))
+                   clang::options::OPT_fno_fp_sum_reassociation, true))
     opts.SplitSumExpressionTree = 1;
 
   // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
@@ -326,6 +329,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   opts.InterchangeLoops =
       args.hasFlag(clang::options::OPT_floop_interchange,
                    clang::options::OPT_fno_loop_interchange, true);
+
+  if (args.hasArg(clang::options::OPT_funique_internal_linkage_names))
+    opts.UniqueInternalLinkageNames = 1;
 
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
@@ -339,6 +345,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   if (args.hasFlag(clang::options::OPT_floop_versioning,
                    clang::options::OPT_fno_loop_versioning, false))
     opts.LoopVersioning = 1;
+
+  if (args.hasFlag(clang::options::OPT_floop_tripcount_versioning,
+                   clang::options::OPT_fno_loop_tripcount_versioning, false))
+    opts.LoopTripCountVersioning = 1;
 
   opts.UnrollLoops = args.hasFlag(clang::options::OPT_funroll_loops,
                                   clang::options::OPT_fno_unroll_loops,
@@ -379,6 +389,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   if (args.hasArg(clang::options::OPT_finstrument_functions))
     opts.InstrumentFunctions = 1;
+
+  if (args.hasArg(clang::options::OPT_fno_optimize_sibling_calls))
+    opts.DisableTailCalls = 1;
 
   // -fno-integrated-as: emit GNU Assembler compatible assembly.
   if (!args.hasFlag(clang::options::OPT_fintegrated_as,
@@ -612,13 +625,10 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     opts.disabledIntegerKinds.push_back(16);
 
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_mabi_EQ)) {
-    opts.abi = a->getValue();
     llvm::StringRef V = a->getValue();
-    if (V == "vec-extabi") {
-      opts.EnableAIXExtendedAltivecABI = true;
-    } else if (V == "vec-default") {
-      opts.EnableAIXExtendedAltivecABI = false;
-    }
+    // Normalize "vec-default" to an empty ABI name; the AIX extended Altivec
+    // ABI is carried to the backend as the "vec-extabi" target-abi module flag.
+    opts.abi = V == "vec-default" ? "" : V.str();
   }
 
   opts.SplitMachineFunctions =
@@ -866,16 +876,25 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (argValue == "none") {
       columns = 0;
     } else if (argValue.getAsInteger(/*Radix=*/10, columns)) {
-      columns = -1;
+      if (!argValue.empty() && llvm::all_of(argValue, llvm::isDigit)) {
+        // Route oversized positive decimals to the large-columns diagnostic.
+        columns = std::numeric_limits<std::int64_t>::max();
+      } else {
+        columns = -1;
+      }
     }
     if (columns < 0) {
       diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
     } else if (columns == 0) {
-      opts.fixedFormColumns = 1000000;
+      opts.fixedFormColumns = std::nullopt;
     } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else if (columns > std::numeric_limits<int>::max()) {
+      diags.Report(clang::diag::err_drv_large_columns)
+          << arg->getOption().getName() << arg->getValue()
+          << std::numeric_limits<int>::max();
     } else {
       opts.fixedFormColumns = columns;
     }
@@ -903,6 +922,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                                     clang::options::OPT_fno_implicit_none_ext,
                                     false));
 
+  // -f{no-}implicit-module-prefix
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::ImplicitModulePrefix,
+      args.hasFlag(clang::options::OPT_fimplicit_module_prefix,
+                   clang::options::OPT_fno_implicit_module_prefix, false));
+
   // -f{no-}backslash
   opts.features.Enable(Fortran::common::LanguageFeature::BackslashEscapes,
                        args.hasFlag(clang::options::OPT_fbackslash,
@@ -919,11 +944,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
-  // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
-  opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
-                       args.hasFlag(clang::options::OPT_fenumeration_type,
-                                    clang::options::OPT_fno_enumeration_type,
-                                    false));
+  // -f{no-}out-of-bounds-subscripts
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
+      args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
+                   clang::options::OPT_fno_out_of_bounds_subscripts, true));
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
@@ -1308,7 +1333,10 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
-    llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
+    llvm::SmallVector<unsigned> ompVersions;
+    for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
+      ompVersions.push_back(v.value());
+    }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
 
@@ -1577,6 +1605,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       opts.FastRealMod = false;
   }
 
+  if (args.getLastArg(clang::options::OPT_fcheck_integer_mod_zero_divisor))
+    opts.CheckIntegerModZeroDivisor = true;
+
   // Set the initial IEEE floating point modes
   setIEEEFPModesArgs(opts, args);
 
@@ -1779,6 +1810,29 @@ bool CompilerInvocation::createFromArgs(
   else
     invoc.loweringOpts.setInitGlobalZero(false);
 
+  // -finit-local=<zero|0x<hex>>  and  -finit-local-zero
+  // (-finit-local-zero is an alias that the driver already expands to
+  //  -finit-local=zero, so we only need to handle OPT_finit_local_EQ here.)
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_finit_local_EQ)) {
+    llvm::StringRef val = a->getValue();
+    if (val == "zero") {
+      invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::Zero);
+    } else if (val.starts_with("0x") || val.starts_with("0X")) {
+      unsigned long long hexVal = 0;
+      if (val.drop_front(2).getAsInteger(16, hexVal) || hexVal > 0xFF) {
+        diags.Report(clang::diag::err_drv_invalid_value)
+            << a->getAsString(args) << val;
+      } else {
+        invoc.loweringOpts.setInitLocalMode(Fortran::lower::InitLocalKind::Hex);
+        invoc.loweringOpts.setInitLocalPattern(static_cast<uint8_t>(hexVal));
+      }
+    } else {
+      diags.Report(clang::diag::err_drv_invalid_value)
+          << a->getAsString(args) << val;
+    }
+  }
+
   // Preserve all the remark options requested, i.e. -Rpass, -Rpass-missed or
   // -Rpass-analysis. This will be used later when processing and outputting the
   // remarks generated by LLVM in ExecuteCompilerInvocation.cpp.
@@ -1813,6 +1867,18 @@ bool CompilerInvocation::createFromArgs(
           args.getLastArg(clang::options::OPT_frepack_arrays_contiguity_EQ))
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
+
+  // -f[no-]openacc-combined-loop-firstprivate
+  invoc.loweringOpts.setOpenACCCombinedLoopFirstprivate(
+      args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
+                   clang::options::OPT_fno_openacc_combined_loop_firstprivate,
+                   /*default=*/true));
+
+  // -f[no-]openacc-acc-kernels-do-concurrent-independent
+  invoc.loweringOpts.setOpenACCKernelsDoConcurrentIndependent(args.hasFlag(
+      clang::options::OPT_fopenacc_acc_kernels_do_concurrent_independent,
+      clang::options::OPT_fno_openacc_acc_kernels_do_concurrent_independent,
+      /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
@@ -1957,7 +2023,7 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
+    Fortran::common::setOpenMPMacro(getLangOpts().getOpenMPVersion().value(),
                                     fortranOptions.predefinitions);
   }
 

@@ -72,10 +72,12 @@ public:
   }
 };
 
-#define LIST_ADD_TESTS(OutType, InType, func)                                  \
-  using LlvmLibcAddTest = AddTest<OutType, InType>;                            \
-  TEST_F(LlvmLibcAddTest, SubnormalRange) { test_subnormal_range(&func); }     \
-  TEST_F(LlvmLibcAddTest, NormalRange) { test_normal_range(&func); }
+#define LIST_ADD_TESTS(Name, OutType, InType, func)                            \
+  using LlvmLibc##Name##Test = AddTest<OutType, InType>;                       \
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) {                               \
+    test_subnormal_range(&func);                                               \
+  }                                                                            \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { test_normal_range(&func); }
 
 #define LIST_ADD_SAME_TYPE_TESTS(suffix, OutType, InType, func)                \
   using LlvmLibcAddTest##suffix = AddTest<OutType, InType>;                    \

@@ -26,28 +26,28 @@ registers:
   - { id: 3, class: _ }
   - { id: 4, class: _ }
 liveins:
-  - { reg: '$a0' }
-  - { reg: '$a1' }
+  - { reg: '$r4' }
+  - { reg: '$r5' }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
-    liveins: $a0, $a1
+    liveins: $r4, $r5
 
     ; MIPS32-LABEL: name: test_memset_inline
-    ; MIPS32: liveins: $a0, $a1
+    ; MIPS32: liveins: $r4, $r5
     ; MIPS32-NEXT: {{  $}}
-    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $a0
-    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $a1
+    ; MIPS32-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $r4
+    ; MIPS32-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $r5
     ; MIPS32-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY1]](s32)
     ; MIPS32-NEXT: G_STORE [[TRUNC]](s8), [[COPY]](p0) :: (store (s8) into %ir.dst, align 4)
     ; MIPS32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; MIPS32-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[COPY]], [[C]](s32)
     ; MIPS32-NEXT: G_STORE [[TRUNC]](s8), [[PTR_ADD]](p0) :: (store (s8) into %ir.dst + 1, basealign 4)
     ; MIPS32-NEXT: RetRA
-    %0:_(p0) = COPY $a0
-    %1:_(s32) = COPY $a1
+    %0:_(p0) = COPY $r4
+    %1:_(s32) = COPY $r5
     %2:_(s8) = G_TRUNC %1(s32)
     %3:_(s64) = G_CONSTANT i64 2
     %4:_(s32) = G_TRUNC %3(s64)

@@ -36,5 +36,47 @@
 // RUN: %clang -### -x hip --offload-device-only --target=x86_64-unknown-linux \
 // RUN: --offload-arch=gfx90a -fprofile-generate -resource-dir=%t \
 // RUN: -nogpuinc -nogpulib %s 2>&1 \
-// RUN: | FileCheck -check-prefix=HIP-DEVICE-PGO %s
-// HIP-DEVICE-PGO: "{{.*}}lld" {{.*}}"{{.*}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
+// RUN: | FileCheck -check-prefix=HIP-DEVICE-PGO --implicit-check-not=-plugin-opt=-amdgpu-internalize-symbols %s
+// HIP-DEVICE-PGO: "-cc1"
+// HIP-DEVICE-PGO-SAME: "-emit-obj"
+// HIP-DEVICE-PGO-SAME: "-mllvm" "-amdgpu-internalize-symbols"
+// HIP-DEVICE-PGO: "{{.*}}lld"
+// HIP-DEVICE-PGO-SAME: "{{.*}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
+
+// An RDC non-LTO link also keeps bitcode library definitions external.
+// RUN: %clang -x c --target=x86_64-unknown-linux-gnu -c %s -o %t.host.o
+// RUN: %clang -x hip --offload-device-only --target=x86_64-unknown-linux \
+// RUN: --offload-arch=gfx90a -fgpu-rdc -fno-offload-lto -nogpuinc -nogpulib \
+// RUN: -c %s -o %t.device.o
+// RUN: clang-offload-bundler -type=o \
+// RUN: -targets=host-x86_64-unknown-linux-gnu,hip-amdgpu9.0a-amd-amdhsa--gfx90a \
+// RUN: -input=%t.host.o -input=%t.device.o -output=%t.rdc.o
+// RUN: %clang -### --hip-link --target=x86_64-unknown-linux \
+// RUN: --offload-arch=gfx90a -fgpu-rdc -fno-offload-lto -fprofile-generate \
+// RUN: -resource-dir=%t --rocm-path=%S/Inputs/rocm -nogpuinc -nogpulib \
+// RUN: %t.rdc.o 2>&1 \
+// RUN: | FileCheck -check-prefix=HIP-RDC-PGO --implicit-check-not=-plugin-opt=-amdgpu-internalize-symbols %s
+// HIP-RDC-PGO: clang-linker-wrapper
+// HIP-RDC-PGO-SAME: "--device-compiler=amdgpu-amd-amdhsa=-fprofile-generate"
+
+// Full offload LTO still enables AMDGPU internalization.
+// RUN: %clang -### -x hip --offload-device-only --target=x86_64-unknown-linux \
+// RUN: --offload-arch=gfx90a -fprofile-generate -foffload-lto=full \
+// RUN: -resource-dir=%t -nogpuinc -nogpulib %s 2>&1 \
+// RUN: | FileCheck -check-prefix=HIP-DEVICE-LTO-PGO %s
+// HIP-DEVICE-LTO-PGO: "-cc1"
+// HIP-DEVICE-LTO-PGO-SAME: "-emit-llvm-bc"
+// HIP-DEVICE-LTO-PGO: "{{.*}}lld"
+// HIP-DEVICE-LTO-PGO-SAME: "-plugin-opt=-amdgpu-internalize-symbols"
+// HIP-DEVICE-LTO-PGO-SAME: "{{.*}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclang_rt.profile.a"
+
+// A normal non-profile device link also internalizes the main module in cc1,
+// not while linking the resulting native object.
+// RUN: %clang -### -x hip --offload-device-only --target=x86_64-unknown-linux \
+// RUN: --offload-arch=gfx90a -resource-dir=%t -nogpuinc -nogpulib %s 2>&1 \
+// RUN: | FileCheck -check-prefix=HIP-DEVICE-NOPGO --implicit-check-not=-plugin-opt=-amdgpu-internalize-symbols %s
+// HIP-DEVICE-NOPGO: "-cc1"
+// HIP-DEVICE-NOPGO-SAME: "-emit-obj"
+// HIP-DEVICE-NOPGO-SAME: "-mllvm" "-amdgpu-internalize-symbols"
+// HIP-DEVICE-NOPGO: "{{.*}}lld"
+// HIP-DEVICE-NOPGO-NOT: libclang_rt.profile.a

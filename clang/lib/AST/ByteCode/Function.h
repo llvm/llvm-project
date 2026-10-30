@@ -136,6 +136,11 @@ public:
   const BlockExpr *getExpr() const {
     return dyn_cast<const BlockExpr *>(Source);
   }
+  QualType getType() const {
+    if (const FunctionDecl *FD = getDecl())
+      return FD->getType();
+    return getExpr()->getType();
+  }
 
   /// Returns the name of the function decl this code
   /// was generated for.
@@ -237,6 +242,8 @@ public:
   bool isDefined() const { return Defined; }
 
   bool isVariadic() const { return Variadic; }
+  /// Returs the full number of parameters, including implicit instance and RVO
+  /// pointers.
   unsigned getNumParams() const {
     return ParamDescriptors.size() + hasThisPointer() + hasRVO();
   }
@@ -279,22 +286,22 @@ private:
   friend class ByteCodeEmitter;
   friend class Context;
 
-  /// Function Kind.
-  FunctionKind Kind;
   /// Declaration this function was compiled from.
   FunctionDeclTy Source;
-  /// Local area size: storage + metadata.
-  unsigned FrameSize = 0;
-  /// Size of the argument stack.
-  unsigned ArgSize;
   /// Program code.
   llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
   llvm::SmallVector<Scope, 2> Scopes;
-  /// List of all parameters, including RVO and instance pointer.
+  /// List of all parameters, excluding RVO and instance pointer.
   llvm::SmallVector<ParamDescriptor> ParamDescriptors;
+  /// Local area size: storage + metadata.
+  unsigned FrameSize = 0;
+  /// Size of the argument stack.
+  unsigned ArgSize;
+  /// Function Kind.
+  FunctionKind Kind;
   /// Flag to indicate if the function is valid.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsValid : 1;

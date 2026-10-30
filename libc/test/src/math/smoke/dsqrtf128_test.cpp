@@ -10,4 +10,5 @@
 
 #include "src/math/dsqrtf128.h"
 
-LIST_NARROWING_SQRT_TESTS(double, float128, LIBC_NAMESPACE::dsqrtf128)
+LIST_NARROWING_SQRT_TESTS(Dsqrtf128, double, float128,
+                          LIBC_NAMESPACE::dsqrtf128)

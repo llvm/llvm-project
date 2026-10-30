@@ -10,4 +10,4 @@
 
 #include "src/math/canonicalize.h"
 
-LIST_CANONICALIZE_TESTS(double, LIBC_NAMESPACE::canonicalize)
+LIST_CANONICALIZE_TESTS(Canonicalize, double, LIBC_NAMESPACE::canonicalize)

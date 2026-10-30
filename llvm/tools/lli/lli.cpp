@@ -56,6 +56,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -67,6 +68,7 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cerrno>
 #include <optional>
@@ -176,6 +178,10 @@ static cl::opt<char>
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
                       "(default = '-O2')"),
              cl::Prefix, cl::init('2'));
+
+static cl::opt<bool> HostJITTriple("host-jit-triple",
+                                   cl::desc("Print process triple and exit"),
+                                   cl::init(false));
 
 static cl::opt<std::string>
     TargetTriple("mtriple", cl::desc("Override target triple for module"));
@@ -370,11 +376,11 @@ private:
 // an empty '__main' function.
 static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
                                   const Triple &TargetTriple) {
-  IRBuilder<> Builder(Context);
-
   // Create a new module.
   std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
   M->setTargetTriple(TargetTriple);
+
+  IRBuilder<> Builder(*M);
 
   // Create an empty function named "__main".
   Type *ReturnTy;
@@ -408,7 +414,8 @@ static CodeGenOptLevel getOptLevel() {
 }
 
 static Error loadDylibs();
-static int runOrcJIT(const char *ProgName);
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName);
 static void disallowOrcOptions();
 static Expected<std::unique_ptr<orc::ExecutorProcessControl>> launchRemote();
 
@@ -427,8 +434,14 @@ int main(int argc, char **argv, char * const *envp) {
   InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
 
-  cl::ParseCommandLineOptions(argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(LibraryOptions, ArrayRef(argv, argc),
                               "llvm interpreter & dynamic compiler\n");
+
+  if (HostJITTriple) {
+    outs() << sys::getProcessTriple() << "\n";
+    return 0;
+  }
 
   // If the user doesn't want core files, disable them.
   if (DisableCoreFiles)
@@ -445,10 +458,11 @@ int main(int argc, char **argv, char * const *envp) {
   if (UseJITKind == JITKind::MCJIT || ForceInterpreter)
     disallowOrcOptions();
   else
-    return runOrcJIT(argv[0]);
+    return runOrcJIT(LibraryOptions, argv[0]);
 
   // Old lli implementation based on ExecutionEngine and MCJIT.
   LLVMContext Context;
+  Context.getLibraryOptions().assign(LibraryOptions);
 
   // Load the bitcode...
   SMDiagnostic Err;
@@ -923,11 +937,14 @@ static Error tryEnableDebugSupport(orc::LLJIT &J) {
   return Error::success();
 }
 
-static int runOrcJIT(const char *ProgName) {
+static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
+                     const char *ProgName) {
   // Start setting up the JIT environment.
 
   // Parse the main module.
-  orc::ThreadSafeContext TSCtx(std::make_unique<LLVMContext>());
+  auto Context = std::make_unique<LLVMContext>();
+  Context->getLibraryOptions().assign(LibraryOptions);
+  orc::ThreadSafeContext TSCtx(std::move(Context));
   auto MainModule = ExitOnErr(loadModule(InputFile, TSCtx));
 
   // Get TargetTriple and DataLayout from the main module if they're explicitly
@@ -960,6 +977,10 @@ static int runOrcJIT(const char *ProgName) {
       .addFeatures(codegen::getFeatureList())
       .setRelocationModel(codegen::getExplicitRelocModel())
       .setCodeModel(codegen::getExplicitCodeModel());
+
+  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS())
+    Builder.getJITTargetMachineBuilder()->getOptions().EmulatedTLS =
+        *EmulatedTLS;
 
   // Link process symbols unless NoProcessSymbols is set.
   Builder.setLinkProcessSymbolsByDefault(!NoProcessSymbols);

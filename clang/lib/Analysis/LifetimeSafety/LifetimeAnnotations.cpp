@@ -127,11 +127,8 @@ FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!AC)
     return;
 
-  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
-  if (!FD)
-    return;
-
   Args = AC->arguments();
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
 }
 
 std::optional<LifetimeBoundParamInfo>
@@ -396,6 +393,11 @@ bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
 bool isGslOwnerType(const CXXRecordDecl *RD) {
   return isRecordWithAttr<OwnerAttr>(RD);
+}
+
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD) {
+  return Ctor && PVD->getType()->isPointerType() &&
+         isGslOwnerType(Ctor->getParent());
 }
 
 static StringRef getName(const CXXRecordDecl &RD) {

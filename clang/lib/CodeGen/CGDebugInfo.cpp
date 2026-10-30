@@ -59,13 +59,6 @@
 using namespace clang;
 using namespace clang::CodeGen;
 
-static SourceLocation getMacroDebugLoc(const CodeGenModule &CGM,
-                                       SourceLocation Loc) {
-  if (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc)
-    return Loc;
-  return CGM.getContext().getSourceManager().getFileLoc(Loc);
-}
-
 static uint32_t getTypeAlignIfRequired(const Type *Ty, const ASTContext &Ctx) {
   auto TI = Ctx.getTypeInfo(Ty);
   if (TI.isAlignRequired())
@@ -353,7 +346,7 @@ void CGDebugInfo::setLocation(SourceLocation Loc) {
     return;
 
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation NewLoc = SM.getExpansionLoc(getMacroDebugLoc(CGM, Loc));
+  SourceLocation NewLoc = SM.getExpansionLoc(Loc);
   if (CurLoc != NewLoc) {
     CurLoc = NewLoc;
     CurLocFile = nullptr;
@@ -596,7 +589,6 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     FileName = TheCU->getFile()->getFilename();
     CSInfo = TheCU->getFile()->getChecksum();
   } else {
-    Loc = getMacroDebugLoc(CGM, Loc);
     if (Loc == CurLoc && CurLocFile)
       return CurLocFile;
 
@@ -627,8 +619,7 @@ llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
     if (CSKind)
       CSInfo.emplace(*CSKind, Checksum);
   }
-  return createFile(FileName, CSInfo,
-                    getSource(SM, SM.getFileID(getMacroDebugLoc(CGM, Loc))));
+  return createFile(FileName, CSInfo, getSource(SM, SM.getFileID(Loc)));
 }
 
 llvm::DIFile *CGDebugInfo::createFile(
@@ -679,10 +670,9 @@ unsigned CGDebugInfo::getLineNumber(SourceLocation Loc) {
   if (Loc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation DebugLoc = getMacroDebugLoc(CGM, Loc);
-  if (DebugLoc == CurLoc)
+  if (Loc == CurLoc)
     return CurLocLine;
-  return SM.getPresumedLoc(DebugLoc).getLine();
+  return SM.getPresumedLoc(Loc).getLine();
 }
 
 unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
@@ -694,7 +684,7 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc) {
   if (Loc.isInvalid() && CurLoc.isInvalid())
     return 0;
   SourceManager &SM = CGM.getContext().getSourceManager();
-  SourceLocation DebugLoc = Loc.isValid() ? getMacroDebugLoc(CGM, Loc) : CurLoc;
+  SourceLocation DebugLoc = Loc.isValid() ? Loc : CurLoc;
   if (DebugLoc == CurLoc)
     return CurLocColumn;
   PresumedLoc PLoc = SM.getPresumedLoc(DebugLoc);
@@ -979,6 +969,10 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::Id:                                                        \
     return getOrCreateStructPtrType(#Name, SingletonId);
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                                \
+  case BuiltinType::Id:                                                        \
+    return DBuilder.createBasicType(#Name, 32, llvm::dwarf::DW_ATE_unsigned);
+#include "clang/Basic/HLSLPackedTypes.def"
 
 #define SVE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/AArch64ACLETypes.def"
@@ -1217,6 +1211,8 @@ llvm::DIType *CGDebugInfo::CreateType(const BuiltinType *BT) {
   case BuiltinType::SatULongFract:
     Encoding = llvm::dwarf::DW_ATE_unsigned_fixed;
     break;
+  case BuiltinType::MetaInfo:
+    llvm_unreachable("std::meta::info is consteval-only type");
   }
 
   BTName = BT->getName(CGM.getLangOpts());
@@ -2108,6 +2104,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
 
     llvm::DIFile *VUnit = getOrCreateFile(Loc);
 
+    FieldIndexCache[*Field] = elements.size();
     elements.push_back(createFieldType(
         GetLambdaCaptureName(Capture), Field->getType(), Loc,
         Field->getAccess(), FieldOffset, Align, VUnit, RecordTy, CXXDecl));
@@ -2228,6 +2225,7 @@ void CGDebugInfo::CollectRecordNormalField(
                         OffsetInBits, Align, tunit, RecordTy, RD, Annotations);
   }
 
+  FieldIndexCache[field] = elements.size();
   elements.push_back(FieldType);
 }
 
@@ -2535,10 +2533,17 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
   // In this debug mode, emit type info for a class when its constructor type
-  // info is emitted.
-  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor)
-    if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(Method))
-      completeUnusedClass(*CD->getParent());
+  // info is emitted. Delegating constructors are ignored because the target
+  // constructor's definition will emit the type info.
+  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor) {
+    if (const auto *CD = dyn_cast<CXXConstructorDecl>(Method)) {
+      if (const auto *Def =
+              dyn_cast_or_null<CXXConstructorDecl>(CD->getDefinition());
+          Def && !Def->isDelegatingConstructor()) {
+        completeUnusedClass(*CD->getParent());
+      }
+    }
+  }
 
   llvm::DINodeArray TParamsArray = CollectFunctionTemplateParams(Method, Unit);
   llvm::DISubprogram *SP = DBuilder.createMethod(
@@ -3080,11 +3085,21 @@ void CGDebugInfo::CollectVTableInfo(const CXXRecordDecl *RD, llvm::DIFile *Unit,
   EltTys.push_back(VPtrMember);
 }
 
-llvm::DIType *CGDebugInfo::getOrCreateRecordType(QualType RTy,
-                                                 SourceLocation Loc) {
-  assert(CGM.getCodeGenOpts().hasReducedDebugInfo());
-  llvm::DIType *T = getOrCreateType(RTy, getOrCreateFile(Loc));
-  return T;
+std::pair<llvm::DIType *, unsigned>
+CGDebugInfo::getOrCreatePreserveAccessInfo(QualType Ty,
+                                           const FieldDecl *Field) {
+  const RecordDecl *RD = Field->getParent();
+  // Preserve-access intrinsics need complete layouts, including base classes.
+  if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
+    CXXRD->forallBases([this](const CXXRecordDecl *Base) {
+      completeClass(Base);
+      return true;
+    });
+  completeClass(RD);
+  llvm::DIType *T = getOrCreateStandaloneType(Ty, RD->getLocation());
+  auto I = FieldIndexCache.find(Field);
+  assert(I != FieldIndexCache.end() && "Missing field debug information");
+  return {T, I->second};
 }
 
 llvm::DIType *CGDebugInfo::getOrCreateInterfaceType(QualType D,
@@ -3232,18 +3247,36 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
   if (isClassOrMethodDLLImport(RD))
     return false;
 
-  if (RD->isLambda() || RD->isAggregate() ||
-      RD->hasTrivialDefaultConstructor() ||
-      RD->hasConstexprNonCopyMoveConstructor())
+  if (RD->isLambda() || RD->isAggregate() || RD->hasTrivialDefaultConstructor())
     return false;
 
+  // Skip this optimization if the class has an implicit constexpr default
+  // constructor, since those constructors can be invoked without emitting type
+  // information for the constructor.
+  if (RD->needsImplicitDefaultConstructor() &&
+      RD->defaultedDefaultConstructorIsConstexpr())
+    return false;
+
+  bool HasNonDeletedCtor = false;
   for (const CXXConstructorDecl *Ctor : RD->ctors()) {
     if (Ctor->isCopyOrMoveConstructor())
       continue;
+    if (const FunctionDecl *Def = Ctor->getDefinition()) {
+      const auto *CtorDef = cast<CXXConstructorDecl>(Def);
+      // Ignore delegating constructors, the target constructor will either be
+      // a non-deleted custom constructor that enables homing, or could be a
+      // copy/move constructor, which does not enable homing.
+      if (CtorDef->isDelegatingConstructor())
+        continue;
+      // Skip this optimization if we see a defined constexpr constructor, which
+      // can be invoked without emitting type info.
+      if (Ctor->isConstexpr() && !Ctor->isDeleted())
+        return false;
+    }
     if (!Ctor->isDeleted())
-      return true;
+      HasNonDeletedCtor = true;
   }
-  return false;
+  return HasNonDeletedCtor;
 }
 
 static bool shouldOmitDefinition(llvm::codegenoptions::DebugInfoKind DebugKind,
@@ -3342,6 +3375,46 @@ llvm::DIType *CGDebugInfo::GetPreferredNameType(const CXXRecordDecl *RD,
   return getOrCreateType(PNA->getTypedefType(), Unit);
 }
 
+static void completeStandardLayoutUnionType(CGDebugInfo &DebugInfo,
+                                            QualType QT);
+
+static void completeStandardLayoutUnionMembers(CGDebugInfo &DebugInfo,
+                                               const CXXRecordDecl *RD) {
+  for (const CXXBaseSpecifier &BS : RD->bases())
+    completeStandardLayoutUnionType(DebugInfo, BS.getType());
+
+  for (const FieldDecl *FD : RD->fields()) {
+    // Invalid declarations are skipped when determining the field layout of
+    // unions. This will of course cause a compiler error, but skip these
+    // fields anyway to avoid triggering the `isStandardLayout()` assertion in
+    // `completeStandardLayoutUnionType`.
+    if (FD->isInvalidDecl())
+      continue;
+    completeStandardLayoutUnionType(DebugInfo,
+                                    FD->getType()
+                                        ->getBaseElementTypeUnsafe()
+                                        ->getCanonicalTypeUnqualified());
+  }
+}
+
+static void completeStandardLayoutUnionType(CGDebugInfo &DebugInfo,
+                                            QualType QT) {
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  auto *CRD = dyn_cast<CXXRecordDecl>(RT->getDecl()->getDefinitionOrSelf());
+  if (!CRD || !CRD->hasDefinition())
+    return;
+
+  // We checked at the root that this is a standard-layout type, which
+  // requires all its members / base types to be standard-layout.
+  assert(CRD->isStandardLayout());
+
+  DebugInfo.completeClassData(CRD);
+  completeStandardLayoutUnionMembers(DebugInfo, CRD);
+}
+
 std::pair<llvm::DIType *, llvm::DIType *>
 CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   RecordDecl *RD = Ty->getDecl()->getDefinitionOrSelf();
@@ -3398,6 +3471,21 @@ CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
         llvm::MDNode::replaceWithPermanent(llvm::TempDICompositeType(FwdDecl));
 
   RegionMap[RD].reset(FwdDecl);
+
+  if (DebugKind == llvm::codegenoptions::DebugInfoConstructor) {
+    // For standard-layout unions, recursively emit full debug info for all
+    // user-defined types (and their bases/fields) in the union. Per the C++
+    // spec, "it is permitted to inspect the common initial part of any of" the
+    // "common initial sequence" of distinct types in a standard-layout union.
+    // This exception to strict aliasing enables producing a reference to a
+    // type without ever having constructed that type, breaking the assumption
+    // made by constructor homing that all interesting types we'd want debug
+    // info for must have been constructed.
+    //
+    // See: https://wg21.link/class.mem#general-30
+    if (CXXDecl && CXXDecl->isUnion() && CXXDecl->isStandardLayout())
+      completeStandardLayoutUnionMembers(*this, CXXDecl);
+  }
 
   if (CGM.getCodeGenOpts().getDebuggerTuning() == llvm::DebuggerKind::LLDB)
     if (auto *PrefDI = GetPreferredNameType(CXXDecl, DefUnit))
@@ -3607,10 +3695,22 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
   if (ID->getImplementation())
     Flags |= llvm::DINode::FlagObjcClassComplete;
 
+  llvm::DINodeArray Annotations;
+  const auto *RuntimeName = ID->getAttr<ObjCRuntimeNameAttr>();
+  if (RuntimeName && RuntimeName->getMetadataName() != ID->getName()) {
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    llvm::Metadata *Ops[2] = {
+        llvm::MDString::get(Ctx, "objc_runtime_name"),
+        llvm::MDString::get(Ctx, RuntimeName->getMetadataName())};
+    Annotations = DBuilder.getOrCreateArray({llvm::MDNode::get(Ctx, Ops)});
+  }
+
   llvm::DIScope *Mod = getParentModuleOrNull(ID);
   llvm::DICompositeType *RealDecl = DBuilder.createStructType(
       Mod ? Mod : Unit, ID->getName(), DefUnit, Line, Size, Align, Flags,
-      nullptr, llvm::DINodeArray(), RuntimeLang);
+      nullptr, llvm::DINodeArray(), RuntimeLang, /*VTableHolder=*/nullptr,
+      /*UniqueIdentifier=*/"", /*Specification=*/nullptr,
+      /*NumExtraInhabitants=*/0, Annotations);
 
   QualType QTy(Ty, 0);
   TypeCache[QTy.getAsOpaquePtr()].reset(RealDecl);
@@ -3733,13 +3833,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
       Flags |= llvm::DINode::FlagBitField;
 
     llvm::MDNode *PropertyNode = nullptr;
+    ObjCPropertyDecl *SynthesizedProperty = nullptr;
+    llvm::DIFile *PUnit = nullptr;
+    unsigned PLine = 0;
     if (ObjCImplementationDecl *ImpD = ID->getImplementation()) {
       if (ObjCPropertyImplDecl *PImpD =
               ImpD->FindPropertyImplIvarDecl(Field->getIdentifier())) {
         if (ObjCPropertyDecl *PD = PImpD->getPropertyDecl()) {
+          SynthesizedProperty = PD;
           SourceLocation Loc = PD->getLocation();
-          llvm::DIFile *PUnit = getOrCreateFile(Loc);
-          unsigned PLine = getLineNumber(Loc);
+          PUnit = getOrCreateFile(Loc);
+          PLine = getLineNumber(Loc);
           ObjCMethodDecl *Getter = PImpD->getGetterMethodDecl();
           ObjCMethodDecl *Setter = PImpD->getSetterMethodDecl();
           PropertyNode = DBuilder.createObjCProperty(
@@ -3755,10 +3859,17 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const ObjCInterfaceType *Ty,
         }
       }
     }
-    FieldTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
-                                      FieldSize, FieldAlign, FieldOffset, Flags,
-                                      FieldTy, PropertyNode);
-    EltTys.push_back(FieldTy);
+    auto *IvarTy = DBuilder.createObjCIVar(FieldName, FieldDefUnit, FieldLine,
+                                           FieldSize, FieldAlign, FieldOffset,
+                                           Flags, FieldTy, PropertyNode);
+    EltTys.push_back(IvarTy);
+
+    if (SynthesizedProperty) {
+      assert(PUnit && "SynthesizedProperty implies PUnit");
+      EltTys.push_back(DBuilder.createProperty(
+          SynthesizedProperty->getName(), PUnit, PLine,
+          getOrCreateType(SynthesizedProperty->getType(), PUnit), IvarTy));
+    }
   }
 
   llvm::DINodeArray Elements = DBuilder.getOrCreateArray(EltTys);
@@ -5180,9 +5291,19 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
   // If there is no DISubprogram attached to the function being called,
   // create the one describing the function in order to have complete
   // call site debug info.
-  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
-    EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
-                     Func);
+  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined()) {
+    // If this is a CXX method, use getFunctionDeclaration which checks the
+    // SPCache first otherwise calls CreateCXXMemberFunction. This ensures that
+    // debug info generated for a declaration here is consistent with that
+    // generated for methods via other means.
+    if (isa<CXXMethodDecl>(CalleeDecl->getCanonicalDecl())) {
+      if (auto *SP = getFunctionDeclaration(CalleeDecl))
+        Func->setSubprogram(SP);
+    } else {
+      EmitFunctionDecl(CalleeGlobalDecl, CalleeDecl->getLocation(), CalleeType,
+                       Func);
+    }
+  }
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {
@@ -5210,9 +5331,7 @@ void CGDebugInfo::EmitLocation(CGBuilderTy &Builder, SourceLocation Loc) {
   // Update our current location
   setLocation(Loc);
 
-  if (CurLoc.isInvalid() ||
-      (CGM.getCodeGenOpts().DebugInfoMacroExpansionLoc && CurLoc.isMacroID()) ||
-      LexicalBlockStack.empty())
+  if (CurLoc.isInvalid() || LexicalBlockStack.empty())
     return;
 
   llvm::MDNode *Scope = LexicalBlockStack.back();
@@ -5224,9 +5343,12 @@ void CGDebugInfo::CreateLexicalBlock(SourceLocation Loc) {
   llvm::MDNode *Back = nullptr;
   if (!LexicalBlockStack.empty())
     Back = LexicalBlockStack.back().get();
+  // A #line 0 macro carried no line information but still take column
+  // information. This will finally be rejected by the lexer but is legal.
+  unsigned Line = getLineNumber(CurLoc);
+  unsigned Column = Line ? getColumnNumber(CurLoc) : 0;
   LexicalBlockStack.emplace_back(DBuilder.createLexicalBlock(
-      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), getLineNumber(CurLoc),
-      getColumnNumber(CurLoc)));
+      cast<llvm::DIScope>(Back), getOrCreateFile(CurLoc), Line, Column));
 }
 
 void CGDebugInfo::AppendAddressSpaceXDeref(
@@ -6482,7 +6604,7 @@ void CGDebugInfo::AddStringLiteralDebugInfo(llvm::GlobalVariable *GV,
                                             const StringLiteral *S) {
   SourceLocation Loc = S->getStrTokenLoc(0);
   SourceManager &SM = CGM.getContext().getSourceManager();
-  PresumedLoc PLoc = SM.getPresumedLoc(getMacroDebugLoc(CGM, Loc));
+  PresumedLoc PLoc = SM.getPresumedLoc(Loc);
   if (!PLoc.isValid())
     return;
 

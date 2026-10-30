@@ -1,62 +1,114 @@
 #
 # This testing configuration runs the test suite using the libstdc++ Standard library.
 #
-# The additional '--param libstdcxx_install_prefix=<PATH>', '--param libstdcxx_triple=<TRIPLE>' and
-# '--param libstdcxx_version=<VERSION>' lit parameters must be provided when invoking lit for the
-# configuration to find the appropriate headers and library.
+# The additional '--param libstdcxx_compiler=<GCC>' Lit parameter must be provided when invoking
+# Lit. It points to the installation of GCC whose libstdc++ will be used for testing. The headers
+# and the library are located by querying that GCC. Note that this is not the compiler used to
+# build the tests, which is selected with '--param compiler' as usual.
 #
 # For example:
 #
-#  $ ./libcxx/utils/libcxx-lit <BUILD> -sv libcxx/test/std --param libstdcxx_install_prefix=/opt/homebrew/Cellar/gcc/14.1.0_1 \
-#                                                          --param libstdcxx_version=14 \
-#                                                          --param libstdcxx_triple=aarch64-apple-darwin22 \
+#  $ ./libcxx/utils/libcxx-lit <BUILD> -sv libcxx/test/std --param libstdcxx_compiler=g++-14 \
 #                                                          --param stdlib=libstdc++
 #
 
-import os, site
+import os, shlex, site, subprocess
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
 import libcxx.test.params, libcxx.test.config, libcxx.test.dsl
 
+
+def _includeSearchDirs(gcc, flags):
+    """
+    Return the list of directories that the given GCC searches for includes when compiling C++.
+    """
+    compile = subprocess.run(shlex.split(gcc) + ['-x', 'c++'] + flags + ['-E', '-v', os.devnull],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.PIPE,
+                             universal_newlines=True)
+    if compile.returncode != 0:
+        raise RuntimeError('Failed to determine the include search paths of {}:\n{}'.format(
+            gcc, compile.stderr))
+
+    # GCC reports the search paths on stderr, as indented lines between two markers.
+    directories = []
+    inside = False
+    for line in compile.stderr.splitlines():
+        if line.startswith('#include <...> search starts here:'):
+            inside = True
+        elif line.startswith('End of search list.'):
+            inside = False
+        elif inside:
+            directories.append(line.strip())
+    return directories
+
+
+def _libstdcxxIncludeFlags(gcc):
+    """
+    Return the flags required to find the libstdc++ headers of the given GCC.
+
+    The C++ directories are the ones that GCC stops searching when it is passed -nostdinc++, which
+    is exactly what we need to add back since we compile the test suite with -nostdinc++.
+    """
+    withStdlib = _includeSearchDirs(gcc, [])
+    withoutStdlib = _includeSearchDirs(gcc, ['-nostdinc++'])
+    directories = [d for d in withStdlib if d not in withoutStdlib]
+    if not directories:
+        raise RuntimeError('Failed to find any libstdc++ header directory using {}'.format(gcc))
+    return ' '.join('-isystem {}'.format(shlex.quote(os.path.realpath(d))) for d in directories)
+
+
+def _libstdcxxLinkFlags(gcc):
+    """
+    Return the flags required to link against the libstdc++ of the given GCC.
+    """
+    for library in ('libstdc++.so', 'libstdc++.dylib', 'libstdc++.a'):
+        # GCC echoes back the file name unchanged when it can't locate the library.
+        path = subprocess.check_output(shlex.split(gcc) + ['-print-file-name={}'.format(library)],
+                                       universal_newlines=True).strip()
+        if os.path.isabs(path) and os.path.exists(path):
+            directory = os.path.realpath(os.path.dirname(path))
+            return '-L {0} -Wl,-rpath,{0} -lstdc++'.format(shlex.quote(directory))
+    raise RuntimeError('Failed to find the libstdc++ library using {}'.format(gcc))
+
+
 # Additional parameters for libstdc++
 LIBSTDCXX_PARAMETERS = [
-    libcxx.test.dsl.Parameter(name='libstdcxx_install_prefix', type=str,
-        actions=lambda path: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-install-prefix}', path)],
+    libcxx.test.dsl.Parameter(name='libstdcxx_compiler', type=str,
+        actions=lambda gcc: [
+            libcxx.test.dsl.AddSubstitution('%{libstdcxx-include-flags}', _libstdcxxIncludeFlags(gcc)),
+            libcxx.test.dsl.AddSubstitution('%{libstdcxx-link-flags}', _libstdcxxLinkFlags(gcc)),
+        ],
         help="""
-        The installation prefix where libstdc++ was installed. This is used to find the libstdc++ headers,
-        link against its built library, etc.
-        """),
-    libcxx.test.dsl.Parameter(name='libstdcxx_triple', type=str,
-        actions=lambda triple: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-triple}', triple)],
-        help="""
-        The target triple used for the target-specific include directory of libstdc++. This is used to find the
-        libstdc++ headers.
-        """),
-    libcxx.test.dsl.Parameter(name='libstdcxx_version', type=str,
-        actions=lambda version: [libcxx.test.dsl.AddSubstitution('%{libstdcxx-version}', version)],
-        help="""
-        The version of libstdc++. This is used to find the libstdc++ headers and library.
+        The GCC whose libstdc++ we are testing against, e.g. 'g++-14'. The libstdc++ headers and
+        library are located by querying that GCC. This is not the compiler used to build the tests.
         """),
 ]
+
+# Since this configuration knows which Standard Library it is testing, provide the corresponding
+# parameters here instead of requiring them on the command line. Note that libstdc++ doesn't ship
+# libc++'s experimental library, so testing experimental features doesn't apply to it. These are
+# only defaults: they can still be overridden with --param if needed.
+config.stdlib = 'libstdc++'
+config.enable_experimental = False
 
 # Configure the compiler and flags
 config.substitutions.append(('%{flags}',
     '-pthread' + (' -isysroot {}'.format('@CMAKE_OSX_SYSROOT@') if '@CMAKE_OSX_SYSROOT@' else '')
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -isystem %{libstdcxx-install-prefix}/include/c++/%{libstdcxx-version} -isystem %{libstdcxx-install-prefix}/include/c++/%{libstdcxx-version}/%{libstdcxx-triple} -I %{libcxx-dir}/test/support'
+    '-nostdinc++ %{libstdcxx-include-flags} -I %{libcxx-dir}/test/support'
 ))
 config.substitutions.append(('%{link_flags}',
-    '-nostdlib++ -L %{libstdcxx-install-prefix}/lib/gcc/%{libstdcxx-version} -Wl,-rpath,%{libstdcxx-install-prefix}/lib/gcc/%{libstdcxx-version} -lstdc++'
+    '-nostdlib++ %{libstdcxx-link-flags}'
 ))
 config.substitutions.append(('%{exec}',
     '%{executor} --execdir %{temp} -- '
 ))
 
-import os, site
-site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
-import libcxx.test.params, libcxx.test.config
 libcxx.test.config.configure(
-    libcxx.test.params.DEFAULT_PARAMETERS + LIBSTDCXX_PARAMETERS,
+    # The libstdc++ parameters must be applied before the default ones: the default parameters
+    # probe the compiler (e.g. to select the default -std=), and those probes use %{compile_flags},
+    # which is not usable until the libstdc++ substitutions have been defined.
+    LIBSTDCXX_PARAMETERS + libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,
     lit_config

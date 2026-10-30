@@ -380,6 +380,11 @@ void MachineInstr::setMemRefs(MachineFunction &MF,
 
 void MachineInstr::addMemOperand(MachineFunction &MF,
                                  MachineMemOperand *MO) {
+  if (memoperands_empty()) {
+    setMemRefs(MF, {MO});
+    return;
+  }
+
   SmallVector<MachineMemOperand *, 2> MMOs;
   MMOs.append(memoperands_begin(), memoperands_end());
   MMOs.push_back(MO);
@@ -616,6 +621,11 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
     if (ICmp->hasSameSign())
       MIFlags |= MachineInstr::MIFlag::SameSign;
 
+  // Copy the nonnull flag.
+  if (const auto *ASC = dyn_cast<AddrSpaceCastInst>(&I))
+    if (ASC->hasNonNull())
+      MIFlags |= MachineInstr::MIFlag::NonNull;
+
   // Copy the exact flag.
   if (const PossiblyExactOperator *PE = dyn_cast<PossiblyExactOperator>(&I))
     if (PE->isExact())
@@ -681,7 +691,7 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     assert(Other.isBundle() && "Expected that both instructions are bundles.");
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
     MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
-    // Loop until we analysed the last intruction inside at least one of the
+    // Loop until we analysed the last instruction inside at least one of the
     // bundles.
     while (I1->isBundledWithSucc() && I2->isBundledWithSucc()) {
       ++I1;
@@ -1027,7 +1037,7 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   // Assume that all registers in a memory operand are pointers.
   if (F.isMemKind())
-    return TRI->getPointerRegClass();
+    return TII->getInlineAsmMemoryOperandRegClass(F.getMemoryConstraintID());
 
   return nullptr;
 }
@@ -1119,6 +1129,20 @@ int MachineInstr::findRegisterUseOperandIdx(Register Reg,
         return i;
   }
   return -1;
+}
+
+bool MachineInstr::hasTiedAndOtherReadOf(Register Reg, unsigned SubReg) const {
+  bool Tied = false;
+  unsigned Reads = 0;
+  for (const MachineOperand &MO : all_uses()) {
+    if (MO.getReg() != Reg || MO.getSubReg() != SubReg)
+      continue;
+    ++Reads;
+    // A tie its def already satisfies is not rewritten.
+    Tied |= MO.isTied() &&
+            getOperand(findTiedOperandIdx(getOperandNo(&MO))).getReg() != Reg;
+  }
+  return Tied && Reads > 1;
 }
 
 /// readsWritesVirtualRegister - Return a pair of bools (reads, writes)
@@ -1742,7 +1766,8 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
   if (!OpInfo.isGenericType())
     return MRI.getType(Op.getReg());
 
-  if (PrintedTypes[OpInfo.getGenericTypeIndex()])
+  // The MIR parser requires a type on every generic register definition.
+  if (PrintedTypes[OpInfo.getGenericTypeIndex()] && !Op.isDef())
     return LLT{};
 
   LLT TypeToPrint = MRI.getType(Op.getReg());
@@ -1894,6 +1919,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "inbounds ";
   if (getFlag(MachineInstr::LRSplit))
     OS << "lr-split ";
+  if (getFlag(MachineInstr::NonNull))
+    OS << "nonnull ";
 
   // Print the opcode name.
   if (TII)
@@ -2555,12 +2582,11 @@ void MachineInstr::changeDebugValuesDefReg(Register Reg) {
 
   Register DefReg = getOperand(0).getReg();
   auto *MRI = getRegInfo();
-  for (auto &MO : MRI->use_operands(DefReg)) {
-    auto *DI = MO.getParent();
-    if (!DI->isDebugValue())
+  for (MachineInstr &DI : MRI->use_instructions(DefReg)) {
+    if (!DI.isDebugValue())
       continue;
-    if (DI->hasDebugOperandForReg(DefReg)) {
-      DbgValues.push_back(DI);
+    if (DI.hasDebugOperandForReg(DefReg)) {
+      DbgValues.push_back(&DI);
     }
   }
 
@@ -2735,16 +2761,10 @@ void MachineInstr::insert(mop_iterator InsertBefore,
   }
 
   unsigned OpIdx = getOperandNo(InsertBefore);
-  unsigned NumOperands = getNumOperands();
-  unsigned OpsToMove = NumOperands - OpIdx;
+  SmallVector<MachineOperand> MovingOps(InsertBefore, operands_end());
 
-  SmallVector<MachineOperand> MovingOps;
-  MovingOps.reserve(OpsToMove);
-
-  for (unsigned I = 0; I < OpsToMove; ++I) {
-    MovingOps.emplace_back(getOperand(OpIdx));
-    removeOperand(OpIdx);
-  }
+  for (unsigned I = getNumOperands(); I > OpIdx; --I)
+    removeOperand(I - 1);
   for (const MachineOperand &MO : Ops)
     addOperand(MO);
   for (const MachineOperand &OpMoved : MovingOps)

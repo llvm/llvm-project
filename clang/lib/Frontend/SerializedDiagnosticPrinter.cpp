@@ -113,17 +113,6 @@ protected:
   std::error_code
   visitSourceRangeRecord(const serialized_diags::Location &Start,
                          const serialized_diags::Location &End) override;
-
-private:
-  std::error_code adjustSourceLocFilename(RecordData &Record,
-                                          unsigned int offset);
-
-  void adjustAbbrevID(RecordData &Record, AbbrevLookup &Lookup,
-                      unsigned NewAbbrev);
-
-  void writeRecordWithAbbrev(unsigned ID, RecordData &Record);
-
-  void writeRecordWithBlob(unsigned ID, RecordData &Record, StringRef Blob);
 };
 
 class SDiagsWriter : public DiagnosticConsumer {

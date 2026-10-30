@@ -28,6 +28,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
+#include <optional>
 
 /// TableGen will produce 2 enums, RTLIB::Libcall and
 /// RTLIB::LibcallImpl. RTLIB::Libcall describes abstract functionality the
@@ -80,6 +81,8 @@ private:
   /// Bitset of libcalls a module may emit a call to.
   LibcallImplBitset AvailableLibcallImpls;
 
+  LongDoubleFormat LongDoubleFmt;
+
 public:
   friend class llvm::LibcallLoweringInfo;
 
@@ -87,20 +90,18 @@ public:
 
   LLVM_ABI explicit RuntimeLibcallsInfo(
       const Triple &TT,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
+      ExceptionHandling ExceptionModel = ExceptionHandling::Default,
       FloatABI::ABIType FloatABI = FloatABI::Default,
-      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
-      VectorLibrary VecLib = VectorLibrary::NoLibrary);
+      std::optional<LongDoubleFormat> LDblFormat = std::nullopt,
+      StringRef ABIName = "", VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
-  // FIXME: The floating-point ABI is read from the "float-abi" module flag, but
-  // the ExceptionModel/EABIVersion/ABIName/VecLib parameters are still
-  // TargetOptions values that are not yet represented in the IR. Delete these
-  // parameters (and build everything from the Module) once those fields are
-  // migrated to module flags.
+  // FIXME: The exception model, floating-point ABI and long double format are
+  // read from the "exception-model", "float-abi" and "long-double-type" module
+  // flags, but the ABIName/VecLib parameters are still TargetOptions values
+  // that are not yet represented in the IR. Delete these parameters (and build
+  // everything from the Module) once those fields are migrated to module flags.
   LLVM_ABI explicit RuntimeLibcallsInfo(
-      const Module &M,
-      ExceptionHandling ExceptionModel = ExceptionHandling::None,
-      EABI EABIVersion = EABI::Default, StringRef ABIName = "",
+      const Module &M, StringRef ABIName = "",
       VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
@@ -127,9 +128,7 @@ public:
   }
 
   /// Return the libcall provided by \p Impl
-  static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
-    return ImplToLibcall[Impl];
-  }
+  LLVM_ABI RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) const;
 
   /// Return the runtime libcall that the floating-point math intrinsic \p ID
   /// may be lowered to, or RTLIB::UNKNOWN_LIBCALL if there is no such mapping.
@@ -137,6 +136,10 @@ public:
   /// \p FTy must be the intrinsic's call signature.
   LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,
                                                         FunctionType *FTy);
+
+  /// Return the runtime libraries enabled by default for \p TT.
+  LLVM_ABI static ArrayRef<RTLIB::RuntimeLibrary>
+  getDefaultRuntimeLibraries(const Triple &TT);
 
   unsigned getNumAvailableLibcallImpls() const {
     return AvailableLibcallImpls.count();
@@ -148,6 +151,10 @@ public:
 
   void setAvailable(RTLIB::LibcallImpl Impl) {
     AvailableLibcallImpls.set(Impl);
+  }
+
+  void setUnavailable(RTLIB::LibcallImpl Impl) {
+    AvailableLibcallImpls.reset(Impl);
   }
 
   /// Check if a function name is a recognized runtime call of any kind. This
@@ -176,6 +183,27 @@ public:
     return RTLIB::Unsupported;
   }
 
+  /// Get size of a C-level int or unsigned int, in bits.
+  // FIXME Could move into Triple class.
+  unsigned getIntSize(const Triple &TT) const {
+    return TT.isArch16Bit() ? 16 : 32;
+  }
+
+  /// Determine the extension attributes needed for i32 parameters and returns
+  /// corresponding to C-level int or unsigned int on \p T.
+  LLVM_ABI static void initExtensionsForTriple(bool &ShouldExtI32Param,
+                                               bool &ShouldExtI32Return,
+                                               bool &ShouldSignExtI32Param,
+                                               bool &ShouldSignExtI32Return,
+                                               const Triple &T);
+
+  /// Get the C-type function signature of the Libcall if provided,
+  /// and convert it to IR FunctionType and Attributes.
+  /// If the C-type function signature is not provided, return nullptr.
+  LLVM_ABI std::pair<FunctionType *, AttributeList>
+  getDefaultFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
+                       RTLIB::LibcallImpl LibcallImpl) const;
+
   /// \returns the function type and attributes for the \p LibcallImpl,
   /// depending on the target \p TT. If the function has incomplete type
   /// information, return nullptr for the function type.
@@ -183,11 +211,27 @@ public:
   getFunctionTy(LLVMContext &Ctx, const Triple &TT, const DataLayout &DL,
                 RTLIB::LibcallImpl LibcallImpl) const;
 
+  /// Return the unmasked variant of the masked vector libcall \p LC, or
+  /// RTLIB::UNKNOWN_LIBCALL if \p LC is not a masked vector libcall.
+  LLVM_ABI static RTLIB::Libcall getUnmaskedVectorLibcall(RTLIB::Libcall LC);
+
+  /// Return the masked variant of the vector libcall \p LC, or
+  /// RTLIB::UNKNOWN_LIBCALL if \p LC has no masked variant.
+  LLVM_ABI static RTLIB::Libcall getMaskedVectorLibcall(RTLIB::Libcall LC);
+
   /// Returns true if the function has a vector mask argument, which is assumed
   /// to be the last argument.
-  LLVM_ABI static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl);
+  static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
+    return getUnmaskedVectorLibcall(ImplToLibcall[Impl]) !=
+           RTLIB::UNKNOWN_LIBCALL;
+  }
 
 private:
+  // Generated per-library setup helpers, dispatched from
+  // setTargetRuntimeLibcallSets.
+#define GET_RUNTIME_LIBCALLS_INFO_MEMBER_DECLS
+#include "llvm/IR/RuntimeLibcalls.inc"
+
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>
   lookupLibcallImplNameImpl(StringRef Name);
 
@@ -205,8 +249,16 @@ private:
   LLVM_ABI static const uint16_t RuntimeLibcallNameOffsetTable[];
   LLVM_ABI static const uint8_t RuntimeLibcallNameSizeTable[];
 
+  /// Function signature of runtime lib calls
+  LLVM_ABI static const FuncArgTypeID SignatureTable[];
+  LLVM_ABI static const uint16_t SignatureOffset[];
+
   /// Map from a concrete LibcallImpl implementation to its RTLIB::Libcall kind.
   LLVM_ABI static const RTLIB::Libcall ImplToLibcall[RTLIB::NumLibcallImpls];
+
+  RTLIB::Libcall selectLongDoubleLibcall(RTLIB::Libcall F80,
+                                         RTLIB::Libcall F128,
+                                         RTLIB::Libcall PPCF128) const;
 
   /// Utility function for tablegenerated lookup function. Return a range of
   /// enum values that apply for the function name at \p NameOffsetEntry with
@@ -234,22 +286,22 @@ private:
   LLVM_READONLY
   static bool isAAPCS_ABI(const Triple &TT, StringRef ABIName);
 
-  /// Return whether the runtime library \p LibraryName is available for the
+  /// Return whether the runtime library \p Library is available for the
   /// current module.
-  bool isLibraryAvailable(StringRef LibraryName) const;
+  bool isLibraryAvailable(RTLIB::RuntimeLibrary Library) const;
 
-  /// Generated by tablegen.
+  /// Set the calling convention and enable the default runtime libraries for
+  /// \p TT.
   void setTargetRuntimeLibcallSets(const Triple &TT,
                                    ExceptionHandling ExceptionModel,
-                                   FloatABI::ABIType FloatABI, EABI ABIType,
+                                   FloatABI::ABIType FloatABI,
                                    StringRef ABIName,
                                    LongDoubleFormat LongDoubleFormat);
 
   /// Set default libcall names. If a target wants to opt-out of a libcall it
   /// should be placed here.
   LLVM_ABI void initLibcalls(const Triple &TT, ExceptionHandling ExceptionModel,
-                             FloatABI::ABIType FloatABI, EABI ABIType,
-                             StringRef ABIName,
+                             FloatABI::ABIType FloatABI, StringRef ABIName,
                              LongDoubleFormat LongDoubleFormat);
 };
 

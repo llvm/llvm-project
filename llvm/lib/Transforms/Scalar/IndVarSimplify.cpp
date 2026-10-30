@@ -24,6 +24,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -62,7 +63,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -88,46 +88,10 @@ STATISTIC(NumLFTR        , "Number of loop exit tests replaced");
 STATISTIC(NumElimExt     , "Number of IV sign/zero extends eliminated");
 STATISTIC(NumElimIV      , "Number of congruent IVs eliminated");
 
-static cl::opt<ReplaceExitVal> ReplaceExitValue(
-    "replexitval", cl::Hidden, cl::init(OnlyCheapRepl),
-    cl::desc("Choose the strategy to replace exit value in IndVarSimplify"),
-    cl::values(
-        clEnumValN(NeverRepl, "never", "never replace exit value"),
-        clEnumValN(OnlyCheapRepl, "cheap",
-                   "only replace exit value when the cost is cheap"),
-        clEnumValN(
-            UnusedIndVarInLoop, "unusedindvarinloop",
-            "only replace exit value when it is an unused "
-            "induction variable in the loop and has cheap replacement cost"),
-        clEnumValN(NoHardUse, "noharduse",
-                   "only replace exit values when loop def likely dead"),
-        clEnumValN(AlwaysRepl, "always",
-                   "always replace exit value whenever possible")));
-
-static cl::opt<bool> UsePostIncrementRanges(
-  "indvars-post-increment-ranges", cl::Hidden,
-  cl::desc("Use post increment control-dependent ranges in IndVarSimplify"),
-  cl::init(true));
-
-static cl::opt<bool>
-DisableLFTR("disable-lftr", cl::Hidden, cl::init(false),
-            cl::desc("Disable Linear Function Test Replace optimization"));
-
-static cl::opt<bool>
-LoopPredication("indvars-predicate-loops", cl::Hidden, cl::init(true),
-                cl::desc("Predicate conditions in read only loops"));
-
-static cl::opt<bool> LoopPredicationTraps(
-    "indvars-predicate-loop-traps", cl::Hidden, cl::init(true),
-    cl::desc("Predicate conditions that trap in loops with only local writes"));
-
-static cl::opt<bool>
-AllowIVWidening("indvars-widen-indvars", cl::Hidden, cl::init(true),
-                cl::desc("Allow widening of indvars to eliminate s/zext"));
-
 namespace {
 
 class IndVarSimplify {
+  const ScalarOptions &Opts;
   LoopInfo *LI;
   ScalarEvolution *SE;
   DominatorTree *DT;
@@ -164,10 +128,11 @@ class IndVarSimplify {
   bool sinkUnusedInvariants(Loop *L);
 
 public:
-  IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-                 const DataLayout &DL, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI, MemorySSA *MSSA, bool WidenIndVars)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
+  IndVarSimplify(const ScalarOptions &Opts, LoopInfo *LI, ScalarEvolution *SE,
+                 DominatorTree *DT, const DataLayout &DL,
+                 TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
+                 MemorySSA *MSSA, bool WidenIndVars)
+      : Opts(Opts), LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
         WidenIndVars(WidenIndVars) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
@@ -216,11 +181,13 @@ struct FloatingPointIV {
   APFloat ExitValue;
   FCmpInst *Compare;
   BinaryOperator *Add;
+  bool ExitsOnTrue;
 
   FloatingPointIV(APFloat Init, APFloat Incr, APFloat Exit, FCmpInst *Compare,
-                  BinaryOperator *Add)
+                  BinaryOperator *Add, bool ExitsOnTrue)
       : InitValue(std::move(Init)), IncrValue(std::move(Incr)),
-        ExitValue(std::move(Exit)), Compare(Compare), Add(Add) {}
+        ExitValue(std::move(Exit)), Compare(Compare), Add(Add),
+        ExitsOnTrue(ExitsOnTrue) {}
 };
 
 /// Represents the integer values for a converted IV.
@@ -257,11 +224,14 @@ static CmpInst::Predicate getIntegerPredicate(CmpInst::Predicate FPPred) {
 }
 
 /// Analyze a PN to determine whether it represents a simple floating-point
-/// induction variable, with constant fp init, increment, and exit values.
+/// induction variable, with constant fp init, increment, and exit values,
+/// whose exit condition is to be evaluated on every iteration of the loop.
 ///
 /// Returns a FloatingPointIV struct if matched, std::nullopt otherwise.
 static std::optional<FloatingPointIV>
-maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
+maybeFloatingPointRecurrence(Loop *L, PHINode *PN, const DominatorTree &DT) {
+  assert(L->getLoopLatch() && "Must be in simplified form.");
+
   // Identify incoming and backedge for the PN.
   unsigned IncomingEdge = L->contains(PN->getIncomingBlock(0));
   unsigned BackEdge = IncomingEdge ^ 1;
@@ -308,19 +278,26 @@ maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
   if (!BI)
     return std::nullopt;
 
-  if (!L->contains(BI->getParent()) ||
+  BasicBlock *ExitingBB = BI->getParent();
+  if (!L->contains(ExitingBB) ||
       (L->contains(BI->getSuccessor(0)) && L->contains(BI->getSuccessor(1))))
     return std::nullopt;
 
+  // Ensure that the fcmp exit comparison runs on every iteration of the loop,
+  // otherwise the IV may be incremented past the exit value, thus overflowing.
+  if (!DT.dominates(ExitingBB, L->getLoopLatch()))
+    return std::nullopt;
+
+  bool ExitsOnTrue = !L->contains(BI->getSuccessor(0));
   // If it isn't a comparison with an integer-as-fp (the exit value), we can't
   // transform it.
   auto *ExitValueVal = dyn_cast<ConstantFP>(Compare->getOperand(1));
   if (!ExitValueVal)
     return std::nullopt;
 
-  return FloatingPointIV(InitValueVal->getValueAPF(),
-                         IncValueVal->getValueAPF(),
-                         ExitValueVal->getValueAPF(), Compare, Incr);
+  return FloatingPointIV(
+      InitValueVal->getValueAPF(), IncValueVal->getValueAPF(),
+      ExitValueVal->getValueAPF(), Compare, Incr, ExitsOnTrue);
 }
 
 /// Ensure that the floating-point IV can be converted to a semantics-preserving
@@ -359,62 +336,49 @@ tryConvertToIntegerIV(const FloatingPointIV &FPIV) {
   if (IncrValue == 0)
     return std::nullopt;
 
-  // Positive and negative strides have different safety conditions.
-  if (IncrValue > 0) {
-    // If we have a positive stride, we require the init to be less than the
-    // exit value.
-    if (InitValue >= ExitValue)
-      return std::nullopt;
+  // Compute the predicate under which the loop keeps iterating.
+  CmpInst::Predicate ContinuePred =
+      FPIV.ExitsOnTrue ? CmpInst::getInversePredicate(NewPred) : NewPred;
 
-    uint32_t Range = uint32_t(ExitValue - InitValue);
-    // Check for infinite loop, either:
-    // while (i <= Exit) or until (i > Exit)
-    if (NewPred == CmpInst::ICMP_SLE || NewPred == CmpInst::ICMP_SGT) {
-      if (++Range == 0)
-        return std::nullopt; // Range overflows.
-    }
-
-    unsigned Leftover = Range % uint32_t(IncrValue);
-
-    // If this is an equality comparison, we require that the strided value
-    // exactly land on the exit value, otherwise the IV condition will wrap
-    // around and do things the fp IV wouldn't.
-    if ((NewPred == CmpInst::ICMP_EQ || NewPred == CmpInst::ICMP_NE) &&
-        Leftover != 0)
-      return std::nullopt;
-
-    // If the stride would wrap around the i32 before exiting, we can't
-    // transform the IV.
-    if (Leftover != 0 && int32_t(ExitValue + IncrValue) < ExitValue)
-      return std::nullopt;
-  } else {
-    // If we have a negative stride, we require the init to be greater than the
-    // exit value.
-    if (InitValue <= ExitValue)
-      return std::nullopt;
-
-    uint32_t Range = uint32_t(InitValue - ExitValue);
-    // Check for infinite loop, either:
-    // while (i >= Exit) or until (i < Exit)
-    if (NewPred == CmpInst::ICMP_SGE || NewPred == CmpInst::ICMP_SLT) {
-      if (++Range == 0)
-        return std::nullopt; // Range overflows.
-    }
-
-    unsigned Leftover = Range % uint32_t(-IncrValue);
-
-    // If this is an equality comparison, we require that the strided value
-    // exactly land on the exit value, otherwise the IV condition will wrap
-    // around and do things the fp IV wouldn't.
-    if ((NewPred == CmpInst::ICMP_EQ || NewPred == CmpInst::ICMP_NE) &&
-        Leftover != 0)
-      return std::nullopt;
-
-    // If the stride would wrap around the i32 before exiting, we can't
-    // transform the IV.
-    if (Leftover != 0 && int32_t(ExitValue + IncrValue) > ExitValue)
-      return std::nullopt;
+  // Normalize to positive stride.
+  int64_t Start = InitValue, Step = IncrValue, Bound = ExitValue;
+  if (Step < 0) {
+    Start = -Start;
+    Step = -Step;
+    Bound = -Bound;
+    ContinuePred = CmpInst::getSwappedPredicate(ContinuePred);
   }
+
+  // Start of IV is below the exit value.
+  if (Start >= Bound)
+    return std::nullopt;
+
+  // Compute the last value of the incremented IV.
+  uint64_t Dist = Bound - Start;
+  int64_t Last;
+  switch (ContinuePred) {
+  case CmpInst::ICMP_SLT:
+    Last = Start + alignTo(Dist, Step);
+    break;
+  case CmpInst::ICMP_SLE:
+    Last = Start + alignTo(Dist + 1, Step);
+    break;
+  case CmpInst::ICMP_NE:
+    // The strided value must exactly land on the exit value.
+    if (Dist % Step != 0)
+      return std::nullopt;
+    Last = Bound;
+    break;
+  case CmpInst::ICMP_EQ:
+    Last = Start + Step == Bound ? Bound + Step : Start + Step;
+    break;
+  default:
+    return std::nullopt;
+  }
+
+  // The integer IV must not overflow before the loop exits.
+  if (!isInt<32>(Last))
+    return std::nullopt;
 
   return IntegerIV{InitValue, IncrValue, ExitValue, NewPred};
 }
@@ -497,7 +461,7 @@ static void canonicalizeToIntegerIV(Loop *L, PHINode *PN,
 ///   bar((double)i);
 bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // See if the PN matches a floating-point IV pattern.
-  auto FPIV = maybeFloatingPointRecurrence(L, PN);
+  auto FPIV = maybeFloatingPointRecurrence(L, PN, *DT);
   if (!FPIV)
     return false;
 
@@ -747,9 +711,9 @@ bool IndVarSimplify::simplifyAndExtend(Loop *L,
     for (; !WideIVs.empty(); WideIVs.pop_back()) {
       unsigned ElimExt;
       unsigned Widened;
-      if (PHINode *WidePhi = createWideIV(WideIVs.back(), LI, SE, Rewriter,
-                                          DT, DeadInsts, ElimExt, Widened,
-                                          HasGuards, UsePostIncrementRanges)) {
+      if (PHINode *WidePhi = createWideIV(
+              WideIVs.back(), LI, SE, Rewriter, DT, DeadInsts, ElimExt, Widened,
+              HasGuards, Opts.indvars_post_increment_ranges)) {
         NumElimExt += ElimExt;
         NumWidened += Widened;
         Changed = true;
@@ -1211,6 +1175,7 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   if (!Preheader) return false;
 
   bool MadeAnyChanges = false;
+  SmallVector<Value *, 16> SunkInsts;
   for (Instruction &I : llvm::make_early_inc_range(llvm::reverse(*Preheader))) {
 
     // Skip BB Terminator.
@@ -1228,10 +1193,6 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     // behavior: LoopSimplify guarantees that the preheader dominates the exit
     // block.
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
-      continue;
-
-    // Skip debug or pseudo instructions.
-    if (I.isDebugOrPseudoInst())
       continue;
 
     // Skip eh pad instructions.
@@ -1268,9 +1229,12 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 
     // Otherwise, sink it to the exit block.
     I.moveBefore(ExitBlock->getFirstInsertionPt());
-    SE->forgetValue(&I);
+    SunkInsts.push_back(&I);
     MadeAnyChanges = true;
   }
+
+  if (!SunkInsts.empty())
+    SE->forgetValues(SunkInsts);
 
   return MadeAnyChanges;
 }
@@ -1855,7 +1819,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // This transformation looks a lot like a restricted form of dead loop
   // elimination, but restricted to read-only loops and without neccesssarily
   // needing to kill the loop entirely.
-  if (!LoopPredication)
+  if (!Opts.indvars_predicate_loops)
     return false;
 
   // Note: ExactBTC is the exact backedge taken count *iff* the loop exits
@@ -1946,6 +1910,11 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   if (ExitingBlocks.empty())
     return false;
 
+  // Predication may skip iterations of L, which is only safe if none of them
+  // would run forever. Calls that may not return are rejected below.
+  if (!isLoopNestFinite(L, *SE, *LI))
+    return false;
+
   // At this point, ExitingBlocks consists of only those blocks which are
   // predicatable.  Given that, we know we have at least one exit we can
   // predicate if the loop is doesn't have side effects and doesn't have any
@@ -1959,7 +1928,7 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     for (auto &I : *BB) {
       // TODO:isGuaranteedToTransfer
       if (I.mayHaveSideEffects()) {
-        if (!LoopPredicationTraps)
+        if (!Opts.indvars_predicate_loop_traps)
           return false;
         HasThreadLocalSideEffects = true;
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
@@ -2091,9 +2060,9 @@ bool IndVarSimplify::run(Loop *L) {
   // that are recurrent in the loop, and substitute the exit values from the
   // loop into any instructions outside of the loop that use the final values
   // of the current expressions.
-  if (ReplaceExitValue != NeverRepl) {
+  if (Opts.replexitval != NeverRepl) {
     if (int Rewrites = rewriteLoopExitValues(L, LI, TLI, SE, TTI, Rewriter, DT,
-                                             ReplaceExitValue, DeadInsts)) {
+                                             Opts.replexitval, DeadInsts)) {
       NumReplaced += Rewrites;
       Changed = true;
     }
@@ -2125,7 +2094,7 @@ bool IndVarSimplify::run(Loop *L) {
 
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.
-  if (!DisableLFTR) {
+  if (!Opts.disable_lftr) {
     BasicBlock *PreHeader = L->getLoopPreheader();
 
     SmallVector<BasicBlock*, 16> ExitingBlocks;
@@ -2218,9 +2187,10 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LPMUpdater &) {
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
+  const ScalarOptions &Opts = getScalarOptions(*F);
 
-  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
-                     WidenIndVars && AllowIVWidening);
+  IndVarSimplify IVS(Opts, &AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI,
+                     AR.MSSA, WidenIndVars && Opts.indvars_widen_indvars);
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 

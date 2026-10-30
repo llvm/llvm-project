@@ -1,9 +1,9 @@
 ! UNSUPPORTED: offload-cuda
 
 ! Verify endian conversion for unformatted stream I/O with
-! CONVERT='BIG_ENDIAN'. The test writes values in big-endian
-! format, reads raw bytes back, applies SwapEndianness(), and
-! checks that the original values are restored.
+! CONVERT='SWAP'. The test writes values with byte swapping,
+! reads raw bytes back, applies SwapEndianness(), and checks
+! that the original values are restored.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
 ! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
@@ -37,7 +37,7 @@ subroutine test2()
   integer(1) i8(4)
   i2 = (/1,2/)
 
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='big_endian')
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
   write(10) i2
   close(10)
 
@@ -57,7 +57,7 @@ subroutine test4()
   integer(1) i8(8)
   f32 = (/1,2/)
 
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='big_endian')
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
   write(10) f32
   close(10)
 
@@ -77,7 +77,7 @@ subroutine test8()
   integer(1) i8(16)
   f64 = (/1,2/)
 
-  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='big_endian')
+  open(10,file='test.dat',form='unformatted',access='stream',status='unknown', convert='swap')
   write(10) f64
   close(10)
 

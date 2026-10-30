@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/Eytzinger.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/SampleProf.h"
@@ -132,6 +133,7 @@ public:
   virtual void setUseCtxSplitLayout() {}
   virtual void setUseMD5ProfileSymbolList() {}
   virtual void setUseMD5IndexedTables() {}
+  virtual void setUseCompositeProfile(bool /*Enable*/) {}
 
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
@@ -224,7 +226,23 @@ protected:
   std::error_code writeSummary();
   virtual std::error_code writeContextIdx(const SampleContext &Context);
   std::error_code writeNameIdx(FunctionId FName);
-  std::error_code writeBody(const FunctionSamples &S);
+  std::error_code writeBody(const FunctionSamples &S, bool IsNested);
+  std::error_code writeLBRProfile(const FunctionSamples &S, bool IsNested);
+
+  /// Interfaces for composite profile writing.
+  std::error_code writeCompositeProfile(const FunctionSamples &S,
+                                        bool IsNested);
+  /// Write one \p Type and the size-prefixed payload emitted by \p
+  /// WritePayload. The callback is invoked once to count its bytes and again to
+  /// emit them, so both calls must produce identical output without external
+  /// side effects.
+  std::error_code
+  writeProfileType(ProfTypes Type,
+                   function_ref<std::error_code()> WritePayload);
+  /// Reusable stream that counts payload bytes without retaining them.
+  std::unique_ptr<raw_ostream> PayloadSizeStream;
+  /// Whether a profile payload callback is currently being executed.
+  bool WritingProfileType = false;
 
   MapVector<FunctionId, uint32_t> NameTable;
 
@@ -238,6 +256,7 @@ protected:
                           raw_ostream &OS);
 
   bool WriteVTableProf = false;
+  bool WriteCompositeProf = false;
 
 private:
   LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
@@ -247,40 +266,6 @@ private:
 
 class SampleProfileWriterRawBinary : public SampleProfileWriterBinary {
   using SampleProfileWriterBinary::SampleProfileWriterBinary;
-};
-
-const std::array<SmallVector<SecHdrTableEntry, 8>, NumOfLayout>
-    ExtBinaryHdrLayoutTable = {
-        // Note that SecFuncOffsetTable section is written after SecLBRProfile
-        // in the profile, but is put before SecLBRProfile in SectionHdrLayout.
-        // This is because sample reader follows the order in SectionHdrLayout
-        // to read each section. To read function profiles on demand, sample
-        // reader need to get the offset of each function profile first.
-        //
-        // DefaultLayout
-        SmallVector<SecHdrTableEntry, 8>({{SecProfSummary, 0, 0, 0, 0},
-                                          {SecNameTable, 0, 0, 0, 0},
-                                          {SecCSNameTable, 0, 0, 0, 0},
-                                          {SecFuncOffsetTable, 0, 0, 0, 0},
-                                          {SecLBRProfile, 0, 0, 0, 0},
-                                          {SecProfileSymbolList, 0, 0, 0, 0},
-                                          {SecFuncMetadata, 0, 0, 0, 0}}),
-        // CtxSplitLayout
-        SmallVector<SecHdrTableEntry, 8>(
-            {{SecProfSummary, 0, 0, 0, 0},
-             {SecNameTable, 0, 0, 0, 0},
-             // profile with inlined functions
-             // for next two sections
-             {SecFuncOffsetTable, 0, 0, 0, 0},
-             {SecLBRProfile, 0, 0, 0, 0},
-             // profile without inlined functions
-             // for next two sections
-             {SecFuncOffsetTable,
-              static_cast<uint64_t>(SecCommonFlags::SecFlagFlat), 0, 0, 0},
-             {SecLBRProfile, static_cast<uint64_t>(SecCommonFlags::SecFlagFlat),
-              0, 0, 0},
-             {SecProfileSymbolList, 0, 0, 0, 0},
-             {SecFuncMetadata, 0, 0, 0, 0}}),
 };
 
 class LLVM_ABI SampleProfileWriterExtBinaryBase
@@ -312,7 +297,9 @@ public:
 
   void setProfileSymbolList(ProfileSymbolList *PSL) override {
     ProfSymList = PSL;
-  };
+    if (ProfSymList && ProfSymList->isMD5())
+      setUseMD5ProfileSymbolList();
+  }
 
   void setUseCtxSplitLayout() override {
     resetSecLayout(SectionLayout::CtxSplitLayout);
@@ -321,6 +308,12 @@ public:
   void setUseMD5ProfileSymbolList() override { UseMD5ProfSymList = true; }
 
   void setUseMD5IndexedTables() override { UseMD5IndexedTables = true; }
+
+  /// Select composite encoding for subsequent writes. Composite output
+  /// requires CompositeProfileVersion or newer when write() is called.
+  void setUseCompositeProfile(bool Enable) override {
+    WriteCompositeProf = Enable;
+  }
 
   void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
@@ -332,10 +325,13 @@ public:
     }
 #endif
     SecLayout = SL;
-    SectionHdrLayout = ExtBinaryHdrLayoutTable[SL];
+    SectionHdrLayout = getExtBinaryHdrLayout(SL);
   }
 
 protected:
+  static SmallVector<SecHdrTableEntry, 8>
+  getExtBinaryHdrLayout(SectionLayout SL);
+
   uint64_t markSectionStart(SecType Type, uint32_t LayoutIdx);
   std::error_code addNewSection(SecType Sec, uint32_t LayoutIdx,
                                 uint64_t SectionStart);
@@ -377,9 +373,10 @@ protected:
   std::error_code writeNameTableSection(const SampleProfileMap &ProfileMap);
   std::error_code
   writeEytzingerNameTableSection(const SampleProfileMap &ProfileMap);
-  std::error_code writeFuncOffsetTable(bool IsNested);
-  std::error_code writeEytzingerFuncOffsetTable(bool IsNested);
-  std::error_code writeLegacyFuncOffsetTable();
+  // Type selects SecFuncOffsetTable vs SecCompositeFuncOffsetTable for flags.
+  std::error_code writeFuncOffsetTable(SecType Type, bool IsNested);
+  std::error_code writeEytzingerFuncOffsetTable(SecType Type, bool IsNested);
+  std::error_code writeLegacyFuncOffsetTable(SecType Type);
   std::error_code writeProfileSymbolListSection();
   std::error_code writeStringBasedProfileSymbolListSection();
   std::error_code writeMD5ProfileSymbolListSection();
@@ -390,7 +387,7 @@ protected:
   // order in SectionHdrLayout. sample Reader will follow the order
   // in SectionHdrLayout to read each section.
   SmallVector<SecHdrTableEntry, 8> SectionHdrLayout =
-      ExtBinaryHdrLayoutTable[DefaultLayout];
+      getExtBinaryHdrLayout(DefaultLayout);
 
   // Save the start of SecLBRProfile so we can compute the offset to the
   // start of SecLBRProfile for each Function's Profile and will keep it
@@ -455,6 +452,9 @@ private:
 
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
+  /// Apply the selected profile representation to the section layout.
+  void configureCompositeProfile();
+
   std::error_code writeCustomSection(SecType Type) override {
     return sampleprof_error::success;
   };
@@ -463,6 +463,11 @@ private:
     assert((SL == DefaultLayout || SL == CtxSplitLayout) &&
            "Unsupported layout");
   }
+
+  /// Section types for profile storage and bookkeeping (used to switch between
+  /// composite and non-composite profiles).
+  SecType ProfSection = SecLBRProfile;
+  SecType FuncOffsetSection = SecFuncOffsetTable;
 };
 
 } // end namespace sampleprof

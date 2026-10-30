@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyRegisterBankInfo.h"
-#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"

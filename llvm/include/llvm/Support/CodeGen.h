@@ -52,16 +52,66 @@ namespace llvm {
   }
 
   enum class ExceptionHandling : int {
-    None,     ///< No exception support
-    DwarfCFI, ///< DWARF-like instruction based exceptions
-    SjLj,     ///< setjmp/longjmp based exceptions
-    ARM,      ///< ARM EHABI
-    WinEH,    ///< Windows Exception Handling
-    Wasm,     ///< WebAssembly Exception Handling
-    AIX,      ///< AIX Exception Handling
+    Default,    ///< Not specified; resolve to the target's default model
+    None,       ///< No exception support
+    DwarfCFI,   ///< DWARF-like instruction based exceptions
+    SjLj,       ///< setjmp/longjmp based exceptions
+    ARM,        ///< ARM EHABI
+    WinEH,      ///< Windows Exception Handling
+    Wasm,       ///< WebAssembly Exception Handling
+    Emscripten, ///< Emscripten JavaScript-based exception handling
+    AIX,        ///< AIX Exception Handling
     ZOS, ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the
          ///< PPA1 is used instead of an .eh_frame section.
   };
+
+  /// Returns the "exception-model" module flag spelling for an
+  /// ExceptionHandling value. Default, AIX, and ZOS have no spelling and return
+  /// "".
+  inline StringRef getExceptionModelName(ExceptionHandling EH) {
+    switch (EH) {
+    case ExceptionHandling::None:
+      return "none";
+    case ExceptionHandling::DwarfCFI:
+      return "dwarf";
+    case ExceptionHandling::SjLj:
+      return "sjlj";
+    case ExceptionHandling::ARM:
+      return "arm";
+    case ExceptionHandling::WinEH:
+      return "wineh";
+    case ExceptionHandling::Wasm:
+      return "wasm";
+    case ExceptionHandling::Emscripten:
+      return "emscripten";
+    case ExceptionHandling::Default:
+    case ExceptionHandling::AIX:
+    case ExceptionHandling::ZOS:
+      break;
+    }
+    return "";
+  }
+
+  /// Parses the string spelling used by the "exception-model" IR module flag
+  /// into an ExceptionHandling value, returning std::nullopt if it does not
+  /// name a supported exception model.
+  inline std::optional<ExceptionHandling> parseExceptionModel(StringRef Name) {
+    if (Name == "none")
+      return ExceptionHandling::None;
+    if (Name == "dwarf")
+      return ExceptionHandling::DwarfCFI;
+    if (Name == "sjlj")
+      return ExceptionHandling::SjLj;
+    if (Name == "arm")
+      return ExceptionHandling::ARM;
+    if (Name == "wineh")
+      return ExceptionHandling::WinEH;
+    if (Name == "wasm")
+      return ExceptionHandling::Wasm;
+    if (Name == "emscripten")
+      return ExceptionHandling::Emscripten;
+    return std::nullopt;
+  }
 
   /// The floating-point format used for the target's "long double" type.
   enum class LongDoubleFormat {
@@ -137,6 +187,87 @@ namespace llvm {
   }
   } // namespace FloatABI
 
+  /// The threading model to assume for lowering, e.g. of atomics.
+  enum class ThreadModel {
+    POSIX,  // POSIX Threads
+    Single, // Single Threaded Environment
+  };
+
+  /// Parse the string spelling used by the "thread-model" IR module flag into a
+  /// ThreadModel.
+  inline std::optional<ThreadModel> parseThreadModel(StringRef S) {
+    if (S == "posix")
+      return ThreadModel::POSIX;
+    if (S == "single")
+      return ThreadModel::Single;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "thread-model" IR module flag for
+  /// a ThreadModel.
+  inline StringRef getThreadModelName(ThreadModel TM) {
+    switch (TM) {
+    case ThreadModel::POSIX:
+      return "posix";
+    case ThreadModel::Single:
+      return "single";
+    }
+    return "";
+  }
+
+  /// Identify a debugger for "tuning" the debug info.
+  ///
+  /// The "debugger tuning" concept allows us to present a more intuitive
+  /// interface that unpacks into different sets of defaults for the various
+  /// individual feature-flag settings, that suit the preferences of the
+  /// various debuggers.  However, it's worth remembering that debuggers are
+  /// not the only consumers of debug info, and some variations in DWARF might
+  /// better be treated as target/platform issues. Fundamentally,
+  /// o if the feature is useful (or not) to a particular debugger, regardless
+  ///   of the target, that's a tuning decision;
+  /// o if the feature is useful (or not) on a particular platform, regardless
+  ///   of the debugger, that's a target decision.
+  /// It's not impossible to see both factors in some specific case.
+  enum class DebuggerKind {
+    Default, ///< No specific tuning requested.
+    GDB,     ///< Tune debug info for gdb.
+    LLDB,    ///< Tune debug info for lldb.
+    SCE,     ///< Tune debug info for SCE targets (e.g. PS4).
+    DBX      ///< Tune debug info for dbx.
+  };
+
+  /// Parse the string spelling used by the "debugger-tuning" IR module flag
+  /// into a DebuggerKind.
+  inline std::optional<DebuggerKind> parseDebuggerTuning(StringRef S) {
+    if (S == "gdb")
+      return DebuggerKind::GDB;
+    if (S == "lldb")
+      return DebuggerKind::LLDB;
+    if (S == "sce")
+      return DebuggerKind::SCE;
+    if (S == "dbx")
+      return DebuggerKind::DBX;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "debugger-tuning" IR module flag
+  /// for a DebuggerKind.
+  inline StringRef getDebuggerTuningName(DebuggerKind Tuning) {
+    switch (Tuning) {
+    case DebuggerKind::GDB:
+      return "gdb";
+    case DebuggerKind::LLDB:
+      return "lldb";
+    case DebuggerKind::SCE:
+      return "sce";
+    case DebuggerKind::DBX:
+      return "dbx";
+    case DebuggerKind::Default:
+      break;
+    }
+    return "";
+  }
+
   enum class EABI {
     Unknown,
     Default, // Default means not specified
@@ -179,6 +310,16 @@ namespace llvm {
     AssemblyFile,
     ObjectFile,
     Null // Do not emit any output.
+  };
+
+  /// Specify where the machine verifier runs in the codegen pipeline.
+  enum class MachineVerifierMode {
+    /// Never run the machine verifier.
+    None,
+    /// Run the machine verifier once, at the end of the pipeline.
+    End,
+    /// Run the machine verifier before and after every machine pass.
+    Each
   };
 
   // Specify what functions should keep the frame pointer.

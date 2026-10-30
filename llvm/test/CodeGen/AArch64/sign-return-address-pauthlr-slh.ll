@@ -52,6 +52,7 @@ define i32 @f() #0 {
 ; CHECK-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTHLR-NEXT:    csetm x16, ne
+; CHECK-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; CHECK-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTHLR-NEXT:    paciasppc
 ; CHECK-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
@@ -75,6 +76,7 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR:       // %bb.0: // %entry
 ; CHECK-PAUTH-PAUTHLR-NEXT:    cmp sp, #0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csetm x16, ne
+; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_non_hint_pauth_frame
 ; CHECK-PAUTH-PAUTHLR-NEXT:  .Ltmp0:
 ; CHECK-PAUTH-PAUTHLR-NEXT:    paciasppc
 ; CHECK-PAUTH-PAUTHLR-NEXT:    .cfi_set_ra_state 2, .Ltmp0
@@ -89,9 +91,10 @@ define i32 @f() #0 {
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x30, x30, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    csdb
 ; CHECK-PAUTH-PAUTHLR-NEXT:    mov x1, sp
+; CHECK-PAUTH-PAUTHLR-NEXT:    autiasppc .Ltmp0
 ; CHECK-PAUTH-PAUTHLR-NEXT:    and x1, x1, x16
 ; CHECK-PAUTH-PAUTHLR-NEXT:    mov sp, x1
-; CHECK-PAUTH-PAUTHLR-NEXT:    retaasppc .Ltmp0
+; CHECK-PAUTH-PAUTHLR-NEXT:    ret
 entry:
   %0 = tail call ptr @llvm.returnaddress(i32 0)
   tail call void asm sideeffect "", "r"(ptr %0)

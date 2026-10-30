@@ -56,13 +56,13 @@ class StoredDeclsList {
       if (!ShouldErase(*DeclListNode::iterator(List))) {
         NewLast = NewTail;
         *NewTail = List;
-        if (auto *Node = List.dyn_cast<DeclListNode*>()) {
+        if (auto *Node = dyn_cast<DeclListNode *>(List)) {
           NewTail = &Node->Rest;
           List = Node->Rest;
         } else {
           break;
         }
-      } else if (DeclListNode *N = List.dyn_cast<DeclListNode*>()) {
+      } else if (DeclListNode *N = dyn_cast<DeclListNode *>(List)) {
         List = N->Rest;
         C.DeallocateDeclListNode(N);
       } else {
@@ -111,7 +111,7 @@ public:
     // If this is a list-form, free the list.
     ASTContext &C = getASTContext();
     Decls List = Data.getPointer();
-    while (DeclListNode *ToDealloc = List.dyn_cast<DeclListNode *>()) {
+    while (DeclListNode *ToDealloc = dyn_cast<DeclListNode *>(List)) {
       List = ToDealloc->Rest;
       C.DeallocateDeclListNode(ToDealloc);
     }
@@ -142,11 +142,11 @@ public:
   DeclsAndHasExternalTy getAsListAndHasExternal() const { return Data; }
 
   NamedDecl *getAsDecl() const {
-    return getAsListAndHasExternal().getPointer().dyn_cast<NamedDecl *>();
+    return dyn_cast<NamedDecl *>(getAsListAndHasExternal().getPointer());
   }
 
   DeclListNode *getAsList() const {
-    return getAsListAndHasExternal().getPointer().dyn_cast<DeclListNode*>();
+    return dyn_cast<DeclListNode *>(getAsListAndHasExternal().getPointer());
   }
 
   bool hasExternalDecls() const {
@@ -248,12 +248,12 @@ public:
     assert(!llvm::is_contained(getLookupResult(), D) && "Already exists!");
     // Determine if this declaration is actually a redeclaration.
     for (DeclListNode *N = getAsList(); /*return in loop*/;
-         N = N->Rest.dyn_cast<DeclListNode *>()) {
+         N = dyn_cast<DeclListNode *>(N->Rest)) {
       if (D->declarationReplaces(N->D, IsKnownNewer)) {
         N->D = D;
         return;
       }
-      if (auto *ND = N->Rest.dyn_cast<NamedDecl *>()) {
+      if (auto *ND = dyn_cast<NamedDecl *>(N->Rest)) {
         if (D->declarationReplaces(ND, IsKnownNewer)) {
           N->Rest = D;
           return;
@@ -290,7 +290,7 @@ public:
     }
 
     while (true) {
-      if (auto *Node = D.dyn_cast<DeclListNode*>()) {
+      if (auto *Node = dyn_cast<DeclListNode *>(D)) {
         llvm::errs() << '[' << Node->D << "] -> ";
         D = Node->Rest;
       } else {

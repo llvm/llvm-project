@@ -904,9 +904,9 @@ namespace cwg573 { // cwg573: no
   void *a;
   int *b = reinterpret_cast<int*>(a);
   void (*c)() = reinterpret_cast<void(*)()>(a);
-  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
+  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
   void *d = reinterpret_cast<void*>(c);
-  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
+  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
   void f() { delete a; }
   // cxx98-23-error@-1 {{cannot delete expression with pointer-to-'void' type 'void *'}}
   // since-cxx26-error@-2 {{cannot delete pointer to incomplete type 'void'}}
@@ -959,12 +959,12 @@ namespace cwg574 { // cwg574: 3.0
 #elif __cplusplus >= 201103L
     // FIXME: We shouldn't produce the 'cannot overload' diagnostics here.
     friend C &C::operator=(const C&); // #cwg574-test-C
-    // since-cxx11-error@#cwg574-test-C {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
+    // since-cxx11-error@#cwg574-test-C {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{previous declaration is here}}
     // since-cxx11-error@#cwg574-test-C {{friend declaration of 'operator=' does not match any declaration in 'cwg574::C'}}
     //   since-cxx11-note@#cwg574-C-copy-assign {{candidate function}}
     friend D &D::operator=(const D&); // #cwg574-test-D
-    // since-cxx11-error@#cwg574-test-D {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&&'}}
+    // since-cxx11-error@#cwg574-test-D {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
     //   since-cxx11-note@#cwg574-D-copy-assign {{previous declaration is here}}
     // since-cxx11-error@#cwg574-test-D {{friend declaration of 'operator=' does not match any declaration in 'cwg574::D'}}
     //   since-cxx11-note@#cwg574-D-copy-assign {{candidate function}}

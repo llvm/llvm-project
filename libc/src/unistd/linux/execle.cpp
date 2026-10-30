@@ -13,41 +13,29 @@
 
 #include "src/unistd/execle.h"
 
-#include "hdr/types/size_t.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/execve.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
+#include "src/unistd/linux/exec_utils.h"
 
 #include <stdarg.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, execle, (const char *path, const char *arg0, ...)) {
-  va_list varargs, varargs_copy;
-  va_start(varargs, arg0);
-  va_copy(varargs_copy, varargs);
+  LIBC_CRASH_ON_NULLPTR(arg0);
 
-  size_t argc = 1;
-  while (va_arg(varargs, const char *) != nullptr)
-    ++argc;
+  va_list varargs;
+  va_start(varargs, arg0);
+  auto ret =
+      internal::exec_with_arg_list(arg0, &varargs, [&](char *const argv[]) {
+        char *const *envp = va_arg(varargs, char *const *);
+        return linux_syscalls::execve(path, argv, envp);
+      });
   va_end(varargs);
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wvla"
-#if __has_warning("-Wvla-cxx-extension")
-#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
-#endif
-  char *argv[argc + 1];
-#pragma GCC diagnostic pop
-  argv[0] = const_cast<char *>(arg0);
-
-  for (size_t i = 1; i <= argc; ++i)
-    argv[i] = va_arg(varargs_copy, char *);
-  char **envp = va_arg(varargs_copy, char **);
-  va_end(varargs_copy);
-
-  auto ret = linux_syscalls::execve(path, argv, envp);
   if (!ret) {
     libc_errno = ret.error();
     return -1;

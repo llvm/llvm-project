@@ -23,7 +23,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -302,7 +301,7 @@ void LVIRReader::addConstantValue(LVElement *Element,
   if (Constant == std::nullopt)
     return;
   std::stringstream Stream;
-  uint64_t Value = DIExpr->getElement(1);
+  uint64_t Value = DIExpr->getConstantValue();
   if (DIExpression::SignedOrUnsignedConstant::SignedConstant == Constant) {
     if (int64_t SignedValue = static_cast<int64_t>(Value); SignedValue < 0) {
       Stream << "-";

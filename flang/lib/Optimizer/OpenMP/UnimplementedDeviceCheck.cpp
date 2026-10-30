@@ -37,9 +37,10 @@ static bool allUsesInHostCode(Operation *moduleOp, SymbolOpInterface symOp) {
 
       if (auto declareTargetOp =
               symUser->getParentOfType<omp::DeclareTargetInterface>()) {
-        if (declareTargetOp.isDeclareTarget() &&
-            declareTargetOp.getDeclareTargetDeviceType() !=
-                omp::DeclareTargetDeviceType::host)
+        omp::DeclareTargetAttr declareTargetAttr =
+            declareTargetOp.getDeclareTarget();
+        if (declareTargetAttr && declareTargetAttr.getDeviceType() !=
+                                     omp::DeclareTargetDeviceType::host)
           return false;
       }
     }

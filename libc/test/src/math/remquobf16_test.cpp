@@ -16,4 +16,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/remquobf16.h"
 
-LIST_REMQUO_TESTS(bfloat16, LIBC_NAMESPACE::remquobf16)
+LIST_REMQUO_TESTS(Remquobf16, bfloat16, LIBC_NAMESPACE::remquobf16)

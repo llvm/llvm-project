@@ -1110,6 +1110,47 @@ func.func @while_move_if_down() -> i32 {
 
 // -----
 
+// The same scf.if result may be forwarded to several scf.condition operands.
+// Every corresponding after-region argument must receive the *then* value,
+// while the while op's results receive the *else* value.
+
+// CHECK-LABEL: @while_move_if_down_duplicate_forward
+func.func @while_move_if_down_duplicate_forward() -> i32 {
+  %0:2 = scf.while () : () -> (i32, i32) {
+    %else_value = "test.get_some_value0" () : () -> (i32)
+    %condition = "test.condition"() : () -> i1
+    %res = scf.if %condition -> (i32) {
+      %then_value = "test.get_some_value1" () : () -> (i32)
+      scf.yield %then_value : i32
+    } else {
+      scf.yield %else_value : i32
+    }
+    scf.condition(%condition) %res, %res : i32, i32
+  } do {
+  ^bb0(%first: i32, %second: i32):
+    "test.use0" (%first) : (i32) -> ()
+    "test.use1" (%second) : (i32) -> ()
+    scf.yield
+  }
+  return %0#1 : i32
+}
+// CHECK:           %[[WHILE_RES:.*]] = scf.while : () -> i32 {
+// CHECK:             %[[else_value:.*]] = "test.get_some_value0"() : () -> i32
+// CHECK:             %[[condition:.*]] = "test.condition"() : () -> i1
+// The while result is the else value.
+// CHECK:             scf.condition(%[[condition]]) %[[else_value]] : i32
+// CHECK:           } do {
+// CHECK:           ^bb0(%{{.*}}: i32):
+// CHECK:             %[[then_value:.*]] = "test.get_some_value1"() : () -> i32
+// Both forwarded positions must observe the then value, not the else value.
+// CHECK:             "test.use0"(%[[then_value]]) : (i32) -> ()
+// CHECK:             "test.use1"(%[[then_value]]) : (i32) -> ()
+// CHECK:             scf.yield
+// CHECK:           }
+// CHECK:           return %[[WHILE_RES]] : i32
+
+// -----
+
 // CHECK-LABEL: @while_cond_true
 func.func @while_cond_true() -> i1 {
   %0 = scf.while () : () -> i1 {
@@ -2059,8 +2100,9 @@ func.func @remove_empty_forall(%in: tensor<8x8xf32>) -> tensor<8x8xf32> {
 }
 // CHECK-LABEL: @remove_empty_forall
 // CHECK-NOT:   scf.forall
+// CHECK-NOT:   arith.constant
 // CHECK:       %[[EMPTY:.*]] = tensor.empty
-// CHECK:       return %[[EMPTY]]
+// CHECK-NEXT:  return %[[EMPTY]]
 
 // -----
 
@@ -2129,7 +2171,7 @@ module {
       %4 = affine.min #map2(%arg3)[%dim, %arg0]
       %extracted_slice0 = tensor.extract_slice %arg4[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice1 = tensor.extract_slice %arg5[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.exp ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.elementwise <exp> ins(%extracted_slice0 : tensor<?xf32>) outs(%extracted_slice1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
       }
@@ -2143,7 +2185,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_5:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ITER_ARG_5]]
-//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.elementwise <exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_5]]
 //  CHECK-NEXT:      }
@@ -2169,7 +2211,7 @@ module {
       %extracted_slice_0 = tensor.extract_slice %arg6[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_1 = tensor.extract_slice %arg7[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
       %extracted_slice_2 = tensor.extract_slice %0[%3] [%4] [1] : tensor<?xf32> to tensor<?xf32>
-      %5 = linalg.exp ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
+      %5 = linalg.elementwise <exp> ins(%extracted_slice : tensor<?xf32>) outs(%extracted_slice_1 : tensor<?xf32>) -> tensor<?xf32>
       scf.forall.in_parallel {
         tensor.parallel_insert_slice %5 into %arg6[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
         tensor.parallel_insert_slice %extracted_slice into %arg5[%3] [%4] [1] : tensor<?xf32> into tensor<?xf32>
@@ -2186,7 +2228,7 @@ module {
 //  CHECK-SAME:                       shared_outs(%[[ITER_ARG_6:.*]] = %[[ARG2]]) -> (tensor<?xf32>) {
 //       CHECK:      %[[OPERAND0:.*]] = tensor.extract_slice %[[ARG1]]
 //       CHECK:      %[[OPERAND1:.*]] = tensor.extract_slice %[[ARG3]]
-//       CHECK:      %[[ELEM:.*]] = linalg.exp ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
+//       CHECK:      %[[ELEM:.*]] = linalg.elementwise <exp> ins(%[[OPERAND0]] : tensor<?xf32>) outs(%[[OPERAND1]] : tensor<?xf32>) -> tensor<?xf32>
 //       CHECK:      scf.forall.in_parallel {
 //  CHECK-NEXT:         tensor.parallel_insert_slice %[[ELEM]] into %[[ITER_ARG_6]]
 //  CHECK-NEXT:      }
@@ -2360,4 +2402,414 @@ func.func @fold_tensor_cast_into_forall_non_sequential_writes(
   }
   // %0#0 contains %arg1 data; %0#1 contains %arg0 data.
   return %0#0, %0#1 : tensor<?x32xf32>, tensor<?x32xf32>
+}
+
+// -----
+
+// The order of insertions is the reverse of the shared output order.
+// CHECK-LABEL: func @promote_reversed_outputs
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<2xf32>, %[[ARG1:.*]]: tensor<2xf32>, %[[ARG2:.*]]: tensor<2xf32>, %[[ARG3:.*]]: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
+//       CHECK:   return %[[ARG0]], %[[ARG1]] : tensor<2xf32>, tensor<2xf32>
+func.func @promote_reversed_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a: tensor<2xf32>, %init_b: tensor<2xf32>) -> (tensor<2xf32>, tensor<2xf32>) {
+  %r:2 = scf.forall (%i) in (1) shared_outs(%x = %init_a, %y = %init_b) -> (tensor<2xf32>, tensor<2xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %b into %y[0] [2] [1] : tensor<2xf32> into tensor<2xf32>
+      tensor.parallel_insert_slice %a into %x[0] [2] [1] : tensor<2xf32> into tensor<2xf32>
+    }
+  }
+  return %r#0, %r#1 : tensor<2xf32>, tensor<2xf32>
+}
+
+// -----
+
+// Partial insertions must preserve both the destination and result association.
+// CHECK-LABEL: func @promote_partial_outputs
+//  CHECK-SAME:   (%[[ARG0:.*]]: tensor<2xf32>, %[[ARG1:.*]]: tensor<2xf32>, %[[ARG2:.*]]: tensor<4xf32>, %[[ARG3:.*]]: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+//       CHECK:   %[[INSERT_SLICE_0:.*]] = tensor.insert_slice %[[ARG0]] into %[[ARG2]][0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+//       CHECK:   %[[INSERT_SLICE_1:.*]] = tensor.insert_slice %[[ARG1]] into %[[ARG3]][2] [2] [1] : tensor<2xf32> into tensor<4xf32>
+//       CHECK:   return %[[INSERT_SLICE_0]], %[[INSERT_SLICE_1]] : tensor<4xf32>, tensor<4xf32>
+func.func @promote_partial_outputs(%a: tensor<2xf32>, %b: tensor<2xf32>, %init_a: tensor<4xf32>, %init_b: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+  %r:2 = scf.forall (%i) in (1) shared_outs(%x = %init_a, %y = %init_b) -> (tensor<4xf32>, tensor<4xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %b into %y[2] [2] [1] : tensor<2xf32> into tensor<4xf32>
+      tensor.parallel_insert_slice %a into %x[0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+    }
+  }
+  return %r#0, %r#1 : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
+// Disjoint insertions into one shared output must contribute to one result.
+// CHECK-LABEL: func @promote_multiple_inserts
+//  CHECK-SAME:   (%[[A:.*]]: tensor<2xf32>, %[[B:.*]]: tensor<2xf32>, %[[INIT:.*]]: tensor<4xf32>)
+//       CHECK:   %[[FIRST:.*]] = tensor.insert_slice %[[B]] into %[[INIT]][2] [2] [1]
+//       CHECK:   %[[SECOND:.*]] = tensor.insert_slice %[[A]] into %[[FIRST]][0] [2] [1]
+//       CHECK:   return %[[SECOND]] : tensor<4xf32>
+func.func @promote_multiple_inserts(%a: tensor<2xf32>, %b: tensor<2xf32>, %init: tensor<4xf32>) -> tensor<4xf32> {
+  %r = scf.forall () in () shared_outs(%out = %init) -> tensor<4xf32> {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %a into %out[0] [2] [1] : tensor<2xf32> into tensor<4xf32>
+      tensor.parallel_insert_slice %b into %out[2] [2] [1] : tensor<2xf32> into tensor<4xf32>
+    }
+  }
+  return %r : tensor<4xf32>
+}
+
+// -----
+
+// Branch-local uses can be simplified even when the select must remain for an
+// outside use. Repeated operands of the same operation are all replaced.
+// CHECK-LABEL: func.func @captured_select(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : i32
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume_pair(%[[A]], %[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume_pair(%[[B]], %[[B]])
+// CHECK: return %[[X]] : i32
+func.func @captured_select(%p: i1, %a: i32, %b: i32) -> i32 {
+  %x = arith.select %p, %a, %b : i32
+  scf.if %p {
+    func.call @consume_pair(%x, %x) : (i32, i32) -> ()
+  } else {
+    func.call @consume_pair(%x, %x) : (i32, i32) -> ()
+  }
+  return %x : i32
+}
+func.func private @consume_pair(i32, i32)
+
+// -----
+
+// CHECK-LABEL: func.func @then_only(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-NOT: arith.select
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume(%[[A]])
+// CHECK-NOT: arith.select
+// CHECK: return
+func.func @then_only(%p: i1, %a: i32, %b: i32) {
+  %x = arith.select %p, %a, %b : i32
+  scf.if %p {
+    func.call @consume(%x) : (i32) -> ()
+  }
+  return
+}
+func.func private @consume(i32)
+
+// -----
+
+// Selecting a memref does not copy its contents. Stores stay in their original
+// branches and use the selected destination; outside uses keep the select.
+// CHECK-LABEL: func.func @memref_destination(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: memref<16xi32>, %[[B:.*]]: memref<16xi32>
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : memref<16xi32>
+// CHECK: scf.if %[[P]] {
+// CHECK: memref.store %{{.*}}, %[[A]][%{{.*}}]
+// CHECK: } else {
+// CHECK: memref.store %{{.*}}, %[[B]][%{{.*}}]
+// CHECK: return %[[X]] : memref<16xi32>
+func.func @memref_destination(%p: i1, %a: memref<16xi32>, %b: memref<16xi32>) -> memref<16xi32> {
+  %c0 = arith.constant 0 : index
+  %v = arith.constant 42 : i32
+  %x = arith.select %p, %a, %b : memref<16xi32>
+  scf.if %p {
+    memref.store %v, %x[%c0] : memref<16xi32>
+  } else {
+    memref.store %v, %x[%c0] : memref<16xi32>
+  }
+  return %x : memref<16xi32>
+}
+
+// -----
+
+// The outer branch's condition also applies to uses in nested regions.
+// CHECK-LABEL: func.func @nested_regions(
+// CHECK-SAME: %[[P:.*]]: i1, %[[Q:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-NOT: arith.select
+// CHECK: scf.if %[[P]] {
+// CHECK: scf.if %[[Q]] {
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+func.func @nested_regions(%p: i1, %q: i1, %a: i32, %b: i32) {
+  %x = arith.select %p, %a, %b : i32
+  scf.if %p {
+    scf.if %q {
+      func.call @consume(%x) : (i32) -> ()
+    } else {
+      func.call @consume(%x) : (i32) -> ()
+    }
+  } else {
+    func.call @consume(%x) : (i32) -> ()
+  }
+  return
+}
+func.func private @consume(i32)
+
+// -----
+
+// CHECK-LABEL: func.func @loop_region(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32, %[[N:.*]]: index
+// CHECK-NOT: arith.select
+// CHECK: scf.if %[[P]] {
+// CHECK: scf.for
+// CHECK: func.call @consume(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[B]])
+func.func @loop_region(%p: i1, %a: i32, %b: i32, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %x = arith.select %p, %a, %b : i32
+  scf.if %p {
+    scf.for %i = %c0 to %n step %c1 {
+      func.call @consume(%x) : (i32) -> ()
+    }
+  } else {
+    func.call @consume(%x) : (i32) -> ()
+  }
+  return
+}
+func.func private @consume(i32)
+
+// -----
+
+// A branch on an unrelated condition cannot refine the selected value.
+// CHECK-LABEL: func.func @unrelated_condition(
+// CHECK-SAME: %[[P:.*]]: i1, %[[Q:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK: %[[X:.*]] = arith.select %[[P]], %[[A]], %[[B]] : i32
+// CHECK: scf.if %[[Q]] {
+// CHECK: func.call @consume(%[[X]])
+// CHECK: } else {
+// CHECK: func.call @consume(%[[X]])
+func.func @unrelated_condition(%p: i1, %q: i1, %a: i32, %b: i32) {
+  %x = arith.select %p, %a, %b : i32
+  scf.if %q {
+    func.call @consume(%x) : (i32) -> ()
+  } else {
+    func.call @consume(%x) : (i32) -> ()
+  }
+  return
+}
+func.func private @consume(i32)
+
+// -----
+
+// Merely using the branch condition as a select arm is not sufficient.
+// CHECK-LABEL: func.func @condition_as_select_arm(
+// CHECK-SAME: %[[P:.*]]: i1, %[[Q:.*]]: i1, %[[B:.*]]: i1
+// CHECK: %[[X:.*]] = arith.select %[[Q]], %[[P]], %[[B]] : i1
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume_i1(%[[X]])
+// CHECK: } else {
+// CHECK: func.call @consume_i1(%[[X]])
+func.func @condition_as_select_arm(%p: i1, %q: i1, %b: i1) {
+  %x = arith.select %q, %p, %b : i1
+  scf.if %p {
+    func.call @consume_i1(%x) : (i1) -> ()
+  } else {
+    func.call @consume_i1(%x) : (i1) -> ()
+  }
+  return
+}
+func.func private @consume_i1(i1)
+
+// -----
+
+// Canonicalization of a negated if condition must preserve which arm is used.
+// CHECK-LABEL: func.func @negated_condition(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32
+// CHECK-NOT: arith.select
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume_pair(%[[A]], %[[B]])
+// CHECK: } else {
+// CHECK: func.call @consume_pair(%[[B]], %[[A]])
+func.func @negated_condition(%p: i1, %a: i32, %b: i32) {
+  %true = arith.constant true
+  %not_p = arith.xori %p, %true : i1
+  %x = arith.select %p, %a, %b : i32
+  scf.if %not_p {
+    func.call @consume_pair(%x, %a) : (i32, i32) -> ()
+  } else {
+    func.call @consume_pair(%x, %b) : (i32, i32) -> ()
+  }
+  return
+}
+func.func private @consume_pair(i32, i32)
+
+// -----
+
+// A scalar branch condition does not refine an elementwise vector condition.
+// CHECK-LABEL: func.func @vector_condition(
+// CHECK-SAME: %[[P:.*]]: i1, %[[MASK:.*]]: vector<4xi1>, %[[A:.*]]: vector<4xi32>, %[[B:.*]]: vector<4xi32>
+// CHECK: %[[X:.*]] = arith.select %[[MASK]], %[[A]], %[[B]]
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume_vector(%[[X]])
+// CHECK: } else {
+// CHECK: func.call @consume_vector(%[[X]])
+func.func @vector_condition(%p: i1, %mask: vector<4xi1>, %a: vector<4xi32>, %b: vector<4xi32>) {
+  %x = arith.select %mask, %a, %b : vector<4xi1>, vector<4xi32>
+  scf.if %p {
+    func.call @consume_vector(%x) : (vector<4xi32>) -> ()
+  } else {
+    func.call @consume_vector(%x) : (vector<4xi32>) -> ()
+  }
+  return
+}
+func.func private @consume_vector(vector<4xi32>)
+
+// -----
+
+// A scalar select can select an entire vector without changing its elements.
+// CHECK-LABEL: func.func @scalar_condition_vector_result(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: vector<4xi32>, %[[B:.*]]: vector<4xi32>
+// CHECK-NOT: arith.select
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume_vector(%[[A]])
+// CHECK: } else {
+// CHECK: func.call @consume_vector(%[[B]])
+func.func @scalar_condition_vector_result(%p: i1, %a: vector<4xi32>, %b: vector<4xi32>) {
+  %x = arith.select %p, %a, %b : vector<4xi32>
+  scf.if %p {
+    func.call @consume_vector(%x) : (vector<4xi32>) -> ()
+  } else {
+    func.call @consume_vector(%x) : (vector<4xi32>) -> ()
+  }
+  return
+}
+func.func private @consume_vector(vector<4xi32>)
+
+// -----
+
+// An isolated region receives the selected value as an operand. Its block
+// argument remains local to that region; it must not capture either select arm.
+// CHECK-LABEL: func.func @isolated_region_operand(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: index, %[[B:.*]]: index
+// CHECK-NOT: arith.select
+// CHECK: scf.if %[[P]] {
+// CHECK: test.isolated_region %[[A]] {
+// CHECK: "test.consume"(%[[A]]) : (index) -> ()
+// CHECK: } else {
+// CHECK: test.isolated_region %[[B]] {
+// CHECK: "test.consume"(%[[B]]) : (index) -> ()
+func.func @isolated_region_operand(%p: i1, %a: index, %b: index) {
+  %x = arith.select %p, %a, %b : index
+  scf.if %p {
+    test.isolated_region %x {
+      "test.consume"(%x) : (index) -> ()
+    }
+  } else {
+    test.isolated_region %x {
+      "test.consume"(%x) : (index) -> ()
+    }
+  }
+  return
+}
+
+// -----
+
+// Correlated selects may form a chain. Both branch-local operands are refined,
+// while the result returned outside the if still needs a select.
+// CHECK-LABEL: func.func @select_chain(
+// CHECK-SAME: %[[P:.*]]: i1, %[[A:.*]]: i32, %[[B:.*]]: i32, %[[C:.*]]: i32
+// CHECK: %[[RESULT:.*]] = arith.select %[[P]], %[[C]], %[[B]] : i32
+// CHECK: scf.if %[[P]] {
+// CHECK: func.call @consume_pair(%[[A]], %[[C]])
+// CHECK: } else {
+// CHECK: func.call @consume_pair(%[[B]], %[[B]])
+// CHECK: return %[[RESULT]] : i32
+func.func @select_chain(%p: i1, %a: i32, %b: i32, %c: i32) -> i32 {
+  %x = arith.select %p, %a, %b : i32
+  %y = arith.select %p, %c, %x : i32
+  scf.if %p {
+    func.call @consume_pair(%x, %y) : (i32, i32) -> ()
+  } else {
+    func.call @consume_pair(%x, %y) : (i32, i32) -> ()
+  }
+  return %y : i32
+}
+func.func private @consume_pair(i32, i32)
+
+// -----
+
+// bounds that look like ub < lb when read as signed must not erase an
+// unsigned scf.parallel. The unsigned trip count is 4.
+// CHECK-LABEL: func @unsigned_parallel_not_erased
+// CHECK-SAME: (%[[A:.*]]: memref<4xi64>)
+// CHECK-DAG: %[[LB:.*]] = arith.constant 9223372036854775806 : index
+// CHECK-DAG: %[[UB:.*]] = arith.constant -9223372036854775806 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK: scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:   %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:   %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:   memref.store %[[V]], %[[A]][%[[OFF]]] : memref<4xi64>
+// CHECK:   scf.reduce
+func.func @unsigned_parallel_not_erased(%arg0: memref<4xi64>) {
+  %lb = arith.constant 9223372036854775806 : index
+  %ub = arith.constant -9223372036854775806 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%i) = (%lb) to (%ub) step (%c1) {
+    %off = arith.subi %i, %lb : index
+    %v = arith.index_cast %off : index to i64
+    memref.store %v, %arg0[%off] : memref<4xi64>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
+// removing the single-iteration dim must keep `unsigned` on the rebuilt loop.
+// CHECK-LABEL: func @unsigned_parallel_single_iter_dim_keeps_unsigned
+// CHECK-SAME: (%[[A:.*]]: memref<4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
+// CHECK: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-NOT: scf.parallel (%{{.*}}, %{{.*}})
+// CHECK: scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:   %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:   %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:   memref.store %[[V]], %[[A]][%[[OFF]]] : memref<4xi64>
+func.func @unsigned_parallel_single_iter_dim_keeps_unsigned(
+    %arg0: memref<4xi64>, %lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  scf.parallel unsigned (%k, %i) = (%c0, %lb) to (%c1, %ub) step (%c1, %c1) {
+    %off0 = arith.subi %i, %lb : index
+    %off = arith.addi %off0, %k : index
+    %v = arith.index_cast %off : index to i64
+    memref.store %v, %arg0[%off] : memref<4xi64>
+    scf.reduce
+  }
+  return
+}
+
+// -----
+
+// a signed outer loop and an unsigned inner loop must not be merged.
+// CHECK-LABEL: func @mixed_signedness_parallel_not_merged
+// CHECK-SAME: (%[[A:.*]]: memref<2x4xi64>, %[[LB:.*]]: index, %[[UB:.*]]: index)
+// CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+// CHECK: scf.parallel (%[[K:.*]]) = (%[[C0]]) to (%[[C2]]) step (%[[C1]]) {
+// CHECK:   scf.parallel unsigned (%[[I:.*]]) = (%[[LB]]) to (%[[UB]]) step (%[[C1]]) {
+// CHECK:     %[[OFF:.*]] = arith.subi %[[I]], %[[LB]] : index
+// CHECK:     %[[V:.*]] = arith.index_cast %[[OFF]] : index to i64
+// CHECK:     memref.store %[[V]], %[[A]][%[[K]], %[[OFF]]] : memref<2x4xi64>
+func.func @mixed_signedness_parallel_not_merged(
+    %arg0: memref<2x4xi64>, %lb: index, %ub: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.parallel (%k) = (%c0) to (%c2) step (%c1) {
+    scf.parallel unsigned (%i) = (%lb) to (%ub) step (%c1) {
+      %off = arith.subi %i, %lb : index
+      %v = arith.index_cast %off : index to i64
+      memref.store %v, %arg0[%k, %off] : memref<2x4xi64>
+      scf.reduce
+    }
+    scf.reduce
+  }
+  return
 }

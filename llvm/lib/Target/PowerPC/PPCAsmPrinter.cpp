@@ -99,11 +99,11 @@ STATISTIC(NumTOCBlockAddress, "Number of Block Address TOC Entries.");
 STATISTIC(NumTOCEHBlock, "Number of EH Block TOC Entries.");
 
 static cl::opt<bool> EnableSSPCanaryBitInTB(
-    "aix-ssp-tb-bit", cl::init(false),
+    "ppc-aix-ssp-tb-bit", cl::init(false),
     cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
 
 static cl::opt<bool> IFuncLocalIfProven(
-    "ifunc-local-if-proven", cl::init(false),
+    "ppc-ifunc-local-if-proven", cl::init(false),
     cl::desc("During ifunc lowering, the compiler assumes the resolver returns "
              "dso-local functions and bails out if non-local functions are "
              "detected; this flag flips the assumption: resolver returns "
@@ -112,7 +112,7 @@ static cl::opt<bool> IFuncLocalIfProven(
     cl::Hidden);
 
 // this flag is used for testing only as it might generate bad code.
-static cl::opt<bool> IFuncWarnInsteadOfError("test-ifunc-warn-noerror",
+static cl::opt<bool> IFuncWarnInsteadOfError("ppc-test-ifunc-warn-noerror",
                                              cl::init(false), cl::ReallyHidden);
 
 // Specialize DenseMapInfo to allow
@@ -1848,7 +1848,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     RetInst.setOpcode(RetOpcode);
     for (const auto &MO : llvm::drop_begin(MI->operands())) {
       MCOperand MCOp;
-      if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this))
+      if (LowerPPCMachineOperandToMCOperand(MI->getOpcode(), MO, MCOp, *this))
         RetInst.addOperand(MCOp);
     }
 
@@ -1941,7 +1941,8 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (static_cast<const PPCTargetMachine &>(TM).isELFv2ABI()) {
+  if (PPCTargetMachine::computeABI(M.getTargetTriple(),
+                                   TM.getTargetABIName(M)) == PPC_ABI_ELFv2) {
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitAbiVersion(2);
@@ -2321,7 +2322,7 @@ uint16_t PPCAIXAsmPrinter::getNumberOfVRSaved() {
   // in the default ABI.
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
-      TM.getAIXExtendedAltivecABI()) {
+      Subtarget.isAIXExtendedAltivecABI()) {
     const MachineRegisterInfo &MRI = MF->getRegInfo();
     for (unsigned Reg = PPC::V20; Reg <= PPC::V31; ++Reg)
       if (MRI.isPhysRegModified(Reg))
@@ -3076,7 +3077,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   const bool Result = PPCAsmPrinter::doInitialization(M);
 
   // Emit the .machine directive on AIX.
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
   XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
   // Walk through the "target-cpu" attribute of functions and use the newest
   // level as the CPU of the module.

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include <optional>
@@ -31,6 +32,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   // Register the target.
   RegisterTargetMachine<LanaiTargetMachine> registered_target(
       getTheLanaiTarget());
+  static opt::RegisterLibraryOptions<LanaiOptions> O;
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeLanaiAsmPrinterPass(PR);
   initializeLanaiDAGToDAGISelLegacyPass(PR);
@@ -47,9 +49,10 @@ LanaiTargetMachine::LanaiTargetMachine(
     std::optional<CodeModel::Model> CodeModel, CodeGenOptLevel OptLevel,
     bool JIT)
     : CodeGenTargetMachineImpl(
-          T, TT.computeDataLayout(), TT, Cpu, FeatureString, Options,
-          getEffectiveRelocModel(RM),
+          T, TT, Cpu, FeatureString, Options, getEffectiveRelocModel(RM),
           getEffectiveCodeModel(CodeModel, CodeModel::Medium), OptLevel),
+      CLOpts(cl::LibraryOptionsContext::get<LanaiOptions>(
+          Options.MCOptions.LibraryOptions)),
       Subtarget(TT, Cpu, FeatureString, *this, Options, getCodeModel(),
                 OptLevel),
       TLOF(new LanaiTargetObjectFile()) {

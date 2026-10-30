@@ -7,23 +7,35 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPUtils.h"
+#include "SLPMemoryUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 #include <algorithm>
+#include <numeric>
+#include <optional>
 #include <string>
 #include <type_traits>
 
@@ -39,6 +51,21 @@ bool isConstant(Value *V) {
 bool isBinOpIdentityConstant(const Value *V, unsigned Opcode) {
   const auto *CI = dyn_cast<ConstantInt>(V);
   return CI && ConstantExpr::getBinOpIdentity(Opcode, CI->getType()) == CI;
+}
+
+bool isUndefTolerantBinOp(const Value *V) {
+  const BinaryOperator *BO;
+  return match(V, m_BinOp(BO)) && BO->getType()->isIntOrIntVectorTy() &&
+         !BO->isShift() && !BO->isIntDivRem();
+}
+
+const LoadInst *getLoadOfUndefTolerantBinOp(const Value *V) {
+  if (!isUndefTolerantBinOp(V))
+    return nullptr;
+  for (const Value *Op : cast<BinaryOperator>(V)->operands())
+    if (const auto *LI = dyn_cast<LoadInst>(Op))
+      return LI;
+  return nullptr;
 }
 
 unsigned getReassocCombineOpcode(unsigned Opcode) {
@@ -116,9 +143,9 @@ bool allSameBlock(ArrayRef<Value *> VL) {
     return true;
 
   BasicBlock *BB = I0->getParent();
-  for (Value *V : iterator_range(It, VL.end())) {
-    if (isa<PoisonValue>(V))
-      continue;
+  for (Value *V : make_filter_range(iterator_range(It, VL.end()), [](Value *V) {
+         return !isa<PoisonValue>(V);
+       })) {
     auto *II = dyn_cast<Instruction>(V);
     if (!II)
       return false;
@@ -137,9 +164,8 @@ bool allConstant(ArrayRef<Value *> VL) {
 
 bool isSplat(ArrayRef<Value *> VL) {
   Value *FirstNonUndef = nullptr;
-  for (Value *V : VL) {
-    if (isa<UndefValue>(V))
-      continue;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<UndefValue>(V); })) {
     if (!FirstNonUndef) {
       FirstNonUndef = V;
       continue;
@@ -161,8 +187,9 @@ Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS) {
 
 bool isCommutative(const Instruction *I, const Value *ValWithUses,
                    bool IsCopyable) {
+  // The trunc X to i1 lanes of a compare have the single operand X.
   if (auto *Cmp = dyn_cast<CmpInst>(I))
-    return Cmp->isCommutative();
+    return isa<CmpInst>(ValWithUses) && Cmp->isCommutative();
   if (auto *BO = dyn_cast<BinaryOperator>(I))
     return BO->isCommutative() ||
            (BO->getOpcode() == Instruction::Sub && ValWithUses->hasUseList() &&
@@ -313,6 +340,103 @@ void reorderScalars(SmallVectorImpl<Value *> &Scalars, ArrayRef<int> Mask) {
       Scalars[Mask[I]] = Prev[I];
 }
 
+void reorderReuses(SmallVectorImpl<int> &Reuses, ArrayRef<int> Mask) {
+  assert(!Mask.empty() && Reuses.size() == Mask.size() &&
+         "Expected non-empty mask.");
+  SmallVector<int> Prev(Reuses.begin(), Reuses.end());
+  Prev.swap(Reuses);
+  for (unsigned I = 0, E = Prev.size(); I < E; ++I)
+    if (Mask[I] != PoisonMaskElem)
+      Reuses[Mask[I]] = Prev[I];
+}
+
+void reorderOrder(SmallVectorImpl<unsigned> &Order, ArrayRef<int> Mask,
+                  bool BottomOrder) {
+  assert(!Mask.empty() && "Expected non-empty mask.");
+  unsigned Sz = Mask.size();
+  if (BottomOrder) {
+    SmallVector<unsigned> PrevOrder;
+    if (Order.empty()) {
+      PrevOrder.resize(Sz);
+      std::iota(PrevOrder.begin(), PrevOrder.end(), 0);
+    } else {
+      PrevOrder.swap(Order);
+    }
+    Order.assign(Sz, Sz);
+    for (unsigned I = 0; I < Sz; ++I)
+      if (Mask[I] != PoisonMaskElem)
+        Order[I] = PrevOrder[Mask[I]];
+    if (all_of(enumerate(Order), [&](const auto &Data) {
+          return Data.value() == Sz || Data.index() == Data.value();
+        })) {
+      Order.clear();
+      return;
+    }
+    fixupOrderingIndices(Order);
+    return;
+  }
+  SmallVector<int> MaskOrder;
+  if (Order.empty()) {
+    MaskOrder.resize(Sz);
+    std::iota(MaskOrder.begin(), MaskOrder.end(), 0);
+  } else {
+    inversePermutation(Order, MaskOrder);
+  }
+  reorderReuses(MaskOrder, Mask);
+  if (ShuffleVectorInst::isIdentityMask(MaskOrder, Sz)) {
+    Order.clear();
+    return;
+  }
+  Order.assign(Sz, Sz);
+  for (unsigned I = 0; I < Sz; ++I)
+    if (MaskOrder[I] != PoisonMaskElem)
+      Order[MaskOrder[I]] = I;
+  fixupOrderingIndices(Order);
+}
+
+bool isReverseOrder(ArrayRef<unsigned> Order) {
+  assert(!Order.empty() &&
+         "Order is empty. Please check it before using isReverseOrder.");
+  unsigned Sz = Order.size();
+  return all_of(enumerate(Order), [&](const auto &Pair) {
+    return Pair.value() == Sz || Sz - Pair.index() - 1 == Pair.value();
+  });
+}
+
+bool isRepeatedNonIdentityClusteredMask(ArrayRef<int> Mask, unsigned Sz) {
+  ArrayRef<int> FirstCluster = Mask.slice(0, Sz);
+  if (ShuffleVectorInst::isIdentityMask(FirstCluster, Sz))
+    return false;
+  for (unsigned I = Sz, E = Mask.size(); I < E; I += Sz) {
+    ArrayRef<int> Cluster = Mask.slice(I, Sz);
+    if (Cluster != FirstCluster)
+      return false;
+  }
+  return true;
+}
+
+void combineOrders(MutableArrayRef<unsigned> Order,
+                   ArrayRef<unsigned> SecondaryOrder) {
+  assert((SecondaryOrder.empty() || Order.size() == SecondaryOrder.size()) &&
+         "Expected same size of orders");
+  size_t Sz = Order.size();
+  SmallBitVector UsedIndices(Sz);
+  for (unsigned Idx : seq<unsigned>(0, Sz)) {
+    if (Order[Idx] != Sz)
+      UsedIndices.set(Order[Idx]);
+  }
+  if (SecondaryOrder.empty()) {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (Order[Idx] == Sz && !UsedIndices.test(Idx))
+        Order[Idx] = Idx;
+  } else {
+    for (unsigned Idx : seq<unsigned>(0, Sz))
+      if (SecondaryOrder[Idx] != Sz && Order[Idx] == Sz &&
+          !UsedIndices.test(SecondaryOrder[Idx]))
+        Order[Idx] = SecondaryOrder[Idx];
+  }
+}
+
 bool allSameType(ArrayRef<Value *> VL) {
   assert(!VL.empty() && "Expected non-empty list of values.");
   Type *Ty = VL.consume_front()->getType();
@@ -357,13 +481,11 @@ bool areAllOperandsNonInsts(Value *V) {
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return true;
-  return !mayHaveNonDefUseDependency(*I) &&
-         all_of(I->operands(), [I](Value *V) {
-           auto *IO = dyn_cast<Instruction>(V);
-           if (!IO)
-             return true;
-           return isa<PHINode>(IO) || IO->getParent() != I->getParent();
-         });
+  return all_of(make_isa_range<Instruction>(I->operands()),
+                [I](Instruction *IO) {
+                  return isa<PHINode>(IO) || IO->getParent() != I->getParent();
+                }) &&
+         !mayHaveNonDefUseDependency(*I);
 }
 
 bool isUsedOutsideBlock(Value *V) {
@@ -371,13 +493,12 @@ bool isUsedOutsideBlock(Value *V) {
   if (!I)
     return true;
   // Limits the number of uses to save compile time.
-  return !I->mayReadOrWriteMemory() && !I->hasNUsesOrMore(UsesLimit) &&
-         all_of(I->users(), [I](User *U) {
-           auto *IU = dyn_cast<Instruction>(U);
-           if (!IU)
-             return true;
-           return IU->getParent() != I->getParent() || isa<PHINode>(IU);
-         });
+  return !I->hasNUsesOrMore(UsesLimit) && all_of(I->users(), [I](User *U) {
+    auto *IU = dyn_cast<Instruction>(U);
+    if (!IU)
+      return true;
+    return IU->getParent() != I->getParent() || isa<PHINode>(IU);
+  }) && !I->mayReadOrWriteMemory();
 }
 
 bool doesNotNeedToBeScheduled(Value *V) {
@@ -459,6 +580,163 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL) {
     AccumulateLength += SVNumElements;
   }
   return Mask;
+}
+
+/// Checks if the vector of instructions can be represented as a shuffle, like:
+/// %x0 = extractelement <4 x i8> %x, i32 0
+/// %x3 = extractelement <4 x i8> %x, i32 3
+/// %y1 = extractelement <4 x i8> %y, i32 1
+/// %y2 = extractelement <4 x i8> %y, i32 2
+/// %x0x0 = mul i8 %x0, %x0
+/// %x3x3 = mul i8 %x3, %x3
+/// %y1y1 = mul i8 %y1, %y1
+/// %y2y2 = mul i8 %y2, %y2
+/// %ins1 = insertelement <4 x i8> poison, i8 %x0x0, i32 0
+/// %ins2 = insertelement <4 x i8> %ins1, i8 %x3x3, i32 1
+/// %ins3 = insertelement <4 x i8> %ins2, i8 %y1y1, i32 2
+/// %ins4 = insertelement <4 x i8> %ins3, i8 %y2y2, i32 3
+/// ret <4 x i8> %ins4
+/// can be transformed into:
+/// %1 = shufflevector <4 x i8> %x, <4 x i8> %y, <4 x i32> <i32 0, i32 3, i32 5,
+///                                                         i32 6>
+/// %2 = mul <4 x i8> %1, %1
+/// ret <4 x i8> %2
+/// Mask will return the Shuffle Mask equivalent to the extracted elements.
+/// TODO: Can we split off and reuse the shuffle mask detection from
+/// ShuffleVectorInst/getShuffleCost?
+std::optional<TargetTransformInfo::ShuffleKind>
+isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
+                     AssumptionCache *AC, SLPAnalysisCache &Cache) {
+  const auto *It = find_if(VL, IsaPred<ExtractElementInst>);
+  if (It == VL.end())
+    return std::nullopt;
+  unsigned Size = 0;
+  Value *Vec1 = nullptr;
+  Value *Vec2 = nullptr;
+  // The poison analysis is expensive, it is required only for the undef
+  // vectors.
+  std::optional<bool> HasNonUndefVec;
+  auto IsNonUndefVecPresent = [&]() {
+    if (!HasNonUndefVec)
+      HasNonUndefVec = any_of(make_isa_range<ExtractElementInst>(VL),
+                              [&](ExtractElementInst *EE) {
+                                Value *Vec = EE->getVectorOperand();
+                                if (isa<UndefValue>(Vec))
+                                  return false;
+                                return Cache.isGuaranteedNotToBePoison(Vec, AC);
+                              });
+    return *HasNonUndefVec;
+  };
+  enum ShuffleMode { Unknown, Select, Permute };
+  ShuffleMode CommonShuffleMode = Unknown;
+  Mask.assign(VL.size(), PoisonMaskElem);
+  for (unsigned I = 0, E = VL.size(); I < E; ++I) {
+    // Undef, or a copyable lane modeled on an extract main op, can be
+    // represented as an undef element in a vector.
+    if (isa<UndefValue>(VL[I]))
+      continue;
+    auto *EI = dyn_cast<ExtractElementInst>(VL[I]);
+    if (!EI)
+      continue;
+    if (isa<ScalableVectorType>(EI->getVectorOperandType()))
+      return std::nullopt;
+    auto *Vec = EI->getVectorOperand();
+    // We can extractelement from undef or poison vector.
+    if (isUndefVector</*isPoisonOnly=*/true>(Vec).all())
+      continue;
+    // All vector operands must have the same number of vector elements.
+    if (isa<UndefValue>(Vec)) {
+      Mask[I] = I;
+    } else {
+      if (isa<UndefValue>(EI->getIndexOperand()))
+        continue;
+      auto *Idx = dyn_cast<ConstantInt>(EI->getIndexOperand());
+      if (!Idx)
+        return std::nullopt;
+      // Undefined behavior if Idx is negative or out of bounds.
+      if (Idx->getValue().uge(getNumElements(Vec->getType())))
+        continue;
+      unsigned IntIdx = Idx->getValue().getZExtValue();
+      Mask[I] = IntIdx;
+    }
+    // The width is defined only by the lanes that are present in the mask.
+    Size = std::max(Size, getNumElements(Vec->getType()));
+    if (isUndefVector(Vec).all() && IsNonUndefVecPresent())
+      continue;
+    // For correct shuffling we have to have at most 2 different vector operands
+    // in all extractelement instructions.
+    if (!Vec1 || Vec1 == Vec) {
+      Vec1 = Vec;
+    } else if (!Vec2 || Vec2 == Vec) {
+      Vec2 = Vec;
+    } else {
+      return std::nullopt;
+    }
+  }
+  if (Vec2 && Size != std::max(getNumElements(Vec1->getType()),
+                               getNumElements(Vec2->getType())))
+    return std::nullopt;
+  for (auto [I, Idx] : enumerate(Mask)) {
+    if (Idx == PoisonMaskElem)
+      continue;
+    auto *Vec = cast<ExtractElementInst>(VL[I])->getVectorOperand();
+    if (Vec == Vec2)
+      Idx += Size;
+    else if (Vec != Vec1)
+      continue;
+    if (CommonShuffleMode == Permute)
+      continue;
+    // If the extract index is not the same as the operation number, it is a
+    // permutation.
+    if (Idx % Size != I) {
+      CommonShuffleMode = Permute;
+      continue;
+    }
+    CommonShuffleMode = Select;
+  }
+  // If we're not crossing lanes in different vectors, consider it as blending.
+  if (CommonShuffleMode == Select && Vec2)
+    return TargetTransformInfo::SK_Select;
+  // If Vec2 was never used, we have a permutation of a single vector, otherwise
+  // we have permutation of 2 vectors.
+  return Vec2 ? TargetTransformInfo::SK_PermuteTwoSrc
+              : TargetTransformInfo::SK_PermuteSingleSrc;
+}
+
+Value *createInsertVector(
+    IRBuilderBase &Builder, Value *Vec, Value *V, unsigned Index,
+    function_ref<Value *(Value *, Value *, ArrayRef<int>)> Generator) {
+  if (isa<PoisonValue>(Vec) && isa<PoisonValue>(V))
+    return Vec;
+  const unsigned SubVecVF = getNumElements(V->getType());
+  // Create shuffle, insertvector requires that index is multiple of
+  // the subvector length.
+  const unsigned VecVF = getNumElements(Vec->getType());
+  SmallVector<int> Mask(VecVF, PoisonMaskElem);
+  if (isa<PoisonValue>(Vec)) {
+    auto *Begin = std::next(Mask.begin(), Index);
+    std::iota(Begin, std::next(Begin, SubVecVF), 0);
+    Vec = Builder.CreateShuffleVector(V, Mask);
+    return Vec;
+  }
+  std::iota(Mask.begin(), Mask.end(), 0);
+  std::iota(std::next(Mask.begin(), Index),
+            std::next(Mask.begin(), Index + SubVecVF), VecVF);
+  if (Generator)
+    return Generator(Vec, V, Mask);
+  // 1. Resize V to the size of Vec.
+  SmallVector<int> ResizeMask(VecVF, PoisonMaskElem);
+  std::iota(ResizeMask.begin(), std::next(ResizeMask.begin(), SubVecVF), 0);
+  V = Builder.CreateShuffleVector(V, ResizeMask);
+  // 2. Insert V into Vec.
+  return Builder.CreateShuffleVector(Vec, V, Mask);
+}
+
+Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
+                           unsigned SubVecVF, unsigned Index) {
+  SmallVector<int> Mask(SubVecVF, PoisonMaskElem);
+  std::iota(Mask.begin(), Mask.end(), Index);
+  return Builder.CreateShuffleVector(Vec, Mask);
 }
 
 SmallBitVector buildUseMask(int VF, ArrayRef<int> Mask, UseMask MaskArg) {
@@ -614,6 +892,115 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
   return TrueBase != nullptr;
 }
 
+Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
+                                      const DataLayout &DL) {
+  assert(all_of(VL, IsaPred<LoadInst>) &&
+         "Expected only load lanes in a blended load.");
+  const uint64_t ScalarSize = DL.getTypeStoreSize(VL.front()->getType());
+  Align BaseAlignment = cast<LoadInst>(VL.front())->getAlign();
+  for (auto [Idx, V] : enumerate(VL))
+    BaseAlignment =
+        std::min(BaseAlignment, commonAlignment(cast<LoadInst>(V)->getAlign(),
+                                                Idx * ScalarSize));
+  return BaseAlignment;
+}
+
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL) {
+  Value *Ptr = cast<LoadInst>(VL.front())->getPointerOperand();
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
+    Ptr = GEP->getPointerOperand();
+  return cast<SelectInst>(Ptr);
+}
+
+Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
+                            function_ref<bool(Value *)> IsGEPLane,
+                            const DataLayout &DL) {
+  constexpr unsigned IndexIdx = 1;
+  Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
+  Type *PtrIdxTy =
+      DL.getIndexType(VL0->getOperand(0)->getType()->getScalarType());
+  bool AllSameTy = true;
+  bool HasNonConstIdx = false;
+  bool ConstsFitVL0Ty = true;
+  for (Value *V : make_filter_range(VL, IsGEPLane)) {
+    Value *Op = cast<GetElementPtrInst>(V)->getOperand(IndexIdx);
+    if (Op->getType() != VL0Ty)
+      AllSameTy = false;
+    auto *CI = dyn_cast<ConstantInt>(Op);
+    if (!CI) {
+      // Non-constant indices are not cast, they must have the main op type.
+      if (Op->getType() != VL0Ty)
+        return nullptr;
+      HasNonConstIdx = true;
+      continue;
+    }
+    if (!CI->getValue().isSignedIntN(VL0Ty->getIntegerBitWidth()))
+      ConstsFitVL0Ty = false;
+  }
+  if (AllSameTy)
+    return VL0Ty;
+  if (!HasNonConstIdx || VL0Ty == PtrIdxTy)
+    return PtrIdxTy;
+  return ConstsFitVL0Ty ? VL0Ty : nullptr;
+}
+
+bool isCopyableGEPAddressVector(ArrayRef<Value *> PointerOps) {
+  SmallPtrSet<Value *, 16> UniquePtrs(llvm::from_range, PointerOps);
+  if (UniquePtrs.size() != PointerOps.size())
+    return false;
+  auto IsConstantOffsetPtr = [](Value *P) {
+    auto *GEP = dyn_cast<GetElementPtrInst>(P);
+    return !GEP ||
+           (GEP->getNumOperands() == 2 && isConstant(GEP->getOperand(1)));
+  };
+  auto *RefIt = find_if_not(PointerOps, IsConstantOffsetPtr);
+  if (RefIt == PointerOps.end())
+    return false;
+  auto *RefGEP = dyn_cast<GetElementPtrInst>(*RefIt);
+  if (!RefGEP || RefGEP->getNumOperands() != 2)
+    return false;
+  Value *Base = RefGEP->getPointerOperand();
+  Type *PtrTy = RefGEP->getType();
+  Type *SrcElemTy = RefGEP->getSourceElementType();
+  // The stride and the (optional) cast opcode of the runtime indices.
+  Value *Stride = nullptr;
+  unsigned CastOpcode = 0;
+  for (Value *P : PointerOps) {
+    if (P->getType() != PtrTy)
+      return false;
+    if (P == Base)
+      continue;
+    auto *GEP = dyn_cast<GetElementPtrInst>(P);
+    if (!GEP || GEP->getNumOperands() != 2 ||
+        GEP->getPointerOperand() != Base ||
+        GEP->getSourceElementType() != SrcElemTy)
+      return false;
+    Value *Idx = GEP->getOperand(1);
+    if (isConstant(Idx))
+      continue;
+    unsigned LaneCastOpcode = 0;
+    if (auto *Cast = dyn_cast<CastInst>(Idx)) {
+      LaneCastOpcode = Cast->getOpcode();
+      Idx = Cast->getOperand(0);
+    }
+    Value *LaneStride = Idx;
+    if (auto *BO = dyn_cast<BinaryOperator>(Idx)) {
+      if (isa<Constant>(BO->getOperand(1)))
+        LaneStride = BO->getOperand(0);
+      else if (isa<Constant>(BO->getOperand(0)))
+        LaneStride = BO->getOperand(1);
+    }
+    if (!Stride) {
+      Stride = LaneStride;
+      CastOpcode = LaneCastOpcode;
+      continue;
+    }
+    if (LaneStride != Stride || LaneCastOpcode != CastOpcode)
+      return false;
+  }
+  return Stride != nullptr;
+}
+
 void addMask(SmallVectorImpl<int> &Mask, ArrayRef<int> SubMask,
              bool ExtendingManyInputs) {
   if (SubMask.empty())
@@ -702,25 +1089,14 @@ Intrinsic::ID getMaskedDivRemIntrinsic(unsigned Opcode) {
 }
 
 /// Returns true if \p I is a part of a single-use chain, computing an address,
-/// which does not pay off the vectorization: a constant table is accessed by a
-/// gather, while the indices, unrelated between the lanes, require a full
-/// buildvector, unlike the ones, shifted by a constant from a common base.
+/// which does not pay off the vectorization: all the lanes are extracted for
+/// the scalar addresses, the extracts delay the memory accesses.
 static bool isNonProfitableIndex(const Instruction *I) {
   constexpr unsigned MaxIndexChainLength = 3;
-  // A constant shift of a common base is a cheap buildvector, while the loads
-  // are vectorized together with the indices, computed from them.
-  auto IsProfitableOperand = [](const Value *V) {
-    if (isa<Constant>(V))
-      return true;
-    if (const auto *Cast = dyn_cast<CastInst>(V); Cast && Cast->hasOneUse())
-      V = Cast->getOperand(0);
-    return isa<LoadInst>(V);
-  };
   const User *U = I->user_back();
   for ([[maybe_unused]] unsigned _ : seq<unsigned>(MaxIndexChainLength)) {
-    if (const auto *GEP = dyn_cast<GetElementPtrInst>(U))
-      return isa<Constant>(GEP->getPointerOperand()) ||
-             none_of(I->operand_values(), IsProfitableOperand);
+    if (isa<GetElementPtrInst>(U))
+      return true;
     if (!isa<Instruction>(U) || !U->hasOneUse())
       return false;
     U = U->user_back();
@@ -889,6 +1265,415 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F) {
   assert(F && "Expected function.");
   return F->hasOptSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+}
+
+/// Checks if \p V is a zero-extended sub-field of a wider integer scalar.
+/// Returns the source scalar, the field width and the field offset.
+static std::optional<std::tuple<Value *, unsigned, unsigned>>
+matchExtractedField(Value *V) {
+  if (!V->getType()->isIntegerTy())
+    return std::nullopt;
+  // Field offset for the field-aligned shift amount, if the shifted value of
+  // the given bit width keeps at least one full field.
+  auto GetFieldOffset = [](const APInt *Amt, unsigned BitWidth,
+                           unsigned FieldWidth) -> std::optional<unsigned> {
+    uint64_t ShAmt = Amt->getLimitedValue(BitWidth);
+    if (ShAmt % FieldWidth != 0 || ShAmt + FieldWidth > BitWidth)
+      return std::nullopt;
+    return ShAmt / FieldWidth;
+  };
+  // Checks if the low bits of Val are a sub-field of the given width of a
+  // wider integer scalar. Val is a scalar integer, since V is one, and so is
+  // the matched source.
+  auto MatchLowField =
+      [&](Value *Val,
+          unsigned FieldWidth) -> std::optional<std::pair<Value *, unsigned>> {
+    Value *Src;
+    const APInt *Amt;
+    // Only the low bits of Val are observed, so lshr and ashr are equivalent.
+    if (match(Val, m_Trunc(m_Shr(m_Value(Src), m_APInt(Amt)))) ||
+        match(Val, m_Shr(m_Value(Src), m_APInt(Amt)))) {
+      if (std::optional<unsigned> Offset = GetFieldOffset(
+              Amt, Src->getType()->getIntegerBitWidth(), FieldWidth)) {
+        // The truncation of the shifted value keeps the field, look through it.
+        match(Src, m_Trunc(m_Value(Src)));
+        return std::make_pair(Src, *Offset);
+      }
+      return std::nullopt;
+    }
+    if (match(Val, m_Trunc(m_Value(Src))) &&
+        Src->getType()->getIntegerBitWidth() >= FieldWidth)
+      return std::make_pair(Src, 0u);
+    // Val itself is the source of its low field.
+    if (Val->getType()->getIntegerBitWidth() > FieldWidth)
+      return std::make_pair(Val, 0u);
+    return std::nullopt;
+  };
+  Value *Val;
+  const APInt *Mask;
+  // and Val, (1 << FieldWidth) - 1 or zext i<FieldWidth> Val - the low bits of
+  // Val.
+  unsigned FieldWidth = 0;
+  if (match(V, m_c_And(m_Value(Val), m_APInt(Mask))) && Mask->isMask())
+    FieldWidth = Mask->popcount();
+  else if (match(V, m_ZExt(m_Value(Val))))
+    FieldWidth = Val->getType()->getIntegerBitWidth();
+  if (FieldWidth != 0) {
+    if (std::optional<std::pair<Value *, unsigned>> Field =
+            MatchLowField(Val, FieldWidth))
+      return std::make_tuple(Field->first, FieldWidth, Field->second);
+    return std::nullopt;
+  }
+  unsigned LaneWidth = V->getType()->getIntegerBitWidth();
+  Value *Src;
+  const APInt *Amt;
+  if (match(V, m_Trunc(m_LShr(m_Value(Src), m_APInt(Amt))))) {
+    unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
+    uint64_t ShAmt = Amt->getLimitedValue(SrcWidth);
+    // The field itself, if the lane width is the field width.
+    if (std::optional<unsigned> Offset =
+            GetFieldOffset(Amt, SrcWidth, LaneWidth))
+      return std::make_tuple(Src, LaneWidth, *Offset);
+    // The zero-extended top field of the source.
+    unsigned FieldWidth = SrcWidth - ShAmt;
+    if (FieldWidth > 0 && FieldWidth < LaneWidth && ShAmt % FieldWidth == 0)
+      return std::make_tuple(Src, FieldWidth, ShAmt / FieldWidth);
+    return std::nullopt;
+  }
+  if (match(V, m_LShr(m_Value(Src), m_APInt(Amt)))) {
+    // The zero-extended top field of the source, if the result keeps exactly
+    // one field. Look through a truncation of the shifted value.
+    unsigned ShfWidth = Src->getType()->getIntegerBitWidth();
+    uint64_t ShAmt = Amt->getLimitedValue(ShfWidth);
+    unsigned FieldWidth = ShfWidth - ShAmt;
+    if (FieldWidth > 0 && ShAmt % FieldWidth == 0) {
+      match(Src, m_Trunc(m_Value(Src)));
+      return std::make_tuple(Src, FieldWidth, ShAmt / FieldWidth);
+    }
+    return std::nullopt;
+  }
+  if (match(V, m_Trunc(m_Value(Src))))
+    return std::make_tuple(Src, LaneWidth, 0u);
+  return std::nullopt;
+}
+
+std::optional<std::tuple<Value *, unsigned, SmallVector<int>>>
+matchGatheredExtractedFields(ArrayRef<Value *> VL, const DataLayout &DL) {
+  // Splats are emitted as broadcasts, sub-fields of a constant are folded.
+  // The bitcast to the field vector maps lane 0 to the least significant
+  // field on little-endian targets only.
+  if (VL.size() < 2 || !VL.front()->getType()->isIntegerTy() || isSplat(VL) ||
+      DL.isBigEndian())
+    return std::nullopt;
+  Value *Src = nullptr;
+  unsigned FieldWidth = 0;
+  SmallVector<int> Mask(VL.size(), PoisonMaskElem);
+  for (auto [Idx, V] : make_filter_range(enumerate(VL), [](const auto &P) {
+         return !isa<UndefValue>(P.value());
+       })) {
+    if (V->getType() != VL.front()->getType())
+      return std::nullopt;
+    std::optional<std::tuple<Value *, unsigned, unsigned>> Field =
+        matchExtractedField(V);
+    if (!Field || (Src && (Src != std::get<0>(*Field) ||
+                           FieldWidth != std::get<1>(*Field))))
+      return std::nullopt;
+    Src = std::get<0>(*Field);
+    FieldWidth = std::get<1>(*Field);
+    Mask[Idx] = std::get<2>(*Field);
+  }
+  // The field width is a whole number of bytes and divides the source
+  // exactly, same as for the packing layout, so the source bitcasts to the
+  // field vector.
+  if (!Src || isa<Constant>(Src) || FieldWidth % 8 != 0 ||
+      Src->getType()->getIntegerBitWidth() % FieldWidth != 0)
+    return std::nullopt;
+  // The same field in every lane is a splat, emitted as a broadcast.
+  if (all_of(Mask, [First = *find_if(Mask, not_equal_to(PoisonMaskElem))](
+                       int MaskElt) {
+        return MaskElt == PoisonMaskElem || MaskElt == First;
+      }))
+    return std::nullopt;
+  return std::make_tuple(Src, FieldWidth, std::move(Mask));
+}
+
+/// Deeper than the standard analysis recursion depth to keep the numeric
+/// bound precise through arithmetic carry chains.
+constexpr unsigned MaxBitPackAnalysisDepth = MaxAnalysisRecursionDepth + 2;
+
+APInt getScalarMaxValue(const Value *V, unsigned Depth) {
+  unsigned BitWidth = V->getType()->getScalarSizeInBits();
+  const APInt Unknown = APInt::getAllOnes(BitWidth);
+  if (Depth > MaxBitPackAnalysisDepth || !V->getType()->isIntegerTy())
+    return Unknown;
+  const APInt *C, *Amt;
+  if (match(V, m_APInt(C)))
+    return *C;
+  Value *L, *R;
+  if (match(V, m_Add(m_Value(L), m_Value(R))) ||
+      match(V, m_Or(m_Value(L), m_Value(R))) ||
+      match(V, m_Xor(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1)
+        .uadd_sat(getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_NUWSub(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1);
+  if (match(V, m_Mul(m_Value(L), m_Value(R))))
+    return getScalarMaxValue(L, Depth + 1)
+        .umul_sat(getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_And(m_Value(L), m_Value(R))))
+    return APIntOps::umin(getScalarMaxValue(L, Depth + 1),
+                          getScalarMaxValue(R, Depth + 1));
+  if (match(V, m_LShr(m_Value(L), m_APInt(Amt))) && Amt->ult(BitWidth))
+    return getScalarMaxValue(L, Depth + 1).lshr(*Amt);
+  if (match(V, m_Shl(m_Value(L), m_APInt(Amt))) && Amt->ult(BitWidth)) {
+    APInt LMax = getScalarMaxValue(L, Depth + 1);
+    return LMax.getActiveBits() + Amt->getZExtValue() <= BitWidth
+               ? LMax.shl(*Amt)
+               : Unknown;
+  }
+  if (match(V, m_ZExt(m_Value(L))))
+    return getScalarMaxValue(L, Depth + 1).zext(BitWidth);
+  if (match(V, m_Trunc(m_Value(L)))) {
+    APInt Max = getScalarMaxValue(L, Depth + 1);
+    return Max.getActiveBits() <= BitWidth ? Max.trunc(BitWidth) : Unknown;
+  }
+  if (match(V, m_SExt(m_Value(L)))) {
+    APInt Max = getScalarMaxValue(L, Depth + 1);
+    return Max.isNonNegative() ? Max.zext(BitWidth) : Unknown;
+  }
+  Value *F;
+  if (match(V, m_Select(m_Value(), m_Value(L), m_Value(F))))
+    return APIntOps::umax(getScalarMaxValue(L, Depth + 1),
+                          getScalarMaxValue(F, Depth + 1));
+  return Unknown;
+}
+
+std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
+                                              ArrayRef<APInt> PossibleBits,
+                                              ArrayRef<uint64_t> ShlAmts,
+                                              ArrayRef<APInt> Masks) {
+  unsigned NumElts = PossibleBits.size();
+  BitPackInfo Info;
+  Info.LShrAmts.assign(NumElts, 0);
+  for (unsigned Idx : seq(NumElts)) {
+    APInt Possible = PossibleBits[Idx].shl(ShlAmts[Idx]) & Masks[Idx];
+    if (Possible.isZero())
+      continue;
+    unsigned Lo, W;
+    if (!Possible.isShiftedMask(Lo, W))
+      return std::nullopt;
+    if (Info.FieldWidth == 0) {
+      if (W % 8 != 0 || BitWidth % W != 0)
+        return std::nullopt;
+      Info.FieldWidth = W;
+      Info.LaneOfField.assign(BitWidth / W, BitPackInfo::NoLane);
+    }
+    if (W != Info.FieldWidth || Lo % W != 0)
+      return std::nullopt;
+    unsigned Field = Lo / W;
+    if (Info.LaneOfField[Field] != BitPackInfo::NoLane)
+      return std::nullopt;
+    Info.LaneOfField[Field] = Idx;
+    Info.LShrAmts[Idx] = Lo - ShlAmts[Idx];
+  }
+  if (Info.FieldWidth == 0)
+    return std::nullopt;
+  return Info;
+}
+
+SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
+                                unsigned NumElts, unsigned BytesPerLane) {
+  unsigned BytesPerField = Info.FieldWidth / 8;
+  SmallVector<int> Mask;
+  for (unsigned J : seq(NumBytes)) {
+    unsigned Lane = Info.LaneOfField[J / BytesPerField];
+    Mask.push_back(Lane == BitPackInfo::NoLane
+                       ? (int)(NumElts * BytesPerLane)
+                       : (int)(Lane * BytesPerLane + J % BytesPerField));
+  }
+  return Mask;
+}
+
+Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
+                    Type *ResultTy, unsigned ShiftWidth, unsigned &NumInsts) {
+  NumInsts = 0;
+  auto *VecTy = cast<FixedVectorType>(X->getType());
+  unsigned BitWidth = VecTy->getScalarSizeInBits();
+  assert(BitWidth % 8 == 0 &&
+         "The byte-multiple field width divides the result bit width.");
+  unsigned NumElts = VecTy->getNumElements();
+  Value *Y = X;
+  if (ShiftWidth != BitWidth) {
+    // Compacting a zext back to its source is free, use it directly.
+    if (auto *Z = dyn_cast<ZExtInst>(X);
+        Z && Z->getSrcTy()->getScalarSizeInBits() == ShiftWidth)
+      Y = Z->getOperand(0);
+    else {
+      Y = Builder.CreateTrunc(
+          Y, FixedVectorType::get(IntegerType::get(X->getContext(), ShiftWidth),
+                                  NumElts));
+      ++NumInsts;
+    }
+  }
+  if (Info.needsShift()) {
+    SmallVector<Constant *> Amts;
+    for (uint64_t A : Info.LShrAmts)
+      Amts.push_back(
+          ConstantInt::get(IntegerType::get(X->getContext(), ShiftWidth), A));
+    Y = Builder.CreateLShr(Y, ConstantVector::get(Amts));
+    ++NumInsts;
+  }
+  unsigned InBytes = NumElts * (ShiftWidth / 8);
+  auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
+  SmallVector<int> Mask = getBitPackMask(
+      Info, ResultTy->getScalarSizeInBits() / 8, NumElts, ShiftWidth / 8);
+  // Fields in lane order, possibly reversed, are a truncation of the shifted
+  // lanes. A reversal of byte fields is a bswap.
+  bool IsReversed = equal(Info.LaneOfField, reverse(seq<unsigned>(NumElts)));
+  if (IsReversed || equal(Info.LaneOfField, seq<unsigned>(NumElts))) {
+    Value *Fields = Builder.CreateTrunc(
+        Y, Y->getType()->getWithNewBitWidth(Info.FieldWidth));
+    NumInsts += 1 + (Info.FieldWidth != ShiftWidth) + IsReversed;
+    if (IsReversed && Info.FieldWidth == 8)
+      return Builder.CreateUnaryIntrinsic(
+          Intrinsic::bswap, Builder.CreateBitCast(Fields, ResultTy));
+    if (IsReversed)
+      Fields = Builder.CreateVectorReverse(Fields);
+    return Builder.CreateBitCast(Fields, ResultTy);
+  }
+  Value *Packed = Builder.CreateShuffleVector(
+      Builder.CreateBitCast(Y, ByteTy),
+      is_contained(Info.LaneOfField, BitPackInfo::NoLane)
+          ? Constant::getNullValue(ByteTy)
+          : PoisonValue::get(ByteTy),
+      Mask);
+  NumInsts += 3;
+  return Builder.CreateBitCast(Packed, ResultTy);
+}
+
+void redirectDbgValues(Instruction &From, Value &To) {
+  SmallVector<DbgVariableRecord *, 2> DVRs;
+  findDbgValues(&From, DVRs);
+  auto *ExI = dyn_cast<Instruction>(&To);
+  for (DbgVariableRecord *DVR : DVRs) {
+    if (!DVR->isDbgValue())
+      continue;
+    Instruction *MarkedI = DVR->getInstruction();
+    if (ExI && MarkedI->getParent() != ExI->getParent())
+      continue;
+    if (!ExI || ExI->comesBefore(MarkedI)) {
+      DVR->replaceVariableLocationOp(&From, &To);
+      continue;
+    }
+    DebugVariableAggregate Var(DVR);
+    auto HasSameVar = [&](auto Records) {
+      return any_of(filterDbgVars(Records),
+                    [&](const DbgVariableRecord &Other) {
+                      return DebugVariableAggregate(&Other) == Var;
+                    });
+    };
+    if (HasSameVar(make_range(std::next(DVR->getIterator()),
+                              MarkedI->getDbgRecordRange().end())) ||
+        any_of(make_range(std::next(MarkedI->getIterator()),
+                          std::next(ExI->getIterator())),
+               [&](const Instruction &I) {
+                 return HasSameVar(I.getDbgRecordRange());
+               }))
+      continue;
+    DbgVariableRecord *NewDVR = DVR->clone();
+    NewDVR->replaceVariableLocationOp(&From, &To);
+    ExI->getParent()->insertDbgRecordAfter(NewDVR, ExI);
+  }
+}
+
+bool isFirstInsertElement(const InsertElementInst *IE1,
+                          const InsertElementInst *IE2) {
+  if (IE1 == IE2)
+    return false;
+  const auto *I1 = IE1;
+  const auto *I2 = IE2;
+  const InsertElementInst *PrevI1;
+  const InsertElementInst *PrevI2;
+  unsigned Idx1 = *getElementIndex(IE1);
+  unsigned Idx2 = *getElementIndex(IE2);
+  do {
+    if (I2 == IE1)
+      return true;
+    if (I1 == IE2)
+      return false;
+    PrevI1 = I1;
+    PrevI2 = I2;
+    if (I1 && (I1 == IE1 || I1->hasOneUse()) &&
+        getElementIndex(I1).value_or(Idx2) != Idx2)
+      I1 = dyn_cast<InsertElementInst>(I1->getOperand(0));
+    if (I2 && ((I2 == IE2 || I2->hasOneUse())) &&
+        getElementIndex(I2).value_or(Idx1) != Idx1)
+      I2 = dyn_cast<InsertElementInst>(I2->getOperand(0));
+  } while ((I1 && PrevI1 != I1) || (I2 && PrevI2 != I2));
+  llvm_unreachable("Two different buildvectors not expected.");
+}
+
+DebugLoc getDebugLocFromPHI(const PHINode &PN) {
+  if (DebugLoc DL = PN.getDebugLoc())
+    return DL;
+  return DebugLoc::getUnknown();
+}
+
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst) {
+  if (auto *IE = dyn_cast<InsertElementInst>(InsertInst))
+    return cast<FixedVectorType>(IE->getType())->getNumElements();
+
+  unsigned AggregateSize = 1;
+  auto *IV = cast<InsertValueInst>(InsertInst);
+  Type *CurrentType = IV->getType();
+  do {
+    if (auto *ST = dyn_cast<StructType>(CurrentType)) {
+      for (auto *Elt : ST->elements())
+        if (Elt != ST->getElementType(0)) // check homogeneity
+          return std::nullopt;
+      AggregateSize *= ST->getNumElements();
+      CurrentType = ST->getElementType(0);
+    } else if (auto *AT = dyn_cast<ArrayType>(CurrentType)) {
+      AggregateSize *= AT->getNumElements();
+      CurrentType = AT->getElementType();
+    } else if (auto *VT = dyn_cast<FixedVectorType>(CurrentType)) {
+      AggregateSize *= VT->getNumElements();
+      return AggregateSize;
+    } else if (CurrentType->isSingleValueType()) {
+      return AggregateSize;
+    } else {
+      return std::nullopt;
+    }
+  } while (true);
+}
+
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL) {
+  assert(L && "Expected valid loop");
+  auto IsLoopInvariant = [&](const Loop *L, ArrayRef<Value *> VL) {
+    return all_of(make_isa_range<Instruction>(VL),
+                  [L](Instruction *I) { return L->isLoopInvariant(I); });
+  };
+  while (L && IsLoopInvariant(L, VL))
+    L = L->getParentLoop();
+  return L;
+}
+
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount) {
+  if (LoopAwareTripCount == 0)
+    return 1;
+  unsigned Scale = SE.getSmallConstantTripCount(L);
+  if (Scale == 0)
+    Scale = getLoopEstimatedTripCount(const_cast<Loop *>(L)).value_or(0);
+  if (Scale != 0) {
+    // Multiple exiting blocks - choose the minimum between trip count (scale)
+    // and LoopAwareTripCount, since the multiple exit loops can be terminated
+    // early.
+    if (!L->getExitingBlock())
+      return std::min<unsigned>(LoopAwareTripCount, Scale);
+    return Scale;
+  }
+  return LoopAwareTripCount;
 }
 
 } // namespace llvm::slpvectorizer
