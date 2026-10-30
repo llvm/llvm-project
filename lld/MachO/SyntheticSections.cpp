@@ -2075,6 +2075,9 @@ ObjCMethListSection::ObjCMethListSection()
 // create them early on here to ensure they are processed correctly by the lld
 // pipeline.
 void ObjCMethListSection::setUp() {
+  llvm::erase_if(inputs, [](const ConcatInputSection *isec) {
+    return isec->shouldOmitFromOutput();
+  });
   for (const ConcatInputSection *isec : inputs) {
     uint32_t structSizeAndFlags = 0, structCount = 0;
     readMethodListHeader(isec->data.data(), structSizeAndFlags, structCount);
@@ -2140,6 +2143,8 @@ void ObjCMethListSection::finalize() {
 void ObjCMethListSection::writeTo(uint8_t *bufStart) const {
   uint8_t *buf = bufStart;
   for (const ConcatInputSection *isec : inputs) {
+    assert(!isec->shouldOmitFromOutput() &&
+           "dead method list should have been dropped in setUp()");
     assert(buf - bufStart == std::ptrdiff_t(isec->outSecOff) &&
            "Writing at unexpected offset");
     uint32_t writtenSize = writeRelativeMethodList(isec, buf);
