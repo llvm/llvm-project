@@ -1536,8 +1536,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_STRICT_FSQRT: {
     KnownFPClass KnownSrc;
     FPClassTest InterestedSrcs = InterestedClasses;
-    if (InterestedClasses & fcNan)
-      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask;
+    if (InterestedClasses & fcQNan)
+      InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
+    // Subnormals may flush to zero.
+    if (InterestedClasses & fcZero)
+      InterestedSrcs |= fcSubnormal;
 
     Register Val = MI.getOperand(1).getReg();
     computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
