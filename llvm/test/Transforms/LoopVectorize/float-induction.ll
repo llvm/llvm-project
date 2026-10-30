@@ -2029,11 +2029,9 @@ define void @fp_iv_used_in_gep_fadd(float %init, ptr noalias nocapture %A, float
 ; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fadd fast float [[INIT]], [[TMP5]]
 ; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
 ; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = fadd fast float [[OFFSET_IDX]], [[TMP9]]
-; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = fptoui float [[OFFSET_IDX]] to i32
-; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP6]] to i32
-; VEC1_INTERL2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[TMP7]]
+; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = fptoui float [[OFFSET_IDX]] to i32
 ; VEC1_INTERL2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[TMP8]]
-; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP10]], align 4
+; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP12]], align 4
 ; VEC1_INTERL2-NEXT:    store float [[TMP6]], ptr [[TMP12]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -2333,11 +2331,9 @@ define void @fp_iv_used_in_gep_fsub(float %init, ptr noalias nocapture %A, float
 ; VEC1_INTERL2-NEXT:    [[OFFSET_IDX:%.*]] = fsub fast float [[INIT]], [[TMP5]]
 ; VEC1_INTERL2-NEXT:    [[TMP9:%.*]] = fmul fast float 1.000000e+00, [[FPINC]]
 ; VEC1_INTERL2-NEXT:    [[TMP6:%.*]] = fsub fast float [[OFFSET_IDX]], [[TMP9]]
-; VEC1_INTERL2-NEXT:    [[TMP7:%.*]] = fptoui float [[OFFSET_IDX]] to i32
-; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = fptoui float [[TMP6]] to i32
-; VEC1_INTERL2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[TMP7]]
+; VEC1_INTERL2-NEXT:    [[TMP8:%.*]] = fptoui float [[OFFSET_IDX]] to i32
 ; VEC1_INTERL2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[A]], i32 [[TMP8]]
-; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP10]], align 4
+; VEC1_INTERL2-NEXT:    store float [[OFFSET_IDX]], ptr [[TMP12]], align 4
 ; VEC1_INTERL2-NEXT:    store float [[TMP6]], ptr [[TMP12]], align 4
 ; VEC1_INTERL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; VEC1_INTERL2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

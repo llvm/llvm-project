@@ -4094,6 +4094,11 @@ void VPReductionEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
 
 #endif
 
+bool VPReplicateRecipe::usesFirstPartOnly(const VPValue *Op) const {
+  assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
+  return vputils::onlyFirstPartUsed(this);
+}
+
 void VPReplicateRecipe::execute(VPTransformState &State) {
   assert(IsSingleScalar &&
          "VPReplicateRecipes must be unrolled before ::execute");
