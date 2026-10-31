@@ -334,6 +334,16 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (match(&R, m_Intrinsic<Intrinsic::mask_beforefirst>(m_VPValue(Op)))) {
+      VPBuilder Builder(Copy);
+      VPValue *Chain = Builder.createNaryOp(
+          VPInstruction::AnyOf,
+          Builder.createNot(getValueForPart(R.getVPSingleValue(), Part - 1)));
+      if (!Plan.hasScalarVFOnly())
+        Chain = Builder.createNaryOp(VPInstruction::Broadcast, Chain);
+      Copy->setOperand(0, Builder.createOr(getValueForPart(Op, Part), Chain));
+      continue;
+    }
     if (match(&R, m_VPInstruction<VPInstruction::ExtractVectorForPart>(
                       m_VPValue(Op), m_VPValue()))) {
       Copy->setOperand(0, Op);
