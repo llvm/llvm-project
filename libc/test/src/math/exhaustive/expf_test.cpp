@@ -58,13 +58,14 @@ TEST_F(LlvmLibcExpfFloatExhaustiveTest, NegativeRange) {
 // Float-eval implementation correctly rounded only in round-to-nearest,
 // ties-to-even mode: tested against the double-eval version in that mode
 // with a 0 ULP bound.
-static float cr_expf_rn(float x) {
-  return LIBC_NAMESPACE::math::float_eval::cr_expf_rn(x);
+static float expf_float_eval_cr_rn(float x) {
+  return LIBC_NAMESPACE::math::float_eval_cr_rn::expf(x);
 }
 
 using LlvmLibcExpfFloatCrRnExhaustiveTest =
     LlvmLibcUnaryOpAgainstBaselineExhaustiveMathTest<
-        float, LIBC_NAMESPACE::math::double_eval::expf, cr_expf_rn, 0>;
+        float, LIBC_NAMESPACE::math::double_eval::expf, expf_float_eval_cr_rn,
+        0>;
 
 TEST_F(LlvmLibcExpfFloatCrRnExhaustiveTest, PositiveRange) {
   test_full_range(mpfr::RoundingMode::Nearest, POS_START, POS_STOP);
