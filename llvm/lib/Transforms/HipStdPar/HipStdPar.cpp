@@ -367,7 +367,7 @@ static inline bool isAcceleratorExecutionRoot(const Function *F) {
     if (!F)
       return false;
 
-    return F->getCallingConv() == CallingConv::AMDGPU_KERNEL;
+    return F->hasKernelCallingConv();
 }
 
 static inline bool isCXXExceptionRuntimeFunction(StringRef Name) {
