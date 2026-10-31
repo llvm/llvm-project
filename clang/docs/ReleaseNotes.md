@@ -228,6 +228,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-Wc++2d-extensions` and `-Wpre-c++2d-compat`, and `__cpp_pack_indexing` is
   bumped to `202606L`.
 
+- Clang now supports [P3668R4](https://wg21.link/p3668r4) (Defaulting postfix
+  increment and decrement operations), which allows the postfix `operator++(int)`
+  and `operator--(int)` to be explicitly defaulted. 
+  This is available in all C++ language modes as an extension, controlled
+  by `-Wc++2d-extensions` and `-Wpre-c++2d-compat`.
+
 #### C++2c Feature Support
 
 - `#embed` ([P1967R14](https://wg21.link/P1967R14)) is no longer diagnosed as
