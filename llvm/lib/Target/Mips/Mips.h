@@ -156,7 +156,15 @@ public:
 };
 
 FunctionPass *createMipsExpandPseudoLegacyPass();
-FunctionPass *createMipsPreLegalizeCombiner();
+
+class MipsPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<MipsPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createMipsPreLegalizeCombinerLegacyPass();
 FunctionPass *createMipsPostLegalizeCombiner(bool IsOptNone);
 
 class MipsMulMulBugFixPass
@@ -179,7 +187,7 @@ void initializeMipsDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeMipsDelaySlotFillerLegacyPass(PassRegistry &);
 void initializeMipsMulMulBugFixLegacyPass(PassRegistry &);
 void initializeMipsPostLegalizerCombinerPass(PassRegistry &);
-void initializeMipsPreLegalizerCombinerPass(PassRegistry &);
+void initializeMipsPreLegalizerCombinerLegacyPass(PassRegistry &);
 } // namespace llvm
 
 #endif
