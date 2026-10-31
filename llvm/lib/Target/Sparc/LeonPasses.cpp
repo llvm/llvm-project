@@ -384,11 +384,12 @@ SparcInsertNOPLoadPass::run(MachineFunction &MF,
 //
 // Detects an erratum in UT699 LEON 3 processor
 
-char DetectRoundChange::ID = 0;
+char SparcDetectRoundChangeLegacy::ID = 0;
 
-DetectRoundChange::DetectRoundChange() : MachineFunctionPass(ID) {}
+SparcDetectRoundChangeLegacy::SparcDetectRoundChangeLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
+static bool detectRoundChangeOnMachineFunction(MachineFunction &MF) {
   const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->detectRoundChange())
     return false;
@@ -415,6 +416,17 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Modified;
+}
+
+bool SparcDetectRoundChangeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return detectRoundChangeOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+SparcDetectRoundChangePass::run(MachineFunction &MF,
+                                MachineFunctionAnalysisManager &MFAM) {
+  detectRoundChangeOnMachineFunction(MF);
+  return PreservedAnalyses::all();
 }
 
 //*****************************************************************************

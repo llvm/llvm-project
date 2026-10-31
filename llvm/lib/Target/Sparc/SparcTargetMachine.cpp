@@ -167,7 +167,7 @@ void SparcPassConfig::addPreEmitPass(){
 
   addPass(createSparcDelaySlotFillerLegacyPass());
   addPass(new SparcInsertNOPLoadLegacy());
-  addPass(new DetectRoundChange());
+  addPass(new SparcDetectRoundChangeLegacy());
   addPass(new FixAllFDIVSQRT());
   addPass(new ErrataWorkaround());
 }

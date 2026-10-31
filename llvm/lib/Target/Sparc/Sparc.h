@@ -58,6 +58,13 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
+class SparcDetectRoundChangePass
+    : public RequiredPassInfoMixin<SparcDetectRoundChangePass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
 void initializeSparcAsmPrinterPass(PassRegistry &);
 void initializeSparcDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeErrataWorkaroundPass(PassRegistry &);

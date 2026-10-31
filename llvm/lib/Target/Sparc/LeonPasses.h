@@ -66,16 +66,22 @@ public:
   }
 };
 
-class LLVM_LIBRARY_VISIBILITY DetectRoundChange : public MachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY SparcDetectRoundChangeLegacy
+    : public MachineFunctionPass {
 public:
   static char ID;
 
-  DetectRoundChange();
+  SparcDetectRoundChangeLegacy();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
     return "DetectRoundChange: Leon erratum detection: detect any rounding "
            "mode change request: use only the round-to-nearest rounding mode";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 

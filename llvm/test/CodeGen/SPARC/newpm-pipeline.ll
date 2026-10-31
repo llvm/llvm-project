@@ -83,6 +83,7 @@
 ; SPARC-BR-RELAX-NEXT:     branch-relaxation
 ; SPARC-NEXT:     sparc-delay-slot-filler
 ; SPARC-NEXT:     sparc-insert-nop-load
+; SPARC-NEXT:     sparc-detect-round-change
 ; SPARC-NEXT:     funclet-layout
 ; SPARC-NEXT:     remove-loads-into-fake-uses
 ; SPARC-NEXT:     StackMapLivenessPass

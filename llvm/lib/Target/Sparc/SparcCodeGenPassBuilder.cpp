@@ -57,7 +57,7 @@ void SparcCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   addMachineFunctionPass(SparcDelaySlotFillerPass(), PMW);
   addMachineFunctionPass(SparcInsertNOPLoadPass(), PMW);
-  // TODO(boomanaiden154): Add SparcDetectRoundChangePass
+  addMachineFunctionPass(SparcDetectRoundChangePass(), PMW);
   // TODO(boomanaiden154): Add SparcFixAllFDIVSQRTPass
   // TODO(boomanaiden154): Add SparcErrataWorkaroundPass
 }
