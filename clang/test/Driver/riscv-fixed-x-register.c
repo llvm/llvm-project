@@ -1,15 +1,3 @@
-// RUN: %clang --target=riscv32 -ffixed-x1 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X1 < %t %s
-// RUN: %clang --target=riscv64 -ffixed-x1 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X1 < %t %s
-// CHECK-FIXED-X1: "-target-feature" "+reserve-x1"
-
-// RUN: %clang --target=riscv32 -ffixed-x2 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X2 < %t %s
-// RUN: %clang --target=riscv64 -ffixed-x2 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X2 < %t %s
-// CHECK-FIXED-X2: "-target-feature" "+reserve-x2"
-
 // RUN: %clang --target=riscv32 -ffixed-x3 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X3 < %t %s
 // RUN: %clang --target=riscv64 -ffixed-x3 -### %s 2> %t
@@ -21,24 +9,6 @@
 // RUN: %clang --target=riscv64 -ffixed-x4 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X4 < %t %s
 // CHECK-FIXED-X4: "-target-feature" "+reserve-x4"
-
-// RUN: %clang --target=riscv32 -ffixed-x5 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X5 < %t %s
-// RUN: %clang --target=riscv64 -ffixed-x5 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X5 < %t %s
-// CHECK-FIXED-X5: "-target-feature" "+reserve-x5"
-
-// RUN: %clang --target=riscv32 -ffixed-x6 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X6 < %t %s
-// RUN: %clang --target=riscv64 -ffixed-x6 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X6 < %t %s
-// CHECK-FIXED-X6: "-target-feature" "+reserve-x6"
-
-// RUN: %clang --target=riscv32 -ffixed-x7 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X7 < %t %s
-// RUN: %clang --target=riscv64 -ffixed-x7 -### %s 2> %t
-// RUN: FileCheck --check-prefix=CHECK-FIXED-X7 < %t %s
-// CHECK-FIXED-X7: "-target-feature" "+reserve-x7"
 
 // RUN: %clang --target=riscv32 -ffixed-x8 -### %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-FIXED-X8 < %t %s
@@ -186,35 +156,30 @@
 
 // Test multiple of reserve-x# options together.
 // RUN: %clang --target=riscv32 \
-// RUN: -ffixed-x1 \
-// RUN: -ffixed-x2 \
+// RUN: -ffixed-x3 \
+// RUN: -ffixed-x4 \
 // RUN: -ffixed-x18 \
 // RUN: -### %s 2> %t
 // RUN: FileCheck \
-// RUN: --check-prefix=CHECK-FIXED-X1 \
-// RUN: --check-prefix=CHECK-FIXED-X2 \
+// RUN: --check-prefix=CHECK-FIXED-X3 \
+// RUN: --check-prefix=CHECK-FIXED-X4 \
 // RUN: --check-prefix=CHECK-FIXED-X18 \
 // RUN: < %t %s
 // RUN: %clang --target=riscv64 \
-// RUN: -ffixed-x1 \
-// RUN: -ffixed-x2 \
+// RUN: -ffixed-x3 \
+// RUN: -ffixed-x4 \
 // RUN: -ffixed-x18 \
 // RUN: -### %s 2> %t
 // RUN: FileCheck \
-// RUN: --check-prefix=CHECK-FIXED-X1 \
-// RUN: --check-prefix=CHECK-FIXED-X2 \
+// RUN: --check-prefix=CHECK-FIXED-X3 \
+// RUN: --check-prefix=CHECK-FIXED-X4 \
 // RUN: --check-prefix=CHECK-FIXED-X18 \
 // RUN: < %t %s
 
 // Test all reserve-x# options together.
 // RUN: %clang --target=riscv32 \
-// RUN: -ffixed-x1 \
-// RUN: -ffixed-x2 \
 // RUN: -ffixed-x3 \
 // RUN: -ffixed-x4 \
-// RUN: -ffixed-x5 \
-// RUN: -ffixed-x6 \
-// RUN: -ffixed-x7 \
 // RUN: -ffixed-x8 \
 // RUN: -ffixed-x9 \
 // RUN: -ffixed-x10 \
@@ -241,13 +206,8 @@
 // RUN: -ffixed-x31 \
 // RUN: -### %s 2> %t
 // RUN: FileCheck \
-// RUN: --check-prefix=CHECK-FIXED-X1 \
-// RUN: --check-prefix=CHECK-FIXED-X2 \
 // RUN: --check-prefix=CHECK-FIXED-X3 \
 // RUN: --check-prefix=CHECK-FIXED-X4 \
-// RUN: --check-prefix=CHECK-FIXED-X5 \
-// RUN: --check-prefix=CHECK-FIXED-X6 \
-// RUN: --check-prefix=CHECK-FIXED-X7 \
 // RUN: --check-prefix=CHECK-FIXED-X8 \
 // RUN: --check-prefix=CHECK-FIXED-X9 \
 // RUN: --check-prefix=CHECK-FIXED-X10 \
@@ -274,13 +234,8 @@
 // RUN: --check-prefix=CHECK-FIXED-X31 \
 // RUN: < %t %s
 // RUN: %clang --target=riscv64 \
-// RUN: -ffixed-x1 \
-// RUN: -ffixed-x2 \
 // RUN: -ffixed-x3 \
 // RUN: -ffixed-x4 \
-// RUN: -ffixed-x5 \
-// RUN: -ffixed-x6 \
-// RUN: -ffixed-x7 \
 // RUN: -ffixed-x8 \
 // RUN: -ffixed-x9 \
 // RUN: -ffixed-x10 \
@@ -307,13 +262,8 @@
 // RUN: -ffixed-x31 \
 // RUN: -### %s 2> %t
 // RUN: FileCheck \
-// RUN: --check-prefix=CHECK-FIXED-X1 \
-// RUN: --check-prefix=CHECK-FIXED-X2 \
 // RUN: --check-prefix=CHECK-FIXED-X3 \
 // RUN: --check-prefix=CHECK-FIXED-X4 \
-// RUN: --check-prefix=CHECK-FIXED-X5 \
-// RUN: --check-prefix=CHECK-FIXED-X6 \
-// RUN: --check-prefix=CHECK-FIXED-X7 \
 // RUN: --check-prefix=CHECK-FIXED-X8 \
 // RUN: --check-prefix=CHECK-FIXED-X9 \
 // RUN: --check-prefix=CHECK-FIXED-X10 \

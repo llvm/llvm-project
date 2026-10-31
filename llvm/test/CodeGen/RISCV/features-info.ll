@@ -117,7 +117,6 @@
 ; CHECK-NEXT:   prefer-w-inst                    - Prefer instructions with W suffix.
 ; CHECK-NEXT:   q                                - 'Q' (Quad-Precision Floating-Point).
 ; CHECK-NEXT:   relax                            - Enable Linker relaxation.
-; CHECK-NEXT:   reserve-x1                       - Reserve X1.
 ; CHECK-NEXT:   reserve-x10                      - Reserve X10.
 ; CHECK-NEXT:   reserve-x11                      - Reserve X11.
 ; CHECK-NEXT:   reserve-x12                      - Reserve X12.
@@ -128,7 +127,6 @@
 ; CHECK-NEXT:   reserve-x17                      - Reserve X17.
 ; CHECK-NEXT:   reserve-x18                      - Reserve X18.
 ; CHECK-NEXT:   reserve-x19                      - Reserve X19.
-; CHECK-NEXT:   reserve-x2                       - Reserve X2.
 ; CHECK-NEXT:   reserve-x20                      - Reserve X20.
 ; CHECK-NEXT:   reserve-x21                      - Reserve X21.
 ; CHECK-NEXT:   reserve-x22                      - Reserve X22.
@@ -143,9 +141,6 @@
 ; CHECK-NEXT:   reserve-x30                      - Reserve X30.
 ; CHECK-NEXT:   reserve-x31                      - Reserve X31.
 ; CHECK-NEXT:   reserve-x4                       - Reserve X4.
-; CHECK-NEXT:   reserve-x5                       - Reserve X5.
-; CHECK-NEXT:   reserve-x6                       - Reserve X6.
-; CHECK-NEXT:   reserve-x7                       - Reserve X7.
 ; CHECK-NEXT:   reserve-x8                       - Reserve X8.
 ; CHECK-NEXT:   reserve-x9                       - Reserve X9.
 ; CHECK-NEXT:   rva20s64                         - RISC-V rva20s64 profile.

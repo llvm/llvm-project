@@ -1,7 +1,3 @@
-; RUN: not llc -mtriple=riscv32 -mattr=+reserve-x1 < %s 2>&1 | FileCheck %s -check-prefix=X1
-; RUN: not llc -mtriple=riscv64 -mattr=+reserve-x1 < %s 2>&1 | FileCheck %s -check-prefix=X1
-; RUN: not llc -mtriple=riscv32 -mattr=+reserve-x2 < %s 2>&1 | FileCheck %s -check-prefix=X2
-; RUN: not llc -mtriple=riscv64 -mattr=+reserve-x2 < %s 2>&1 | FileCheck %s -check-prefix=X2
 ; RUN: not llc -mtriple=riscv32 -mattr=+reserve-x8 < %s 2>&1 | FileCheck %s -check-prefix=X8
 ; RUN: not llc -mtriple=riscv64 -mattr=+reserve-x8 < %s 2>&1 | FileCheck %s -check-prefix=X8
 ; RUN: not llc -mtriple=riscv32 -mattr=+reserve-x10 < %s 2>&1 | FileCheck %s -check-prefix=X10
@@ -16,8 +12,6 @@
 ; errors are produced when no registers are reserved.
 
 define i32 @caller(i32 %a) #0 {
-; X1: in function caller {{.*}} Return address register required, but has been reserved.
-; X2: in function caller {{.*}} Stack pointer required, but has been reserved.
 ; X8: in function caller {{.*}} Frame pointer required, but has been reserved.
 ; X10: in function caller {{.*}} Argument register required, but has been reserved.
 ; X10: in function caller {{.*}} Return value register required, but has been reserved.
