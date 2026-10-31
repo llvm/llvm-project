@@ -47,6 +47,7 @@ using namespace llvm;
 #define DEBUG_TYPE "simplifycfg"
 
 STATISTIC(NumSimpl, "Number of blocks simplified");
+STATISTIC(NumSimplifyIterations, "Number of SimplifyCFG iterations");
 
 static bool
 performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
@@ -207,8 +208,28 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   (void)IterCnt;
   while (LocalChange) {
     assert(IterCnt++ < 2000 && "Iterative simplification didn't converge!");
+    ++NumSimplifyIterations;
     LocalChange = false;
 
+    SmallVector<WeakVH, 16> Worklist;
+    auto SimplifyBlock = [&](BasicBlock *BB) {
+      WeakVH Pred(BB->getSinglePredecessor());
+      if (!simplifyCFG(BB, TTI, DTU, Options, LoopHeaders))
+        return false;
+      ++NumSimpl;
+
+      // Removing an empty block can make both successors of its predecessor
+      // identical. Revisit that predecessor without rescanning the function,
+      // so that this simplification can propagate up a long branch chain.
+      if (auto *PredBB = dyn_cast_or_null<BasicBlock>(Pred))
+        if (!DTU || !DTU->isBBPendingDeletion(PredBB))
+          if (auto *BI = dyn_cast<CondBrInst>(PredBB->getTerminator()))
+            if (BI->getSuccessor(0) == BI->getSuccessor(1))
+              Worklist.emplace_back(PredBB);
+      return true;
+    };
+
+    unsigned ResimplifyBudget = 0;
     // Loop over all of the basic blocks and remove them if they are unneeded.
     for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
       BasicBlock &BB = *BBIt++;
@@ -221,10 +242,18 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
         while (BBIt != F.end() && DTU->isBBPendingDeletion(&*BBIt))
           ++BBIt;
       }
-      if (simplifyCFG(&BB, TTI, DTU, Options, LoopHeaders)) {
-        LocalChange = true;
-        ++NumSimpl;
-      }
+      ++ResimplifyBudget;
+      LocalChange |= SimplifyBlock(&BB);
+    }
+
+    // Revisit blocks after the scan, as they may be deleted. Bound this work by
+    // the number of blocks visited in the scan, so that the outer convergence
+    // check still catches transformations that do not reach a fixpoint.
+    while (ResimplifyBudget && !Worklist.empty()) {
+      --ResimplifyBudget;
+      auto *BB = dyn_cast_or_null<BasicBlock>(Worklist.pop_back_val());
+      if (BB && (!DTU || !DTU->isBBPendingDeletion(BB)))
+        LocalChange |= SimplifyBlock(BB);
     }
     Changed |= LocalChange;
   }
