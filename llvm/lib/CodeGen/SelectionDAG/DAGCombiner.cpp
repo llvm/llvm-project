@@ -6596,6 +6596,34 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
     }
   }
 
+  // Narrow min/max of an extend and a constant that fits in the narrow type, as
+  // InstCombine does. Extends can also be formed later by target combines.
+  //   min/max (sext X), C -> sext (min/max X, trunc C)
+  //   umin/umax (zext X), C -> zext (umin/umax X, trunc C)
+  //   smin/smax (zext X), C -> zext (umin/umax X, trunc C)
+  // In the last form C fits in X's type, so both operands are non-negative and
+  // signed and unsigned agree. Only do this before operation legalization, as
+  // targets such as AMDGPU promote narrow min/max back to the wider type.
+  if (!LegalOperations &&
+      (N0.getOpcode() == ISD::SIGN_EXTEND ||
+       N0.getOpcode() == ISD::ZERO_EXTEND) &&
+      N0.hasOneUse() && sd_match(N1, m_ConstInt(C))) {
+    SDValue X = N0.getOperand(0);
+    EVT NarrowVT = X.getValueType();
+    unsigned NarrowBits = NarrowVT.getScalarSizeInBits();
+    bool IsSExt = N0.getOpcode() == ISD::SIGN_EXTEND;
+    bool IsSigned = Opcode == ISD::SMIN || Opcode == ISD::SMAX;
+    unsigned NarrowOpc = !IsSExt && IsSigned
+                             ? ISD::getOppositeSignednessMinMaxOpcode(Opcode)
+                             : Opcode;
+    if ((IsSExt ? C.isSignedIntN(NarrowBits) : C.isIntN(NarrowBits)) &&
+        TLI.isOperationLegalOrCustom(NarrowOpc, NarrowVT)) {
+      SDValue NarrowC = DAG.getConstant(C.trunc(NarrowBits), DL, NarrowVT);
+      SDValue MinMax = DAG.getNode(NarrowOpc, DL, NarrowVT, X, NarrowC);
+      return DAG.getNode(N0.getOpcode(), DL, VT, MinMax);
+    }
+  }
+
   if (Opcode == ISD::SMIN || Opcode == ISD::SMAX)
     if (SDValue S = PerformMinMaxFpToSatCombine(
             N0, N1, N0, N1, Opcode == ISD::SMIN ? ISD::SETLT : ISD::SETGT, DAG))
