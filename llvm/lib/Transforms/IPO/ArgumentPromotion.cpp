@@ -777,6 +777,28 @@ static bool findArgParts(Argument *Arg, const DataLayout &DL, AAResults &AAR,
         if (AAR.canBasicBlockModify(*TranspBB, Loc))
           return false;
     }
+
+    
+    // Recursive calls reuse the value loaded at function entry.
+    // Check that this memory hasn't changed before passing it along.
+    if (!Arg->getParamByValType()) {
+      for (CallBase *Call : RecursiveCalls) {
+        BasicBlock *CallBB = Call->getParent();
+        Instruction *LastBeforeCall = Call->getPrevNode();
+
+        // Check instructions before the call, not the call itself.
+        // canInstructionRangeModRef includes both endpoints.
+        if (LastBeforeCall && AAR.canInstructionRangeModRef( CallBB->front(), *LastBeforeCall, Loc, ModRefInfo::Mod)) return false;
+
+        // Also check predecessor blocks on paths leading to this call.
+        for (BasicBlock *P : predecessors(CallBB)) {
+          for (BasicBlock *TranspBB : inverse_depth_first(P)) {
+            if (AAR.canBasicBlockModify(*TranspBB, Loc)) return false;
+          }
+        }
+      }
+    }
+
   }
 
   // If the path from the entry of the function to each load is free of
