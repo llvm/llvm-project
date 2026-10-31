@@ -95,6 +95,10 @@ class Driver {
 
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS;
 
+  /// Stream used for informational output produced by verbose driver modes.
+  /// Diagnostics continue to use the diagnostics engine.
+  raw_ostream *VerboseOutputStream;
+
   enum DriverMode {
     GCCMode,
     GXXMode,
@@ -412,6 +416,15 @@ public:
   bool getCheckInputsExist() const { return CheckInputsExist; }
 
   void setCheckInputsExist(bool Value) { CheckInputsExist = Value; }
+
+  /// Replace the stream used for informational verbose output. The caller
+  /// retains ownership and must keep the stream alive for this Driver.
+  void setVerboseOutputStream(raw_ostream &Value) {
+    VerboseOutputStream = &Value;
+  }
+
+  /// Return the stream used for informational verbose output.
+  raw_ostream &getVerboseOutputStream() const { return *VerboseOutputStream; }
 
   bool getProbePrecompiled() const { return ProbePrecompiled; }
   void setProbePrecompiled(bool Value) { ProbePrecompiled = Value; }

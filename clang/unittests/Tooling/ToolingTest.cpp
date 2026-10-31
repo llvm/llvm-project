@@ -26,6 +26,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 #include <algorithm>
@@ -54,6 +55,23 @@ protected:
 
 private:
   std::unique_ptr<clang::ASTConsumer> TestConsumer;
+};
+
+class VerifyVerboseOutputAction : public ToolAction {
+public:
+  VerifyVerboseOutputAction(llvm::raw_ostream &Expected, bool &Observed)
+      : Expected(Expected), Observed(Observed) {}
+
+  bool runInvocation(std::shared_ptr<CompilerInvocation>, FileManager *,
+                     std::shared_ptr<PCHContainerOperations>,
+                     DiagnosticConsumer *) override {
+    Observed = getVerboseOutputStream() == &Expected;
+    return true;
+  }
+
+private:
+  llvm::raw_ostream &Expected;
+  bool &Observed;
 };
 
 class FindTopLevelDeclConsumer : public clang::ASTConsumer {
@@ -224,6 +242,54 @@ TEST(ToolInvocation, TestMapVirtualFile) {
   InMemoryFileSystem->addFile("def/abc", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
   EXPECT_TRUE(Invocation.run());
+}
+
+TEST(ToolInvocation, VerboseOutputStream) {
+  auto OverlayFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+          llvm::vfs::getRealFileSystem());
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  OverlayFileSystem->pushOverlay(InMemoryFileSystem);
+  auto Files = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(),
+                                                      OverlayFileSystem);
+  InMemoryFileSystem->addFile("test.cpp", 0,
+                              llvm::MemoryBuffer::getMemBuffer("int value;\n"));
+
+  std::vector<std::string> Args = {"tool-executable", "-v", "-fsyntax-only",
+                                   "test.cpp"};
+  ToolInvocation Invocation(Args, std::make_unique<SyntaxOnlyAction>(),
+                            Files.get());
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  Invocation.setVerboseOutputStream(OS);
+
+  EXPECT_TRUE(Invocation.run());
+  OS.flush();
+  EXPECT_NE(Output.find("clang version"), std::string::npos);
+  EXPECT_NE(Output.find("clang Invocation:"), std::string::npos);
+  EXPECT_NE(Output.find("-cc1"), std::string::npos);
+  EXPECT_NE(Output.find("clang -cc1 version"), std::string::npos);
+  EXPECT_NE(Output.find("End of search list."), std::string::npos);
+}
+
+TEST(ToolInvocation, PropagatesVerboseOutputStreamToToolAction) {
+  auto FileSystem = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  FileSystem->addFile("test.cpp", 0,
+                      llvm::MemoryBuffer::getMemBuffer("int value;\n"));
+  FileManager Files(FileSystemOptions(), FileSystem);
+  std::string Output;
+  llvm::raw_string_ostream OS(Output);
+  bool Observed = false;
+  VerifyVerboseOutputAction Action(OS, Observed);
+  std::vector<std::string> Args = {"tool-executable", "-v", "-fsyntax-only",
+                                   "test.cpp"};
+  ToolInvocation Invocation(Args, &Action, &Files,
+                            std::make_shared<PCHContainerOperations>());
+  Invocation.setVerboseOutputStream(OS);
+
+  EXPECT_TRUE(Invocation.run());
+  EXPECT_TRUE(Observed);
 }
 
 TEST(ToolInvocation, TestVirtualModulesCompilation) {
