@@ -2807,6 +2807,7 @@ private:
       ReducedBitcastBSwapLoads,
       ReducedBitPack,
       ReducedCmpBitcast,
+      ExtractedFieldsBSwap,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -15246,6 +15247,42 @@ void BoUpSLP::transformNodes() {
         is_contained({Instruction::FAdd, Instruction::FSub}, TE->getOpcode()))
       CombineFMulAdd(*TE);
 
+  // The gathers of the fully reversed bytes of a scalar are emitted as a byte
+  // swap of the scalar, if profitable.
+  SmallVector<TreeEntry *> GatherNodes;
+  SmallVector<SmallVector<Value *>> GatheredScalars;
+  for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
+    if (!TE->isGather() || !TE->ReuseShuffleIndices.empty() ||
+        !TE->CombinedEntriesWithIndices.empty())
+      continue;
+    GatherNodes.push_back(TE.get());
+    SmallVector<Value *> &VL =
+        GatheredScalars.emplace_back(TE->Scalars.begin(), TE->Scalars.end());
+    SmallVector<int> ReorderMask(TE->ReorderIndices.begin(),
+                                 TE->ReorderIndices.end());
+    if (!ReorderMask.empty())
+      reorderScalars(VL, ReorderMask);
+  }
+  SmallBitVector BSwapGathers = selectBSwapGathers(
+      GatheredScalars, *DL, *TTI, Opts.slp_revec, CostKind,
+      [&](Value *Src)
+          -> std::optional<
+              std::tuple<const void *, FixedVectorType *, unsigned>> {
+        ArrayRef<TreeEntry *> TEs = getTreeEntries(Src);
+        const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
+          return TransformedToGatherNodes.contains(TE) ||
+                 DeletedNodes.contains(TE);
+        });
+        if (It == TEs.end())
+          return std::nullopt;
+        return std::make_tuple(*It,
+                               cast<FixedVectorType>(getWidenedType(
+                                   Src->getType(), (*It)->getVectorFactor())),
+                               (*It)->findLaneForValue(Src));
+      });
+  for (unsigned Idx : BSwapGathers.set_bits())
+    GatherNodes[Idx]->CombinedOp = TreeEntry::ExtractedFieldsBSwap;
+
   if (LoadEntriesToVectorize.empty()) {
     // Single load node - exit.
     if (VectorizableTree.size() <= 1 && getRootNode().hasState() &&
@@ -16196,11 +16233,11 @@ public:
         getAllOnesValue(*R.DL, ScalarTy->getScalarType()));
   }
   /// Estimates the cost of the gather of zero-extended sub-fields of width
-  /// \p FieldWidth of the same wider integer scalar \p Src, permuted by
-  /// \p Mask, as a bitcast to the field vector plus a permutation and an
-  /// extension to the lane type.
+  /// \p FieldWidth of the same wider integer scalar \p Src, byte swapped if
+  /// \p IsBSwap, permuted by \p Mask, as a bitcast to the field vector plus a
+  /// permutation and an extension to the lane type.
   InstructionCost createExtractedFieldsVector(Value *Src, unsigned FieldWidth,
-                                              ArrayRef<int> Mask,
+                                              ArrayRef<int> Mask, bool IsBSwap,
                                               const TreeEntry &E) {
     auto *FieldTy = IntegerType::get(Src->getContext(), FieldWidth);
     unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
@@ -16211,6 +16248,11 @@ public:
     TTI::CastContextHint CCH = R.getCastContextHint(E);
     InstructionCost Cost = TTI.getCastInstrCost(
         Instruction::BitCast, FieldVecTy, Src->getType(), CCH, CostKind);
+    if (IsBSwap) {
+      IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, Src->getType(),
+                                        {Src->getType()});
+      Cost += TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+    }
     // The permutation is elided only for the full-length identity mask.
     if (Mask.size() != NumFields ||
         !ShuffleVectorInst::isIdentityMask(Mask, NumFields))
@@ -23254,27 +23296,34 @@ public:
                     });
   }
   /// Emits the gather of zero-extended sub-fields of width \p FieldWidth of
-  /// the same wider integer scalar \p Src, permuted by \p Mask, as a bitcast
-  /// to the field vector plus a permutation and an extension to the lane type.
+  /// the same wider integer scalar \p Src, byte swapped if \p IsBSwap,
+  /// permuted by \p Mask, as a bitcast to the field vector plus a permutation
+  /// and an extension to the lane type.
   Value *createExtractedFieldsVector(Value *Src, unsigned FieldWidth,
-                                     ArrayRef<int> Mask, const TreeEntry &) {
+                                     ArrayRef<int> Mask, bool IsBSwap,
+                                     const TreeEntry &) {
     auto *FieldTy = IntegerType::get(Src->getContext(), FieldWidth);
     unsigned SrcWidth = Src->getType()->getIntegerBitWidth();
     assert(SrcWidth % FieldWidth == 0 &&
            "Expected the field width to divide the source width.");
-    Value *Vec = Builder.CreateBitCast(
-        Src, getWidenedType(FieldTy, SrcWidth / FieldWidth));
+    Value *Vec =
+        IsBSwap ? Builder.CreateUnaryIntrinsic(Intrinsic::bswap, Src) : Src;
+    Vec = Builder.CreateBitCast(Vec,
+                                getWidenedType(FieldTy, SrcWidth / FieldWidth));
     if (auto *I = dyn_cast<Instruction>(Vec)) {
+      auto *SrcUser = IsBSwap ? cast<Instruction>(I->getOperand(0)) : I;
+      R.GatherShuffleExtractSeq.insert(SrcUser);
       R.GatherShuffleExtractSeq.insert(I);
       R.CSEBlocks.insert(I->getParent());
-      // A vectorized source scalar is erased; extract it for the bitcast.
+      // A vectorized source scalar is erased; extract it for its user.
       ArrayRef<TreeEntry *> TEs = R.getTreeEntries(Src);
       const auto *It = find_if_not(TEs, [&](const TreeEntry *TE) {
         return R.TransformedToGatherNodes.contains(TE) ||
                R.DeletedNodes.contains(TE);
       });
       if (It != TEs.end())
-        R.ExternalUses.emplace_back(Src, I, **It, (*It)->findLaneForValue(Src));
+        R.ExternalUses.emplace_back(Src, SrcUser, **It,
+                                    (*It)->findLaneForValue(Src));
     }
     Vec = createShuffle(Vec, /*V2=*/nullptr, Mask);
     // The extracted fields are unsigned.
@@ -23416,7 +23465,16 @@ std::optional<ResTy> BoUpSLP::processExtractedFieldsGather(
   Value *Src = std::get<0>(*ExtractedFields);
   unsigned FieldWidth = std::get<1>(*ExtractedFields);
   SmallVector<int> &Mask = std::get<2>(*ExtractedFields);
-  return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask, *E);
+  bool IsBSwap = E->CombinedOp == TreeEntry::ExtractedFieldsBSwap;
+  assert((!IsBSwap ||
+          (FieldWidth == 8 &&
+           ShuffleVectorInst::isReverseMask(
+               Mask, Src->getType()->getIntegerBitWidth() / FieldWidth))) &&
+         "Expected the full reversal of the bytes.");
+  if (IsBSwap)
+    std::iota(Mask.begin(), Mask.end(), 0);
+  return ShuffleBuilder.createExtractedFieldsVector(Src, FieldWidth, Mask,
+                                                    IsBSwap, *E);
 }
 
 template <typename BVTy, typename ResTy, typename... Args>
