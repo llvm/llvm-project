@@ -113,6 +113,9 @@ public:
             else if (auto *STM = dyn_cast<SwitchTypeMatcher>(N))
               for (unsigned I = 0; I < STM->getNumCases(); I++)
                 Statistic(STM->getCaseMatcher(I));
+            else if (auto *SCIM = dyn_cast<SwitchChildIntegerMatcher>(N))
+              for (unsigned I = 0; I < SCIM->getNumCases(); I++)
+                Statistic(SCIM->getCaseMatcher(I));
             else if (auto *CPM = dyn_cast<CheckComplexPatMatcher>(N))
               ++ComplexPatternUsage[&CPM->getPattern()];
             else if (auto *CPPM = dyn_cast<CheckPatternPredicateMatcher>(N))
@@ -435,6 +438,23 @@ unsigned MatcherTableEmitter::SizeMatcher(Matcher *N, raw_ostream &OS) {
     return Size;
   }
 
+  // SwitchChildInteger has its kind, the child number, a series of child size +
+  // value + child, and a trailing zero.
+  case Matcher::SwitchChildInteger: {
+    SwitchChildIntegerMatcher *SCIM = cast<SwitchChildIntegerMatcher>(N);
+    unsigned Size = 2; // Count the kind and the child number.
+    for (unsigned i = 0, e = SCIM->getNumCases(); i != e; ++i) {
+      MatcherList &Child = SCIM->getCaseMatcher(i);
+      const unsigned ChildSize = SizeMatcherList(Child, OS);
+      assert(ChildSize != 0 && "Matcher cannot have child of size 0");
+      Child.setSize(ChildSize);
+      Size += GetVBRSize(ChildSize) + ChildSize; // Count VBR and child size.
+      Size += getSLEB128Size(SCIM->getCaseValue(i)); // Count the value.
+    }
+    ++Size; // Count the zero sentinel.
+    return Size;
+  }
+
   default:
     // Employ the matcher emitter to size other matchers.
     return EmitMatcher(N, 0, Idx, OS);
@@ -748,6 +768,51 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << (isa<SwitchOpcodeMatcher>(N) ? " // EndSwitchOpcode"
                                          : " // EndSwitchType");
 
+    OS << '\n';
+    return CurrentIdx - StartIdx + 1;
+  }
+
+  case Matcher::SwitchChildInteger: {
+    const SwitchChildIntegerMatcher *SCIM = cast<SwitchChildIntegerMatcher>(N);
+    unsigned StartIdx = CurrentIdx;
+
+    OS << "OPC_SwitchChildInteger, " << SCIM->getChildNo() << ", ";
+    if (!OmitComments)
+      OS << "/*" << SCIM->getNumCases() << " cases */";
+    CurrentIdx += 2;
+
+    // For each case we emit the size, then the value, then the matcher.
+    for (unsigned i = 0, e = SCIM->getNumCases(); i != e; ++i) {
+      const MatcherList &Child = SCIM->getCaseMatcher(i);
+
+      if (i != 0) {
+        if (!OmitComments)
+          OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+        OS.indent(Indent);
+        if (!OmitComments)
+          OS << "/*SwitchChildInteger*/ ";
+      }
+
+      unsigned ChildSize = Child.getSize();
+      CurrentIdx += EmitVBRValue(ChildSize, OS);
+      OS << ' ';
+      CurrentIdx += EmitSignedVBRValue(SCIM->getCaseValue(i), OS);
+      if (!OmitComments)
+        OS << " // ->" << CurrentIdx + ChildSize;
+      OS << '\n';
+
+      ChildSize = EmitMatcherList(Child, Indent + 1, CurrentIdx, OS);
+      assert(ChildSize == Child.getSize() &&
+             "Emitted child size does not match calculated size");
+      CurrentIdx += ChildSize;
+    }
+
+    // Emit the final zero to terminate the switch.
+    if (!OmitComments)
+      OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+    OS.indent(Indent) << "0,";
+    if (!OmitComments)
+      OS << " // EndSwitchChildInteger";
     OS << '\n';
     return CurrentIdx - StartIdx + 1;
   }
@@ -1543,6 +1608,8 @@ static StringRef getOpcodeString(Matcher::KindTy Kind) {
     return "OPC_CheckInteger";
   case Matcher::CheckChildInteger:
     return "OPC_CheckChildInteger";
+  case Matcher::SwitchChildInteger:
+    return "OPC_SwitchChildInteger";
   case Matcher::CheckCondCode:
     return "OPC_CheckCondCode";
   case Matcher::CheckChild2CondCode:
