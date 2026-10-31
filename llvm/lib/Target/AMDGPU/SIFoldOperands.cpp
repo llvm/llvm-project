@@ -1723,6 +1723,23 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
 
   unsigned Opc = MI->getOpcode();
 
+  // (src0 << src1) + 0 -> src0 << src1
+  if (Opc == AMDGPU::V_LSHL_ADD_U32_e64) {
+    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int AddIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    std::optional<int64_t> Addend =
+        TII->getImmOrMaterializedImm(*MRI, MI->getOperand(AddIdx));
+
+    if (Addend && static_cast<uint32_t>(*Addend) == 0) {
+      MachineOperand Data = MI->getOperand(DataIdx);
+      MI->removeOperand(AddIdx);
+      MI->removeOperand(DataIdx);
+      MI->addOperand(*MF, Data);
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::V_LSHLREV_B32_e64));
+      return true;
+    }
+  }
+
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   if (Src0Idx == -1)
     return false;
