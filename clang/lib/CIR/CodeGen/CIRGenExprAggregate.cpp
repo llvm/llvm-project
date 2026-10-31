@@ -653,8 +653,11 @@ public:
   }
 
   void VisitCXXScalarValueInitExpr(CXXScalarValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "AggExprEmitter: VisitCXXScalarValueInitExpr");
+    QualType ty = e->getType();
+    mlir::Location loc = cgf.getLoc(e->getSourceRange());
+    AggValueSlot slot = ensureSlot(loc, ty);
+    emitNullInitializationToLValue(loc,
+                                   cgf.makeAddrLValue(slot.getAddress(), ty));
   }
   void VisitCXXTypeidExpr(CXXTypeidExpr *e) { emitAggLoadOfLValue(e); }
   void VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *e) {
