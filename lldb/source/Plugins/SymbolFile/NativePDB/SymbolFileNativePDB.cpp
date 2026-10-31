@@ -616,16 +616,16 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
       func_addr, AddressRanges{AddressRange(func_addr, sol.length)});
 
   comp_unit.AddFunction(func_sp);
+  if (proc.FunctionType.isNoneType())
+    return func_sp;
 
-  if (!proc.FunctionType.isNoneType()) {
-    auto ts_or_err = GetTypeSystemForLanguage(comp_unit.GetLanguage());
-    if (auto err = ts_or_err.takeError())
-      return func_sp;
-    auto ts = *ts_or_err;
-    if (ts) {
-      if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
-        ast_builder->EnsureFunction(func_id);
-    }
+  auto ts_or_err = GetTypeSystemForLanguage(comp_unit.GetLanguage());
+  if (auto err = ts_or_err.takeError())
+    return func_sp;
+  auto ts = *ts_or_err;
+  if (ts) {
+    if (PdbAstBuilder *ast_builder = ts->GetNativePDBParser())
+      ast_builder->EnsureFunction(func_id);
   }
 
   return func_sp;
