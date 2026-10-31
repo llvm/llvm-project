@@ -11,7 +11,11 @@
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/JSON.h"
@@ -19,7 +23,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <stack>
 
 #include "gtest/gtest.h"
 #include <tuple>
@@ -166,12 +169,13 @@ std::string GetMetadata(json::Object *Event) {
 }
 
 // Returns pretty-printed trace graph.
-std::string buildTraceGraph(StringRef Json) {
+std::string buildTraceGraph(StringRef Json, StringRef ExpectedGraph) {
   struct EventRecord {
     int64_t TimestampBegin;
     int64_t TimestampEnd;
     std::string Name;
     std::string Metadata;
+    bool IsInstant;
   };
   std::vector<EventRecord> Events;
 
@@ -188,6 +192,7 @@ std::string buildTraceGraph(StringRef Json) {
         TimestampBegin + TraceEventObj->getInteger("dur").value_or(0);
     std::string Name = TraceEventObj->getString("name").value_or("").str();
     std::string Metadata = GetMetadata(TraceEventObj);
+    bool IsInstant = TraceEventObj->getString("ph") == "i";
 
     // Source events are asynchronous events and may not perfectly nest the
     // synchronous events. Skip testing them.
@@ -200,69 +205,108 @@ std::string buildTraceGraph(StringRef Json) {
       continue;
 
     Events.emplace_back(
-        EventRecord{TimestampBegin, TimestampEnd, Name, Metadata});
+        EventRecord{TimestampBegin, TimestampEnd, Name, Metadata, IsInstant});
   }
 
-  // There can be nested events that are very fast, for example:
-  // {"name":"EvaluateAsBooleanCondition",... ,"ts":2380,"dur":1}
-  // {"name":"EvaluateAsRValue",... ,"ts":2380,"dur":1}
-  // Therefore we should reverse the events list, so that events that have
-  // started earlier are first in the list.
-  // Then do a stable sort, we need it for the trace graph.
-  std::reverse(Events.begin(), Events.end());
-  llvm::stable_sort(Events, [](const auto &lhs, const auto &rhs) {
-    return std::make_pair(lhs.TimestampBegin, -lhs.TimestampEnd) <
-           std::make_pair(rhs.TimestampBegin, -rhs.TimestampEnd);
-  });
-
-  std::stringstream Stream;
-  // Write a newline for better testing with multiline string literal.
-  Stream << "\n";
-
-  // Keep the current event stack.
-  std::stack<const EventRecord *> EventStack;
-  for (const auto &Event : Events) {
-    // Pop every event in the stack until meeting the parent event.
-    while (!EventStack.empty()) {
-      bool InsideCurrentEvent =
-          Event.TimestampBegin >= EventStack.top()->TimestampBegin &&
-          Event.TimestampEnd <= EventStack.top()->TimestampEnd;
-
-      // Presumably due to timer rounding, PerformPendingInstantiations often
-      // appear to be within the timer interval of the immediately previous
-      // event group. We always know these events occur at level 1 in our
-      // tests, so keep popping until the stack is back at the root.
-      if (InsideCurrentEvent && Event.Name == "PerformPendingInstantiations" &&
-          EventStack.size() >= 2) {
-        InsideCurrentEvent = false;
-      }
-
-      if (!InsideCurrentEvent)
-        EventStack.pop();
-      else
-        break;
-    }
-    EventStack.push(&Event);
-
-    // Write indentaion, name, detail, newline.
-    for (size_t i = 1; i < EventStack.size(); ++i) {
-      Stream << "| ";
-    }
-    Stream.write(Event.Name.data(), Event.Name.size());
-    if (!Event.Metadata.empty()) {
-      Stream << " (";
-      Stream.write(Event.Metadata.data(), Event.Metadata.size());
-      Stream << ")";
-    }
-    Stream << "\n";
+  // Parse the expected graph: each line is indented one "| " per level.
+  struct ExpectedNode {
+    unsigned Depth;
+    std::string Label;
+    int Parent;
+    SmallVector<int, 4> Children;
+  };
+  std::vector<ExpectedNode> Nodes;
+  SmallVector<int, 8> LastAtDepth;
+  SmallVector<StringRef, 32> Lines;
+  ExpectedGraph.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+  for (StringRef Line : Lines) {
+    unsigned Depth = 0;
+    while (Line.consume_front("| "))
+      ++Depth;
+    if (Depth > LastAtDepth.size())
+      return "expected graph skips a level";
+    LastAtDepth.resize(Depth);
+    int Parent = Depth ? LastAtDepth.back() : -1;
+    int Index = Nodes.size();
+    LastAtDepth.push_back(Index);
+    if (Parent >= 0)
+      Nodes[Parent].Children.push_back(Index);
+    Nodes.push_back({Depth, Line.str(), Parent, {}});
   }
-  return Stream.str();
+
+  // Timestamps are truncated to microseconds, so two sibling events that fit
+  // in the same microsecond look nested and the graph cannot be rebuilt from
+  // the timestamps alone. The order of events in the trace is exact, though:
+  // an event is written when it ends, and instant events are written right
+  // after their parent. Check the expected graph's end order against it, then
+  // that each parent contains its children and that siblings do not overlap,
+  // and print the graph with any violation marked.
+  StringSet<> InstantLabels;
+  auto Label = [](const EventRecord &E) {
+    return E.Metadata.empty() ? E.Name : E.Name + " (" + E.Metadata + ")";
+  };
+  for (const EventRecord &Event : Events)
+    if (Event.IsInstant)
+      InstantLabels.insert(Label(Event));
+  auto IsInstant = [&](int N) {
+    return InstantLabels.contains(Nodes[N].Label);
+  };
+
+  std::vector<int> EndOrder;
+  auto Visit = [&](auto &Self, int N) -> void {
+    for (int C : Nodes[N].Children)
+      if (!IsInstant(C))
+        Self(Self, C);
+    EndOrder.push_back(N);
+    for (int C : Nodes[N].Children)
+      if (IsInstant(C))
+        EndOrder.push_back(C);
+  };
+  for (auto [N, Node] : enumerate(Nodes))
+    if (Node.Parent < 0)
+      Visit(Visit, N);
+
+  auto Labels = [](auto &&Range, auto Label) {
+    return join(map_range(Range, Label), "\n");
+  };
+  std::string ExpectedOrder =
+      Labels(EndOrder, [&](int N) -> StringRef { return Nodes[N].Label; });
+  std::string ActualOrder = Labels(Events, Label);
+  if (ExpectedOrder != ActualOrder)
+    return "\n(events in end order)\n" + ActualOrder + "\n";
+
+  std::vector<const EventRecord *> EventOf(Nodes.size());
+  for (auto [I, N] : enumerate(EndOrder))
+    EventOf[N] = &Events[I];
+
+  std::vector<std::string> Marks(Nodes.size());
+  for (auto [N, Node] : enumerate(Nodes)) {
+    if (Node.Parent < 0)
+      continue;
+    const EventRecord &Child = *EventOf[N];
+    const EventRecord &Parent = *EventOf[Node.Parent];
+    if (Child.TimestampBegin < Parent.TimestampBegin)
+      Marks[N] += " [starts before parent]";
+    if (Child.TimestampEnd > Parent.TimestampEnd)
+      Marks[N] += " [ends after parent]";
+  }
+  for (const ExpectedNode &Node : Nodes)
+    for (auto [S, T] : zip(Node.Children, drop_begin(Node.Children)))
+      if (EventOf[S]->TimestampEnd > EventOf[T]->TimestampBegin)
+        Marks[S] += " [overlaps next sibling]";
+
+  std::string Graph = "\n";
+  for (auto [N, Node] : enumerate(Nodes)) {
+    for (unsigned I = 0; I < Node.Depth; ++I)
+      Graph += "| ";
+    Graph += Node.Label + Marks[N] + "\n";
+  }
+  return Graph;
 }
 
 } // namespace
 
-// FIXME: Flaky test. See https://github.com/llvm/llvm-project/pull/138613
-TEST(TimeProfilerTest, DISABLED_ConstantEvaluationCxx20) {
+TEST(TimeProfilerTest, ConstantEvaluationCxx20) {
   std::string Code = R"(
 void print(double value);
 
@@ -293,7 +337,7 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
-  ASSERT_EQ(R"(
+  std::string ExpectedGraph = R"(
 ExecuteCompiler
 | Frontend (test.cc)
 | | ParseDeclarationOrFunctionDefinition (test.cc:2:1)
@@ -305,23 +349,24 @@ ExecuteCompiler
 | | | | EvaluateAsRValue (<test.cc:9:14>)
 | | | | EvaluateForOverflow (<test.cc:9:9, col:14>)
 | | | | isPotentialConstantExpr (slow_namespace::slow_func)
-| | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
-| | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
-| | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| | | | BuildCFG
+| | | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
+| | | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
+| | | | | EvaluateAsBooleanCondition (<test.cc:8:21, col:25>)
+| | | | | | EvaluateAsRValue (<test.cc:8:21, col:25>)
 | | ParseDeclarationOrFunctionDefinition (test.cc:16:1)
 | | | ParseFunctionDefinition (slow_test)
-| | | | EvaluateAsInitializer (slow_value)
-| | | | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
-| | | | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
+| | | | EvaluateAsMandatedConstantInitializer (slow_value)
+| | | | EvaluateAsMandatedConstantExpr (<test.cc:17:33, col:59>)
+| | | | EvaluateAsMandatedConstantExpr (<test.cc:18:11, col:37>)
 | | ParseDeclarationOrFunctionDefinition (test.cc:22:1)
-| | | EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
-| | | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
+| | | EvaluateAsMandatedConstantExpr (<test.cc:23:31, col:57>)
+| | | EvaluateAsMandatedConstantRValue (<test.cc:22:14, line:23:58>)
 | | ParseDeclarationOrFunctionDefinition (test.cc:25:1)
-| | | EvaluateAsInitializer (slow_init_list)
-| PerformPendingInstantiations
-)",
-            buildTraceGraph(Json));
+| | | EvaluateAsMandatedConstantInitializer (slow_init_list)
+| | PerformPendingInstantiations
+)";
+  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
 }
 
 TEST(TimeProfilerTest, ClassTemplateInstantiations) {
@@ -345,7 +390,7 @@ TEST(TimeProfilerTest, ClassTemplateInstantiations) {
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc"));
   std::string Json = teardownProfiler();
-  ASSERT_EQ(R"(
+  std::string ExpectedGraph = R"(
 ExecuteCompiler
 | Frontend (test.cc)
 | | ParseClass (S)
@@ -359,10 +404,10 @@ ExecuteCompiler
 | | | | CheckConstraintSatisfaction (<test.cc:13:7, col:14>)
 | | | | InstantiateClass (S<float>, test.cc:3)
 | | | | DeferInstantiation (S<float>::foo)
-| PerformPendingInstantiations
-| | InstantiateFunction (S<float>::foo, test.cc:5)
-)",
-            buildTraceGraph(Json));
+| | PerformPendingInstantiations
+| | | InstantiateFunction (S<float>::foo, test.cc:5)
+)";
+  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
 }
 
 TEST(TimeProfilerTest, TemplateInstantiations) {
@@ -397,7 +442,7 @@ TEST(TimeProfilerTest, TemplateInstantiations) {
   ASSERT_TRUE(compileFromString(Code, "-std=c++20", "test.cc",
                                 /*Headers=*/{{"a.h", A_H}, {"b.h", B_H}}));
   std::string Json = teardownProfiler();
-  ASSERT_EQ(R"(
+  std::string ExpectedGraph = R"(
 ExecuteCompiler
 | Frontend (test.cc)
 | | ParseFunctionDefinition (fooC)
@@ -407,17 +452,17 @@ ExecuteCompiler
 | | ParseDeclarationOrFunctionDefinition (test.cc:3:5)
 | | | ParseFunctionDefinition (user)
 | | | | DeferInstantiation (fooA<int>)
-| PerformPendingInstantiations
-| | InstantiateFunction (fooA<int>, a.h:7)
-| | | InstantiateFunction (fooB<int>, b.h:8)
-| | | | DeferInstantiation (fooC<int>)
-| | | | BuildCFG
-| | | DeferInstantiation (fooMTA<int>)
-| | | InstantiateFunction (fooC<int>, b.h:3)
-| | | | BuildCFG
-| | | InstantiateFunction (fooMTA<int>, a.h:4)
-)",
-            buildTraceGraph(Json));
+| | PerformPendingInstantiations
+| | | InstantiateFunction (fooA<int>, a.h:7)
+| | | | InstantiateFunction (fooB<int>, b.h:8)
+| | | | | DeferInstantiation (fooC<int>)
+| | | | | BuildCFG
+| | | | DeferInstantiation (fooMTA<int>)
+| | | | InstantiateFunction (fooC<int>, b.h:3)
+| | | | | BuildCFG
+| | | | InstantiateFunction (fooMTA<int>, a.h:4)
+)";
+  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
 }
 
 static SpecializationCounts
@@ -597,13 +642,13 @@ struct {
   setupProfiler();
   ASSERT_TRUE(compileFromString(Code, "-std=c99", "test.c"));
   std::string Json = teardownProfiler();
-  ASSERT_EQ(R"(
+  std::string ExpectedGraph = R"(
 ExecuteCompiler
 | Frontend (test.c)
 | | ParseDeclarationOrFunctionDefinition (test.c:2:1)
 | | | isIntegerConstantExpr (<test.c:3:18>)
 | | | EvaluateKnownConstIntCheckOverflow (<test.c:3:18>)
-| PerformPendingInstantiations
-)",
-            buildTraceGraph(Json));
+| | PerformPendingInstantiations
+)";
+  ASSERT_EQ(ExpectedGraph, buildTraceGraph(Json, ExpectedGraph));
 }
