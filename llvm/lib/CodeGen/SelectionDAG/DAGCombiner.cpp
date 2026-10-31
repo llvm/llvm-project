@@ -12393,14 +12393,15 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
       return SDValue();
   }
 
-  unsigned Opc0 = Op0.getOpcode();
-
-  // Check if the operands of the sub are (zero|sign)-extended, otherwise
-  // fallback to ValueTracking.
-  if (Opc0 != Op1.getOpcode() ||
-      (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
-       Opc0 != ISD::SIGN_EXTEND_INREG)) {
-
+  EVT VT0, VT1;
+  unsigned ABDOpcode;
+  if (sd_match(Op0, m_ZExt(m_VT(VT0))) &&
+      sd_match(Op1, m_ZExt(m_VT(VT1)))) {
+    ABDOpcode = ISD::ABDU;
+  } else if (sd_match(Op0, m_SExtOrSExtInReg(VT0, m_Value())) &&
+             sd_match(Op1, m_SExtOrSExtInReg(VT1, m_Value()))) {
+    ABDOpcode = ISD::ABDS;
+  } else {
     auto CreateZextedAbd = [&](unsigned AbdOpc) {
       if (IsAdd)
         Op1 = DAG.getNegative(Op1, SDLoc(Op1), VT);
@@ -12425,20 +12426,9 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
     return SDValue();
   }
 
-  // The IsAdd case explicitly checks for const/bv-of-const. This implies either
-  // (Opc0 != Op1.getOpcode() || Opc0 is not in {zext/sext/sign_ext_inreg}. This
-  // implies it was alrady handled by the above if statement.
+  // The IsAdd case is only handled by the fallback above, which turns the
+  // addend into a negated RHS before creating ABD.
   assert(!IsAdd && "Unexpected abs(add(x,y)) pattern");
-
-  EVT VT0, VT1;
-  if (Opc0 == ISD::SIGN_EXTEND_INREG) {
-    VT0 = cast<VTSDNode>(Op0.getOperand(1))->getVT();
-    VT1 = cast<VTSDNode>(Op1.getOperand(1))->getVT();
-  } else {
-    VT0 = Op0.getOperand(0).getValueType();
-    VT1 = Op1.getOperand(0).getValueType();
-  }
-  unsigned ABDOpcode = (Opc0 == ISD::ZERO_EXTEND) ? ISD::ABDU : ISD::ABDS;
 
   // fold abs(sext(x) - sext(y)) -> zext(abds(x, y))
   // fold abs(zext(x) - zext(y)) -> zext(abdu(x, y))
