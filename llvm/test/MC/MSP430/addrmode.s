@@ -7,7 +7,16 @@ foo:
   mov &disp+2, r15
   mov @r8, r15
   mov @r8+, r15
+  mov @r8+, 0(r15)
+  mov @r8+, 4(r15)
+  mov @r8+, 256(r15)
+  mov @r8+, &0x200
+  mov @r8+, disp
   mov #disp+2, r15
+  mov.b @r8+, r15
+  mov.b @r8+, 0(r15)
+  mov.b @r8+, &0x200
+  mov.b @r8+, disp
 
 ; CHECK: mov r8, r15           ; encoding: [0x0f,0x48]
 ; CHECK: mov disp+2(r8), r15   ; encoding: [0x1f,0x48,A,A]
@@ -15,7 +24,16 @@ foo:
 ; CHECK: mov &disp+2, r15      ; encoding: [0x1f,0x42,A,A]
 ; CHECK: mov @r8, r15          ; encoding: [0x2f,0x48]
 ; CHECK: mov @r8+, r15         ; encoding: [0x3f,0x48]
+; CHECK: mov @r8+, 0(r15)      ; encoding: [0xbf,0x48,0x00,0x00]
+; CHECK: mov @r8+, 4(r15)      ; encoding: [0xbf,0x48,0x04,0x00]
+; CHECK: mov @r8+, 256(r15)    ; encoding: [0xbf,0x48,0x00,0x01]
+; CHECK: mov @r8+, &512        ; encoding: [0xb2,0x48,0x00,0x02]
+; CHECK: mov @r8+, disp        ; encoding: [0xb0,0x48,A,A]
 ; CHECK: mov #disp+2, r15      ; encoding: [0x3f,0x40,A,A]
+; CHECK: mov.b @r8+, r15       ; encoding: [0x7f,0x48]
+; CHECK: mov.b @r8+, 0(r15)    ; encoding: [0xff,0x48,0x00,0x00]
+; CHECK: mov.b @r8+, &512      ; encoding: [0xf2,0x48,0x00,0x02]
+; CHECK: mov.b @r8+, disp      ; encoding: [0xf0,0x48,A,A]
 
   mov #42, r15
   mov #42, 12(r15)
