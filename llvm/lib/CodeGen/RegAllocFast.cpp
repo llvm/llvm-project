@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/RegAllocFast.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
@@ -281,6 +282,10 @@ private:
 
   /// Physical registers with a non-dead def on the current instruction.
   SmallVector<MCRegister, 4> LiveDefRegs;
+
+  /// Register units of subregister defs whose non-undef tied use reads the
+  /// same virtual register.
+  SmallDenseSet<MCRegUnit, 4> TiedSubRegUnits;
 
   SmallVector<unsigned, 8> DefOperandIndexes;
 
@@ -1245,6 +1250,14 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
     BundleVirtRegsMap[VirtReg] = *LRI;
   }
   markRegUsedInInstr(PhysReg);
+  if (MO.getSubReg() && MO.isTied()) {
+    const MachineOperand &TiedMO = getTiedOperand(MI, MO);
+    if (!TiedMO.isUndef() && TiedMO.getReg() == VirtReg) {
+      MCRegister SubReg = TRI->getSubReg(PhysReg, MO.getSubReg());
+      for (MCRegUnit Unit : TRI->regunits(SubReg))
+        TiedSubRegUnits.insert(Unit);
+    }
+  }
   return setPhysReg(MI, MO, *LRI);
 }
 
@@ -1655,6 +1668,7 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
   }
   RegMasks.clear();
   LiveDefRegs.clear();
+  TiedSubRegUnits.clear();
   BundleVirtRegsMap.clear();
 
   // Scan for special cases; Apply pre-assigned register defs to state.
@@ -1785,6 +1799,12 @@ void RegAllocFastImpl::allocateInstruction(MachineInstr &MI) {
       }
       assert(Reg.isPhysical());
       if (MRI->isReserved(Reg))
+        continue;
+      // The implicit super-register def must not free the assignment while a
+      // non-undef use tied to an overlapping subregister def is still pending.
+      if (any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+            return TiedSubRegUnits.contains(Unit);
+          }))
         continue;
       freePhysReg(Reg);
       unmarkRegUsedInInstr(Reg);
