@@ -653,25 +653,7 @@ private:
   friend class shared_ptr;
   template <class _Up>
   friend class weak_ptr;
-
-  friend struct __tombstone_traits<shared_ptr<_Tp> >;
 };
-
-#if _LIBCPP_STD_VER >= 17 && 0
-template <class _Tp>
-shared_ptr(weak_ptr<_Tp>) -> shared_ptr<_Tp>;
-template <class _Tp, class _Dp>
-shared_ptr(unique_ptr<_Tp, _Dp>) -> shared_ptr<_Tp>;
-
-template <class _Tp>
-struct __tombstone_traits<shared_ptr<_Tp>> {
-  static constexpr auto __disengaged_value_ =
-      __tombstone_traits_assume_aligned_pointer<__shared_weak_count*>::__disengaged_value_;
-  static constexpr size_t __is_disengaged_offset_ =
-      __builtin_offsetof(shared_ptr<_Tp>, __cntrl_) +
-      __tombstone_traits_assume_aligned_pointer<__shared_weak_count*>::__is_disengaged_offset_;
-};
-#endif // _LIBCPP_STD_VER >= 17
 
 //
 // std::allocate_shared and std::make_shared
