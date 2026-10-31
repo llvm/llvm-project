@@ -72,6 +72,10 @@ bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
   CmpInst::Predicate Pred = FCmp.getCond();
   APFloat LHS = LHSCst.getScalarValue();
   APFloat RHS = RHSCst.getScalarValue();
+  // The operand types can name different formats, for example bf16 and a plain
+  // s16, and then the constants cannot be compared.
+  if (&LHS.getSemantics() != &RHS.getSemantics())
+    return false;
 
   bool Result = FCmpInst::compare(LHS, RHS, Pred);
 

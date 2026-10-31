@@ -455,9 +455,21 @@ std::optional<FPValueAndVReg> llvm::getFConstantVRegValWithLookThrough(
   if (!Reg)
     return std::nullopt;
 
-  APFloat FloatVal(getFltSemanticForLLT(LLT::scalar(Reg->Value.getBitWidth())),
-                   Reg->Value);
-  return FPValueAndVReg{FloatVal, Reg->VReg};
+  // Read the bits in the format of VReg's type, so that operands of the same
+  // type get the same format. Other types do not name a format: use the IEEE
+  // type of the width, or the constant's own format if there is none
+  // (x86_fp80), and give up if that does not fit either (a cast changed the
+  // width).
+  LLT Ty = MRI.getType(VReg);
+  unsigned BitWidth = Reg->Value.getBitWidth();
+  const fltSemantics *Sem =
+      getFltSemanticForLLTOrNull(Ty.isFloat() ? Ty : LLT::scalar(BitWidth));
+  if (!Sem) {
+    Sem = &getConstantFPVRegVal(Reg->VReg, MRI)->getValueAPF().getSemantics();
+    if (APFloat::getSizeInBits(*Sem) != BitWidth)
+      return std::nullopt;
+  }
+  return FPValueAndVReg{APFloat(*Sem, Reg->Value), Reg->VReg};
 }
 
 const ConstantFP *

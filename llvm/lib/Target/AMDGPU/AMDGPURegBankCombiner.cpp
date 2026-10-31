@@ -273,7 +273,10 @@ bool AMDGPURegBankCombinerImpl::matchFPMinMaxToMed3(
   if (!matchMed<GFCstAndRegMatch>(MI, MRI, OpcodeTriple, Val, K0, K1))
     return false;
 
-  if (K0->Value > K1->Value)
+  // The constants can be in different formats if their registers' types name
+  // different ones, for example bf16 and a plain s16.
+  if (&K0->Value.getSemantics() != &K1->Value.getSemantics() ||
+      K0->Value > K1->Value)
     return false;
 
   // For IEEE=false perform combine only when it's safe to assume that there are
