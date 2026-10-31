@@ -127,7 +127,9 @@ public:
 #if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 reference_wrapper(_Tp&) -> reference_wrapper<_Tp>;
+#endif // _LIBCPP_STD_VER >= 17
 
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct __tombstone_traits<reference_wrapper<_Tp>> {
   // reference_wrapper<_Tp> is conceptually that same as _Tp& and can only be constructed from a _Tp&. Since references
@@ -147,7 +149,7 @@ struct __tombstone_traits<reference_wrapper<_Tp>> {
     _Tp* __value_;
   };
 };
-#endif // _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI

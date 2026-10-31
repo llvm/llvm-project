@@ -39,7 +39,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class>
 struct __tombstone_traits;
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 20
 
 // bools always have exactly one bit set. If there is more than one set it's disengaged.
 template <>
@@ -49,7 +49,7 @@ struct __tombstone_traits<bool> {
     template <class... _Args>
     constexpr __representation(_Args&&... __args) : __payload_(std::forward<_Args>(__args)...), __value_(_Np + 2) {}
 
-    bool __is_tombstone() { return __value_ == _Np + 2; }
+    constexpr bool __is_tombstone() { return __value_ == _Np + 2; }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Payload __payload_;
     unsigned char __value_;
@@ -72,12 +72,16 @@ template <class _Tp>
 struct __tombstone_traits_assume_aligned_pointer {
   template <class _Payload, size_t _Np>
   struct __representation {
+    _LIBCPP_DIAGNOSTIC_PUSH
+    _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wreorder-ctor")
     template <class... _Args>
     constexpr __representation(_Args&&... __args) : __payload_(std::forward<_Args>(__args)...), __value_(_Np + 1) {}
+    _LIBCPP_DIAGNOSTIC_POP
 
     constexpr bool __is_tombstone() { return __value_ == _Np + 1; }
 
-    static_assert(sizeof(_Tp*) - 1 - (alignof(_Payload) - 1) >= sizeof(_Payload));
+    static_assert(sizeof(_Tp*) - 1 - (alignof(_Payload) - 1) >= sizeof(_Payload),
+                  "Payload is too big for tombstone of pointer!");
 
     // clang-format off
 #  ifdef _LIBCPP_LITTLE_ENDIAN
@@ -128,10 +132,6 @@ inline constexpr struct __init_disengaged_t {
 template <class _Tp, class = void>
 struct alignas(_Tp) __dummy_payload {
   char __data_[__datasizeof_v<_Tp>];
-
-  static_assert(alignof(__dummy_payload) == alignof(_Tp));
-  static_assert(sizeof(__dummy_payload) == sizeof(_Tp));
-  static_assert(__datasizeof_v<__dummy_payload> == __datasizeof_v<_Tp>);
 };
 
 template <class _Tp>
@@ -157,7 +157,7 @@ union _MaybeTombstone {
   _MaybeTombstone& operator=(const _MaybeTombstone&) = default;
   _MaybeTombstone& operator=(_MaybeTombstone&&)      = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __is_engaged() const noexcept {
+  constexpr bool __is_engaged() const noexcept {
     if consteval {
       return __builtin_is_within_lifetime(&__value_);
     } else {
@@ -170,7 +170,7 @@ union _MaybeTombstone {
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~_MaybeTombstone() {
+  constexpr ~_MaybeTombstone() {
     if (__is_engaged()) {
       std::destroy_at(&__value_);
     } else {
@@ -199,7 +199,7 @@ union _MaybeTombstone<_Tp, _Payload, true> {
   _MaybeTombstone& operator=(const _MaybeTombstone&) = default;
   _MaybeTombstone& operator=(_MaybeTombstone&&)      = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __is_engaged() const noexcept {
+  constexpr bool __is_engaged() const noexcept {
     if consteval {
       return __builtin_is_within_lifetime(&__value_);
     } else {
@@ -211,7 +211,7 @@ union _MaybeTombstone<_Tp, _Payload, true> {
     }
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 ~_MaybeTombstone() = default;
+  constexpr ~_MaybeTombstone() = default;
 };
 
 // For a type to have a tombstone, it must have a specialization of __tombstone_traits.
@@ -223,8 +223,9 @@ union _MaybeTombstone<_Tp, _Payload, true> {
 
 template <class _Tp, class _Payload>
 struct __tombstoned_value final {
-  using _Tombstone      = __tombstone_traits<_Tp>::template __representation<_Payload, 0>;
-  using _DummyTombstone = __tombstone_traits<_Tp>::template __representation<__dummy_payload<_Payload>, 0>;
+  using _Repr           = _MaybeTombstone<_Tp, _Payload>;
+  using _Tombstone      = _Repr::_Tombstone;
+  using _DummyTombstone = _Repr::_DummyTombstone;
 
   static_assert(__builtin_is_implicit_lifetime(_DummyTombstone));
   static_assert(sizeof(_Tombstone) == sizeof(_DummyTombstone));
@@ -232,67 +233,67 @@ struct __tombstoned_value final {
   static_assert(__datasizeof_v<_Tombstone> == __datasizeof_v<_DummyTombstone>);
   static_assert(sizeof(_Tombstone) <= sizeof(_Tp), "Trying to use tombstone which can't hold T");
 
-  _MaybeTombstone<_Tp, _Payload> __data_;
+  _Repr __data_;
 
   template <class... _Args>
-  explicit _LIBCPP_HIDE_FROM_ABI constexpr __tombstoned_value(__init_disengaged_t, _Args&&... __args)
+  explicit constexpr __tombstoned_value(__init_disengaged_t, _Args&&... __args)
       : __data_(__init_disengaged, std::forward<_Args>(__args)...) {}
 
   template <class... _Args>
-  explicit _LIBCPP_HIDE_FROM_ABI constexpr __tombstoned_value(__init_engaged_t, _Args&&... __args)
+  explicit constexpr __tombstoned_value(__init_engaged_t, _Args&&... __args)
       : __data_(__init_engaged, std::forward<_Args>(__args)...) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __is_engaged() const noexcept { return __data_.__is_engaged(); }
+  constexpr bool __is_engaged() const noexcept { return __data_.__is_engaged(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_value() & noexcept {
+  constexpr auto&& __get_value() & noexcept {
     _LIBCPP_ASSERT_INTERNAL(__is_engaged(), "Trying to get the value of a disenagaged tombstoned value");
     return __data_.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_value() const& noexcept {
+  constexpr auto&& __get_value() const& noexcept {
     _LIBCPP_ASSERT_INTERNAL(__is_engaged(), "Trying to get the value of a disenagaged tombstoned value");
     return __data_.__value_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_value() && noexcept {
+  constexpr auto&& __get_value() && noexcept {
     _LIBCPP_ASSERT_INTERNAL(__is_engaged(), "Trying to get the value of a disenagaged tombstoned value");
     return std::move(__data_.__value_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_value() const&& noexcept {
+  constexpr auto&& __get_value() const&& noexcept {
     _LIBCPP_ASSERT_INTERNAL(__is_engaged(), "Trying to get the value of a disenagaged tombstoned value");
     return std::move(__data_.__value_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_payload() & noexcept {
+  constexpr auto&& __get_payload() & noexcept {
     _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an enagaged tombstoned value");
     return __data_.__tombstone_.__payload_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_payload() const& noexcept {
+  constexpr auto&& __get_payload() const& noexcept {
     _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an enagaged tombstoned value");
     return __data_.__tombstone_.__payload_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_payload() && noexcept {
+  constexpr auto&& __get_payload() && noexcept {
     _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an engaged tombstoned value");
     return std::move(__data_.__tombstone_.__payload_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto&& __get_payload() const&& noexcept {
+  constexpr auto&& __get_payload() const&& noexcept {
     _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to get the payload of an engaged tombstoned value");
     return std::move(__data_.__tombstone_.__payload_);
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __engage(in_place_t, _Args&&... __args) {
+  constexpr void __engage(in_place_t, _Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL(!__is_engaged(), "Trying to engage a already engaged tombstoned value");
     std::destroy_at(&__data_.__tombstone_);
     std::__construct_at(&__data_.__value_, std::forward<_Args>(__args)...);
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __disengage(in_place_t, _Args&&... __args) {
+  constexpr void __disengage(in_place_t, _Args&&... __args) {
     _LIBCPP_ASSERT_INTERNAL(__is_engaged(), "Trying to disengage a disengaged tombstoned value");
     std::destroy_at(&__data_.__value_);
     std::__construct_at(&__data_.__tombstone_, std::forward<_Args>(__args)...);
@@ -305,7 +306,7 @@ inline constexpr bool __has_tombstone_v = false;
 template <class _Tp>
 inline constexpr bool __has_tombstone_v<_Tp, void_t<decltype(sizeof(__tombstone_traits<_Tp>))>> = true;
 
-#endif // _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

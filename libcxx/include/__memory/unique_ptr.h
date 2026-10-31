@@ -276,10 +276,12 @@ public:
     swap(__deleter_, __u.__deleter_);
   }
 
+#if _LIBCPP_STD_VER >= 20
   friend struct __tombstone_traits<unique_ptr>;
+#endif
 };
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct __tombstone_traits<__enable_specialization_if<__has_tombstone_v<_Tp*>, unique_ptr<_Tp>>>
     : __tombstone_traits<_Tp*> {
@@ -589,10 +591,12 @@ public:
     swap(__checker_, __u.__checker_);
   }
 
+#if _LIBCPP_STD_VER >= 20
   friend struct __tombstone_traits<unique_ptr>;
+#endif
 };
 
-#if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Tp>
 struct __tombstone_traits<__enable_specialization_if<__has_tombstone_v<_Tp*>, unique_ptr<_Tp[]>>>
     : __tombstone_traits<_Tp*> {

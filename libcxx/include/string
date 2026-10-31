@@ -2490,9 +2490,9 @@ private:
   void __init(const value_type* __s, size_type __sz, size_type __reserve);
 #  endif
 
-#if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 20
   friend __tombstone_traits<basic_string>;
-#endif
+#  endif
 };
 
 // These declarations must appear before any functions are implicitly used
@@ -2583,7 +2583,7 @@ basic_string(from_range_t, _Range&&, _Allocator = _Allocator())
     -> basic_string<ranges::range_value_t<_Range>, char_traits<ranges::range_value_t<_Range>>, _Allocator>;
 #  endif
 
-#  if _LIBCPP_STD_VER >= 17
+#  if _LIBCPP_STD_VER >= 20
 template <class _CharT, class _Traits, class _Allocator>
 struct __tombstone_traits<basic_string<_CharT, _Traits, _Allocator>> {
   // If `string` is in the `__short` representation, the size can never be larger than `__min_cap`. 65 sets the bit
@@ -2621,7 +2621,7 @@ struct __tombstone_traits<basic_string<_CharT, _Traits, _Allocator>> {
 #    endif
   };
 };
-#  endif                       // _LIBCPP_STD_VER >= 17
+#  endif                       // _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
