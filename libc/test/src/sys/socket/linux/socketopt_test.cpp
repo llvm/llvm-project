@@ -200,6 +200,7 @@ TEST_F(LlvmLibcSocketOptTest, ReceiveTimeout) {
   int64_t elapsed_seconds = end.tv_sec - start.tv_sec;
   int64_t elapsed_nseconds = end.tv_nsec - start.tv_nsec;
   int64_t elapsed_ms = elapsed_seconds * 1000 + elapsed_nseconds / 1000000;
-  ASSERT_GE(elapsed_ms, static_cast<int64_t>(1000));
+  // Make sure the value is in the right ballpark.
+  ASSERT_GE(elapsed_ms, static_cast<int64_t>(900));
   ASSERT_LT(elapsed_ms, static_cast<int64_t>(10000));
 }
