@@ -75,7 +75,7 @@ std::string createQualifiedNameForReplacement(
 } // anonymous namespace
 
 IncludeFixerContext::IncludeFixerContext(
-    StringRef FilePath, std::vector<QuerySymbolInfo> QuerySymbols,
+    llvm::StringRef FilePath, std::vector<QuerySymbolInfo> QuerySymbols,
     std::vector<find_all_symbols::SymbolInfo> Symbols)
     : FilePath(FilePath), QuerySymbolInfos(std::move(QuerySymbols)),
       MatchedSymbols(std::move(Symbols)) {
