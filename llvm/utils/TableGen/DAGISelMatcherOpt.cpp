@@ -542,7 +542,19 @@ static void FactorNodes(MatcherList &ML) {
   // Check to see if all of the leading entries are now opcode checks.  If so,
   // we can convert this Scope to be a OpcodeSwitch instead.
   bool AllOpcodeChecks = true, AllTypeChecks = true;
+  // All options start with a CheckChildInteger of the same child.
+  bool AllChildIntChecks = true;
+  unsigned SwitchChildNo = 0;
   for (MatcherList &Optn : OptionsToMatch) {
+    if (AllChildIntChecks) {
+      auto *CCI = dyn_cast<CheckChildIntegerMatcher>(Optn.front());
+      if (!CCI || (&Optn != &OptionsToMatch.front() &&
+                   CCI->getChildNo() != SwitchChildNo))
+        AllChildIntChecks = false;
+      else
+        SwitchChildNo = CCI->getChildNo();
+    }
+
     // Check to see if this breaks a series of CheckOpcodeMatchers.
     if (AllOpcodeChecks && !isa<CheckOpcodeMatcher>(Optn.front())) {
 #if 0
@@ -594,6 +606,68 @@ static void FactorNodes(MatcherList &ML) {
 
     ML.erase_after(Prev);
     ML.insert_after(Prev, new SwitchOpcodeMatcher(std::move(Cases)));
+    return;
+  }
+
+  // If all the options are CheckChildInteger's of the same child, we can form
+  // the SwitchChildInteger.
+  if (AllChildIntChecks) {
+    DenseMap<int64_t, unsigned> ValueEntry;
+    SmallVector<std::pair<int64_t, MatcherList>, 8> Cases;
+    for (MatcherList &Optn : OptionsToMatch) {
+      int64_t Value = cast<CheckChildIntegerMatcher>(Optn.front())->getValue();
+      Optn.pop_front();
+
+      unsigned &Entry = ValueEntry[Value];
+      if (Entry != 0) {
+        // Duplicate values must stay in their original relative order, so put
+        // them in a scope under the first case and factor that scope.
+        ScopeMatcher *SM =
+            dyn_cast<ScopeMatcher>(Cases[Entry - 1].second.front());
+        // Create a new scope if we don't have one.
+        if (!SM) {
+          SmallVector<MatcherList, 1> Entries;
+          Entries.push_back(std::move(Cases[Entry - 1].second));
+          Cases[Entry - 1].second.push_front(
+              new ScopeMatcher(std::move(Entries)));
+          SM = cast<ScopeMatcher>(Cases[Entry - 1].second.front());
+        }
+
+        // If Optn is ScopeMatcher, merge its contents into this ScopeMatcher.
+        if (auto *ChildSM = dyn_cast<ScopeMatcher>(Optn.front())) {
+          MatcherList TmpList = std::move(Optn);
+          SmallVectorImpl<MatcherList> &Children = ChildSM->getChildren();
+          SM->getChildren().append(std::make_move_iterator(Children.begin()),
+                                   std::make_move_iterator(Children.end()));
+        } else {
+          SM->getChildren().push_back(std::move(Optn));
+        }
+        continue;
+      }
+
+      Entry = Cases.size() + 1;
+      Cases.emplace_back(Value, std::move(Optn));
+    }
+    ML.erase_after(Prev);
+
+    // Make sure we recursively factor any scopes we may have created.
+    for (auto &M : Cases) {
+      if (isa<ScopeMatcher>(M.second.front())) {
+        FactorNodes(M.second);
+        assert(!M.second.empty() && "empty matcher list");
+      }
+    }
+
+    if (Cases.size() != 1) {
+      ML.insert_after(
+          Prev, new SwitchChildIntegerMatcher(SwitchChildNo, std::move(Cases)));
+    } else {
+      // If we factored and ended up with one case, insert a type check and
+      // splice the rest.
+      auto I = ML.insert_after(
+          Prev, new CheckChildIntegerMatcher(SwitchChildNo, Cases[0].first));
+      ML.splice_after(I, Cases[0].second);
+    }
     return;
   }
 

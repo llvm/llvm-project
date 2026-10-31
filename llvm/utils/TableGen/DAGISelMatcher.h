@@ -80,6 +80,7 @@ public:
     CheckChildType,      // Fail if child has wrong type.
     CheckInteger,        // Fail if wrong val.
     CheckChildInteger,   // Fail if child is wrong val.
+    SwitchChildInteger,  // Dispatch based on an integer child's value.
     CheckCondCode,       // Fail if not condcode.
     CheckChild2CondCode, // Fail if child is wrong condcode.
     CheckValueType,
@@ -819,6 +820,40 @@ private:
            cast<CheckChildIntegerMatcher>(M)->Value == Value;
   }
   bool isContradictoryImpl(const Matcher *M) const override;
+};
+
+/// SwitchChildIntegerMatcher - Switch based on the value of an integer constant
+/// child of the current node, dispatching to one matcher per case.  If the
+/// child isn't a constant or its value doesn't match any case, then the match
+/// fails.  This is semantically equivalent to a Scope node where every child
+/// does a CheckChildInteger on the same child, but is much faster.
+class SwitchChildIntegerMatcher : public Matcher {
+  unsigned ChildNo;
+  SmallVector<std::pair<int64_t, MatcherList>, 8> Cases;
+
+public:
+  SwitchChildIntegerMatcher(
+      unsigned childno,
+      SmallVectorImpl<std::pair<int64_t, MatcherList>> &&cases)
+      : Matcher(SwitchChildInteger), ChildNo(childno), Cases(std::move(cases)) {
+  }
+
+  static bool classof(const Matcher *N) {
+    return N->getKind() == SwitchChildInteger;
+  }
+
+  unsigned getChildNo() const { return ChildNo; }
+  unsigned getNumCases() const { return Cases.size(); }
+
+  int64_t getCaseValue(unsigned i) const { return Cases[i].first; }
+  MatcherList &getCaseMatcher(unsigned i) { return Cases[i].second; }
+  const MatcherList &getCaseMatcher(unsigned i) const {
+    return Cases[i].second;
+  }
+
+private:
+  void printImpl(raw_ostream &OS, indent Indent) const override;
+  bool isEqualImpl(const Matcher *M) const override { return false; }
 };
 
 /// CheckCondCodeMatcher - This checks to see if the current node is a

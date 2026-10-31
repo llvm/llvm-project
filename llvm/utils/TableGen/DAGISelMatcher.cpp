@@ -152,6 +152,16 @@ void CheckChildIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckChildInteger " << ChildNo << " " << Value << '\n';
 }
 
+void SwitchChildIntegerMatcher::printImpl(raw_ostream &OS,
+                                          indent Indent) const {
+  OS << Indent << "SwitchChildInteger " << ChildNo << ": {\n";
+  for (const auto &C : Cases) {
+    OS << Indent << "case " << C.first << ":\n";
+    C.second.print(OS, Indent + 2);
+  }
+  OS << Indent << "}\n";
+}
+
 void CheckCondCodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckCondCode ISD::" << CondCodeName << '\n';
 }

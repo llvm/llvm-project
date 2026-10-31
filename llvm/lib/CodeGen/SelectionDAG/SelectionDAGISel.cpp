@@ -3857,6 +3857,42 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                         << '\n');
       continue;
     }
+    case OPC_SwitchChildInteger: {
+      unsigned ChildNo = MatcherTable[MatcherIndex++];
+      unsigned SwitchStart = MatcherIndex - 2;
+      (void)SwitchStart;
+      // The match fails if the child is missing or not a constant.
+      std::optional<int64_t> ChildVal;
+      if (ChildNo < N.getNumOperands())
+        if (auto *C = dyn_cast<ConstantSDNode>(N.getOperand(ChildNo)))
+          ChildVal = C->getAPIntValue().trySExtValue();
+      unsigned CaseSize;
+      while (true) {
+        // Get the size of this case.
+        CaseSize = MatcherTable[MatcherIndex++];
+        if (CaseSize & 128)
+          CaseSize = GetVBR(CaseSize, MatcherTable, MatcherIndex);
+        if (CaseSize == 0)
+          break;
+
+        int64_t CaseVal = GetSignedVBR(MatcherTable, MatcherIndex);
+
+        // If the value matches, then we will execute this case.
+        if (ChildVal && *ChildVal == CaseVal)
+          break;
+
+        // Otherwise, skip over this case.
+        MatcherIndex += CaseSize;
+      }
+
+      // If no cases matched, bail out.
+      if (CaseSize == 0)
+        break;
+
+      LLVM_DEBUG(dbgs() << "  ChildIntegerSwitch[" << ChildNo << "] from "
+                        << SwitchStart << " to " << MatcherIndex << '\n');
+      continue;
+    }
     case OPC_CheckChild0Type:
     case OPC_CheckChild1Type:
     case OPC_CheckChild2Type:
