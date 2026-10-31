@@ -2,8 +2,8 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512f -emit-llvm %s -o - | FileCheck %s
 
-// A struct output in a mask register ("k") is returned as a vector of i1. It's
-// stored to the destination as an integer of the destination's size.
+// A struct or _Complex output in a mask register ("k") is returned as a vector
+// of i1. It's stored to the destination as an integer of the destination's size.
 
 struct C {
   char a, b;
@@ -60,4 +60,19 @@ void test_mask_inout(struct C *p) {
 //
 void test_mask_tied_int(struct C *p, int x) {
   asm("" : "=k"(*p) : "0"(x));
+}
+
+// CHECK-LABEL: define dso_local void @test_complex_mask_output(
+// CHECK-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = call <16 x i1> asm "", "=k,~{dirflag},~{fpsr},~{flags}"() #[[ATTR2]], !srcloc [[META4:![0-9]+]]
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+// CHECK-NEXT:    store i16 [[TMP2]], ptr [[TMP0]], align 1
+// CHECK-NEXT:    ret void
+//
+void test_complex_mask_output(_Complex char *p) {
+  asm("" : "=k"(*p));
 }
