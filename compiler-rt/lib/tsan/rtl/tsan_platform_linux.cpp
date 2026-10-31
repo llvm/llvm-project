@@ -429,7 +429,7 @@ void InitializePlatform() {
   // is not compiled with -pie.
 #if !SANITIZER_GO
   {
-#    if CALIBRATE_LONGJMP_SP
+#    if CALIBRATE_LONGJMP_SP && !SANITIZER_ANDROID
     InitializeLongjmpSpMangling();
 #    endif
   }
