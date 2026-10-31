@@ -49,3 +49,43 @@ define i1 @vec_reverse_known_bits_demanded_fail(<4 x i8> %xx) {
   %r = icmp slt i8 %ele, 0
   ret i1 %r
 }
+
+define i1 @shl_self_not_odd(i32 %x) {
+; CHECK-LABEL: @shl_self_not_odd(
+; CHECK-NEXT:    ret i1 false
+;
+  %shift = shl i32 %x, %x
+  %cmp = icmp eq i32 %shift, 1
+  ret i1 %cmp
+}
+
+define <2 x i1> @shl_self_not_odd_vector(<2 x i8> %x) {
+; CHECK-LABEL: @shl_self_not_odd_vector(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %shift = shl <2 x i8> %x, %x
+  %cmp = icmp eq <2 x i8> %shift, splat (i8 1)
+  ret <2 x i1> %cmp
+}
+
+define i1 @shl_distinct_may_be_odd(i32 %x, i32 %y) {
+; CHECK-LABEL: @shl_distinct_may_be_odd(
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHIFT]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shift = shl i32 %x, %y
+  %cmp = icmp eq i32 %shift, 1
+  ret i1 %cmp
+}
+
+define i1 @shl_self_may_be_two(i32 %x) {
+; CHECK-LABEL: @shl_self_may_be_two(
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i32 [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SHIFT]], 2
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %shift = shl i32 %x, %x
+  %cmp = icmp eq i32 %shift, 2
+  ret i1 %cmp
+}
