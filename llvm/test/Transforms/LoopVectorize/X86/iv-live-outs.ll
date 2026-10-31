@@ -125,22 +125,19 @@ define i64 @reverse_load_liveout_only(ptr %A) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ <i32 16, i32 15>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 17, [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP1]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP4]], i64 [[TMP3]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i64 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP8]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc <2 x i64> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[A]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, ptr [[TMP10]], i64 -1
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x i32> [[TMP9]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    store <2 x i32> [[REVERSE]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[TMP9]], splat (i32 -2)
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 18
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
