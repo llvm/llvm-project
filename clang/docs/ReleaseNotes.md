@@ -1153,6 +1153,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a bug where Clang could ignore lambda constraints in return-type
   requirements.
+  
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
 
 #### Bug Fixes to AST Handling
 

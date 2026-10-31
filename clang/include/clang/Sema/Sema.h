@@ -1117,9 +1117,6 @@ public:
   sema::LambdaScopeInfo *
   getCurLambda(bool IgnoreNonLambdaCapturingScope = false);
 
-  /// Retrieve the current generic lambda info, if any.
-  sema::LambdaScopeInfo *getCurGenericLambda();
-
   /// Retrieve the current captured region, if any.
   sema::CapturedRegionScopeInfo *getCurCapturedRegion();
 
@@ -3625,10 +3622,6 @@ public:
 public:
   IdentifierResolver IdResolver;
 
-  /// The index of the first InventedParameterInfo that refers to the current
-  /// context.
-  unsigned InventedParameterInfosStart = 0;
-
   /// A RAII object to temporarily push a declaration context.
   class ContextRAII {
   private:
@@ -3637,22 +3630,19 @@ public:
     ProcessingContextState SavedContextState;
     QualType SavedCXXThisTypeOverride;
     unsigned SavedFunctionScopesStart;
-    unsigned SavedInventedParameterInfosStart;
 
   public:
     ContextRAII(Sema &S, DeclContext *ContextToPush, bool NewThisContext = true)
         : S(S), SavedContext(S.CurContext),
           SavedContextState(S.DelayedDiagnostics.pushUndelayed()),
           SavedCXXThisTypeOverride(S.CXXThisTypeOverride),
-          SavedFunctionScopesStart(S.FunctionScopesStart),
-          SavedInventedParameterInfosStart(S.InventedParameterInfosStart) {
+          SavedFunctionScopesStart(S.FunctionScopesStart) {
       assert(ContextToPush && "pushing null context");
       S.CurContext = ContextToPush;
       if (NewThisContext)
         S.CXXThisTypeOverride = QualType();
       // Any saved FunctionScopes do not refer to this context.
       S.FunctionScopesStart = S.FunctionScopes.size();
-      S.InventedParameterInfosStart = S.InventedParameterInfos.size();
     }
 
     void pop() {
@@ -3662,7 +3652,6 @@ public:
       S.DelayedDiagnostics.popUndelayed(SavedContextState);
       S.CXXThisTypeOverride = SavedCXXThisTypeOverride;
       S.FunctionScopesStart = SavedFunctionScopesStart;
-      S.InventedParameterInfosStart = SavedInventedParameterInfosStart;
       SavedContext = nullptr;
     }
 
@@ -11577,12 +11566,6 @@ public:
   void resetFPOptions(FPOptions FPO) {
     CurFPFeatures = FPO;
     FpPragmaStack.CurrentValue = FPO.getChangesFrom(FPOptions(LangOpts));
-  }
-
-  ArrayRef<InventedTemplateParameterInfo> getInventedParameterInfos() const {
-    return llvm::ArrayRef(InventedParameterInfos.begin() +
-                              InventedParameterInfosStart,
-                          InventedParameterInfos.end());
   }
 
   ArrayRef<sema::FunctionScopeInfo *> getFunctionScopes() const {

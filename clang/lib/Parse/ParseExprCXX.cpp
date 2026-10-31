@@ -1248,6 +1248,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   DeclSpec DS(AttrFactory);
   Declarator D(DS, ParsedAttributesView::none(), DeclaratorContext::LambdaExpr);
   TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+  const unsigned Depth = TemplateParameterDepth;
 
   ParseScope LambdaScope(this, Scope::LambdaScope | Scope::DeclScope |
                                    Scope::FunctionDeclarationScope |
@@ -1343,6 +1344,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
   bool HasSpecifiers = false;
   SourceLocation MutableLoc;
 
+  ParseScope ImplicitTemplateScope(
+      this, Scope::NoScope,
+      Actions.getCurLambda()->NumExplicitTemplateParams == 0);
+
   ParseScope Prototype(this, Scope::FunctionPrototypeScope |
                                  Scope::FunctionDeclarationScope |
                                  Scope::DeclScope);
@@ -1357,17 +1362,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
     LParenLoc = T.getOpenLocation();
 
     if (Tok.isNot(tok::r_paren)) {
-      Actions.RecordParsingTemplateParameterDepth(
-          CurTemplateDepthTracker.getOriginalDepth());
+      Actions.RecordParsingTemplateParameterDepth(Depth);
 
-      ParseParameterDeclarationClause(D, Attributes, ParamInfo, EllipsisLoc);
-      // For a generic lambda, each 'auto' within the parameter declaration
-      // clause creates a template type parameter, so increment the depth.
-      // If we've parsed any explicit template parameters, then the depth will
-      // have already been incremented. So we make sure that at most a single
-      // depth level is added.
-      if (Actions.getCurGenericLambda())
-        CurTemplateDepthTracker.setAddedDepth(1);
+      ParseParameterDeclarationClause(D, Attributes, ParamInfo, EllipsisLoc,
+                                      CurTemplateDepthTracker);
     }
 
     T.consumeClose();
@@ -1505,6 +1503,7 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
   StmtResult Stmt(ParseCompoundStatementBody());
   BodyScope.Exit();
+  ImplicitTemplateScope.Exit();
   TemplateParamScope.Exit();
   LambdaScope.Exit();
 
@@ -3261,12 +3260,14 @@ ExprResult Parser::ParseRequiresExpression() {
                                     Scope::DeclScope);
     Parens.consumeOpen();
     if (!Tok.is(tok::r_paren)) {
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
       ParsedAttributes FirstArgAttrs(getAttrFactory());
       SourceLocation EllipsisLoc;
       llvm::SmallVector<DeclaratorChunk::ParamInfo, 2> LocalParameters;
       ParseParameterDeclarationClause(DeclaratorContext::RequiresExpr,
                                       FirstArgAttrs, LocalParameters,
-                                      EllipsisLoc);
+                                      EllipsisLoc, CurTemplateDepthTracker);
       if (EllipsisLoc.isValid())
         Diag(EllipsisLoc, diag::err_requires_expr_parameter_list_ellipsis);
       for (auto &ParamInfo : LocalParameters)

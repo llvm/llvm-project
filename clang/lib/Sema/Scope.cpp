@@ -103,6 +103,20 @@ void Scope::Init(Scope *parent, unsigned flags) {
   NRVO = std::nullopt;
 }
 
+void Scope::EnterTemplateParameterScope() {
+  assert(isFunctionPrototypeScope() && isFunctionDeclarationScope());
+
+  Scope *Parent = getParent();
+  assert(Parent && !Parent->Entity && Parent->DeclsInScope.empty() &&
+         Parent->UsingDirectives.empty());
+  assert((Parent->getFlags() &
+          ~(OpenMPSimdDirectiveScope | OpenMPOrderClauseScope)) == NoScope &&
+         "expected a reserved, inactive template scope");
+
+  Parent->setFlags(TemplateParamScope);
+  TemplateParamParent = Parent;
+}
+
 bool Scope::containedInPrototypeScope() const {
   const Scope *S = this;
   while (S) {
