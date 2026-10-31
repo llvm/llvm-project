@@ -284,3 +284,45 @@ cir.func @f32(%arg0: !cir.ptr<!cir.func<(!s32i, ...)>>,
   %3 = cir.call @f31(%arg3, %arg3) : (!u32i, !u32i) -> !s32i
   cir.return
 }
+
+// -----
+// Result extension signedness regression tests
+
+!s8i = !cir.int<s, 8>
+module {
+  cir.func private @signed_result() -> !s8i
+  cir.func @bad_direct_call() {
+    // expected-error@+1 {{llvm.zeroext is incompatible with a signed result type}}
+    %0 = cir.call @signed_result() : () -> (!s8i {llvm.zeroext})
+    cir.return
+  }
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+module {
+  cir.func @bad_indirect_call(%fn: !cir.ptr<!cir.func<() -> !u8i>>) {
+    // expected-error@+1 {{llvm.signext is incompatible with an unsigned result type}}
+    %0 = cir.call %fn() : (!cir.ptr<!cir.func<() -> !u8i>>) -> (!u8i {llvm.signext})
+    cir.return
+  }
+}
+
+// -----
+
+!s8i = !cir.int<s, 8>
+module {
+  cir.func private @signed_result() -> !s8i
+  cir.func @bad_try_call() {
+    // expected-error@+1 {{llvm.zeroext is incompatible with a signed result type}}
+    %0 = cir.try_call @signed_result() ^normal, ^unwind
+        : () -> (!s8i {llvm.zeroext})
+  ^normal:
+    cir.br ^end
+  ^unwind:
+    cir.br ^end
+  ^end:
+    cir.return
+  }
+}
