@@ -3900,6 +3900,13 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
       continue;
     // Give multi-register arms a value-id first, before the result is mutated.
     insertCompositeAggregateArms(&I, B);
+    // Every arm has the result's type. A constant arm's deduced type can be a
+    // distinct struct with typed pointer members (pointee types deduced in
+    // another function), which would no longer match.
+    for (Value *Op : I.operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op))
+        if (auto It = AggrConstTypes.find(OpI); It != AggrConstTypes.end())
+          It->second = I.getType();
     AggrConstTypes[&I] = I.getType();
     I.mutateType(I32Ty);
   }
