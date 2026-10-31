@@ -7240,6 +7240,15 @@ static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
       DeleteDeadPHIs(L->getHeader(), &TLI, MSSAU.get());
     }
   }
+
+  // We might end up with duplicate phi nodes when preserving LCSSA. Clean them
+  // up here, as otherwise rewriteLoopExitValues will bail due to the extra
+  // uses.
+  SmallVector<BasicBlock *, 4> ExitBlocks;
+  L->getUniqueExitBlocks(ExitBlocks);
+  for (BasicBlock *ExitBB : ExitBlocks)
+    Changed |= EliminateDuplicatePHINodes(ExitBB);
+
   // LSR may at times remove all uses of an induction variable from a loop.
   // The only remaining use is the PHI in the exit block.
   // When this is the case, if the exit value of the IV can be calculated using
