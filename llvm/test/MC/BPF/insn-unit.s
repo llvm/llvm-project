@@ -23,11 +23,14 @@
   r9 = 8589934591 ll     // BPF_LD | BPF_DW | BPF_IMM
   r9 = 0x1ffffffff ll    // BPF_LD | BPF_DW | BPF_IMM
   r9 = dummy_map  ll     // BPF_LD | BPF_DW | BPF_IMM
+  r8 = dummy_map + 8 ll  // BPF_LD | BPF_DW | BPF_IMM
 // CHECK: 18 09 00 00 ff ff ff ff 00 00 00 00 00 00 00 00 	r9 = 4294967295 ll
 // CHECK: 18 09 00 00 ff ff ff ff 00 00 00 00 01 00 00 00 	r9 = 8589934591 ll
 // CHECK: 18 09 00 00 ff ff ff ff 00 00 00 00 01 00 00 00 	r9 = 8589934591 ll
 // CHECK: 18 09 00 00 00 00 00 00 00 00 00 00 00 00 00 00 	r9 = 0 ll
 // CHECK: 0000000000000060:  R_BPF_64_64	dummy_map
+// CHECK: 18 08 00 00 08 00 00 00 00 00 00 00 00 00 00 00 	r8 = 8 ll
+// CHECK: 0000000000000070:  R_BPF_64_64	dummy_map
 
 // ======== BPF_LDX Class ========
   r5 = *(u8 *)(r0 + 0)   // BPF_LDX | BPF_B
