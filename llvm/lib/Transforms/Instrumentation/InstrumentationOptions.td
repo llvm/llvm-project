@@ -390,6 +390,8 @@ defm : BoolField<"hash-based-counter-split", "true",
   "Rename counter variable of a comdat function based on cfg hash">;
 defm : BoolField<"instrprof-atomic-counter-update-all", "false",
   "Make all profile counter updates atomic (for testing only)">;
+defm : ValueField<"instrprof-counter-scale-var", "StringRef", "",
+  "Name of an i64 variable, thread_local unless the module declares it otherwise, that every counter increment is multiplied by. The program defines it (normally initialized to 1), so a thread can weight the counts it contributes">;
 defm : BoolField<"iterative-counter-promotion", "true",
   "Allow counter promotion across the whole loop nest">;
 // A debug option.
