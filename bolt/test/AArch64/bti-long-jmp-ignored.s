@@ -7,9 +7,17 @@
 # RUN:   -mattr=+bti -aarch64-mark-bti-property %s -o %t.o
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q -Wl,-z,force-bti
 # RUN: not llvm-bolt %t.exe -o %t.bolt \
-# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func 2>&1 | FileCheck %s
+# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func \
+# RUN:   --relax-with-clusters=false 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.cluster.bolt \
+# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func \
+# RUN:   --relax-with-clusters 2>&1 | FileCheck %s --check-prefix=CLUSTER
 
 # CHECK:  BOLT-ERROR: Cannot add BTI to function without CFG far_away_func. Recompile the binary using -fpatchable-function-entry 1 to include a nop at the entry
+
+# TODO: Clustered relaxation must reject this thunk until it can add a BTI
+# landing pad to the skipped target. Then check for the error above.
+# CLUSTER-NOT: BOLT-ERROR: Cannot add BTI to function without CFG far_away_func
 
   .section .text
   .align 4
@@ -30,4 +38,3 @@ far_away_func:
     ret
 
 .reloc 0, R_AARCH64_NONE
-

@@ -5,7 +5,7 @@
 # RUN: %clang %s %cflags -Wl,-q -o %t -mbranch-protection=bti -Wl,-z,force-bti
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions \
-# RUN: --print-split --print-only foo --print-longjmp 2>&1 | FileCheck %s
+# RUN: --relax-with-clusters=false --print-split --print-only foo --print-longjmp 2>&1 | FileCheck %s
 
 # CHECK: BOLT-INFO: Starting stub-insertion pass
 # CHECK: Binary Function "foo" after long-jmp

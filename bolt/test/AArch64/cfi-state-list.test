@@ -5,7 +5,7 @@
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt 2>&1 | FileCheck %s
 
-# CHECK: BOLT-INFO: Starting stub-insertion pass
+# CHECK: BOLT-INFO: starting clustered relaxation pass
 
 .text
 .global main

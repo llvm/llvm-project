@@ -10,7 +10,7 @@
   .type _foo, %function
 _foo:
   ldr w8, [sp]
-  adr x10, _jmptbl
+  adr x10, .Ljmptbl
   ldrsw x9, [x10, x9, lsl #2]
   add x10, x10, x9
   br x10
@@ -23,7 +23,7 @@ _foo:
   ret
 
   .balign 4
-_jmptbl:
+.Ljmptbl:
   .long -16
   .long -8
 
@@ -33,10 +33,10 @@ _bar:
   stp x29, x30, [sp, #-0x10]!
   mov x29, sp
   sub sp, sp, #0x10
-  tbnz x0, #0x3, _L2
+  tbnz x0, #0x3, .L2
   ldr x8, [x29, #0x30]
   blr x8
-_L2:
+.L2:
   add sp, sp, #0x10
   ldp x29, x30, [sp], #0x10
   br x2
@@ -48,7 +48,7 @@ _L2:
   .type _goo, %function
 _goo:
   ldr w8, [sp]
-  adr x10, _jmptbl2
+  adr x10, .Ljmptbl2
   ldrsw x9, [x10, x9, lsl #2]
   add x10, x10, x9
   str x30, [sp, #-0x10]!
@@ -66,7 +66,7 @@ _goo:
   ret
 
   .balign 4
-_jmptbl2:
+.Ljmptbl2:
   .long -16
   .long -8
 
@@ -74,9 +74,9 @@ _jmptbl2:
   .type _faz, %function
 _faz:
   str x30, [sp, #-0x10]!
-  tbnz x0, #0x1, _L3
+  tbnz x0, #0x1, .L3
   bl _bar
-_L3:
+.L3:
   ldr x30, [sp], #0x10
   mov x0, x1
   br x3

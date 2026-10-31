@@ -8,14 +8,21 @@
 # RUN: llvm-strip --strip-unneeded %t*.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
 # RUN: %clang %cflags %t.compact.o -o %t.compact.exe -Wl,-q -static
-# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite
+# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite \
+# RUN:   --relax-with-clusters=false
+# RUN: llvm-bolt %t.exe -o %t.cluster.bolt --data %t.fdata --lite \
+# RUN:   --relax-with-clusters
 # RUN: llvm-bolt %t.compact.exe -o %t.compact.bolt --data %t.fdata --lite \
 # RUN:   --compact-code-model
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.exe \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INPUT
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.bolt \
 # RUN:   | FileCheck %s
+# RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.cluster.bolt \
+# RUN:   | FileCheck %s
 # RUN: llvm-objdump -d --disassemble-symbols=_start.org.0 %t.bolt \
+# RUN:   | FileCheck %s --check-prefix=CHECK-PATCH
+# RUN: llvm-objdump -d --disassemble-symbols=_start.org.0 %t.cluster.bolt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-PATCH
 # RUN: llvm-objdump -d %t.compact.bolt \
 # RUN:   | FileCheck %s --check-prefix=CHECK-COMPACT
@@ -26,10 +33,14 @@
 ## Verify that the number of FDEs matches the number of functions in the output
 ## binary. There are four original functions and three optimized.
 ## NOTE: at the moment we are emitting extra FDEs for patched functions, thus
-## there is one more FDE for _start.
+## there is one more FDE for _start. Clustered relaxation adds another FDE for
+## its separate long thunk to cold_function.
 # RUN: llvm-readelf -u %t.bolt | grep -wc FDE \
-# RUN:   | FileCheck --check-prefix=CHECK-FDE %s
-# CHECK-FDE: 8
+# RUN:   | FileCheck --check-prefix=CHECK-FDE-LEGACY %s
+# RUN: llvm-readelf -u %t.cluster.bolt | grep -wc FDE \
+# RUN:   | FileCheck --check-prefix=CHECK-FDE-CLUSTER %s
+# CHECK-FDE-LEGACY: 8
+# CHECK-FDE-CLUSTER: 9
 
 ## In lite mode, optimized code will be separated from the original .text by
 ## over 128MB, making it impossible for call/bl instructions in cold functions

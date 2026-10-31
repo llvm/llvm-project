@@ -146,6 +146,9 @@ test2_0:
 test2_1:
   ret
 
+# Force relocation mode.
+.reloc 0, R_AARCH64_NONE
+
   .section .rodata,"a",@progbits
 jump_table:
   .hword  (test2_0-test2_0)>>2

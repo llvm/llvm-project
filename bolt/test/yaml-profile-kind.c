@@ -2,7 +2,7 @@
 
 # REQUIRES: system-linux
 
-# RUN: %clang %cflags %s -o %t.exe
+# RUN: %clang %cflags %s -o %t.exe -Wl,-q
 # RUN: link_fdata %s %t.exe %t.fdata
 # RUN: llvm-bolt %t.exe -o %t.null -data %t.fdata -w %t.yaml
 # RUN: FileCheck %s --input-file %t.yaml --check-prefix=CHECK-BINARY

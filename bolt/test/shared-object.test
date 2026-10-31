@@ -4,7 +4,7 @@
 ## on Linux systems where the host triple matches the target.
 REQUIRES: system-linux
 
-RUN: %clang %cflags %S/Inputs/icf-jump-tables.c -o %t.so -shared -fPIC -Wl,--build-id
+RUN: %clang %cflags %S/Inputs/icf-jump-tables.c -o %t.so -shared -fPIC -Wl,--build-id -Wl,-q
 RUN: llvm-bolt %t.so -o %t | FileCheck %s
 
 CHECK: patched build-id

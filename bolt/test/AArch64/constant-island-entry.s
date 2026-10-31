@@ -30,3 +30,6 @@ constant_island:
 caller:
   bl constant_island
   ret
+
+# Force relocation mode.
+.reloc 0, R_AARCH64_NONE

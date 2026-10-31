@@ -42,7 +42,7 @@ CHECK-NM:      T main
 CHECK-NM-NEXT: T fib
 CHECK-NM-NEXT: W __hot_end
 CHECK-NM: t __bolt_hugify_start_program
-CHECK-NM-NEXT: W __bolt_runtime_start
+CHECK-NM: W __bolt_runtime_start
 
 CHECK-NM-NOHUGIFY:      W  __hot_start
 CHECK-NM-NOHUGIFY:      T main

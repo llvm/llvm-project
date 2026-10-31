@@ -54,3 +54,6 @@ CI2:
   .xword 0x30
 CI3:
   .xword 0x40
+
+# Force relocation mode.
+.reloc 0, R_AARCH64_NONE

@@ -32,3 +32,6 @@ main:
     sub     x0, x0, #2
     mov     w8, #93
     svc     #0
+
+// Force relocation mode.
+.reloc 0, R_AARCH64_NONE

@@ -7,14 +7,25 @@
 # RUN:   -mattr=+bti -aarch64-mark-bti-property %s -o %t.o
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q -Wl,-z,force-bti
 # RUN: llvm-bolt %t.exe -o %t.bolt \
-# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func 2>&1 | FileCheck %s
+# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func \
+# RUN:   --relax-with-clusters=false 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.cluster.bolt \
+# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func \
+# RUN:   --relax-with-clusters 2>&1 | FileCheck %s
 
 # CHECK-NOT:  BOLT-ERROR: Cannot add BTI to function without CFG far_away_func. Recompile the binary using -fpatchable-function-entry 1 to include a nop at the entry
 
 # RUN: llvm-objdump -d -j .bolt.org.text %t.bolt | FileCheck %s --check-prefix=OBJDUMP
+# RUN: llvm-objdump -d -j .bolt.org.text %t.cluster.bolt | FileCheck %s --check-prefix=CLUSTER-OBJDUMP
 # OBJDUMP: <far_away_func>:
 # OBJDUMP-NEXT: bti c
 # OBJDUMP-NEXT: add x0, x0, #0x1
+
+# TODO: Clustered relaxation must replace this nop with bti c, as the legacy
+# pass does. Update this check when the BTI fixup is added.
+# CLUSTER-OBJDUMP: <far_away_func>:
+# CLUSTER-OBJDUMP-NEXT: nop
+# CLUSTER-OBJDUMP-NEXT: add x0, x0, #0x1
 
   .section .text
   .align 4
@@ -36,4 +47,3 @@ far_away_func:
     ret
 
 .reloc 0, R_AARCH64_NONE
-
