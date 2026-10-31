@@ -10,6 +10,18 @@
 // RUN: FileCheck %s --check-prefix=HDRTMPL < %t/on.ll
 // RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -o - %t/main.cpp | FileCheck %s --check-prefix=OFF
 
+// Preprocessed source: the line markers (as emitted by -E) still attribute
+// hdr.h's code to hdr.h, so the result must be the same.
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -E -o %t/main.ii %t/main.cpp
+// RUN: %clang_cc1 -triple arm64-apple-macosx14.0.0 -std=c++20 -emit-llvm -fmodule-local-hints -x c++-cpp-output -o %t/pp.ll %t/main.ii
+// RUN: FileCheck %s --check-prefix=INL < %t/pp.ll
+// RUN: FileCheck %s --check-prefix=TMPL < %t/pp.ll
+// RUN: FileCheck %s --check-prefix=LAMBDA < %t/pp.ll
+// RUN: FileCheck %s --check-prefix=MEMBER < %t/pp.ll
+// RUN: FileCheck %s --check-prefix=PLAIN < %t/pp.ll
+// RUN: FileCheck %s --check-prefix=HDR < %t/pp.ll
+// RUN: FileCheck %s --check-prefix=HDRTMPL < %t/pp.ll
+
 //--- hdr.h
 inline int hdr_inline(int x) { return x * 3; }
 template <class F> int hdr_call(F f) { return f(); }

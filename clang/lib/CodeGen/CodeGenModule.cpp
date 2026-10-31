@@ -3336,6 +3336,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     const SourceManager &SM = getContext().getSourceManager();
     // D->getLocation(), for a template instantiation, is the location of the
     // template's definition, not instantiation.
+    // TODO: Also consider template instantiations where a template argument is
+    // a class declared in the main file.
     bool InMainFile = SM.isInMainFile(D->getLocation());
     if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
       B.addAttribute(llvm::Attribute::LikelyModuleLocal);
