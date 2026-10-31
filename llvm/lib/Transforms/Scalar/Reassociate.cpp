@@ -149,7 +149,8 @@ XorOpnd::XorOpnd(Value *V) {
 /// (This routine is only intended to be called for floating-point operations.)
 static bool hasFPAssociativeFlags(Instruction *I) {
   assert(I && isa<FPMathOperator>(I) && "Should only check FP ops");
-  return I->hasAllowReassoc() && I->hasNoSignedZeros();
+  return I->hasAllowReassoc() && I->hasNoSignedZeros() &&
+         (!(I->getOpcode() == Instruction::FDiv) || I->hasAllowReciprocal());
 }
 
 /// Return true if V is an instruction of the specified opcode and if it
@@ -354,6 +355,51 @@ static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   return Res;
 }
 
+static BinaryOperator *ReuseFDiv(Value *Denom, Value *Divisor,
+                                 FastMathFlags FMF, Instruction *BeforeInst) {
+  for (User *U : Divisor->users()) {
+    if (!match(U, m_FDiv(m_Specific(Denom), m_Specific(Divisor))))
+      continue;
+    BinaryOperator *BO = cast<BinaryOperator>(U);
+    if (BO->getParent() == BeforeInst->getParent() &&
+        BO->comesBefore(BeforeInst) && BO->getFastMathFlags() == FMF)
+      return BO;
+  }
+  return nullptr;
+}
+
+// rewrite (a * b) / c into a * (b / c).
+// If There already exists (b / c), reuse it.
+static BinaryOperator *ReassociateFDiv(BinaryOperator *I) {
+  if (!hasFPAssociativeFlags(I))
+    return nullptr;
+  if (auto *FMul = dyn_cast<BinaryOperator>(I->getOperand(0))) {
+    if (isReassociableOp(FMul, Instruction::FMul)) {
+      Value *Divisor = I->getOperand(1);
+      Value *Denom1 = FMul->getOperand(0);
+      Value *Denom2 = FMul->getOperand(1);
+      BinaryOperator *D;
+      FastMathFlags FMF = I->getFastMathFlags();
+      FMF &= FMul->getFastMathFlags();
+      FMF.setNoInfs(FMF.noInfs() && FMF.noNaNs());
+      if (BinaryOperator *ReusedDiv = ReuseFDiv(Denom2, Divisor, FMF, I)) {
+        D = ReusedDiv;
+      } else {
+        D = BinaryOperator::CreateFDiv(Denom2, Divisor, "div",
+                                       I->getIterator());
+        D->setFastMathFlags(FMF);
+      }
+      BinaryOperator *M =
+          BinaryOperator::CreateFMul(Denom1, D, "mul", I->getIterator());
+      M->setFastMathFlags(FMF);
+      I->replaceAllUsesWith(M);
+      M->setDebugLoc(I->getDebugLoc());
+      return M;
+    }
+  }
+  return nullptr;
+}
+
 using RepeatedValue = std::pair<Value *, uint64_t>;
 
 /// Given an associative binary expression, return the leaf
@@ -433,6 +479,20 @@ static bool LinearizeExprTree(Instruction *I,
                               SmallVectorImpl<RepeatedValue> &Ops,
                               ReassociatePass::OrderedSet &ToRedo,
                               OverflowTracking &Flags) {
+  // For a FDIV, returns (Linearized numerator) / denominator.
+  // However, Ops does not include denominator.
+  bool isFDiv = I->getOpcode() == Instruction::FDiv;
+  if (isFDiv) {
+    assert(hasFPAssociativeFlags(I) &&
+           "Expected a reassociable FDIV operation!");
+    if (auto Numerator = dyn_cast<Instruction>(I->getOperand(0));
+        Numerator && isReassociableOp(Numerator, Instruction::FMul))
+      I = Numerator;
+    else {
+      Ops.push_back(RepeatedValue(I->getOperand(0), 1));
+      return false;
+    }
+  }
   assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
          "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
@@ -621,9 +681,21 @@ static bool LinearizeExprTree(Instruction *I,
 
 /// Now that the operands for this expression tree are
 /// linearized and optimized, emit them in-order.
+/// For FDIV, only numerator is rewrited.
 void ReassociatePass::RewriteExprTree(BinaryOperator *I,
                                       SmallVectorImpl<ValueEntry> &Ops,
                                       OverflowTracking Flags) {
+  // case: (single value) / (denominator)
+  if (Ops.size() < 2) {
+    BinaryOperator *Reuse =
+        ReuseFDiv(I->getOperand(0), I->getOperand(1), I->getFastMathFlags(), I);
+    if (Reuse) {
+      I->replaceAllUsesWith(Reuse);
+      llvm::salvageDebugInfo(*I);
+      RedoInsts.insert(I);
+    }
+    return;
+  }
   assert(Ops.size() > 1 && "Single values should be used directly!");
 
   // Since our optimizations should never increase the number of operations, the
@@ -638,6 +710,9 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
   /// NodesToRewrite - Nodes from the original expression available for writing
   /// the new expression into.
   SmallVector<BinaryOperator*, 8> NodesToRewrite;
+  bool isFDiv = I->getOpcode() == Instruction::FDiv;
+  if (isFDiv)
+    I = dyn_cast<BinaryOperator>(I->getOperand(0));
   unsigned Opcode = I->getOpcode();
   BinaryOperator *Op = I;
 
@@ -671,11 +746,16 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
       Value *OldLHS = Op->getOperand(0);
       Value *OldRHS = Op->getOperand(1);
 
-      if (NewLHS == OldLHS && NewRHS == OldRHS)
+      // Workaround: current order of operands is (Ops[N-2].Op op Ops[N-1].Op)
+      // op Ops[N-3].Op ... op Ops[0].Op To enable FDIV reassociation, we have
+      // to set Ops[N-2] left.
+      if ((!isFDiv && NewLHS == OldLHS && NewRHS == OldRHS) ||
+          (isFDiv && NewLHS == OldRHS && NewRHS == OldLHS))
         // Nothing changed, leave it alone.
         break;
 
-      if (NewLHS == OldRHS && NewRHS == OldLHS) {
+      if ((!isFDiv && NewLHS == OldRHS && NewRHS == OldLHS) ||
+          (isFDiv && NewLHS == OldLHS && NewRHS == OldRHS)) {
         // The order of the operands was reversed.  Swap them.
         LLVM_DEBUG(dbgs() << "RA: " << *Op << '\n');
         Op->swapOperands();
@@ -2013,6 +2093,12 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
   // three, such that a balanced tree might require fewer total multiplies.
   if (Ops.size() < 4)
     return nullptr;
+  if (I->getOpcode() == Instruction::FDiv) {
+    if (BinaryOperator *BO = dyn_cast<BinaryOperator>(I->getOperand(0)))
+      I = BO;
+    else
+      return nullptr;
+  }
 
   // Try to turn linear trees of multiplies without other uses of the
   // intermediate stages into minimal multiply DAGs with perfect sub-expression
@@ -2043,7 +2129,8 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
   // Start by folding any constants that we found.
   const DataLayout &DL = I->getDataLayout();
   Constant *Cst = nullptr;
-  unsigned Opcode = I->getOpcode();
+  bool isFDiv = I->getOpcode() == Instruction::FDiv;
+  unsigned Opcode = isFDiv ? Instruction::FMul : I->getOpcode();
   while (!Ops.empty()) {
     if (auto *C = dyn_cast<Constant>(Ops.back().Op)) {
       if (!Cst) {
@@ -2060,19 +2147,31 @@ Value *ReassociatePass::OptimizeExpression(BinaryOperator *I,
     break;
   }
   // If there was nothing but constants then we are done.
-  if (Ops.empty())
+  if (Ops.empty() && !isFDiv)
     return Cst;
+  // If Cst / denominator, fold constants and return the simplified instruction.
+  if (Ops.empty()) {
+    if (auto *Op0 = dyn_cast<Instruction>(I->getOperand(0))) {
+      llvm::salvageDebugInfo(*Op0);
+      RedoInsts.insert(Op0);
+      I->setOperand(0, Cst);
+      MadeChange = true;
+    }
+    return I;
+  }
 
   // Put the combined constant back at the end of the operand list, except if
   // there is no point.  For example, an add of 0 gets dropped here, while a
   // multiplication by zero turns the whole expression into zero.
-  if (Cst && Cst != ConstantExpr::getBinOpIdentity(Opcode, I->getType())) {
+  if (Cst &&
+      (Cst != ConstantExpr::getBinOpIdentity(Opcode, I->getType()) || isFDiv)) {
     if (Cst == ConstantExpr::getBinOpAbsorber(Opcode, I->getType()))
       return Cst;
     Ops.push_back(ValueEntry(0, Cst));
   }
 
-  if (Ops.size() == 1) return Ops[0].Op;
+  if (Ops.size() == 1 && !isFDiv)
+    return Ops[0].Op;
 
   // Handle destructive annihilation due to identities between elements in the
   // argument list here.
@@ -2416,13 +2515,19 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
   }
 
   // If this instruction is an associative binary operator, process it.
-  if (!I->isAssociative()) return;
+  // However, we also consider FDiv instructions.
+  if (!(I->isAssociative() || I->getOpcode() == Instruction::FDiv))
+    return;
   BinaryOperator *BO = cast<BinaryOperator>(I);
 
   // If this is an interior node of a reassociable tree, ignore it until we
   // get to the root of the tree, to avoid N^2 analysis.
   unsigned Opcode = BO->getOpcode();
-  if (BO->hasOneUse() && BO->user_back()->getOpcode() == Opcode) {
+  unsigned BackOpcode = BO->user_back()->getOpcode();
+  if (BO->hasOneUse() &&
+      ((BackOpcode != Instruction::FDiv && BackOpcode == Opcode) ||
+       (BackOpcode == Instruction::FDiv && Opcode == Instruction::FMul &&
+        BO->user_back()->getOperand(0) == BO))) {
     // During the initial run we will get to the root of the tree.
     // But if we get here while we are redoing instructions, there is no
     // guarantee that the root will be visited. So Redo later
@@ -2449,6 +2554,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
   // operand information.
   SmallVector<RepeatedValue, 8> Tree;
   OverflowTracking Flags;
+  bool isFDiv = I->getOpcode() == Instruction::FDiv;
   MadeChange |= LinearizeExprTree(I, Tree, RedoInsts, Flags);
   SmallVector<ValueEntry, 8> Ops;
   Ops.reserve(Tree.size());
@@ -2531,7 +2637,9 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
 
   LLVM_DEBUG(dbgs() << "RAOut:\t"; PrintOps(I, Ops); dbgs() << '\n');
 
-  if (Ops.size() == 1) {
+  // Divisor is not included in the Ops for FDiv.
+  const unsigned OpsSize = Ops.size() + unsigned(isFDiv);
+  if (OpsSize == 1) {
     if (Ops[0].Op == I)
       // Self-referential expression in unreachable code.
       return;
@@ -2545,7 +2653,7 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     return;
   }
 
-  if (Ops.size() > 2 && Ops.size() <= GlobalReassociateLimit) {
+  if (OpsSize > 2 && OpsSize <= GlobalReassociateLimit) {
     // Find the pair with the highest count in the pairmap and move it to the
     // back of the list so that it can later be CSE'd.
     // example:
@@ -2555,6 +2663,9 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
     unsigned Max = 1;
     unsigned BestRank = 0;
     std::pair<unsigned, unsigned> BestPair;
+    unsigned MaxFDiv = 1;
+    unsigned BestRankFDiv = 0;
+    unsigned BestPairFDiv;
     unsigned Idx = I->getOpcode() - Instruction::BinaryOpsBegin;
     unsigned LimitIdx = 0;
     // With the CSE-driven heuristic, we are about to slap two values at the
@@ -2614,6 +2725,27 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
         }
       }
     }
+    if (isFDiv) {
+      for (int i = Ops.size() - 1; i >= (int)LimitIdx; --i) {
+        unsigned Score = 0;
+        Value *Op0 = Ops[i].Op;
+        Value *Op1 = I->getOperand(1);
+        auto it = PairMap[Idx].find({Op0, Op1});
+        if (it != PairMap[Idx].end()) {
+          if (it->second.isValid())
+            Score += it->second.Score;
+        }
+
+        unsigned MaxRank = Ops[i].Rank;
+
+        if (Score > MaxFDiv || (Score == MaxFDiv && MaxRank < BestRankFDiv)) {
+          BestPairFDiv = i;
+          MaxFDiv = Score;
+          BestRankFDiv = MaxRank;
+        }
+      }
+      Idx = Instruction::FMul - Instruction::BinaryOpsBegin;
+    }
     for (unsigned i = Ops.size() - 1; i > LimitIdx; --i) {
       // We must use int type to go below zero when LimitIdx is 0.
       for (int j = i - 1; j >= (int)LimitIdx; --j) {
@@ -2654,7 +2786,17 @@ void ReassociatePass::ReassociateExpression(BinaryOperator *I) {
         }
       }
     }
-    if (Max > 1) {
+    if (isFDiv && MaxFDiv > 1) {
+      auto Op0 = Ops[BestPairFDiv];
+      Ops.erase(&Ops[BestPairFDiv]);
+      Ops.insert(Ops.begin(), Op0);
+      RewriteExprTree(I, Ops, Flags);
+      if (auto *Reassociated = ReassociateFDiv(I)) {
+        RedoInsts.insert(I);
+        RedoInsts.insert(Reassociated);
+      }
+      return;
+    } else if (Max > 1) {
       auto Op0 = Ops[BestPair.first];
       auto Op1 = Ops[BestPair.second];
       Ops.erase(&Ops[BestPair.second]);
@@ -2675,22 +2817,35 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
   // Make a "pairmap" of how often each operand pair occurs.
   for (BasicBlock *BI : RPOT) {
     for (Instruction &I : *BI) {
-      if (!I.isAssociative() || !I.isBinaryOp())
+      bool isFDiv =
+          I.getOpcode() == Instruction::FDiv && I.hasAllowReciprocal();
+      if ((!isFDiv && !I.isAssociative()) || !I.isBinaryOp())
         continue;
 
       // Ignore nodes that aren't at the root of trees.
-      if (I.hasOneUse() && I.user_back()->getOpcode() == I.getOpcode())
+      if (I.hasOneUse() && I.user_back()->getOpcode() == I.getOpcode() &&
+          !isFDiv) // (I.user_back()->getOpcode() != Instruction::FDiv ||
+                   // I.user_back()->getOperand(0) == &I))
+        continue;
+      // ex.) (a * b) of (a * b) / c is not a root.
+      if (I.hasOneUse() && I.user_back()->getOpcode() == Instruction::FDiv &&
+          I.getOpcode() == Instruction::FMul &&
+          I.user_back()->getOperand(0) == &I)
         continue;
 
       // Collect all operands in a single reassociable expression.
       // Since Reassociate has already been run once, we can assume things
       // are already canonical according to Reassociation's regime.
-      SmallVector<Value *, 8> Worklist = { I.getOperand(0), I.getOperand(1) };
+      SmallVector<Value *, 8> Worklist =
+          isFDiv ? SmallVector<Value *, 8>{I.getOperand(0)}
+                 : SmallVector<Value *, 8>{I.getOperand(0), I.getOperand(1)};
       SmallVector<Value *, 8> Ops;
       while (!Worklist.empty() && Ops.size() <= GlobalReassociateLimit) {
         Value *Op = Worklist.pop_back_val();
         Instruction *OpI = dyn_cast<Instruction>(Op);
-        if (!OpI || OpI->getOpcode() != I.getOpcode() || !OpI->hasOneUse()) {
+        if (!OpI || (!isFDiv && OpI->getOpcode() != I.getOpcode()) ||
+            (isFDiv && OpI->getOpcode() != Instruction::FMul) ||
+            !OpI->hasOneUse()) {
           Ops.push_back(Op);
           continue;
         }
@@ -2705,7 +2860,9 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
         continue;
 
       // Add all pairwise combinations of operands to the pair map.
-      unsigned BinaryIdx = I.getOpcode() - Instruction::BinaryOpsBegin;
+      unsigned BinaryIdx =
+          (isFDiv ? unsigned(Instruction::FMul) : I.getOpcode()) -
+          Instruction::BinaryOpsBegin;
       SmallSet<std::pair<Value *, Value*>, 32> Visited;
       for (unsigned i = 0; i < Ops.size() - 1; ++i) {
         for (unsigned j = i + 1; j < Ops.size(); ++j) {
@@ -2722,6 +2879,23 @@ ReassociatePass::BuildPairMap(ReversePostOrderTraversal<Function *> &RPOT) {
             // address by coincidence. That can't happen here because nothing is
             // erasing values but it can happen by the time we're querying the
             // map.
+            assert(res.first->second.isValid() && "WeakVH invalidated");
+            ++res.first->second.Score;
+          }
+        }
+      }
+
+      SmallSet<std::pair<Value *, Value *>, 32> DivVisited;
+      if (isFDiv) {
+        for (unsigned i = 0; i < Ops.size(); ++i) {
+          Value *Op0 = Ops[i];
+          Value *Op1 = I.getOperand(1);
+          if (!DivVisited.insert({Op0, Op1}).second)
+            continue;
+          auto res =
+              PairMap[Instruction::FDiv - Instruction::BinaryOpsBegin].insert(
+                  {{Op0, Op1}, {Op0, Op1, 1}});
+          if (!res.second) {
             assert(res.first->second.isValid() && "WeakVH invalidated");
             ++res.first->second.Score;
           }
