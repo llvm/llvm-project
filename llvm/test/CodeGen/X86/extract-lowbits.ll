@@ -4888,6 +4888,7 @@ define i64 @bzhi64_32_e4_shifted_val(i64 %val, i32 %numlowbits) nounwind {
 ; X64-BMI1-NEXT:    shll $8, %esi
 ; X64-BMI1-NEXT:    orl $40, %esi
 ; X64-BMI1-NEXT:    bextrq %rsi, %rdi, %rax
+; X64-BMI1-NEXT:    movl %eax, %eax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bzhi64_32_e4_shifted_val:

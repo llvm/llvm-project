@@ -3886,13 +3886,13 @@ define <32 x i16> @test_compress_v32i16(<32 x i16> %vec, <32 x i1> %mask, <32 x 
 ; AVX512VL-ONLY-NEXT:    vpextrw $0, %xmm0, (%rsp)
 ; AVX512VL-ONLY-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $1, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
+; AVX512VL-ONLY-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $2, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
+; AVX512VL-ONLY-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $3, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
+; AVX512VL-ONLY-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $4, %xmm0, (%rsp,%r13,2)
-; AVX512VL-ONLY-NEXT:    movzwl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 2-byte Folded Reload
+; AVX512VL-ONLY-NEXT:    movl {{[-0-9]+}}(%r{{[sb]}}p), %r13d # 4-byte Reload
 ; AVX512VL-ONLY-NEXT:    vpextrw $5, %xmm0, (%rsp,%r13,2)
 ; AVX512VL-ONLY-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
 ; AVX512VL-ONLY-NEXT:    andl $31, %r13d
