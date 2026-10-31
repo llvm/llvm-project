@@ -4660,6 +4660,11 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
     return 0;
   }
 
+  // Without an address map, output ranges may contain fragment-relative
+  // estimates from earlier passes rather than linked addresses.
+  if (!requiresAddressMap())
+    return 0;
+
   return std::min(BB->getOutputAddressRange().first + Offset - BB->getOffset(),
                   BB->getOutputAddressRange().second);
 }
