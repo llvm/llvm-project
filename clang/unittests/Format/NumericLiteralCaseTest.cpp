@@ -340,6 +340,27 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
   verifyFormat("o = 0o0_10_010;", "o = 0O0_10_010;", Style);
 }
 
+TEST_F(NumericLiteralCaseTest, IgnoresIncludeDirectives) {
+  // pp-numbers in a header name lex as numeric_constant but are not numeric
+  // literals, so they must be left untouched.
+  constexpr StringRef A("#include <path/to/16header.h>");
+  constexpr StringRef B("#include_next <16foo.h>");
+  constexpr StringRef C("#import <16bar.h>");
+  // A literal in any other directive must still be formatted.
+  constexpr StringRef D("#define MASK 0xff;");
+  verifyFormat(A);
+  verifyFormat(B);
+  verifyFormat(C);
+  verifyFormat(D);
+
+  auto Style = getLLVMStyle();
+  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
+  verifyFormat(A, Style);
+  verifyFormat(B, Style);
+  verifyFormat(C, Style);
+  verifyFormat("#define MASK 0xFF;", D, Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
