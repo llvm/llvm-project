@@ -86,6 +86,9 @@ def SSizeT : FuncArgType;   // POSIX ssize_t.
 def Flt : FuncArgType;      // IEEE float.
 def Dbl : FuncArgType;      // IEEE double.
 def LDbl : FuncArgType;     // Any floating type (TODO: tighten this up).
+def X86FP80 : FuncArgType;
+def FP128 : FuncArgType;
+def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
 def Struct : FuncArgType;   // Any struct type.
@@ -170,6 +173,11 @@ class LongDoubleLibcallImpl<string libcall_basename, string Name = NAME>
   RuntimeLibcall ProvidesF128 = !cast<RuntimeLibcall>(libcall_basename#"_F128");
   RuntimeLibcall ProvidesPPCF128 =
       !cast<RuntimeLibcall>(libcall_basename#"_PPCF128");
+
+  let ReturnType = !if(!eq(ProvidesF128.ReturnType, FP128), LDbl,
+                       ProvidesF128.ReturnType);
+  let ArgumentTypes = !foreach(Ty, ProvidesF128.ArgumentTypes,
+                               !if(!eq(Ty, FP128), LDbl, Ty));
 }
 
 /// A family of runtime libcalls implementing one floating-point operation, used

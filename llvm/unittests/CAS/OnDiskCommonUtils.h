@@ -20,6 +20,8 @@
 namespace llvm::cas::ondisk {
 /// Declared in the private "OnDiskCommon.h".
 Expected<uint64_t> getBootTime();
+std::error_code lockFileThreadSafe(int FD, sys::fs::LockKind Kind);
+std::error_code unlockFileThreadSafe(int FD);
 } // namespace llvm::cas::ondisk
 
 namespace llvm::unittest::cas {
