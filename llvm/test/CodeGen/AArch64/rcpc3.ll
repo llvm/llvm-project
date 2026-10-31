@@ -405,3 +405,148 @@ define hidden void @test_extract_store_2xi64(ptr nocapture noundef writeonly %a,
   store i64 %1, ptr %a, align 8
   ret void
 }
+
+define void @test_atomic_store_hint_release_bfloat(ptr %ptr, bfloat %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_release_bfloat:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh keep
+; RCPC3-NEXT:    stlur h0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_release_bfloat:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    // kill: def $h0 killed $h0 def $s0
+; NO-RCPC3-NEXT:    fmov w8, s0
+; NO-RCPC3-NEXT:    stshh keep
+; NO-RCPC3-NEXT:    stlrh w8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic bfloat %val, ptr %ptr release, align 2, !mem.cache_hint !0
+  ret void
+}
+
+define void @test_atomic_store_hint_release_half(ptr %ptr, half %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_release_half:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh keep
+; RCPC3-NEXT:    stlur h0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_release_half:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    // kill: def $h0 killed $h0 def $s0
+; NO-RCPC3-NEXT:    fmov w8, s0
+; NO-RCPC3-NEXT:    stshh keep
+; NO-RCPC3-NEXT:    stlrh w8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic half %val, ptr %ptr release, align 2, !mem.cache_hint !0
+  ret void
+}
+
+define void @test_atomic_store_hint_release_float(ptr %ptr, float %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_release_float:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh keep
+; RCPC3-NEXT:    stlur s0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_release_float:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov w8, s0
+; NO-RCPC3-NEXT:    stshh keep
+; NO-RCPC3-NEXT:    stlr w8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic float %val, ptr %ptr release, align 4, !mem.cache_hint !0
+  ret void
+}
+
+define void @test_atomic_store_hint_release_double(ptr %ptr, double %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_release_double:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh keep
+; RCPC3-NEXT:    stlur d0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_release_double:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov x8, d0
+; NO-RCPC3-NEXT:    stshh keep
+; NO-RCPC3-NEXT:    stlr x8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic double %val, ptr %ptr release, align 8, !mem.cache_hint !0
+  ret void
+}
+
+define void @test_atomic_store_hint_seq_cst_bfloat(ptr %ptr, bfloat %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_seq_cst_bfloat:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh strm
+; RCPC3-NEXT:    stlur h0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_seq_cst_bfloat:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    // kill: def $h0 killed $h0 def $s0
+; NO-RCPC3-NEXT:    fmov w8, s0
+; NO-RCPC3-NEXT:    stshh strm
+; NO-RCPC3-NEXT:    stlrh w8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic bfloat %val, ptr %ptr seq_cst, align 2, !mem.cache_hint !2
+  ret void
+}
+
+define void @test_atomic_store_hint_seq_cst_half(ptr %ptr, half %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_seq_cst_half:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh strm
+; RCPC3-NEXT:    stlur h0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_seq_cst_half:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    // kill: def $h0 killed $h0 def $s0
+; NO-RCPC3-NEXT:    fmov w8, s0
+; NO-RCPC3-NEXT:    stshh strm
+; NO-RCPC3-NEXT:    stlrh w8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic half %val, ptr %ptr seq_cst, align 2, !mem.cache_hint !2
+  ret void
+}
+
+define void @test_atomic_store_hint_seq_cst_float(ptr %ptr, float %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_seq_cst_float:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh strm
+; RCPC3-NEXT:    stlur s0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_seq_cst_float:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov w8, s0
+; NO-RCPC3-NEXT:    stshh strm
+; NO-RCPC3-NEXT:    stlr w8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic float %val, ptr %ptr seq_cst, align 4, !mem.cache_hint !2
+  ret void
+}
+
+define void @test_atomic_store_hint_seq_cst_double(ptr %ptr, double %val) nounwind {
+; RCPC3-LABEL: test_atomic_store_hint_seq_cst_double:
+; RCPC3:       // %bb.0:
+; RCPC3-NEXT:    stshh strm
+; RCPC3-NEXT:    stlur d0, [x0]
+; RCPC3-NEXT:    ret
+;
+; NO-RCPC3-LABEL: test_atomic_store_hint_seq_cst_double:
+; NO-RCPC3:       // %bb.0:
+; NO-RCPC3-NEXT:    fmov x8, d0
+; NO-RCPC3-NEXT:    stshh strm
+; NO-RCPC3-NEXT:    stlr x8, [x0]
+; NO-RCPC3-NEXT:    ret
+  store atomic double %val, ptr %ptr seq_cst, align 8, !mem.cache_hint !2
+  ret void
+}
+
+!0 = !{i32 1, !1}
+!1 = !{!"aarch64.mem_hint", i32 0}
+!2 = !{i32 1, !3}
+!3 = !{!"aarch64.mem_hint", i32 1}

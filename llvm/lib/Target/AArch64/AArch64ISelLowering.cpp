@@ -33593,11 +33593,6 @@ AArch64TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
 
 TargetLoweringBase::AtomicExpansionKind
 AArch64TargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
-  // Atomic stores with memory hints use target pseudos that currently expect
-  // non-integral values to be cast to integers.
-  if (SI->getMetadata(LLVMContext::MD_mem_cache_hint))
-    return TargetLowering::shouldCastAtomicStoreInIR(SI);
-
   if (Subtarget->hasFPARMv8() &&
       isSupportedFPAtomicType(SI->getValueOperand()->getType())) {
     switch (SI->getOrdering()) {

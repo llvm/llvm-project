@@ -3106,14 +3106,16 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STZGi:
   case AArch64::TAGPstack:
   case AArch64::ATOMIC_STORE_HINT_Bi:
-  case AArch64::ATOMIC_STORE_HINT_Hi:
+  case AArch64::ATOMIC_STORE_HINT_HHi:
   case AArch64::ATOMIC_STORE_HINT_Wi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
   case AArch64::ATOMIC_STORE_HINT_Si:
   case AArch64::ATOMIC_STORE_HINT_Xi:
   case AArch64::ATOMIC_STORE_HINT_Di:
   case AArch64::ATOMIC_STORE_HINT_Bui:
-  case AArch64::ATOMIC_STORE_HINT_Hui:
+  case AArch64::ATOMIC_STORE_HINT_HHui:
   case AArch64::ATOMIC_STORE_HINT_Wui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
   case AArch64::ATOMIC_STORE_HINT_Sui:
   case AArch64::ATOMIC_STORE_HINT_Xui:
   case AArch64::ATOMIC_STORE_HINT_Dui:
@@ -4745,6 +4747,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDRSHXui:
   case AArch64::STRHui:
   case AArch64::STRHHui:
+  case AArch64::ATOMIC_STORE_HINT_HHui:
   case AArch64::ATOMIC_STORE_HINT_Hui:
     Scale = Width = TypeSize::getFixed(2);
     MinOffset = 0;
@@ -4867,6 +4870,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::STURHi:
   case AArch64::STURHHi:
   case AArch64::STLURHi:
+  case AArch64::ATOMIC_STORE_HINT_HHi:
   case AArch64::ATOMIC_STORE_HINT_Hi:
     Scale = TypeSize::getFixed(1);
     Width = TypeSize::getFixed(2);
