@@ -3761,6 +3761,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    rsqrtbf16_test.cpp
+  HDRS
+    RsqrtTest.h
+  DEPENDS
+    libc.src.math.rsqrtbf16
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   generic_sqrtf_test
   SUITE
     libc-math-smoke-tests
