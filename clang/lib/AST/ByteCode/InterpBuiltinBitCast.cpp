@@ -295,6 +295,8 @@ static bool checkBitcastType(InterpState &S, CodePtr OpPC, QualType T,
     return diag(E_Volatile);
 
   if (const RecordDecl *RD = T->getAsRecordDecl()) {
+    if (RD->isInvalidDecl())
+      return false;
     if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const CXXBaseSpecifier &BS : CXXRD->bases()) {
         if (!checkBitcastType(S, OpPC, BS.getType(), IsToType))
