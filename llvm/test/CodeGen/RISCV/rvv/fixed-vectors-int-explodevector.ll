@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v,+m -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+m -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,RV64
 
-define i8 @explode_2xi8(<2 x i8> %v) {
+define i8 @explode_2xi8(<2 x i8> noundef %v) {
 ; CHECK-LABEL: explode_2xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
@@ -16,21 +16,33 @@ define i8 @explode_2xi8(<2 x i8> %v) {
   ret i8 %add0
 }
 
-define i8 @explode_4xi8(<4 x i8> %v) {
-; CHECK-LABEL: explode_4xi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a0, a2, a0
-; CHECK-NEXT:    ret
+define i8 @explode_4xi8(<4 x i8> noundef %v) {
+; RV32-LABEL: explode_4xi8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    srli a1, a0, 8
+; RV32-NEXT:    srli a2, a0, 16
+; RV32-NEXT:    srli a3, a0, 24
+; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    add a2, a2, a3
+; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_4xi8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v9
+; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; RV64-NEXT:    vredxor.vs v8, v8, v9
+; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    add a0, a0, a1
+; RV64-NEXT:    add a0, a2, a0
+; RV64-NEXT:    ret
   %e0 = extractelement <4 x i8> %v, i32 0
   %e1 = extractelement <4 x i8> %v, i32 1
   %e2 = extractelement <4 x i8> %v, i32 2
@@ -42,33 +54,53 @@ define i8 @explode_4xi8(<4 x i8> %v) {
 }
 
 
-define i8 @explode_8xi8(<8 x i8> %v) {
-; CHECK-LABEL: explode_8xi8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 4
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 5
-; CHECK-NEXT:    vmv.x.s a3, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 6
-; CHECK-NEXT:    vmv.x.s a4, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 7
-; CHECK-NEXT:    vmv.x.s a5, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a6, v8
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a0, a0, a2
-; CHECK-NEXT:    add a0, a0, a3
-; CHECK-NEXT:    add a0, a0, a4
-; CHECK-NEXT:    add a0, a0, a5
-; CHECK-NEXT:    add a0, a6, a0
-; CHECK-NEXT:    ret
+define i8 @explode_8xi8(<8 x i8> noundef %v) {
+; RV32-LABEL: explode_8xi8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vi v9, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 4
+; RV32-NEXT:    vmv.x.s a2, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 5
+; RV32-NEXT:    vmv.x.s a3, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 6
+; RV32-NEXT:    vmv.x.s a4, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 7
+; RV32-NEXT:    vmv.x.s a5, v9
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vmv.x.s a6, v8
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a0, a2
+; RV32-NEXT:    add a0, a0, a3
+; RV32-NEXT:    add a0, a0, a4
+; RV32-NEXT:    add a0, a0, a5
+; RV32-NEXT:    add a0, a6, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_8xi8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    srli a1, a0, 8
+; RV64-NEXT:    srli a2, a0, 16
+; RV64-NEXT:    srli a3, a0, 24
+; RV64-NEXT:    srli a4, a0, 32
+; RV64-NEXT:    srli a5, a0, 40
+; RV64-NEXT:    srli a6, a0, 48
+; RV64-NEXT:    xor a1, a0, a1
+; RV64-NEXT:    add a2, a2, a3
+; RV64-NEXT:    add a4, a4, a5
+; RV64-NEXT:    add a1, a1, a2
+; RV64-NEXT:    add a4, a4, a6
+; RV64-NEXT:    srli a0, a0, 56
+; RV64-NEXT:    add a1, a1, a4
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    ret
   %e0 = extractelement <8 x i8> %v, i32 0
   %e1 = extractelement <8 x i8> %v, i32 1
   %e2 = extractelement <8 x i8> %v, i32 2
@@ -87,7 +119,7 @@ define i8 @explode_8xi8(<8 x i8> %v) {
   ret i8 %add6
 }
 
-define i8 @explode_16xi8(<16 x i8> %v) {
+define i8 @explode_16xi8(<16 x i8> noundef %v) {
 ; CHECK-LABEL: explode_16xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e8, m1, ta, ma
@@ -173,35 +205,55 @@ define i8 @explode_16xi8(<16 x i8> %v) {
   ret i8 %add14
 }
 
-define i16 @explode_2xi16(<2 x i16> %v) {
-; CHECK-LABEL: explode_2xi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+define i16 @explode_2xi16(<2 x i16> noundef %v) {
+; RV32-LABEL: explode_2xi16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    srli a1, a0, 16
+; RV32-NEXT:    xor a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_2xi16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64-NEXT:    vmv.s.x v9, zero
+; RV64-NEXT:    vredxor.vs v8, v8, v9
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
   %e0 = extractelement <2 x i16> %v, i32 0
   %e1 = extractelement <2 x i16> %v, i32 1
   %add0 = xor i16 %e0, %e1
   ret i16 %add0
 }
 
-define i16 @explode_4xi16(<4 x i16> %v) {
-; CHECK-LABEL: explode_4xi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v9, v8, 2
-; CHECK-NEXT:    vmv.x.s a0, v9
-; CHECK-NEXT:    vslidedown.vi v9, v8, 3
-; CHECK-NEXT:    vmv.x.s a1, v9
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    add a0, a0, a1
-; CHECK-NEXT:    add a0, a2, a0
-; CHECK-NEXT:    ret
+define i16 @explode_4xi16(<4 x i16> noundef %v) {
+; RV32-LABEL: explode_4xi16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
+; RV32-NEXT:    vslidedown.vi v9, v8, 2
+; RV32-NEXT:    vmv.x.s a0, v9
+; RV32-NEXT:    vslidedown.vi v9, v8, 3
+; RV32-NEXT:    vmv.x.s a1, v9
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vmv.x.s a2, v8
+; RV32-NEXT:    add a0, a0, a1
+; RV32-NEXT:    add a0, a2, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_4xi16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    srli a1, a0, 16
+; RV64-NEXT:    srli a2, a0, 32
+; RV64-NEXT:    srli a3, a0, 48
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    add a2, a2, a3
+; RV64-NEXT:    add a0, a0, a2
+; RV64-NEXT:    ret
   %e0 = extractelement <4 x i16> %v, i32 0
   %e1 = extractelement <4 x i16> %v, i32 1
   %e2 = extractelement <4 x i16> %v, i32 2
@@ -213,7 +265,7 @@ define i16 @explode_4xi16(<4 x i16> %v) {
 }
 
 
-define i16 @explode_8xi16(<8 x i16> %v) {
+define i16 @explode_8xi16(<8 x i16> noundef %v) {
 ; CHECK-LABEL: explode_8xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
@@ -258,7 +310,7 @@ define i16 @explode_8xi16(<8 x i16> %v) {
   ret i16 %add6
 }
 
-define i16 @explode_16xi16(<16 x i16> %v) {
+define i16 @explode_16xi16(<16 x i16> noundef %v) {
 ; CHECK-LABEL: explode_16xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
@@ -345,21 +397,29 @@ define i16 @explode_16xi16(<16 x i16> %v) {
   ret i16 %add14
 }
 
-define i32 @explode_2xi32(<2 x i32> %v) {
-; CHECK-LABEL: explode_2xi32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, zero
-; CHECK-NEXT:    vredxor.vs v8, v8, v9
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+define i32 @explode_2xi32(<2 x i32> noundef %v) {
+; RV32-LABEL: explode_2xi32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vmv.s.x v9, zero
+; RV32-NEXT:    vredxor.vs v8, v8, v9
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_2xi32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    srli a1, a0, 32
+; RV64-NEXT:    xor a0, a0, a1
+; RV64-NEXT:    ret
   %e0 = extractelement <2 x i32> %v, i32 0
   %e1 = extractelement <2 x i32> %v, i32 1
   %add0 = xor i32 %e0, %e1
   ret i32 %add0
 }
 
-define i32 @explode_4xi32(<4 x i32> %v) {
+define i32 @explode_4xi32(<4 x i32> noundef %v) {
 ; RV32-LABEL: explode_4xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
@@ -400,7 +460,7 @@ define i32 @explode_4xi32(<4 x i32> %v) {
 }
 
 
-define i32 @explode_8xi32(<8 x i32> %v) {
+define i32 @explode_8xi32(<8 x i32> noundef %v) {
 ; RV32-LABEL: explode_8xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
@@ -474,7 +534,7 @@ define i32 @explode_8xi32(<8 x i32> %v) {
   ret i32 %add6
 }
 
-define i32 @explode_16xi32(<16 x i32> %v) {
+define i32 @explode_16xi32(<16 x i32> noundef %v) {
 ; RV32-LABEL: explode_16xi32:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -128
@@ -636,7 +696,7 @@ define i32 @explode_16xi32(<16 x i32> %v) {
   ret i32 %add14
 }
 
-define i64 @explode_2xi64(<2 x i64> %v) {
+define i64 @explode_2xi64(<2 x i64> noundef %v) {
 ; RV32-LABEL: explode_2xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -662,7 +722,7 @@ define i64 @explode_2xi64(<2 x i64> %v) {
   ret i64 %add0
 }
 
-define i64 @explode_4xi64(<4 x i64> %v) {
+define i64 @explode_4xi64(<4 x i64> noundef %v) {
 ; RV32-LABEL: explode_4xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a0, 32
@@ -717,7 +777,7 @@ define i64 @explode_4xi64(<4 x i64> %v) {
 }
 
 
-define i64 @explode_8xi64(<8 x i64> %v) {
+define i64 @explode_8xi64(<8 x i64> noundef %v) {
 ; RV32-LABEL: explode_8xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
@@ -915,7 +975,7 @@ define i64 @explode_8xi64(<8 x i64> %v) {
   ret i64 %add6
 }
 
-define i64 @explode_16xi64(<16 x i64> %v) {
+define i64 @explode_16xi64(<16 x i64> noundef %v) {
 ; RV32-LABEL: explode_16xi64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -80
@@ -1552,7 +1612,7 @@ define i64 @explode_16xi64(<16 x i64> %v) {
   ret i64 %add14
 }
 
-define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
+define i32 @explode_16xi32_exact_vlen(<16 x i32> noundef %v) vscale_range(2, 2) {
 ; RV32-LABEL: explode_16xi32_exact_vlen:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
@@ -1682,4 +1742,93 @@ define i32 @explode_16xi32_exact_vlen(<16 x i32> %v) vscale_range(2, 2) {
   %add13 = add i32 %add12, %e14
   %add14 = add i32 %add13, %e15
   ret i32 %add14
+}
+
+define i8 @explode_4xi8_dominates(<4 x i8> noundef %v) {
+; RV32-LABEL: explode_4xi8_dominates:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    slli a1, a0, 8
+; RV32-NEXT:    srli a2, a0, 24
+; RV32-NEXT:    srli a1, a1, 24
+; RV32-NEXT:    divu a1, a1, a2
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    srli a2, a2, 24
+; RV32-NEXT:    divu a0, a0, a2
+; RV32-NEXT:    divu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_4xi8_dominates:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 1
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    divuw a0, a0, a1
+; RV64-NEXT:    vmv.x.s a1, v9
+; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    zext.b a2, a2
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    divuw a1, a2, a1
+; RV64-NEXT:    divuw a0, a1, a0
+; RV64-NEXT:    ret
+  %e2 = extractelement <4 x i8> %v, i32 2
+  %e3 = extractelement <4 x i8> %v, i32 3
+  %udiv1 = udiv i8 %e2, %e3
+  %e1 = extractelement <4 x i8> %v, i32 1
+  %e0 = extractelement <4 x i8> %v, i32 0
+  %udiv0 = udiv i8 %e0, %e1
+  %udiv2 = udiv i8 %udiv0, %udiv1
+  ret i8 %udiv2
+}
+
+define i8 @explode_poison(<4 x i8> %in) {
+; RV32-LABEL: explode_poison:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    slli a1, a0, 8
+; RV32-NEXT:    srli a2, a0, 24
+; RV32-NEXT:    srli a1, a1, 24
+; RV32-NEXT:    divu a1, a1, a2
+; RV32-NEXT:    slli a2, a0, 16
+; RV32-NEXT:    zext.b a0, a0
+; RV32-NEXT:    srli a2, a2, 24
+; RV32-NEXT:    divu a0, a0, a2
+; RV32-NEXT:    divu a0, a0, a1
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: explode_poison:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 2
+; RV64-NEXT:    vmv.x.s a0, v9
+; RV64-NEXT:    vslidedown.vi v9, v8, 3
+; RV64-NEXT:    vmv.x.s a1, v9
+; RV64-NEXT:    vmv.x.s a2, v8
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    zext.b a0, a0
+; RV64-NEXT:    divuw a0, a0, a1
+; RV64-NEXT:    vslidedown.vi v8, v8, 1
+; RV64-NEXT:    vmv.x.s a1, v8
+; RV64-NEXT:    zext.b a2, a2
+; RV64-NEXT:    zext.b a1, a1
+; RV64-NEXT:    divuw a1, a2, a1
+; RV64-NEXT:    divuw a0, a1, a0
+; RV64-NEXT:    ret
+  %v = insertelement <4 x i8> %in, i8 poison, i32 2
+  %e0 = extractelement <4 x i8> %v, i32 0
+  %e1 = extractelement <4 x i8> %v, i32 1
+  %e2 = extractelement <4 x i8> %v, i32 2
+  %e3 = extractelement <4 x i8> %v, i32 3
+  %udiv1 = udiv i8 %e2, %e3
+  %udiv0 = udiv i8 %e0, %e1
+  %udiv2 = udiv i8 %udiv0, %udiv1
+  ret i8 %udiv2
 }
