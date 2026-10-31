@@ -27,12 +27,14 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -5890,6 +5892,156 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   }
 }
 
+static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
+                                    VPCostContext &CostCtx) {
+  bool IsLoad = VPI->getOpcode() == Instruction::Load;
+  if (!IsLoad && VPI->getOpcode() != Instruction::Store)
+    return false;
+
+  // A GEP of a select of uniform bases is not consecutive, even when its index
+  // is. Split it into one consecutive access per base.
+  VPValue *Ptr = VPI->getOperand(!IsLoad);
+  Type *SourceElementTy = nullptr;
+  ArrayRef<VPValue *> GEPOperands;
+  auto *GEPRecipe = dyn_cast_or_null<VPInstruction>(Ptr->getDefiningRecipe());
+  auto *GEP = dyn_cast_or_null<GetElementPtrInst>(Ptr->getUnderlyingValue());
+  if (!GEPRecipe || !GEP || GEP->getNumIndices() != 1 ||
+      !match(Ptr, m_GetElementPtr(SourceElementTy, GEPOperands)) ||
+      GEPOperands.size() != 2)
+    return false;
+
+  ScalarEvolution &SE = *CostCtx.PSE.getSE();
+  auto IsUniformBase = [&](VPValue *Base) {
+    Value *UnderlyingV = Base->getUnderlyingValue();
+    return vputils::isSingleScalar(Base) && UnderlyingV &&
+           SE.isLoopInvariant(CostCtx.PSE.getSCEV(UnderlyingV), CostCtx.L);
+  };
+  VPValue *Cond = nullptr, *TrueBase = nullptr, *FalseBase = nullptr;
+  if (!match(GEPOperands[0], m_Select(m_VPValue(Cond), m_VPValue(TrueBase),
+                                      m_VPValue(FalseBase))) ||
+      vputils::isSingleScalar(Cond) || !IsUniformBase(TrueBase) ||
+      !IsUniformBase(FalseBase))
+    return false;
+
+  auto AreKnownNoAlias = [](VPValue *A, VPValue *B) {
+    const Value *ObjA = getUnderlyingObject(A->getUnderlyingValue());
+    const Value *ObjB = getUnderlyingObject(B->getUnderlyingValue());
+    return ObjA != ObjB && isIdentifiedObject(ObjA) && isIdentifiedObject(ObjB);
+  };
+  if (!IsLoad && !AreKnownNoAlias(TrueBase, FalseBase))
+    return false;
+
+  VPlan &Plan = *VPI->getParent()->getPlan();
+  Instruction *I = VPI->getUnderlyingInstr();
+  Type *ScalarTy =
+      IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
+  TypeSize TypeScale = Plan.getDataLayout().getTypeAllocSize(SourceElementTy);
+  if (TypeScale.isScalable() ||
+      TypeScale != Plan.getDataLayout().getTypeStoreSize(ScalarTy))
+    return false;
+
+  Value *Index = *GEP->idx_begin();
+  const SCEV *IndexSCEV = CostCtx.PSE.getSCEV(Index);
+  if (!match(IndexSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(),
+                                            m_SpecificLoop(CostCtx.L))))
+    return false;
+  // GEP indices are sign-extended or truncated to the pointer index type.
+  // Make sure the converted recurrence still has unit stride.
+  Type *GEPIndexTy = Plan.getDataLayout().getIndexType(GEP->getType());
+  IndexSCEV = SE.getTruncateOrSignExtend(IndexSCEV, GEPIndexTy);
+  if (!match(IndexSCEV, m_scev_AffineAddRec(m_SCEV(), m_scev_One(),
+                                            m_SpecificLoop(CostCtx.L))))
+    return false;
+
+  Align Alignment = getLoadStoreAlignment(I);
+  unsigned AddressSpace = GEP->getAddressSpace();
+  if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy, Alignment,
+                                               AddressSpace))
+    return false;
+
+  auto IsProfitable = [&](ElementCount VF) {
+    Type *DataTy = VectorType::get(ScalarTy, VF);
+    Type *MaskTy = VectorType::get(Type::getInt1Ty(Plan.getContext()), VF);
+    Type *PtrTy = VectorType::get(GEP->getType(), VF);
+    // Avoid VFs that split the index vector, which require rebuilding the
+    // condition mask across parts and can outweigh the benefit of splitting
+    // the gather or scatter.
+    if (CostCtx.TTI.getNumberOfParts(VectorType::get(GEPIndexTy, VF)) != 1)
+      return false;
+    unsigned GatherScatterID =
+        IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
+    InstructionCost GatherScatterCost =
+        CostCtx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
+                                              CostCtx.CostKind) +
+        CostCtx.TTI.getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(
+                GatherScatterID, DataTy, GEP,
+                /*VariableMask=*/VPI->getMask() != nullptr, Alignment, I),
+            CostCtx.CostKind);
+    unsigned MaskedMemID =
+        IsLoad ? Intrinsic::masked_load : Intrinsic::masked_store;
+    InstructionCost MaskedMemCost = CostCtx.TTI.getMemIntrinsicInstrCost(
+        MemIntrinsicCostAttributes(MaskedMemID, DataTy, Alignment,
+                                   AddressSpace),
+        CostCtx.CostKind);
+    InstructionCost AddressCost = CostCtx.TTI.getAddressComputationCost(
+        GEP->getType(), nullptr, nullptr, CostCtx.CostKind);
+    InstructionCost SplitCost = 2 * (AddressCost + MaskedMemCost) +
+                                CostCtx.TTI.getArithmeticInstrCost(
+                                    Instruction::Xor, MaskTy, CostCtx.CostKind);
+    if (IsLoad)
+      SplitCost += CostCtx.TTI.getCmpSelInstrCost(
+          Instruction::Select, DataTy, MaskTy, CmpInst::BAD_ICMP_PREDICATE,
+          CostCtx.CostKind);
+    if (VPI->getMask())
+      SplitCost += 2 * CostCtx.TTI.getArithmeticInstrCost(
+                           Instruction::And, MaskTy, CostCtx.CostKind);
+    return GatherScatterCost.isValid() && SplitCost.isValid() &&
+           SplitCost < GatherScatterCost;
+  };
+  if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable, Range))
+    return false;
+
+  DebugLoc DL = VPI->getDebugLoc();
+  VPBuilder Builder(VPI);
+  auto CreatePointer = [&](VPValue *Base) {
+    SmallVector<VPValue *> Operands(GEPOperands);
+    Operands[0] = Base;
+    auto *ArmGEP = GEPRecipe->cloneWithOperands(Operands, Ptr->getScalarType());
+    ArmGEP->dropPoisonGeneratingFlags();
+    Builder.insert(ArmGEP);
+    return Builder.createConsecutiveVectorPointer(ArmGEP, ScalarTy,
+                                                  /*Reverse=*/false, DL);
+  };
+  VPValue *TruePtr = CreatePointer(TrueBase);
+  VPValue *FalsePtr = CreatePointer(FalseBase);
+
+  VPValue *FalseCond = Builder.createNot(Cond, DL);
+  VPValue *TrueMask = Cond;
+  VPValue *FalseMask = FalseCond;
+  if (VPValue *Mask = VPI->getMask()) {
+    TrueMask = Builder.createLogicalAnd(Mask, Cond, DL);
+    FalseMask = Builder.createLogicalAnd(Mask, FalseCond, DL);
+  }
+
+  auto CreateMemOp = [&](VPValue *Ptr, VPValue *Mask) -> VPRecipeBase * {
+    if (IsLoad)
+      return Builder.createWidenLoad(*cast<LoadInst>(I), Ptr, Mask,
+                                     /*Consecutive=*/true, *VPI, DL);
+    return Builder.createWidenStore(*cast<StoreInst>(I), Ptr,
+                                    VPI->getOperand(0), Mask,
+                                    /*Consecutive=*/true, *VPI, DL);
+  };
+  VPRecipeBase *TrueMemOp = CreateMemOp(TruePtr, TrueMask);
+  VPRecipeBase *FalseMemOp = CreateMemOp(FalsePtr, FalseMask);
+  if (IsLoad)
+    VPI->replaceAllUsesWith(
+        Builder.createSelect(Cond, TrueMemOp->getVPSingleValue(),
+                             FalseMemOp->getVPSingleValue(), DL));
+  VPI->eraseFromParent();
+  return true;
+}
+
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
                                                  VPCostContext &CostCtx) {
@@ -6001,6 +6153,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return true;
         });
   }
+
+  VPlanTransforms::runPass(
+      "splitSelectBaseMemOps", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+        return trySplitSelectBaseMemOp(VPI, Range, CostCtx);
+      });
 
   // Widen unit-stride consecutive accesses, matching the legacy CM. Both
   // forward (stride +1) and reverse (stride -1) accesses are handled.
