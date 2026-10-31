@@ -119,6 +119,8 @@ protected:
   StringRef valueType;
   /// The C++ base interface type.
   StringRef interfaceBaseType;
+  /// The header declaring the C++ base interface type.
+  StringRef interfaceBaseTypeInclude;
   /// The name of the typename for the value template.
   StringRef valueTemplate;
   /// The name of the substituion variable for the value.
@@ -137,6 +139,7 @@ struct AttrInterfaceGenerator : public InterfaceGenerator {
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Attr"), os) {
     valueType = "::mlir::Attribute";
     interfaceBaseType = "AttributeInterface";
+    interfaceBaseTypeInclude = "mlir/IR/Attributes.h";
     valueTemplate = "ConcreteAttr";
     substVar = "_attr";
     StringRef castCode = "(::llvm::cast<ConcreteAttr>(tablegen_opaque_val))";
@@ -152,6 +155,7 @@ struct OpInterfaceGenerator : public InterfaceGenerator {
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Op"), os) {
     valueType = "::mlir::Operation *";
     interfaceBaseType = "OpInterface";
+    interfaceBaseTypeInclude = "mlir/IR/OpDefinition.h";
     valueTemplate = "ConcreteOp";
     substVar = "_op";
     StringRef castCode = "(llvm::cast<ConcreteOp>(tablegen_opaque_val))";
@@ -171,6 +175,7 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
       : InterfaceGenerator(getAllInterfaceDefinitions(records, "Type"), os) {
     valueType = "::mlir::Type";
     interfaceBaseType = "TypeInterface";
+    interfaceBaseTypeInclude = "mlir/IR/Types.h";
     valueTemplate = "ConcreteType";
     substVar = "_type";
     StringRef castCode = "(::llvm::cast<ConcreteType>(tablegen_opaque_val))";
@@ -679,6 +684,18 @@ bool InterfaceGenerator::emitInterfaceDecls() {
   llvm::sort(sortedDefs, [](const Record *lhs, const Record *rhs) {
     return lhs->getID() < rhs->getID();
   });
+  // Include the headers declaring the C++ base interface type and the base
+  // interfaces.
+  SmallVector<StringRef> includes;
+  if (!sortedDefs.empty())
+    includes.push_back(interfaceBaseTypeInclude);
+  for (const Record *def : sortedDefs) {
+    Interface interface(def);
+    for (const Interface &base : interface.getBaseInterfaces())
+      llvm::append_range(includes, base.getCppIncludes());
+  }
+  tblgen::emitIncludes(os, includes);
+
   for (const Record *def : sortedDefs)
     forwardDeclareInterface(Interface(def));
   for (const Record *def : sortedDefs)

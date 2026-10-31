@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "TestDialect.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/Parser/Parser.h"
 

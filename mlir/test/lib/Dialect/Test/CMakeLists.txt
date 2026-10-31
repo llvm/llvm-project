@@ -99,6 +99,13 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRBufferizationDialect
 )
 
+# Users include the test dialect headers by their file name. The generated
+# headers in the binary directory include the source headers in the same way.
+target_include_directories(MLIRTestDialect PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>
+)
+
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation
   TestFromLLVMIRTranslation.cpp
 

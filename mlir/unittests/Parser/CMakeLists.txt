@@ -5,7 +5,6 @@ add_mlir_unittest(MLIRParserTests
   DEPENDS
   MLIRTestInterfaceIncGen
 )
-target_include_directories(MLIRParserTests PRIVATE "${MLIR_BINARY_DIR}/test/lib/Dialect/Test")
 
 mlir_target_link_libraries(MLIRParserTests PRIVATE
   MLIRFuncDialect

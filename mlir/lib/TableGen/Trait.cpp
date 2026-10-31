@@ -37,6 +37,10 @@ Trait Trait::create(const llvm::Init *init) {
 
 Trait::Trait(Kind kind, const llvm::Record *def) : def(def), kind(kind) {}
 
+std::vector<StringRef> Trait::getCppIncludes() const {
+  return def->getValueAsListOfStrings("cppIncludes");
+}
+
 //===----------------------------------------------------------------------===//
 // NativeTrait
 //===----------------------------------------------------------------------===//

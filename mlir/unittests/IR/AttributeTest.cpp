@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 #include <optional>
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "TestDialect.h"
 
 using namespace mlir;
 using namespace mlir::detail;
