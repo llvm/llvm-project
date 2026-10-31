@@ -91,6 +91,9 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
 Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
                                BasicBlock *ParentBB, LoopInfo *LI);
 
+/// Gets recurrence kind from the specified value.
+RecurKind getRdxKind(Value *V);
+
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
