@@ -53,6 +53,8 @@ default_builtins_opts = ""
 config.test_source_root = os.path.dirname(__file__)
 
 # Path to the static library
+# On generic ELF targets %librt also links libm (-lm); spirv links libm.bc
+# instead.
 is_msvc = get_required_attr(config, "is_msvc")
 if is_msvc:
     base_lib = os.path.join(
@@ -102,6 +104,15 @@ else:
                     + libc_bitcode_library
                     + " "
                 )
+            libm_bitcode_library = os.path.join(
+                config.llvm_shlib_dir, config.target_triple, "libm.bc"
+            )
+            if os.path.exists(libm_bitcode_library):
+                librt_flags += (
+                    "-Xclang -mlink-builtin-bitcode -Xclang "
+                    + libm_bitcode_library
+                    + " "
+                )
             config.substitutions.append(("%librt ", librt_flags))
         # Check if the linker supports --start-group and --end-group
         # For nvptx64 target, it falls back to the default.
@@ -109,11 +120,11 @@ else:
             config.substitutions.append(
                 (
                     "%librt ",
-                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group ",
+                    "-lm -Wl,--start-group " + base_lib + " -lc -Wl,--end-group -lm ",
                 )
             )
         else:
-            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc "))
+            config.substitutions.append(("%librt ", "-lm " + base_lib + " -lc -lm "))
 
 builtins_test_crt = get_required_attr(config, "builtins_test_crt")
 if builtins_test_crt:
