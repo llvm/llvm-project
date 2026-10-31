@@ -321,16 +321,6 @@ option(LIBCXX_HAS_EXTERNAL_THREAD_API
    This option may only be set to ON when LIBCXX_ENABLE_THREADS=ON." OFF)
 option(LIBCXX_HAS_C11_THREAD_API "Ignore auto-detection and force use of C11 thread API" OFF)
 
-if (APPLE)
-  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "libdispatch")
-elseif(LIBCXX_ENABLE_THREADS)
-  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "std_thread")
-else()
-  set(LIBCXX_PSTL_BACKEND_DEFAULT_VALUE "serial")
-endif()
-
-set(LIBCXX_PSTL_BACKEND "${LIBCXX_PSTL_BACKEND_DEFAULT_VALUE}" CACHE STRING "Which PSTL backend to use")
-
 # Misc options ----------------------------------------------------------------
 # FIXME: Turn -pedantic back ON. It is currently off because it warns
 # about #include_next which is used everywhere.
@@ -797,19 +787,6 @@ elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "quick_enforce")
   config_define(16 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
 elseif (LIBCXX_ASSERTION_SEMANTIC STREQUAL "enforce")
   config_define(32 _LIBCPP_ASSERTION_SEMANTIC_DEFAULT)
-endif()
-
-if (LIBCXX_PSTL_BACKEND STREQUAL "serial")
-  config_define(1 _LIBCPP_PSTL_BACKEND_SERIAL)
-elseif(LIBCXX_PSTL_BACKEND STREQUAL "std_thread")
-  config_define(1 _LIBCPP_PSTL_BACKEND_STD_THREAD)
-elseif(LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
-  config_define(1 _LIBCPP_PSTL_BACKEND_LIBDISPATCH)
-elseif(LIBCXX_PSTL_BACKEND STREQUAL "statpart")
-  config_define(1 _LIBCPP_PSTL_BACKEND_STATPART)
-else()
-  message(FATAL_ERROR "LIBCXX_PSTL_BACKEND is set to ${LIBCXX_PSTL_BACKEND}, which is not a valid backend.
-                       Valid backends are: serial, std_thread, libdispatch and statpart")
 endif()
 
 if (LIBCXX_ABI_DEFINES)
