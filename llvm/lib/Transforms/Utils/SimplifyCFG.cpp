@@ -1924,25 +1924,20 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // hoisting all instructions and removing the blocks we are hoisting from,
     // so does not add any new instructions.
 
-    // Check if sizes and terminators of all successors match.
-    unsigned Size0 = UniqueSuccessors[0]->size();
-    Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
-    bool AllSame =
-        all_of(drop_begin(UniqueSuccessors), [Term0, Size0](BasicBlock *Succ) {
-          return Succ->getTerminator()->isIdenticalTo(Term0) &&
-                 Succ->size() == Size0;
-        });
-    if (!AllSame)
-      return false;
-    LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
-    while (LRI.isValid()) {
-      Instruction *I0 = (*LRI)[0];
-      if (any_of(*LRI, [I0](Instruction *I) {
-            return !areIdenticalUpToCommutativity(I0, I);
-          })) {
+    // Check that all successors hold the same instructions, ignoring pseudo
+    // probes, which do not affect code generation.
+    auto IsNotProbe = [](const Instruction &I) {
+      return !isa<PseudoProbeInst>(I);
+    };
+    auto Insts0 = make_filter_range(*UniqueSuccessors[0], IsNotProbe);
+    for (BasicBlock *Succ : drop_begin(UniqueSuccessors)) {
+      if (!Succ->getTerminator()->isIdenticalTo(
+              UniqueSuccessors[0]->getTerminator()) ||
+          !llvm::equal(Insts0, make_filter_range(*Succ, IsNotProbe),
+                       [](const Instruction &I0, const Instruction &I) {
+                         return areIdenticalUpToCommutativity(&I0, &I);
+                       }))
         return false;
-      }
-      --LRI;
     }
     // Now we know that all instructions in all successors can be hoisted. Let
     // the loop below handle the hoisting.
@@ -1963,7 +1958,28 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
 
   bool Changed = false;
 
+  auto SkipProbe = [](SuccIterPair &Pair) {
+    auto Probe = Pair.first++;
+    // Debug records before a probe still describe the following code.
+    Pair.first->adoptDbgRecords(Probe->getParent(), Probe,
+                                /*InsertAtHead=*/true);
+  };
+
   for (;;) {
+    // Preserve identical probes through the normal hoisting path. Skip other
+    // probes so they neither block hoisting nor count as skipped instructions.
+    Instruction *First = &*SuccIterPairs.front().first;
+    if (!isa<PseudoProbeInst>(First) ||
+        !all_of(drop_begin(SuccIterPairs), [First](const auto &Pair) {
+          Instruction *I = &*Pair.first;
+          return areIdenticalUpToCommutativity(First, I) &&
+                 MMRAMetadata(*First) == MMRAMetadata(*I);
+        })) {
+      for (auto &Pair : SuccIterPairs)
+        while (isa<PseudoProbeInst>(*Pair.first))
+          SkipProbe(Pair);
+    }
+
     auto *SuccIterPairBegin = SuccIterPairs.begin();
     auto &BB1ItrPair = *SuccIterPairBegin++;
     auto OtherSuccIterPairRange =
@@ -2079,6 +2095,13 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
       Changed = true;
       NumHoistCommonInstrs += SuccIterPairs.size();
     } else {
+      // Even identical probes may fail a normal hoisting safety check. Do not
+      // charge them against the scan budget in that case.
+      if (isa<PseudoProbeInst>(I1)) {
+        for (auto &Pair : SuccIterPairs)
+          SkipProbe(Pair);
+        continue;
+      }
       if (NumSkipped >= HoistCommonSkipLimit) {
         hoistLockstepIdenticalDbgVariableRecords(TI, I1, OtherInsts);
         return Changed;
