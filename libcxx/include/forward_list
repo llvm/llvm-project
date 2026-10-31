@@ -1281,6 +1281,8 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::resize(size_type _
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::splice_after(const_iterator __p, forward_list& __x) {
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+      this != std::addressof(__x), "forward_list::splice_after(iterator, forward_list) called with this == &forward_list");
   if (!__x.empty()) {
     if (__p.__ptr_->__next_ != nullptr) {
       const_iterator __lm1 = __x.before_begin();
@@ -1296,6 +1298,9 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::splice_after(const
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 forward_list<_Tp, _Alloc>::splice_after(const_iterator __p, forward_list& /*__other*/, const_iterator __i) {
+  _LIBCPP_ASSERT_NON_NULL(__i.__ptr_ != nullptr && __i.__ptr_->__next_ != nullptr,
+                          "forward_list::splice_after(iterator, forward_list, iterator) called with an iterator "
+                          "whose successor is not dereferenceable");
   const_iterator __lm1 = std::next(__i);
   if (__p != __i && __p != __lm1) {
     __i.__ptr_->__next_   = __lm1.__ptr_->__next_;
@@ -1308,9 +1313,20 @@ template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX26 void forward_list<_Tp, _Alloc>::splice_after(
     const_iterator __p, forward_list& /*__other*/, const_iterator __f, const_iterator __l) {
   if (__f != __l && __p != __f) {
+    _LIBCPP_ASSERT_NON_NULL(
+        __f.__ptr_ != nullptr,
+        "forward_list::splice_after(iterator, forward_list, iterator, iterator) called with an invalid range");
     const_iterator __lm1 = __f;
-    while (__lm1.__ptr_->__next_ != __l.__ptr_)
+    while (__lm1.__ptr_->__next_ != __l.__ptr_) {
       ++__lm1;
+      _LIBCPP_ASSERT_NON_NULL(
+          __lm1.__ptr_ != nullptr,
+          "forward_list::splice_after(iterator, forward_list, iterator, iterator) called with an invalid range");
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE(
+          __lm1 != __p,
+          "forward_list::splice_after(iterator, forward_list, iterator, iterator) called with the position inside "
+          "the range");
+    }
     if (__f != __lm1) {
       __lm1.__ptr_->__next_ = __p.__ptr_->__next_;
       __p.__ptr_->__next_   = __f.__ptr_->__next_;
