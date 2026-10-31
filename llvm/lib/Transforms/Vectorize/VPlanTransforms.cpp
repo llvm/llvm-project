@@ -2971,14 +2971,11 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::createInterleaveGroups(
-    VPlan &Plan,
-    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
-        &InterleaveGroups,
-    const bool &EpilogueAllowed) {
-  if (InterleaveGroups.empty())
-    return;
-
+/// Build a map from each VPWidenMemoryRecipe's underlying IR instruction to
+/// the recipe itself, for all VPWidenMemoryRecipes in \p Plan's vector loop
+/// region.
+static DenseMap<Instruction *, VPWidenMemoryRecipe *>
+collectIRMemberToRecipe(VPlan &Plan) {
   DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe;
   for (VPBasicBlock *VPBB :
        VPBlockUtils::blocksOnly<VPBasicBlock>(vp_depth_first_shallow(
@@ -2989,6 +2986,19 @@ void VPlanTransforms::createInterleaveGroups(
       auto *MemR = cast<VPWidenMemoryRecipe>(&R);
       IRMemberToRecipe[&MemR->getIngredient()] = MemR;
     }
+  return IRMemberToRecipe;
+}
+
+void VPlanTransforms::createInterleaveGroups(
+    VPlan &Plan,
+    const SmallPtrSetImpl<const InterleaveGroup<Instruction> *>
+        &InterleaveGroups,
+    const bool &EpilogueAllowed) {
+  if (InterleaveGroups.empty())
+    return;
+
+  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe =
+      collectIRMemberToRecipe(Plan);
 
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
@@ -6345,15 +6355,137 @@ void VPlanTransforms::narrowInductionTruncates(VPlan &Plan, VFRange &Range,
   }
 }
 
-void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
-                                               PredicatedScalarEvolution &PSE,
-                                               Loop &L, VPCostContext &Ctx,
-                                               VFRange &Range) {
+void VPlanTransforms::convertToStridedAccesses(
+    VPlan &Plan, PredicatedScalarEvolution &PSE, Loop &L, VPCostContext &Ctx,
+    VFRange &Range,
+    SmallPtrSetImpl<const InterleaveGroup<Instruction> *> &InterleaveGroups) {
   if (Plan.hasScalarVFOnly())
     return;
 
-  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  DenseMap<Instruction *, VPWidenMemoryRecipe *> IRMemberToRecipe =
+      collectIRMemberToRecipe(Plan);
+
   VPValue *I32VF = nullptr;
+  auto GetI32VF = [&I32VF, &Plan]() {
+    if (!I32VF) {
+      VPBuilder Builder(Plan.getVectorPreheader());
+      I32VF = Builder.createScalarZExtOrTrunc(
+          &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
+          DebugLoc::getUnknown());
+    }
+    return I32VF;
+  };
+  auto &DL = Plan.getDataLayout();
+  // Return the scalar data type and the strided-load/store intrinsic ID to
+  // use for \p R, which must be a VPWidenStoreRecipe or VPWidenLoadRecipe.
+  auto GetDataTyAndIntrinID =
+      [](VPRecipeBase *R) -> std::pair<Type *, Intrinsic::ID> {
+    if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(R))
+      return {StoreR->getStoredValue()->getScalarType(),
+              Intrinsic::experimental_vp_strided_store};
+    return {cast<VPWidenLoadRecipe>(R)->getScalarType(),
+            Intrinsic::experimental_vp_strided_load};
+  };
+  // Replace \p MemR's recipe, a VPWidenStoreRecipe or VPWidenLoadRecipe, with
+  // a strided-load/store intrinsic recipe using \p NewPtr as the vector
+  // pointer and \p StrideInBytes as the stride operand.
+  auto ReplaceWithStridedAccess =
+      [&](VPBuilder &Builder, VPWidenMemoryRecipe *MemR, VPValue *NewPtr,
+          VPValue *StrideInBytes, Type *DataTy, Intrinsic::ID IntrinID) {
+        VPRecipeBase *R = MemR->getAsRecipe();
+        VPValue *StoredValue = nullptr;
+        if (IntrinID == Intrinsic::experimental_vp_strided_store)
+          StoredValue = cast<VPWidenStoreRecipe>(R)->getStoredValue();
+
+        VPValue *Mask = MemR->getMask();
+        if (!Mask)
+          Mask = Plan.getTrue();
+        SmallVector<VPValue *, 5> Ops;
+        if (StoredValue)
+          Ops.push_back(StoredValue);
+        Ops.append({NewPtr, StrideInBytes, Mask, GetI32VF()});
+
+        auto *StridedR = Builder.createWidenMemIntrinsic(
+            IntrinID, Ops,
+            StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy,
+            MemR->getAlign(), *MemR, R->getDebugLoc());
+        if (!StoredValue)
+          cast<VPWidenLoadRecipe>(R)->replaceAllUsesWith(StridedR);
+        R->eraseFromParent();
+      };
+  // Transform interleave access into multiple strided accesses.
+  InterleaveGroups.remove_if([&](const auto *IG) {
+    auto It =
+        llvm::find_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
+          return IRMemberToRecipe.contains(Member);
+        });
+    // Skip dead group.
+    if (It == IG->members().end())
+      return false;
+
+    VPWidenMemoryRecipe *StartMemR = IRMemberToRecipe.lookup(*It);
+    VPRecipeBase *StartR = StartMemR->getAsRecipe();
+    auto [DataTy, IntrinID] = GetDataTyAndIntrinID(StartR);
+    unsigned NumOfMembers =
+        llvm::count_if(IG->members(), [&IRMemberToRecipe](Instruction *Member) {
+          return IRMemberToRecipe.contains(Member);
+        });
+    Align Alignment = StartMemR->getAlign();
+    auto IsProfitable = [&](ElementCount VF) {
+      Type *VectorTy = toVectorTy(DataTy, VF);
+      if (!Ctx.TTI.isLegalStridedLoadStore(VectorTy, Alignment))
+        return false;
+      const InstructionCost InterleavedCost =
+          Ctx.getLegacyCost(IG->getInsertPos(), VF);
+      const InstructionCost StridedLoadStoreCost =
+          VPWidenMemIntrinsicRecipe::computeMemIntrinsicCost(
+              IntrinID, VectorTy, StartMemR->isMasked(), Alignment, Ctx);
+      return StridedLoadStoreCost * NumOfMembers < InterleavedCost;
+    };
+
+    if (!LoopVectorizationPlanner::getDecisionAndClampRange(IsProfitable,
+                                                            Range))
+      return false;
+
+    // ???: Do we still need to invalidate the legacy widening decision?
+    // Get stride from the factor of group.
+    VPValue *Addr = StartMemR->getAddr();
+    Type *IndexTy = DL.getIndexType(Addr->getScalarType());
+    APInt StrideSize(IndexTy->getIntegerBitWidth(),
+                     IG->getFactor() *
+                         DL.getTypeAllocSize(DataTy).getFixedValue(),
+                     /*IsSigned=*/true);
+    VPValue *StrideInBytes =
+        Plan.getConstantInt(IG->isReverse() ? -StrideSize : StrideSize);
+
+    for (auto *Member : IG->members()) {
+      VPWidenMemoryRecipe *MemR = IRMemberToRecipe.lookup(Member);
+      if (!MemR)
+        continue;
+
+      VPRecipeBase *R = MemR->getAsRecipe();
+      VPBuilder Builder(R);
+      // Create a new vector pointer for strided access.
+      VPValue *BasePtr = MemR->getAddr();
+      VPValue *NewPtr = Builder.createVectorPointer(
+          BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes,
+          vputils::getGEPFlagsForPtr(BasePtr), R->getDebugLoc());
+
+      ReplaceWithStridedAccess(Builder, MemR, NewPtr, StrideInBytes, DataTy,
+                               IntrinID);
+    }
+    return true;
+  });
+
+  // Collect recipes that still belong to an interleave group, so they can be
+  // skipped below.
+  SmallPtrSet<VPWidenMemoryRecipe *, 4> InGroups;
+  for (const auto *IG : InterleaveGroups)
+    for (auto *Member : IG->members())
+      if (VPWidenMemoryRecipe *R = IRMemberToRecipe.lookup(Member))
+        InGroups.insert(R);
+
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(VectorLoop->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6361,8 +6493,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       // TODO: Transform reverse access into strided access with -1 stride.
       // TODO: Transform gather/scatter with uniform address into strided access
       // with 0 stride.
-      // TODO: Transform interleave access into multiple strided accesses.
-      if (!MemR || MemR->isConsecutive())
+      if (!MemR || MemR->isConsecutive() || InGroups.contains(MemR))
         continue;
 
       VPValue *Ptr = MemR->getAddr();
@@ -6377,18 +6508,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
                                      m_SpecificLoop(&L))))
         continue;
 
-      VPValue *StoredValue = nullptr;
-      Type *DataTy;
-      Intrinsic::ID IntrinID;
-      if (auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R)) {
-        StoredValue = StoreR->getStoredValue();
-        DataTy = StoredValue->getScalarType();
-        IntrinID = Intrinsic::experimental_vp_strided_store;
-      } else {
-        auto *LoadR = cast<VPWidenLoadRecipe>(&R);
-        DataTy = LoadR->getScalarType();
-        IntrinID = Intrinsic::experimental_vp_strided_load;
-      }
+      auto [DataTy, IntrinID] = GetDataTyAndIntrinID(&R);
 
       Align Alignment = MemR->getAlign();
       auto IsProfitable = [&](ElementCount VF) {
@@ -6412,14 +6532,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       for (ElementCount VF : Range)
         Ctx.invalidateWideningDecision(&MemR->getIngredient(), VF);
 
-      // Get VF as i32 for the vector length operand.
-      if (!I32VF) {
-        VPBuilder Builder(Plan.getVectorPreheader());
-        I32VF = Builder.createScalarZExtOrTrunc(
-            &Plan.getVF(), Type::getInt32Ty(Plan.getContext()),
-            DebugLoc::getUnknown());
-      }
-
       VPBuilder Builder(&R);
       // Create the base pointer of strided access.
       // TODO: reuse VPDerivedIVRecipe for base pointer computation when it
@@ -6427,7 +6539,7 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
       VPValue *StartVPV =
           VPSCEVExpander(Builder, *PSE.getSE(), R.getDebugLoc()).expand(Start);
       VPValue *StrideInBytes = Plan.getOrAddLiveIn(Step->getValue());
-      Type *IndexTy = Plan.getDataLayout().getIndexType(Ptr->getScalarType());
+      Type *IndexTy = DL.getIndexType(Ptr->getScalarType());
       assert(IndexTy == StrideInBytes->getScalarType() &&
              "Stride type from SCEV must match the index type");
       VPValue *CanIV = Builder.createScalarZExtOrTrunc(
@@ -6446,21 +6558,8 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
           BasePtr, Type::getInt8Ty(Plan.getContext()), StrideInBytes, NWFlags,
           R.getDebugLoc());
 
-      VPValue *Mask = MemR->getMask();
-      if (!Mask)
-        Mask = Plan.getTrue();
-      SmallVector<VPValue *, 5> Ops;
-      if (StoredValue)
-        Ops.push_back(StoredValue);
-      Ops.append({NewPtr, StrideInBytes, Mask, I32VF});
-
-      auto *StridedR = Builder.createWidenMemIntrinsic(
-          IntrinID, Ops,
-          StoredValue ? Type::getVoidTy(Plan.getContext()) : DataTy, Alignment,
-          *MemR, R.getDebugLoc());
-      if (!StoredValue)
-        cast<VPWidenLoadRecipe>(&R)->replaceAllUsesWith(StridedR);
-      R.eraseFromParent();
+      ReplaceWithStridedAccess(Builder, MemR, NewPtr, StrideInBytes, DataTy,
+                               IntrinID);
     }
   }
 }
