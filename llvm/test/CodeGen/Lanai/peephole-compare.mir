@@ -297,7 +297,7 @@ body:             |
     %1 = COPY $r7
     %0 = COPY $r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
+    SFSUB_F_RI_LO %4, 0, implicit-def $sr
     %5 = SELECT %2, %3, 11, implicit $sr
     $rv = COPY %5
     RET implicit $rca, implicit $rv
@@ -343,7 +343,7 @@ body:             |
     %1 = COPY $r7
     %0 = COPY $r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
+    SFSUB_F_RI_LO %4, 0, implicit-def $sr
     %5 = SELECT %2, %3, 11, implicit $sr
     $rv = COPY %5
     RET implicit $rca, implicit $rv
@@ -389,7 +389,7 @@ body:             |
     %1 = COPY $r7
     %0 = COPY $r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
+    SFSUB_F_RI_LO %4, 0, implicit-def $sr
     %5 = SELECT %2, %3, 10, implicit $sr
     $rv = COPY %5
     RET implicit $rca, implicit $rv
@@ -435,7 +435,7 @@ body:             |
     %1 = COPY $r7
     %0 = COPY $r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 0, implicit-def $sr
+    SFSUB_F_RI_LO %4, 0, implicit-def $sr
     %5 = SELECT %2, %3, 10, implicit $sr
     $rv = COPY %5
     RET implicit $rca, implicit $rv
@@ -481,7 +481,7 @@ body:             |
     %1 = COPY $r7
     %0 = COPY $r6
     %4 = SUB_R %1, %0, 0
-    SFSUB_F_RI_LO killed %4, 1, implicit-def $sr
+    SFSUB_F_RI_LO %4, 1, implicit-def $sr
     %5 = SELECT %2, %3, 13, implicit $sr
     $rv = COPY %5
     RET implicit $rca, implicit $rv
@@ -548,10 +548,10 @@ body:             |
     %5 = SCC 6, implicit $sr
     SFSUB_F_RR %1, %2, implicit-def $sr
     %6 = SCC 4, implicit $sr
-    %7 = AND_R killed %5, killed %6, 0
+    %7 = AND_R %5, %6, 0
     %8 = SLI 1
-    %9 = AND_R killed %7, %8, 0
-    SFSUB_F_RI_LO killed %9, 0, implicit-def $sr
+    %9 = AND_R %7, %8, 0
+    SFSUB_F_RI_LO %9, 0, implicit-def $sr
     BRCC %bb.4.return, 6, implicit $sr
     BT %bb.1.if.end
 
@@ -562,9 +562,9 @@ body:             |
     %10 = SCC 6, implicit $sr
     SFSUB_F_RR %2, %3, implicit-def $sr
     %11 = SCC 4, implicit $sr
-    %12 = AND_R killed %10, killed %11, 0
-    %14 = AND_R killed %12, %8, 0
-    SFSUB_F_RI_LO killed %14, 0, implicit-def $sr
+    %12 = AND_R %10, %11, 0
+    %14 = AND_R %12, %8, 0
+    SFSUB_F_RI_LO %14, 0, implicit-def $sr
     BRCC %bb.4.return, 6, implicit $sr
     BT %bb.2.if.end6
 
@@ -575,10 +575,10 @@ body:             |
     %15 = SCC 6, implicit $sr
     SFSUB_F_RR %3, %4, implicit-def $sr
     %16 = SCC 4, implicit $sr
-    %17 = AND_R killed %15, killed %16, 0
+    %17 = AND_R %15, %16, 0
     %18 = SLI 1
-    %19 = AND_R killed %17, killed %18, 0
-    SFSUB_F_RI_LO killed %19, 0, implicit-def $sr
+    %19 = AND_R %17, %18, 0
+    SFSUB_F_RI_LO %19, 0, implicit-def $sr
     BRCC %bb.4.return, 6, implicit $sr
     BT %bb.3.if.end11
 
@@ -587,7 +587,7 @@ body:             |
     SFSUB_F_RR %4, %1, implicit-def $sr
     %21 = SELECT %2, %20, 4, implicit $sr
     SFSUB_F_RI_LO %4, 0, implicit-def $sr
-    %22 = SELECT killed %21, %20, 6, implicit $sr
+    %22 = SELECT %21, %20, 6, implicit $sr
     $rv = COPY %22
     RET implicit $rca, implicit $rv
 
@@ -631,12 +631,12 @@ body:             |
     successors: %bb.3.if.end, %bb.1.if.then
 
     %1 = MOVHI target-flags(lanai-hi) @a
-    %2 = OR_I_LO killed %1, target-flags(lanai-lo) @a
-    %3 = LDW_RI killed %2, 0, 0 :: (load (s32) from @a, !tbaa !0)
+    %2 = OR_I_LO %1, target-flags(lanai-lo) @a
+    %3 = LDW_RI %2, 0, 0 :: (load (s32) from @a, !tbaa !0)
     %4 = MOVHI target-flags(lanai-hi) @b
-    %5 = OR_I_LO killed %4, target-flags(lanai-lo) @b
-    %6 = LDW_RI killed %5, 0, 0 :: (load (s32) from @b, !tbaa !0)
-    %0 = SUB_R killed %6, killed %3, 0
+    %5 = OR_I_LO %4, target-flags(lanai-lo) @b
+    %6 = LDW_RI %5, 0, 0 :: (load (s32) from @b, !tbaa !0)
+    %0 = SUB_R %6, %3, 0
     SFSUB_F_RI_LO %0, 0, implicit-def $sr
     BRCC %bb.3.if.end, 10, implicit $sr
     BT %bb.1.if.then
