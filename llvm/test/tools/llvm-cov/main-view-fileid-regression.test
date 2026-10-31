@@ -14,3 +14,13 @@ CHECK: Filename
 CHECK: lib.rs
 CHECK: TOTAL
 CHECK: 100.00%
+
+# The LCOV exporter used to crash on the same input (front() of an empty
+# CountedRegions list in renderFunctions).
+RUN: llvm-cov export --format=lcov %S/Inputs/main-view-fileid-regression.covmapping \
+RUN:   -instr-profile=%t.profdata | FileCheck %s --check-prefix=LCOV
+
+LCOV: SF:{{.*}}lib.rs
+LCOV: FNF:3
+LCOV: FNH:3
+LCOV: end_of_record
