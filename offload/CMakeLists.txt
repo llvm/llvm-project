@@ -17,7 +17,7 @@ set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
 set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
 
 # libomptarget is not supported on Windows.
-set(BUILD_LIBOMPTARGET ON)
+option(BUILD_LIBOMPTARGET "Build libomptarget" ON)
 if(MSVC)
   set(BUILD_LIBOMPTARGET OFF)
   message(STATUS "libomptarget is not supported on Windows, skipping.")
