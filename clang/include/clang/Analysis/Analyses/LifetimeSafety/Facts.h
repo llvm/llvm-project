@@ -270,15 +270,28 @@ public:
 class UseFact : public Fact {
   const Expr *UseExpr;
   const OriginList *OList;
+  // Implicit uses (no UseExpr) happen at scope exit: a destructor or a cleanup
+  // callback that may read the borrow.
+  SourceLocation ImplicitLoc;
+  bool IsDestructorUse = false;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
   UseFact(const Expr *UseExpr, const OriginList *OList)
       : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
+  UseFact(SourceLocation ImplicitLoc, const OriginList *OList,
+          bool IsDestructorUse)
+      : Fact(Kind::Use), UseExpr(nullptr), OList(OList),
+        ImplicitLoc(ImplicitLoc), IsDestructorUse(IsDestructorUse) {}
 
   const OriginList *getUsedOrigins() const { return OList; }
+  /// Null for an implicit use.
   const Expr *getUseExpr() const { return UseExpr; }
+  SourceLocation getUseLoc() const {
+    return UseExpr ? UseExpr->getExprLoc() : ImplicitLoc;
+  }
+  bool isDestructorUse() const { return IsDestructorUse; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;

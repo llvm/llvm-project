@@ -524,6 +524,7 @@ enables only the high-confidence subset of these checks.
 
   - `-Wlifetime-safety-experimental-invalidation`: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation or explicit destruction (e.g., `std::unique_ptr::reset`, `std::destroy_at`).
   - `-Wlifetime-safety-experimental-field-origin-escape`: Warns when a member function returns a value derived from a pointer, reference, or view field rather than from `*this` (e.g., `Span::data()`). Owned pointer fields (e.g., `Vector::data()`) are also reported; mark such methods `[[clang::lifetimebound]]` to silence the warning.
+  - `-Wlifetime-safety-experimental-destructor-use`: Treats a non-trivial destructor run at scope exit as a use of the borrows the object holds, so an object destroyed after the storage it borrows from is reported. Destructors that never read the borrow (e.g., `std::function`'s) are also reported.
 
 ## Limitations
 

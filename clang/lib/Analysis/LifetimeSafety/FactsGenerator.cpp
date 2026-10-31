@@ -819,6 +819,19 @@ void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {
   const VarDecl *LifetimeEndsVD = LifetimeEnds.getVarDecl();
   if (!LifetimeEndsVD)
     return;
+  // A cleanup callback or a non-trivial destructor (other than an owner's) run
+  // at scope exit may read the borrows the variable holds.
+  QualType Ty = LifetimeEndsVD->getType();
+  bool HasCleanup = LifetimeEndsVD->hasAttr<CleanupAttr>();
+  bool IsDestructorUse =
+      LSOpts.CheckDestructorUses &&
+      Ty.isDestructedType() == QualType::DK_cxx_destructor &&
+      !isGslOwnerType(AC.getASTContext().getBaseElementType(Ty));
+  if (HasCleanup || IsDestructorUse)
+    if (OriginList *List = getOriginsList(*LifetimeEndsVD))
+      CurrentBlockFacts.push_back(FactMgr.createFact<UseFact>(
+          LifetimeEnds.getTriggerStmt()->getEndLoc(), List,
+          /*IsDestructorUse=*/!HasCleanup));
   // Expire the origin when its variable's lifetime ends to ensure liveness
   // doesn't persist through loop back-edges.
   std::optional<OriginID> ExpiredOID;

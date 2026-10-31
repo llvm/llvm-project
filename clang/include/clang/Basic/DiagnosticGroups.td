@@ -754,10 +754,21 @@ method ``[[clang::lifetimebound]]``.
   }];
 }
 
+def LifetimeSafetyDestructorUse
+    : DiagGroup<"lifetime-safety-experimental-destructor-use"> {
+  code Documentation = [{
+Experimental. Treats a non-trivial destructor running at scope exit as a use of
+the borrows the object holds, since the analysis cannot see whether the
+destructor reads them. Detects objects destroyed after the storage they borrow
+from. May report destructors that never read the borrow (e.g. ``std::function``).
+  }];
+}
+
 def LifetimeSafetyExperimental
     : DiagGroup<"lifetime-safety-experimental",
                 [LifetimeSafetyInvalidation,
-                 LifetimeSafetyFieldOriginEscape]> {
+                 LifetimeSafetyFieldOriginEscape,
+                 LifetimeSafetyDestructorUse]> {
   code Documentation = [{
 Experimental lifetime safety warnings. These may have known false positives and
 their behavior may change. Not enabled by -Wlifetime-safety-all.

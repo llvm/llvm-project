@@ -79,6 +79,11 @@ inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_field_origin_escape, D->getBeginLoc());
 }
 
+inline bool ShouldCheckDestructorUses(Sema &S, const Decl *D) {
+  return !S.getDiagnostics().isIgnored(
+      diag::warn_lifetime_safety_destructor_use_after_scope, D->getBeginLoc());
+}
+
 inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   constexpr unsigned DiagIDs[] = {
@@ -122,6 +127,7 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
          ShouldCheckMisplacedLifetimebound(S, D) ||
          ShouldCheckInapplicableLifetimebound(S, D) ||
          ShouldCheckFieldOriginEscape(S, D) ||
+         ShouldCheckDestructorUses(S, D) ||
          ShouldSuggestLifetimeAnnotations(S, D);
 }
 
@@ -136,6 +142,7 @@ inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
   LSOpts.CheckInapplicableLifetimebound =
       ShouldCheckInapplicableLifetimebound(S, D);
   LSOpts.CheckFieldOriginEscape = ShouldCheckFieldOriginEscape(S, D);
+  LSOpts.CheckDestructorUses = ShouldCheckDestructorUses(S, D);
   return LSOpts;
 }
 
@@ -166,10 +173,13 @@ public:
 
   void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
                            const Expr *MovedExpr, SourceLocation FreeLoc,
-                           llvm::ArrayRef<const Expr *> ExprChain) override {
-    unsigned DiagID = MovedExpr
-                          ? diag::warn_lifetime_safety_use_after_scope_moved
-                          : diag::warn_lifetime_safety_use_after_scope;
+                           llvm::ArrayRef<const Expr *> ExprChain,
+                           bool IsDestructorUse) override {
+    unsigned DiagID =
+        IsDestructorUse
+            ? diag::warn_lifetime_safety_destructor_use_after_scope
+            : (MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
+                         : diag::warn_lifetime_safety_use_after_scope);
     std::string DestroyedSubject = getDiagSubjectDescription(IssueExpr);
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
@@ -266,7 +276,8 @@ public:
     reportUseAfterInvalidationImpl(
         IssueExpr->getExprLoc(), IssueExpr->getSourceRange(),
         getDiagSubjectDescription(IssueExpr), InvalidationExpr, ExprChain,
-        UseExpr->getExprLoc(), UseExpr->getSourceRange());
+        UseExpr->getExprLoc(), UseExpr->getSourceRange(),
+        /*IsDestructorUse=*/false);
   }
   void
   reportUseAfterInvalidation(const ParmVarDecl *PVD, const Expr *UseExpr,
@@ -275,25 +286,26 @@ public:
     reportUseAfterInvalidationImpl(
         PVD->getSourceRange().getBegin(), PVD->getSourceRange(),
         getDiagSubjectDescription(PVD), InvalidationExpr, ExprChain,
-        UseExpr->getExprLoc(), UseExpr->getSourceRange());
+        UseExpr->getExprLoc(), UseExpr->getSourceRange(),
+        /*IsDestructorUse=*/false);
   }
-  void
-  reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
-                             const Expr *InvalidationExpr,
-                             llvm::ArrayRef<const Expr *> ExprChain) override {
+  void reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
+                                  const Expr *InvalidationExpr,
+                                  llvm::ArrayRef<const Expr *> ExprChain,
+                                  bool IsDestructorUse) override {
     reportUseAfterInvalidationImpl(
         IssueExpr->getExprLoc(), IssueExpr->getSourceRange(),
         getDiagSubjectDescription(IssueExpr), InvalidationExpr, ExprChain,
-        UseLoc, SourceRange());
+        UseLoc, SourceRange(), IsDestructorUse);
   }
-  void
-  reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
-                             const Expr *InvalidationExpr,
-                             llvm::ArrayRef<const Expr *> ExprChain) override {
+  void reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
+                                  const Expr *InvalidationExpr,
+                                  llvm::ArrayRef<const Expr *> ExprChain,
+                                  bool IsDestructorUse) override {
     reportUseAfterInvalidationImpl(
         PVD->getSourceRange().getBegin(), PVD->getSourceRange(),
         getDiagSubjectDescription(PVD), InvalidationExpr, ExprChain, UseLoc,
-        SourceRange());
+        SourceRange(), IsDestructorUse);
   }
 
   void reportInvalidatedField(const Expr *IssueExpr,
@@ -637,15 +649,19 @@ private:
         << InvalidatedSubject << InvalidationExpr->getSourceRange();
   }
 
-  void reportUseAfterInvalidationImpl(SourceLocation IssueLoc,
-                                      SourceRange IssueRange,
-                                      StringRef InvalidatedSubject,
-                                      const Expr *InvalidationExpr,
-                                      llvm::ArrayRef<const Expr *> ExprChain,
-                                      SourceLocation UseLoc,
-                                      SourceRange UseRange) {
-    auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                        ? diag::warn_lifetime_safety_use_after_free
+  void reportUseAfterInvalidationImpl(
+      SourceLocation IssueLoc, SourceRange IssueRange,
+      StringRef InvalidatedSubject, const Expr *InvalidationExpr,
+      llvm::ArrayRef<const Expr *> ExprChain, SourceLocation UseLoc,
+      SourceRange UseRange, bool IsDestructorUse) {
+    bool IsFree = isa<CXXDeleteExpr>(InvalidationExpr);
+    unsigned WarnDiag;
+    if (IsDestructorUse)
+      WarnDiag =
+          IsFree ? diag::warn_lifetime_safety_destructor_use_after_scope
+                 : diag::warn_lifetime_safety_destructor_use_after_invalidation;
+    else
+      WarnDiag = IsFree ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
     S.Diag(IssueLoc, WarnDiag) << InvalidatedSubject << IssueRange;
     reportInvalidationSite(InvalidationExpr, InvalidatedSubject);

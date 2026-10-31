@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-invalidation -Wlifetime-safety-experimental-destructor-use -Wno-dangling -verify=expected,dtor %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -1015,3 +1016,59 @@ struct S {
   }            // expected-note {{later used here}}
 };
 } // namespace CapturedByThis
+
+// Implicit uses at scope exit (destructors, cleanup callbacks) have no use
+// expression.
+namespace implicit_use_join {
+void view_and_callable() {
+  std::string text = "long enough heap-allocated backing string value here!";
+  std::string_view tok = text;
+  std::function<void()> c = [] {};
+  (void)c;
+  (void)tok.size();
+}
+
+void view_and_callable_mutation() {
+  std::string text = "long enough heap-allocated backing string value here!";
+  std::string_view tok = text; // expected-warning {{local variable 'text' is later invalidated}}
+  std::function<void()> c = [] {};
+  (void)c;
+  text.push_back('x'); // expected-note {{local variable 'text' is invalidated here}}
+  (void)tok.size();    // expected-note {{later used here}}
+}
+} // namespace implicit_use_join
+
+namespace implicit_use_after_free {
+struct [[gsl::Pointer]] Ref {
+  const int *p;
+  Ref &operator=(const int *q [[clang::lifetime_capture_by_this]]);
+  ~Ref();
+};
+void cleanup_ref(Ref *r);
+
+void via_destructor() {
+  Ref r;
+  int *h = new int(7); // dtor-warning {{allocated object does not live long enough}}
+  r = h;
+  delete h;            // dtor-note {{allocated object is freed here}}
+}                      // dtor-note {{later used here}}
+
+void via_cleanup() {
+  Ref g __attribute__((cleanup(cleanup_ref)));
+  int *h = new int(7); // expected-warning {{allocated object does not live long enough}}
+  g = h;
+  delete h;            // expected-note {{allocated object is freed here}}
+}                      // expected-note {{later used here}}
+
+struct [[gsl::Pointer]] ViewRef {
+  std::string_view sv;
+  ViewRef &operator=(std::string_view s [[clang::lifetime_capture_by_this]]);
+  ~ViewRef();
+};
+void via_destructor_invalidated() {
+  std::string s;
+  ViewRef r;
+  r = s;            // dtor-warning {{local variable 's' is later invalidated}}
+  s.push_back('x'); // dtor-note {{local variable 's' is invalidated here}}
+}                   // dtor-note {{later used here}}
+} // namespace implicit_use_after_free

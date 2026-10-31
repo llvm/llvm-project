@@ -47,6 +47,8 @@ struct LifetimeSafetyOpts {
   bool CheckMisplacedLifetimebound = false;
   bool CheckInapplicableLifetimebound = false;
   bool CheckFieldOriginEscape = false;
+  /// Whether to model non-trivial destructors at scope exit as uses.
+  bool CheckDestructorUses = false;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -76,11 +78,13 @@ public:
                                    llvm::ArrayRef<const Expr *> ExprChain) {}
 
   // Overload for a use with only a location and no expression (e.g. a borrow
-  // captured into the object and still held at the capturing method's exit).
+  // captured into the object and still held at the capturing method's exit, or
+  // read by a destructor at scope exit).
   virtual void reportUseAfterScope(const Expr *IssueExpr, SourceLocation UseLoc,
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc,
-                                   llvm::ArrayRef<const Expr *> ExprChain) {}
+                                   llvm::ArrayRef<const Expr *> ExprChain,
+                                   bool IsDestructorUse) {}
 
   // TODO: Report where the object was destroyed when that happens before the
   // return (inner scopes, temporaries).
@@ -116,11 +120,13 @@ public:
   virtual void
   reportUseAfterInvalidation(const Expr *IssueExpr, SourceLocation UseLoc,
                              const Expr *InvalidationExpr,
-                             llvm::ArrayRef<const Expr *> ExprChain) {}
+                             llvm::ArrayRef<const Expr *> ExprChain,
+                             bool IsDestructorUse) {}
   virtual void
   reportUseAfterInvalidation(const ParmVarDecl *PVD, SourceLocation UseLoc,
                              const Expr *InvalidationExpr,
-                             llvm::ArrayRef<const Expr *> ExprChain) {}
+                             llvm::ArrayRef<const Expr *> ExprChain,
+                             bool IsDestructorUse) {}
   virtual void reportInvalidatedField(const Expr *IssueExpr,
                                       const FieldDecl *Field,
                                       const Expr *InvalidationExpr,

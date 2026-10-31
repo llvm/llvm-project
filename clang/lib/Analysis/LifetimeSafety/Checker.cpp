@@ -303,7 +303,22 @@ public:
       if (const auto *UF = dyn_cast<const UseFact *>(CausingFact)) {
         llvm::SmallVector<const Expr *> ExprChain =
             getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID, Cfg));
-        if (Warning.InvalidatedByExpr) {
+        if (!UF->getUseExpr()) {
+          // Implicit use at scope exit (destructor or cleanup callback).
+          SourceLocation UseLoc = UF->getUseLoc();
+          bool IsDtor = UF->isDestructorUse();
+          if (!Warning.InvalidatedByExpr)
+            SemaHelper->reportUseAfterScope(IssueExpr, UseLoc, MovedExpr,
+                                            ExpiryLoc, ExprChain, IsDtor);
+          else if (IssueExpr)
+            SemaHelper->reportUseAfterInvalidation(IssueExpr, UseLoc,
+                                                   Warning.InvalidatedByExpr,
+                                                   ExprChain, IsDtor);
+          else if (InvalidatedPVD)
+            SemaHelper->reportUseAfterInvalidation(InvalidatedPVD, UseLoc,
+                                                   Warning.InvalidatedByExpr,
+                                                   ExprChain, IsDtor);
+        } else if (Warning.InvalidatedByExpr) {
           if (IssueExpr)
             // Use-after-invalidation of an object on stack.
             SemaHelper->reportUseAfterInvalidation(IssueExpr, UF->getUseExpr(),
@@ -361,11 +376,12 @@ public:
             if (IssueExpr)
               SemaHelper->reportUseAfterInvalidation(
                   IssueExpr, ThisEscape->getLoc(), Warning.InvalidatedByExpr,
-                  ExprChain);
+                  ExprChain, /*IsDestructorUse=*/false);
             else if (InvalidatedPVD)
               SemaHelper->reportUseAfterInvalidation(
                   InvalidatedPVD, ThisEscape->getLoc(),
-                  Warning.InvalidatedByExpr, ExprChain);
+                  Warning.InvalidatedByExpr, ExprChain,
+                  /*IsDestructorUse=*/false);
           } else
             llvm_unreachable("Unhandled OriginEscapesFact type");
         } else if (const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF)) {
@@ -394,8 +410,8 @@ public:
           // method.
           SemaHelper->reportUseAfterScope(
               IssueExpr, ThisEscape->getLoc(), MovedExpr, ExpiryLoc,
-              getExprChain(
-                  LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)));
+              getExprChain(LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg)),
+              /*IsDestructorUse=*/false);
         else
           llvm_unreachable("Unhandled OriginEscapesFact type");
       } else
