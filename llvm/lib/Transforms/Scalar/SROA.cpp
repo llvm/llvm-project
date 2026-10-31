@@ -6116,8 +6116,14 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   // handled as the begin offset of the set, and the end offset we know is not a
   // splittable offset as it's inside the first slice of the set).
   SparseBitVector<> SplittableOffset;
+  SmallVector<uint64_t, 16> AccessOffsets;
   uint64_t CurBegin = 0, CurEnd = 0;
   for (Slice &S : AS) {
+    // Lifetime markers span the allocation, not indivisible memory accesses.
+    if (isa<LifetimeIntrinsic>(S.getUse()->getUser()))
+      continue;
+    AccessOffsets.push_back(S.beginOffset());
+    AccessOffsets.push_back(S.endOffset());
     // Check if we have a new set of slices
     if (S.beginOffset() > CurBegin || S.endOffset() > CurEnd) {
       // If the start isn't inside the previous set it's splittable
@@ -6139,11 +6145,17 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     }
   }
 
+  llvm::sort(AccessOffsets);
   for (Slice &S : AS) {
     if (!S.isSplittable())
       continue;
 
-    if ((S.beginOffset() > AllocaSize ||
+    // Keep leaf accesses indivisible so lifetime ranges cannot merge them.
+    auto NextOffset = llvm::upper_bound(AccessOffsets, S.beginOffset());
+    bool ContainsAccessBoundary =
+        NextOffset != AccessOffsets.end() && *NextOffset < S.endOffset();
+    if (ContainsAccessBoundary &&
+        (S.beginOffset() > AllocaSize ||
          SplittableOffset.test(S.beginOffset())) &&
         (S.endOffset() > AllocaSize || SplittableOffset.test(S.endOffset())))
       continue;
