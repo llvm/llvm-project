@@ -385,7 +385,9 @@ static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
 // target by parsing as AMDGPU and re-emitting it.
 static inline StringRef mapScopeToSPIRV(const llvm::Triple &TargetTriple,
                                         StringRef AMDGCNScope) {
-  static const llvm::Triple AMDGPU("amdgcn-amd-amdhsa");
+  static const llvm::Triple AMDGPU(llvm::Triple::amdgpu,
+                                   llvm::Triple::NoSubArch, llvm::Triple::AMD,
+                                   llvm::Triple::AMDHSA);
   if (auto Parsed = llvm::parseAtomicScopeIRString(AMDGPU, AMDGCNScope)) {
     auto [Scope, IsSingleAddressSpace] = *Parsed;
     if (auto Str = llvm::getAtomicScopeIRString(TargetTriple, Scope,
