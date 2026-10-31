@@ -148,32 +148,17 @@ define <6 x i16> @saturating_6xi16(<6 x i16> %a, <6 x i16> %b) {
 ;
 ; CHECK-GI-LABEL: saturating_6xi16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smov w8, v1.h[0]
-; CHECK-GI-NEXT:    smov w9, v0.h[0]
-; CHECK-GI-NEXT:    smov w10, v1.h[1]
-; CHECK-GI-NEXT:    smov w11, v0.h[1]
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    fmov s3, w9
-; CHECK-GI-NEXT:    smov w8, v1.h[2]
-; CHECK-GI-NEXT:    smov w9, v0.h[2]
-; CHECK-GI-NEXT:    mov v2.s[1], w10
-; CHECK-GI-NEXT:    mov v3.s[1], w11
-; CHECK-GI-NEXT:    smov w10, v1.h[3]
-; CHECK-GI-NEXT:    sshll2 v1.4s, v1.8h, #0
-; CHECK-GI-NEXT:    mov v2.s[2], w8
-; CHECK-GI-NEXT:    smov w8, v0.h[3]
-; CHECK-GI-NEXT:    mov v3.s[2], w9
-; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    mov v2.s[3], w10
-; CHECK-GI-NEXT:    mov v3.s[3], w8
-; CHECK-GI-NEXT:    mul v0.2s, v1.2s, v0.2s
-; CHECK-GI-NEXT:    mul v2.4s, v2.4s, v3.4s
+; CHECK-GI-NEXT:    sqdmulh v3.4h, v1.4h, v0.4h
+; CHECK-GI-NEXT:    mov v4.h[0], v1.h[4]
+; CHECK-GI-NEXT:    mov v5.h[0], v0.h[4]
+; CHECK-GI-NEXT:    mov v2.h[0], v3.h[0]
+; CHECK-GI-NEXT:    mov v4.h[1], v1.h[5]
+; CHECK-GI-NEXT:    mov v5.h[1], v0.h[5]
+; CHECK-GI-NEXT:    mov v2.h[1], v3.h[1]
+; CHECK-GI-NEXT:    smull v0.4s, v4.4h, v5.4h
+; CHECK-GI-NEXT:    mov v2.h[2], v3.h[2]
 ; CHECK-GI-NEXT:    sshr v0.2s, v0.2s, #15
 ; CHECK-GI-NEXT:    sqxtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    sqshrn v3.4h, v2.4s, #15
-; CHECK-GI-NEXT:    mov v2.h[0], v3.h[0]
-; CHECK-GI-NEXT:    mov v2.h[1], v3.h[1]
-; CHECK-GI-NEXT:    mov v2.h[2], v3.h[2]
 ; CHECK-GI-NEXT:    mov v2.h[3], v3.h[3]
 ; CHECK-GI-NEXT:    mov v2.h[4], v0.h[0]
 ; CHECK-GI-NEXT:    mov v2.h[5], v0.h[1]
@@ -282,9 +267,9 @@ define <1 x i16> @saturating_1xi16(<1 x i16> %a, <1 x i16> %b) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    smov w8, v0.h[0]
-; CHECK-GI-NEXT:    smov w9, v1.h[0]
-; CHECK-GI-NEXT:    mul w8, w9, w8
+; CHECK-GI-NEXT:    smov w8, v1.h[0]
+; CHECK-GI-NEXT:    smov w9, v0.h[0]
+; CHECK-GI-NEXT:    mul w8, w8, w9
 ; CHECK-GI-NEXT:    mov w9, #32767 // =0x7fff
 ; CHECK-GI-NEXT:    asr w8, w8, #15
 ; CHECK-GI-NEXT:    cmp w8, w9

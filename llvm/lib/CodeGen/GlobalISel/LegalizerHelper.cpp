@@ -4724,6 +4724,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerSADDE(MI);
   case TargetOpcode::G_SSUBE:
     return lowerSSUBE(MI);
+  case TargetOpcode::G_UMULL:
+  case TargetOpcode::G_SMULL:
+    return lowerSMULL_UMULL(MI);
   case TargetOpcode::G_UMULH:
   case TargetOpcode::G_SMULH:
     return lowerSMULH_UMULH(MI);
@@ -5818,6 +5821,8 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_PTR_ADD:
   case G_SMULH:
   case G_UMULH:
+  case G_SMULL:
+  case G_UMULL:
   case G_FADD:
   case G_FMUL:
   case G_FSUB:
@@ -7164,6 +7169,26 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
       SrcExtTy = MoreTy;
     }
     moreElementsVectorSrc(MI, SrcExtTy, 1);
+    moreElementsVectorDst(MI, DstExtTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_SMULL:
+  case TargetOpcode::G_UMULL: {
+    Observer.changingInstr(MI);
+    LLT SrcExtTy;
+    LLT DstExtTy;
+    if (TypeIdx == 0) {
+      DstExtTy = MoreTy;
+      SrcExtTy = MoreTy.changeElementType(
+          MRI.getType(MI.getOperand(1).getReg()).getElementType());
+    } else {
+      DstExtTy = MoreTy.changeElementType(
+          MRI.getType(MI.getOperand(0).getReg()).getElementType());
+      SrcExtTy = MoreTy;
+    }
+    moreElementsVectorSrc(MI, SrcExtTy, 1);
+    moreElementsVectorSrc(MI, SrcExtTy, 2);
     moreElementsVectorDst(MI, DstExtTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
@@ -10516,6 +10541,20 @@ LegalizerHelper::lowerReadWriteRegister(MachineInstr &MI) {
   else
     MIRBuilder.buildCopy(PhysReg, ValReg);
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerSMULL_UMULL(MachineInstr &MI) {
+  bool IsSigned = MI.getOpcode() == TargetOpcode::G_SMULL;
+  unsigned ExtOp = IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT;
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+
+  auto LHS = MIRBuilder.buildInstr(ExtOp, {DstTy}, {MI.getOperand(1)});
+  auto RHS = MIRBuilder.buildInstr(ExtOp, {DstTy}, {MI.getOperand(2)});
+  MIRBuilder.buildMul(Dst, LHS, RHS);
   MI.eraseFromParent();
   return Legalized;
 }

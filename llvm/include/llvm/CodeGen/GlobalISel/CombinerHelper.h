@@ -781,6 +781,14 @@ public:
   LLVM_ABI bool matchUMulHToLShr(MachineInstr &MI) const;
   LLVM_ABI void applyUMulHToLShr(MachineInstr &MI) const;
 
+  // G_SMULL/G_UMULL
+  bool matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         GISelValueTracking *KB,
+                         std::tuple<bool, Register, Register> &MatchInfo) const;
+  void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, GISelChangeObserver &Observer,
+                         std::tuple<bool, Register, Register> &MatchInfo) const;
+
   // Combine trunc(smin(smax(x, C1), C2)) -> truncssat_s(x)
   // or      trunc(smax(smin(x, C2), C1)) -> truncssat_s(x).
   LLVM_ABI bool matchTruncSSatS(MachineInstr &MI, Register &MatchInfo) const;

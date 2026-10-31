@@ -26,15 +26,48 @@ def fold_global_offset : GICombineRule<
   (apply [{ applyFoldGlobalOffset(*${root}, MRI, B, Observer, ${matchinfo});}])
 >;
 
-// Boolean: 0 = G_ZEXT, 1 = G_SEXT
-def ext_addv_to_udot_addv_matchinfo : GIDefMatchData<"std::tuple<Register, Register, bool>">;
 let Predicates = [HasDotProd] in {
 def ext_addv_to_udot_addv : GICombineRule<
-  (defs root:$root, ext_addv_to_udot_addv_matchinfo:$matchinfo),
-  (match (G_VECREDUCE_ADD $dst, $src):$root,
-         [{ return matchExtAddvToDotAddv(*${root}, MRI, STI, ${matchinfo}); }]),
-  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, STI, ${matchinfo}); }])
+  (defs root:$root),
+  (match (G_ZEXT $t1, $src),
+         (G_VECREDUCE_ADD $dst, $t1):$root,
+         [{ return MRI.hasOneNonDBGUse(${t1}.getReg()) &&
+                   MRI.getType(${dst}.getReg()).getScalarSizeInBits() == 32 &&
+                   MRI.getType(${src}.getReg()).getScalarSizeInBits() == 8 &&
+                   MRI.getType(${src}.getReg()).getNumElements() % 8 == 0; }]),
+  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, ${src}.getReg(), 0, 0); }])
 >;
+def ext_addv_to_sdot_addv : GICombineRule<
+  (defs root:$root),
+  (match (G_SEXT $t1, $src),
+         (G_VECREDUCE_ADD $dst, $t1):$root,
+         [{ return MRI.hasOneNonDBGUse(${t1}.getReg()) &&
+                   MRI.getType(${dst}.getReg()).getScalarSizeInBits() == 32 &&
+                   MRI.getType(${src}.getReg()).getScalarSizeInBits() == 8 &&
+                   MRI.getType(${src}.getReg()).getNumElements() % 8 == 0; }]),
+  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, ${src}.getReg(), 0, 1); }])
+>;
+
+def ext_mul_addv_to_udot_addv : GICombineRule<
+  (defs root:$root),
+  (match (G_UMULL $t1, $src1, $src2),
+         (G_ZEXT $t2, $t1),
+         (G_VECREDUCE_ADD $dst, $t2):$root,
+         [{ return MRI.hasOneNonDBGUse(${t1}.getReg()) &&
+                   MRI.getType(${dst}.getReg()).getScalarSizeInBits() == 32 &&
+                   MRI.getType(${src1}.getReg()).getScalarSizeInBits() == 8 &&
+                   MRI.getType(${src1}.getReg()).getNumElements() % 8 == 0; }]),
+  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, ${src1}.getReg(), ${src2}.getReg(), 0); }])>;
+def ext_mul_addv_to_sdot_addv : GICombineRule<
+  (defs root:$root),
+  (match (G_SMULL $t1, $src1, $src2),
+         (G_SEXT $t2, $t1),
+         (G_VECREDUCE_ADD $dst, $t2):$root,
+         [{ return MRI.hasOneNonDBGUse(${t1}.getReg()) &&
+                   MRI.getType(${dst}.getReg()).getScalarSizeInBits() == 32 &&
+                   MRI.getType(${src1}.getReg()).getScalarSizeInBits() == 8 &&
+                   MRI.getType(${src1}.getReg()).getNumElements() % 8 == 0; }]),
+  (apply [{ applyExtAddvToDotAddv(*${root}, MRI, B, Observer, ${src1}.getReg(), ${src2}.getReg(), 1); }])>;
 }
 
 def ext_uaddv_to_uaddlv_matchinfo : GIDefMatchData<"std::pair<Register, bool>">;
@@ -99,6 +132,9 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       icmp_redundant_trunc,
                                       fold_global_offset,
                                       ext_addv_to_udot_addv,
+                                      ext_addv_to_sdot_addv,
+                                      ext_mul_addv_to_udot_addv,
+                                      ext_mul_addv_to_sdot_addv,
                                       ext_uaddv_to_uaddlv,
                                       push_sub_through_zext,
                                       push_add_through_zext,
@@ -286,20 +322,14 @@ def extractvecelt_pairwise_add : GICombineRule<
 >;
 
 def mul_const_matchdata : GIDefMatchData<"std::function<void(MachineIRBuilder&, Register)>">;
-def mul_const : GICombineRule<
+foreach opc = [G_MUL, G_UMULL] in
+def opc#_const : GICombineRule<
   (defs root:$root, mul_const_matchdata:$matchinfo),
-  (match (G_MUL $dst, $src1, $src2):$root,
-          [{ return matchAArch64MulConstCombine(*${root}, MRI, ${matchinfo}); }]),
+  (match (opc $dst, $src1, $src2):$root,
+         [{ return matchAArch64MulConstCombine(*${root}, MRI, ${matchinfo}); }]),
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
-
-def mull_matchdata : GIDefMatchData<"std::tuple<bool, Register, Register>">;
-def extmultomull : GICombineRule<
-  (defs root:$root, mull_matchdata:$matchinfo),
-  (match (G_MUL $dst, $src1, $src2):$root,
-          [{ return matchExtMulToMULL(*${root}, MRI, VT, ${matchinfo}); }]),
-  (apply [{ applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
->;
+def mul_const : GICombineGroup<[G_MUL_const, G_UMULL_const]>;
 
 // The mid end will reassociate sub(sub(x, m1), m2) to sub(x, add(m1, m2))
 // This reassociates it back to allow the creation of more mls instructions.

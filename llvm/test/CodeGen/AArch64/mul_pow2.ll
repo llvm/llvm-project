@@ -73,11 +73,18 @@ define i64 @test6_64b(i64 %x) {
 ; mul that appears together with add, sub, s(z)ext is not supported to be
 ; converted to the combination of lsl, add/sub yet.
 define i64 @test6_umull(i32 %x) {
-; CHECK-LABEL: test6_umull:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6 // =0x6
-; CHECK-NEXT:    umull x0, w0, w8
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test6_umull:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov w8, #6 // =0x6
+; CHECK-SD-NEXT:    umull x0, w0, w8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test6_umull:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    add x8, x8, w0, uxtw #1
+; CHECK-GI-NEXT:    lsl x0, x8, #1
+; CHECK-GI-NEXT:    ret
 
   %ext = zext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -153,18 +160,11 @@ define i64 @test6_smaddl(i32 %x, i64 %y) {
 }
 
 define i64 @test6_umsubl(i32 %x, i64 %y) {
-; CHECK-SD-LABEL: test6_umsubl:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #6 // =0x6
-; CHECK-SD-NEXT:    umsubl x0, w0, w8, x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test6_umsubl:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-6 // =0xfffffffffffffffa
-; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    madd x0, x9, x8, x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test6_umsubl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #6 // =0x6
+; CHECK-NEXT:    umsubl x0, w0, w8, x1
+; CHECK-NEXT:    ret
 
   %ext = zext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -173,17 +173,11 @@ define i64 @test6_umsubl(i32 %x, i64 %y) {
 }
 
 define i64 @test6_smsubl(i32 %x, i64 %y) {
-; CHECK-SD-LABEL: test6_smsubl:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #6 // =0x6
-; CHECK-SD-NEXT:    smsubl x0, w0, w8, x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test6_smsubl:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-6 // =0xfffffffa
-; CHECK-GI-NEXT:    smaddl x0, w0, w8, x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test6_smsubl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #6 // =0x6
+; CHECK-NEXT:    smsubl x0, w0, w8, x1
+; CHECK-NEXT:    ret
 
   %ext = sext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -192,18 +186,11 @@ define i64 @test6_smsubl(i32 %x, i64 %y) {
 }
 
 define i64 @test6_umnegl(i32 %x) {
-; CHECK-SD-LABEL: test6_umnegl:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #6 // =0x6
-; CHECK-SD-NEXT:    umnegl x0, w0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test6_umnegl:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov x8, #-6 // =0xfffffffffffffffa
-; CHECK-GI-NEXT:    mov w9, w0
-; CHECK-GI-NEXT:    mul x0, x9, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test6_umnegl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #6 // =0x6
+; CHECK-NEXT:    umnegl x0, w0, w8
+; CHECK-NEXT:    ret
 
   %ext = zext i32 %x to i64
   %mul = mul nsw i64 %ext, 6
@@ -212,17 +199,11 @@ define i64 @test6_umnegl(i32 %x) {
 }
 
 define i64 @test6_smnegl(i32 %x) {
-; CHECK-SD-LABEL: test6_smnegl:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #6 // =0x6
-; CHECK-SD-NEXT:    smnegl x0, w0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: test6_smnegl:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #-6 // =0xfffffffa
-; CHECK-GI-NEXT:    smull x0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: test6_smnegl:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #6 // =0x6
+; CHECK-NEXT:    smnegl x0, w0, w8
+; CHECK-NEXT:    ret
 
   %ext = sext i32 %x to i64
   %mul = mul nsw i64 %ext, 6

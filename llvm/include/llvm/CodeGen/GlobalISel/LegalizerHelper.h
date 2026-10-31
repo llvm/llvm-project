@@ -578,6 +578,7 @@ public:
   LLVM_ABI LegalizeResult lowerBswap(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerBitreverse(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerReadWriteRegister(MachineInstr &MI);
+  LLVM_ABI LegalizeResult lowerSMULL_UMULL(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerSMULH_UMULH(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerSelect(MachineInstr &MI);
   LLVM_ABI LegalizeResult lowerDIVREM(MachineInstr &MI);

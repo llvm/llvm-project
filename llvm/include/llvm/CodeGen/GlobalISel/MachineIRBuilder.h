@@ -1896,6 +1896,18 @@ public:
     return buildInstr(TargetOpcode::G_ABDU, {Dst}, {Src0, Src1});
   }
 
+  MachineInstrBuilder buildUMulL(const DstOp &Dst, const SrcOp &Src0,
+                                 const SrcOp &Src1,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_UMULL, {Dst}, {Src0, Src1}, Flags);
+  }
+
+  MachineInstrBuilder buildSMulL(const DstOp &Dst, const SrcOp &Src0,
+                                 const SrcOp &Src1,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_SMULL, {Dst}, {Src0, Src1}, Flags);
+  }
+
   MachineInstrBuilder buildUMulH(const DstOp &Dst, const SrcOp &Src0,
                                  const SrcOp &Src1,
                                  std::optional<unsigned> Flags = std::nullopt) {

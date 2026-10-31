@@ -65,13 +65,12 @@ define void @maddpt1(i32 %pos, ptr %val) {
 ;
 ; CHECK-CPA-O3-LABEL: maddpt1:
 ; CHECK-CPA-O3:       // %bb.0: // %entry
-; CHECK-CPA-O3-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-CPA-O3-NEXT:    sxtw x9, w0
 ; CHECK-CPA-O3-NEXT:    mov w8, #48 // =0x30
 ; CHECK-CPA-O3-NEXT:    ldr q0, [x1]
-; CHECK-CPA-O3-NEXT:    adrp x10, array2
-; CHECK-CPA-O3-NEXT:    add x10, x10, :lo12:array2
-; CHECK-CPA-O3-NEXT:    maddpt x8, x9, x8, x10
+; CHECK-CPA-O3-NEXT:    adrp x9, array2
+; CHECK-CPA-O3-NEXT:    add x9, x9, :lo12:array2
+; CHECK-CPA-O3-NEXT:    smull x8, w0, w8
+; CHECK-CPA-O3-NEXT:    addpt x8, x9, x8
 ; CHECK-CPA-O3-NEXT:    str q0, [x8]
 ; CHECK-CPA-O3-NEXT:    ldr q0, [x1, #16]
 ; CHECK-CPA-O3-NEXT:    str q0, [x8, #16]
