@@ -13,6 +13,7 @@
 #define LLVM_LIB_TARGET_SPARC_LEON_PASSES_H
 
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/Pass.h"
 
 namespace llvm {
 class SparcSubtarget;
@@ -45,17 +46,23 @@ public:
   StringRef getPassName() const override { return "Errata workaround pass"; };
 };
 
-class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public MachineFunctionPass {
+class LLVM_LIBRARY_VISIBILITY SparcInsertNOPLoadLegacy
+    : public MachineFunctionPass {
 public:
   static char ID;
 
-  InsertNOPLoad();
+  SparcInsertNOPLoadLegacy();
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
     return "InsertNOPLoad: Erratum Fix LBR35: insert a NOP instruction after "
            "every single-cycle load instruction when the next instruction is "
            "another load/store instruction";
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
