@@ -326,9 +326,11 @@ mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
   if (existingResAttrs && !existingResAttrs.empty())
     attrs.append(
         mlir::cast<mlir::DictionaryAttr>(existingResAttrs[0]).getValue());
-  if (retInfo.kind == ArgKind::Extend)
+  if (retInfo.kind == ArgKind::Extend) {
+    attrs.erase(retInfo.signExtend ? "llvm.zeroext" : "llvm.signext");
     attrs.set(retInfo.signExtend ? "llvm.signext" : "llvm.zeroext",
               mlir::UnitAttr::get(ctx));
+  }
   if (needsNoUndefDrop)
     attrs.erase(mlir::LLVM::LLVMDialect::getNoUndefAttrName());
   return mlir::ArrayAttr::get(ctx, {attrs.getDictionary(ctx)});

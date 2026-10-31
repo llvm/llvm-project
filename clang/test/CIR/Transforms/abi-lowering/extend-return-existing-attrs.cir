@@ -1,0 +1,68 @@
+
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s8i = !cir.int<s, 8>
+!u8i = !cir.int<u, 8>
+
+#extend_signed_return = {
+  return = { kind = "extend",
+             coerced_type = !cir.int<s, 32>,
+             sign_extend = true },
+  args = [ ]
+}
+
+#extend_unsigned_return = {
+  return = { kind = "extend",
+             coerced_type = !cir.int<u, 32>,
+             sign_extend = false },
+  args = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>>
+} {
+  // An existing zeroext must be replaced with signext.
+  cir.func @returns_s8() -> (!s8i {llvm.zeroext})
+      attributes { test_classify = #extend_signed_return } {
+    %0 = cir.const #cir.int<7> : !s8i
+    cir.return %0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @returns_s8() -> (!s8i {llvm.signext})
+  // CHECK:   cir.return %{{.*}} : !s8i
+
+  // Check both the caller's result and the call result.
+  cir.func @caller_s8() -> (!s8i {llvm.zeroext})
+      attributes { test_classify = #extend_signed_return } {
+    %0 = cir.call @returns_s8() : () -> (!s8i {llvm.zeroext})
+    cir.return %0 : !s8i
+  }
+
+  // CHECK: cir.func{{.*}} @caller_s8() -> (!s8i {llvm.signext})
+  // CHECK:   %[[SR:.*]] = cir.call @returns_s8() : () -> (!s8i {llvm.signext})
+  // CHECK:   cir.return %[[SR]] : !s8i
+
+  // An existing signext must be replaced with zeroext.
+  cir.func @returns_u8() -> (!u8i {llvm.signext})
+      attributes { test_classify = #extend_unsigned_return } {
+    %0 = cir.const #cir.int<7> : !u8i
+    cir.return %0 : !u8i
+  }
+
+  // CHECK: cir.func{{.*}} @returns_u8() -> (!u8i {llvm.zeroext})
+  // CHECK:   cir.return %{{.*}} : !u8i
+
+  // Check both the caller's result and the call result.
+  cir.func @caller_u8() -> (!u8i {llvm.signext})
+      attributes { test_classify = #extend_unsigned_return } {
+    %0 = cir.call @returns_u8() : () -> (!u8i {llvm.signext})
+    cir.return %0 : !u8i
+  }
+
+  // CHECK: cir.func{{.*}} @caller_u8() -> (!u8i {llvm.zeroext})
+  // CHECK:   %[[UR:.*]] = cir.call @returns_u8() : () -> (!u8i {llvm.zeroext})
+  // CHECK:   cir.return %[[UR]] : !u8i
+}
