@@ -526,6 +526,17 @@ public:
 
   Module *findOrLoadModule(StringRef Name);
 
+  /// Determine if a top-level module named \p Name was loaded or parsed.
+  bool isModuleKnown(StringRef Name) const {
+    return Modules.contains(Name) || ParsedModules.contains(Name);
+  }
+
+  /// Find the module map that defines the top-level module \p Name, without
+  /// loading it.
+  /// For an inferred module, this is the module map that allows inferring it
+  /// and requires loading.
+  OptionalFileEntryRef getModuleMapFileForName(StringRef Name) const;
+
   Module *findOrInferSubmodule(Module *Parent, StringRef Name);
 
   /// Retrieve a module with the given name using lexical name lookup,
