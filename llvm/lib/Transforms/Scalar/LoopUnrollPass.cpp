@@ -75,9 +75,8 @@ using namespace llvm;
 #define DEBUG_TYPE "loop-unroll"
 
 bool llvm::getForgetSCEVInLoopUnroll(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  return cl::LibraryOptionsContext::get<ScalarOptions>(LibraryOptions)
-      .forget_scev_loop_unroll;
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  return LibraryOptions.get<ScalarOptions>().forget_scev_loop_unroll;
 }
 
 /// A magic value for use with the Threshold parameter to indicate

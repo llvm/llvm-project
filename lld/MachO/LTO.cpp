@@ -39,7 +39,7 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 static lto::Config createConfig() {
   lto::Config c;
   c.LibraryOptions = &config->libraryOptions;
-  c.PTO = PipelineTuningOptions(c.LibraryOptions);
+  c.PTO.emplace(*c.LibraryOptions);
   c.Options = initTargetOptionsFromCodeGenFlags();
   c.Options.EmitAddrsig = config->icfLevel == ICFLevel::safe ||
                           config->icfLevel == ICFLevel::safe_thunks;
@@ -65,8 +65,8 @@ static lto::Config createConfig() {
   c.OptLevel = config->ltoo;
   c.CGOptLevel = config->ltoCgo;
 
-  c.PTO.LoopVectorization = c.OptLevel > 1;
-  c.PTO.SLPVectorization = c.OptLevel > 1;
+  c.PTO->LoopVectorization = c.OptLevel > 1;
+  c.PTO->SLPVectorization = c.OptLevel > 1;
 
   if (config->saveTemps)
     checkError(c.addSaveTemps(config->outputFile.str() + ".",

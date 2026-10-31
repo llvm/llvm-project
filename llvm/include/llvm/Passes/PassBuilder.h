@@ -45,15 +45,10 @@ class LibraryOptionsContext;
 /// Tunable parameters for passes in the default pipelines.
 class PipelineTuningOptions {
 public:
-  /// Constructor sets pipeline tuning defaults based on the global values of
-  /// the library options. Each option can be set in the PassBuilder when using
-  /// a LLVM as a library.
-  PipelineTuningOptions() : PipelineTuningOptions(nullptr) {}
-
-  /// Reads the defaults from \p LibraryOptions, or their global values if
-  /// null.
+  /// Reads the defaults from \p LibraryOptions. Each option can be set in the
+  /// PassBuilder when using LLVM as a library.
   LLVM_ABI explicit PipelineTuningOptions(
-      const cl::LibraryOptionsContext *LibraryOptions);
+      const cl::LibraryOptionsContext &LibraryOptions);
 
   /// Tuning option to set loop interleaving on/off, set based on opt level.
   bool LoopInterleaving;

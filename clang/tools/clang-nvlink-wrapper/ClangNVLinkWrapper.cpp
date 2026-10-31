@@ -376,7 +376,7 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   const llvm::Triple Triple("nvptx64-nvidia-cuda");
   lto::Config Conf;
   Conf.LibraryOptions = &LibraryOptions;
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
+  Conf.PTO.emplace(LibraryOptions);
   lto::ThinBackend Backend;
   unsigned Jobs = 0;
   if (auto *Arg = Args.getLastArg(OPT_jobs))

@@ -346,7 +346,7 @@ static int run(int argc, char **argv) {
 
   Config Conf;
   Conf.LibraryOptions = &LibraryOptions;
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
+  Conf.PTO.emplace(LibraryOptions);
   if (TimeTrace) {
     Conf.TimeTraceEnabled = TimeTrace;
     Conf.TimeTraceGranularity = TimeTraceGranularity;
@@ -408,8 +408,8 @@ static int run(int argc, char **argv) {
   Conf.OverrideTriple = OverrideTriple;
   Conf.DefaultTriple = DefaultTriple;
   Conf.StatsFile = StatsFile;
-  Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
-  Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
+  Conf.PTO->LoopVectorization = Conf.OptLevel > 1;
+  Conf.PTO->SLPVectorization = Conf.OptLevel > 1;
 
   if (WholeProgramVisibilityEnabledInLTO.getNumOccurrences() > 0)
     Conf.HasWholeProgramVisibility = WholeProgramVisibilityEnabledInLTO;

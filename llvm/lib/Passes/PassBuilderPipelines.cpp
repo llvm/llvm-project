@@ -171,9 +171,8 @@ extern cl::opt<bool> EnableProfcheckInPipeline;
 } // namespace llvm
 
 PipelineTuningOptions::PipelineTuningOptions(
-    const cl::LibraryOptionsContext *LibraryOptions) {
-  const PassesOptions &Opts =
-      cl::LibraryOptionsContext::get<PassesOptions>(LibraryOptions);
+    const cl::LibraryOptionsContext &LibraryOptions) {
+  const PassesOptions &Opts = LibraryOptions.get<PassesOptions>();
   LoopInterleaving = true;
   LoopVectorization = true;
   SLPVectorization = false;

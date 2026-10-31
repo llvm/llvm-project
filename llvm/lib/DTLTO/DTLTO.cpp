@@ -226,7 +226,7 @@ void lto::DTLTO::buildCommonRemoteCompilerOptions() {
     Ops.push_back("-ffunction-sections");
   if (C.Options.DataSections)
     Ops.push_back("-fdata-sections");
-  if (C.PTO.LoopInterchange)
+  if (C.PTO && C.PTO->LoopInterchange)
     Ops.push_back("-floop-interchange");
 
   if (C.RelocModel == Reloc::PIC_)

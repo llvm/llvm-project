@@ -573,7 +573,7 @@ PassBuilder::PassBuilder(LLVMContext &Context, TargetMachine *TM,
                          PassInstrumentationCallbacks *PIC,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS)
     : Context(Context), Opts(getPassesOptions(Context)), TM(TM),
-      PTO(PTO ? *PTO : PipelineTuningOptions(&Context.getLibraryOptions())),
+      PTO(PTO ? *PTO : PipelineTuningOptions(Context.getLibraryOptions())),
       PGOOpt(PGOOpt), PIC(PIC), FS(std::move(FS)) {
   if (TM)
     TM->registerPassBuilderCallbacks(*this);

@@ -902,11 +902,11 @@ createLTO(const cl::LibraryOptionsContext &LibraryOptions,
   Conf.CGOptLevel = *CGOptLevelOrNone;
   Conf.DisableVerify = options::DisableVerify;
   Conf.OptLevel = options::OptLevel;
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
-  Conf.PTO.LoopVectorization = options::OptLevel > 1;
-  Conf.PTO.SLPVectorization = options::OptLevel > 1;
-  Conf.PTO.MergeFunctions = options::merge_functions;
-  Conf.PTO.UnifiedLTO = options::unifiedlto;
+  Conf.PTO.emplace(LibraryOptions);
+  Conf.PTO->LoopVectorization = options::OptLevel > 1;
+  Conf.PTO->SLPVectorization = options::OptLevel > 1;
+  Conf.PTO->MergeFunctions = options::merge_functions;
+  Conf.PTO->UnifiedLTO = options::unifiedlto;
   Conf.AlwaysEmitRegularLTOObj = !options::obj_path.empty();
 
   if (options::thinlto_index_only) {

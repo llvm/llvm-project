@@ -18,6 +18,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -30,7 +31,8 @@ public:
   explicit LLVMPassBuilderOptions(
       bool DebugLogging = false, bool VerifyEach = false,
       const char *AAPipeline = nullptr,
-      PipelineTuningOptions PTO = PipelineTuningOptions())
+      PipelineTuningOptions PTO =
+          PipelineTuningOptions(cl::getCAPILibraryOptions()))
       : DebugLogging(DebugLogging), VerifyEach(VerifyEach),
         AAPipeline(AAPipeline), PTO(PTO) {}
 

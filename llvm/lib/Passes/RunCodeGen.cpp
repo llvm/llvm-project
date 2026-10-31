@@ -66,7 +66,7 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
   const auto &LibraryOptions = M.getContext().getLibraryOptions();
-  PipelineTuningOptions PTOptions(&LibraryOptions);
+  PipelineTuningOptions PTOptions(LibraryOptions);
   PassBuilder PB(M.getContext(), &TM, PTOptions, std::nullopt, &PIC, VFS);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);

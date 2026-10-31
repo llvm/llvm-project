@@ -966,7 +966,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   llvm::PassInstrumentationCallbacks pic;
   const llvm::cl::LibraryOptionsContext &libraryOptions =
       llvmModule->getContext().getLibraryOptions();
-  llvm::PipelineTuningOptions pto(&libraryOptions);
+  llvm::PipelineTuningOptions pto(libraryOptions);
   std::optional<llvm::PGOOptions> pgoOpt;
 
   if (opts.hasProfileIRInstr()) {
