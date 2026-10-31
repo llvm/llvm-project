@@ -84,11 +84,11 @@ cleanup2:
 ; CHECK:   br i1 %3, label %cleanup2.from.handler2, label %cleanup2.from.catch.dispatch.2, !prof [[PROF1:![0-9]+]]
 
 ; CHECK: cleanup2.from.handler2:
-; CHECK:   %valueB.reload = load i32, ptr %valueB.spill.addr, align 4
+; CHECK:   %valueB.reload = load i32, ptr %valueB.reload.addr, align 4
 ; CHECK:   br label %cleanup2
 
 ; CHECK: cleanup2.from.catch.dispatch.2:
-; CHECK:   %valueA.reload = load i32, ptr %valueA.spill.addr, align 4
+; CHECK:   %valueA.reload = load i32, ptr %valueA.reload.addr, align 4
 ; CHECK:   br label %cleanup2
 
 ; CHECK: cleanup2:

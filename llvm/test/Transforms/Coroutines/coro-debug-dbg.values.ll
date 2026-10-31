@@ -2,8 +2,18 @@
 ; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 ;
 ; This file is based on coro-debug-frame-variable.ll.
-; CHECK-LABEL: define void @_Z3foov(
+; CHECK: define void @_Z3foov(i32 %[[I:.+]], i32 %[[J:.+]])
+; CHECK:       %[[produced:.+]] = call i32 @value_producer()
 ; CHECK:       %[[frame:.*]] = call {{.*}} @llvm.coro.begin
+
+; CHECK: PostSpill:
+; CHECK-NEXT:  %[[PtrProduce:.+]] = getelementptr inbounds i8, ptr %[[frame]], i64 [[OffsetSpill:[0-9]+]]
+; CHECK-NEXT:  store i32 %[[produced]], ptr %[[PtrProduce]], align 4
+; CHECK-NEXT:  %[[PtrJ:.+]] = getelementptr inbounds i8, ptr %[[frame]], i64 [[OffsetJ:[0-9]+]]
+; CHECK-NEXT:  store i32 %[[J]], ptr %[[PtrJ]], align 4
+; CHECK-NEXT:  %[[PtrI:.+]] = getelementptr inbounds i8, ptr %[[frame]], i64 [[OffsetI:[0-9]+]]
+; CHECK-NEXT:  store i32 %[[I]], ptr %[[PtrI]], align 4
+
 ; CHECK:       #dbg_value(ptr %[[frame]]
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX:[0-9]*]]),
 ;                                                                   ^ No deref at the end, as this variable ("x") is an array;
@@ -12,13 +22,6 @@
 ; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetX]])
 ;; FIXME: Should we be updating the addresses on assigns here as well?
 ; CHECK-SAME:    , ptr %[[frame]], !DIExpression(),
-
-; CHECK:       #dbg_value(ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetSpill:[0-9]*]], DW_OP_deref),
-; CHECK:       #dbg_value(ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetI:[0-9]*]], DW_OP_deref),
-; CHECK:       #dbg_value(ptr %[[frame]]
-; CHECK-SAME:    !DIExpression(DW_OP_plus_uconst, [[OffsetJ:[0-9]*]], DW_OP_deref),
 
 ; CHECK-LABEL: void @_Z3foov.resume(
 ; CHECK-SAME:                 ptr {{.*}} %[[frame:.*]])
