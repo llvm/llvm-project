@@ -342,6 +342,8 @@ private:
   LLVM_PREFERRED_TYPE(TSCS)
   unsigned ThreadStorageClassSpec : 2;
   LLVM_PREFERRED_TYPE(bool)
+  unsigned C23ThreadLocalSpelling : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned SCS_extern_in_linkage_spec : 1;
 
   // type-specifier
@@ -470,7 +472,7 @@ public:
 
   DeclSpec(AttributeFactory &attrFactory)
       : StorageClassSpec(SCS_unspecified),
-        ThreadStorageClassSpec(TSCS_unspecified),
+        ThreadStorageClassSpec(TSCS_unspecified), C23ThreadLocalSpelling(false),
         SCS_extern_in_linkage_spec(false),
         TypeSpecWidth(static_cast<unsigned>(TypeSpecifierWidth::Unspecified)),
         TypeSpecComplex(TSC_unspecified),
@@ -491,6 +493,7 @@ public:
   TSCS getThreadStorageClassSpec() const {
     return (TSCS)ThreadStorageClassSpec;
   }
+  const char *getThreadStorageClassSpecName() const;
   bool isExternInLinkageSpec() const { return SCS_extern_in_linkage_spec; }
   void setExternInLinkageSpec(bool Value) {
     SCS_extern_in_linkage_spec = Value;
@@ -504,6 +507,7 @@ public:
   void ClearStorageClassSpecs() {
     StorageClassSpec           = DeclSpec::SCS_unspecified;
     ThreadStorageClassSpec     = DeclSpec::TSCS_unspecified;
+    C23ThreadLocalSpelling = false;
     SCS_extern_in_linkage_spec = false;
     StorageClassSpecLoc        = SourceLocation();
     ThreadStorageClassSpecLoc  = SourceLocation();
@@ -733,7 +737,8 @@ public:
                            const char *&PrevSpec, unsigned &DiagID,
                            const PrintingPolicy &Policy);
   bool SetStorageClassSpecThread(TSCS TSC, SourceLocation Loc,
-                                 const char *&PrevSpec, unsigned &DiagID);
+                                 const char *&PrevSpec, unsigned &DiagID,
+                                 bool IsC23ThreadLocal = false);
   bool SetTypeSpecWidth(TypeSpecifierWidth W, SourceLocation Loc,
                         const char *&PrevSpec, unsigned &DiagID,
                         const PrintingPolicy &Policy);

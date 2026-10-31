@@ -5220,10 +5220,10 @@ Decl *SemaObjC::ActOnObjCExceptionDecl(Scope *S, Declarator &D) {
   if (DS.isInlineSpecified())
     Diag(DS.getInlineSpecLoc(), diag::err_inline_non_function)
         << getLangOpts().CPlusPlus17;
-  if (DeclSpec::TSCS TSCS = D.getDeclSpec().getThreadStorageClassSpec())
+  if (D.getDeclSpec().getThreadStorageClassSpec())
     Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
          diag::err_invalid_thread)
-     << DeclSpec::getSpecifierName(TSCS);
+        << D.getDeclSpec().getThreadStorageClassSpecName();
   D.getMutableDeclSpec().ClearStorageClassSpecs();
 
   SemaRef.DiagnoseFunctionSpecifiers(D.getDeclSpec());
