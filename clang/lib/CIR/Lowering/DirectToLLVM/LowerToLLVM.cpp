@@ -926,10 +926,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type convertedTy = converter->convertType(attr.getType());
   auto moduleOp = parentOp->getParentOfType<mlir::ModuleOp>();
   mlir::DataLayout dataLayout(moduleOp);
-  mlir::Type llvmTy =
-      adjustGlobalTypeForInit(convertedTy, attr, *converter, dataLayout);
-  if (!llvmTy)
+  mlir::Type failedType = attr.getType();
+  mlir::Type llvmTy = adjustGlobalTypeForInit(convertedTy, attr, *converter,
+                                              dataLayout, &failedType);
+  if (!llvmTy) {
+    emitTypeConversionError(parentOp, failedType);
     return {};
+  }
   mlir::Location loc = parentOp->getLoc();
   mlir::Value result;
 
@@ -1002,10 +1005,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   mlir::Type llvmTy = converter->convertType(constRecord.getType());
   mlir::DataLayout dataLayout(parentOp->getParentOfType<mlir::ModuleOp>());
   llvm::SmallVector<unsigned> paddingAddedIndexes;
+  mlir::Type failedType = constRecord.getType();
   llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout,
-                                   paddingAddedIndexes);
-  if (!llvmTy)
+                                   paddingAddedIndexes, &failedType);
+  if (!llvmTy) {
+    emitTypeConversionError(parentOp, failedType);
     return {};
+  }
   const mlir::Location loc = parentOp->getLoc();
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, loc, llvmTy);
 
@@ -3357,11 +3363,12 @@ CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
 
   // Keep the global's type in sync with the value built by CIRAttrToValue: a
   // flexible array member initializer requires an oversized anonymous struct.
+  mlir::Type failedType = op.getSymType();
   if (std::optional<mlir::Attribute> init = op.getInitialValue())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
-                                       dataLayout);
+                                       dataLayout, &failedType);
   if (!llvmType)
-    return mlir::failure();
+    return emitTypeConversionError(op, failedType);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -3450,11 +3457,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // A flexible array member initializer makes the constant larger than the
   // record's declared type, so the global must use an oversized anonymous
   // struct instead.
+  mlir::Type failedType = cirSymType;
   if (init.has_value())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
-                                       dataLayout);
+                                       dataLayout, &failedType);
   if (!llvmType)
-    return mlir::failure();
+    return emitTypeConversionError(op, failedType);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.

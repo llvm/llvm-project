@@ -1,13 +1,14 @@
 // RUN: cir-opt %s --split-input-file --cir-to-llvm -verify-diagnostics | FileCheck %s
 
 // Vector-of-_BitInt conversion is unsupported; propagate its failure to the
-// enclosing operation instead of constructing invalid LLVM operations.
+// enclosing operation and diagnose the active initializer's type.
 
 !vec = !cir.vector<4 x !cir.int<s, 7, bitint>>
 !union = !cir.union<"U" {data !cir.int<s, 128>, data !vec}>
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // The union's integer storage converts, but its active initializer does not.
+  // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.vector<4 x !cir.int<s, 7, bitint>>'}}
   // expected-error @below {{failed to legalize operation 'cir.global'}}
   cir.global external @global_union = #cir.const_record<{#cir.zero : !vec}> : !union
 }
@@ -19,6 +20,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @constant_union() {
+    // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.vector<4 x !cir.int<s, 7, bitint>>'}}
     // expected-error @below {{failed to legalize operation 'cir.const'}}
     %0 = cir.const #cir.const_record<{#cir.zero : !vec}> : !union
     cir.return
@@ -35,6 +37,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // Propagate adjustment failure through both the enclosing union and struct.
   cir.func @nested_union() {
+    // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.vector<4 x !cir.int<s, 7, bitint>>'}}
     // expected-error @below {{failed to legalize operation 'cir.const'}}
     %0 = cir.const #cir.const_record<{#cir.const_record<{#cir.const_record<{#cir.zero : !vec}> : !union}> : !outer}> : !record
     cir.return
@@ -48,6 +51,7 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
 
 module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   cir.func @array_union() {
+    // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.vector<4 x !cir.int<s, 7, bitint>>'}}
     // expected-error @below {{failed to legalize operation 'cir.const'}}
     %0 = cir.const #cir.const_array<[#cir.const_record<{#cir.zero : !vec}> : !union]> : !cir.array<!union x 1>
     cir.return
