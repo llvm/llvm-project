@@ -449,6 +449,9 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
   Type type = lhs.getType();
 
   // Calculate the remainder with spirv.UMod.
+  // OpSRem(INT_MIN, -1) is UB, but this emulation supports overflow<zero>:
+  // without NoSignedWrap, SAbs preserves INT_MIN's unsigned magnitude, and
+  // UMod by abs(-1) = 1 yields zero.
   Value lhsAbs = SignedAbsOp::create(builder, loc, type, lhs);
   Value rhsAbs = SignedAbsOp::create(builder, loc, type, rhs);
   Value abs = spirv::UModOp::create(builder, loc, lhsAbs, rhsAbs);

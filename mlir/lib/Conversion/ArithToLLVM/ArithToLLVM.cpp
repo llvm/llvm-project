@@ -185,8 +185,55 @@ using RemFOpLowering =
     VectorConvertToLLVMPattern<arith::RemFOp, LLVM::FRemOp,
                                arith::AttrConvertFastMathToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
-using RemSIOpLowering =
-    VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
+struct RemSIOpLowering
+    : VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp> {
+  using Base = VectorConvertToLLVMPattern<arith::RemSIOp, LLVM::SRemOp>;
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::RemSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Keep the default lowering free of runtime checks.
+    if (!op.getIsOverflowZero())
+      return Base::matchAndRewrite(op, adaptor, rewriter);
+
+    Type resultType = getTypeConverter()->convertType(op.getType());
+    if (!resultType || !LLVM::isCompatibleType(resultType))
+      return rewriter.notifyMatchFailure(op, "unsupported result type");
+
+    auto buildRemainder = [&](Type type, ValueRange operands) -> Value {
+      Location loc = op.getLoc();
+      auto constant = [&](int64_t value) -> Value {
+        auto attr = rewriter.getIntegerAttr(getElementTypeOrSelf(type), value);
+        if (auto vectorType = dyn_cast<VectorType>(type))
+          return LLVM::ConstantOp::create(
+              rewriter, loc, type, SplatElementsAttr::get(vectorType, attr));
+        return LLVM::ConstantOp::create(rewriter, loc, type, attr);
+      };
+      Value zero = constant(0);
+      Value minusOne = constant(-1);
+
+      // x % -1 is always zero. Guard the dividend before srem, including for
+      // i1, where replacing the divisor with 1 would still mean signed -1.
+      // A zero or poison divisor is UB in both modes, as in LLVM srem.
+      Value rhs = operands[1];
+      Value isMinusOne = LLVM::ICmpOp::create(
+          rewriter, loc, LLVM::ICmpPredicate::eq, rhs, minusOne);
+      Value lhs =
+          LLVM::SelectOp::create(rewriter, loc, isMinusOne, zero, operands[0]);
+      auto remainder = LLVM::SRemOp::create(rewriter, loc, lhs, rhs);
+      remainder->setDiscardableAttrs(op->getDiscardableAttrDictionary());
+      return remainder;
+    };
+
+    if (isa<LLVM::LLVMArrayType>(resultType))
+      return LLVM::detail::handleMultidimensionalVectors(
+          op, adaptor.getOperands(), *getTypeConverter(), buildRemainder,
+          rewriter);
+    rewriter.replaceOp(op, buildRemainder(resultType, adaptor.getOperands()));
+    return success();
+  }
+};
 using RemUIOpLowering =
     VectorConvertToLLVMPattern<arith::RemUIOp, LLVM::URemOp>;
 using SelectOpLowering =

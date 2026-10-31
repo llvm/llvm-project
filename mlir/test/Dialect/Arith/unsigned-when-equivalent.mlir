@@ -114,3 +114,24 @@ func.func @gpu_func(%arg0: memref<2x32xf32>, %arg1: memref<2x32xf32>, %arg2: mem
   } 
   return %arg1 : memref<2x32xf32> 
 }
+
+// CHECK-LABEL: @remsi_overflow_zero_nonnegative
+// CHECK: arith.remui
+// CHECK-NOT: isOverflowZero
+// CHECK-NOT: overflow<zero>
+// CHECK: return
+func.func @remsi_overflow_zero_nonnegative(%a: i32, %b: i32) -> i32 {
+  %zero = arith.constant 0 : i32
+  %one = arith.constant 1 : i32
+  %positive_a = arith.maxsi %a, %zero : i32
+  %positive_b = arith.maxsi %b, %one : i32
+  %r = arith.remsi %positive_a, %positive_b overflow<zero> : i32
+  return %r : i32
+}
+
+// CHECK-LABEL: @remsi_overflow_zero_unknown_sign
+// CHECK: arith.remsi {{.*}} overflow<zero> : i32
+func.func @remsi_overflow_zero_unknown_sign(%a: i32, %b: i32) -> i32 {
+  %r = arith.remsi %a, %b overflow<zero> : i32
+  return %r : i32
+}
