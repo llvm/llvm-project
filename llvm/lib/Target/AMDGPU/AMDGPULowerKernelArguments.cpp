@@ -81,10 +81,13 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
   if (NoAliasArgs.empty())
     return;
 
-  // Add alias scopes for each noalias argument.
+  // Add alias scopes for each noalias argument. The scopes are disjoint, since
+  // an access based on one noalias argument can't reach memory an access based
+  // on another one reaches.
   MDBuilder MDB(F.getContext());
   DenseMap<const Argument *, MDNode *> NewScopes;
-  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain(F.getName());
+  MDNode *NewDomain =
+      MDB.createAnonymousAliasScopeDomain(F.getName(), /*DisjointScopes=*/true);
 
   for (unsigned I = 0u; I < NoAliasArgs.size(); ++I) {
     const Argument *Arg = NoAliasArgs[I];
@@ -164,23 +167,26 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     if (IsUnrestrictedCall)
       RequiresNoCaptureBefore = true;
 
-    // Collect noalias scopes for instruction.
-    for (const Argument *Arg : NoAliasArgs) {
-      if (ObjSet.contains(Arg))
-        continue;
-
-      if (!RequiresNoCaptureBefore ||
-          !capturesAnything(PointerMayBeCapturedBefore(
-              Arg, false, I, &DT, false, CaptureComponents::Provenance)))
-        NoAliases.push_back(NewScopes[Arg]);
-    }
-
     // Collect scopes for alias.scope metadata. Skip unrestricted calls: they
     // may touch memory beyond their pointer arguments' pointees.
     if (!UsesAliasingPtr && !IsUnrestrictedCall)
       for (const Argument *Arg : NoAliasArgs) {
         if (ObjSet.count(Arg))
           Scopes.push_back(NewScopes[Arg]);
+      }
+
+    // Collect noalias scopes for the instruction not implied by its scopes.
+    // Scopes is only non-empty when no underlying object is an escape source
+    // and the instruction isn't an unrestricted call.
+    if (Scopes.empty())
+      for (const Argument *Arg : NoAliasArgs) {
+        if (ObjSet.contains(Arg))
+          continue;
+
+        if (!RequiresNoCaptureBefore ||
+            !capturesAnything(PointerMayBeCapturedBefore(
+                Arg, false, I, &DT, false, CaptureComponents::Provenance)))
+          NoAliases.push_back(NewScopes[Arg]);
       }
 
     // Add noalias metadata to instruction.
