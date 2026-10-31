@@ -39,4 +39,16 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP TEAMS 'thread_limit' clause}}
 #pragma omp teams thread_limit(8)
   {}
+
+  // The distribute construct supports no clauses yet, so every
+  // `distribute` clause is reported as not-yet-implemented.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP DISTRIBUTE 'dist_schedule' clause}}
+#pragma omp teams distribute dist_schedule(static)
+  for (int j = 0; j < 10; j++) {
+  }
+
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP DISTRIBUTE 'collapse' clause}}
+#pragma omp teams distribute collapse(1)
+  for (int j = 0; j < 10; j++) {
+  }
 }
