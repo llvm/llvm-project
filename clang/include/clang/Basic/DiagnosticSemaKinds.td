@@ -818,6 +818,8 @@ def err_invalid_thread : Error<
   "'%0' is only allowed on variable declarations">;
 def err_thread_non_global : Error<
   "'%0' variables must have global storage">;
+def err_thread_local_block_scope : Error<
+  "'%0' at block scope requires 'static' or 'extern'">;
 def err_thread_unsupported : Error<
   "thread-local storage is not supported for the current target">;
 
