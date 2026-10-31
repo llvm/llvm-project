@@ -10,7 +10,6 @@ add_integration_test(
     getcwd_test.cpp
   DEPENDS
     libc.src.__support.CPP.string_view
-    libc.src.errno.errno
     libc.src.sys.stat.stat
     libc.src.unistd.getcwd
 )
@@ -25,7 +24,6 @@ add_integration_test(
     libc.include.signal
     libc.include.sys_wait
     libc.include.unistd
-    libc.src.errno.errno
     libc.src.pthread.pthread_atfork
     libc.src.signal.raise
     libc.src.sys.wait.wait
@@ -73,7 +71,6 @@ add_integration_test(
     libc.hdr.sys_wait_macros
     libc.hdr.unistd_macros
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.stdlib.exit
     libc.src.sys.wait.waitpid
@@ -95,7 +92,6 @@ if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86})
       libc.include.sys_wait
       libc.include.unistd
       libc.src.compiler.__stack_chk_fail
-      libc.src.errno.errno
       libc.src.pthread.pthread_atfork
       libc.src.signal.raise
       libc.src.sys.wait.wait
@@ -166,7 +162,6 @@ add_integration_test(
     libc_exec_test_signal_exit
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
-    libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.environ
     libc.src.unistd.execl
@@ -184,7 +179,6 @@ add_integration_test(
   DEPENDS
     libc_execle_test_normal_exit
     libc_exec_test_signal_exit
-    libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execle
     libc.src.unistd.fork
@@ -201,7 +195,6 @@ add_integration_test(
   DEPENDS
     libc_execv_test_normal_exit
     libc_exec_test_signal_exit
-    libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execv
     libc.src.unistd.fork
@@ -218,7 +211,6 @@ add_integration_test(
   DEPENDS
     libc_execv_test_normal_exit
     libc_exec_test_signal_exit
-    libc.src.errno.errno
     libc.src.sys.wait.waitpid
     libc.src.unistd.execve
     libc.src.unistd.fork
@@ -239,7 +231,6 @@ add_integration_test(
     libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
-    libc.src.errno.errno
     libc.src.stdlib.setenv
     libc.src.sys.wait.waitpid
     libc.src.unistd.execvp
@@ -261,7 +252,6 @@ add_integration_test(
     libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
-    libc.src.errno.errno
     libc.src.stdlib.setenv
     libc.src.sys.wait.waitpid
     libc.src.unistd._exit
@@ -281,7 +271,6 @@ add_integration_test(
     libc.hdr.fcntl_macros
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.wait.waitpid
     libc.src.unistd.close
@@ -304,7 +293,6 @@ add_integration_test(
     libc.hdr.errno_macros
     libc.hdr.signal_macros
     libc.hdr.sys_wait_macros
-    libc.src.errno.errno
     libc.src.stdlib.setenv
     libc.src.sys.wait.waitpid
     libc.src.unistd._exit

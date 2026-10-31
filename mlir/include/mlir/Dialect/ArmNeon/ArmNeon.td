@@ -35,8 +35,9 @@ def ArmNeon_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 class NeonVectorOfLength<int length, Type elementType> : ShapedContainerType<
-  [elementType], And<[IsVectorOfShape<[length]>, IsFixedVectorOfAnyRankTypePred]>,
-  "a vector with length " # length,
+  [elementType], And<[IsVectorOfShape<[length]>,
+  IsFixedVectorOfAnyRankTypePred, IsVectorOfRank1Pred]>,
+  "a 1D vector with length " # length,
   "::mlir::VectorType">;
 
 //===----------------------------------------------------------------------===//

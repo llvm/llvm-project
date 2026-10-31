@@ -235,8 +235,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   now diagnosed as a C++26 extension under `-Wc++26-extensions` (previously it
   was diagnosed as a Clang extension under `-Wc23-extensions`), and a new
   `-Wpre-c++26-compat` warning is available in C++26 mode. The
-  `__cpp_pp_embed` feature-test macro is not yet defined because of known
-  issues in the implementation.
+  `__cpp_pp_embed` feature-test macro is now defined.
 
 - Added `__builtin_type_order` for compatibility with GCC as part of the
   implementation of [P2830R10](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2025/p2830r10.html) (Constexpr Type Ordering).
@@ -463,6 +462,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   A requirement naming a parameter of the pointee, such as
   `void (*unlock)(struct BDev *bdev) UNLOCK_FUNCTION(bdev->lock)`, keeps
   working. Without the flag both forward references remain errors.
+
+- Fixed thread safety attributes on a member of a nested struct or union, named
+  or anonymous, naming a member of the enclosing struct, such as
+  `struct Dst { unsigned len GUARDED_BY(lock); } dst;` after `Mutex lock;`.
+  The requirement is resolved on the enclosing object, `s->lock` for
+  `s->dst.len`, and is reported as `dst->Scratch::lock` when no enclosing
+  object is reachable.
 
 ### Improvements to Clang's diagnostics
 
@@ -787,12 +793,15 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Clang now defines the GCC-compatible predefined macro `__SIG_ATOMIC_TYPE__`. (#GH213895)
 - Fixed IEEE f128 complex mul/div using the IBM f128 libcalls on powerpc. (#GH216820)
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
+- Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
   enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
   binding. (#GH217893)
+- Fixed a crash when template argument substitution fails in the type of an OpenMP `declare reduction` or
+  `declare mapper` directive. (#GH223366)
 - Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
@@ -818,6 +827,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed auto type inference being rejected when the initializer is a bit-field. (#GH226280)
 - Fixed failed assertion when creating a compound literal with erroneous initializer at file scope. (#GH229888)
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
+- Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1210,6 +1220,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   parameter substituted through an alias template is used as the base of an
   unresolved name, such as `TT<T>::value` in a non-type template parameter's
   type. (#GH88592)
+- Fixed an assertion when emitting base destructor as alias on targets (such
+  as AVR) which have different address spaces for code and data. (#GH236285)
 
 ### OpenACC Specific Changes
 

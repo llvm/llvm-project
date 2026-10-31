@@ -1,0 +1,176 @@
+# This file defines a reusable workflow that builds Clang at the given commit, runs the LLVM test-suite
+# with it using the given machine setup, and uploads the resulting LNT report as an artifact.
+#
+# See .ci/lnt/llvm-test-suite/README.md for a description of the machine setup.
+
+name: "[LLVM] Run the test-suite"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      commit:
+        description: 'The llvm-project commit to build Clang and LLVM from (a full SHA or a ref name)'
+        required: true
+        type: string
+      lnt-machine:
+        description: 'The name of the LNT machine to report the results as'
+        required: true
+        type: string
+      setup:
+        description: 'The setup of the machine to run on, as a JSON object (see .ci/lnt/llvm-test-suite/README.md)'
+        required: true
+        type: string
+      filter:
+        description: 'An optional filter to determine which tests to run (all the tests are still built)'
+        required: false
+        type: string
+      artifact-name:
+        description: 'The name of the artifact to upload the LNT report as'
+        required: true
+        type: string
+
+jobs:
+  run-test-suite:
+    name: Run the test-suite on ${{ inputs.lnt-machine }}
+    runs-on: ${{ fromJSON(inputs.setup).runner }}
+    container: ${{ fromJSON(inputs.setup).container || null }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      LLVM_CMAKE_CACHE: ${{ fromJSON(inputs.setup).llvm-cmake-cache }}
+      LNT_MACHINE: ${{ inputs.lnt-machine }}
+      RUN_TEST_SUITE_ARGS: ${{ join(fromJSON(inputs.setup).run-test-suite-args, ' ') }}
+      XCODE_VERSION: ${{ fromJSON(inputs.setup).xcode-version }}
+    steps:
+      # Check out the tooling from the commit the workflow is taken from, since the configuration of the
+      # machine refers to it. Only Clang and LLVM are built from the requested commit.
+      - name: Checkout the tooling from ${{ github.sha }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: tooling
+          sparse-checkout: .ci/lnt
+
+      - name: Checkout the LLVM monorepo at ${{ inputs.commit }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: ${{ inputs.commit }}
+          path: llvm-project
+          # The full history is required to determine the ordinal of the commit, but not the blob content.
+          fetch-depth: 0
+          filter: blob:none
+        # TODO(#226230): Remove this once we have resolved the underlying issue
+        # causing actions/checkout to be prematurely killed.
+        env:
+          GIT_TRACE: "true"
+          GIT_CURL_VERBOSE: "true"
+
+      - name: Checkout the test-suite
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          repository: llvm/llvm-test-suite
+          ref: ${{ fromJSON(inputs.setup).test-suite-version }}
+          path: llvm-test-suite
+
+      - name: Select Xcode
+        if: runner.os == 'macOS'
+        run: |
+          developer_dir="/Applications/Xcode_${XCODE_VERSION}.app/Contents/Developer"
+          echo "DEVELOPER_DIR=${developer_dir}" >> "${GITHUB_ENV}"
+          # The just-built Clang doesn't know where the SDK is.
+          echo "SDKROOT=$(DEVELOPER_DIR="${developer_dir}" xcrun --show-sdk-path)" >> "${GITHUB_ENV}"
+
+      - name: Install dependencies via Homebrew
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install ninja cmake python@3.14
+          echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
+
+      # tclsh is used to generate the inputs of sqlite3. It's already installed on macOS.
+      - name: Install dependencies via apt
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tcl python3-venv linux-perf
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv "${RUNNER_TEMP}/venv"
+          source "${RUNNER_TEMP}/venv/bin/activate"
+          pip install -r llvm-test-suite/utils/lnt/requirements.txt lit
+
+      - name: Diagnose tools in use
+        run: |
+          cmake --version
+          ninja --version
+          "${CC:-cc}" --version
+          python3 --version
+          which perf && perf --version
+
+      - name: Build and install Clang at ${{ inputs.commit }}
+        run: |
+          cmake -S llvm-project/llvm -B "${RUNNER_TEMP}/llvm-build" -G Ninja -C "tooling/${LLVM_CMAKE_CACHE}" \
+                -DCMAKE_INSTALL_PREFIX="${RUNNER_TEMP}/llvm-install"
+          ninja -C "${RUNNER_TEMP}/llvm-build" install-distribution
+
+      - name: Run the test-suite
+        env:
+          FILTER: ${{ inputs.filter }}
+        run: |
+          # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
+          (while sleep 60; do echo "Still running the test-suite..."; done) &
+          keepalive=$!
+          trap 'kill ${keepalive}' EXIT
+
+          sha=$(git -C llvm-project rev-parse --verify HEAD)
+
+          # Only commits on main get an ordinal, so that they can be ordered with each other.
+          ordinal_arg=()
+          rc=0
+          git -C llvm-project merge-base --is-ancestor "${sha}" origin/main || rc=$?
+          case ${rc} in
+            0) ordinal_arg=(--commit-ordinal "$(git -C llvm-project rev-list --count "${sha}")") ;;
+            1) echo "${sha} is not on main: not giving it an ordinal" ;;
+            *) echo "::error::Could not determine whether ${sha} is on main"; exit 1 ;;
+          esac
+
+          filter_arg=()
+          if [ -n "${FILTER}" ]; then
+            filter_arg=(--filter "${FILTER}")
+          fi
+
+          read -ra configured_args <<< "${RUN_TEST_SUITE_ARGS}"
+
+          source "${RUNNER_TEMP}/venv/bin/activate"
+
+          python3 llvm-test-suite/utils/lnt/run-test-suite.py "${LNT_MACHINE}" \
+            --no-auto-name                                                     \
+            --succinct-compile-output                                          \
+            --sandbox "${RUNNER_TEMP}/sandbox"                                 \
+            --test-suite llvm-test-suite                                       \
+            --cc "${RUNNER_TEMP}/llvm-install/bin/clang"                       \
+            --use-make ninja                                                   \
+            --use-lit lit                                                      \
+            --benchmarking-only                                                \
+            --threads 1                                                        \
+            --report-format v5                                                 \
+            --commit "${sha}"                                                  \
+            "${ordinal_arg[@]}"                                                \
+            --output-v5 lnt-report.json                                        \
+            "${filter_arg[@]}"                                                 \
+            "${configured_args[@]}"
+
+      - name: Upload the LNT report
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: lnt-report.json
+          if-no-files-found: error

@@ -51,6 +51,8 @@ int32_t __ol_tgt_GetPluginDeviceId(ol_device_handle_t Device);
 RecordReplayTy *__ol_tgt_GetRecordReplay(ol_device_handle_t Device);
 llvm::omp::target::plugin::DeviceImageTy *
 __ol_tgt_GetDeviceImageFromProgram(ol_program_handle_t Program);
+llvm::omp::target::plugin::PluginContextTy *
+__ol_tgt_GetPluginContext(ol_context_handle_t Context);
 } // namespace llvm::offload::tmp
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -248,11 +250,12 @@ llvm::Expected<void *>
 DeviceTy::getAndRecordGlobalAddress(const ProgramTy &Program, const char *Name,
                                     size_t ExpectedSize) {
   size_t Size = 0;
-  auto AddrOrErr = Program.getGlobalAddress(Name, &Size);
+  auto AddrOrErr =
+      Program.getGlobalAddress(Name, ExpectedSize ? &Size : nullptr);
   if (!AddrOrErr)
     return AddrOrErr;
-  // Some backends return size 0 if the size is unknown.
-  // Only check the size if it is non-zero.
+  // If the user didn't specify an expected size or the backend returned size 0,
+  // we skip the size check.
   if (Size && Size != ExpectedSize)
     return createError(ErrorCode::InvalidBinary,
                        "size of global symbol %s does not match expected size "
@@ -408,6 +411,10 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   return Program;
 }
 
+llvm::omp::target::plugin::PluginContextTy *DeviceTy::getPluginContext() {
+  return llvm::offload::tmp::__ol_tgt_GetPluginContext(Context);
+}
+
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
@@ -416,7 +423,24 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
                     DeviceID, HstPtr, &TargetPtr, Size,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  auto *PluginCtx = getPluginContext();
+  if (!PluginCtx) {
+    REPORT() << "Failure to allocate device memory: device " << DeviceID
+             << " has no context";
+    return nullptr;
+  }
+
+  auto AllocOrErr =
+      PluginCtx->allocate(RTL->getDevice(RTLDeviceID), Size, HstPtr,
+                          static_cast<TargetAllocTy>(Kind), /*Alignment=*/0);
+  if (!AllocOrErr) {
+    REPORT() << "Failure to allocate device memory: "
+             << llvm::toString(AllocOrErr.takeError());
+    return nullptr;
+  }
+  assert(*AllocOrErr && "Null pointer upon successful allocation");
+
+  TargetPtr = *AllocOrErr;
   return TargetPtr;
 }
 
@@ -427,7 +451,22 @@ int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
                     DeviceID, TgtAllocBegin,
                     /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
-  return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
+  auto *PluginCtx = getPluginContext();
+  if (!PluginCtx) {
+    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin
+             << ": device " << DeviceID << " has no context";
+    return OFFLOAD_FAIL;
+  }
+
+  if (auto Err =
+          PluginCtx->deallocate(RTL->getDevice(RTLDeviceID), TgtAllocBegin,
+                                static_cast<TargetAllocTy>(Kind))) {
+    REPORT() << "Failure to deallocate device pointer " << TgtAllocBegin << ": "
+             << llvm::toString(std::move(Err));
+    return OFFLOAD_FAIL;
+  }
+
+  return OFFLOAD_SUCCESS;
 }
 
 llvm::Expected<void *> DeviceTy::allocCtxMem(int64_t Size,
@@ -1408,7 +1447,15 @@ void DeviceTy::dumpOffloadEntries() {
 bool DeviceTy::useAutoZeroCopy() {
   if (PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY)
     return false;
-  return RTL->use_auto_zero_copy(RTLDeviceID);
+  bool PrefersHost = false;
+  if (auto Res =
+          olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PREFERRED_LOCATION_HOST,
+                          sizeof(PrefersHost), &PrefersHost)) {
+    REPORT() << "Failed to query zero-copy preference of device " << DeviceID
+             << ": " << Res->Details;
+    return false;
+  }
+  return PrefersHost;
 }
 
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {

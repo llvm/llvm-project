@@ -15003,6 +15003,12 @@ bool BuildVectorSDNode::getConstantRawBits(
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
 
+  // If the elements don't pack cleanly, don't attempt to recast.
+  // TODO: Add handling (e.g. bitcast <33 x i8> --> <8 x i33>)
+  if ((SrcEltSizeInBits % DstEltSizeInBits) != 0 &&
+      (DstEltSizeInBits % SrcEltSizeInBits) != 0)
+    return false;
+
   // Extract raw src bits.
   SmallVector<APInt> SrcBitElements(NumSrcOps,
                                     APInt::getZero(SrcEltSizeInBits));
@@ -15037,8 +15043,10 @@ void BuildVectorSDNode::recastRawBits(bool IsLittleEndian,
   unsigned SrcEltSizeInBits = SrcBitElements[0].getBitWidth();
   assert(((NumSrcOps * SrcEltSizeInBits) % DstEltSizeInBits) == 0 &&
          "Invalid bitcast scale");
-  assert(NumSrcOps == SrcUndefElements.size() &&
-         "Vector size mismatch");
+  assert(((SrcEltSizeInBits % DstEltSizeInBits) == 0 ||
+          (DstEltSizeInBits % SrcEltSizeInBits) == 0) &&
+         "Unsupported bitcast scale");
+  assert(NumSrcOps == SrcUndefElements.size() && "Vector size mismatch");
 
   unsigned NumDstOps = (NumSrcOps * SrcEltSizeInBits) / DstEltSizeInBits;
   DstUndefElements.clear();

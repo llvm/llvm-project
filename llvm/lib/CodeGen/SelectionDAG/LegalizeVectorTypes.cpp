@@ -6940,7 +6940,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_ATOMIC_LOAD(AtomicSDNode *LD) {
   if (!FirstVT)
     return SDValue();
 
-  SmallVector<EVT, 8> MemVTs;
   TypeSize FirstVTWidth = FirstVT->getSizeInBits();
 
   SDValue LdOp = DAG.getAtomicLoad(ISD::NON_EXTLOAD, dl, *FirstVT, *FirstVT,

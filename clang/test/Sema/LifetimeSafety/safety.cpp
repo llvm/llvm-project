@@ -645,7 +645,7 @@ const int* return_pointer_to_parameter_via_reference(int a, int b, bool cond) {
 
 const int& return_pointer_to_parameter_via_reference_1(int a) {
     const int* d = &a; // expected-warning {{stack memory associated with parameter 'a' is returned}}
-    return *d;    // expected-note {{returned here}}
+    return *d;         // expected-note {{returned here}}
 }
 
 const int& get_ref_to_local() {
@@ -1634,7 +1634,7 @@ View range_based_for_use_after_return() {
   MyObjStorage s;
   for (const MyObj &o : s) { // expected-warning {{stack memory associated with local variable 's' is returned}} \
                              // expected-note {{local variable '__range1' aliases the storage of local variable 's'}}
-    return o;  // expected-note {{returned here}}
+    return o;                // expected-note {{returned here}}
   }
   return *s.begin();  // expected-warning {{stack memory associated with local variable 's' is returned}} \
                       // expected-note {{result of call to 'begin' aliases the storage of local variable 's' because the implicit object parameter is marked as lifetimebound}} \
@@ -1985,7 +1985,7 @@ const MyObj* testData(MyObj obj) {
   return v.data();  // expected-note {{returned here}}
 }
 const int* testLifetimeboundAccessorOfMyObj(MyObj obj) {
-  View v = obj;           // expected-warning {{stack memory associated with parameter 'obj' is returned}}
+  View v = obj;                // expected-warning {{stack memory associated with parameter 'obj' is returned}}
   const MyObj* ptr = v.data(); // expected-note {{local variable 'v' aliases the storage of parameter 'obj'}} \
                                // expected-note {{result of call to 'data' aliases the storage of parameter 'obj' because the implicit object parameter is inferred as lifetimebound}}
   return ptr->getData();  // expected-note {{returned here}}
@@ -2350,7 +2350,7 @@ namespace lambda_captures {
 auto return_ref_capture() {
   int local = 1;
   auto lambda = [&local]() { return local; }; // expected-warning {{stack memory associated with local variable 'local' is returned}}
-  return lambda; // expected-note {{returned here}}
+  return lambda;                              // expected-note {{returned here}}
 }
 
 void safe_ref_capture() {
@@ -2367,7 +2367,7 @@ auto capture_int_by_value() {
 
 auto capture_view_by_value() {
   MyObj obj;
-  View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
+  View v(obj);                       // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   auto lambda = [v]() { return v; }; // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return lambda; // expected-note {{returned here}}
 }
@@ -2383,7 +2383,7 @@ auto capture_pointer_by_ref() {
   MyObj obj;
   MyObj* p = &obj;
   auto lambda = [&p]() { return p; }; // expected-warning {{stack memory associated with local variable 'p' is returned}}
-  return lambda; // expected-note {{returned here}}
+  return lambda;                      // expected-note {{returned here}}
 }
 
 auto capture_multiple() {
@@ -2397,28 +2397,28 @@ auto capture_multiple() {
 
 auto capture_raw_pointer_by_value() {
   int x;
-  int* p = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  int* p = &x;                       // expected-warning {{stack memory associated with local variable 'x' is returned}}
   auto lambda = [p]() { return p; }; // expected-note {{local variable 'p' aliases the storage of local variable 'x'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_raw_pointer_init_capture() {
   int x;
-  int* p = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  int* p = &x;                           // expected-warning {{stack memory associated with local variable 'x' is returned}}
   auto lambda = [q = p]() { return q; }; // expected-note {{local variable 'p' aliases the storage of local variable 'x'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_view_init_capture() {
   MyObj obj;
-  View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
+  View v(obj);                           // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   auto lambda = [w = v]() { return w; }; // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return lambda; // expected-note {{returned here}}
 }
 
 auto capture_lambda() {
   int x;
-  auto inner = [&x]() { return x; }; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  auto inner = [&x]() { return x; };          // expected-warning {{stack memory associated with local variable 'x' is returned}}
   auto outer = [inner]() { return inner(); }; // expected-note {{local variable 'inner' aliases the storage of local variable 'x'}}
   return outer; // expected-note {{returned here}}
 }
@@ -2433,7 +2433,7 @@ auto return_copied_lambda() {
 auto implicit_ref_capture() {
   int local = 1;
   auto lambda = [&]() { return local; }; // expected-warning {{stack memory associated with local variable 'local' is returned}}
-  return lambda; // expected-note {{returned here}}
+  return lambda;                         // expected-note {{returned here}}
 }
 
 // TODO: Include the name of the variable in the diagnostic to improve
@@ -2442,12 +2442,12 @@ auto implicit_ref_capture() {
 auto implicit_ref_capture_multiple() {
   int local = 1, local2 = 2;
   auto lambda = [&]() { return local + local2; }; // expected-warning {{stack memory associated with local variable 'local2' is returned}} expected-warning {{stack memory associated with local variable 'local' is returned}}
-  return lambda; // expected-note 2 {{returned here}}
+  return lambda;                                  // expected-note 2 {{returned here}}
 }
 
 auto implicit_value_capture() {
   MyObj obj;
-  View v(obj); // expected-warning {{stack memory associated with local variable 'obj' is returned}}
+  View v(obj);                       // expected-warning {{stack memory associated with local variable 'obj' is returned}}
   auto lambda = [=]() { return v; }; // expected-note {{local variable 'v' aliases the storage of local variable 'obj'}}
   return lambda; // expected-note {{returned here}}
 }
@@ -2480,14 +2480,14 @@ auto capture_static_address_by_ref() {
   static int local = 1;
   int* p = &local;
   auto lambda = [&p]() { return p; }; // expected-warning {{stack memory associated with local variable 'p' is returned}}
-  return lambda; // expected-note {{returned here}}
+  return lambda;                      // expected-note {{returned here}}
 }
 
 auto capture_multilevel_pointer() {
   int x;
-  int *p = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
-  int **q = &p; // expected-warning {{stack memory associated with local variable 'p' is returned}}
-  int ***r = &q; // expected-warning {{stack memory associated with local variable 'q' is returned}}
+  int *p = &x;                                     // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  int **q = &p;                                    // expected-warning {{stack memory associated with local variable 'p' is returned}}
+  int ***r = &q;                                   // expected-warning {{stack memory associated with local variable 'q' is returned}}
   auto lambda = [=]() { return *p + **q + ***r; }; // expected-note {{local variable 'p' aliases the storage of local variable 'x'}} \
                                                    // expected-note {{local variable 'r' aliases the storage of local variable 'q'}} \
                                                    // expected-note {{local variable 'q' aliases the storage of local variable 'p'}}
@@ -2885,7 +2885,8 @@ void from_template_instantiation() {
 
 struct FieldInitFromLifetimebound {
   S value; // expected-note {{this field dangles}}
-  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{stack memory associated with temporary object escapes to the field 'value' which will dangle}}
+  FieldInitFromLifetimebound() : value(getS(std::string("temp"))) {} // expected-warning {{stack memory associated with temporary object escapes to the field 'value' which will dangle}} \
+                                                                     // expected-note {{result of call to 'getS' aliases the storage of temporary object}}
 };
 
 S S::return_self_after_registration() const {
@@ -3116,7 +3117,7 @@ void binary_conditional_throw_void(int *in) {
 
 int *binary_conditional_throw_dangling() {
   int x;
-  int *p = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  int *p = &x;         // expected-warning {{stack memory associated with local variable 'x' is returned}}
   return p ?: throw 1; // expected-note {{returned here}}
 }
 
@@ -3800,7 +3801,7 @@ std::function<void()> reassign_safe_then_unsafe() {
   int local = 2;
   std::function<void()> f = []() { (void)safe; };
   f = [&local]() { (void)local; }; // expected-warning {{stack memory associated with local variable 'local' is returned}}
-  return f; // expected-note {{returned here}}
+  return f;                        // expected-note {{returned here}}
 }
 
 std::function<void()> reassign_unsafe_then_safe() {
@@ -3920,10 +3921,10 @@ void deref_use_after_scope() {
 namespace GH191954 {
   int* return_moved_pointer() {
     int x;
-    int* f = &x; // expected-warning {{stack memory associated with local variable 'x' is returned}}
+    int* f = &x;       // expected-warning {{stack memory associated with local variable 'x' is returned}}
     int* a;
     a = std::move(f); // expected-note {{result of call to 'move<int *&>' aliases the storage of local variable 'x'}}
-    return a; // expected-note {{returned here}}
+    return a;         // expected-note {{returned here}}
   }
 
   int* return_moved_pointer2() {
@@ -3935,7 +3936,7 @@ namespace GH191954 {
 
   View return_moved_view() {
     MyObj o;
-    View v(o); // expected-warning {{stack memory associated with local variable 'o' is returned}}
+    View v(o);              // expected-warning {{stack memory associated with local variable 'o' is returned}}
     View v2 = std::move(v); // expected-note {{result of call to 'move<View &>' aliases the storage of local variable 'o'}}
     return v2; // expected-note {{returned here}}
   }
@@ -3973,7 +3974,7 @@ View use_after_return_capture_by() {
   MyObj a;
   View res;
   setCaptureBy(res, a);   // expected-warning {{stack memory associated with local variable 'a' is returned}}
-  return res;     // expected-note {{returned here}}  
+  return res;             // expected-note {{returned here}}
                    
 }
 
