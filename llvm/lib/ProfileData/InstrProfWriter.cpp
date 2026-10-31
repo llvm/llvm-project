@@ -320,14 +320,14 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
     MemProfData.Frames = std::move(Incoming.Frames);
   else
     for (const auto &[Id, F] : Incoming.Frames)
-      if (addMemProfFrame(Id, F, Warn))
+      if (!addMemProfFrame(Id, F, Warn))
         return false;
 
   if (MemProfData.CallStacks.empty())
     MemProfData.CallStacks = std::move(Incoming.CallStacks);
   else
     for (const auto &[CSId, CS] : Incoming.CallStacks)
-      if (addMemProfCallStack(CSId, CS, Warn))
+      if (!addMemProfCallStack(CSId, CS, Warn))
         return false;
 
   // Add one record at a time if randomization is requested.
