@@ -195,3 +195,40 @@ mbb5291:                                           ; preds = %mbb4321
   store volatile [2 x i32] %i5293, ptr addrspace(5) null, align 4
   ret void
 }
+
+; The only value of %p moved into the guard block is undef from %h.
+define i32 @exit_phi_moved_undef(i1 %c, i1 %d) {
+; CHECK-LABEL: define i32 @exit_phi_moved_undef(
+; CHECK-SAME: i1 [[C:%.*]], i1 [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[H:.*]]
+; CHECK:       [[H]]:
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP_EXIT_GUARD:.*]], label %[[L:.*]]
+; CHECK:       [[L]]:
+; CHECK-NEXT:    br i1 [[D]], label %[[H]], label %[[LOOP_EXIT_GUARD]]
+; CHECK:       [[E1:.*]]:
+; CHECK-NEXT:    [[Z:%.*]] = and i32 undef, 0
+; CHECK-NEXT:    ret i32 [[Z]]
+; CHECK:       [[E2:.*]]:
+; CHECK-NEXT:    ret i32 1
+; CHECK:       [[LOOP_EXIT_GUARD]]:
+; CHECK-NEXT:    [[GUARD_E1:%.*]] = phi i1 [ true, %[[H]] ], [ false, %[[L]] ]
+; CHECK-NEXT:    br i1 [[GUARD_E1]], label %[[E1]], label %[[E2]]
+;
+entry:
+  br label %h
+
+h:
+  br i1 %c, label %e1, label %l
+
+l:
+  br i1 %d, label %h, label %e2
+
+e1:
+  %p = phi i32 [ undef, %h ]
+  %z = and i32 %p, 0
+  ret i32 %z
+
+e2:
+  ret i32 1
+}
