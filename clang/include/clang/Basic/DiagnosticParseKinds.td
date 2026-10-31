@@ -328,8 +328,7 @@ def warn_attribute_no_decl : Warning<
   "attribute %0 ignored, because it is not attached to a declaration">,
   InGroup<IgnoredAttributes>;
 def err_late_attribute_param_in_template : Error<
-  "%0 attribute in a template cannot name "
-  "%select{pointee function parameter|later parameter}1 %2">;
+  "%0 attribute in a template cannot name pointee function parameter %1">;
 def err_ms_attributes_not_enabled : Error<
   "'__declspec' attributes are not enabled; use '-fdeclspec' or "
   "'-fms-extensions' to enable support for __declspec attributes">;

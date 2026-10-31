@@ -72,38 +72,38 @@ define amdgpu_kernel void @repro(i32 %in) {
 ; CHECK-NEXT:    s_mov_b64 s[34:35], exec
 ; CHECK-NEXT:    s_mov_b64 exec, 0xffffffff
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[68:71], 0 offset:256
-; CHECK-NEXT:    v_writelane_b32 v0, s36, 0
-; CHECK-NEXT:    v_writelane_b32 v0, s37, 1
-; CHECK-NEXT:    v_writelane_b32 v0, s38, 2
-; CHECK-NEXT:    v_writelane_b32 v0, s39, 3
-; CHECK-NEXT:    v_writelane_b32 v0, s40, 4
-; CHECK-NEXT:    v_writelane_b32 v0, s41, 5
-; CHECK-NEXT:    v_writelane_b32 v0, s42, 6
-; CHECK-NEXT:    v_writelane_b32 v0, s43, 7
-; CHECK-NEXT:    v_writelane_b32 v0, s44, 8
-; CHECK-NEXT:    v_writelane_b32 v0, s45, 9
-; CHECK-NEXT:    v_writelane_b32 v0, s46, 10
-; CHECK-NEXT:    v_writelane_b32 v0, s47, 11
-; CHECK-NEXT:    v_writelane_b32 v0, s48, 12
-; CHECK-NEXT:    v_writelane_b32 v0, s49, 13
-; CHECK-NEXT:    v_writelane_b32 v0, s50, 14
-; CHECK-NEXT:    v_writelane_b32 v0, s51, 15
-; CHECK-NEXT:    v_writelane_b32 v0, s52, 16
-; CHECK-NEXT:    v_writelane_b32 v0, s53, 17
-; CHECK-NEXT:    v_writelane_b32 v0, s54, 18
-; CHECK-NEXT:    v_writelane_b32 v0, s55, 19
-; CHECK-NEXT:    v_writelane_b32 v0, s56, 20
-; CHECK-NEXT:    v_writelane_b32 v0, s57, 21
-; CHECK-NEXT:    v_writelane_b32 v0, s58, 22
-; CHECK-NEXT:    v_writelane_b32 v0, s59, 23
-; CHECK-NEXT:    v_writelane_b32 v0, s60, 24
-; CHECK-NEXT:    v_writelane_b32 v0, s61, 25
-; CHECK-NEXT:    v_writelane_b32 v0, s62, 26
-; CHECK-NEXT:    v_writelane_b32 v0, s63, 27
-; CHECK-NEXT:    v_writelane_b32 v0, s64, 28
-; CHECK-NEXT:    v_writelane_b32 v0, s65, 29
-; CHECK-NEXT:    v_writelane_b32 v0, s66, 30
-; CHECK-NEXT:    v_writelane_b32 v0, s67, 31
+; CHECK-NEXT:    v_writelane_b32 v0, s0, 0
+; CHECK-NEXT:    v_writelane_b32 v0, s1, 1
+; CHECK-NEXT:    v_writelane_b32 v0, s2, 2
+; CHECK-NEXT:    v_writelane_b32 v0, s3, 3
+; CHECK-NEXT:    v_writelane_b32 v0, s4, 4
+; CHECK-NEXT:    v_writelane_b32 v0, s5, 5
+; CHECK-NEXT:    v_writelane_b32 v0, s6, 6
+; CHECK-NEXT:    v_writelane_b32 v0, s7, 7
+; CHECK-NEXT:    v_writelane_b32 v0, s8, 8
+; CHECK-NEXT:    v_writelane_b32 v0, s9, 9
+; CHECK-NEXT:    v_writelane_b32 v0, s10, 10
+; CHECK-NEXT:    v_writelane_b32 v0, s11, 11
+; CHECK-NEXT:    v_writelane_b32 v0, s12, 12
+; CHECK-NEXT:    v_writelane_b32 v0, s13, 13
+; CHECK-NEXT:    v_writelane_b32 v0, s14, 14
+; CHECK-NEXT:    v_writelane_b32 v0, s15, 15
+; CHECK-NEXT:    v_writelane_b32 v0, s16, 16
+; CHECK-NEXT:    v_writelane_b32 v0, s17, 17
+; CHECK-NEXT:    v_writelane_b32 v0, s18, 18
+; CHECK-NEXT:    v_writelane_b32 v0, s19, 19
+; CHECK-NEXT:    v_writelane_b32 v0, s20, 20
+; CHECK-NEXT:    v_writelane_b32 v0, s21, 21
+; CHECK-NEXT:    v_writelane_b32 v0, s22, 22
+; CHECK-NEXT:    v_writelane_b32 v0, s23, 23
+; CHECK-NEXT:    v_writelane_b32 v0, s24, 24
+; CHECK-NEXT:    v_writelane_b32 v0, s25, 25
+; CHECK-NEXT:    v_writelane_b32 v0, s26, 26
+; CHECK-NEXT:    v_writelane_b32 v0, s27, 27
+; CHECK-NEXT:    v_writelane_b32 v0, s28, 28
+; CHECK-NEXT:    v_writelane_b32 v0, s29, 29
+; CHECK-NEXT:    v_writelane_b32 v0, s30, 30
+; CHECK-NEXT:    v_writelane_b32 v0, s31, 31
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[68:71], 0 offset:128 ; 4-byte Folded Spill
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[68:71], 0 offset:256
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -113,38 +113,38 @@ define amdgpu_kernel void @repro(i32 %in) {
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[68:71], 0 offset:256
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[68:71], 0 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readlane_b32 s36, v0, 0
-; CHECK-NEXT:    v_readlane_b32 s37, v0, 1
-; CHECK-NEXT:    v_readlane_b32 s38, v0, 2
-; CHECK-NEXT:    v_readlane_b32 s39, v0, 3
-; CHECK-NEXT:    v_readlane_b32 s40, v0, 4
-; CHECK-NEXT:    v_readlane_b32 s41, v0, 5
-; CHECK-NEXT:    v_readlane_b32 s42, v0, 6
-; CHECK-NEXT:    v_readlane_b32 s43, v0, 7
-; CHECK-NEXT:    v_readlane_b32 s44, v0, 8
-; CHECK-NEXT:    v_readlane_b32 s45, v0, 9
-; CHECK-NEXT:    v_readlane_b32 s46, v0, 10
-; CHECK-NEXT:    v_readlane_b32 s47, v0, 11
-; CHECK-NEXT:    v_readlane_b32 s48, v0, 12
-; CHECK-NEXT:    v_readlane_b32 s49, v0, 13
-; CHECK-NEXT:    v_readlane_b32 s50, v0, 14
-; CHECK-NEXT:    v_readlane_b32 s51, v0, 15
-; CHECK-NEXT:    v_readlane_b32 s52, v0, 16
-; CHECK-NEXT:    v_readlane_b32 s53, v0, 17
-; CHECK-NEXT:    v_readlane_b32 s54, v0, 18
-; CHECK-NEXT:    v_readlane_b32 s55, v0, 19
-; CHECK-NEXT:    v_readlane_b32 s56, v0, 20
-; CHECK-NEXT:    v_readlane_b32 s57, v0, 21
-; CHECK-NEXT:    v_readlane_b32 s58, v0, 22
-; CHECK-NEXT:    v_readlane_b32 s59, v0, 23
-; CHECK-NEXT:    v_readlane_b32 s60, v0, 24
-; CHECK-NEXT:    v_readlane_b32 s61, v0, 25
-; CHECK-NEXT:    v_readlane_b32 s62, v0, 26
-; CHECK-NEXT:    v_readlane_b32 s63, v0, 27
-; CHECK-NEXT:    v_readlane_b32 s64, v0, 28
-; CHECK-NEXT:    v_readlane_b32 s65, v0, 29
-; CHECK-NEXT:    v_readlane_b32 s66, v0, 30
-; CHECK-NEXT:    v_readlane_b32 s67, v0, 31
+; CHECK-NEXT:    v_readlane_b32 s0, v0, 0
+; CHECK-NEXT:    v_readlane_b32 s1, v0, 1
+; CHECK-NEXT:    v_readlane_b32 s2, v0, 2
+; CHECK-NEXT:    v_readlane_b32 s3, v0, 3
+; CHECK-NEXT:    v_readlane_b32 s4, v0, 4
+; CHECK-NEXT:    v_readlane_b32 s5, v0, 5
+; CHECK-NEXT:    v_readlane_b32 s6, v0, 6
+; CHECK-NEXT:    v_readlane_b32 s7, v0, 7
+; CHECK-NEXT:    v_readlane_b32 s8, v0, 8
+; CHECK-NEXT:    v_readlane_b32 s9, v0, 9
+; CHECK-NEXT:    v_readlane_b32 s10, v0, 10
+; CHECK-NEXT:    v_readlane_b32 s11, v0, 11
+; CHECK-NEXT:    v_readlane_b32 s12, v0, 12
+; CHECK-NEXT:    v_readlane_b32 s13, v0, 13
+; CHECK-NEXT:    v_readlane_b32 s14, v0, 14
+; CHECK-NEXT:    v_readlane_b32 s15, v0, 15
+; CHECK-NEXT:    v_readlane_b32 s16, v0, 16
+; CHECK-NEXT:    v_readlane_b32 s17, v0, 17
+; CHECK-NEXT:    v_readlane_b32 s18, v0, 18
+; CHECK-NEXT:    v_readlane_b32 s19, v0, 19
+; CHECK-NEXT:    v_readlane_b32 s20, v0, 20
+; CHECK-NEXT:    v_readlane_b32 s21, v0, 21
+; CHECK-NEXT:    v_readlane_b32 s22, v0, 22
+; CHECK-NEXT:    v_readlane_b32 s23, v0, 23
+; CHECK-NEXT:    v_readlane_b32 s24, v0, 24
+; CHECK-NEXT:    v_readlane_b32 s25, v0, 25
+; CHECK-NEXT:    v_readlane_b32 s26, v0, 26
+; CHECK-NEXT:    v_readlane_b32 s27, v0, 27
+; CHECK-NEXT:    v_readlane_b32 s28, v0, 28
+; CHECK-NEXT:    v_readlane_b32 s29, v0, 29
+; CHECK-NEXT:    v_readlane_b32 s30, v0, 30
+; CHECK-NEXT:    v_readlane_b32 s31, v0, 31
 ; CHECK-NEXT:    buffer_load_dword v0, off, s[68:71], 0 offset:256
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_mov_b64 exec, s[34:35]

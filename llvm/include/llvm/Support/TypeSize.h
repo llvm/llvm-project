@@ -342,6 +342,10 @@ public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
+  // ElementCount is just a TypeSize with reduced range.
+  explicit constexpr TypeSize(const ElementCount &EC)
+      : FixedOrScalableQuantity(EC.getKnownMinValue(), EC.isScalable()) {}
+
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);
   }

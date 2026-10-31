@@ -707,6 +707,14 @@ math_test(
 )
 
 math_test(
+    name = "fdimf80",
+    hdrs = ["FDimTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fdimf16",
     hdrs = ["FDimTest.h"],
 )
@@ -837,6 +845,14 @@ math_test(
 )
 
 math_test(
+    name = "fmaxf80",
+    hdrs = ["FMaxTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fmaximum",
     hdrs = ["FMaximumTest.h"],
 )
@@ -864,6 +880,14 @@ math_test(
     hdrs = ["FMaximumTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fmaximumf80",
+    hdrs = ["FMaximumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
@@ -899,6 +923,14 @@ math_test(
 )
 
 math_test(
+    name = "fmaximum_magf80",
+    hdrs = ["FMaximumMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fmaximum_mag_num",
     hdrs = ["FMaximumMagNumTest.h"],
 )
@@ -930,6 +962,14 @@ math_test(
 )
 
 math_test(
+    name = "fmaximum_mag_numf80",
+    hdrs = ["FMaximumMagNumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fmaximum_num",
     hdrs = ["FMaximumNumTest.h"],
 )
@@ -957,6 +997,14 @@ math_test(
     hdrs = ["FMaximumNumTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fmaximum_numf80",
+    hdrs = ["FMaximumNumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
@@ -1017,6 +1065,14 @@ math_test(
 )
 
 math_test(
+    name = "fminf80",
+    hdrs = ["FMinTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fminimum",
     hdrs = ["FMinimumTest.h"],
 )
@@ -1048,6 +1104,14 @@ math_test(
 )
 
 math_test(
+    name = "fminimumf80",
+    hdrs = ["FMinimumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fminimum_mag",
     hdrs = ["FMinimumMagTest.h"],
 )
@@ -1075,6 +1139,14 @@ math_test(
     hdrs = ["FMinimumMagTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fminimum_magf80",
+    hdrs = ["FMinimumMagTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 
@@ -1115,6 +1187,14 @@ math_test(
 )
 
 math_test(
+    name = "fminimum_mag_numf80",
+    hdrs = ["FMinimumMagNumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
+    ],
+)
+
+math_test(
     name = "fminimum_mag_numf16",
     hdrs = ["FMinimumMagNumTest.h"],
 )
@@ -1147,6 +1227,14 @@ math_test(
     hdrs = ["FMinimumNumTest.h"],
     deps = [
         "//libc:__support_fputil_float128",
+    ],
+)
+
+math_test(
+    name = "fminimum_numf80",
+    hdrs = ["FMinimumNumTest.h"],
+    deps = [
+        "//libc:__support_fputil_float80",
     ],
 )
 

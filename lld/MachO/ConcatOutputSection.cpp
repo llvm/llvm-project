@@ -291,7 +291,7 @@ void TextOutputSection::finalize() {
           alignToPowerOf2(addr + size, isec->align) + isec->getSize();
       // If we were to emit this section, would we have enough space for more
       // thunks? If we do, then we can delay processing this thunk so we may
-      // finalize more potencial target sections. Otherwise we must emit thunks
+      // finalize more potential target sections. Otherwise we must emit thunks
       // until we have enough space.
       if (nextEnd + slop <= highVA)
         break;

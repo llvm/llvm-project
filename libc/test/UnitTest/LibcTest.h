@@ -214,11 +214,11 @@ protected:
     return testMatch(Matcher.match(Value), Matcher, ValueStr, MatcherStr, Loc);
   }
 
-  bool testProcessExits(cpp::function<void(void)> Func, int ExitCode,
+  bool testProcessExits(cpp::function_ref<void(void)> Func, int ExitCode,
                         const char *LHSStr, const char *RHSStr,
                         internal::Location Loc);
 
-  bool testProcessKilled(cpp::function<void(void)> Func, int Signal,
+  bool testProcessKilled(cpp::function_ref<void(void)> Func, int Signal,
                          const char *LHSStr, const char *RHSStr,
                          internal::Location Loc);
 

@@ -11,15 +11,18 @@ import argparse
 import common
 import contextlib
 import datetime
-import json
 import logging
 import os
 import pathlib
-import platform
-import re
 import subprocess
 import sys
 import tempfile
+
+
+# The tools used by this script are taken from the checkout this script lives in, which isn't
+# necessarily the repository passed as --git-repo.
+LNT_TOOLS = pathlib.Path(__file__).resolve().parent
+LIBCXX_UTILS = LNT_TOOLS.parents[1]
 
 
 def directory_path(string):
@@ -27,96 +30,6 @@ def directory_path(string):
         return pathlib.Path(string)
     else:
         raise NotADirectoryError(string)
-
-def gather_machine_information(args):
-    """
-    Gather the machine information to upload to LNT as part of the submission.
-    """
-    info = {}
-    if platform.system() == 'Darwin':
-        profiler_info = json.loads(subprocess.check_output(['system_profiler', 'SPHardwareDataType', 'SPSoftwareDataType', '-json']).decode())
-        info['hardware'] = profiler_info['SPHardwareDataType'][0]['chip_type']
-        info['os'] = profiler_info['SPSoftwareDataType'][0]['os_version']
-        info['sdk'] = subprocess.check_output(['xcrun', '--show-sdk-version']).decode().strip()
-
-    info['compiler'] = subprocess.check_output([args.compiler, '--version']).decode().strip().splitlines()[0]
-    info['test_suite_commit'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.test_suite_commit]).decode().strip()
-
-    if args.spec_dir is not None:
-        with open(args.spec_dir / 'version.txt', 'r') as f:
-            info['spec'] = f.read().strip()
-
-    return info
-
-def gather_lit_features(lit, lit_args, tests):
-    """
-    Gather the Lit features in effect for the configuration we benchmarked, as a dictionary of
-    feature name to feature value.
-    """
-    # Lit features that we report as part of the machine information, and the names
-    # we use in that machine information.
-    REPORTED_FEATURES = {
-        'libcpp-abi-version': 'abi_version',
-        'libcpp-hardening-mode': 'hardening_mode',
-    }
-
-    if not lit.is_file():
-        logging.warning(f'{lit} does not exist: not reporting any Lit feature')
-        return {}
-
-    # Lit prints the features of the configuration it discovered and exits without running anything.
-    command = [str(c) for c in [lit, '--show-suites', *lit_args, tests]]
-    logging.debug(f'$ {" ".join(command)}')
-    try:
-        output = subprocess.check_output(command, stderr=subprocess.PIPE).decode()
-    except subprocess.CalledProcessError as e:
-        logging.warning(f'Could not determine the Lit features in effect: {e.stderr.decode()}')
-        return {}
-
-    matches = re.findall(r'^\s*Available Features:\s*(.+)$', output, flags=re.MULTILINE)
-    if len(matches) != 1:
-        logging.warning(f'Expected exactly one list of features in the output of Lit, got {len(matches)}')
-        return {}
-    parsed = dict(f.split('=', 1) for f in matches[0].split() if '=' in f)
-
-    reported = {}
-    for (name, value) in parsed.items():
-        if name in REPORTED_FEATURES:
-            reported[REPORTED_FEATURES[name]] = value
-    return reported
-
-def gather_commit_information(args):
-    """
-    Gather the information about the benchmarked commit to upload to LNT as part of the submission.
-    """
-    def git(*command):
-        return subprocess.check_output(['git', '-C', args.git_repo, *command]).decode().strip()
-
-    sha = git('rev-parse', '--verify', f'{args.benchmark_commit}^{{commit}}')
-    (subject, author, timestamp) = git('log', '-1', '--no-show-signature', '--format=%s%x00%an%x00%ct', sha).split('\0')
-    fields = {
-        'short_sha': sha[:12],
-        'title': subject,
-        'author': author,
-        'committed_at': datetime.datetime.fromtimestamp(int(timestamp), datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-    }
-    commit = {'value': sha, 'fields': fields}
-
-    # Only commits on the main branch get an ordinal so we can order them on time series. Other commits
-    # can exist, but they are not totally ordered with the rest.
-    ancestor = subprocess.run(['git', '-C', args.git_repo, 'merge-base', '--is-ancestor', sha, args.main_branch])
-    if ancestor.returncode == 0:
-        commit['ordinal'] = int(git('rev-list', '--count', sha))
-    elif ancestor.returncode == 1:
-        logging.info(f'{sha} is not on {args.main_branch}: not giving it an ordinal')
-    else:
-        raise RuntimeError(f'could not determine whether {sha} is on {args.main_branch} (does that branch exist?)')
-    return commit
-
-def key_value(string):
-    if '=' not in string:
-        raise argparse.ArgumentTypeError(f'expected KEY=VALUE, got {string!r}')
-    return tuple(string.split('=', 1))
 
 def main(argv):
     parser = argparse.ArgumentParser(
@@ -139,7 +52,7 @@ def main(argv):
              'already exist.')
     parser.add_argument('--main-branch', type=str, default='origin/main',
         help='The main branch of the repository. Only commits on that branch are given an ordinal.')
-    parser.add_argument('--run-parameter', type=key_value, action='append', default=[], metavar='KEY=VALUE',
+    parser.add_argument('--run-parameter', type=common.key_value, action='append', default=[], metavar='KEY=VALUE',
         help='Additional information about the run to include in the report (e.g. the URL of the CI job). '
              'This can be passed multiple times.')
     parser.add_argument('lit_options', nargs=argparse.REMAINDER,
@@ -205,8 +118,6 @@ def main(argv):
         sys.exit(f'error: output report {args.output} already exists; not overwriting it')
     if args.artifacts_dir is not None and args.artifacts_dir.exists():
         sys.exit(f'error: artifacts directory {args.artifacts_dir} already exists; not overwriting it')
-    # Gather the information about the commit up front, since it doesn't depend on the results and can fail.
-    commit = None if args.dry_run else gather_commit_information(args)
 
     with contextlib.ExitStack() as stack:
         # The artifacts are kept in --artifacts-dir when it is given, and stored in a temporary directory otherwise.
@@ -225,7 +136,7 @@ def main(argv):
         if args.spec_dir is not None:
             lit_args += ['--param', f'spec_dir={args.spec_dir}']
         lit_args += lit_options
-        cmd = [args.git_repo / 'libcxx/utils/test-at-commit',
+        cmd = [LIBCXX_UTILS / 'test-at-commit',
                             '--git-repo', args.git_repo,
                             '--build-dir', artifacts / 'benchmarks-build',
                             '--test-suite-commit', args.test_suite_commit,
@@ -241,23 +152,37 @@ def main(argv):
         run(cmd, enforce_success=False) # some benchmarks may fail to build/run at some commits, and that's okay
         measured_at = datetime.datetime.now(datetime.timezone.utc)
 
-        consolidate = [args.git_repo / 'libcxx/utils/consolidate-benchmarks', artifacts / 'benchmarks-build']
+        consolidate = [LIBCXX_UTILS / 'consolidate-benchmarks', artifacts / 'benchmarks-build']
         if args.dry_run:
             run(consolidate)
-            logging.info('Dry run: not creating a LNT report')
-            return
-        with open(artifacts / 'benchmarks.lnt', 'w') as f:
-            run(consolidate, stdout=f)
+        else:
+            with open(artifacts / 'benchmarks.lnt', 'w') as f:
+                run(consolidate, stdout=f)
 
-        logging.info('Creating JSON report for LNT')
-        machine_fields = {**gather_machine_information(args),
-                          **gather_lit_features(artifacts / 'benchmarks-build/bin/llvm-lit', lit_args,
-                                                artifacts / 'benchmarks-build/libcxx/test/benchmarks')}
-        tests = common.parse_lnt_results((artifacts / 'benchmarks.lnt').read_text().splitlines())
+        logging.info('Dry run: not creating a LNT report' if args.dry_run else 'Creating JSON report for LNT')
         output = args.output.resolve()
-        common.write_lnt_report(output, args.machine, machine_fields, commit, tests, measured_at,
-                                run_parameters=dict(args.run_parameter))
-        logging.info(f'Report written to {output}')
+        report = [LNT_TOOLS / 'create-lnt-report',
+                  '--input', artifacts / 'benchmarks.lnt',
+                  '--output', output,
+                  '--machine', args.machine,
+                  '--commit', args.benchmark_commit,
+                  '--test-suite-commit', args.test_suite_commit,
+                  '--compiler', args.compiler,
+                  '--git-repo', args.git_repo,
+                  '--main-branch', args.main_branch,
+                  '--measured-at', measured_at.strftime(common.LNT_TIMESTAMP_FORMAT)]
+        if args.spec_dir is not None:
+            report += ['--spec-dir', args.spec_dir]
+        for (key, value) in args.run_parameter:
+            report += ['--run-parameter', f'{key}={value}']
+        if args.verbose:
+            report += ['--verbose']
+        # The Lit features are gathered from the build directory, so this must be done before the artifacts
+        # are cleaned up.
+        report += ['--lit-build-dir', artifacts / 'benchmarks-build', '--', *lit_args]
+        # Don't capture the output of the tool, which reports useful warnings (e.g. when some information can't
+        # be determined) even when it succeeds.
+        run(report, stdout=None, stderr=None)
 
 
 if __name__ == '__main__':

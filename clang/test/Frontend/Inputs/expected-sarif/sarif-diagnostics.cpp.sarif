@@ -295,6 +295,29 @@ clang: warning: diagnostic formatting in SARIF mode is currently unstable [-Wsar
           },
           "ruleId": "err_typecheck_invalid_operands",
           "ruleIndex": 8
+        },
+        {
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "index": 0,
+                  "uri": "file:///[...]/sarif-diagnostics.cpp"
+                },
+                "region": {
+                  "endColumn": 9,
+                  "startColumn": 9,
+                  "startLine": 31
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "expected expression"
+          },
+          "ruleId": "err_expected_expression",
+          "ruleIndex": 9
         }
       ],
       "tool": {
@@ -411,6 +434,18 @@ clang: warning: diagnostic formatting in SARIF mode is currently unstable [-Wsar
               },
               "id": "err_typecheck_invalid_operands",
               "name": ""
+            },
+            {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "error",
+                "rank": 50
+              },
+              "fullDescription": {
+                "text": ""
+              },
+              "id": "err_expected_expression",
+              "name": ""
             }
           ],
           "version": "[clang version]"
@@ -421,4 +456,4 @@ clang: warning: diagnostic formatting in SARIF mode is currently unstable [-Wsar
   "version": "[SARIF version]"
 }
 
-2 warnings and 6 errors generated.
+2 warnings and 7 errors generated.

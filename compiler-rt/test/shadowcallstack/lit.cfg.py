@@ -11,6 +11,9 @@ config.test_source_root = os.path.dirname(__file__)
 # Test suffixes.
 config.suffixes = [".c", ".cpp", ".m", ".mm", ".ll", ".test"]
 
+if config.target_arch == "aarch64":
+    config.target_cflags += " -mbranch-protection=none"
+
 # Add clang substitutions.
 config.substitutions.append(
     (

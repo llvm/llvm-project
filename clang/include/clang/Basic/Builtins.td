@@ -6092,3 +6092,8 @@ def CountedByRef : Builtin {
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "int(...)";
 }
+
+//===----------------------------------------------------------------------===//
+// C++26 reflection metafunctions.
+//===----------------------------------------------------------------------===//
+include "clang/Basic/BuiltinsMeta.td"

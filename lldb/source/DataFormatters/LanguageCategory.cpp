@@ -39,17 +39,17 @@ bool LanguageCategory::Get(FormattersMatchData &match_data,
   if (!IsEnabled())
     return false;
 
-  if (match_data.GetTypeForCache()) {
-    if (m_format_cache.Get(match_data.GetTypeForCache(), retval_sp))
+  llvm::StringRef match_data_name(match_data.GetTypeForCache());
+  if (!match_data_name.empty()) {
+    if (m_format_cache.Get(match_data_name, retval_sp))
       return (bool)retval_sp;
   }
 
   ValueObject &valobj(match_data.GetValueObject());
   bool result = m_category_sp->Get(valobj.GetObjectRuntimeLanguage(),
                                    match_data.GetMatchesVector(), retval_sp);
-  if (match_data.GetTypeForCache() &&
-      (!retval_sp || !retval_sp->NonCacheable())) {
-    m_format_cache.Set(match_data.GetTypeForCache(), retval_sp);
+  if (!match_data_name.empty() && (!retval_sp || !retval_sp->NonCacheable())) {
+    m_format_cache.Set(match_data_name, retval_sp);
   }
   return result;
 }

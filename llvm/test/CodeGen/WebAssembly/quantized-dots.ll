@@ -640,7 +640,6 @@ define hidden float @vec_dot_q6_K_q8_K(i32 noundef %arg, ptr noundef readonly %a
 ; CHECK-NEXT:    local.get 2
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load32_zero 0:p2align=0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
 ; CHECK-NEXT:    local.get 4
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i32.const 4
@@ -649,8 +648,8 @@ define hidden float @vec_dot_q6_K_q8_K(i32 noundef %arg, ptr noundef readonly %a
 ; CHECK-NEXT:    i32x4.extract_lane 0
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    v128.load8_splat 0
-; CHECK-NEXT:    i16x8.extend_low_i8x16_s
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    i16x8.extmul_low_i8x16_s
+; CHECK-NEXT:    i32x4.extend_low_i16x8_s
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 5
 ; CHECK-NEXT:    i32.const 7

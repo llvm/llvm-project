@@ -14,46 +14,46 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; COEXEC-NEXT:    v_dual_mov_b32 v76, 0 :: v_dual_bitop2_b32 v0, s2, v0 bitop3:0x40
 ; COEXEC-NEXT:    s_wait_kmcnt 0x0
 ; COEXEC-NEXT:    v_mov_b32_e32 v77, s1
-; COEXEC-NEXT:    v_lshl_add_u32 v20, v0, 5, s0
+; COEXEC-NEXT:    v_lshl_add_u32 v28, v0, 5, s0
 ; COEXEC-NEXT:    v_lshl_add_u32 v78, v0, 4, s1
-; COEXEC-NEXT:    ds_load_b128 v[40:43], v20
-; COEXEC-NEXT:    ds_load_b128 v[16:19], v20 offset:10240
-; COEXEC-NEXT:    ds_load_b128 v[24:27], v20 offset:6144
-; COEXEC-NEXT:    ds_load_b128 v[32:35], v20 offset:3072
-; COEXEC-NEXT:    ds_load_b128 v[48:51], v20 offset:1024
-; COEXEC-NEXT:    ds_load_b128 v[44:47], v20 offset:16
-; COEXEC-NEXT:    ds_load_b128 v[0:3], v20 offset:22528
-; COEXEC-NEXT:    ds_load_b128 v[52:55], v20 offset:1040
-; COEXEC-NEXT:    ds_load_b128 v[4:7], v20 offset:22544
-; COEXEC-NEXT:    ds_load_b128 v[36:39], v20 offset:3088
-; COEXEC-NEXT:    ds_load_b128 v[8:11], v20 offset:22560
-; COEXEC-NEXT:    ds_load_b128 v[28:31], v20 offset:6160
-; COEXEC-NEXT:    ds_load_b128 v[12:15], v20 offset:22576
-; COEXEC-NEXT:    ds_load_b128 v[20:23], v20 offset:10256
+; COEXEC-NEXT:    ds_load_b128 v[16:19], v28
+; COEXEC-NEXT:    ds_load_b128 v[24:27], v28 offset:10240
+; COEXEC-NEXT:    ds_load_b128 v[32:35], v28 offset:6144
+; COEXEC-NEXT:    ds_load_b128 v[40:43], v28 offset:3072
+; COEXEC-NEXT:    ds_load_b128 v[48:51], v28 offset:1024
+; COEXEC-NEXT:    ds_load_b128 v[20:23], v28 offset:16
+; COEXEC-NEXT:    ds_load_b128 v[0:3], v28 offset:22528
+; COEXEC-NEXT:    ds_load_b128 v[52:55], v28 offset:1040
+; COEXEC-NEXT:    ds_load_b128 v[4:7], v28 offset:22544
+; COEXEC-NEXT:    ds_load_b128 v[44:47], v28 offset:3088
+; COEXEC-NEXT:    ds_load_b128 v[8:11], v28 offset:22560
+; COEXEC-NEXT:    ds_load_b128 v[36:39], v28 offset:6160
+; COEXEC-NEXT:    ds_load_b128 v[12:15], v28 offset:22576
+; COEXEC-NEXT:    ds_load_b128 v[28:31], v28 offset:10256
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000100) size(14) SyncID(0)
 ; COEXEC-NEXT:    s_wait_dscnt 0xd
-; COEXEC-NEXT:    v_mov_b64_e32 v[58:59], v[42:43]
-; COEXEC-NEXT:    v_mov_b64_e32 v[56:57], v[40:41]
+; COEXEC-NEXT:    v_mov_b64_e32 v[58:59], v[18:19]
+; COEXEC-NEXT:    v_mov_b64_e32 v[56:57], v[16:17]
 ; COEXEC-NEXT:    s_wait_dscnt 0xc
-; COEXEC-NEXT:    v_mov_b64_e32 v[62:63], v[18:19]
-; COEXEC-NEXT:    v_mov_b64_e32 v[60:61], v[16:17]
+; COEXEC-NEXT:    v_mov_b64_e32 v[62:63], v[26:27]
+; COEXEC-NEXT:    v_mov_b64_e32 v[60:61], v[24:25]
 ; COEXEC-NEXT:    s_wait_dscnt 0xb
-; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], v[26:27]
-; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], v[24:25]
+; COEXEC-NEXT:    v_mov_b64_e32 v[66:67], v[34:35]
+; COEXEC-NEXT:    v_mov_b64_e32 v[64:65], v[32:33]
 ; COEXEC-NEXT:    s_wait_dscnt 0xa
-; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], v[34:35]
-; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], v[32:33]
+; COEXEC-NEXT:    v_mov_b64_e32 v[70:71], v[42:43]
+; COEXEC-NEXT:    v_mov_b64_e32 v[68:69], v[40:41]
 ; COEXEC-NEXT:    s_wait_dscnt 0x9
 ; COEXEC-NEXT:    v_mov_b64_e32 v[74:75], v[50:51]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], v[48:49]
 ; COEXEC-NEXT:    s_wait_dscnt 0x1
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[56:59], v[40:47], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[56:59], v[16:23], v[0:15], v76
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[72:75], v[48:55], v[0:15], v76
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[68:71], v[32:39], v[0:15], v76
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[64:67], v[24:31], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[68:71], v[40:47], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[64:67], v[32:39], v[0:15], v76
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[60:63], v[16:23], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[60:63], v[24:31], v[0:15], v76
 ; COEXEC-NEXT:    ds_store_b128 v78, v[56:59]
 ; COEXEC-NEXT:    ds_store_b128 v77, v[72:75] offset:512
 ; COEXEC-NEXT:    ds_store_b128 v77, v[68:71] offset:1024

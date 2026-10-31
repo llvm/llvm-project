@@ -27,6 +27,18 @@ not sure). The bug description should contain the following information:
 
 Thanks for helping us make LLVM better!
 
+## AI policy
+
+All interactions with the LLVM community are required to comply with the
+{doc}`AI policy <AIToolPolicy>`. You must not post any description you don't
+understand, and any AI assistance must be noted.
+
+Fuzzer and AI-generated testcases should include a brief description of the
+framework used to generate them. If you're planning to file more than three
+bug reports using a particular framework, please make a thread on
+[LLVM Discourse](https://discourse.llvm.org/) to plan out how to file those
+reports.
+
 (crashes the compiler)=
 
 ## Crashing Bugs

@@ -960,7 +960,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lround
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -976,7 +975,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -992,7 +990,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1008,7 +1005,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1024,7 +1020,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1041,7 +1036,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lroundbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1058,7 +1052,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llround
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1074,7 +1067,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1090,7 +1082,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1106,7 +1097,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1122,7 +1112,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1139,7 +1128,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llroundbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1242,7 +1230,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrint
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1258,7 +1245,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1274,7 +1260,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1290,7 +1275,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1306,7 +1290,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1323,7 +1306,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.lrintbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -1340,7 +1322,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrint
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1356,7 +1337,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintf
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1372,7 +1352,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintl
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1388,7 +1367,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1404,7 +1382,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
@@ -1421,7 +1398,6 @@ add_fp_unittest(
   HDRS
     RoundToIntegerTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.math.llrintbf16
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.bfloat16
@@ -2716,6 +2692,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fdimf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fdimf80_test.cpp
+  HDRS
+    FDimTest.h
+  DEPENDS
+    libc.src.math.fdimf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fdimbf16_test
   SUITE
     libc-math-smoke-tests
@@ -2797,6 +2788,21 @@ add_fp_unittest(
     FMinTest.h
   DEPENDS
     libc.src.math.fminf16
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminf80_test.cpp
+  HDRS
+    FMinTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.math.fminf80
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
@@ -2888,6 +2894,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaxf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaxf80_test.cpp
+  HDRS
+    FMaxTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.float80
+    libc.src.math.fmaxf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaxbf16_test
   SUITE
     libc-math-smoke-tests
@@ -2942,6 +2963,21 @@ add_fp_unittest(
     libc.src.math.fmaximumf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fmaximumf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximumf80_test.cpp
+  HDRS
+    FMaximumTest.h
+  DEPENDS
+    libc.src.math.fmaximumf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3060,6 +3096,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaximum_numf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_numf80_test.cpp
+  HDRS
+    FMaximumNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_numf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaximum_numbf16_test
   SUITE
     libc-math-smoke-tests
@@ -3151,6 +3202,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaximum_magf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_magf80_test.cpp
+  HDRS
+    FMaximumMagTest.h
+  DEPENDS
+    libc.src.math.fmaximum_magf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaximum_magbf16_test
   SUITE
     libc-math-smoke-tests
@@ -3237,6 +3303,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaximum_mag_numf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fmaximum_mag_numf80_test.cpp
+  HDRS
+    FMaximumMagNumTest.h
+  DEPENDS
+    libc.src.math.fmaximum_mag_numf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fmaximum_mag_numbf16_test
   SUITE
     libc-math-smoke-tests
@@ -3291,6 +3372,21 @@ add_fp_unittest(
     libc.src.math.fminimumf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimumf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimumf80_test.cpp
+  HDRS
+    FMinimumTest.h
+  DEPENDS
+    libc.src.math.fminimumf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -3409,6 +3505,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fminimum_numf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_numf80_test.cpp
+  HDRS
+    FMinimumNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_numf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fminimum_numbf16_test
   SUITE
     libc-math-smoke-tests
@@ -3495,6 +3606,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fminimum_magf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_magf80_test.cpp
+  HDRS
+    FMinimumMagTest.h
+  DEPENDS
+    libc.src.math.fminimum_magf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   fminimum_magbf16_test
   SUITE
     libc-math-smoke-tests
@@ -3577,6 +3703,21 @@ add_fp_unittest(
     libc.src.math.fminimum_mag_numf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fminimum_mag_numf80_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fminimum_mag_numf80_test.cpp
+  HDRS
+    FMinimumMagNumTest.h
+  DEPENDS
+    libc.src.math.fminimum_mag_numf80
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.float80
     libc.src.__support.FPUtil.fp_bits
 )
 

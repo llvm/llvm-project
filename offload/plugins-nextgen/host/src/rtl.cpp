@@ -482,26 +482,15 @@ struct GenELF64PluginContextTy final : public PluginContextTy {
     return Plugin::success();
   }
 
-  Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
-                            void *HostPtr, TargetAllocTy Kind, size_t Alignment,
-                            GenericProfilerTy *ProfilerPtr) override {
-    auto PtrOrErr = PluginContextTy::allocate(Device, Size, HostPtr, Kind,
-                                              Alignment, ProfilerPtr);
-    if (!PtrOrErr)
-      return PtrOrErr.takeError();
-    void *Ptr = *PtrOrErr;
+  void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
+                       TargetAllocTy Kind) override {
     std::lock_guard<std::mutex> Lock(AllocsMutex);
     Allocs[Ptr] = Entry{&Device, Kind, static_cast<size_t>(Size)};
-    return Ptr;
   }
 
-  Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
-                   GenericProfilerTy *ProfilerPtr) override {
-    {
-      std::lock_guard<std::mutex> Lock(AllocsMutex);
-      Allocs.erase(Ptr);
-    }
-    return PluginContextTy::deallocate(Device, Ptr, Kind, ProfilerPtr);
+  void untrackAllocation(void *Ptr) override {
+    std::lock_guard<std::mutex> Lock(AllocsMutex);
+    Allocs.erase(Ptr);
   }
 
   Expected<PluginAllocInfoTy> getAllocInfo(const void *Ptr) override {

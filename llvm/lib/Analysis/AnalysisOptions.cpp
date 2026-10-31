@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "AnalysisOptions.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Option/LibraryOptions.h"

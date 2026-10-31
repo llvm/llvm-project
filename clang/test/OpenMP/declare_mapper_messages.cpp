@@ -121,3 +121,23 @@ int fun(int arg) {
   }
   return arg;
 }
+
+#if __cplusplus >= 201103L
+namespace GH223366 {
+struct HasType {
+  typedef int type;
+};
+
+template <typename T> using Vec = vec;
+
+template <typename T>
+void f() {
+#pragma omp declare mapper(id : Vec<typename T::type> v) map(v.len) // expected-error {{type 'int' cannot be used prior to '::' because it has no members}}
+}
+
+void g() {
+  f<HasType>();
+  f<int>(); // expected-note {{in instantiation of function template specialization 'GH223366::f<int>' requested here}}
+}
+}
+#endif

@@ -683,7 +683,6 @@ define void @too_many_args_use_workitem_id_x(
 ; GFX7-NEXT:    v_and_b32_e32 v31, 0x3ff, v31
 ; GFX7-NEXT:    flat_store_dword v[0:1], v31
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX7-NEXT:    flat_store_dword v[0:1], v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v1
@@ -691,6 +690,8 @@ define void @too_many_args_use_workitem_id_x(
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v3
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s32
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v4
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -746,7 +747,7 @@ define void @too_many_args_use_workitem_id_x(
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v30
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    flat_store_dword v[0:1], v31
+; GFX7-NEXT:    flat_store_dword v[0:1], v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1124,7 +1125,6 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GFX7-NEXT:    v_and_b32_e32 v31, 0x3ff, v31
 ; GFX7-NEXT:    flat_store_dword v[0:1], v31
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    buffer_load_dword v31, off, s[0:3], s32
 ; GFX7-NEXT:    flat_store_dword v[0:1], v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v1
@@ -1132,6 +1132,8 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GFX7-NEXT:    flat_store_dword v[0:1], v2
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v3
+; GFX7-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s32
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v4
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
@@ -1187,7 +1189,7 @@ define void @too_many_args_use_workitem_id_x_byval(
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    flat_store_dword v[0:1], v30
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    flat_store_dword v[0:1], v31
+; GFX7-NEXT:    flat_store_dword v[0:1], v0
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:4 glc
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)

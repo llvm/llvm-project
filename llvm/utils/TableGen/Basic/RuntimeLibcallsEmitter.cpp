@@ -459,15 +459,41 @@ const uint8_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameSizeTable[] = {
 
     for (const RuntimeLibcallImpl &LibCallImpl :
          Libcalls.getRuntimeLibcallImplDefList()) {
-      const RuntimeLibcall *Provides = LibCallImpl.getProvides();
       OS << "  ";
-      Provides->emitEnumEntry(OS);
+      if (const RuntimeLibcall *Provides = LibCallImpl.getProvides())
+        Provides->emitEnumEntry(OS);
+      else
+        OS << "RTLIB::UNKNOWN_LIBCALL";
       OS << ", // ";
       LibCallImpl.emitEnumEntry(OS);
       OS << '\n';
     }
 
     OS << "};\n\n";
+
+    OS << "RTLIB::Libcall llvm::RTLIB::RuntimeLibcallsInfo::getLibcallFromImpl("
+          "RTLIB::LibcallImpl Impl) const {\n"
+          "  switch (Impl) {\n";
+    for (const RuntimeLibcallImpl &LibCallImpl :
+         Libcalls.getRuntimeLibcallImplDefList()) {
+      if (!LibCallImpl.isLongDouble())
+        continue;
+
+      OS << "  case ";
+      LibCallImpl.emitEnumEntry(OS);
+      OS << ":\n    return selectLongDoubleLibcall(";
+      LibCallImpl.getProvidesF80()->emitEnumEntry(OS);
+      OS << ", ";
+      LibCallImpl.getProvidesF128()->emitEnumEntry(OS);
+      OS << ", ";
+      LibCallImpl.getProvidesPPCF128()->emitEnumEntry(OS);
+      OS << ");\n";
+    }
+
+    OS << "  default:\n"
+          "    return ImplToLibcall[Impl];\n"
+          "  }\n"
+          "}\n\n";
   }
 
   emitNameMatchHashTable(OS, Table);
@@ -491,8 +517,11 @@ void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallSignatures(
     raw_ostream &OS) const {
   SequenceToOffsetTable<Signature> SignatureTable("NoFuncArgType");
 
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList())
-    SignatureTable.add(getSignature(LC.getDef()));
+  const Signature NoSignature;
+  SignatureTable.add(NoSignature);
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList())
+    SignatureTable.add(getSignature(LibCallImpl.getDef()));
   SignatureTable.layout();
 
   IfDefEmitter IfDef(OS, "GET_INIT_RUNTIME_LIBCALL_SIGNATURES");
@@ -506,11 +535,16 @@ const FuncArgTypeID RTLIB::RuntimeLibcallsInfo::SignatureTable[] = {
   OS << R"(
 const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
 )";
-  for (const RuntimeLibcall &LC : Libcalls.getRuntimeLibcallDefList()) {
-    const Record *LibcallDef = LC.getDef();
-    OS << formatv("  {}, // {}\n", SignatureTable.get(getSignature(LibcallDef)),
-                  LibcallDef->getName());
+  OS << formatv("  {}, // RTLIB::Unsupported\n",
+                SignatureTable.get(NoSignature));
+  for (const RuntimeLibcallImpl &LibCallImpl :
+       Libcalls.getRuntimeLibcallImplDefList()) {
+    OS << formatv("  {}, // ",
+                  SignatureTable.get(getSignature(LibCallImpl.getDef())));
+    LibCallImpl.emitEnumEntry(OS);
+    OS << '\n';
   }
+
   OS << "};\n";
 }
 
@@ -606,13 +640,11 @@ void RuntimeLibcallEmitter::emitPredicateGroups(
 
     // Records which impls are available, not which is selected, so a libcall
     // may have more than one. Order is irrelevant (each entry is a setAvailable
-    // call); sort by the provided libcall, breaking ties on the impl enum for a
-    // deterministic total order.
-    llvm::sort(Funcs, [](const RuntimeLibcallImpl *A,
-                         const RuntimeLibcallImpl *B) {
-      return std::make_pair(A->getProvides()->getEnumVal(), A->getEnumVal()) <
-             std::make_pair(B->getProvides()->getEnumVal(), B->getEnumVal());
-    });
+    // call); sort by the impl enum for a deterministic order.
+    llvm::sort(Funcs,
+               [](const RuntimeLibcallImpl *A, const RuntimeLibcallImpl *B) {
+                 return A->getEnumVal() < B->getEnumVal();
+               });
 
     OS << indent(IndentDepth + 2)
        << "static const RTLIB::LibcallImpl LibraryCalls";

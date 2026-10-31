@@ -11,6 +11,7 @@ add_integration_test(
   SRCS
     getenv_test.cpp
   DEPENDS
+    libc.src.stdlib.environ_internal
     libc.src.stdlib.getenv
   ENV
     FRANCE=Paris
@@ -41,7 +42,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       setenv_test.cpp
     DEPENDS
-      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.setenv
   )
@@ -53,7 +53,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
     SRCS
       putenv_test.cpp
     DEPENDS
-      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.putenv
       libc.src.unistd.environ
@@ -67,7 +66,6 @@ if(${LIBC_TARGET_OS} STREQUAL "linux")
       unsetenv_test.cpp
     DEPENDS
       libc.src.__support.alloc_checker
-      libc.src.errno.errno
       libc.src.stdlib.getenv
       libc.src.stdlib.setenv
       libc.src.stdlib.unsetenv

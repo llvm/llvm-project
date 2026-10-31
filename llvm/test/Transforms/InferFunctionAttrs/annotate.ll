@@ -1227,12 +1227,10 @@ declare { double, double } @__sincos_stret(double)
 ; CHECK-DARWIN: declare <2 x float> @__sincosf_stret(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare <2 x float> @__sincosf_stret(float)
 
-; FIXME: __sincospi_stret is missing most attributes
-; CHECK-DARWIN: declare { double, double } @__sincospi_stret(double) [[NOFREE]]
+; CHECK-DARWIN: declare { double, double } @__sincospi_stret(double) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare { double, double } @__sincospi_stret(double)
 
-; FIXME: __sincospif_stret shouldn't set errno
-; CHECK-DARWIN: declare <2 x float> @__sincospif_stret(float) [[ERRNOMEMONLY_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
+; CHECK-DARWIN: declare <2 x float> @__sincospif_stret(float) [[MEMNONE_NOFREE_NOSYNC_NOUNWIND_WILLRETURN]]
 declare <2 x float> @__sincospif_stret(float)
 
 ; memset_pattern{4,8,16} aren't available everywhere.

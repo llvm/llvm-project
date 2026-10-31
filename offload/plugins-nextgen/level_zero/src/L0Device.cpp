@@ -446,8 +446,8 @@ const char *L0DeviceTy::getArchCStr() const {
 Expected<InfoTreeNode> L0DeviceTy::obtainInfoImpl() {
   InfoTreeNode Info;
   Info.add("Device Number", getDeviceId());
-  Info.add("Device Name", getNameCStr(), "", DeviceInfo::NAME);
-  Info.add("Product Name", getArchCStr(), "", DeviceInfo::PRODUCT_NAME);
+  Info.add("Device Name", getArchCStr(), "", DeviceInfo::NAME);
+  Info.add("Product Name", getNameCStr(), "", DeviceInfo::PRODUCT_NAME);
   Info.add("Device Type", "GPU", "", DeviceInfo::TYPE);
   Info.add("Vendor", "Intel", "", DeviceInfo::VENDOR);
   Info.add("Vendor ID", getVendorId(), "", DeviceInfo::VENDOR_ID);

@@ -4465,8 +4465,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Mark the scratch resource descriptor as allocated so the CC analysis
   // does not assign user arguments to these registers, matching the callee.
-  if (!Subtarget->hasFlatScratchEnabled())
-    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+  if (!Subtarget->hasFlatScratchEnabled()) {
+    CCInfo.AllocateReg(
+        AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallConv));
+  }
 
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
@@ -4500,10 +4502,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       // In the HSA case, this should be an identity copy.
       SDValue ScratchRSrcReg =
           DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
-      RegsToPass.emplace_back(IsChainCallConv
-                                  ? AMDGPU::SGPR48_SGPR49_SGPR50_SGPR51
-                                  : AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
-                              ScratchRSrcReg);
+      RegsToPass.emplace_back(
+          AMDGPUFunctionArgInfo::getPrivateSegmentBufferReg(CallConv),
+          ScratchRSrcReg);
       CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
       Chain = DAG.getTokenFactor(DL, CopyFromChains);
     }
@@ -16160,12 +16161,12 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   SDLoc DL(N);
   uint32_t PermMask = 0x0c0c0c0c;
   if (V0) {
-    V0 = DAG.getBitcastedAnyExtOrTrunc(V0, DL, MVT::i32);
+    V0 = getDWordFromOffset(DAG, DL, V0, /*DWordOffset=*/0);
     PermMask = (PermMask & ~0xFF) | (BP0->SrcOffset + 4);
   }
 
   if (V1) {
-    V1 = DAG.getBitcastedAnyExtOrTrunc(V1, DL, MVT::i32);
+    V1 = getDWordFromOffset(DAG, DL, V1, /*DWordOffset=*/0);
     PermMask = (PermMask & ~(0xFF << 8)) | (BP1->SrcOffset << 8);
   }
 

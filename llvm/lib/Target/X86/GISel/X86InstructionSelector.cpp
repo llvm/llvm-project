@@ -99,7 +99,6 @@ private:
                   MachineFunction &MF) const;
   bool selectUAddSub(MachineInstr &I, MachineRegisterInfo &MRI,
                      MachineFunction &MF) const;
-  bool selectDebugInstr(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectUnmergeValues(MachineInstr &I, MachineRegisterInfo &MRI,
                            MachineFunction &MF);
@@ -247,38 +246,6 @@ static const TargetRegisterClass *getRegClassFromGRPhysReg(Register Reg) {
   llvm_unreachable("Unknown RegClass for PhysReg!");
 }
 
-// FIXME: We need some sort of API in RBI/TRI to allow generic code to
-// constrain operands of simple instructions given a TargetRegisterClass
-// and LLT
-bool X86InstructionSelector::selectDebugInstr(MachineInstr &I,
-                                              MachineRegisterInfo &MRI) const {
-  for (MachineOperand &MO : I.operands()) {
-    if (!MO.isReg())
-      continue;
-    Register Reg = MO.getReg();
-    if (!Reg)
-      continue;
-    if (Reg.isPhysical())
-      continue;
-    LLT Ty = MRI.getType(Reg);
-    const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-    const TargetRegisterClass *RC =
-        dyn_cast_if_present<const TargetRegisterClass *>(RegClassOrBank);
-    if (!RC) {
-      const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
-      RC = getRegClass(Ty, RB);
-      if (!RC) {
-        LLVM_DEBUG(
-            dbgs() << "Warning: DBG_VALUE operand has unexpected size/bank\n");
-        break;
-      }
-    }
-    RBI.constrainGenericRegister(Reg, *RC, MRI);
-  }
-
-  return true;
-}
-
 // Set X86 Opcode and constrain DestReg.
 bool X86InstructionSelector::selectCopy(MachineInstr &I,
                                         MachineRegisterInfo &MRI) const {
@@ -419,9 +386,6 @@ bool X86InstructionSelector::select(MachineInstr &I) {
 
     if (I.isCopy())
       return selectCopy(I, MRI);
-
-    if (I.isDebugInstr())
-      return selectDebugInstr(I, MRI);
 
     return true;
   }
