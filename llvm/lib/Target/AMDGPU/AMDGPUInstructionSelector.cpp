@@ -3539,7 +3539,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   return true;
 }
 
-static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
+static bool isGFX9GFX10Async(Intrinsic::ID Intr) {
   switch (Intr) {
   case Intrinsic::amdgcn_raw_buffer_load_async_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
@@ -3614,6 +3614,12 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
     break;
   }
 
+  if (isGFX9GFX10Async(IntrinsicID)) {
+    int AsyncOpc = AMDGPU::getGFX9GFX10AsyncOp(Opc);
+    assert(AsyncOpc != -1 && "GFX9GFX10Async sibling missing");
+    Opc = AsyncOpc;
+  }
+
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
@@ -3647,7 +3653,6 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
       Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
           ? 1
           : 0); // swz
-  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   // Don't set the offset value here because the pointer points to the base of
@@ -3832,6 +3837,12 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
     }
   }
 
+  if (isGFX9GFX10Async(IntrinsicID)) {
+    int AsyncOpc = AMDGPU::getGFX9GFX10AsyncOp(Opc);
+    assert(AsyncOpc != -1 && "GFX9GFX10Async sibling missing");
+    Opc = AsyncOpc;
+  }
+
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc))
     .addReg(Addr);
 
@@ -3842,7 +3853,6 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   unsigned Aux = MI.getOperand(5).getImm();
   MIB.addImm(Aux & ~AMDGPU::CPol::VIRTUAL_BITS); // cpol
-  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();
