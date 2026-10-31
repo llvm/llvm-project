@@ -89,12 +89,12 @@ func.func @materialize_read(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-DAG:  %[[C3:.*]] = arith.constant 3 : index
   // CHECK-DAG:  %[[C4:.*]] = arith.constant 4 : index
   // CHECK-DAG:  %[[C5:.*]] = arith.constant 5 : index
+  // CHECK-DAG:  %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
   // CHECK:      %{{.*}} = memref.alloc(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : memref<?x?x?x?xf32>
   // CHECK-NEXT:  affine.for %[[I0:.*]] = 0 to %{{.*}} step 3 {
   // CHECK-NEXT:    affine.for %[[I1:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:      affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:        affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  // CHECK:               %[[ALLOC:.*]] = memref.alloca() : memref<vector<5x4x3xf32>>
   // CHECK:               scf.for %[[I4:.*]] = %[[C0]] to %[[C5]] step %[[C1]] {
   // CHECK:                 scf.if
   // CHECK:                   %[[L3:.*]] = affine.apply #[[$ADD]](%[[I3]], %[[I4]])
@@ -155,12 +155,12 @@ func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
   // CHECK-DAG:  %[[C3:.*]] = arith.constant 3 : index
   // CHECK-DAG:  %[[C4:.*]] = arith.constant 4 : index
+  // CHECK-DAG:  %[[ALLOC:.*]] = memref.alloca() : memref<vector<3x4x1x5xf32>>
   // CHECK:      %{{.*}} = memref.alloc(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : memref<?x?x?x?xf32>
   // CHECK-NEXT: affine.for %[[I0:.*]] = 0 to %{{.*}} step 3 {
   // CHECK-NEXT:   affine.for %[[I1:.*]] = 0 to %{{.*}} step 4 {
   // CHECK-NEXT:     affine.for %[[I2:.*]] = 0 to %{{.*}} {
   // CHECK-NEXT:       affine.for %[[I3:.*]] = 0 to %{{.*}} step 5 {
-  // CHECK:              %[[ALLOC:.*]] = memref.alloca() : memref<vector<3x4x1x5xf32>>
   // CHECK:              memref.store %{{.*}}, %[[ALLOC]][] : memref<vector<3x4x1x5xf32>>
   // CHECK:              %[[VECTOR_VIEW1:.*]] = vector.type_cast %[[ALLOC]] : memref<vector<3x4x1x5xf32>> to memref<3xvector<4x1x5xf32>>
   // CHECK:              scf.for %[[I4:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
