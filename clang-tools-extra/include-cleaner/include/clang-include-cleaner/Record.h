@@ -17,15 +17,19 @@
 #ifndef CLANG_INCLUDE_CLEANER_RECORD_H
 #define CLANG_INCLUDE_CLEANER_RECORD_H
 
+#include "clang-include-cleaner/MappingFile.h"
 #include "clang-include-cleaner/Types.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -62,8 +66,24 @@ public:
   bool shouldKeep(const FileEntry *FE) const;
 
   /// Returns the public mapping include for the given physical header file.
-  /// Returns "" if there is none.
+  /// Returns "" if there is none.  Checks both IWYU pragmas in source and
+  /// externally-loaded mapping files.
   llvm::StringRef getPublic(const FileEntry *File) const;
+
+  /// Loads external header and symbol mappings from a parsed MappingFile.
+  /// These supplement IWYU pragmas found in source code.
+  void loadMapping(const MappingFile &Mapping);
+
+  /// Returns the header spelling for a symbol name from external mapping files.
+  /// Returns "" if there is no mapping.  Checks both the simple name and any
+  /// qualified name provided.
+  llvm::StringRef getExternalSymbolHeader(llvm::StringRef SymbolName) const;
+
+  /// Returns the public header spelling for an include spelled as \p BarePath
+  /// (without angle-bracket or quote delimiters, e.g.
+  /// "CarbonCore/MacMemory.h"). Checks exact external include mappings first,
+  /// then regex patterns. Returns "" if no mapping is found.
+  llvm::StringRef getPublicForSpelling(llvm::StringRef BarePath) const;
 
   /// Returns all direct exporter headers for the given header file.
   /// Returns empty if there is none.
@@ -117,6 +137,18 @@ private:
   std::vector<std::shared_ptr<const llvm::BumpPtrAllocator>> Arena;
 
   // FIXME: add support for clang use_instead pragma
+
+  /// External include mappings from mapping files.
+  /// Key: bare path suffix (e.g. "foo/bar.h"); Value: public header spelling.
+  llvm::StringMap<std::string> ExternalIncludes;
+
+  /// Validated, anchored regex patterns from "@<...>" include mapping entries.
+  /// Stored as strings; compiled at match time to keep PragmaIncludes copyable.
+  std::vector<std::pair<std::string, std::string>> ExternalIncludeRegexMappings;
+
+  /// External symbol mappings from mapping files.
+  /// Key: symbol name, possibly qualified; Value: public header spelling.
+  llvm::StringMap<std::string> ExternalSymbols;
 };
 
 /// Recorded main-file parser events relevant to include-cleaner.

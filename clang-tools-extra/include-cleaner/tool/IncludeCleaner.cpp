@@ -8,6 +8,7 @@
 
 #include "AnalysisInternal.h"
 #include "clang-include-cleaner/Analysis.h"
+#include "clang-include-cleaner/MappingFile.h"
 #include "clang-include-cleaner/Record.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -18,6 +19,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
@@ -116,6 +118,14 @@ cl::opt<bool> DisableRemove{
     cl::cat(IncludeCleaner),
 };
 
+cl::list<std::string> MappingFiles{
+    "mapping-file",
+    cl::desc("Path to an IWYU mapping file (.imp). May be specified multiple "
+             "times. Entries in mapping files supplement IWYU pragmas in "
+             "source code."),
+    cl::cat(IncludeCleaner),
+};
+
 std::atomic<unsigned> Errors = ATOMIC_VAR_INIT(0);
 
 format::FormatStyle getStyle(llvm::StringRef Filename) {
@@ -131,8 +141,10 @@ format::FormatStyle getStyle(llvm::StringRef Filename) {
 class Action : public clang::ASTFrontendAction {
 public:
   Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
-         llvm::StringMap<std::string> &EditedFiles)
-      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {}
+         llvm::StringMap<std::string> &EditedFiles,
+         const MappingFile *Mapping = nullptr)
+      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles), Mapping(Mapping) {
+  }
 
 private:
   RecordedAST AST;
@@ -140,6 +152,7 @@ private:
   PragmaIncludes PI;
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
   llvm::StringMap<std::string> &EditedFiles;
+  const MappingFile *Mapping;
 
   bool BeginInvocation(CompilerInstance &CI) override {
     // We only perform include-cleaner analysis. So we disable diagnostics that
@@ -164,6 +177,8 @@ private:
     auto &P = CI.getPreprocessor();
     P.addPPCallbacks(PP.record(P));
     PI.record(getCompilerInstance());
+    if (Mapping)
+      PI.loadMapping(*Mapping);
     ASTFrontendAction::ExecuteAction();
   }
 
@@ -195,6 +210,33 @@ private:
     auto Results =
         analyze(AST.Roots, PP.MacroReferences, PP.Includes, &PI,
                 getCompilerInstance().getPreprocessor(), HeaderFilter);
+
+    // Apply mapping file patterns directly to the spelled include suggestions.
+    // This handles headers whose physical paths don't reconstruct the include
+    // spelling (e.g. macOS framework sub-headers accessed via umbrella).
+    if (Mapping) {
+      // Collect headers already directly included in the main file.
+      llvm::StringSet<> DirectIncludes;
+      for (const auto &Inc : PP.Includes.all())
+        DirectIncludes.insert(Inc.quote());
+
+      llvm::StringSet<> AddedMapped;
+      std::vector<std::pair<std::string, Header>> NewMissing;
+      for (auto &[Spelling, H] : Results.Missing) {
+        llvm::StringRef Bare = llvm::StringRef(Spelling).trim("<>\"");
+        llvm::StringRef Mapped = PI.getPublicForSpelling(Bare);
+        if (!Mapped.empty()) {
+          // Replace private suggestion with its public mapping.
+          // Skip if the mapped header is already included or already queued.
+          if (!DirectIncludes.count(Mapped) &&
+              AddedMapped.insert(Mapped).second)
+            NewMissing.emplace_back(Mapped.str(), H);
+        } else {
+          NewMissing.emplace_back(std::move(Spelling), H);
+        }
+      }
+      Results.Missing = std::move(NewMissing);
+    }
 
     if (!Insert) {
       llvm::errs()
@@ -252,11 +294,12 @@ private:
 };
 class ActionFactory : public tooling::FrontendActionFactory {
 public:
-  ActionFactory(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter)
-      : HeaderFilter(HeaderFilter) {}
+  ActionFactory(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
+                const MappingFile *Mapping = nullptr)
+      : HeaderFilter(HeaderFilter), Mapping(Mapping) {}
 
   std::unique_ptr<clang::FrontendAction> create() override {
-    return std::make_unique<Action>(HeaderFilter, EditedFiles);
+    return std::make_unique<Action>(HeaderFilter, EditedFiles, Mapping);
   }
 
   const llvm::StringMap<std::string> &editedFiles() const {
@@ -265,6 +308,7 @@ public:
 
 private:
   llvm::function_ref<bool(llvm::StringRef)> HeaderFilter;
+  const MappingFile *Mapping;
   // Map from file name to final code with the include edits applied.
   llvm::StringMap<std::string> EditedFiles;
 };
@@ -390,7 +434,19 @@ int main(int argc, const char **argv) {
   auto HeaderFilter = headerFilter();
   if (!HeaderFilter)
     return 1; // error already reported.
-  ActionFactory Factory(HeaderFilter);
+
+  // Parse mapping files if specified.
+  std::optional<MappingFile> Mapping;
+  if (!MappingFiles.empty()) {
+    std::vector<std::string> Paths(MappingFiles.begin(), MappingFiles.end());
+    llvm::Expected<MappingFile> M = parseMappingFiles(Paths);
+    if (!M) {
+      llvm::errs() << toString(M.takeError()) << "\n";
+      return 1;
+    }
+    Mapping = std::move(*M);
+  }
+  ActionFactory Factory(HeaderFilter, Mapping ? &*Mapping : nullptr);
   auto ErrorCode = Tool.run(&Factory);
   if (Edit) {
     for (const auto &NameAndContent : Factory.editedFiles()) {
