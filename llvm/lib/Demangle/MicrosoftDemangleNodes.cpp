@@ -225,7 +225,10 @@ void IdentifierNode::outputTemplateParameters(OutputBuffer &OB,
   if (!TemplateParams)
     return;
   OB << "<";
-  TemplateParams->output(OB, Flags);
+  std::string_view Sep = (Flags & OF_CompactTemplateLists) ? "," : ", ";
+  TemplateParams->output(OB, Flags, Sep);
+  if ((Flags & OF_SplitTemplateClosers) != 0 && OB.back() == '>')
+    OB << ' ';
   OB << ">";
 }
 

@@ -58,6 +58,10 @@ enum MSDemangleFlags {
   /// will instead output
   ///   struct MyStruct
   MSDF_NoDecorativeRTTITypeDescriptor = 1 << 8,
+  /// Do not insert a space between template arguments (like MSVC does).
+  MSDF_CompactTemplateLists = 1 << 9,
+  /// Add a space between nested closing braces of templates.
+  MSDF_SplitTemplateClosers = 1 << 10,
 };
 
 /// Demangles the Microsoft symbol pointed at by mangled_name and returns it.
