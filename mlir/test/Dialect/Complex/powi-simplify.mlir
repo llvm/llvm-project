@@ -28,3 +28,15 @@ func.func @powi_int64_min(%arg0: complex<f32>) -> complex<f32> {
 }
 // CHECK-LABEL: func.func @powi_int64_min(
 // CHECK: complex.powi %{{.*}}, %{{.*}} : complex<f32>, i64
+
+// Exponents outside the int64_t range must not be truncated.
+func.func @powi_wide_exp(%arg0: complex<f32>) -> complex<f32> {
+  %c = arith.constant 18446744073709551618 : i128
+  %0 = complex.powi %arg0, %c : complex<f32>, i128
+  return %0 : complex<f32>
+}
+// CHECK-LABEL: func.func @powi_wide_exp(
+// CHECK-SAME: %[[ARG:.+]]: complex<f32>
+// CHECK: %[[CST:.*]] = arith.constant 18446744073709551618 : i128
+// CHECK: %[[RES:.*]] = complex.powi %[[ARG]], %[[CST]] : complex<f32>, i128
+// CHECK: return %[[RES]] : complex<f32>
