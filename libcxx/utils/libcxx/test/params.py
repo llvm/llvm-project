@@ -348,6 +348,13 @@ DEFAULT_PARAMETERS = [
         )
     ),
     Parameter(
+        name="use_linker",
+        type=str,
+        default="",
+        help="An optional linker to use when linking tests via -fuse-ld=<linker>.",
+        actions=lambda linker: [AddLinkFlag(f"-fuse-ld={linker}")] if linker else [],
+    ),
+    Parameter(
         name="enable_experimental",
         choices=[True, False],
         type=bool,
