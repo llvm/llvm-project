@@ -24,6 +24,7 @@
 #include "src/__support/endian_internal.h"
 #include "src/__support/fixedvector.h"
 #include "src/__support/libc_assert.h"
+#include "src/__support/net/hex.h"
 #include "src/__support/str_to_integer.h"
 #include "src/string/memory_utils/inline_bzero.h"
 #include "src/string/memory_utils/inline_memcpy.h"
@@ -122,18 +123,9 @@ namespace net {
       break;
     }
 
-    if (internal::isspace(src[0]) || src[0] == '+' || src[0] == '-' ||
-        src.starts_with("0x") || src.starts_with("0X"))
+    cpp::optional<uint16_t> word = consume_hex<uint16_t>(src);
+    if (!word || !parts[part_idx].push_back(Endian::to_big_endian(*word)))
       return false;
-
-    auto result = internal::strtointeger<uint16_t>(src.data(), 16, src.size());
-    if (result.has_error() || result.parsed_len == 0 || result.parsed_len > 4)
-      return false;
-
-    if (!parts[part_idx].push_back(Endian::to_big_endian(result.value)))
-      return false;
-
-    src.remove_prefix(static_cast<size_t>(result.parsed_len));
   }
 
   if (part_idx > 0) {
