@@ -21,7 +21,12 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 // CHECK: %[[SQRT:.*]] = math.sqrt %[[RATIO_SQ_PLUS_ONE]] : f32
 // CHECK: %[[ABS_OR_NAN:.*]] = arith.mulf %[[MAX]], %[[SQRT]] : f32
 // CHECK: %[[IS_NAN:.*]] = arith.cmpf uno, %[[ABS_OR_NAN]], %[[ABS_OR_NAN]] : f32
-// CHECK: %[[ABS:.*]] = arith.select %[[IS_NAN]], %[[MIN]], %[[ABS_OR_NAN]] : f32
+// CHECK: %[[FALLBACK:.*]] = arith.select %[[IS_NAN]], %[[MIN]], %[[ABS_OR_NAN]] : f32
+// CHECK: %[[INF:.*]] = arith.constant {{.*}} : f32
+// CHECK: %[[IS_REAL_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] : f32
+// CHECK: %[[IS_IMAG_INF:.*]] = arith.cmpf oeq, %[[ABS_IMAG]], %[[INF]] : f32
+// CHECK: %[[IS_INF:.*]] = arith.ori %[[IS_REAL_INF]], %[[IS_IMAG_INF]] : i1
+// CHECK: %[[ABS:.*]] = arith.select %[[IS_INF]], %[[INF]], %[[FALLBACK]] : f32
 // CHECK: return %[[ABS]] : f32
 
 // -----
@@ -760,7 +765,7 @@ func.func @complex_rsqrt(%arg: complex<f32>) -> complex<f32> {
   return %rsqrt : complex<f32>
 }
 
-// CHECK-COUNT-5: arith.select
+// CHECK-COUNT-6: arith.select
 // CHECK-NOT: arith.select
 
 // -----
@@ -809,7 +814,12 @@ func.func @complex_abs_with_fmf(%arg: complex<f32>) -> f32 {
 // CHECK: %[[SQRT:.*]] = math.sqrt %[[RATIO_SQ_PLUS_ONE]] fastmath<contract> : f32
 // CHECK: %[[ABS_OR_NAN:.*]] = arith.mulf %[[MAX]], %[[SQRT]] fastmath<contract> : f32
 // CHECK: %[[IS_NAN:.*]] = arith.cmpf uno, %[[ABS_OR_NAN]], %[[ABS_OR_NAN]] fastmath<contract> : f32
-// CHECK: %[[ABS:.*]] = arith.select %[[IS_NAN]], %[[MIN]], %[[ABS_OR_NAN]] : f32
+// CHECK: %[[FALLBACK:.*]] = arith.select %[[IS_NAN]], %[[MIN]], %[[ABS_OR_NAN]] : f32
+// CHECK: %[[INF:.*]] = arith.constant {{.*}} : f32
+// CHECK: %[[IS_REAL_INF:.*]] = arith.cmpf oeq, %[[ABS_REAL]], %[[INF]] fastmath<contract> : f32
+// CHECK: %[[IS_IMAG_INF:.*]] = arith.cmpf oeq, %[[ABS_IMAG]], %[[INF]] fastmath<contract> : f32
+// CHECK: %[[IS_INF:.*]] = arith.ori %[[IS_REAL_INF]], %[[IS_IMAG_INF]] : i1
+// CHECK: %[[ABS:.*]] = arith.select %[[IS_INF]], %[[INF]], %[[FALLBACK]] : f32
 // CHECK: return %[[ABS]] : f32
 
 // -----

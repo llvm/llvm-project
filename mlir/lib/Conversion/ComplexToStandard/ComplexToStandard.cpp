@@ -24,7 +24,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 enum class AbsFn { abs, sqrt, rsqrt };
 
 // Returns the absolute value, its square root or its reciprocal square root.
@@ -68,7 +67,30 @@ Value computeAbs(Value real, Value imag, arith::FastMathFlags fmf,
 
   Value isNaN = arith::CmpFOp::create(b, arith::CmpFPredicate::UNO, result,
                                       result, fmfWithNaNInf);
-  return arith::SelectOp::create(b, isNaN, min, result);
+  Value fallback = arith::SelectOp::create(b, isNaN, min, result);
+
+  if (arith::bitEnumContainsAny(fmf, arith::FastMathFlags::ninf))
+    return fallback;
+
+  // ISO C99 Annex G.5.1 / IEEE 754: if either component is infinite, the
+  // magnitude is +inf (or 0 for rsqrt), even if the other component is NaN.
+  auto floatType = cast<FloatType>(real.getType());
+  Value inf = arith::ConstantOp::create(
+      b, floatType,
+      b.getFloatAttr(floatType,
+                     APFloat::getInf(floatType.getFloatSemantics())));
+  Value isRealInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absReal,
+                                          inf, fmfWithNaNInf);
+  Value isImagInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absImag,
+                                          inf, fmfWithNaNInf);
+  Value isInf = arith::OrIOp::create(b, isRealInf, isImagInf);
+
+  Value infResult = fn == AbsFn::rsqrt
+                        ? arith::ConstantOp::create(
+                              b, floatType, b.getFloatAttr(floatType, 0.0))
+                        : inf;
+
+  return arith::SelectOp::create(b, isInf, infResult, fallback);
 }
 
 struct AbsOpConversion : public OpConversionPattern<complex::AbsOp> {
@@ -1132,7 +1154,6 @@ struct AngleOpConversion : public OpConversionPattern<complex::AngleOp> {
     return success();
   }
 };
-
 } // namespace
 
 void mlir::populateComplexToStandardConversionPatterns(
