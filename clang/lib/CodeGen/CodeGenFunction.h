@@ -5464,6 +5464,8 @@ public:
     BCK_CTZPassedZero,
     BCK_CLZPassedZero,
     BCK_AssumePassedFalse,
+    BCK_NonUniformLane,
+    BCK_InactiveLane,
   };
 
   /// Emits an argument for a call to a builtin. If the builtin sanitizer is
