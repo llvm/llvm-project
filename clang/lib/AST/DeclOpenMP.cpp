@@ -130,9 +130,9 @@ OMPRequiresDecl *OMPRequiresDecl::CreateDeserialized(ASTContext &C,
 //===----------------------------------------------------------------------===//
 
 OMPDeclareReductionDecl::OMPDeclareReductionDecl(
-    Kind DK, DeclContext *DC, SourceLocation L, DeclarationName Name,
-    QualType Ty, OMPDeclareReductionDecl *PrevDeclInScope)
-    : ValueDecl(DK, DC, L, Name, Ty), DeclContext(DK), Combiner(nullptr),
+    ASTContext &C, Kind DK, DeclContext *DC, SourceLocation L,
+    DeclarationName Name, QualType Ty, OMPDeclareReductionDecl *PrevDeclInScope)
+    : ValueDecl(DK, DC, L, Name, Ty), DeclContext(C, DK), Combiner(nullptr),
       PrevDeclInScope(PrevDeclInScope) {
   setInitializer(nullptr, OMPDeclareReductionInitKind::Call);
 }
@@ -142,15 +142,15 @@ void OMPDeclareReductionDecl::anchor() {}
 OMPDeclareReductionDecl *OMPDeclareReductionDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation L, DeclarationName Name,
     QualType T, OMPDeclareReductionDecl *PrevDeclInScope) {
-  return new (C, DC) OMPDeclareReductionDecl(OMPDeclareReduction, DC, L, Name,
-                                             T, PrevDeclInScope);
+  return new (C, DC) OMPDeclareReductionDecl(C, OMPDeclareReduction, DC, L,
+                                             Name, T, PrevDeclInScope);
 }
 
 OMPDeclareReductionDecl *
 OMPDeclareReductionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
   return new (C, ID) OMPDeclareReductionDecl(
-      OMPDeclareReduction, /*DC=*/nullptr, SourceLocation(), DeclarationName(),
-      QualType(), /*PrevDeclInScope=*/nullptr);
+      C, OMPDeclareReduction, /*DC=*/nullptr, SourceLocation(),
+      DeclarationName(), QualType(), /*PrevDeclInScope=*/nullptr);
 }
 
 OMPDeclareReductionDecl *OMPDeclareReductionDecl::getPrevDeclInScope() {
@@ -173,16 +173,18 @@ OMPDeclareMapperDecl *OMPDeclareMapperDecl::Create(
     ASTContext &C, DeclContext *DC, SourceLocation L, DeclarationName Name,
     QualType T, DeclarationName VarName, ArrayRef<OMPClause *> Clauses,
     OMPDeclareMapperDecl *PrevDeclInScope) {
-  return OMPDeclarativeDirective::createDirective<OMPDeclareMapperDecl>(
-      C, DC, Clauses, 1, L, Name, T, VarName, PrevDeclInScope);
+  return OMPDeclarativeDirective::createDirectiveWithContext<
+      OMPDeclareMapperDecl>(C, DC, Clauses, 1, L, Name, T, VarName,
+                            PrevDeclInScope);
 }
 
 OMPDeclareMapperDecl *OMPDeclareMapperDecl::CreateDeserialized(ASTContext &C,
                                                                GlobalDeclID ID,
                                                                unsigned N) {
-  return OMPDeclarativeDirective::createEmptyDirective<OMPDeclareMapperDecl>(
-      C, ID, N, 1, SourceLocation(), DeclarationName(), QualType(),
-      DeclarationName(), /*PrevDeclInScope=*/nullptr);
+  return OMPDeclarativeDirective::createEmptyDirectiveWithContext<
+      OMPDeclareMapperDecl>(C, ID, N, 1, SourceLocation(), DeclarationName(),
+                            QualType(), DeclarationName(),
+                            /*PrevDeclInScope=*/nullptr);
 }
 
 OMPDeclareMapperDecl *OMPDeclareMapperDecl::getPrevDeclInScope() {
