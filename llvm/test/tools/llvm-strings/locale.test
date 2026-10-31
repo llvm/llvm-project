@@ -1,0 +1,14 @@
+REQUIRES: system-darwin
+
+RUN: printf 'Hello\360\237\230\203\n\202\261\202\361\202\311\202\277\202\315\n' > %t
+
+RUN: env LANG=en_US.US-ASCII  llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-US-ASCII %s
+RUN: env LANG=en_US.ISO8859-1 llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-ISO8859-1 %s
+RUN: env LANG=en_US.UTF-8     llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-UTF-8 %s
+RUN: env LANG=ja_JP.SJIS      llvm-strings -eS %t | FileCheck --match-full-lines --strict-whitespace --check-prefixes CHECK-IN-SJIS %s
+
+CHECK-IN-US-ASCII:Hello
+CHECK-IN-ISO8859-1:Hello{{\xF0}}
+CHECK-IN-UTF-8:Hello{{\xF0\x9F\x98\x83}}
+CHECK-IN-SJIS:Hello
+CHECK-IN-SJIS:{{\x82\xB1\x82\xF1\x82\xC9\x82\xBF\x82\xCD}}

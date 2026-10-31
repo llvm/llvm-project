@@ -15,6 +15,10 @@ add_llvm_tool(llvm-strings
   StringsOptsTableGen
   )
 
+if(APPLE)
+  target_link_libraries(llvm-strings PRIVATE iconv)
+endif()
+
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(strings llvm-strings)
 endif()
