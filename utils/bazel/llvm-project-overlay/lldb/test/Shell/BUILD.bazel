@@ -1,0 +1,116 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("//llvm:binary_alias.bzl", "binary_alias")
+load("//llvm:lit_test.bzl", "lit_expand_template")
+load("//llvm:targets.bzl", "llvm_targets")
+
+licenses(["notice"])
+
+# use_clang() and use_lld() only look in LLDB_LIT_TOOLS_DIR and the LLVM tools
+# directory before falling back to PATH. Put clang and the lld drivers in one
+# directory so the tests use the ones built here.
+[
+    binary_alias(
+        name = "lit_tools/" + name,
+        testonly = True,
+        binary = binary,
+    )
+    for name, binary in [
+        ("clang", "//clang"),
+        ("ld.lld", "//lld:ld.lld"),
+        ("ld64.lld", "//lld:ld64.lld"),
+        ("lld-link", "//lld:lld-link"),
+        ("wasm-ld", "//lld:wasm-ld"),
+    ]
+]
+
+lit_expand_template(
+    name = "lit_site_cfg_py",
+    testonly = True,
+    out = "lit.site.cfg.py",
+    dirname_substitutions = {
+        "@LLDB_LIBS_DIR@": "//lldb:BUILD.bazel",
+        "@LLDB_LIT_TOOLS_DIR@": ":lit_tools/clang",
+        "@LLDB_SOURCE_DIR@": "//lldb:BUILD.bazel",
+        "@LLDB_TOOLS_DIR@": "//lldb:BUILD.bazel",
+        "@LLVM_BINARY_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_LIBS_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_LIT_TOOLS_DIR@": "//llvm/utils/lit:BUILD.bazel",
+        "@LLVM_SOURCE_DIR@": "//llvm:BUILD.bazel",
+        "@LLVM_TOOLS_DIR@": "//llvm:BUILD.bazel",
+        "@SHLIBDIR@": "//llvm:BUILD.bazel",
+    },
+    substitutions = {
+        # Lit needs a writable execution root inside the test sandbox, and so
+        # do the module caches and the inferior build directory. Use the
+        # same names CMake uses under its build directory.
+        "\"@LLDB_BINARY_DIR@\"": "os.environ[\"TEST_TMPDIR\"]",
+        "\"@LLDB_TEST_BUILD_DIRECTORY@\"": "os.path.join(os.environ[\"TEST_TMPDIR\"], \"lldb-test-build.noindex\")",
+        "\"@LLDB_TEST_MODULE_CACHE_CLANG@\"": "os.path.join(os.environ[\"TEST_TMPDIR\"], \"module-cache-clang\")",
+        "\"@LLDB_TEST_MODULE_CACHE_LLDB@\"": "os.path.join(os.environ[\"TEST_TMPDIR\"], \"module-cache-lldb\")",
+        "@CLANG_RESOURCE_DIR@": "",
+        "@DEFAULT_SYSROOT@": "",
+        "@LIBCXX_LIBRARY_DIR@": "",
+        "@LLDB_ENABLE_LUA@": "0",
+        "@LLDB_ENABLE_MTE@": "0",
+        "@LLDB_ENABLE_PYTHON@": "0",
+        "@LLDB_HAS_LIBCXX@": "0",
+        "@LLDB_IS_64_BITS@": "1",
+        "@LLDB_LAUNCHER@": "",
+        "@LLDB_TEST_OBJC_GNUSTEP_DIR@": "",
+        "@LLDB_TEST_PLATFORM_URL@": "",
+        "@LLDB_TEST_PLATFORM_WORKING_DIR@": "",
+        "@LLDB_TEST_SHELL_DISABLE_REMOTE@": "1",
+        "@LLDB_TEST_SYSROOT@": "",
+        "@LLDB_TEST_USE_LLDB_SERVER@": "0",
+        "@LLDB_TOOL_LLDB_SERVER_BUILD@": "0",
+        "@LLDB_USE_SYSTEM_DEBUGSERVER@": "0",
+        "@LLVM_ENABLE_DIA_SDK@": "0",
+        "@LLVM_HOST_TRIPLE@": "x86_64-unknown-linux-gnu",
+        "@LLVM_TARGETS_TO_BUILD@": ";".join(llvm_targets),
+        "@LLVM_TARGET_TRIPLE@": "x86_64-unknown-linux-gnu",
+        "@LLVM_USE_SANITIZER@": "",
+        "@Python3_EXECUTABLE@": "python3",
+        "@Python3_ROOT_DIR@": "",
+    } | select({
+        "//third-party:llvm_lzma_enabled": {"@LLVM_ENABLE_LZMA@": "1"},
+        "//conditions:default": {"@LLVM_ENABLE_LZMA@": "0"},
+    }) | select({
+        "//third-party:llvm_zlib_enabled": {"@LLVM_ENABLE_ZLIB@": "1"},
+        "//conditions:default": {"@LLVM_ENABLE_ZLIB@": "0"},
+    }),
+    template = "lit.site.cfg.py.in",
+)
+
+filegroup(
+    name = "lit_data",
+    testonly = True,
+    data = glob(["helper/*.py"]) + [
+        "lit.cfg.py",
+        "lit.site.cfg.py",
+        ":lit_tools/clang",
+        ":lit_tools/ld.lld",
+        ":lit_tools/ld64.lld",
+        ":lit_tools/lld-link",
+        ":lit_tools/wasm-ld",
+        "//lldb",
+        "//lldb:lldb-test",
+        "//lldb:test/lldbflakes.py",
+        "//llvm:FileCheck",
+        "//llvm:count",
+        "//llvm:llvm-config",
+        "//llvm:llvm-mc",
+        "//llvm:llvm-objcopy",
+        "//llvm:llvm-objdump",
+        "//llvm:llvm-pdbutil",
+        "//llvm:llvm-readobj",
+        "//llvm:llvm-strip",
+        "//llvm:not",
+        "//llvm:obj2yaml",
+        "//llvm:split-file",
+        "//llvm:yaml2obj",
+    ],
+    visibility = ["//lldb/test/Shell:__subpackages__"],
+)

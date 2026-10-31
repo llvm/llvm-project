@@ -71,6 +71,7 @@ DEFAULT_PLUGINS = [
     "ObjectFilePECOFF",
     "ObjectFilePlaceholder",
     "ObjectFileWasm",
+    "ObjectFileXCOFF",
     "PlatformAIX",
     "PlatformAndroid",
     "PlatformEmscripten",
