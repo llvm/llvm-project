@@ -1844,6 +1844,12 @@ static QualType deduceOpenCLPointeeAddrSpace(Sema &S, QualType PointeeType) {
 
 QualType Sema::BuildPointerType(QualType T,
                                 SourceLocation Loc, DeclarationName Entity) {
+  if (getLangOpts().OpenCL && T->getAs<CooperativeMatrixType>()) {
+    Diag(Loc, diag::err_invalid_coopmat_element_type)
+        << T->getAs<CooperativeMatrixType>()->getElementType();
+    return QualType();
+  }
+
   if (T->isReferenceType()) {
     // C++ 8.3.2p4: There shall be no ... pointers to references ...
     Diag(Loc, diag::err_illegal_decl_pointer_to_reference)
@@ -2640,6 +2646,102 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
     return QualType();
   }
   return Context.getConstantMatrixType(ElementTy, MatrixRows, MatrixColumns);
+}
+
+QualType Sema::BuildCoopMatrixType(QualType ElementTy, Expr *ScopeExpr,
+                                   Expr *NumRows, Expr *NumCols, Expr *UseExpr,
+                                   SourceLocation AttrLoc) {
+  std::optional<llvm::APSInt> ValueRows =
+      NumRows->getIntegerConstantExpr(Context);
+  std::optional<llvm::APSInt> ValueColumns =
+      NumCols->getIntegerConstantExpr(Context);
+
+  auto const RowRange = NumRows->getSourceRange();
+  auto const ColRange = NumCols->getSourceRange();
+
+  // Both are row and column expressions are invalid.
+  if (!ValueRows && !ValueColumns) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant << RowRange << ColRange;
+    return QualType();
+  }
+
+  // Only the row expression is invalid.
+  if (!ValueRows) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant << RowRange;
+    return QualType();
+  }
+
+  // Only the column expression is invalid.
+  if (!ValueColumns) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant << ColRange;
+    return QualType();
+  }
+
+  // Check the matrix dimensions.
+  unsigned MatrixRows = static_cast<unsigned>(ValueRows->getZExtValue());
+  unsigned MatrixColumns = static_cast<unsigned>(ValueColumns->getZExtValue());
+  if (MatrixRows == 0 && MatrixColumns == 0) {
+    Diag(AttrLoc, diag::err_attribute_zero_size)
+        << "matrix" << RowRange << ColRange;
+    return QualType();
+  }
+  if (MatrixRows == 0) {
+    Diag(AttrLoc, diag::err_attribute_zero_size) << "coop_mat" << RowRange;
+    return QualType();
+  }
+  if (MatrixColumns == 0) {
+    Diag(AttrLoc, diag::err_attribute_zero_size) << "coop_mat" << ColRange;
+    return QualType();
+  }
+  std::optional<llvm::APSInt> ValueScope =
+      ScopeExpr->getIntegerConstantExpr(Context);
+  // Only the scope expression is invalid.
+  if (!ValueScope) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant
+        << ScopeExpr->getSourceRange();
+    return QualType();
+  }
+  unsigned Scope = static_cast<unsigned>(ValueScope->getZExtValue());
+  std::optional<llvm::APSInt> ValueUse =
+      UseExpr->getIntegerConstantExpr(Context);
+  // Only the use expression is invalid.
+  if (!ValueUse) {
+    Diag(AttrLoc, diag::err_attribute_argument_type)
+        << "coop_mat" << AANT_ArgumentIntegerConstant
+        << UseExpr->getSourceRange();
+    return QualType();
+  }
+  unsigned Use = static_cast<unsigned>(ValueUse->getZExtValue());
+
+  if (!CooperativeMatrixType::isScopeValid(Scope)) {
+    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << "scope";
+    return QualType();
+  }
+  if (!CooperativeMatrixType::isUseValid(Use)) {
+    Diag(AttrLoc, diag::err_invalid_coopmat_attr) << "use";
+    return QualType();
+  }
+  if (!CooperativeMatrixType::isValidOpenCLScalarType(ElementTy)) {
+    Diag(AttrLoc, diag::err_invalid_coopmat_element_type) << ElementTy;
+    return QualType();
+  }
+  auto Result = Context.getCooperativeMatrixType(ElementTy, Scope, MatrixRows,
+                                                 MatrixColumns, Use);
+  if (getLangOpts().OpenCL) {
+    if (!getOpenCLOptions().isSupported("cl_khr_cooperative_matrix",
+                                        getLangOpts()))
+      Diag(AttrLoc, diag::err_opencl_requires_extension)
+          << 0 << Result << "cl_khr_cooperative_matrix";
+    else if (!getOpenCLOptions().isAvailableOption("cl_khr_cooperative_matrix",
+                                                   getLangOpts()))
+      Diag(AttrLoc, diag::err_coopmat_without_pragma)
+          << "cl_khr_cooperative_matrix";
+  }
+  return Result;
 }
 
 bool Sema::CheckFunctionReturnType(QualType T, SourceLocation Loc) {
@@ -6003,6 +6105,23 @@ static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
   ATL.setParensRange(SourceRange());
 }
 
+static void fillCooperativeMatrixTypeLoc(CooperativeMatrixTypeLoc MTL,
+                                         const ParsedAttributesView &Attrs) {
+  for (const ParsedAttr &AL : Attrs) {
+    if (AL.getKind() == ParsedAttr::AT_CoopMatrixType) {
+      MTL.setAttrNameLoc(AL.getLoc());
+      MTL.setAttrScopeOperand(AL.getArgAsExpr(0));
+      MTL.setAttrRowOperand(AL.getArgAsExpr(1));
+      MTL.setAttrColumnOperand(AL.getArgAsExpr(2));
+      MTL.setAttrUseOperand(AL.getArgAsExpr(3));
+      MTL.setAttrOperandParensRange(SourceRange());
+      return;
+    }
+  }
+
+  llvm_unreachable("no coop_mat attribute found at the expected location!");
+}
+
 namespace {
   class TypeSpecLocFiller : public TypeLocVisitor<TypeSpecLocFiller> {
     Sema &SemaRef;
@@ -6397,6 +6516,9 @@ namespace {
     }
     void VisitMatrixTypeLoc(MatrixTypeLoc TL) {
       fillMatrixTypeLoc(TL, Chunk.getAttrs());
+    }
+    void VisitCooperativeMatrixTypeLoc(CooperativeMatrixTypeLoc TL) {
+      fillCooperativeMatrixTypeLoc(TL, Chunk.getAttrs());
     }
 
     void VisitTypeLoc(TypeLoc TL) {
@@ -8972,9 +9094,33 @@ static void HandleMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
+  if (Attr.getNumArgs() != 2) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 2;
+    return;
+  }
+
   Expr *RowsExpr = Attr.getArgAsExpr(0);
   Expr *ColsExpr = Attr.getArgAsExpr(1);
   QualType T = S.BuildMatrixType(CurType, RowsExpr, ColsExpr, Attr.getLoc());
+  if (!T.isNull())
+    CurType = T;
+}
+
+/// "coop_mat" attribute, like ext_vector_type
+static void HandleCoopMatrixTypeAttr(QualType &CurType, const ParsedAttr &Attr,
+                                     Sema &S) {
+  if (Attr.getNumArgs() != 4) {
+    S.Diag(Attr.getLoc(), diag::err_attribute_wrong_number_arguments)
+        << Attr << 4;
+    return;
+  }
+  Expr *Scope = Attr.getArgAsExpr(0);
+  Expr *RowsExpr = Attr.getArgAsExpr(1);
+  Expr *ColsExpr = Attr.getArgAsExpr(2);
+  Expr *Use = Attr.getArgAsExpr(3);
+  QualType T = S.BuildCoopMatrixType(CurType, Scope, RowsExpr, ColsExpr, Use,
+                                     Attr.getLoc());
   if (!T.isNull())
     CurType = T;
 }
@@ -9287,6 +9433,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
 
     case ParsedAttr::AT_MatrixType:
       HandleMatrixTypeAttr(type, attr, state.getSema());
+      attr.setUsedAsTypeAttr();
+      break;
+
+    case ParsedAttr::AT_CoopMatrixType:
+      HandleCoopMatrixTypeAttr(type, attr, state.getSema());
       attr.setUsedAsTypeAttr();
       break;
 
