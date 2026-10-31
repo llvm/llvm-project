@@ -17,8 +17,8 @@ define void @zero_sized_access(ptr %a, i64 %n) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %a High: (-8 + (16 * (1 smax %n)) + %a))
-; CHECK-NEXT:            Member: {%a,+,16}<%loop>
 ; CHECK-NEXT:            Member: {(8 + %a),+,16}<%loop>
+; CHECK-NEXT:            Member: {%a,+,16}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:

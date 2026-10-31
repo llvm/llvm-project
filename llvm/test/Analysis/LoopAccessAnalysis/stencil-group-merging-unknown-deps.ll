@@ -29,9 +29,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; FORCE-NEXT:        Comparing group GRP0:
 ; FORCE-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
 ; FORCE-NEXT:        Against group GRP4:
-; FORCE-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
-; FORCE-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
 ; FORCE-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv
+; FORCE-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
+; FORCE-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
 ; FORCE-NEXT:      Check 4:
 ; FORCE-NEXT:        Comparing group GRP1:
 ; FORCE-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
@@ -46,9 +46,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; FORCE-NEXT:        Comparing group GRP1:
 ; FORCE-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; FORCE-NEXT:        Against group GRP4:
-; FORCE-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
-; FORCE-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
 ; FORCE-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv
+; FORCE-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
+; FORCE-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
 ; FORCE-NEXT:      Check 7:
 ; FORCE-NEXT:        Comparing group GRP2:
 ; FORCE-NEXT:          %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
@@ -58,9 +58,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; FORCE-NEXT:        Comparing group GRP2:
 ; FORCE-NEXT:          %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
 ; FORCE-NEXT:        Against group GRP4:
-; FORCE-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
-; FORCE-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
 ; FORCE-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv
+; FORCE-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
+; FORCE-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
 ; FORCE-NEXT:      Grouped accesses:
 ; FORCE-NEXT:        Group GRP0:
 ; FORCE-NEXT:          (Low: %a High: (-4 + (8 * %n) + %a))
@@ -76,9 +76,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; FORCE-NEXT:            Member: {((4 * %off) + %a),+,8}<%loop>
 ; FORCE-NEXT:        Group GRP4:
 ; FORCE-NEXT:          (Low: %b High: ((4 * %n) + (8 * %m) + %b))
-; FORCE-NEXT:            Member: {((8 * %m) + %b),+,4}<%loop>
-; FORCE-NEXT:            Member: {((4 * %m) + %b),+,4}<%loop>
 ; FORCE-NEXT:            Member: {%b,+,4}<nuw><%loop>
+; FORCE-NEXT:            Member: {((4 * %m) + %b),+,4}<%loop>
+; FORCE-NEXT:            Member: {((8 * %m) + %b),+,4}<%loop>
 ; FORCE-EMPTY:
 ; FORCE-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; FORCE-NEXT:      SCEV assumptions:
@@ -113,9 +113,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; AUTO-NEXT:        Comparing group GRP0:
 ; AUTO-NEXT:          %gep.a.0 = getelementptr inbounds i32, ptr %a, i64 %iv.2
 ; AUTO-NEXT:        Against group GRP4:
-; AUTO-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
-; AUTO-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
 ; AUTO-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv
+; AUTO-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
+; AUTO-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
 ; AUTO-NEXT:      Check 4:
 ; AUTO-NEXT:        Comparing group GRP1:
 ; AUTO-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
@@ -130,9 +130,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; AUTO-NEXT:        Comparing group GRP1:
 ; AUTO-NEXT:          %gep.a.1 = getelementptr inbounds i32, ptr %gep.a.0, i64 1
 ; AUTO-NEXT:        Against group GRP4:
-; AUTO-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
-; AUTO-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
 ; AUTO-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv
+; AUTO-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
+; AUTO-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
 ; AUTO-NEXT:      Check 7:
 ; AUTO-NEXT:        Comparing group GRP2:
 ; AUTO-NEXT:          %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
@@ -142,9 +142,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; AUTO-NEXT:        Comparing group GRP2:
 ; AUTO-NEXT:          %gep.c = getelementptr inbounds i32, ptr %c, i64 %iv
 ; AUTO-NEXT:        Against group GRP4:
-; AUTO-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
-; AUTO-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
 ; AUTO-NEXT:          %gep.b.0 = getelementptr inbounds i32, ptr %b, i64 %iv
+; AUTO-NEXT:          %gep.b.1 = getelementptr inbounds i32, ptr %b, i64 %iv.m
+; AUTO-NEXT:          %gep.b.2 = getelementptr inbounds i32, ptr %b, i64 %iv.m.2
 ; AUTO-NEXT:      Grouped accesses:
 ; AUTO-NEXT:        Group GRP0:
 ; AUTO-NEXT:          (Low: %a High: (-4 + (8 * %n) + %a))
@@ -160,9 +160,9 @@ define void @stencil_loads_and_independent_stores_with_unknown_deps(ptr %a, ptr 
 ; AUTO-NEXT:            Member: {((4 * %off) + %a),+,8}<%loop>
 ; AUTO-NEXT:        Group GRP4:
 ; AUTO-NEXT:          (Low: %b High: ((4 * %n) + (8 * %m) + %b))
-; AUTO-NEXT:            Member: {((8 * %m) + %b),+,4}<%loop>
-; AUTO-NEXT:            Member: {((4 * %m) + %b),+,4}<%loop>
 ; AUTO-NEXT:            Member: {%b,+,4}<nuw><%loop>
+; AUTO-NEXT:            Member: {((4 * %m) + %b),+,4}<%loop>
+; AUTO-NEXT:            Member: {((8 * %m) + %b),+,4}<%loop>
 ; AUTO-EMPTY:
 ; AUTO-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; AUTO-NEXT:      SCEV assumptions:

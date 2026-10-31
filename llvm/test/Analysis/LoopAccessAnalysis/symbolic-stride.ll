@@ -883,11 +883,11 @@ define void @single_stride_scaled_inside_and_outside_cast(ptr %A, i32 %N, i32 %s
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (((4 * (zext i32 (-1 + %N) to i64) * (sext i32 (16 * %stride) to i64)) + %A) umin %A) High: (4 + (((4 * (zext i32 (-1 + %N) to i64) * (sext i32 (16 * %stride) to i64)) + %A) umax %A)))
-; CHECK-NEXT:            Member: {%A,+,(4 * (sext i32 (16 * %stride) to i64))<nsw>}<%loop>
-; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (4 + %A)<nuw> High: (8 + (4 * (zext i32 (-1 + %N) to i64))<nuw><nsw> + %A))
 ; CHECK-NEXT:            Member: {(4 + %A)<nuw>,+,4}<nuw><%loop>
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: (((4 * (zext i32 (-1 + %N) to i64) * (sext i32 (16 * %stride) to i64)) + %A) umin %A) High: (4 + (((4 * (zext i32 (-1 + %N) to i64) * (sext i32 (16 * %stride) to i64)) + %A) umax %A)))
+; CHECK-NEXT:            Member: {%A,+,(4 * (sext i32 (16 * %stride) to i64))<nsw>}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -929,16 +929,16 @@ define void @stray_predicates(ptr %a, ptr %b, i64 %c, i64 %d, i64 %n) {
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.b.mul = getelementptr i32, ptr %b, i64 %mul
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %gep.a.idx.1 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 1
 ; CHECK-NEXT:          %gep.a.idx.0 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 0
+; CHECK-NEXT:          %gep.a.idx.1 = getelementptr { i32, i32 }, ptr %a, i64 %idx, i32 1
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
 ; CHECK-NEXT:            Member: {%b,+,4}<%loop>
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (8 + %a) High: (8 + (8 * %n) + %a))
-; CHECK-NEXT:            Member: {(12 + %a),+,8}<%loop>
 ; CHECK-NEXT:            Member: {(8 + %a),+,8}<%loop>
+; CHECK-NEXT:            Member: {(12 + %a),+,8}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
