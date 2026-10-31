@@ -317,10 +317,15 @@ public:
   ///   and cache file size reduction. Strings are stored as uint32_t string
   ///   table offsets in the cache data.
   ///
+  /// \param file_base_addr
+  ///   The base file address of the ObjectFile, which will be added to
+  ///   any Section-relative file addresses during serialization.
+  ///
   /// \return
   ///   True if the symbol is successfully decoded, false otherwise.
   bool Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
-              const SectionList *section_list, const StringTableReader &strtab);
+              const SectionList *section_list, const StringTableReader &strtab,
+              lldb::addr_t file_base_addr);
 
   /// Encode this object into a data encoder object.
   ///
@@ -333,7 +338,16 @@ public:
   ///   All strings in cache files are put into string tables for efficiency
   ///   and cache file size reduction. Strings are stored as uint32_t string
   ///   table offsets in the cache data.
-  void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
+  /// \param file_base_addr
+  ///   The base file address of the ObjectFile. Symbols with a Section-relative
+  ///   file address will have the base file address subtraced when serializing,
+  ///   and added back again during deserialization, because it is possible for
+  ///   a binary to be rebased to a new file address (including the file
+  ///   addresses of all the symbols) while maintaining the same UUID.  A
+  ///   "rebased" file like this have the identical content, but its file
+  ///   addresses have all been shifted.
+  void Encode(DataEncoder &encoder, ConstStringTable &strtab,
+              lldb::addr_t file_base_addr) const;
 
   bool operator==(const Symbol &rhs) const;
 

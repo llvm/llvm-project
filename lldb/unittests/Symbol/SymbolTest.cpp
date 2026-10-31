@@ -23,7 +23,7 @@ static void EncodeDecode(const Symbol &object, const SectionList *sect_list,
   DataEncoder file(byte_order, addr_size);
   DataEncoder strtab_encoder(byte_order, addr_size);
   ConstStringTable const_strtab;
-  object.Encode(file, const_strtab);
+  object.Encode(file, const_strtab, /*file_base_addr=*/0);
   llvm::ArrayRef<uint8_t> bytes = file.GetData();
   DataExtractor data(bytes.data(), bytes.size(), byte_order, addr_size);
 
@@ -37,7 +37,8 @@ static void EncodeDecode(const Symbol &object, const SectionList *sect_list,
 
   Symbol decoded_object;
   offset_t data_offset = 0;
-  decoded_object.Decode(data, &data_offset, sect_list, strtab_reader);
+  decoded_object.Decode(data, &data_offset, sect_list, strtab_reader,
+                        /*file_base_addr=*/0);
   EXPECT_EQ(object, decoded_object);
 }
 

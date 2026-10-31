@@ -1209,7 +1209,7 @@ bool DecodeCStrMap(const DataExtractor &data, lldb::offset_t *offset_ptr,
 }
 
 constexpr llvm::StringLiteral kIdentifierSymbolTable("SYMB");
-constexpr uint32_t CURRENT_CACHE_VERSION = 3;
+constexpr uint32_t CURRENT_CACHE_VERSION = 4;
 
 // If the size of the Symbol object changes, the serialized
 // format likely also needs to change so the
@@ -1250,9 +1250,10 @@ bool Symtab::Encode(DataEncoder &encoder) const {
   symtab_encoder.AppendU32(CURRENT_CACHE_VERSION);
   // Encode the number of symbols.
   symtab_encoder.AppendU32(m_symbols.size());
+  addr_t file_base_addr = m_objfile->GetBaseAddress().GetFileAddress();
   // Encode the symbol data for all symbols.
   for (const auto &symbol: m_symbols)
-    symbol.Encode(symtab_encoder, strtab);
+    symbol.Encode(symtab_encoder, strtab, file_base_addr);
 
   // Emit a byte for how many C string maps we emit. We will fix this up after
   // we emit the C string maps since we skip emitting C string maps if they are
@@ -1306,8 +1307,10 @@ bool Symtab::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
       return true;
     m_symbols.resize(num_symbols);
     SectionList *sections = m_objfile->GetModule()->GetSectionList();
+    addr_t file_base_addr = m_objfile->GetBaseAddress().GetFileAddress();
     for (uint32_t i=0; i<num_symbols; ++i) {
-      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab))
+      if (!m_symbols[i].Decode(data, offset_ptr, sections, strtab,
+                               file_base_addr))
         return false;
     }
   }
