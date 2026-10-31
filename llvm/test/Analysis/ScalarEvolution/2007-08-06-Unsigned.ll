@@ -7,7 +7,7 @@ define i32 @f(i32 %x, i32 %y) {
 ; CHECK-LABEL: 'f'
 ; CHECK-NEXT:  Determining loop execution counts for: @f
 ; CHECK-NEXT:  Loop %bb: backedge-taken count is (-1 + (-1 * %x) + %y)
-; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %bb: constant max backedge-taken count is i32 -2
 ; CHECK-NEXT:  Loop %bb: symbolic max backedge-taken count is (-1 + (-1 * %x) + %y)
 ; CHECK-NEXT:  Loop %bb: Trip multiple is 1
 ;
