@@ -1723,6 +1723,39 @@ void LowerAIR::recoverAGXOperations(Function &F) {
           (FlushingArith(A) ||
            (!Sel->use_empty() && all_of(Sel->users(), FlushingArith))))
         R = A;
+    } else if (auto *Sel = dyn_cast<SelectInst>(&I);
+               Sel && Ty->isIntegerTy(32) && HardwareFlush) {
+      // The same flush on the bits (a front end's strict mode tests them:
+      // a flushing GPU compares a denormal as zero):
+      // select((x & 0x7f800000) == 0, x & 0x80000000, x), where x is the bits
+      // of an operation that flushes, also through the canonical NaN select
+      // select((x & 0x7fffffff) > 0x7f800000, 0x7fffffff, x), or every user
+      // reads it back as an operand of one.
+      Value *X = nullptr;
+      if (match(Sel->getCondition(),
+                m_SpecificICmp(ICmpInst::ICMP_EQ,
+                               m_And(m_Value(X), m_SpecificInt(0x7f800000)),
+                               m_Zero())) &&
+          Sel->getFalseValue() == X &&
+          match(Sel->getTrueValue(),
+                m_And(m_Specific(X), m_SpecificInt(0x80000000)))) {
+        Value *Bits = X, *Y;
+        if (match(Bits, m_Select(m_SpecificICmp(ICmpInst::ICMP_UGT,
+                                                m_And(m_Value(Y),
+                                                      m_SpecificInt(0x7fffffff)),
+                                                m_SpecificInt(0x7f800000)),
+                                 m_SpecificInt(0x7fffffff), m_Deferred(Y))))
+          Bits = Y;
+        Value *A = nullptr;
+        bool Made = match(Bits, m_BitCast(m_Value(A))) && FlushingArith(A);
+        bool Read = !Sel->use_empty() && all_of(Sel->users(), [&](User *U) {
+          auto *BC = dyn_cast<BitCastInst>(U);
+          return BC && BC->getType()->isFloatTy() && !BC->use_empty() &&
+                 all_of(BC->users(), FlushingArith);
+        });
+        if (Made || Read)
+          R = X;
+      }
     }
     if (!R)
       continue;
