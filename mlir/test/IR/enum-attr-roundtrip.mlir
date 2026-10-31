@@ -123,6 +123,30 @@ func.func @test_two_default_bit_enum_props() -> () {
   return
 }
 
+// CHECK-LABEL: @test_space_bit_enum_prop
+func.func @test_space_bit_enum_prop() -> () {
+  // CHECK: test.op_with_default_space_bit_enum_prop{{$}}
+  test.op_with_default_space_bit_enum_prop
+
+  // CHECK: test.op_with_default_space_bit_enum_prop user group{{$}}
+  test.op_with_default_space_bit_enum_prop group user
+
+  // Parsing stops at the first keyword that is not a case.
+  // CHECK: test.op_with_default_space_bit_enum_prop other tag 1 : i32{{$}}
+  test.op_with_default_space_bit_enum_prop other tag 1 : i32
+
+  // CHECK: test.op_with_default_space_bit_enum_prop tag 1 : i32{{$}}
+  test.op_with_default_space_bit_enum_prop tag 1 : i32
+
+  // An explicit `none` is the default and so is elided.
+  // CHECK: test.op_with_default_space_bit_enum_prop{{$}}
+  test.op_with_default_space_bit_enum_prop none
+
+  // CHECK: test.op_with_default_space_bit_enum_prop user other{{$}}
+  "test.op_with_default_space_bit_enum_prop"() <{value = 5 : i32}> : () -> ()
+  return
+}
+
 // CHECK-LABEL @test_bit_enum_prop()
 func.func @test_bit_enum_prop() -> () {
   // CHECK: test.op_with_bit_enum_prop read : ()
