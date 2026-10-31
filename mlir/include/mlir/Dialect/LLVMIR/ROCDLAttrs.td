@@ -85,6 +85,9 @@ def ROCDL_SchedGroupMaskAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_SchedGroupMask,
                                      "sched_group_mask">;
 
+def ROCDL_AsyncStagesAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_AsyncStages, "async_stages">;
+
 def ROCDL_PreGfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_PreGfx12CachePolicy,
                                      "pre_gfx12_cache_policy">;
