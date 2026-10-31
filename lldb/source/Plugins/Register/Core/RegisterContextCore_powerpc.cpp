@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_powerpc.cpp ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterContextPOSIX_powerpc.h"
+#include "RegisterContextCore_powerpc.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -76,51 +76,51 @@ static const RegisterSet g_reg_sets_powerpc[k_num_register_sets] = {
 
 static_assert(k_first_gpr_powerpc == 0,
               "GPRs must index starting at 0, or fix IsGPR()");
-bool RegisterContextPOSIX_powerpc::IsGPR(unsigned reg) {
+bool RegisterContextCore_powerpc::IsGPR(unsigned reg) {
   return (reg <= k_last_gpr_powerpc); // GPR's come first.
 }
 
-bool RegisterContextPOSIX_powerpc::IsFPR(unsigned reg) {
+bool RegisterContextCore_powerpc::IsFPR(unsigned reg) {
   return (reg >= k_first_fpr) && (reg <= k_last_fpr);
 }
 
-bool RegisterContextPOSIX_powerpc::IsVMX(unsigned reg) {
+bool RegisterContextCore_powerpc::IsVMX(unsigned reg) {
   return (reg >= k_first_vmx) && (reg <= k_last_vmx);
 }
 
-RegisterContextPOSIX_powerpc::RegisterContextPOSIX_powerpc(
+RegisterContextCore_powerpc::RegisterContextCore_powerpc(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
   m_register_info_up.reset(register_info);
 }
 
-RegisterContextPOSIX_powerpc::~RegisterContextPOSIX_powerpc() = default;
+RegisterContextCore_powerpc::~RegisterContextCore_powerpc() = default;
 
-void RegisterContextPOSIX_powerpc::Invalidate() {}
+void RegisterContextCore_powerpc::Invalidate() {}
 
-void RegisterContextPOSIX_powerpc::InvalidateAllRegisters() {}
+void RegisterContextCore_powerpc::InvalidateAllRegisters() {}
 
-unsigned RegisterContextPOSIX_powerpc::GetRegisterOffset(unsigned reg) {
+unsigned RegisterContextCore_powerpc::GetRegisterOffset(unsigned reg) {
   assert(reg < k_num_registers_powerpc && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_offset;
 }
 
-unsigned RegisterContextPOSIX_powerpc::GetRegisterSize(unsigned reg) {
+unsigned RegisterContextCore_powerpc::GetRegisterSize(unsigned reg) {
   assert(reg < k_num_registers_powerpc && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_size;
 }
 
-size_t RegisterContextPOSIX_powerpc::GetRegisterCount() {
+size_t RegisterContextCore_powerpc::GetRegisterCount() {
   size_t num_registers = k_num_registers_powerpc;
   return num_registers;
 }
 
-size_t RegisterContextPOSIX_powerpc::GetGPRSize() {
+size_t RegisterContextCore_powerpc::GetGPRSize() {
   return m_register_info_up->GetGPRSize();
 }
 
-const RegisterInfo *RegisterContextPOSIX_powerpc::GetRegisterInfo() {
+const RegisterInfo *RegisterContextCore_powerpc::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.
@@ -128,14 +128,14 @@ const RegisterInfo *RegisterContextPOSIX_powerpc::GetRegisterInfo() {
 }
 
 const RegisterInfo *
-RegisterContextPOSIX_powerpc::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextCore_powerpc::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < k_num_registers_powerpc)
     return &GetRegisterInfo()[reg];
   else
     return nullptr;
 }
 
-size_t RegisterContextPOSIX_powerpc::GetRegisterSetCount() {
+size_t RegisterContextCore_powerpc::GetRegisterSetCount() {
   size_t sets = 0;
   for (size_t set = 0; set < k_num_register_sets; ++set) {
     if (IsRegisterSetAvailable(set))
@@ -145,19 +145,19 @@ size_t RegisterContextPOSIX_powerpc::GetRegisterSetCount() {
   return sets;
 }
 
-const RegisterSet *RegisterContextPOSIX_powerpc::GetRegisterSet(size_t set) {
+const RegisterSet *RegisterContextCore_powerpc::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set))
     return &g_reg_sets_powerpc[set];
   else
     return nullptr;
 }
 
-const char *RegisterContextPOSIX_powerpc::GetRegisterName(unsigned reg) {
+const char *RegisterContextCore_powerpc::GetRegisterName(unsigned reg) {
   assert(reg < k_num_registers_powerpc && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
 }
 
-bool RegisterContextPOSIX_powerpc::IsRegisterSetAvailable(size_t set_index) {
+bool RegisterContextCore_powerpc::IsRegisterSetAvailable(size_t set_index) {
   size_t num_sets = k_num_register_sets;
 
   return (set_index < num_sets);

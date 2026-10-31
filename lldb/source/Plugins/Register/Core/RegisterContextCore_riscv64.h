@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_arm.h ------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,23 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV64_H
+#define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV64_H
 
 #include "Register/RegisterInfoInterface.h"
-#include "Register/Common/RegisterInfo_arm.h"
+#include "Register/Common/RegisterInfo_riscv64.h"
+#include "Register/Arch/lldb-riscv-register-enums.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextPOSIX_arm : public lldb_private::RegisterContext {
+class RegisterContextCore_riscv64 : public lldb_private::RegisterContext {
 public:
-  RegisterContextPOSIX_arm(
+  RegisterContextCore_riscv64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_arm> register_info);
+      std::unique_ptr<RegisterInfo_riscv64> register_info);
 
-  ~RegisterContextPOSIX_arm() override;
+  ~RegisterContextCore_riscv64() override;
 
-  void Invalidate();
+  void invalidate();
 
   void InvalidateAllRegisters() override;
 
@@ -40,10 +41,8 @@ public:
 
   const lldb_private::RegisterSet *GetRegisterSet(size_t set) override;
 
-  const char *GetRegisterName(unsigned reg);
-
 protected:
-  std::unique_ptr<RegisterInfo_arm> m_register_info_up;
+  std::unique_ptr<RegisterInfo_riscv64> m_register_info_up;
 
   virtual const lldb_private::RegisterInfo *GetRegisterInfo();
 
@@ -51,7 +50,9 @@ protected:
 
   bool IsFPR(unsigned reg);
 
-  size_t GetFPUSize() { return sizeof(RegisterInfo_arm::FPU); }
+  size_t GetFPRSize() { return sizeof(RegisterInfo_riscv64::FPR); }
+
+  uint32_t GetRegNumFCSR() const { return fpr_fcsr_riscv; }
 
   virtual bool ReadGPR() = 0;
   virtual bool ReadFPR() = 0;
@@ -59,4 +60,4 @@ protected:
   virtual bool WriteFPR() = 0;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_ARM_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_RISCV64_H

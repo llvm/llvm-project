@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_X86_64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_X86_64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_x86.h"
+#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 class RegisterContextFreeBSDKernelCore_x86_64
-    : public RegisterContextPOSIX_x86 {
+    : public RegisterContextCore_x86 {
 public:
   RegisterContextFreeBSDKernelCore_x86_64(
       lldb_private::Thread &thread,

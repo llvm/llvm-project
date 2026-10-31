@@ -9,11 +9,11 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_POWERPC_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_powerpc.h"
+#include "Plugins/Register/Core/RegisterContextCore_powerpc.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataExtractor.h"
 
-class RegisterContextCorePOSIX_powerpc : public RegisterContextPOSIX_powerpc {
+class RegisterContextCorePOSIX_powerpc : public RegisterContextCore_powerpc {
 public:
   RegisterContextCorePOSIX_powerpc(
       lldb_private::Thread &thread,

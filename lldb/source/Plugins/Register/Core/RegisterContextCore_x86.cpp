@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_x86.cpp --------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterContextPOSIX_x86.h"
+#include "RegisterContextCore_x86.h"
 #include "Register/Arch/RegisterContext_x86.h"
 
 using namespace lldb_private;
@@ -175,19 +175,19 @@ static const RegisterSet g_reg_sets_x86_64[k_num_register_sets] = {
     {"Advanced Vector Extensions", "avx", k_num_avx_registers_x86_64,
      g_avx_regnums_x86_64}};
 
-bool RegisterContextPOSIX_x86::IsGPR(unsigned reg) {
+bool RegisterContextCore_x86::IsGPR(unsigned reg) {
   return reg <= GetRegInfo().last_gpr; // GPR's come first.
 }
 
-bool RegisterContextPOSIX_x86::IsFPR(unsigned reg) {
+bool RegisterContextCore_x86::IsFPR(unsigned reg) {
   return (GetRegInfo().first_fpr <= reg && reg <= GetRegInfo().last_fpr);
 }
 
-bool RegisterContextPOSIX_x86::IsAVX(unsigned reg) {
+bool RegisterContextCore_x86::IsAVX(unsigned reg) {
   return (GetRegInfo().first_ymm <= reg && reg <= GetRegInfo().last_ymm);
 }
 
-bool RegisterContextPOSIX_x86::IsFPR(unsigned reg, FPRType fpr_type) {
+bool RegisterContextCore_x86::IsFPR(unsigned reg, FPRType fpr_type) {
   bool generic_fpr = IsFPR(reg);
 
   if (fpr_type == eXSAVE)
@@ -195,7 +195,7 @@ bool RegisterContextPOSIX_x86::IsFPR(unsigned reg, FPRType fpr_type) {
   return generic_fpr;
 }
 
-RegisterContextPOSIX_x86::RegisterContextPOSIX_x86(
+RegisterContextCore_x86::RegisterContextCore_x86(
     Thread &thread, uint32_t concrete_frame_idx,
     RegisterInfoInterface *register_info)
     : RegisterContext(thread, concrete_frame_idx) {
@@ -207,9 +207,9 @@ RegisterContextPOSIX_x86::RegisterContextPOSIX_x86(
   m_fpr_type = eNotValid;
 }
 
-RegisterContextPOSIX_x86::~RegisterContextPOSIX_x86() = default;
+RegisterContextCore_x86::~RegisterContextCore_x86() = default;
 
-RegisterContextPOSIX_x86::FPRType RegisterContextPOSIX_x86::GetFPRType() {
+RegisterContextCore_x86::FPRType RegisterContextCore_x86::GetFPRType() {
   if (m_fpr_type == eNotValid) {
     // TODO: Use assembly to call cpuid on the inferior and query ebx or ecx
     m_fpr_type = eXSAVE; // extended floating-point registers, if available
@@ -219,27 +219,27 @@ RegisterContextPOSIX_x86::FPRType RegisterContextPOSIX_x86::GetFPRType() {
   return m_fpr_type;
 }
 
-void RegisterContextPOSIX_x86::Invalidate() {}
+void RegisterContextCore_x86::Invalidate() {}
 
-void RegisterContextPOSIX_x86::InvalidateAllRegisters() {}
+void RegisterContextCore_x86::InvalidateAllRegisters() {}
 
-unsigned RegisterContextPOSIX_x86::GetRegisterOffset(unsigned reg) {
+unsigned RegisterContextCore_x86::GetRegisterOffset(unsigned reg) {
   assert(reg < GetRegInfo().num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_offset;
 }
 
-RegInfo &RegisterContextPOSIX_x86::GetRegInfo() {
+RegInfo &RegisterContextCore_x86::GetRegInfo() {
   return GetRegInfoShared(
       m_register_info_up->GetTargetArchitecture().GetMachine(),
       /*with_base=*/false);
 }
 
-unsigned RegisterContextPOSIX_x86::GetRegisterSize(unsigned reg) {
+unsigned RegisterContextCore_x86::GetRegisterSize(unsigned reg) {
   assert(reg < GetRegInfo().num_registers && "Invalid register number.");
   return GetRegisterInfo()[reg].byte_size;
 }
 
-size_t RegisterContextPOSIX_x86::GetRegisterCount() {
+size_t RegisterContextCore_x86::GetRegisterCount() {
   size_t num_registers =
       GetRegInfo().num_gpr_registers + GetRegInfo().num_fpr_registers;
   if (GetFPRType() == eXSAVE)
@@ -247,15 +247,15 @@ size_t RegisterContextPOSIX_x86::GetRegisterCount() {
   return num_registers;
 }
 
-size_t RegisterContextPOSIX_x86::GetGPRSize() {
+size_t RegisterContextCore_x86::GetGPRSize() {
   return m_register_info_up->GetGPRSize();
 }
 
-size_t RegisterContextPOSIX_x86::GetFXSAVEOffset() {
+size_t RegisterContextCore_x86::GetFXSAVEOffset() {
   return GetRegisterInfo()[GetRegInfo().first_fpr].byte_offset;
 }
 
-const RegisterInfo *RegisterContextPOSIX_x86::GetRegisterInfo() {
+const RegisterInfo *RegisterContextCore_x86::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.
@@ -263,14 +263,14 @@ const RegisterInfo *RegisterContextPOSIX_x86::GetRegisterInfo() {
 }
 
 const RegisterInfo *
-RegisterContextPOSIX_x86::GetRegisterInfoAtIndex(size_t reg) {
+RegisterContextCore_x86::GetRegisterInfoAtIndex(size_t reg) {
   if (reg < GetRegInfo().num_registers)
     return &GetRegisterInfo()[reg];
   else
     return nullptr;
 }
 
-size_t RegisterContextPOSIX_x86::GetRegisterSetCount() {
+size_t RegisterContextCore_x86::GetRegisterSetCount() {
   size_t sets = 0;
   for (size_t set = 0; set < k_num_register_sets; ++set) {
     if (IsRegisterSetAvailable(set))
@@ -280,7 +280,7 @@ size_t RegisterContextPOSIX_x86::GetRegisterSetCount() {
   return sets;
 }
 
-const RegisterSet *RegisterContextPOSIX_x86::GetRegisterSet(size_t set) {
+const RegisterSet *RegisterContextCore_x86::GetRegisterSet(size_t set) {
   if (IsRegisterSetAvailable(set)) {
     switch (m_register_info_up->GetTargetArchitecture().GetMachine()) {
     case llvm::Triple::x86:
@@ -295,13 +295,13 @@ const RegisterSet *RegisterContextPOSIX_x86::GetRegisterSet(size_t set) {
   return nullptr;
 }
 
-const char *RegisterContextPOSIX_x86::GetRegisterName(unsigned reg) {
+const char *RegisterContextCore_x86::GetRegisterName(unsigned reg) {
   assert(reg < GetRegInfo().num_registers && "Invalid register offset.");
   return GetRegisterInfo()[reg].name;
 }
 
 // Parse ymm registers and into xmm.bytes and ymmh.bytes.
-bool RegisterContextPOSIX_x86::CopyYMMtoXSTATE(uint32_t reg,
+bool RegisterContextCore_x86::CopyYMMtoXSTATE(uint32_t reg,
                                                lldb::ByteOrder byte_order) {
   if (!IsAVX(reg))
     return false;
@@ -317,7 +317,7 @@ bool RegisterContextPOSIX_x86::CopyYMMtoXSTATE(uint32_t reg,
 }
 
 // Concatenate xmm.bytes with ymmh.bytes
-bool RegisterContextPOSIX_x86::CopyXSTATEtoYMM(uint32_t reg,
+bool RegisterContextCore_x86::CopyXSTATEtoYMM(uint32_t reg,
                                                lldb::ByteOrder byte_order) {
   if (!IsAVX(reg))
     return false;
@@ -332,7 +332,7 @@ bool RegisterContextPOSIX_x86::CopyXSTATEtoYMM(uint32_t reg,
   return false; // unsupported or invalid byte order
 }
 
-bool RegisterContextPOSIX_x86::IsRegisterSetAvailable(size_t set_index) {
+bool RegisterContextCore_x86::IsRegisterSetAvailable(size_t set_index) {
   // Note: Extended register sets are assumed to be at the end of g_reg_sets...
   size_t num_sets = k_num_register_sets - k_num_extended_register_sets;
 

@@ -1,4 +1,4 @@
-//===-- RegisterContextPOSIX_x86.h ------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_X86_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_X86_H
+#ifndef LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_X86_H
+#define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_X86_H
 
 #include "Register/Arch/RegisterContext_x86.h"
 #include "Register/RegisterInfoInterface.h"
@@ -16,13 +16,13 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
-class RegisterContextPOSIX_x86 : public lldb_private::RegisterContext {
+class RegisterContextCore_x86 : public lldb_private::RegisterContext {
 public:
-  RegisterContextPOSIX_x86(lldb_private::Thread &thread,
+  RegisterContextCore_x86(lldb_private::Thread &thread,
                            uint32_t concrete_frame_idx,
                            lldb_private::RegisterInfoInterface *register_info);
 
-  ~RegisterContextPOSIX_x86() override;
+  ~RegisterContextCore_x86() override;
 
   void Invalidate();
 
@@ -88,4 +88,4 @@ protected:
   virtual lldb_private::RegInfo &GetRegInfo();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_UTILITY_REGISTERCONTEXTPOSIX_X86_H
+#endif // LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_X86_H

@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_X86_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_X86_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_x86.h"
+#include "Plugins/Register/Core/RegisterContextCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
-class RegisterContextCorePOSIX_x86 : public RegisterContextPOSIX_x86 {
+class RegisterContextCorePOSIX_x86 : public RegisterContextCore_x86 {
 public:
   RegisterContextCorePOSIX_x86(
       lldb_private::Thread &thread,
