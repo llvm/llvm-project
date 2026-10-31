@@ -5822,8 +5822,10 @@ public:
 
   /// Expand parallel bit deposit (expand).
   /// \param N Node to expand
+  /// \param AllowFullExpansion If false, only try the single-bit expansion.
   /// \returns The expansion if successful, SDValue() otherwise
-  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG) const;
+  SDValue expandPDEP(SDNode *N, SelectionDAG &DAG,
+                     bool AllowFullExpansion = true) const;
 
   /// Expand rotations.
   /// \param N Node to expand

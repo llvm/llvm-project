@@ -9451,12 +9451,84 @@ SDValue TargetLowering::expandPEXT(SDNode *Node, SelectionDAG &DAG) const {
   return X;
 }
 
-SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG) const {
+SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG,
+                                   bool AllowFullExpansion) const {
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
   SDValue Val = Node->getOperand(0);
   SDValue Msk = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
+
+  // Depositing a single bit selects the Nth set bit of the mask. Find it by
+  // repeatedly counting the bits in the lower half and selecting a half.
+  if (VT.isScalarInteger() && isPowerOf2_32(BW) &&
+      Val.getOpcode() == ISD::SHL && isOneConstant(Val.getOperand(0))) {
+    EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue Rank = DAG.getZExtOrTrunc(Val.getOperand(1), DL, VT);
+    SDValue Pos = Zero;
+    SDValue M = Msk;
+    SmallVector<SDValue, 8> Counts;
+    if (!isOperationLegalOrPromote(ISD::CTPOP, VT)) {
+      // Without a hardware popcount, compute counts for all aligned groups
+      // once, rather than expanding a separate popcount at every step.
+      Counts.push_back(Msk);
+      for (unsigned Half = 1; Half < BW / 2; Half *= 2) {
+        SDValue Prev = Counts.back();
+        SDValue Mask = DAG.getConstant(
+            APInt::getSplat(BW, APInt::getLowBitsSet(2 * Half, Half)), DL, VT);
+        SDValue Shifted = DAG.getNode(ISD::SRL, DL, VT, Prev,
+                                      DAG.getShiftAmountConstant(Half, VT, DL));
+        if (Half == 1) {
+          Counts.push_back(
+              DAG.getNode(ISD::SUB, DL, VT, Prev,
+                          DAG.getNode(ISD::AND, DL, VT, Shifted, Mask)));
+        } else if (Half == 2) {
+          Counts.push_back(DAG.getNode(
+              ISD::ADD, DL, VT, DAG.getNode(ISD::AND, DL, VT, Prev, Mask),
+              DAG.getNode(ISD::AND, DL, VT, Shifted, Mask)));
+        } else {
+          Counts.push_back(
+              DAG.getNode(ISD::AND, DL, VT,
+                          DAG.getNode(ISD::ADD, DL, VT, Prev, Shifted), Mask));
+        }
+      }
+    }
+    for (unsigned Half = BW / 2; Half; Half /= 2) {
+      SDValue LowMask = DAG.getConstant(APInt::getLowBitsSet(BW, Half), DL, VT);
+      SDValue Count;
+      if (Counts.empty()) {
+        SDValue Low = DAG.getNode(ISD::AND, DL, VT, M, LowMask);
+        Count = DAG.getNode(ISD::CTPOP, DL, VT, Low);
+      } else {
+        Count = DAG.getNode(ISD::SRL, DL, VT, Counts[Log2_32(Half)],
+                            DAG.getZExtOrTrunc(Pos, DL, ShiftVT));
+        Count = DAG.getNode(ISD::AND, DL, VT, Count, LowMask);
+      }
+      SDValue High = DAG.getSetCC(DL, CCVT, Rank, Count, ISD::SETUGE);
+      Rank = DAG.getNode(ISD::SUB, DL, VT, Rank,
+                         DAG.getSelect(DL, VT, High, Count, Zero));
+      if (Counts.empty()) {
+        SDValue Shift = DAG.getShiftAmountConstant(Half, VT, DL);
+        M = DAG.getSelect(DL, VT, High, DAG.getNode(ISD::SRL, DL, VT, M, Shift),
+                          M);
+      }
+      Pos = DAG.getNode(
+          ISD::OR, DL, VT, Pos,
+          DAG.getSelect(DL, VT, High, DAG.getConstant(Half, DL, VT), Zero));
+    }
+    SDValue Shift = DAG.getZExtOrTrunc(Pos, DL, ShiftVT);
+    SDValue Bit =
+        DAG.getNode(ISD::SHL, DL, VT, DAG.getConstant(1, DL, VT), Shift);
+    SDValue Result = DAG.getNode(ISD::AND, DL, VT, Msk, Bit);
+    // A nonzero remaining rank means the requested set bit does not exist.
+    return DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, Rank, Zero, ISD::SETEQ),
+                         Result, Zero);
+  }
+
+  if (!AllowFullExpansion)
+    return SDValue();
 
   // Just scalarize if scalar PDEP is legal
   if (VT.isVector() && isOperationLegal(ISD::PDEP, VT.getVectorElementType()))
