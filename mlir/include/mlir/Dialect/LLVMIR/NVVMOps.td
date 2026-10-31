@@ -501,7 +501,8 @@ def NVVM_Ex2Op
     Computes a fast approximation of 2 raised to the power of the input value.
     Supports f32, vector<1xf32>, and packed f16x2 and bf16x2 values. The `ftz`
     attribute is optional for f32 and vector<1xf32>, unavailable for f16x2,
-    and required for bf16x2.
+    and required for bf16x2. A vector<1xf32> operand is not a distinct PTX
+    form: it is lowered through the scalar f32 intrinsic.
   }];
   let arguments = (ins
     AnyTypeOf<[F32, VectorOfLengthAndType<[1], [F32]>,
@@ -516,6 +517,23 @@ def NVVM_Ex2Op
     $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
   }];
   let hasVerifier = 1;
+  let llvmBuilder = [{
+    auto [id, args] =
+        NVVM::Ex2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    llvm::Value *src = args[0];
+    auto *vecTy = llvm::dyn_cast<llvm::FixedVectorType>(src->getType());
+    if (vecTy && vecTy->getNumElements() == 1) {
+      // There is no one-lane PTX form; use the scalar f32 intrinsic.
+      llvm::Type *f32Ty = vecTy->getElementType();
+      llvm::Value *scalar = builder.CreateBitCast(src, f32Ty);
+      llvm::Value *res = createIntrinsicCall(builder, id, f32Ty, {scalar});
+      $res = builder.CreateBitCast(res, vecTy);
+    } else {
+      $res = createIntrinsicCall(
+          builder, id, moduleTranslation.convertType(op.getRes().getType()),
+          args);
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
