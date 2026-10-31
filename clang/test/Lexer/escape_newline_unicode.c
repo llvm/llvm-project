@@ -20,7 +20,7 @@ int ス\
 
 int \
 ス = 42;
-// expected-warning@-2 {{unused variable 'ス'}}
+// expected-warning@-1 {{unused variable 'ス'}}
 
 }
 
@@ -28,8 +28,9 @@ void gh65156_err(void) {
 
 int \
 ❌ = 0;
+// expected-error@-1 {{unexpected character '❌' U+274C}}
 // cpp-error@-2 {{expected unqualified-id}}
-// c-error@-3 {{expected identifier}}
+// c-error@-3 {{expected identifier or '('}}
 
 
 int a\

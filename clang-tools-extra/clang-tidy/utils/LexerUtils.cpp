@@ -52,23 +52,7 @@ SourceLocation findPreviousTokenKind(SourceLocation Start,
                                      const SourceManager &SM,
                                      const LangOptions &LangOpts,
                                      tok::TokenKind TK) {
-  if (Start.isInvalid() || Start.isMacroID())
-    return {};
-
-  while (true) {
-    const SourceLocation L = findPreviousTokenStart(Start, SM, LangOpts);
-    if (L.isInvalid() || L.isMacroID())
-      return {};
-
-    Token T;
-    if (Lexer::getRawToken(L, T, SM, LangOpts, /*IgnoreWhiteSpace=*/true))
-      return {};
-
-    if (T.is(TK))
-      return T.getLocation();
-
-    Start = L;
-  }
+  return findPreviousAnyTokenKind(Start, SM, LangOpts, TK);
 }
 
 SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
