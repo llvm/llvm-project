@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-windows-msvc -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-pc-windows-msvc -fclangir -emit-cir -mmlir --mlir-print-ir-before=cir-lowering-prepare %s -o %t.cir 2>&1 | FileCheck %s --check-prefix=CIR-BEFORE-LPP --implicit-check-not=cir.cxx_module_init_fn_name
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR --implicit-check-not=_ZGIW
 
 // Classic codegen only enables C++20 module initializers for the Itanium
@@ -30,7 +30,7 @@ int foo();
 int x = foo();
 
 // The Itanium-only attribute must not be emitted for the Microsoft mangler.
-// CIR-NOT: cir.cxx_module_init_fn_name
+// CIR-BEFORE-LPP: module
 
 // CIR: cir.global_ctors = [#cir.global_ctor<"_GLOBAL__sub_I_{{.*}}", 65535>]
 
