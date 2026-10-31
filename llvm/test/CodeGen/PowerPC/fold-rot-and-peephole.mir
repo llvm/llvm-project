@@ -18,7 +18,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICL %1:g8rc, 0, 32
-    %3:g8rc = ANDI8_rec killed %2:g8rc, 1, implicit-def dead $cr0
+    %3:g8rc = ANDI8_rec %2:g8rc, 1, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -38,7 +38,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICL %1:g8rc, 10, 60
-    %3:g8rc = ANDI8_rec killed %2:g8rc, 32, implicit-def dead $cr0
+    %3:g8rc = ANDI8_rec %2:g8rc, 32, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -58,7 +58,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICR %1:g8rc, 0, 60
-    %3:g8rc = ANDI8_rec killed %2:g8rc, 16, implicit-def dead $cr0
+    %3:g8rc = ANDI8_rec %2:g8rc, 16, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -78,7 +78,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICR %1:g8rc, 10, 60
-    %3:g8rc = ANDI8_rec killed %2:g8rc, 1, implicit-def dead $cr0
+    %3:g8rc = ANDI8_rec %2:g8rc, 1, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -98,7 +98,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICL %1:g8rc, 0, 32
-    %3:g8rc = ANDIS8_rec killed %2:g8rc, 1, implicit-def dead $cr0
+    %3:g8rc = ANDIS8_rec %2:g8rc, 1, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -118,7 +118,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICL %1:g8rc, 10, 60
-    %3:g8rc = ANDIS8_rec killed %2:g8rc, 16, implicit-def dead $cr0
+    %3:g8rc = ANDIS8_rec %2:g8rc, 16, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -138,7 +138,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICR %1:g8rc, 0, 60
-    %3:g8rc = ANDIS8_rec killed %2:g8rc, 16, implicit-def dead $cr0
+    %3:g8rc = ANDIS8_rec %2:g8rc, 16, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...
@@ -158,7 +158,7 @@ body: |
     ; CHECK-NEXT: BLR8 implicit $lr8, implicit $rm, implicit $x3
     %1:g8rc = COPY $x3
     %2:g8rc = RLDICR %1:g8rc, 10, 32
-    %3:g8rc = ANDIS8_rec killed %2:g8rc, 1, implicit-def dead $cr0
+    %3:g8rc = ANDIS8_rec %2:g8rc, 1, implicit-def dead $cr0
     $x3 = COPY %3:g8rc
     BLR8 implicit $lr8, implicit $rm, implicit $x3
 ...

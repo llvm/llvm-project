@@ -69,7 +69,7 @@ declare i32 @__gxx_personality_v0(...)
 ; CHECK-LABEL:	.Lfunc_end0:
 
 ; CHECK: 	.section	.llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3bazb{{$}}
-; CHECK-NEXT:	.byte	5		# version
+; CHECK-NEXT:	.byte	6		# version
 ; BASIC-NEXT:	.short	32		# feature
 ; PGO-ALL-NEXT:	.short	39		# feature
 ; FEC-ONLY-NEXT:.short	33		# feature

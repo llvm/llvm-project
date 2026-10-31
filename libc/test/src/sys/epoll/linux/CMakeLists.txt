@@ -8,7 +8,6 @@ add_libc_test(
     epoll_create_test.cpp
   DEPENDS
     libc.include.sys_epoll
-    libc.src.errno.errno
     libc.src.sys.epoll.epoll_create
     libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
@@ -23,7 +22,6 @@ add_libc_test(
     epoll_create1_test.cpp
   DEPENDS
     libc.hdr.sys_epoll_macros
-    libc.src.errno.errno
     libc.src.sys.epoll.epoll_create1
     libc.src.unistd.close
     libc.test.UnitTest.ErrnoCheckingTest
@@ -39,7 +37,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_epoll_macros
     libc.hdr.types.struct_epoll_event
-    libc.src.errno.errno
     libc.src.sys.epoll.epoll_create1
     libc.src.sys.epoll.epoll_ctl
     libc.src.unistd.pipe
@@ -57,7 +54,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_epoll_macros
     libc.hdr.types.struct_epoll_event
-    libc.src.errno.errno
     libc.src.sys.epoll.epoll_create1
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_wait
@@ -76,7 +72,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.sys_epoll_macros
     libc.hdr.types.struct_epoll_event
-    libc.src.errno.errno
     libc.src.sys.epoll.epoll_create1
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_pwait
@@ -96,7 +91,6 @@ add_libc_test(
     libc.hdr.sys_epoll_macros
     libc.hdr.types.struct_epoll_event
     libc.hdr.types.struct_timespec
-    libc.src.errno.errno
     libc.src.sys.epoll.epoll_create1
     libc.src.sys.epoll.epoll_ctl
     libc.src.sys.epoll.epoll_pwait2

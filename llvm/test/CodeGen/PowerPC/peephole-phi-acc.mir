@@ -242,8 +242,8 @@ body:             |
     %6:gprc = COPY %3.sub_32
     %7:accrc = XXSETACCZ
     %0:uaccrc = COPY %7
-    %8:crrc = CMPLWI killed %6, 0
-    BCC 76, killed %8, %bb.2
+    %8:crrc = CMPLWI %6, 0
+    BCC 76, %8, %bb.2
     B %bb.1
 
   bb.1.if.then:
@@ -266,17 +266,17 @@ body:             |
     %12:accrc = XXMFACC %13
     %14:vsrc = COPY %12.sub_vsx1
     %16:vsrprc = IMPLICIT_DEF
-    %15:vsrprc = INSERT_SUBREG %16, killed %14, %subreg.sub_vsx1
+    %15:vsrprc = INSERT_SUBREG %16, %14, %subreg.sub_vsx1
     %17:vsrc = COPY %12.sub_vsx0
-    %18:vsrprc = INSERT_SUBREG %15, killed %17, %subreg.sub_vsx0
-    STXVP killed %18, 32, %5 :: (store (s256) into %ir.ptr + 32)
+    %18:vsrprc = INSERT_SUBREG %15, %17, %subreg.sub_vsx0
+    STXVP %18, 32, %5 :: (store (s256) into %ir.ptr + 32)
     %19:vsrprc = COPY %12.sub_pair1
     %20:vsrc = COPY %19.sub_vsx1
     %22:vsrprc = IMPLICIT_DEF
-    %21:vsrprc = INSERT_SUBREG %22, killed %20, %subreg.sub_vsx1
+    %21:vsrprc = INSERT_SUBREG %22, %20, %subreg.sub_vsx1
     %23:vsrc = COPY %19.sub_vsx0
-    %24:vsrprc = INSERT_SUBREG %21, killed %23, %subreg.sub_vsx0
-    STXVP killed %24, 0, %5 :: (store (s256) into %ir.ptr, align 64)
+    %24:vsrprc = INSERT_SUBREG %21, %23, %subreg.sub_vsx0
+    STXVP %24, 0, %5 :: (store (s256) into %ir.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -354,8 +354,8 @@ body:             |
     %3:vrrc = COPY $v2
     %2:g8rc = COPY $x3
     %6:gprc = COPY %2.sub_32
-    %7:crrc = CMPLWI killed %6, 0
-    BCC 68, killed %7, %bb.1
+    %7:crrc = CMPLWI %6, 0
+    BCC 68, %7, %bb.1
 
   bb.3:
     successors: %bb.2(0x80000000)
@@ -384,17 +384,17 @@ body:             |
     %12:accrc = XXMFACC %13
     %14:vsrc = COPY %12.sub_vsx1
     %16:vsrprc = IMPLICIT_DEF
-    %15:vsrprc = INSERT_SUBREG %16, killed %14, %subreg.sub_vsx1
+    %15:vsrprc = INSERT_SUBREG %16, %14, %subreg.sub_vsx1
     %17:vsrc = COPY %12.sub_vsx0
-    %18:vsrprc = INSERT_SUBREG %15, killed %17, %subreg.sub_vsx0
-    STXVP killed %18, 32, %4 :: (store (s256) into %ir.ptr + 32)
+    %18:vsrprc = INSERT_SUBREG %15, %17, %subreg.sub_vsx0
+    STXVP %18, 32, %4 :: (store (s256) into %ir.ptr + 32)
     %19:vsrprc = COPY %12.sub_pair1
     %20:vsrc = COPY %19.sub_vsx1
     %22:vsrprc = IMPLICIT_DEF
-    %21:vsrprc = INSERT_SUBREG %22, killed %20, %subreg.sub_vsx1
+    %21:vsrprc = INSERT_SUBREG %22, %20, %subreg.sub_vsx1
     %23:vsrc = COPY %19.sub_vsx0
-    %24:vsrprc = INSERT_SUBREG %21, killed %23, %subreg.sub_vsx0
-    STXVP killed %24, 0, %4 :: (store (s256) into %ir.ptr, align 64)
+    %24:vsrprc = INSERT_SUBREG %21, %23, %subreg.sub_vsx0
+    STXVP %24, 0, %4 :: (store (s256) into %ir.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
 ...
@@ -503,7 +503,7 @@ body:             |
     %7:g8rc = COPY $x3
     %10:gprc_and_gprc_nor0 = COPY %7.sub_32
     %12:crrc = CMPWI %10, 1
-    BCC 4, killed %12, %bb.1
+    BCC 4, %12, %bb.1
 
   bb.8:
     successors: %bb.6(0x80000000)
@@ -517,20 +517,20 @@ body:             |
     %14:gprc = ADDI %10, -1
     %0:gprc_and_gprc_nor0 = RLWINM %10, 0, 29, 31
     %13:uaccrc = IMPLICIT_DEF
-    %15:crrc = CMPLWI killed %14, 7
-    BCC 12, killed %15, %bb.3
+    %15:crrc = CMPLWI %14, 7
+    BCC 12, %15, %bb.3
     B %bb.2
 
   bb.2.for.body.preheader.new:
     successors: %bb.7(0x80000000)
 
     %17:gprc_and_gprc_nor0 = RLWINM %10, 0, 0, 28
-    %18:gprc = ADDI killed %17, -8
+    %18:gprc = ADDI %17, -8
     %20:g8rc = IMPLICIT_DEF
-    %19:g8rc = INSERT_SUBREG %20, killed %18, %subreg.sub_32
+    %19:g8rc = INSERT_SUBREG %20, %18, %subreg.sub_32
     %21:g8rc_and_g8rc_nox0 = RLWINM8 %19, 29, 3, 31
-    %22:g8rc = nuw nsw ADDI8 killed %21, 1
-    MTCTR8loop killed %22, implicit-def dead $ctr8
+    %22:g8rc = nuw nsw ADDI8 %21, 1
+    MTCTR8loop %22, implicit-def dead $ctr8
     %16:uaccrc = IMPLICIT_DEF
     B %bb.7
 
@@ -539,7 +539,7 @@ body:             |
 
     %1:uaccrc = PHI %13, %bb.1, %6, %bb.7
     %33:crrc = CMPLWI %0, 0
-    BCC 76, killed %33, %bb.6
+    BCC 76, %33, %bb.6
     B %bb.4
 
   bb.4.for.body.epil.preheader:
@@ -547,10 +547,10 @@ body:             |
 
     %34:gprc = nsw ADDI %0, -1
     %36:g8rc = IMPLICIT_DEF
-    %35:g8rc = INSERT_SUBREG %36, killed %34, %subreg.sub_32
-    %37:g8rc_and_g8rc_nox0 = RLDICL killed %35, 0, 32
-    %38:g8rc = nuw nsw ADDI8 killed %37, 1
-    MTCTR8loop killed %38, implicit-def dead $ctr8
+    %35:g8rc = INSERT_SUBREG %36, %34, %subreg.sub_32
+    %37:g8rc_and_g8rc_nox0 = RLDICL %35, 0, 32
+    %38:g8rc = nuw nsw ADDI8 %37, 1
+    MTCTR8loop %38, implicit-def dead $ctr8
 
   bb.5.for.body.epil:
     successors: %bb.5(0x7c000000), %bb.6(0x04000000)
@@ -576,17 +576,17 @@ body:             |
     %42:accrc = XXMFACC %43
     %44:vsrc = COPY %42.sub_vsx1
     %46:vsrprc = IMPLICIT_DEF
-    %45:vsrprc = INSERT_SUBREG %46, killed %44, %subreg.sub_vsx1
+    %45:vsrprc = INSERT_SUBREG %46, %44, %subreg.sub_vsx1
     %47:vsrc = COPY %42.sub_vsx0
-    %48:vsrprc = INSERT_SUBREG %45, killed %47, %subreg.sub_vsx0
-    STXVP killed %48, 96, %9 :: (store (s256) into %ir.add.ptr + 32)
+    %48:vsrprc = INSERT_SUBREG %45, %47, %subreg.sub_vsx0
+    STXVP %48, 96, %9 :: (store (s256) into %ir.add.ptr + 32)
     %49:vsrprc = COPY %42.sub_pair1
     %50:vsrc = COPY %49.sub_vsx1
     %52:vsrprc = IMPLICIT_DEF
-    %51:vsrprc = INSERT_SUBREG %52, killed %50, %subreg.sub_vsx1
+    %51:vsrprc = INSERT_SUBREG %52, %50, %subreg.sub_vsx1
     %53:vsrc = COPY %49.sub_vsx0
-    %54:vsrprc = INSERT_SUBREG %51, killed %53, %subreg.sub_vsx0
-    STXVP killed %54, 64, %9 :: (store (s256) into %ir.add.ptr, align 64)
+    %54:vsrprc = INSERT_SUBREG %51, %53, %subreg.sub_vsx0
+    STXVP %54, 64, %9 :: (store (s256) into %ir.add.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
   bb.7.for.body:
@@ -714,7 +714,7 @@ body:             |
     %7:g8rc = COPY $x3
     %10:gprc_and_gprc_nor0 = COPY %7.sub_32
     %12:crrc = CMPWI %10, 1
-    BCC 4, killed %12, %bb.1
+    BCC 4, %12, %bb.1
 
   bb.8:
     successors: %bb.6(0x80000000)
@@ -729,19 +729,19 @@ body:             |
     %0:gprc_and_gprc_nor0 = RLWINM %10, 0, 29, 31
     %13:uaccrc = IMPLICIT_DEF
     %15:crrc = CMPLWI %14, 7
-    BCC 12, killed %15, %bb.3
+    BCC 12, %15, %bb.3
     B %bb.2
 
   bb.2.for.body.preheader.new:
     successors: %bb.7(0x80000000)
 
     %17:gprc_and_gprc_nor0 = RLWINM %10, 0, 0, 28
-    %18:gprc = ADDI killed %17, -8
+    %18:gprc = ADDI %17, -8
     %20:g8rc = IMPLICIT_DEF
-    %19:g8rc = INSERT_SUBREG %20, killed %18, %subreg.sub_32
+    %19:g8rc = INSERT_SUBREG %20, %18, %subreg.sub_32
     %21:g8rc_and_g8rc_nox0 = RLWINM8 %19, 29, 3, 31
-    %22:g8rc = nuw nsw ADDI8 killed %21, 1
-    MTCTR8loop killed %22, implicit-def dead $ctr8
+    %22:g8rc = nuw nsw ADDI8 %21, 1
+    MTCTR8loop %22, implicit-def dead $ctr8
     %16:uaccrc = IMPLICIT_DEF
     B %bb.7
 
@@ -756,7 +756,7 @@ body:             |
     ; CHECK-NEXT: %33:crrc
     %1:uaccrc = PHI %13, %bb.1, %6, %bb.7, %2, %bb.5
     %33:crrc = CMPLWI %0, 0
-    BCC 76, killed %33, %bb.6
+    BCC 76, %33, %bb.6
     B %bb.4
 
   bb.4.for.body.epil.preheader:
@@ -764,10 +764,10 @@ body:             |
 
     %34:gprc = nsw ADDI %0, -1
     %36:g8rc = IMPLICIT_DEF
-    %35:g8rc = INSERT_SUBREG %36, killed %34, %subreg.sub_32
-    %37:g8rc_and_g8rc_nox0 = RLDICL killed %35, 0, 32
-    %38:g8rc = nuw nsw ADDI8 killed %37, 1
-    MTCTR8loop killed %38, implicit-def dead $ctr8
+    %35:g8rc = INSERT_SUBREG %36, %34, %subreg.sub_32
+    %37:g8rc_and_g8rc_nox0 = RLDICL %35, 0, 32
+    %38:g8rc = nuw nsw ADDI8 %37, 1
+    MTCTR8loop %38, implicit-def dead $ctr8
     B %bb.5
 
   bb.5.for.body.epil:
@@ -785,7 +785,7 @@ body:             |
     %40:accrc = XVF32GERPP %41, %39, %39
     %3:uaccrc = COPY %40
     %55:crrc = CMPLWI %14, 7
-    BCC 12, killed %55, %bb.5
+    BCC 12, %55, %bb.5
     B %bb.3
 
   bb.6.for.cond.cleanup:
@@ -794,17 +794,17 @@ body:             |
     %42:accrc = XXMFACC %43
     %44:vsrc = COPY %42.sub_vsx1
     %46:vsrprc = IMPLICIT_DEF
-    %45:vsrprc = INSERT_SUBREG %46, killed %44, %subreg.sub_vsx1
+    %45:vsrprc = INSERT_SUBREG %46, %44, %subreg.sub_vsx1
     %47:vsrc = COPY %42.sub_vsx0
-    %48:vsrprc = INSERT_SUBREG %45, killed %47, %subreg.sub_vsx0
-    STXVP killed %48, 96, %9 :: (store (s256) into %ir.add.ptr + 32)
+    %48:vsrprc = INSERT_SUBREG %45, %47, %subreg.sub_vsx0
+    STXVP %48, 96, %9 :: (store (s256) into %ir.add.ptr + 32)
     %49:vsrprc = COPY %42.sub_pair1
     %50:vsrc = COPY %49.sub_vsx1
     %52:vsrprc = IMPLICIT_DEF
-    %51:vsrprc = INSERT_SUBREG %52, killed %50, %subreg.sub_vsx1
+    %51:vsrprc = INSERT_SUBREG %52, %50, %subreg.sub_vsx1
     %53:vsrc = COPY %49.sub_vsx0
-    %54:vsrprc = INSERT_SUBREG %51, killed %53, %subreg.sub_vsx0
-    STXVP killed %54, 64, %9 :: (store (s256) into %ir.add.ptr, align 64)
+    %54:vsrprc = INSERT_SUBREG %51, %53, %subreg.sub_vsx0
+    STXVP %54, 64, %9 :: (store (s256) into %ir.add.ptr, align 64)
     BLR8 implicit $lr8, implicit $rm
 
   bb.7.for.body:

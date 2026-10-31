@@ -1274,6 +1274,11 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   VPValue *A, *B;
 
+  // icmp Pred X, X -> true if Pred is true when equal, false otherwise.
+  CmpPredicate Pred;
+  if (match(Def, m_ICmp(Pred, m_VPValue(A), m_Deferred(A))))
+    return ICmpInst::isTrueWhenEqual(Pred) ? Plan.getTrue() : Plan.getFalse();
+
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return A;
 
@@ -1737,8 +1742,8 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def,
     auto *Phi = cast<VPPhi>(X);
     // If Phi has a second user (besides IVInc's defining recipe), it must be
     // Inc = Phi + Y for the fold to apply.
-    auto *Inc = dyn_cast_if_present<VPSingleDefRecipe>(
-        findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+    auto *Inc = findSingleUser<VPSingleDefRecipe>(
+        Phi, m_Add(m_Specific(Phi), m_Specific(Y)));
     if ((Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) &&
         isAvailableAtEndOf(Y, Phi->getIncomingBlock(0))) {
       Def->replaceAllUsesWith(IVInc);
@@ -2394,6 +2399,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
       if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
         return false;
+    // Whether to expand in IR is left out and handled by cse.
     if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
       if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
         return false;
@@ -2451,6 +2457,13 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
         }
         // Keep only metadata common to both loads on the survivor.
         cast<VPIRMetadata>(V)->intersect(*cast<VPIRMetadata>(Def));
+      }
+      // Only expansions in IR can replace expansions in IR.
+      auto *DefExp = dyn_cast<VPExpandSCEVRecipe>(Def);
+      if (DefExp && DefExp->expandInIR() &&
+          !cast<VPExpandSCEVRecipe>(V)->expandInIR()) {
+        It->second = Def;
+        continue;
       }
       // Only keep flags present on both V and Def.
       if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
@@ -4396,7 +4409,6 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
 static bool
 canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable,
              DenseMap<VPValue *, SmallVector<VPValue *>> &FirstMembersOf) {
-  SmallVector<VPValue *> Ops0;
   auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
     return false;
@@ -4766,7 +4778,7 @@ void VPlanTransforms::adjustFirstOrderRecurrenceMiddleUsers(VPlan &Plan,
     // createHeaderPhiRecipes. All uses of FOR have already been replaced with
     // RecurSplice there; only RecurSplice itself still references FOR.
     auto *RecurSplice =
-        findUserOf<VPInstruction::FirstOrderRecurrenceSplice>(&FOR);
+        findSingleUser<VPInstruction::FirstOrderRecurrenceSplice>(&FOR);
     assert(RecurSplice && "expected FirstOrderRecurrenceSplice");
 
     // For VF vscale x 1, if vscale = 1, we are unable to extract the
@@ -5381,9 +5393,9 @@ static void transformToPartialReduction(const PartialReductionDescriptor &Link,
       Link.Blend ? cast<VPValue>(Link.Blend) : cast<VPValue>(WidenRecipe);
 
   VPValue *Cond = nullptr;
-  VPValue *ExitValue = cast_or_null<VPInstruction>(
-      findUserOf(ExitSearch, m_Select(m_VPValue(Cond), m_Specific(ExitSearch),
-                                      m_Specific(RdxPhi))));
+  VPValue *ExitValue = findSingleUser<VPInstruction>(
+      ExitSearch,
+      m_Select(m_VPValue(Cond), m_Specific(ExitSearch), m_Specific(RdxPhi)));
 
   if (Link.Blend) {
     std::optional<unsigned> BlendReductionIdx =

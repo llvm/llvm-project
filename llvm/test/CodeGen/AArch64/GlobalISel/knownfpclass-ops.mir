@@ -672,6 +672,28 @@ body:             |
     %copy:_(f32) = COPY %fmul
 ...
 ---
+# G_FCANONICALIZE turns sNaN into qNaN. Here we are testing to make sure that
+# both the LHS and RHS are demanded/queried to rule out sNaN.
+name:            FMulNoSNaN
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FMulNoSNaN
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %rhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lhs_no_snan:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %rhs_no_snan:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %fmul:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %lhs_no_snan:_(f32) = G_FCANONICALIZE %lhs
+    %rhs_no_snan:_(f32) = G_FCANONICALIZE %rhs
+    %fmul:_(f32) = G_FMUL %lhs_no_snan, %rhs_no_snan
+    %copy:_(f32) = COPY %fmul
+...
+---
 name:            FLog
 body:             |
   bb.0:
@@ -1018,6 +1040,28 @@ body:             |
     %lhs:_(f32) = G_FCONSTANT float 1.0
     %rhs:_(f32) = G_FCONSTANT float 0.0
     %fdiv:_(f32) = G_FDIV %lhs, %rhs
+    %copy:_(f32) = COPY %fdiv
+...
+---
+# G_FCANONICALIZE turns sNaN into qNaN. Here we are testing to make sure that
+# both the LHS and RHS are demanded/queried to rule out sNaN.
+name:            FDivNoSNaN
+body:             |
+  bb.0:
+  ; CHECK-LABEL: name: @FDivNoSNaN
+  ; CHECK-NEXT: %ptr:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %rhs:_ FPClasses:(all) SignBitKnown:?
+  ; CHECK-NEXT: %lhs_no_snan:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %rhs_no_snan:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %fdiv:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+  ; CHECK-NEXT: %copy:_ FPClasses:(qnan inf zero sub norm) SignBitKnown:?
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %lhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %rhs:_(f32) = G_LOAD %ptr(p0) :: (load (f32))
+    %lhs_no_snan:_(f32) = G_FCANONICALIZE %lhs
+    %rhs_no_snan:_(f32) = G_FCANONICALIZE %rhs
+    %fdiv:_(f32) = G_FDIV %lhs_no_snan, %rhs_no_snan
     %copy:_(f32) = COPY %fdiv
 ...
 ---

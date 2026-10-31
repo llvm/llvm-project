@@ -13,7 +13,6 @@ add_libc_test(
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -31,7 +30,6 @@ add_libc_test(
     libc.src.fcntl.open
     libc.src.unistd.close
     libc.src.fcntl.fcntl
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
     libc.hdr.types.DIR

@@ -62,3 +62,86 @@ loop:
 exit:
   ret void
 }
+
+; The hoisted check that the outer loop stride %n is non-negative and the inner
+; trip count both expand %n.
+define void @hoisted_stride_check_and_trip_count_expand_same_scev(ptr %dst, ptr %src, ptr %n.ptr, i64 %m) {
+; CHECK-LABEL: VPlan for loop in 'hoisted_stride_check_and_trip_count_expand_same_scev'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF={1}' {
+; CHECK-NEXT:  vp<[[VP1:%[0-9]+]]> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<outer.header>:
+; CHECK-NEXT:    IR   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+; CHECK-NEXT:    IR   %row = mul i64 %outer.iv, %n
+; CHECK-NEXT:    EMIT vp<[[VP1]]> = EXPAND SCEV %n (in IR)
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = EXPAND SCEV (4 * %n) (in IR)
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV ((%m * %n) + %src) (in IR)
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV ((4 * %m * %n) + %dst) (in IR)
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = EXPAND SCEV %n
+; CHECK-NEXT:    EMIT vp<%min.iters.check> = icmp ult vp<[[VP1]]>, ir<2>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.memcheck
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.memcheck:
+; CHECK-NEXT:    EMIT vp<%bound0> = icmp ult ir<%dst>, vp<[[VP3]]>
+; CHECK-NEXT:    EMIT vp<%bound1> = icmp ult ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:    EMIT vp<%found.conflict> = and vp<%bound0>, vp<%bound1>
+; CHECK-NEXT:    EMIT vp<%stride.check> = icmp slt vp<[[VP2]]>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = or vp<%found.conflict>, vp<%stride.check>
+; CHECK-NEXT:    EMIT vp<%stride.check>.1 = icmp slt vp<[[VP1]]>, ir<0>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = or vp<[[VP7]]>, vp<%stride.check>.1
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP8]]>
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.main.loop.iter.check
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.main.loop.iter.check:
+; CHECK-NEXT:    EMIT vp<%min.iters.check>.1 = icmp ult vp<[[VP1]]>, ir<4>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%min.iters.check>.1
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<%n.mod.vf> = urem vp<[[VP1]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<%n.vec> = sub vp<[[VP1]]>, vp<%n.mod.vf>
+; CHECK-NEXT:  Successor(s): vector.body
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.body:
+; CHECK-NEXT:    EMIT-SCALAR vp<%index> = phi [ ir<0>, vector.ph ], [ vp<%index.next>, vector.body ]
+; CHECK-NEXT:    CLONE ir<%idx> = add ir<%row>, vp<%index>
+; CHECK-NEXT:    CLONE ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
+; CHECK-NEXT:    WIDEN ir<%l> = load ir<%gep.src> (!alias.scope !11)
+; CHECK-NEXT:    WIDEN-CAST ir<%ext> = zext ir<%l> to i32
+; CHECK-NEXT:    CLONE ir<%gep.dst> = getelementptr ir<%dst>, ir<%idx>
+; CHECK-NEXT:    WIDEN store ir<%gep.dst>, ir<%ext> (!alias.scope !12, !noalias !11)
+; CHECK-NEXT:    EMIT vp<%index.next> = add nuw vp<%index>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%n.vec>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP11]]>
+; CHECK-NEXT:  Successor(s): middle.block, vector.body
+;
+entry:
+  %n = load i64, ptr %n.ptr
+  br label %outer.header
+
+outer.header:
+  %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
+  %row = mul i64 %outer.iv, %n
+  br label %inner
+
+inner:
+  %inner.iv = phi i64 [ 0, %outer.header ], [ %inner.iv.next, %inner ]
+  %idx = add i64 %row, %inner.iv
+  %gep.src = getelementptr i8, ptr %src, i64 %idx
+  %l = load i8, ptr %gep.src
+  %ext = zext i8 %l to i32
+  %gep.dst = getelementptr i32, ptr %dst, i64 %idx
+  store i32 %ext, ptr %gep.dst
+  %inner.iv.next = add i64 %inner.iv, 1
+  %inner.ec = icmp eq i64 %inner.iv.next, %n
+  br i1 %inner.ec, label %outer.latch, label %inner
+
+outer.latch:
+  %outer.iv.next = add i64 %outer.iv, 1
+  %outer.ec = icmp eq i64 %outer.iv.next, %m
+  br i1 %outer.ec, label %exit, label %outer.header
+
+exit:
+  ret void
+}

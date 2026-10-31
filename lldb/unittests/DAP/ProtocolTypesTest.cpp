@@ -1326,6 +1326,23 @@ TEST(ProtocolTypesTest, StackFrame) {
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
 
+  frame.languageSpecificData = json::Object{{"Objective-C runtime version", 2}};
+  expected_frame = parse(R"({
+    "id": 1,
+    "name": "test",
+    "source": {
+      "name": "test.cpp",
+      "sourceReference": 23
+    },
+    "line": 10,
+    "column": 1,
+    "$__lldb_languageSpecificData": {"Objective-C runtime version": 2},
+    "presentationHint": "normal"
+  })");
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+  frame.languageSpecificData.reset();
+
   frame.id = 2;
   frame.canRestart = true;
   frame.source = std::nullopt;

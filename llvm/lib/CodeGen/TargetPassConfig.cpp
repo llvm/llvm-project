@@ -1350,9 +1350,6 @@ void TargetPassConfig::addOptimizedRegAlloc() {
     addPass(&SSAMachineSchedulerID);
   }
 
-  // LiveIntervals is computed unconditionally before TwoAddressInstruction so
-  // that pass can rely on it instead of LiveVariables. This is a step toward
-  // removing LiveVariables entirely.
   addPass(&LiveIntervalsID);
 
   // Edge splitting is smarter with machine loop info.
