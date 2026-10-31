@@ -622,8 +622,22 @@ static Value *foldLogOpOfMaskedICmps(Value *LHS, Value *RHS, bool IsAnd,
         return LHS;
       if (NewMask == *ConstD) {
         if (IsLogical) {
-          if (auto *RHSI = dyn_cast<Instruction>(RHS))
+          if (auto *RHSI = dyn_cast<Instruction>(RHS)) {
+            // The RHS constants were checked with poison lanes filled in
+            // but select is replaced with the original RHS, which includes
+            // poison lanes. This was originally gated by the LHS of the select,
+            // so we exit if the RHS has such constants.
+            auto HasPoison = [](Value *V) {
+              auto *C = dyn_cast<Constant>(V);
+              return C && C->containsPoisonElement();
+            };
+            Value *Mask;
+            if (any_of(RHSI->operands(), HasPoison) ||
+                (match(RHSI->getOperand(0), m_And(m_Value(), m_Value(Mask))) &&
+                 HasPoison(Mask)))
+              return nullptr;
             RHSI->dropPoisonGeneratingFlags();
+          }
         }
         return RHS;
       }
