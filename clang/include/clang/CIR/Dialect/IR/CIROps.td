@@ -5930,6 +5930,9 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
     order: output, input and then in/out operands. When several output operands
     are present, the result type may be represented as an anonymous record type.
 
+    The `convergent` attribute marks asm that may contain convergent
+    operations, so it must not be moved across divergent control flow.
+
     Example:
     ```C++
     __asm__("foo" : : : );
@@ -5972,13 +5975,13 @@ def CIR_InlineAsmOp : CIR_Op<"asm",
   let arguments =
       (ins VariadicOfVariadic<AnyType, "operands_segments">:$asm_operands,
           StrAttr:$asm_string, StrAttr:$constraints, UnitAttr:$side_effects,
-          CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
+          UnitAttr:$convergent, CIR_AsmFlavorAttr:$asm_flavor, ArrayAttr:$operand_attrs,
           DenseI32ArrayAttr:$operands_segments);
 
   let builders = [OpBuilder<(ins
       "llvm::ArrayRef<mlir::ValueRange>":$asmOperands,
       "llvm::StringRef":$asmString, "llvm::StringRef":$constraints,
-      "bool":$sideEffects, "AsmFlavor":$asmFlavor,
+      "bool":$sideEffects, "bool":$convergent, "AsmFlavor":$asmFlavor,
       "llvm::ArrayRef<mlir::Attribute>":$operandAttrs)>];
 
   let hasCustomAssemblyFormat = 1;
