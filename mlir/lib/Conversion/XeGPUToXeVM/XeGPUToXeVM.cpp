@@ -738,6 +738,19 @@ class LoadStorePrefetchNdToXeVMPattern : public OpConversionPattern<OpType> {
               baseShapeH, basePitchBytes, offsetW, offsetH, elemBitSize, tileW,
               tileH, vblocks, transpose, vnni,
               xevm::LoadCacheControlAttr::get(ctxt, loadCacheControl));
+          // A transposed block taller than the subgroup gives each lane
+          // several source rows, which the HW interleaves column by column.
+          // Reorder them row by row, as the lane-level value expects.
+          int64_t numLoaded = loadedTy.getNumElements();
+          if (transpose && numLoaded > tileW && numLoaded % tileW == 0) {
+            int64_t rowsPerLane = numLoaded / tileW;
+            SmallVector<int64_t> rowMajor;
+            for (int64_t r = 0; r < rowsPerLane; ++r)
+              for (int64_t c = 0; c < tileW; ++c)
+                rowMajor.push_back(c * rowsPerLane + r);
+            resultFlatVec = vector::ShuffleOp::create(
+                rewriter, loc, resultFlatVec, resultFlatVec, rowMajor);
+          }
           resultFlatVec = vector::BitCastOp::create(
               rewriter, loc,
               encodeVectorTypeTo(loadedTy, dstVecTy.getElementType()),

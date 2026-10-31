@@ -43,4 +43,21 @@ gpu.module @load_check {
         vector.store %loaded, %dstte[%c0, %c0] : memref<16x16xf16>, vector<16xf16>
         gpu.return
     }
+
+    // Each lane gets two source rows interleaved by the HW; they are reordered
+    // row by row.
+    // CHECK-LABEL: gpu.func @load_nd_transpose_32_rows(
+    gpu.func @load_nd_transpose_32_rows(%src: memref<32x8xi32, 1>, %dst: memref<16xi32, 1>) kernel {
+        %srcce = memref.memory_space_cast %src : memref<32x8xi32, 1> to memref<32x8xi32>
+        %src_tdesc = xegpu.create_nd_tdesc %srcce : memref<32x8xi32> -> !xegpu.tensor_desc<32x8xi32>
+        // CHECK: %[[LD:.*]] = xevm.blockload2d
+        // CHECK-SAME: tile_height = 32 : i32, tile_width = 8 : i32, transpose = true
+        // CHECK-SAME: -> vector<16xi32>
+        // CHECK: vector.shuffle %[[LD]], %[[LD]] [0, 2, 4, 6, 8, 10, 12, 14, 1, 3, 5, 7, 9, 11, 13, 15] : vector<16xi32>, vector<16xi32>
+        %loaded = xegpu.load_nd %src_tdesc[0, 0] <{transpose = array<i64: 1, 0>}> : !xegpu.tensor_desc<32x8xi32> -> vector<16xi32>
+        %dstte = memref.memory_space_cast %dst : memref<16xi32, 1> to memref<16xi32>
+        %c0 = arith.constant 0 : index
+        vector.store %loaded, %dstte[%c0] : memref<16xi32>, vector<16xi32>
+        gpu.return
+    }
 }
