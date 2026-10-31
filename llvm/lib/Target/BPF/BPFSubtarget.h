@@ -66,6 +66,15 @@ protected:
   // whether we allows misaligned memory access
   bool AllowsMisalignedMemAccess;
 
+  // whether pointers that can be addresses in arena are cast to access it
+  bool HasArenaCast;
+
+  // whether locals are in arena
+  bool HasArenaStack;
+
+  // whether global data is in arena
+  bool HasArenaData;
+
   // whether cpu v4 insns are enabled.
   bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm,
       HasLoadAcqStoreRel, HasGotox;
@@ -96,6 +105,9 @@ public:
   bool getAllowsMisalignedMemAccess() const {
     return AllowsMisalignedMemAccess;
   }
+  bool hasArenaCast() const { return HasArenaCast; }
+  bool hasArenaStack() const { return HasArenaStack; }
+  bool hasArenaData() const { return HasArenaData; }
   bool hasLdsx() const { return HasLdsx; }
   bool hasMovsx() const { return HasMovsx; }
   bool hasBswap() const { return HasBswap; }

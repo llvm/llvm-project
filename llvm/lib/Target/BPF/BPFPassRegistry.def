@@ -16,6 +16,9 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("bpf-arena-cast", BPFArenaCastPass())
+MODULE_PASS("bpf-arena-data", BPFArenaDataPass())
+MODULE_PASS("bpf-arena-kptr", BPFArenaKptrPass())
 MODULE_PASS("bpf-asm-printer-begin", BPFAsmPrinterBeginPass())
 MODULE_PASS("bpf-asm-printer-end", BPFAsmPrinterEndPass())
 MODULE_PASS("bpf-check-and-opt-ir", BPFCheckAndAdjustIRPass())
@@ -24,6 +27,7 @@ MODULE_PASS("bpf-check-and-opt-ir", BPFCheckAndAdjustIRPass())
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("bpf-arena-stack", BPFArenaStackPass())
 FUNCTION_PASS("bpf-aspace-simplify", BPFASpaceCastSimplifyPass())
 FUNCTION_PASS("bpf-ir-peephole", BPFIRPeepholePass())
 #undef FUNCTION_PASS

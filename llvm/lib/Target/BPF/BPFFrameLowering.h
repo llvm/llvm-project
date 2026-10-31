@@ -38,6 +38,13 @@ public:
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
 
+  bool isSupportedStackID(TargetStackID::Value ID) const override {
+    return ID == TargetStackID::Default || ID == TargetStackID::BPFArena;
+  }
+
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };

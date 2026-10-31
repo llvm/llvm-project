@@ -358,6 +358,19 @@ void BPFTargetLowering::ReplaceNodeResults(
   fail(DL, DAG, Msg);
 }
 
+/// Locals that BPFArenaStack.cpp picked are objects of the stack in arena.
+void BPFTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  for (int FI = 0, E = MFI.getObjectIndexEnd(); FI != E; ++FI) {
+    const AllocaInst *AI = MFI.getObjectAllocation(FI);
+
+    if (AI && AI->hasMetadata(BPFArenaStackMD))
+      MFI.setStackID(FI, TargetStackID::BPFArena);
+  }
+  TargetLowering::finalizeLowering(MF);
+}
+
 SDValue BPFTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   default:

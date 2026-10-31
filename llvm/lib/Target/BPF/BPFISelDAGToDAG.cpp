@@ -72,6 +72,7 @@ private:
   // Node preprocessing cases
   void PreprocessLoad(SDNode *Node, SelectionDAG::allnodes_iterator &I);
   void PreprocessTrunc(SDNode *Node, SelectionDAG::allnodes_iterator &I);
+  void PreprocessArenaAddr(SDNode *Node);
 
   // Find constants from a constant structure
   typedef std::vector<unsigned char> val_vec_type;
@@ -334,6 +335,57 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
   CurDAG->DeleteNode(Node);
 }
 
+/// The address is made of the address of a local in the stack in arena.
+static bool isArenaLocal(SDValue V, const MachineFrameInfo &MFI,
+                         unsigned Depth = 0) {
+  if (Depth > 6)
+    return false;
+  switch (V.getOpcode()) {
+  case ISD::FrameIndex: {
+    // finalizeLowering() has not set the id of the stack yet.
+    const AllocaInst *AI =
+        MFI.getObjectAllocation(cast<FrameIndexSDNode>(V)->getIndex());
+    return AI && AI->hasMetadata(BPFArenaStackMD);
+  }
+  case ISD::ADD:
+  case ISD::OR:
+    return isArenaLocal(V.getOperand(0), MFI, Depth + 1);
+  case ISD::SELECT:
+    return isArenaLocal(V.getOperand(1), MFI, Depth + 1) ||
+           isArenaLocal(V.getOperand(2), MFI, Depth + 1);
+  case ISD::SELECT_CC:
+    return isArenaLocal(V.getOperand(2), MFI, Depth + 1) ||
+           isArenaLocal(V.getOperand(3), MFI, Depth + 1);
+  case BPFISD::SELECT_CC:
+    return isArenaLocal(V.getOperand(3), MFI, Depth + 1) ||
+           isArenaLocal(V.getOperand(4), MFI, Depth + 1);
+  }
+  return false;
+}
+
+/// A local in the stack in arena is accessed at r12 plus a constant. Its
+/// address in a register is a number that has to be cast. BPFArenaCast takes
+/// care of that, but the combiner makes such addresses too:
+///   select c, (load a), (load b) -> load (select c, a, b)
+void BPFDAGToDAGISel::PreprocessArenaAddr(SDNode *Node) {
+  auto *LS = cast<LSBaseSDNode>(Node);
+  SDValue Base = LS->getBasePtr();
+
+  if (LS->getAddressSpace() != 0)
+    return;
+  if (CurDAG->isBaseWithConstantOffset(Base))
+    Base = Base.getOperand(0);
+  if (Base.getOpcode() == ISD::FrameIndex ||
+      !isArenaLocal(Base, MF->getFrameInfo()))
+    return;
+
+  SDValue Cast =
+      CurDAG->getAddrSpaceCast(SDLoc(Node), MVT::i64, LS->getBasePtr(), 1, 0);
+  SmallVector<SDValue, 4> Ops(Node->op_values());
+  Ops[isa<LoadSDNode>(Node) ? 1 : 2] = Cast;
+  CurDAG->UpdateNodeOperands(Node, Ops);
+}
+
 void BPFDAGToDAGISel::PreprocessISelDAG() {
   // Iterate through all nodes, interested in the following case:
   //
@@ -347,6 +399,8 @@ void BPFDAGToDAGISel::PreprocessISelDAG() {
        I != E;) {
     SDNode *Node = &*I++;
     unsigned Opcode = Node->getOpcode();
+    if (Opcode == ISD::LOAD || Opcode == ISD::STORE)
+      PreprocessArenaAddr(Node);
     if (Opcode == ISD::LOAD)
       PreprocessLoad(Node, I);
     else if (Opcode == ISD::AND)

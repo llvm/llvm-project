@@ -34,6 +34,17 @@ def MisalignedMemAccess : SubtargetFeature<"allows-misaligned-mem-access",
                                            "AllowsMisalignedMemAccess", "true",
                                            "Allows misaligned memory access">;
 
+def ArenaCast : SubtargetFeature<"arena-cast", "HasArenaCast", "true",
+                                 "Cast pointers to access arena">;
+
+def ArenaData : SubtargetFeature<"arena-data", "HasArenaData", "true",
+                                 "Keep global data in arena",
+                                 [ArenaCast]>;
+
+def ArenaStack : SubtargetFeature<"arena-stack", "HasArenaStack", "true",
+                                  "Keep locals in arena",
+                                  [ArenaCast]>;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;

@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=bpfel -mcpu=v4 -run-pass=prolog-epilog -o - %s | FileCheck %s
+
+# An object of the stack in arena is at an offset from r12, and the frame there
+# is made by the first insn. The other object is at an offset from r10.
+
+# CHECK-LABEL: name: f
+# CHECK:       stack-id: bpf-arena
+# CHECK:       $r12 = ADD_ri $r12, 16
+# CHECK-NEXT:  STD $r1, $r12, -8
+# CHECK-NEXT:  STD $r1, $r10, -8
+---
+name:            f
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 8, alignment: 8, stack-id: bpf-arena }
+  - { id: 1, size: 8, alignment: 8 }
+body:             |
+  bb.0:
+    liveins: $r1
+
+    STD $r1, %stack.0, 0
+    STD $r1, %stack.1, 0
+    RET
+...
