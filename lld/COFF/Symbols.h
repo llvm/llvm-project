@@ -342,6 +342,10 @@ class Undefined : public Symbol {
 public:
   explicit Undefined(StringRef n) : Symbol(UndefinedKind, n) {}
 
+  // The first bitcode input that supplied this COFF weak-external alias.
+  // LTO needs one prevailing copy to materialize the alias.
+  InputFile *ltoWeakAliasOwner = nullptr;
+
   static bool classof(const Symbol *s) { return s->kind() == UndefinedKind; }
 
   // An undefined symbol can have a fallback symbol which gives an

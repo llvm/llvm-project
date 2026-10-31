@@ -190,7 +190,14 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // flags an undefined in IR with a definition in ASM as prevailing.
     // Once IRObjectFile is fixed to report only one symbol this hack can
     // be removed.
-    r.Prevailing = !objSym.isUndefined() && sym->getFile() == &f;
+    // COFF represents an IR weak alias as a weak external. LLD models it as
+    // an Undefined to resolve its fallback, but LTO must materialize the copy
+    // supplied by the recorded bitcode owner.
+    bool isOwningWeakAlias = objSym.isWeak() && objSym.isIndirect() &&
+                             isa<Undefined>(sym) &&
+                             cast<Undefined>(sym)->ltoWeakAliasOwner == &f;
+    r.Prevailing =
+        !objSym.isUndefined() && (sym->getFile() == &f || isOwningWeakAlias);
     r.VisibleToRegularObj = sym->isUsedInRegularObj;
     if (r.Prevailing)
       undefine(sym);
