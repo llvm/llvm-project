@@ -8,6 +8,7 @@
 
 #include "NVPTXTargetTransformInfo.h"
 #include "NVVMProperties.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -17,7 +18,9 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
@@ -469,8 +472,90 @@ static Instruction *foldAbsIntoRedux(InstCombiner &IC, IntrinsicInst &II) {
   return IC.replaceOperand(II, 0, Abs->getArgOperand(0));
 }
 
+static Instruction *foldIntegerExp2(InstCombiner &IC, IntrinsicInst &II) {
+  Intrinsic::ID IID = II.getIntrinsicID();
+  if ((IID != Intrinsic::nvvm_ex2_approx &&
+       IID != Intrinsic::nvvm_ex2_approx_ftz) ||
+      !II.getType()->isFloatTy() || II.isStrictFP())
+    return nullptr;
+
+  Value *Arg = II.getArgOperand(0);
+  APInt Offset(32, 0);
+  bool HasFPOffset = false;
+
+  if (auto *Add = dyn_cast<BinaryOperator>(Arg)) {
+    if (Add->getOpcode() == Instruction::FAdd) {
+      auto *C = dyn_cast<ConstantFP>(Add->getOperand(1));
+      if (!C)
+        return nullptr;
+
+      APSInt IntOffset(32, /*isUnsigned=*/false);
+      bool Exact = false;
+      auto Status = C->getValueAPF().convertToInteger(
+          IntOffset, APFloat::rmTowardZero, &Exact);
+      if ((Status & APFloat::opInvalidOp) || !Exact)
+        return nullptr;
+
+      Arg = Add->getOperand(0);
+      Offset = IntOffset;
+      HasFPOffset = true;
+    }
+  }
+
+  auto *Cast = dyn_cast<CastInst>(Arg);
+  if (!Cast || (!isa<SIToFPInst>(Cast) && !isa<UIToFPInst>(Cast)))
+    return nullptr;
+
+  Value *Int = Cast->getOperand(0);
+  if (!Int->getType()->isIntegerTy() ||
+      Int->getType()->getIntegerBitWidth() > 32)
+    return nullptr;
+
+  bool Signed = isa<SIToFPInst>(Cast);
+  const SimplifyQuery &SQ = IC.getSimplifyQuery();
+  ConstantRange Range = computeConstantRangeIncludingKnownBits(Int, Signed, SQ);
+
+  if (auto *Add = dyn_cast<BinaryOperator>(Int)) {
+    if (Add->getOpcode() == Instruction::Add) {
+      if (auto *C = dyn_cast<ConstantInt>(Add->getOperand(1))) {
+        ConstantRange Base = computeConstantRangeIncludingKnownBits(
+            Add->getOperand(0), Signed, SQ);
+        Range = Range.intersectWith(Base.add(ConstantRange(C->getValue())));
+      }
+    }
+  }
+
+  APInt Min =
+      Signed ? Range.getSignedMin().sext(64) : Range.getUnsignedMin().zext(64);
+  APInt Max =
+      Signed ? Range.getSignedMax().sext(64) : Range.getUnsignedMax().zext(64);
+
+  constexpr int64_t MaxExactInteger = 1LL << 24;
+  if (HasFPOffset && (Min.slt(APInt(64, -MaxExactInteger, true)) ||
+                      Max.sgt(APInt(64, MaxExactInteger))))
+    return nullptr;
+
+  Min += Offset.sext(64);
+  Max += Offset.sext(64);
+
+  int MinExponent = IID == Intrinsic::nvvm_ex2_approx_ftz ? -127 : -126;
+  if (Min.slt(APInt(64, MinExponent, true)) || Max.sgt(APInt(64, 128)))
+    return nullptr;
+
+  Value *Exponent =
+      IC.Builder.CreateIntCast(Int, IC.Builder.getInt32Ty(), Signed);
+  Value *Biased = IC.Builder.CreateAdd(
+      Exponent, ConstantInt::get(II.getContext(), Offset + 127));
+  Value *Bits = IC.Builder.CreateShl(Biased, IC.Builder.getInt32(23));
+
+  return IC.replaceInstUsesWith(II,
+                                IC.Builder.CreateBitCast(Bits, II.getType()));
+}
+
 std::optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
+  if (Instruction *I = foldIntegerExp2(IC, II))
+    return I;
   if (std::optional<Instruction *> I = handleSpaceCheckIntrinsics(IC, II))
     return *I;
   if (Instruction *I = convertNvvmIntrinsicToLlvm(IC, &II))
