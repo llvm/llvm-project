@@ -545,3 +545,59 @@ void named_in_decl_unnamed_in_def(int&) {
   // If the parameter is unnamed in the definition, it will not be reported, even
   // if it is named in some declaration.
 }
+
+// Adding 'const' to the pointee or reference would change the function type,
+// which breaks code that uses the function as a value.
+void destroy(Bar* const p) { delete p; }
+void (*destroy_ptr)(Bar*) = &destroy;
+
+void take_callback(void (*)(Bar*));
+
+void decayed_to_pointer(Bar* b) {
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: variable 'b' of type 'Bar *' can be declared 'const'
+  // CHECK-FIXES: void decayed_to_pointer(Bar* const b) {
+  b->const_method();
+}
+
+void use_decayed_to_pointer() {
+  take_callback(decayed_to_pointer);
+}
+
+void bound_to_reference(Bar& b) {
+  b.const_method();
+}
+void (&bound_ref)(Bar&) = bound_to_reference;
+
+void template_argument(Bar& b) {
+  b.const_method();
+}
+template <void (*)(Bar&)> struct TakesFunction {};
+TakesFunction<&template_argument> takes_function;
+
+void address_taken_before_definition(Bar& b);
+void (*early_ptr)(Bar&) = &address_taken_before_definition;
+void address_taken_before_definition(Bar& b) {
+  b.const_method();
+}
+
+void only_called(Bar& b) {
+  // CHECK-MESSAGES: [[@LINE-1]]:18: warning: variable 'b' of type 'Bar &' can be declared 'const'
+  // CHECK-FIXES: void only_called(Bar const& b) {
+  b.const_method();
+}
+
+void call_only_called(Bar& b) {
+  only_called(b);
+  (only_called)(b);
+}
+
+Bar operator+(Bar& l, Bar& r) {
+  // CHECK-MESSAGES: [[@LINE-1]]:15: warning: variable 'l' of type 'Bar &' can be declared 'const'
+  // CHECK-MESSAGES: [[@LINE-2]]:23: warning: variable 'r' of type 'Bar &' can be declared 'const'
+  // CHECK-FIXES: Bar operator+(Bar const& l, Bar const& r) {
+  return l;
+}
+
+void call_operator(Bar& l, Bar& r) {
+  l + r;
+}

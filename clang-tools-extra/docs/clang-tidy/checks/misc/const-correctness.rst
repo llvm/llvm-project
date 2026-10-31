@@ -123,7 +123,11 @@ Options
   Enable or disable the analysis of function parameters, like
   ``void foo(int* ptr)``. Only reference and pointer parameters are analyzed.
   Unnamed parameters, parameters of ``main``, member functions (including
-  constructors) and lambdas are excluded from the analysis. Default is `true`.
+  constructors) and lambdas are excluded from the analysis. If a function is
+  used other than by calling it, e.g. its address is taken, ``const`` is not
+  suggested for the pointee or reference of its parameters, as that would
+  change the function type. Only uses in the current translation unit are
+  seen. Default is `true`.
 
   .. code-block:: c++
 
