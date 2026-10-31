@@ -460,7 +460,9 @@ struct _BinaryOp {
   _A1 __a1_;
 
   _LIBCPP_HIDE_FROM_ABI _BinaryOp(const _Op& __op, const _A0& __a0, const _A1& __a1)
-      : __op_(__op), __a0_(__a0), __a1_(__a1) {}
+      : __op_(__op), __a0_(__a0), __a1_(__a1) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__a0.size() == __a1.size(), "valarray binary operation size mismatch");
+  }
 
   _LIBCPP_HIDE_FROM_ABI __result_type operator[](size_t __i) const { return __op_(__a0_[__i], __a1_[__i]); }
 
@@ -766,6 +768,9 @@ struct __is_val_expr<indirect_array<_Tp> > : true_type {};
 //   __get(size_t)
 // else it uses the __val_expr's member function
 //   operator[](size_t)
+//
+// The non-member function __get_size(__val_expr) likewise uses either the
+// member function __get_size() or size().
 template <class _ValExpr>
 struct __val_expr_use_member_functions;
 
@@ -979,6 +984,18 @@ _LIBCPP_HIDE_FROM_ABI typename _Expr::value_type __get(const _Expr& __v, size_t 
   return __v[__i];
 }
 
+template <class _Expr,
+          __enable_if_t<__is_val_expr<_Expr>::value && __val_expr_use_member_functions<_Expr>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI size_t __get_size(const _Expr& __v) {
+  return __v.__get_size();
+}
+
+template <class _Expr,
+          __enable_if_t<__is_val_expr<_Expr>::value && !__val_expr_use_member_functions<_Expr>::value, int> = 0>
+_LIBCPP_HIDE_FROM_ABI size_t __get_size(const _Expr& __v) {
+  return __v.size();
+}
+
 extern template _LIBCPP_EXPORTED_FROM_ABI void valarray<size_t>::resize(size_t, size_t);
 
 template <class _Op, class _Tp>
@@ -1006,7 +1023,9 @@ struct _BinaryOp<_Op, valarray<_Tp>, _A1> {
   _A1 __a1_;
 
   _LIBCPP_HIDE_FROM_ABI _BinaryOp(const _Op& __op, const valarray<_Tp>& __a0, const _A1& __a1)
-      : __op_(__op), __a0_(__a0), __a1_(__a1) {}
+      : __op_(__op), __a0_(__a0), __a1_(__a1) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__a0.size() == __a1.size(), "valarray binary operation size mismatch");
+  }
 
   _LIBCPP_HIDE_FROM_ABI __result_type operator[](size_t __i) const { return __op_(__a0_[__i], __a1_[__i]); }
 
@@ -1023,7 +1042,9 @@ struct _BinaryOp<_Op, _A0, valarray<_Tp> > {
   const valarray<_Tp>& __a1_;
 
   _LIBCPP_HIDE_FROM_ABI _BinaryOp(const _Op& __op, const _A0& __a0, const valarray<_Tp>& __a1)
-      : __op_(__op), __a0_(__a0), __a1_(__a1) {}
+      : __op_(__op), __a0_(__a0), __a1_(__a1) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__a0.size() == __a1.size(), "valarray binary operation size mismatch");
+  }
 
   _LIBCPP_HIDE_FROM_ABI __result_type operator[](size_t __i) const { return __op_(__a0_[__i], __a1_[__i]); }
 
@@ -1040,7 +1061,9 @@ struct _BinaryOp<_Op, valarray<_Tp>, valarray<_Tp> > {
   const valarray<_Tp>& __a1_;
 
   _LIBCPP_HIDE_FROM_ABI _BinaryOp(const _Op& __op, const valarray<_Tp>& __a0, const valarray<_Tp>& __a1)
-      : __op_(__op), __a0_(__a0), __a1_(__a1) {}
+      : __op_(__op), __a0_(__a0), __a1_(__a1) {
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__a0.size() == __a1.size(), "valarray binary operation size mismatch");
+  }
 
   _LIBCPP_HIDE_FROM_ABI __result_type operator[](size_t __i) const { return __op_(__a0_[__i], __a1_[__i]); }
 
@@ -1107,6 +1130,8 @@ public:
     return __vp_[__i * __stride_];
   }
 
+  _LIBCPP_HIDE_FROM_ABI size_t __get_size() const { return __size_; }
+
 private:
   _LIBCPP_HIDE_FROM_ABI slice_array(const slice& __sl, const valarray<value_type>& __v)
       : __vp_(const_cast<value_type*>(__v.__begin_ + __sl.start())), __size_(__sl.size()), __stride_(__sl.stride()) {}
@@ -1117,6 +1142,7 @@ private:
 
 template <class _Tp>
 inline const slice_array<_Tp>& slice_array<_Tp>::operator=(const slice_array& __sa) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__sa.__size_ == __size_, "slice_array::operator= size mismatch");
   value_type* __t       = __vp_;
   const value_type* __s = __sa.__vp_;
   for (size_t __n = __size_; __n; --__n, __t += __stride_, __s += __sa.__stride_)
@@ -1134,6 +1160,7 @@ inline void slice_array<_Tp>::operator=(const _Expr& __v) const {
 
 template <class _Tp>
 inline void slice_array<_Tp>::operator=(const valarray<value_type>& __va) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__va.size() == __size_, "slice_array::operator= size mismatch");
   value_type* __t = __vp_;
   for (size_t __i = 0; __i < __va.size(); ++__i, __t += __stride_)
     *__t = __va[__i];
@@ -1334,6 +1361,8 @@ public:
     return __vp_[__1d_[__i]];
   }
 
+  _LIBCPP_HIDE_FROM_ABI size_t __get_size() const { return __1d_.size(); }
+
 private:
   gslice_array(const gslice& __gs, const valarray<value_type>& __v)
       : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(__gs.__1d_) {}
@@ -1448,6 +1477,7 @@ inline void gslice_array<_Tp>::operator>>=(const _Expr& __v) const {
 
 template <class _Tp>
 inline const gslice_array<_Tp>& gslice_array<_Tp>::operator=(const gslice_array& __ga) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ga.__1d_.size() == __1d_.size(), "gslice_array::operator= size mismatch");
   typedef const size_t* _Ip;
   const value_type* __s = __ga.__vp_;
   for (_Ip __i = __1d_.__begin_, __e = __1d_.__end_, __j = __ga.__1d_.__begin_; __i != __e; ++__i, ++__j)
@@ -1518,6 +1548,8 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < __1d_.size(), "mask_array.__get() index out of bounds");
     return __vp_[__1d_[__i]];
   }
+
+  _LIBCPP_HIDE_FROM_ABI size_t __get_size() const { return __1d_.size(); }
 
 private:
   _LIBCPP_HIDE_FROM_ABI mask_array(const valarray<bool>& __vb, const valarray<value_type>& __v)
@@ -1724,6 +1756,8 @@ public:
     return __vp_[__1d_[__i]];
   }
 
+  _LIBCPP_HIDE_FROM_ABI size_t __get_size() const { return __1d_.size(); }
+
 private:
   _LIBCPP_HIDE_FROM_ABI indirect_array(const valarray<size_t>& __ia, const valarray<value_type>& __v)
       : __vp_(const_cast<value_type*>(__v.__begin_)), __1d_(__ia) {}
@@ -1829,6 +1863,7 @@ inline void indirect_array<_Tp>::operator>>=(const _Expr& __v) const {
 
 template <class _Tp>
 inline const indirect_array<_Tp>& indirect_array<_Tp>::operator=(const indirect_array& __ia) const {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ia.__1d_.size() == __1d_.size(), "indirect_array::operator= size mismatch");
   typedef const size_t* _Ip;
   const value_type* __s = __ia.__vp_;
   for (_Ip __i = __1d_.__begin_, __e = __1d_.__end_, __j = __ia.__1d_.__begin_; __i != __e; ++__i, ++__j)
@@ -2168,6 +2203,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator=(const value_type& __x) {
 
 template <class _Tp>
 inline valarray<_Tp>& valarray<_Tp>::operator=(const slice_array<value_type>& __sa) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__sa.__size_ == size(), "valarray::operator=(slice_array) size mismatch");
   value_type* __t       = __begin_;
   const value_type* __s = __sa.__vp_;
   for (size_t __n = __sa.__size_; __n; --__n, __s += __sa.__stride_, ++__t)
@@ -2177,6 +2213,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator=(const slice_array<value_type>& __
 
 template <class _Tp>
 inline valarray<_Tp>& valarray<_Tp>::operator=(const gslice_array<value_type>& __ga) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ga.__1d_.size() == size(), "valarray::operator=(gslice_array) size mismatch");
   typedef const size_t* _Ip;
   value_type* __t       = __begin_;
   const value_type* __s = __ga.__vp_;
@@ -2187,6 +2224,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator=(const gslice_array<value_type>& _
 
 template <class _Tp>
 inline valarray<_Tp>& valarray<_Tp>::operator=(const mask_array<value_type>& __ma) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ma.__1d_.size() == size(), "valarray::operator=(mask_array) size mismatch");
   typedef const size_t* _Ip;
   value_type* __t       = __begin_;
   const value_type* __s = __ma.__vp_;
@@ -2197,6 +2235,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator=(const mask_array<value_type>& __m
 
 template <class _Tp>
 inline valarray<_Tp>& valarray<_Tp>::operator=(const indirect_array<value_type>& __ia) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__ia.__1d_.size() == size(), "valarray::operator=(indirect_array) size mismatch");
   typedef const size_t* _Ip;
   value_type* __t       = __begin_;
   const value_type* __s = __ia.__vp_;
@@ -2397,6 +2436,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator>>=(const value_type& __x) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator*=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator*= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t *= std::__get(__v, __i);
@@ -2406,6 +2446,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator*=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator/=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator/= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t /= std::__get(__v, __i);
@@ -2415,6 +2456,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator/=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator%=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator%= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t %= std::__get(__v, __i);
@@ -2424,6 +2466,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator%=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator+=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator+= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t += std::__get(__v, __i);
@@ -2433,6 +2476,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator+=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator-=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator-= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t -= std::__get(__v, __i);
@@ -2442,6 +2486,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator-=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator^=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator^= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t ^= std::__get(__v, __i);
@@ -2451,6 +2496,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator^=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator|=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator|= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t |= std::__get(__v, __i);
@@ -2460,6 +2506,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator|=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator&=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator&= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t &= std::__get(__v, __i);
@@ -2469,6 +2516,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator&=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator<<=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator<<= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t <<= std::__get(__v, __i);
@@ -2478,6 +2526,7 @@ inline valarray<_Tp>& valarray<_Tp>::operator<<=(const _Expr& __v) {
 template <class _Tp>
 template <class _Expr, __enable_if_t<__is_val_expr<_Expr>::value, int> >
 inline valarray<_Tp>& valarray<_Tp>::operator>>=(const _Expr& __v) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(size() == std::__get_size(__v), "valarray::operator>>= size mismatch");
   size_t __i = 0;
   for (value_type* __t = __begin_; __t != __end_; ++__t, ++__i)
     *__t >>= std::__get(__v, __i);
