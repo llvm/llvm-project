@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H
 
 #include "AMDGPUArgumentUsageInfo.h"
+#include "AMDGPUIGroupLP.h"
 #include "AMDGPUMachineFunctionInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -629,6 +630,10 @@ private:
 private:
   Register VGPRForAGPRCopy;
 
+  // The IGLP analysis of each scheduling region with an IGLP_OPT, keyed by
+  // that IGLP_OPT. It is computed pre-RA and reused post-RA.
+  DenseMap<const MachineInstr *, AMDGPU::IGLPPreRAAnalysis> IGLPAnalyses;
+
   bool allocateVirtualVGPRForSGPRSpills(MachineFunction &MF, int FI,
                                         unsigned LaneIndex);
   bool allocatePhysicalVGPRForSGPRSpills(MachineFunction &MF, int FI,
@@ -642,6 +647,16 @@ public:
 
   void setVGPRForAGPRCopy(Register NewVGPRForAGPRCopy) {
     VGPRForAGPRCopy = NewVGPRForAGPRCopy;
+  }
+
+  AMDGPU::IGLPPreRAAnalysis
+  getIGLPPreRAAnalysis(const MachineInstr &IGLPOpt) const {
+    return IGLPAnalyses.lookup(&IGLPOpt);
+  }
+
+  void setIGLPPreRAAnalysis(const MachineInstr &IGLPOpt,
+                            const AMDGPU::IGLPPreRAAnalysis &Analysis) {
+    IGLPAnalyses[&IGLPOpt] = Analysis;
   }
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
