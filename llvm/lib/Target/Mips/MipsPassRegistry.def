@@ -16,7 +16,7 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("mips-16-hard-float", Mips16HardFloatPass(*this))
+MODULE_PASS("mips-mips16-hard-float", Mips16HardFloatPass(*this))
 MODULE_PASS("mips-os16", MipsOs16Pass())
 #undef MODULE_PASS
 
@@ -25,7 +25,7 @@ MODULE_PASS("mips-os16", MipsOs16Pass())
 #endif
 MACHINE_FUNCTION_PASS("mips-16-isel", Mips16ISelDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("mips-expand-pseudo", MipsExpandPseudoPass())
-MACHINE_FUNCTION_PASS("mips-micro-size-reduce", MipsMicroSizeReducePass())
+MACHINE_FUNCTION_PASS("mips-micromips-size-reduce", MicroMipsSizeReducePass())
 MACHINE_FUNCTION_PASS("mips-optimize-pic-call", MipsOptimizePICCallPass())
 MACHINE_FUNCTION_PASS("mips-se-isel", MipsSEISelDAGPass(*this, getOptLevel()))
 #undef MACHINE_FUNCTION_PASS

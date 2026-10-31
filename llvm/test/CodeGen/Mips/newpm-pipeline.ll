@@ -30,7 +30,7 @@
 ; MIPS-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-NEXT:   expand-reductions
 ; MIPS-NEXT:   atomic-expand
-; MIPS-NEXT: mips-16-hard-float
+; MIPS-NEXT: mips-mips16-hard-float
 ; MIPS-NEXT: function
 ; MIPS-NEXT:   codegenprepare
 ; MIPS-NEXT:   sjlj-eh-prepare
@@ -87,7 +87,7 @@
 ; MIPS-NEXT:     xray-instrumentation
 ; MIPS-NEXT:     patchable-function
 ; MIPS-NEXT:     mips-expand-pseudo
-; MIPS-NEXT:     mips-micro-size-reduce
+; MIPS-NEXT:     mips-micromips-size-reduce
 ; MIPS-NEXT:     funclet-layout
 ; MIPS-NEXT:     remove-loads-into-fake-uses
 ; MIPS-NEXT:     StackMapLivenessPass
@@ -123,7 +123,7 @@
 ; MIPS-OS16-NEXT:   expand-reductions
 ; MIPS-OS16-NEXT:   atomic-expand
 ; MIPS-OS16-NEXT: mips-os16
-; MIPS-OS16-NEXT: mips-16-hard-float
+; MIPS-OS16-NEXT: mips-mips16-hard-float
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   codegenprepare
 ; MIPS-OS16-NEXT:   sjlj-eh-prepare
@@ -180,7 +180,7 @@
 ; MIPS-OS16-NEXT:     xray-instrumentation
 ; MIPS-OS16-NEXT:     patchable-function
 ; MIPS-OS16-NEXT:     mips-expand-pseudo
-; MIPS-OS16-NEXT:     mips-micro-size-reduce
+; MIPS-OS16-NEXT:     mips-micromips-size-reduce
 ; MIPS-OS16-NEXT:     funclet-layout
 ; MIPS-OS16-NEXT:     remove-loads-into-fake-uses
 ; MIPS-OS16-NEXT:     StackMapLivenessPass
@@ -215,7 +215,7 @@
 ; MIPS-MFIX4300-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-MFIX4300-NEXT:   expand-reductions
 ; MIPS-MFIX4300-NEXT:   atomic-expand
-; MIPS-MFIX4300-NEXT: mips-16-hard-float
+; MIPS-MFIX4300-NEXT: mips-mips16-hard-float
 ; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   codegenprepare
 ; MIPS-MFIX4300-NEXT:   sjlj-eh-prepare
@@ -272,7 +272,7 @@
 ; MIPS-MFIX4300-NEXT:     xray-instrumentation
 ; MIPS-MFIX4300-NEXT:     patchable-function
 ; MIPS-MFIX4300-NEXT:     mips-expand-pseudo
-; MIPS-MFIX4300-NEXT:     mips-micro-size-reduce
+; MIPS-MFIX4300-NEXT:     mips-micromips-size-reduce
 ; MIPS-MFIX4300-NEXT:     funclet-layout
 ; MIPS-MFIX4300-NEXT:     remove-loads-into-fake-uses
 ; MIPS-MFIX4300-NEXT:     StackMapLivenessPass

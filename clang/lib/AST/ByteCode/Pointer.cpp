@@ -814,7 +814,7 @@ void PtrView::initialize() const {
 
   const Descriptor *Desc = getFieldDesc();
   assert(Desc);
-  if (Desc->isPrimitiveArray()) {
+  if (Offset != Base && Desc->isPrimitiveArray()) {
     if (Desc->getNumElems() != 0)
       initializeElement(getIndex());
     return;

@@ -67,6 +67,9 @@ LIBC_CONFIGURE_FULL_BUILD_OPTIONS = [
     # Documentation in libc/src/__support/libc_errno.h
     "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_THREAD_LOCAL",
 
+    # Provide GNU-compatible aliases (e.g. __errno_location).
+    "LIBC_COPT_PROVIDE_GNU_ALIASES",
+
     # Defined for targets which support threads.
     "LIBC_COPT_SUPPORT_THREADS",
 ]

@@ -5524,10 +5524,10 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         assert(OtherAI != &AI && "We can't re-split our own alloca!");
         ResplitPromotableAllocas.insert(OtherAI);
         Worklist.insert(OtherAI);
-      } else if (AllocaInst *OtherAI = dyn_cast<AllocaInst>(
+      } else if (AllocaInst *StrippedAI = dyn_cast<AllocaInst>(
                      LoadBasePtr->stripInBoundsOffsets())) {
-        assert(OtherAI != &AI && "We can't re-split our own alloca!");
-        Worklist.insert(OtherAI);
+        assert(StrippedAI != &AI && "We can't re-split our own alloca!");
+        Worklist.insert(StrippedAI);
       }
     }
 

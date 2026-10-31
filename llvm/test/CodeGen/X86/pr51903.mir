@@ -66,7 +66,7 @@ body:             |
   ; CHECK: bb.1.for.body:
   ; CHECK:   successors: %bb.1(0x80000000)
   ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @a, $noreg :: (load (s64) from got)
-  ; CHECK:   [[MOVSX64rm32_:%[0-9]+]]:gr64 = MOVSX64rm32 killed [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @a)
+  ; CHECK:   [[MOVSX64rm32_:%[0-9]+]]:gr64 = MOVSX64rm32 [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @a)
   ; CHECK:   [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; CHECK:   OR64mr [[DEF]], 1, $noreg, 0, $noreg, [[MOVSX64rm32_]], implicit-def $eflags :: (store (s64) into `ptr undef`), (load (s64) from `ptr undef`)
   ; CHECK:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
@@ -87,7 +87,7 @@ body:             |
 
   bb.1.for.body:
     %7:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @a, $noreg :: (load (s64) from got)
-    %8:gr64 = MOVSX64rm32 killed %7, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @a)
+    %8:gr64 = MOVSX64rm32 %7, 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @a)
     %9:gr64 = IMPLICIT_DEF
     OR64mr %9, 1, $noreg, 0, $noreg, %8, implicit-def $eflags :: (store (s64) into `ptr undef`), (load (s64) from `ptr undef`)
     %10:gr64 = COPY $eflags
@@ -96,7 +96,7 @@ body:             |
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
     $eflags = COPY %10
     %11:gr8 = SETCCr 4, implicit $eflags
-    %4:gr32 = MOVZX32rr8 killed %11
+    %4:gr32 = MOVZX32rr8 %11
     %12:gr64 = IMPLICIT_DEF
     SETCCm %12, 1, $noreg, 0, $noreg, 4, implicit $eflags :: (store (s8) into `ptr undef`)
     %5:gr32 = IMPLICIT_DEF

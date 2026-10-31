@@ -30,6 +30,7 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "TemplateArgumentLoc"},
     {NKI_None, "LambdaCapture"},
     {NKI_None, "TemplateName"},
+    {NKI_None, "NestedNameSpecifier"},
     {NKI_None, "NestedNameSpecifierLoc"},
     {NKI_None, "QualType"},
 #define TYPELOC(CLASS, PARENT) {NKI_##PARENT, #CLASS "TypeLoc"},
@@ -37,7 +38,6 @@ const ASTNodeKind::KindInfo ASTNodeKind::AllKindInfo[] = {
     {NKI_None, "TypeLoc"},
     {NKI_None, "CXXBaseSpecifier"},
     {NKI_None, "CXXCtorInitializer"},
-    {NKI_None, "NestedNameSpecifier"},
     {NKI_None, "Decl"},
 #define DECL(DERIVED, BASE) { NKI_##BASE, #DERIVED "Decl" },
 #include "clang/AST/DeclNodes.inc"

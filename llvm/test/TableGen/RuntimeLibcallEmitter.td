@@ -122,6 +122,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  Bool,
 // CHECK-NEXT:  Dbl,
 // CHECK-NEXT:  Ellip,
+// CHECK-NEXT:  FP128,
 // CHECK-NEXT:  Floating,
 // CHECK-NEXT:  Flt,
 // CHECK-NEXT:  Int,
@@ -141,6 +142,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  NXV4F32,
 // CHECK-NEXT:  NXV4I1,
 // CHECK-NEXT:  NXV4I32,
+// CHECK-NEXT:  PPCFP128,
 // CHECK-NEXT:  Ptr,
 // CHECK-NEXT:  SSizeT,
 // CHECK-NEXT:  Same,
@@ -166,6 +168,7 @@ def BlahLibrary : SystemRuntimeLibrary<isBlahArch, ["libc"]>;
 // CHECK-NEXT:  V16F32,
 // CHECK-NEXT:  V16I32,
 // CHECK-NEXT:  Void,
+// CHECK-NEXT:  X86FP80,
 // CHECK-NEXT:};
 // CHECK-EMPTY:
 // CHECK-NEXT: enum class RuntimeLibrary : unsigned char {
