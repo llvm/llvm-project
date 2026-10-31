@@ -254,22 +254,17 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTopFromRTTI(
   if (!ts)
     return std::nullopt;
 
-  llvm::Expected<uint64_t> int_size =
-      ts->GetBasicTypeFromAST(lldb::eBasicTypeInt).GetByteSize(nullptr);
-  if (!int_size) {
-    LLDB_LOG_ERROR(log, int_size.takeError(),
-                   "Failed to get size of int from AST: {0}");
-    return std::nullopt;
-  }
+  // On all supported platforms running the MS ABI, `int` is four bytes.
+  constexpr uint32_t int_size = 4;
 
   // See MSRTTIBuilder::getCompleteObjectLocator in Clang for the layout.
   // We're interested in the offset which is the second int in the struct.
   Address offset_from_top_addr = rtti_locator_base_addr;
-  offset_from_top_addr.Slide(*int_size);
+  offset_from_top_addr.Slide(int_size);
 
   error.Clear();
   const int64_t offset_from_top = target.ReadSignedIntegerFromMemory(
-      offset_from_top_addr, *int_size, INT64_MIN, error);
+      offset_from_top_addr, int_size, INT64_MIN, error);
   if (offset_from_top == INT64_MIN || error.Fail()) {
     LLDB_LOG_ERROR(log, error.takeError(),
                    "Failed to read 'offset from top' from RTTI complete object "
