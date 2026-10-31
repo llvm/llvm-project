@@ -262,8 +262,8 @@ foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>] in {
   def NEG_#IntTy.Suffix : RuntimeLibcall<IntTy.Type, [IntTy.Type]>;
 }
 
-foreach IntTy = [TypeSuffix<"I32", Int32>, TypeSuffix<"I64", Int64>,
-                 TypeSuffix<"I128", Int128>] in {
+foreach IntTy = [TypeSuffix<"I32", UInt32>, TypeSuffix<"I64", UInt64>,
+                 TypeSuffix<"I128", UInt128>] in {
   def CTLZ_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
   def CTPOP_#IntTy.Suffix : RuntimeLibcall<Int, [IntTy.Type]>;
 }
