@@ -149,12 +149,12 @@ define dso_local void @test_fetch_sub_64_noret(ptr nocapture noundef %i) local_u
 ; CHECK-NEXT:    r3 = r2
 ; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r3
 ; CHECK-NEXT:    r3 = r2
-; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
+; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r3
 ; CHECK-NEXT:    r3 = r2
-; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
+; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r3
 ; CHECK-NEXT:    r3 = r2
-; CHECK-NEXT:    r3 = atomic_fetch_add((u64 *)(r1 + 0), r3)
-; CHECK-NEXT:    r2 = atomic_fetch_add((u64 *)(r1 + 0), r2)
+; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r3
+; CHECK-NEXT:    lock *(u64 *)(r1 + 0) += r2
 ; CHECK-NEXT:    exit
 entry:
   %0 = atomicrmw sub ptr %i, i64 10 monotonic, align 8

@@ -1116,6 +1116,15 @@ let Predicates = [BPFHasALU32] in {
   }
 }
 
+// No atomic fetch on non-ALU32 CPUs (kernels < 5.12):
+// lower an unused-result sub of any memory ordering to plain
+// XADDD rather than the ALU32-only XFADDD.
+def atomic_load_sub_i64_nu : binop_no_use<atomic_load_sub_i64>;
+let Predicates = [BPFNoALU32], AddedComplexity = 1 in {
+  def : Pat<(atomic_load_sub_i64_nu ADDRri:$addr, GPR:$val),
+            (XADDD ADDRri:$addr, (NEG_64 GPR:$val))>;
+}
+
 foreach P = [[atomic_load_sub_i64_monotonic_nu, XADDD],
              [atomic_load_sub_i64_monotonic_hu, XFADDD],
              [atomic_load_sub_i64_acquire,   XFADDD],
