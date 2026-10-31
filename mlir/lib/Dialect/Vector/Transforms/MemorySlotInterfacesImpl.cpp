@@ -9,8 +9,8 @@
 // This file implements memory slot interface models for
 // `vector.transfer_read` and `vector.transfer_write`. These models implement
 // `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
-// and definitions of a vector SSA value. The models for `memref.subview`
-// live in the MemRef dialect.
+// and definitions of a vector SSA value. The models for `memref.copy` and
+// `memref.subview` live in the MemRef dialect.
 //
 // A read uses the slot's current value; a write defines its next value.
 // Static subviews use a vector matching the subview's shape: reads extract that
