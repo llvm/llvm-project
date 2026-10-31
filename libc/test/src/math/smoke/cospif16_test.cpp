@@ -21,7 +21,7 @@ TEST_F(LlvmLibcCospif16Test, SpecialNumbers) {
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::cospif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospif16(zero));
+  EXPECT_FP_EQ_WITH_EXCEPTION(1.0f16, LIBC_NAMESPACE::cospif16(zero), 0);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospif16(neg_zero));
@@ -32,6 +32,9 @@ TEST_F(LlvmLibcCospif16Test, SpecialNumbers) {
 
   EXPECT_FP_IS_NAN(LIBC_NAMESPACE::cospif16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(-1.0f16, LIBC_NAMESPACE::cospif16(1.0f16), 0);
+  EXPECT_MATH_ERRNO(0);
 }
 
 TEST_F(LlvmLibcCospif16Test, Integers) {
