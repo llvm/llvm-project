@@ -5673,7 +5673,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Query whether the target wants loops it vectorizes to remain eligible for
   // runtime unrolling. Do this here, on the original loop and before its SCEV
   // is forgotten below.
-  TargetTransformInfo::UnrollingPreferences UP;
+  TargetTransformInfo::UnrollingPreferences UP{};
   TTI.getUnrollingPreferences(OrigLoop, SE, UP, ORE);
   bool UnrollVectorizedLoop = UP.UnrollVectorizedLoop;
 
