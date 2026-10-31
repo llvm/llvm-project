@@ -387,9 +387,15 @@ Value *AA::getWithType(Value &V, Type &Ty) {
       return ConstantExpr::getPointerCast(C, &Ty);
     if (C->getType()->getPrimitiveSizeInBits() >= Ty.getPrimitiveSizeInBits()) {
       if (C->getType()->isIntegerTy() && Ty.isIntegerTy())
-        return ConstantExpr::getTrunc(C, &Ty, /* OnlyIfReduced */ true);
-      if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy())
+        return ConstantExpr::getTrunc(C, &Ty, true);
+      if (C->getType()->isFloatingPointTy() && Ty.isFloatingPointTy()) {
+        if (C->getType()->getPrimitiveSizeInBits() == Ty.getPrimitiveSizeInBits()) {
+          if (C->getType()->isPPC_FP128Ty() || Ty.isPPC_FP128Ty())
+            return nullptr;
+          return ConstantFoldCastInstruction(Instruction::BitCast, C, &Ty);
+        }
         return ConstantFoldCastInstruction(Instruction::FPTrunc, C, &Ty);
+      } 
     }
   }
   return nullptr;
