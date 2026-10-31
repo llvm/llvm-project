@@ -17,6 +17,7 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/mathvec/expf_utils.h"
 #include "src/mathvec/aarch64/common.h"
+#include "src/mathvec/abi_prefix.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -99,7 +100,7 @@ inline_exp(float64x2_t x, const expf_data &data) {
 }
 
 LLVM_LIBC_FUNCTION(AdvSIMDFP32Vector, expf, (AdvSIMDFP32Vector x),
-                   "_ZGVnN4v_expf") {
+                   LIBC_VFABI_FLOAT_SYMBOL(expf)) {
   const expf_data &data = *PTR_BARRIER(&EXPF_DATA);
 
   // Splits into an upper and lower half for double-precision computation.
