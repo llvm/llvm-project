@@ -986,6 +986,16 @@ add_header_library(
 )
 
 add_header_library(
+  fmaximum_magf80
+  HDRS
+    fmaximum_magf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   fmaximum_magl
   HDRS
     fmaximum_magl.h
@@ -1288,6 +1298,16 @@ add_header_library(
   DEPENDS
     libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  fminimum_magf80
+  HDRS
+    fminimum_magf80.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float80
     libc.src.__support.macros.config
 )
 
