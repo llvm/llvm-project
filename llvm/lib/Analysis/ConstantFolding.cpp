@@ -1567,6 +1567,45 @@ Constant *llvm::FlushFPConstant(Constant *Operand, const Function *CtxF,
   return nullptr;
 }
 
+/// Mimic the precise ExpandIRInsts FRem behaviour for denormal flushing.
+/// This expansion has 3 cases for regular inputs (non-nan, non-zero, non-inf):
+///  1: |X_FTZ| <  |Y_FTZ| --> return un-flushed X
+///  2: |X_FTZ| == |Y_FTZ| --> return 0.0 (with the same sign as X)
+///  3: |X_FTZ| >  |Y_FTZ| --> do the full frem, and flush denormal output
+/// Note that the comparisons all occur on the flushed input, but for the
+/// "small" value case 1, the un-flushed input gets returned.
+static Constant *foldExpandedFRem(Constant *X, Constant *X_FTZ, Constant *Y_FTZ,
+                                  const DataLayout &DL, const Function *F) {
+  Type *Ty = X->getType();
+  auto *Ax = ConstantFoldIntrinsic(Intrinsic::fabs, {X_FTZ}, Ty, DL, F);
+  auto *Ay = ConstantFoldIntrinsic(Intrinsic::fabs, {Y_FTZ}, Ty, DL, F);
+  if (!Ax || !Ay)
+    return nullptr;
+  auto *IsSmall = ConstantFoldCompareInstruction(FCmpInst::FCMP_OLT, Ax, Ay);
+  auto *Rem = ConstantFoldBinaryOpOperands(Instruction::FRem, X_FTZ, Y_FTZ, DL);
+  if (!IsSmall || !Rem)
+    return nullptr;
+  if (auto *Rem_FTZ = FlushFPConstant(Rem, F, /*IsOutput=*/true))
+    return ConstantFoldSelectInstruction(IsSmall, X, Rem_FTZ);
+  return nullptr;
+}
+
+/// Mimic the FRem afn expansion from ExpandIRInsts: fma(-trunc(x / y), y, x).
+static Constant *foldApproxFRem(Constant *X_FTZ, Constant *Y_FTZ,
+                                const DataLayout &DL, const Function *F) {
+  Type *Ty = X_FTZ->getType();
+  // No need to flush intermediate fdiv, as trunc(subnormal) is zero anyway, so
+  // flushing the FMA output is sufficient.
+  if (auto *Div =
+          ConstantFoldBinaryOpOperands(Instruction::FDiv, X_FTZ, Y_FTZ, DL))
+    if (auto *Trunc = ConstantFoldIntrinsic(Intrinsic::trunc, {Div}, Ty, DL, F))
+      if (auto *Neg = ConstantFoldUnaryOpOperand(Instruction::FNeg, Trunc, DL))
+        if (auto *FMA = ConstantFoldIntrinsic(Intrinsic::fma,
+                                              {Neg, Y_FTZ, X_FTZ}, Ty, DL, F))
+          return FlushFPConstant(FMA, F, /*IsOutput=*/true);
+  return nullptr;
+}
+
 Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
                                            Constant *RHS, const DataLayout &DL,
                                            const Instruction *I,
@@ -1590,6 +1629,18 @@ Constant *llvm::ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS,
         if (FP->hasNoSignedZeros() || FP->hasAllowReassoc() ||
             FP->hasAllowContract() || FP->hasAllowReciprocal())
           return nullptr;
+
+    if (Opcode == Instruction::FRem) {
+      const Function *F = I->getFunction();
+      Constant *C;
+      if (isa<UndefValue>(LHS) || isa<UndefValue>(RHS))
+        C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
+      else if (I->hasApproxFunc())
+        C = foldApproxFRem(Op0, Op1, DL, F);
+      else
+        C = foldExpandedFRem(LHS, Op0, Op1, DL, F);
+      return C && (AllowNonDeterministic || !C->isNaN()) ? C : nullptr;
+    }
 
     // Calculate constant result.
     Constant *C = ConstantFoldBinaryOpOperands(Opcode, Op0, Op1, DL);
@@ -4906,6 +4957,9 @@ Constant *llvm::ConstantFoldIntrinsic(Intrinsic::ID ID,
     return nullptr;
   if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
     return ConstantFoldFixedVectorCall("", ID, FVTy, Ops, DL);
+  if (auto *SVTy = dyn_cast<ScalableVectorType>(Ty))
+    return ConstantFoldScalableVectorCall("", ID, SVTy, Ops, DL,
+                                          /*TLI=*/nullptr, /*Call=*/nullptr);
   return ConstantFoldScalarCall("", ID, Ty, Ops);
 }
 
