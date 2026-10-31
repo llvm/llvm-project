@@ -2249,11 +2249,14 @@ bool TargetLowering::SimplifyDemandedBits(
             (!TLO.LegalOperations() || isOperationLegal(ISD::SRL, HalfVT)) &&
             ((InDemandedMask.countLeadingZeros() >= (BitWidth / 2)) ||
              TLO.DAG.MaskedValueIsZero(Op0, HiBits))) {
+          // Truncation preserves the shifted-out bits, so we can keep the exact
+          // flag.
           SDValue NewOp = TLO.DAG.getNode(ISD::TRUNCATE, dl, HalfVT, Op0);
           SDValue NewShiftAmt =
               TLO.DAG.getShiftAmountConstant(ShAmt, HalfVT, dl);
           SDValue NewShift =
-              TLO.DAG.getNode(ISD::SRL, dl, HalfVT, NewOp, NewShiftAmt);
+              TLO.DAG.getNode(ISD::SRL, dl, HalfVT, NewOp, NewShiftAmt,
+                              Op->getFlags() & SDNodeFlags::Exact);
           return TLO.CombineTo(
               Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, NewShift));
         }
