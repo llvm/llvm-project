@@ -1,0 +1,101 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa --passes='print<live-intervals>' -filetype=null %s 2>&1 | FileCheck %s
+
+# Main ranges and subranges both get phi-defs for uses in unreachable
+# blocks, including when partial undef defs make the main range use
+# undefs.
+
+# CHECK: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi  L0000000000000003 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
+# CHECK-LABEL: Machine code for function partial_def_use_in_unreachable:
+---
+name: partial_def_use_in_unreachable
+tracksRegLiveness: true
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    $vgpr0 = COPY %0.sub0
+    SI_RETURN implicit $vgpr0
+
+  bb.2:
+    SI_RETURN
+...
+
+# CHECK: %0 [16r,32r:0)[32r,32d:1)[64B,80r:2) 0@16r 1@32r 2@64B-phi  L0000000000000003 [16r,16d:0)[64B,80r:1) 0@16r 1@64B-phi  L000000000000000C [32r,32d:0)[64B,80r:1) 0@32r 1@64B-phi
+# CHECK-LABEL: Machine code for function partial_defs_full_use_in_unreachable:
+
+---
+name: partial_defs_full_use_in_unreachable
+tracksRegLiveness: true
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 1, implicit $exec
+    %0.sub1:vreg_64 = V_MOV_B32_e32 2, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    $vgpr0_vgpr1 = COPY %0
+    SI_RETURN implicit $vgpr0_vgpr1
+
+  bb.2:
+    SI_RETURN
+...
+
+# CHECK: %0 [16r,48B:0)[48B,80B:1)[80B,96r:2) 0@16r 1@48B-phi 2@80B-phi  L0000000000000003 [16r,48B:0)[48B,80B:1)[80B,96r:2) 0@16r 1@48B-phi 2@80B-phi
+# CHECK-LABEL: Machine code for function partial_def_unreachable_into_use:
+
+---
+name: partial_def_unreachable_into_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    S_BRANCH %bb.2
+
+  bb.2:
+    $vgpr0 = COPY %0.sub0
+    SI_RETURN implicit $vgpr0
+...
+
+# CHECK: %0 [16r,48B:1)[64r,96B:0)[96B,112r:2) 0@64r 1@16r 2@96B-phi  L0000000000000003 [16r,48B:1)[64r,96B:0)[96B,112r:2) 0@64r 1@16r 2@96B-phi
+# CHECK-LABEL: Machine code for function partial_redef_in_unreachable_into_use:
+
+---
+name: partial_redef_in_unreachable_into_use
+tracksRegLiveness: true
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 3, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    $vgpr0 = COPY %0.sub0
+    SI_RETURN implicit $vgpr0
+...
+
+# CHECK: %0 [16r,48B:0)[48B,64r:2)[64r,96B:1)[96B,112r:3) 0@16r 1@64r 2@48B-phi 3@96B-phi  L0000000000000003 [16r,48B:0)[48B,96B:1)[96B,112r:2) 0@16r 1@48B-phi 2@96B-phi  L000000000000000C [64r,96B:0)[96B,112r:1) 0@64r 1@96B-phi
+# CHECK-LABEL: Machine code for function sub1_defined_only_in_unreachable:
+---
+name: sub1_defined_only_in_unreachable
+tracksRegLiveness: true
+body: |
+  bb.0:
+    undef %0.sub0:vreg_64 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.1:
+    %0.sub1:vreg_64 = V_MOV_B32_e32 3, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    $vgpr0_vgpr1 = COPY %0
+    SI_RETURN implicit $vgpr0_vgpr1
+...
