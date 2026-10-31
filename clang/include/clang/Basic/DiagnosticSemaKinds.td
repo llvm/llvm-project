@@ -13862,6 +13862,8 @@ def err_hlsl_rootsignature_entry: Error<
 def err_hlsl_operator_unsupported : Error<
   "the '%select{&|*|->}0' operator is unsupported in HLSL">;
 
+def ext_hlsl_variable_template : ExtWarn<
+  "variable templates are a HLSL 202x extension">, InGroup<HLSL202x>;
 def warn_hlsl_groupshared_202x : Warning<
   "support for groupshared parameter annotation not added until HLSL 202x">,
   InGroup<HLSLAvailability>;

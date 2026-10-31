@@ -8015,8 +8015,11 @@ NamedDecl *Sema::ActOnVariableDeclarator(
           // This is a template declaration.
           IsVariableTemplate = true;
 
-          // Only C++1y supports variable templates (N3651).
-          DiagCompat(D.getIdentifierLoc(), diag_compat::variable_template);
+          // Only C++1y and HLSL 202x support variable templates (N3651).
+          if (!getLangOpts().HLSL)
+            DiagCompat(D.getIdentifierLoc(), diag_compat::variable_template);
+          else if (getLangOpts().getHLSLVersion() < LangOptions::HLSL_202x)
+            Diag(D.getIdentifierLoc(), diag::ext_hlsl_variable_template);
         }
       }
     } else {
