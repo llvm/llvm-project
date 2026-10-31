@@ -46,6 +46,12 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
   MCContext &Ctx = Streamer->getContext();
   const MCExpr *Value = nullptr;
 
+  if (RH.emitsBareSymbol(Type)) {
+    if (Symbol)
+      return MCSymbolRefExpr::create(Symbol, Ctx);
+    return MCConstantExpr::create(0, Ctx);
+  }
+
   if (Symbol && Addend) {
     Value = MCBinaryExpr::createAdd(MCSymbolRefExpr::create(Symbol, Ctx),
                                     MCConstantExpr::create(Addend, Ctx), Ctx);
@@ -71,6 +77,8 @@ const MCExpr *Relocation::createExpr(MCStreamer *Streamer,
   const auto *Value = createExpr(Streamer, RH);
 
   if (RetainedValue) {
+    if (!RH.composesRelocations())
+      return RetainedValue;
     Value = MCBinaryExpr::create(RH.getComposeOpcodeFor(Type), RetainedValue,
                                  Value, Streamer->getContext());
   }
