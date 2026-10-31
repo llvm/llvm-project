@@ -206,6 +206,10 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
     this->MCountName = "\01_mcount";
   else if (Triple.getOS() == llvm::Triple::UnknownOS)
     this->MCountName = Triple.isGNUEnvironment() ? "\01_mcount" : "mcount";
+
+  // This should be compatible with x86-64.
+  if (Triple.isWindowsArm64EC() && !Triple.isWindowsMSVCEnvironment())
+    HasFloat128 = true;
 }
 
 StringRef AArch64TargetInfo::getABI() const { return ABI; }
@@ -449,6 +453,11 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (T.isLFI())
     Builder.defineMacro("__LFI__");
+
+  if (HasFloat128) {
+    Builder.defineMacro("__FLOAT128__");
+    Builder.defineMacro("__SIZEOF_FLOAT128__", "16");
+  }
 
   // Inline assembly supports AArch64 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
@@ -1831,6 +1840,14 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedLongLong;
   PtrDiffType = SignedLongLong;
   IntPtrType = SignedLongLong;
+
+  if (Triple.isWindowsArm64EC() && !Triple.isWindowsMSVCEnvironment()) {
+    // arm64ec-w64-mingw32 should be interoperable with x86_64-w64-mingw32,
+    // which by default has `long double` as the x87-specific extended
+    // precision format.
+    LongDoubleWidth = LongDoubleAlign = SuitableAlign = 128;
+    LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
+  }
 }
 
 TargetInfo::BuiltinVaListKind
