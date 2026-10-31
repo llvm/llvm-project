@@ -1320,16 +1320,36 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
     // Remember registers that are part of early-clobber defs.
     SmallVector<Register, 8> ECRegs;
 
+    SmallVector<Register, 4> OutputDefs;
+    for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
+      const InlineAsm::Flag F(Node->getConstantOperandVal(i));
+      const unsigned NumVals = F.getNumOperandRegisters();
+      if (F.isRegDefKind() || F.isRegDefEarlyClobberKind()) {
+        for (unsigned j = 1; j <= NumVals; ++j) {
+          Register Reg =
+              cast<RegisterSDNode>(Node->getOperand(i + j))->getReg();
+          if (Reg.isPhysical())
+            OutputDefs.push_back(Reg);
+        }
+      }
+
+      i += NumVals + 1;
+    }
+
     // A glued CopyFromReg may read a clobbered register, e.g. a flag output
-    // like X86 "={@ccz}" reads EFLAGS defined only by "~{flags}".
+    // like X86 "={@ccz}" reads EFLAGS defined only by "~{flags}". A read fully
+    // covered by an output def does not keep an overlapping clobber live.
     SmallVector<Register, 2> GluedUses;
     if (Node->getValueType(Node->getNumValues() - 1) == MVT::Glue) {
       for (SDNode *G = Node->getGluedUser(); G; G = G->getGluedUser()) {
         if (G->getOpcode() != ISD::CopyFromReg)
           continue;
         Register Reg = cast<RegisterSDNode>(G->getOperand(1))->getReg();
-        if (Reg.isPhysical())
-          GluedUses.push_back(Reg);
+        if (!Reg.isPhysical() || any_of(OutputDefs, [&](Register Def) {
+              return TRI->isSubRegisterEq(Def, Reg);
+            }))
+          continue;
+        GluedUses.push_back(Reg);
       }
     }
 
@@ -1357,10 +1377,10 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
       case InlineAsm::Kind::Clobber:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-          bool IsDead =
-              F.isClobberKind() && none_of(GluedUses, [&](Register U) {
-                return TRI->regsOverlap(U, Reg);
-              });
+          bool IsDead = F.isClobberKind() && !is_contained(OutputDefs, Reg) &&
+                        none_of(GluedUses, [&](Register U) {
+                          return TRI->regsOverlap(U, Reg);
+                        });
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
                               getDeadRegState(IsDead) |
                               getImplRegState(Reg.isPhysical()));

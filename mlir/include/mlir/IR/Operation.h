@@ -345,7 +345,9 @@ public:
 
   void print(raw_ostream &os, const OpPrintingFlags &flags = {});
   void print(raw_ostream &os, AsmState &state);
-  void dump();
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump();
+#endif
 
   // Dump pretty printed IR. This method is helpful for better readability if
   // the Operation is not verified because it won't disable custom printers to

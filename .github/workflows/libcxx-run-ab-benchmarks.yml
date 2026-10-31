@@ -158,6 +158,8 @@ jobs:
             -C "${CMAKE_CACHE}"
 
       - name: Run baseline and candidate interleaved
+        env:
+          CI_JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
         run: |
           # TODO(#226230): Remove this once the underlying issue with K8s has been resolved.
           (while sleep 60; do echo "Still running the benchmarks..."; done) &
@@ -199,8 +201,10 @@ jobs:
                 --commit "${commit}"                                                                    \
                 --compiler "${COMPILER}"                                                                \
                 --no-ordinal                                                                            \
+                --untracked-machine                                                                     \
+                --delete-after-inactive-days 180                                                        \
                 --run-parameter "test_suite_commit=${BENCHMARK_SUITE_VERSION}"                          \
-                --run-parameter "ci_run=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+                --run-parameter "ci_job=${CI_JOB_URL}"                                                  \
                 --lit-build-dir "benchmarks/${build}"                                                   \
                 -- "${lit_params[@]}" --param libcxx_installation="${PWD}/install/${build}"
             done

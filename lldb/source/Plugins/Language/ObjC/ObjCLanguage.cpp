@@ -949,7 +949,8 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
         break;
       if (ConstString name = objc_class_sp->GetClassName())
         result.push_back(
-            {name, valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter(),
+            {name.GetStringRef().str(),
+             valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter(),
              TypeImpl(objc_class_sp->GetType()),
              FormattersMatchCandidate::Flags{}});
     } while (false);

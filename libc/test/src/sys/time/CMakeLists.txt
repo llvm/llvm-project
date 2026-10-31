@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.time.utimes
     libc.src.unistd.close
@@ -33,7 +32,6 @@ add_libc_test(
     libc.src.signal.sigaction
     libc.src.signal.sigemptyset
     libc.src.__support.common
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -48,7 +46,6 @@ add_libc_test(
     libc.hdr.sys_time_macros
     libc.src.sys.time.getitimer
     libc.src.__support.common
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -62,6 +59,5 @@ add_libc_test(
   DEPENDS
     libc.src.sys.time.gettimeofday
     libc.hdr.types.struct_timeval
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )

@@ -806,7 +806,7 @@ static bool buildAtomicRMWInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
 
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   StringRef Name = Call->Builtin->name();
-  // The registry prefixes atomic_fetch_min/max with "s_" or "u_".
+  // The registry prefixes atomic_fetch_min/max with "s_", "u_" or "f".
   bool IsOCL20 =
       Name.contains("atomic_fetch_") || Name.starts_with("atomic_exchange");
   SPIRV::Scope::Scope DefaultScope =
@@ -1888,6 +1888,8 @@ static bool generateAtomicInst(const SPIRV::IncomingCall *Call,
   case SPIRV::OpAtomicSMin:
   case SPIRV::OpAtomicUMax:
   case SPIRV::OpAtomicUMin:
+  case SPIRV::OpAtomicFMinEXT:
+  case SPIRV::OpAtomicFMaxEXT:
     return buildAtomicRMWInst(Call, Opcode, MIRBuilder, GR);
   case SPIRV::OpMemoryBarrier:
     return buildBarrierInst(Call, SPIRV::OpMemoryBarrier, MIRBuilder, GR);

@@ -39,8 +39,8 @@
 ; MIPS-NEXT:   verify
 ; MIPS-NEXT: function
 ; MIPS-NEXT:   machine-function
-; MIPS-NEXT:     mips-16-isel
-; MIPS-NEXT:     mips-se-isel
+; MIPS-NEXT:     mips-mips16-isel
+; MIPS-NEXT:     mips-mipsse-isel
 ; MIPS-NEXT:     finalize-isel
 ; MIPS-NEXT:     early-tailduplication
 ; MIPS-NEXT:     opt-phis
@@ -126,8 +126,8 @@
 ; MIPS-OS16-NEXT:   verify
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   machine-function
-; MIPS-OS16-NEXT:     mips-16-isel
-; MIPS-OS16-NEXT:     mips-se-isel
+; MIPS-OS16-NEXT:     mips-mips16-isel
+; MIPS-OS16-NEXT:     mips-mipsse-isel
 ; MIPS-OS16-NEXT:     finalize-isel
 ; MIPS-OS16-NEXT:     early-tailduplication
 ; MIPS-OS16-NEXT:     opt-phis
@@ -213,8 +213,8 @@
 ; MIPS-MFIX4300-NEXT:   verify
 ; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   machine-function
-; MIPS-MFIX4300-NEXT:     mips-16-isel
-; MIPS-MFIX4300-NEXT:     mips-se-isel
+; MIPS-MFIX4300-NEXT:     mips-mips16-isel
+; MIPS-MFIX4300-NEXT:     mips-mipsse-isel
 ; MIPS-MFIX4300-NEXT:     finalize-isel
 ; MIPS-MFIX4300-NEXT:     early-tailduplication
 ; MIPS-MFIX4300-NEXT:     opt-phis

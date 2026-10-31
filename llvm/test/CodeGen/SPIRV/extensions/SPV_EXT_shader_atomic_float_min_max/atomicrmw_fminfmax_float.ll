@@ -15,6 +15,7 @@
 ; CHECK-DAG: %[[MemSeqCst:[0-9]+]] = OpConstant %[[TyInt32]] 528{{$}}
 ; CHECK-DAG: %[[MemRaw16:[0-9]+]] = OpConstant %[[TyInt32]] 16{{$}}
 ; CHECK-DAG: %[[ScopeDevice:[0-9]+]] = OpConstant %[[TyInt32]] 1{{$}}
+; CHECK-DAG: %[[CrossWorkgroupMemory:[0-9]+]] = OpConstant %[[TyInt32]] 512{{$}}
 ; CHECK-DAG: %[[TyFP32Ptr:[0-9]+]] = OpTypePointer {{[a-zA-Z]+}} %[[TyFP32]]
 ; CHECK-DAG: %[[DblPtr:[0-9]+]] = OpVariable %[[TyFP32Ptr]] {{[a-zA-Z]+}} %[[Const0]]
 ; CHECK: OpAtomicFMinEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeAllSvmDevices]] %[[MemSeqCst]] %[[Const42]]
@@ -40,6 +41,25 @@ entry:
 
 declare dso_local spir_func float @_Z21__spirv_AtomicFMinEXT(ptr addrspace(1), i32, i32, float)
 declare dso_local spir_func float @_Z21__spirv_AtomicFMaxEXT(ptr addrspace(1), i32, i32, float)
+
+; CHECK: OpAtomicFMinEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
+; CHECK: OpAtomicFMaxEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[MemSeqCst]] %[[Const42]]
+; CHECK: OpAtomicFMinEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[CrossWorkgroupMemory]] %[[Const42]]
+; CHECK: OpAtomicFMaxEXT %[[TyFP32]] %[[DblPtr]] %[[ScopeDevice]] %[[CrossWorkgroupMemory]] %[[Const42]]
+
+define dso_local spir_func void @test3() local_unnamed_addr {
+entry:
+  %r1 = tail call spir_func float @_Z16atomic_fetch_minPU3AS1VU7_Atomicff(ptr addrspace(1) @f, float 42.000000e+00)
+  %r2 = tail call spir_func float @_Z16atomic_fetch_maxPU3AS1VU7_Atomicff(ptr addrspace(1) @f, float 42.000000e+00)
+  %r3 = tail call spir_func float @_Z25atomic_fetch_min_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1) @f, float 42.000000e+00, i32 0)
+  %r4 = tail call spir_func float @_Z25atomic_fetch_max_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1) @f, float 42.000000e+00, i32 0)
+  ret void
+}
+
+declare spir_func float @_Z16atomic_fetch_minPU3AS1VU7_Atomicff(ptr addrspace(1), float)
+declare spir_func float @_Z16atomic_fetch_maxPU3AS1VU7_Atomicff(ptr addrspace(1), float)
+declare spir_func float @_Z25atomic_fetch_min_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1), float, i32)
+declare spir_func float @_Z25atomic_fetch_max_explicitPU3AS1VU7_Atomicff12memory_order(ptr addrspace(1), float, i32)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"wchar_size", i32 4}

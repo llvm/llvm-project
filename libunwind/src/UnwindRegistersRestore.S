@@ -72,10 +72,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip fs
   # skip gs
 
-// Native FreeBSD restores selectors and bases together through sigreturn in
-// libunwind.cpp; its sysarch base setters also replace the segment selectors.
-#elif defined(__x86_64__) && !defined(__arm64ec__) && \
-    (!defined(__FreeBSD__) || defined(_LIBUNWIND_IS_BAREMETAL))
+#elif defined(__x86_64__) && !defined(__arm64ec__)
 .att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
@@ -101,57 +98,6 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
   movq  %rbx, 0(%rax)
   movq  128(%rdi), %rbx # store new rip on new stack
   movq  %rbx, 8(%rax)
-  # Segment selectors are 16 bits. In particular, do not reload unchanged
-  # FS/GS selectors: doing so can clear their hidden base addresses.
-  movw  %fs,%ax
-  cmpw  148(%rdi),%ax
-  je    1f
-  movw  148(%rdi),%fs
-1:
-  movw  %gs,%ax
-  cmpw  150(%rdi),%ax
-  je    2f
-  movw  150(%rdi),%gs
-2:
-  movw  146(%rdi),%es
-  movw  142(%rdi),%ss
-  movw  144(%rdi),%ds
-  movw  %cs,%ax
-  cmpw  140(%rdi),%ax
-  je    3f
-  # An indirect far jump changes CS without consuming a shadow-stack entry.
-  movzwq 140(%rdi),%rax
-  pushq %rax
-  leaq  3f(%rip),%rax
-  pushq %rax
-  rex64 ljmp *(%rsp)
-3:
-  _LIBUNWIND_CET_ENDBR
-  # The far-jump path used a temporary 16-byte far pointer on the old stack.
-  # The old stack is discarded below.
-
-#if defined(X86_64_BASE_SYSCALL)
-  movq  %rdi,%r8
-  movq  $X86_64_BASE_SYSCALL,%rax
-  movq  $X86_64_SET_FSBASE,%rdi
-  movq  152(%r8),%rsi
-  syscall
-  testq %rax,%rax
-  js    9f
-  movq  $X86_64_BASE_SYSCALL,%rax
-  movq  $X86_64_SET_GSBASE,%rdi
-  movq  160(%r8),%rsi
-  syscall
-  testq %rax,%rax
-  js    9f
-  movq  %r8,%rdi
-#endif
-
-  # Restore flags after all arithmetic, comparisons, and syscalls. The upper
-  # half of the packed flags word contains selectors, so zero-extend it first.
-  movl  136(%rdi),%eax
-  pushq %rax
-  popfq
   # restore all registers
   movq    0(%rdi), %rax
   movq    8(%rdi), %rbx
@@ -172,6 +118,10 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
   movq  112(%rdi), %r14
   movq  120(%rdi), %r15
 #endif
+  # skip rflags
+  # skip cs
+  # skip fs
+  # skip gs
 
 #if defined(_WIN64)
   movdqu 176(%rdi),%xmm0
@@ -193,13 +143,8 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
 #endif
   movq  56(%rdi), %rsp  # cut back rsp to new location
   pop    %rdi      # rdi was saved here earlier
-  leaq   8(%rsp),%rsp
-  jmpq   *-8(%rsp)
-#if defined(X86_64_BASE_SYSCALL)
-9:
-  # A failed base restore cannot safely resume with a different TLS base.
-  ud2
-#endif
+  pop    %rcx
+  jmpq   *%rcx
 
 
 #elif defined(__powerpc64__)

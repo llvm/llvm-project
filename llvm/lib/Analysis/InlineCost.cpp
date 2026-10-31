@@ -2225,9 +2225,10 @@ bool CallAnalyzer::visitBinaryOperator(BinaryOperator &I) {
   // is expensive, this may eventually become a library call. Treat the cost
   // as such. Unless it's fneg which can be implemented with an xor.
   using namespace llvm::PatternMatch;
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
   if (I.getType()->isFloatingPointTy() &&
       TTI.getFPOpCost(I.getType()) == TargetTransformInfo::TCC_Expensive &&
-      !match(&I, m_FNeg(m_Value())))
+      !match(&I, m_FNegOrFSubNegZero(m_Value())))
     onCallPenalty();
 
   return false;
@@ -3205,10 +3206,15 @@ InlineCost llvm::getInlineCost(
                           << "... (caller:" << Call.getCaller()->getName()
                           << ")\n");
 
-  InlineCostCallAnalyzer CA(*Callee, Call, Params, CalleeTTI,
-                            GetAssumptionCache, GetBFI, GetTLI, PSI, ORE,
-                            /*BoostIndirect=*/true, /*IgnoreThreshold=*/false,
-                            GetEphValuesCache);
+  // If requested, make the analysis independent of any profile information by
+  // not providing the profile summary or block frequency info.
+  const bool IgnoreProfile = Params.IgnoreProfile.value_or(false);
+  function_ref<BlockFrequencyInfo &(Function &)> GetBFIForAnalysis =
+      IgnoreProfile ? nullptr : GetBFI;
+  InlineCostCallAnalyzer CA(
+      *Callee, Call, Params, CalleeTTI, GetAssumptionCache, GetBFIForAnalysis,
+      GetTLI, IgnoreProfile ? nullptr : PSI, ORE,
+      /*BoostIndirect=*/true, /*IgnoreThreshold=*/false, GetEphValuesCache);
   InlineResult ShouldInline = CA.analyze();
 
   LLVM_DEBUG(CA.dump());
