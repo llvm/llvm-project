@@ -6340,9 +6340,8 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     }
 
     // Process resources in user-defined structs, or arrays of such structs.
-    const Type *VDTy = VD->getType().getTypePtr();
-    if (VD->getStorageClass() != SC_Static && VDTy->isHLSLIntangibleType() &&
-        !isResourceRecordTypeOrArrayOf(VD))
+    if (VD->getStorageClass() != SC_Static &&
+        isStructOrArrayOfWithResources(VD->getType()))
       handleGlobalStructOrArrayOfWithResources(VD);
 
     // Mark groupshared variables as extern so they will have

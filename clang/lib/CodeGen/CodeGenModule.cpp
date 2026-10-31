@@ -35,6 +35,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
@@ -6540,10 +6541,16 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
 
   // TODO(Reflection): add support for consteval-only types.
 
-  // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen
+  // HLSL default buffer constants will be emitted during HLSLBufferDecl codegen.
+  // Also skip emitting globals for structs or arrays of structs containing only
+  // resource constants, which should have already been flattened into separate
+  // variables.
   if (getLangOpts().HLSL &&
-      D->getType().getAddressSpace() == LangAS::hlsl_constant)
+      (ASTTy.getAddressSpace() == LangAS::hlsl_constant ||
+       (D->getStorageClass() != SC_Static &&
+        hlsl::isStructOrArrayOfWithResources(ASTTy)))) {
     return;
+  }
 
   // If this is OpenMP device, check if it is legal to emit this global
   // normally.
