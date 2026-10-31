@@ -10212,6 +10212,59 @@ static void patchMatchingInput(const SDISelAsmOperandInfo &OpInfo,
   MatchingOpInfo.ConstraintVT = OpInfo.ConstraintVT;
 }
 
+/// Store \p Val, a value of aggregate type \p Ty, to stack slot \p SSFI.
+/// SelectionDAG represents an aggregate as one value per member, so store each
+/// member at its offset, as visitStore() does.
+static SDValue storeAggregateToStackSlot(SDValue Chain, const SDLoc &Location,
+                                         SDValue Val, Type *Ty, int SSFI,
+                                         SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  const DataLayout &DL = DAG.getDataLayout();
+  MachineFunction &MF = DAG.getMachineFunction();
+  SmallVector<EVT, 4> ValueVTs, MemVTs;
+  SmallVector<TypeSize, 4> Offsets;
+  ComputeValueVTs(TLI, DL, Ty, ValueVTs, &MemVTs, &Offsets);
+  SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DL));
+  SmallVector<SDValue, 4> Stores;
+
+  for (unsigned I = 0, E = ValueVTs.size(); I != E; ++I) {
+    // TODO: MachinePointerInfo only supports a fixed length offset.
+    MachinePointerInfo PtrInfo =
+        !Offsets[I].isScalable() || Offsets[I].isZero()
+            ? MachinePointerInfo::getFixedStack(MF, SSFI,
+                                                Offsets[I].getKnownMinValue())
+            : MachinePointerInfo();
+
+    SDValue Ptr = DAG.getObjectPtrOffset(Location, StackSlot, Offsets[I]);
+    SDValue Member(Val.getNode(), Val.getResNo() + I);
+
+    if (MemVTs[I] != ValueVTs[I])
+      Member = DAG.getPtrExtOrTrunc(Member, Location, MemVTs[I]);
+
+    Stores.push_back(DAG.getStore(Chain, Location, Member, Ptr, PtrInfo));
+  }
+
+  if (Stores.empty())
+    return Chain;
+
+  return DAG.getNode(ISD::TokenFactor, Location, MVT::Other, Stores);
+}
+
+/// Create a stack slot that can hold a value of type \p Ty.
+static int createStackSlotForType(Type *Ty, SelectionDAG &DAG) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  const DataLayout &DL = DAG.getDataLayout();
+  TypeSize TySize = DL.getTypeAllocSize(Ty);
+  int StackID =
+      TySize.isScalable()
+          ? MF.getSubtarget().getFrameLowering()->getStackIDForScalableVectors()
+          : 0;
+
+  return MF.getFrameInfo().CreateStackObject(TySize.getKnownMinValue(),
+                                             DL.getPrefTypeAlign(Ty), false,
+                                             nullptr, StackID);
+}
+
 /// Get a direct memory input to behave well as an indirect operand.
 /// This may introduce stores, hence the need for a \p Chain.
 /// \return The (possibly updated) chain.
@@ -10240,22 +10293,46 @@ static SDValue getAddressForMemoryInput(SDValue Chain, const SDLoc &Location,
   // Otherwise, create a stack slot and emit a store to it before the asm.
   Type *Ty = OpVal->getType();
   auto &DL = DAG.getDataLayout();
-  TypeSize TySize = DL.getTypeAllocSize(Ty);
   MachineFunction &MF = DAG.getMachineFunction();
-  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  int StackID = 0;
-  if (TySize.isScalable())
-    StackID = TFI->getStackIDForScalableVectors();
-  int SSFI = MF.getFrameInfo().CreateStackObject(TySize.getKnownMinValue(),
-                                                 DL.getPrefTypeAlign(Ty), false,
-                                                 nullptr, StackID);
+
+  int SSFI = createStackSlotForType(Ty, DAG);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DL));
-  Chain = DAG.getTruncStore(Chain, Location, OpInfo.CallOperand, StackSlot,
-                            MachinePointerInfo::getFixedStack(MF, SSFI),
-                            TLI.getMemValueType(DL, Ty));
+
+  if (Ty->isAggregateType())
+    Chain = storeAggregateToStackSlot(Chain, Location, OpInfo.CallOperand, Ty,
+                                      SSFI, DAG);
+  else
+    Chain = DAG.getTruncStore(Chain, Location, OpInfo.CallOperand, StackSlot,
+                              MachinePointerInfo::getFixedStack(MF, SSFI),
+                              TLI.getMemValueType(DL, Ty));
+
   OpInfo.CallOperand = StackSlot;
 
   return Chain;
+}
+
+/// Return the value of an aggregate inline asm input that is passed in
+/// registers. ParseConstraints() gives such an input the integer type of the
+/// same size, but SelectionDAG has one value per member, so store the members
+/// to a stack slot and load the integer.
+static SDValue loadAggregateAsInteger(SDValue &Chain, const SDLoc &Location,
+                                      const SDISelAsmOperandInfo &OpInfo,
+                                      SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  MachineFunction &MF = DAG.getMachineFunction();
+  Type *Ty = OpInfo.CallOperandVal->getType();
+
+  int SSFI = createStackSlotForType(Ty, DAG);
+  Chain = storeAggregateToStackSlot(Chain, Location, OpInfo.CallOperand, Ty,
+                                    SSFI, DAG);
+
+  SDValue Load = DAG.getLoad(
+      OpInfo.ConstraintVT, Location, Chain,
+      DAG.getFrameIndex(SSFI, TLI.getFrameIndexTy(DAG.getDataLayout())),
+      MachinePointerInfo::getFixedStack(MF, SSFI));
+
+  Chain = Load.getValue(1);
+  return Load;
 }
 
 /// GetRegistersForValue - Assign registers (virtual or physical) for the
@@ -10670,6 +10747,14 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
     case InlineAsm::isInput:
     case InlineAsm::isLabel: {
       SDValue InOperandVal = OpInfo.CallOperand;
+
+      // An aggregate in registers is passed as one integer, which needs more
+      // than its first member.
+      if (OpInfo.CallOperandVal &&
+          OpInfo.CallOperandVal->getType()->isAggregateType() &&
+          OpInfo.ConstraintVT.isInteger() &&
+          InOperandVal.getValueType() != OpInfo.ConstraintVT)
+        InOperandVal = loadAggregateAsInteger(Info.Chain, DL, OpInfo, DAG);
 
       if (OpInfo.isMatchingInputConstraint()) {
         // If this is required to match an output register we have already set,
