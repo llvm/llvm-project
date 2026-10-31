@@ -16765,7 +16765,7 @@ BoUpSLP::getCompressEntryData(const TreeEntry &E) {
   SmallVector<Value *> PointerOps(Scalars.size());
   for (auto [I, V] : enumerate(Scalars))
     PointerOps[I] = cast<LoadInst>(V)->getPointerOperand();
-  [[maybe_unused]] bool IsVectorized = isMaskedLoadCompress(
+  (void)isMaskedLoadCompress(
       Scalars, PointerOps, E.ReorderIndices, *TTI, *DL, *SE, *AC, *DT, *TLI,
       CostKind, [](Value *) { return true; }, Opts.slp_revec, IsMasked,
       InterleaveFactor, CompressMask, LoadVecTy, Cache);
