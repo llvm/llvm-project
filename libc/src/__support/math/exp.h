@@ -18,8 +18,19 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
+#if !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE) &&                                \
+    defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY) &&                        \
+    defined(LIBC_MATH_HAS_NO_EXCEPT) && defined(LIBC_MATH_HAS_NO_ERRNO)
+
+#include "src/__support/math/exp_integer_eval.h"
+#define LIBC_MATH_EXP_IMPL integer_eval
+
+#else
+
 #include "src/__support/math/exp_double_eval.h"
 #define LIBC_MATH_EXP_IMPL double_eval
+
+#endif
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {

@@ -4404,9 +4404,42 @@ add_header_library(
     exp.h
   DEPENDS
     .exp_double_eval
+    .exp_integer_eval
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp_integer_eval
+  HDRS
+    exp_integer_eval.h
+  DEPENDS
+    .exp_integer_utils
+    libc.hdr.fenv_macros
+    libc.src.__support.CPP.bit
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.frac64
+    libc.src.__support.frac128
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  exp_integer_utils
+  HDRS
+    exp_integer_utils.h
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.frac64
+    libc.src.__support.frac128
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
