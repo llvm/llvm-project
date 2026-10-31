@@ -413,7 +413,8 @@ def flushw        : SDNode<"SPISD::FLUSHW", SDTNone,
                            [SDNPHasChain, SDNPSideEffect, SDNPMayStore]>;
 
 def tlsadd        : SDNode<"SPISD::TLS_ADD", SDTSPtlsadd>;
-def tlsld         : SDNode<"SPISD::TLS_LD",  SDTSPtlsld>;
+def tlsld         : SDNode<"SPISD::TLS_LD",  SDTSPtlsld,
+                           [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def tlscall       : SDNode<"SPISD::TLS_CALL", SDT_SPCall,
                             [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                              SDNPVariadic]>;

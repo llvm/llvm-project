@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
@@ -2524,11 +2525,19 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   const DataLayout &DL = A.getInfoCache().getDL();
   if (const auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->isBundleOperand(U)) {
-      if (RetainedKnowledge RK = getKnowledgeFromUse(
-              U, {Attribute::NonNull, Attribute::Dereferenceable})) {
-        IsNonNull |=
-            (RK.AttrKind == Attribute::NonNull || !NullPointerIsDefined);
-        return RK.ArgValue;
+      auto OBU = CB->getOperandBundleForOperand(U->getOperandNo());
+      switch (getBundleAttrFromOBU(OBU)) {
+      case BundleAttr::NonNull:
+        IsNonNull = true;
+        break;
+      case BundleAttr::Dereferenceable: {
+        IsNonNull |= !NullPointerIsDefined;
+        Value *Count = getAssumeDereferenceableInfo(OBU).Count;
+        if (auto *CI = dyn_cast<ConstantInt>(Count))
+          return CI->getZExtValue();
+      } break;
+      default:
+        break;
       }
       return 0;
     }
@@ -10805,10 +10814,20 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
   /// See AbstractAttribute::updateImpl(...).
   ChangeStatus updateImpl(Attributor &A) override {
     ChangeStatus Change = ChangeStatus::UNCHANGED;
+    bool AllCallsDirect = true;
 
     auto ProcessCallInst = [&](Instruction &Inst) {
       CallBase &CB = cast<CallBase>(Inst);
 
+      // A direct call without callbacks only calls its callee; there is no
+      // need for a call site attribute.
+      auto *Callee = dyn_cast<Function>(CB.getCalledOperand());
+      if (Callee && !Callee->hasMetadata(LLVMContext::MD_callback)) {
+        addCalledFunction(Callee, Change);
+        return true;
+      }
+
+      AllCallsDirect = false;
       auto *CBEdges = A.getAAFor<AACallEdges>(
           *this, IRPosition::callsite_function(CB), DepClassTy::REQUIRED);
       if (!CBEdges)
@@ -10833,6 +10852,10 @@ struct AACallEdgesFunction : public AACallEdgesImpl {
       // are unknown callees.
       setHasUnknownCallee(true, Change);
     }
+
+    // The callees of direct calls in code known to be live do not change.
+    if (AllCallsDirect && !UsedAssumedInformation)
+      indicateOptimisticFixpoint();
 
     return Change;
   }

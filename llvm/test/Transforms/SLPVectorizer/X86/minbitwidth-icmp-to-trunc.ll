@@ -18,7 +18,7 @@ define i1 @test(ptr noalias %0, i64 %1, ptr noalias %p, ptr %p1) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = and <2 x i24> [[TMP7]], splat (i24 255)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq <2 x i24> [[TMP8]], splat (i24 24)
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <2 x i1> [[TMP9]], <2 x i24> splat (i24 23), <2 x i24> [[TMP8]]
-; CHECK-NEXT:    [[TMP26:%.*]] = zext <2 x i24> [[TMP10]] to <2 x i32>
+; CHECK-NEXT:    [[TMP26:%.*]] = zext nneg <2 x i24> [[TMP10]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP13:%.*]] = and <2 x i32> [[TMP26]], splat (i32 254)
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq <2 x i32> [[TMP13]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <2 x i1> [[TMP15]], <2 x i32> splat (i32 2), <2 x i32> [[TMP26]]

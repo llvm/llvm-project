@@ -209,9 +209,11 @@ void populatePassManagerSubmodule(nb::module_ &m) {
             MlirTypeID passID = PyGlobals::get().allocateTypeID();
             MlirExternalPassCallbacks callbacks;
             callbacks.construct = [](void *obj) {
+              nb::gil_scoped_acquire acquire;
               (void)nb::handle(static_cast<PyObject *>(obj)).inc_ref();
             };
             callbacks.destruct = [](void *obj) {
+              nb::gil_scoped_acquire acquire;
               (void)nb::handle(static_cast<PyObject *>(obj)).dec_ref();
             };
             callbacks.initialize = nullptr;
@@ -220,6 +222,7 @@ void populatePassManagerSubmodule(nb::module_ &m) {
             };
             callbacks.run = [](MlirOperation op, MlirExternalPass pass,
                                void *userData) {
+              nb::gil_scoped_acquire acquire;
               nb::handle(static_cast<PyObject *>(userData))(
                   op, PyMlirExternalPass{pass.ptr});
             };
@@ -252,8 +255,13 @@ void populatePassManagerSubmodule(nb::module_ &m) {
           [](PyPassManager &passManager, PyOperationBase &op) {
             // Actually run the pass manager.
             PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
-            MlirLogicalResult status = mlirPassManagerRunOnOp(
-                passManager.get(), op.getOperation().get());
+            MlirPassManager pm = passManager.get();
+            MlirOperation operation = op.getOperation().get();
+            MlirLogicalResult status;
+            {
+              nb::gil_scoped_release release;
+              status = mlirPassManagerRunOnOp(pm, operation);
+            }
             if (mlirLogicalResultIsFailure(status))
               throw MLIRError("Failure while executing pass pipeline",
                               errors.take());

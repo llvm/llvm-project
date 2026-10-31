@@ -46,7 +46,6 @@ using namespace llvm::memprof;
 
 namespace llvm {
 extern cl::opt<bool> NoPGOWarnMismatch;
-extern cl::opt<bool> AnnotateStringLiteralSectionPrefix;
 } // namespace llvm
 
 // Matching statistics
@@ -973,7 +972,7 @@ bool MemProfUsePass::annotateGlobalVariables(
     SymbolHandleRef Handle = SymbolHandleRef(Name);
     // Skip string literals as their mangled names don't stay stable across
     // binary releases.
-    if (!AnnotateStringLiteralSectionPrefix)
+    if (!shouldAnnotateStringLiteralSectionPrefix(GVar.getContext()))
       if (Name.starts_with(".str"))
         continue;
 

@@ -113,7 +113,7 @@ jobs:
           ninja --version
           "${CC:-cc}" --version
           python3 --version
-          which perf && perf --version
+          if command -v perf >/dev/null; then perf --version; fi
 
       - name: Build and install Clang at ${{ inputs.commit }}
         run: |
