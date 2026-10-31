@@ -1,9 +1,6 @@
 ; RUN: opt -mtriple=x86_64-pc-linux-gnu -safestack-use-pointer-address \
 ; RUN:   -passes='require<libcall-lowering-info>,function(require<domtree>,safe-stack,verify<domtree>)' \
 ; RUN:   -disable-output < %s
-; RUN: opt -mtriple=x86_64-pc-linux-gnu -safestack-use-pointer-address \
-; RUN:   -domtree -safe-stack -loops -verify-dom-info \
-; RUN:   -disable-output < %s
 
 @unsafe_stack_pointer_a = thread_local global ptr null
 @unsafe_stack_pointer_b = thread_local global ptr null

@@ -1,5 +1,5 @@
 ; REQUIRES: arm-registered-target
-; RUN: opt -S -loop-unroll -codegenprepare < %s -domtree -verify-dom-info | FileCheck %s
+; RUN: opt -S -passes='require<profile-summary>,function(loop-unroll,codegenprepare,verify<domtree>)' < %s | FileCheck %s
 ;
 ; Checks that the dom tree is properly invalidated after an operation that will
 ; invalidate it in CodeGenPrepare. If the domtree isn't properly invalidated,

@@ -73,9 +73,20 @@ static codegen::RegisterCodeGenFlags CFG;
 static codegen::RegisterMTuneFlag MTF;
 static codegen::RegisterSaveStatsFlag SSF;
 
-// The OptimizationList is automatically populated with registered Passes by the
-// PassNameParser.
-static cl::list<const PassInfo *, bool, PassNameParser> PassList(cl::desc(
+static bool shouldPinPassToLegacyPM(StringRef Pass);
+
+namespace {
+// Register only the passes that the legacy pipeline accepts, so other pass
+// names do not occupy option spellings.
+struct PinnedPassNameParser : PassNameParser {
+  using PassNameParser::PassNameParser;
+  bool ignorablePassImpl(const PassInfo *P) const override {
+    return !shouldPinPassToLegacyPM(P->getPassArgument());
+  }
+};
+} // namespace
+
+static cl::list<const PassInfo *, bool, PinnedPassNameParser> PassList(cl::desc(
     "Optimizations available (use \"-passes=\" for the new pass manager)"));
 
 // This flag specifies a textual description of the optimization pass pipeline
@@ -393,16 +404,6 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
   return llvm::is_contained(PassNameExact, Pass);
 }
 
-// For use in NPM transition.
-static bool shouldForceLegacyPM() {
-  for (const PassInfo *P : PassList) {
-    StringRef Arg = P->getPassArgument();
-    if (shouldPinPassToLegacyPM(Arg))
-      return true;
-  }
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 // main for opt
 //
@@ -470,9 +471,7 @@ optMain(int argc, char **argv,
   if (Error E = passPluginArguments(Extensions, PluginArgs))
     reportFatalUsageError(std::move(E));
 
-  // TODO: remove shouldForceLegacyPM().
-  const bool UseNPM =
-      !shouldForceLegacyPM() || PassPipeline.getNumOccurrences() > 0;
+  const bool UseNPM = PassList.empty() || PassPipeline.getNumOccurrences() > 0;
 
   if (UseNPM && !PassList.empty()) {
     errs() << "The `opt -passname` syntax for the new pass manager is "
