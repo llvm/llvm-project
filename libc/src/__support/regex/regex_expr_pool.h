@@ -167,6 +167,8 @@ public:
   ErrorOr<ExprId> make_byte_set(const ByteSet &bs);
   /// Creates or returns a normalized Kleene star node (body*).
   ErrorOr<ExprId> make_star(ExprId body);
+  /// Creates or returns a normalized Repeat node (body{min,max}).
+  ErrorOr<ExprId> make_repeat(ExprId body, uint16_t min, uint16_t max);
   /// Creates or returns a right-associated Concatenation node (l . r).
   ErrorOr<ExprId> make_concat(ExprId l, ExprId r);
   /// Creates or returns a canonical deduplicated Alternation node (l | r).

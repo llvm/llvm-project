@@ -253,13 +253,30 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   ASSERT_FALSE(trailing_escape.has_value());
   EXPECT_EQ(trailing_escape.error(), REG_EESCAPE);
 
-  const string_view bad_rpt_patterns[] = {"*",   "+",   "?",    "{1}", "^*",
-                                          "^+",  "^?",  "^{1}", "$*",  "a**",
-                                          "a*+", "a*?", "a*{1}"};
+  const string_view bad_rpt_patterns[] = {
+      "*",     "+",     "?",     "{1}",     "{1",    "^*",    "^+",
+      "^?",    "^{1}",  "$*",    "${1}",    "a**",   "a*+",   "a*?",
+      "a*{1}", "a+{1}", "a?{1}", "a{2}{2}", "a{2}*", "a{2}+", "a{2}?"};
   for (string_view bad_rpt : bad_rpt_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad_rpt, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
     EXPECT_EQ(err.error(), REG_BADRPT);
+  }
+
+  const string_view ebrace_patterns[] = {"a{1", "a{1a", "a{1,2", "a{1,x"};
+  for (string_view pat : ebrace_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_EBRACE);
+  }
+
+  const string_view badbr_patterns[] = {"a{1a}",    "a{1,x}",       "a{1,0}",
+                                        "a{5,2}",   "a{256}",       "a{1,256}",
+                                        "a{1,2,3}", "a{9876543210}"};
+  for (string_view pat : badbr_patterns) {
+    ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
+    ASSERT_FALSE(err.has_value());
+    EXPECT_EQ(err.error(), REG_BADBR);
   }
 
   const string_view ebrack_patterns[] = {
@@ -295,8 +312,6 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   }
 
   const string_view bad_patterns[] = {
-      // Unimplemented quantifiers.
-      "a{1}", "{",
       // Unimplemented word boundaries.
       "[[:<:]]", "[[:>:]]",
       // Unimplemented backreferences.
@@ -449,6 +464,7 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   // D_a((a . b) | (a . c)) = b | c, and D_a((a . b)*) = b . (a . b)*.
   const ExprId need_bc = *pool.make_alt(ab, ac);
   const ExprId star_ab = *pool.make_star(ab);
+  const ExprId rep_ab = *pool.make_repeat(ab, 2, 3);
   const ExprId concat_left_fail = *pool.make_concat(need_bc, lit_c);
   const ExprId concat_right_fail = *pool.make_concat(opt_a, need_bc);
   const ExprId alt_right_fail = *pool.make_alt(lit_a, need_bc);
@@ -460,9 +476,9 @@ TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
   while (pool.size() < 10000)
     chain = *pool.make_concat(lit_a, chain);
 
-  const ExprId exhausted_exprs[] = {need_bc,          star_ab,
-                                    concat_left_fail, concat_right_fail,
-                                    alt_left_fail,    alt_right_fail};
+  const ExprId exhausted_exprs[] = {
+      need_bc,           star_ab,       rep_ab,        concat_left_fail,
+      concat_right_fail, alt_left_fail, alt_right_fail};
   for (ExprId expr : exhausted_exprs) {
     ErrorOr<ExprId> err = derivative(expr, 'a', pool);
     ASSERT_FALSE(err.has_value());
@@ -522,8 +538,9 @@ TEST(LlvmLibcRegexMatcherTest, AlternationAndGroupingStabilization) {
 
 TEST(LlvmLibcRegexMatcherTest, PlusAndQuestionDesugaringAndStabilization) {
   ExprPool pool;
-  // r+ desugars to Concat(r, Star(r)) and r? desugars to Alt(EmptyStr, r),
-  // interning to identical ExprId handles.
+  // r+ pushes r and Star(r) separately onto ParsedAtomStack and r? lowers to
+  // Alt(EmptyStr, r), interning to identical ExprId handles without orphaned
+  // Concat spines.
   ErrorOr<ExprId> plus_a = parse_ere("a+", REG_EXTENDED, pool);
   ErrorOr<ExprId> concat_star_a = parse_ere("aa*", REG_EXTENDED, pool);
   ASSERT_TRUE(plus_a.has_value());
@@ -542,4 +559,154 @@ TEST(LlvmLibcRegexMatcherTest, PlusAndQuestionDesugaringAndStabilization) {
   size_t warm_nodes = pool.size();
   EXPECT_EQ(match(pool, *ere, "aaabc"), MatchResult::Match);
   EXPECT_EQ(pool.size(), warm_nodes);
+
+  // Pushing r and Star(r) as separate stack entries builds r . (r* . rest)
+  // once, giving (ab)+c and (ab)(ab)*c identical 10-node pools and allowing
+  // ^(a...2500_as...)+$ to compile in 5,007 nodes and match 2,500 'a's.
+  ExprPool plus_pool;
+  ExprPool star_pool;
+  ErrorOr<ExprId> group_plus = parse_ere("(ab)+c", REG_EXTENDED, plus_pool);
+  ErrorOr<ExprId> group_star = parse_ere("(ab)(ab)*c", REG_EXTENDED, star_pool);
+  ASSERT_TRUE(group_plus.has_value());
+  ASSERT_TRUE(group_star.has_value());
+  EXPECT_EQ(plus_pool.size(), size_t(10));
+  EXPECT_EQ(plus_pool.size(), star_pool.size());
+
+  char pat2500[2506];
+  pat2500[0] = '^';
+  pat2500[1] = '(';
+  for (size_t i = 0; i < 2500; ++i)
+    pat2500[2 + i] = 'a';
+  pat2500[2502] = ')';
+  pat2500[2503] = '+';
+  pat2500[2504] = '$';
+  pat2500[2505] = '\0';
+  ExprPool long_plus_pool;
+  ErrorOr<ExprId> long_plus =
+      parse_ere(string_view(pat2500, 2505), REG_EXTENDED, long_plus_pool);
+  ASSERT_TRUE(long_plus.has_value());
+  EXPECT_EQ(long_plus_pool.size(), size_t(5007));
+  EXPECT_EQ(match(long_plus_pool, *long_plus, string_view(pat2500 + 2, 2500)),
+            MatchResult::Match);
+}
+
+TEST(LlvmLibcRegexMatcherTest, RepeatStabilizationAndRfc2822Grammar) {
+  // Native Repeat(body, 255, 255) compiles into 4 nodes inside 1 KiB; both
+  // unanchored a{255} / a{255}b (via make_alt interval coalescing) and anchored
+  // ^a{255}$ match and stabilize on warm runs.
+  ExprPool rep_pool;
+  ErrorOr<ExprId> a255 = parse_ere("a{255}", REG_EXTENDED, rep_pool);
+  ASSERT_TRUE(a255.has_value());
+  EXPECT_EQ(rep_pool.size(), size_t(4));
+  EXPECT_LE(rep_pool.allocated_bytes(), size_t(1024));
+
+  ErrorOr<ExprId> a255b = parse_ere("a{255}b", REG_EXTENDED, rep_pool);
+  ErrorOr<ExprId> anchored_a255 = parse_ere("^a{255}$", REG_EXTENDED, rep_pool);
+  ASSERT_TRUE(a255b.has_value());
+  ASSERT_TRUE(anchored_a255.has_value());
+  char buf256[256];
+  for (char &ch : buf256)
+    ch = 'a';
+  EXPECT_EQ(match(rep_pool, *a255, string_view(buf256, 255)),
+            MatchResult::Match);
+  buf256[255] = 'b';
+  EXPECT_EQ(match(rep_pool, *a255b, string_view(buf256, 256)),
+            MatchResult::Match);
+  buf256[255] = 'a';
+  EXPECT_EQ(match(rep_pool, *anchored_a255, string_view(buf256, 255)),
+            MatchResult::Match);
+  size_t warm_nodes = rep_pool.size();
+  EXPECT_EQ(match(rep_pool, *a255, string_view(buf256, 255)),
+            MatchResult::Match);
+  EXPECT_EQ(match(rep_pool, *anchored_a255, string_view(buf256, 255)),
+            MatchResult::Match);
+  EXPECT_EQ(rep_pool.size(), warm_nodes);
+  EXPECT_EQ(match(rep_pool, *anchored_a255, string_view(buf256, 254)),
+            MatchResult::NoMatch);
+  EXPECT_EQ(match(rep_pool, *anchored_a255, string_view(buf256, 256)),
+            MatchResult::NoMatch);
+
+  // Shared-prefix Concat derivatives (^(a+){255}$, (ab?){255}b) and interleaved
+  // multi-branch spines (x?.{255}a|.{255}b) coalesce without hitting
+  // MAX_NODE_LIMIT, and cached Expr::rep_expansion parses 30-deep nested '+'
+  // inside '{2}' in O(1) per node.
+  ExprPool prefix_pool;
+  ErrorOr<ExprId> plus_255 =
+      parse_ere("^(a+){255}$", REG_EXTENDED, prefix_pool);
+  ErrorOr<ExprId> opt_255b =
+      parse_ere("(ab?){255}b", REG_EXTENDED, prefix_pool);
+  ErrorOr<ExprId> inter_255 =
+      parse_ere("x?.{255}a|.{255}b", REG_EXTENDED, prefix_pool);
+  ASSERT_TRUE(plus_255.has_value());
+  ASSERT_TRUE(opt_255b.has_value());
+  ASSERT_TRUE(inter_255.has_value());
+  EXPECT_EQ(match(prefix_pool, *plus_255, string_view(buf256, 255)),
+            MatchResult::Match);
+  buf256[255] = 'b';
+  EXPECT_EQ(match(prefix_pool, *opt_255b, string_view(buf256, 256)),
+            MatchResult::Match);
+  EXPECT_EQ(match(prefix_pool, *inter_255, string_view(buf256, 256)),
+            MatchResult::Match);
+
+  ExprPool dag_exp_pool;
+  ErrorOr<ExprId> deep_plus_rep = parse_ere(
+      "(((((((((((((((((((((((((((((((a)+)+)+)+)+)+)+)+)+)+)+)+)+)+)+)+"
+      ")+)+)+)+)+)+)+)+)+)+)+)+)+)+){2}",
+      REG_EXTENDED, dag_exp_pool);
+  ASSERT_TRUE(deep_plus_rep.has_value());
+  EXPECT_EQ(match(dag_exp_pool, *deep_plus_rep, "aa"), MatchResult::Match);
+
+  // Build a >7 KiB ERE from RFC-2822 Section 3.4.1 addr-spec EBNF productions
+  // (F = FWS, C = CFWS, T = atext, W = word, S = addr-spec) and verify
+  // hash-consed DAG deduplication keeps the pool under 32 KiB.
+  char rfc_buf[16384];
+  size_t rfc_len = 0;
+  auto expand = [&](auto &self, string_view str) -> void {
+    for (char ch : str) {
+      if (ch == 'F') {
+        self(self, "(([ \t]*\r\n)?[ \t]+)");
+      } else if (ch == 'C') {
+        self(self, R"(((F?\((F?([!-'*-[^-~]|\\([ -~]|[ )"
+                   "\t"
+                   R"(])))*F?\))+F?|F)?)");
+      } else if (ch == 'T') {
+        self(self, R"([[:alnum:]!#$%&'*+/=?^_`{|}~-])");
+      } else if (ch == 'W') {
+        self(self, R"(((CT+C)|(C"(F?([!#-[^-~]|\\([ -~]|[ )"
+                   "\t"
+                   R"(])))*F?"C)))");
+      } else if (ch == 'S') {
+        self(self, R"((((CT+(\.T+)*C)|W|(W(\.W{1,1}){0,31}))@)"
+                   R"(((CT+(\.T+)*C)|(C\[(([0-9]{1,3}\.){3}[0-9]{1,3}|)"
+                   R"((F?([!-Z^-~]|\\([ -~]|[ )"
+                   "\t"
+                   R"(])))*F?)\]C)|)"
+                   R"(((CT+C)(\.(CT+C){1,1}){1,31}))))");
+      } else if (rfc_len < sizeof(rfc_buf)) {
+        rfc_buf[rfc_len] = ch;
+        ++rfc_len;
+      }
+    }
+  };
+  expand(expand, "^(S|W{0,8}<S>)$");
+  string_view rfc2822_ere(rfc_buf, rfc_len);
+  EXPECT_GT(rfc2822_ere.size(), size_t(7000));
+
+  ExprPool rfc_pool;
+  ErrorOr<ExprId> addr_spec = parse_ere(rfc2822_ere, REG_EXTENDED, rfc_pool);
+  ASSERT_TRUE(addr_spec.has_value());
+  EXPECT_LE(rfc_pool.allocated_bytes(), size_t(32768));
+
+  const string_view good_addrs[] = {"user.name+tag@example.com",
+                                    R"("quoted..user"@[192.168.1.1])",
+                                    "(comment) alice@sub.domain.org (ok)",
+                                    "(\r\n folded comment )alice@example.com",
+                                    "Alice Smith <alice@example.com>"};
+  for (string_view addr : good_addrs)
+    EXPECT_EQ(match(rfc_pool, *addr_spec, addr), MatchResult::Match);
+  const string_view bad_addrs[] = {"user..name@example.com", "@example.com",
+                                   "user@", "user@.example.com",
+                                   "user@example..com"};
+  for (string_view addr : bad_addrs)
+    EXPECT_EQ(match(rfc_pool, *addr_spec, addr), MatchResult::NoMatch);
 }

@@ -10,9 +10,11 @@ add_object_library(
     libc.hdr.regex_macros
     libc.hdr.stdint_proxy
     libc.src.__support.alloc_checker
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.array
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.new
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.scope
     libc.src.__support.CPP.span
     libc.src.__support.CPP.utility
@@ -58,6 +60,7 @@ add_object_library(
     regex_parser.h
   DEPENDS
     .regex_expr_pool
+    libc.hdr.limits_macros
     libc.hdr.regex_macros
     libc.src.__support.alloc_checker
     libc.src.__support.CPP.array
