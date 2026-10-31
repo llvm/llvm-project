@@ -908,10 +908,17 @@ static bool ShouldRemoveFromUnused(Sema *SemaRef, const DeclaratorDecl *D) {
 
   if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     // If this is a function template and none of its specializations is used,
-    // we should warn.
+    // we should warn. A specialization that was implicitly instantiated only
+    // because it was named in an unevaluated operand (decltype, sizeof,
+    // noexcept, a requires-expression) is referenced but never odr-used and
+    // never gets a body; the template still determined the meaning of that
+    // expression, so treat it as a use.
     if (FunctionTemplateDecl *Template = FD->getDescribedFunctionTemplate())
       for (const auto *Spec : Template->specializations())
-        if (ShouldRemoveFromUnused(SemaRef, Spec))
+        if (ShouldRemoveFromUnused(SemaRef, Spec) ||
+            (Spec->getTemplateSpecializationKind() ==
+                 TSK_ImplicitInstantiation &&
+             Spec->isReferenced()))
           return true;
 
     // UnusedFileScopedDecls stores the first declaration.
@@ -939,9 +946,13 @@ static bool ShouldRemoveFromUnused(Sema *SemaRef, const DeclaratorDecl *D) {
 
     if (VarTemplateDecl *Template = VD->getDescribedVarTemplate())
       // If this is a variable template and none of its specializations is used,
-      // we should warn.
+      // we should warn. As for function templates above, a specialization that
+      // is only referenced from an unevaluated operand counts as a use.
       for (const auto *Spec : Template->specializations())
-        if (ShouldRemoveFromUnused(SemaRef, Spec))
+        if (ShouldRemoveFromUnused(SemaRef, Spec) ||
+            (Spec->getTemplateSpecializationKind() ==
+                 TSK_ImplicitInstantiation &&
+             Spec->isReferenced()))
           return true;
 
     // UnusedFileScopedDecls stores the first declaration.

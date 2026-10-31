@@ -22,9 +22,9 @@ class A {
   // CHECK-NEXT:   void func() {}
   // CHECK-NEXT:        ^~~~{{$}}
     void func() {}
-  // CHECK:      :{[[@LINE+3]]:32-[[@LINE+3]]:37}: warning: unused function template
-  // CHECK-NEXT:   void templ(T) {}
-  // CHECK-NEXT:        ^~~~~{{$}}
+  // templ(0.0) in foo() references templ<double>, which counts as a use even
+  // though foo() is never instantiated; the template must not be diagnosed.
+  // CHECK-NOT:    warning: unused function template 'templ'
     template <typename T> void templ(T) {}
   // CHECK:      :{[[@LINE+3]]:22-[[@LINE+3]]:32}: warning: member function 'templ<int>' is not needed
   // CHECK-NEXT:   void templ<int>(int) {}

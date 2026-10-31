@@ -479,6 +479,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed spurious `-Wimplicit-void-ptr-cast` warnings in C for parenthesized
   null pointer macros such as `(NULL)`. (#GH171874)
 
+- `-Wunused-template` no longer warns about a function or variable template
+  whose only uses are in unevaluated operands such as `decltype`, `sizeof`,
+  `noexcept` or a requires-expression. (#GH218429)
+
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
