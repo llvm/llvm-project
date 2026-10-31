@@ -19,6 +19,7 @@ struct basic_string_view;
 template <typename C, typename T = char_traits<C>, typename A = allocator<C>>
 struct basic_string {
   typedef size_t size_type;
+  typedef const C *const_iterator;
   typedef basic_string<C, T, A> _Type;
   basic_string();
   basic_string(const basic_string &);

@@ -33,3 +33,10 @@ objects of the same type. If a class is listed here, the check will not
 suggest using `empty()` instead of such comparisons for objects of that
 class. Default is `::std::array`.
 ```
+
+```{option} ExcludedLengthTypes
+A semicolon-separated list of regular expressions matching class names for
+which the check will not suggest replacing calls to `length()` with
+`empty()`. This is useful for types where `length()` and `empty()` have
+different semantics. Default is `::std::match_results`.
+```

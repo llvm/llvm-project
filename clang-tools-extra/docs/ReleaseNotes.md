@@ -361,6 +361,11 @@ infrastructure are described first, followed by tool-specific sections.
   fixing a crash when checking a const-qualified method declared with the
   `lifetimebound` attribute.
 
+- Improved {doc}`readability-container-size-empty
+  <clang-tidy/checks/readability/container-size-empty>` check to avoid
+  suggesting `empty()` for `std::match_results::length()`, whose return value
+  can be zero even when the match results object is not empty.
+
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the

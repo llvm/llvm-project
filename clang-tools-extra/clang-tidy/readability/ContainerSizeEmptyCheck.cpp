@@ -135,10 +135,14 @@ using utils::isBinaryOrTernary;
 ContainerSizeEmptyCheck::ContainerSizeEmptyCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
+      ExcludedLengthTypes(utils::options::parseStringList(
+          Options.get("ExcludedLengthTypes", "::std::match_results"))),
       ExcludedComparisonTypes(utils::options::parseStringList(
           Options.get("ExcludedComparisonTypes", "::std::array"))) {}
 
 void ContainerSizeEmptyCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ExcludedLengthTypes",
+                utils::options::serializeStringList(ExcludedLengthTypes));
   Options.store(Opts, "ExcludedComparisonTypes",
                 utils::options::serializeStringList(ExcludedComparisonTypes));
 }
@@ -168,6 +172,15 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
   const auto ValidContainer = qualType(
       anyOf(ValidContainerNonTemplateType, ValidContainerTemplateType));
 
+  const auto ExcludedLengthTypesMatcher = qualType(
+      anyOf(hasDeclaration(cxxRecordDecl(
+                matchers::matchesAnyListedRegexName(ExcludedLengthTypes))),
+            hasCanonicalType(hasDeclaration(cxxRecordDecl(
+                matchers::matchesAnyListedRegexName(ExcludedLengthTypes))))));
+  const auto ExcludedLengthExprType = qualType(
+      anyOf(ExcludedLengthTypesMatcher, pointsTo(ExcludedLengthTypesMatcher),
+            references(ExcludedLengthTypesMatcher)));
+
   const auto WrongUse =
       anyOf(hasParent(binaryOperator(
                           isComparisonOperator(),
@@ -189,7 +202,9 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
           argumentCountIs(0), on(ValidContainerExpr),
           callee(
               cxxMethodDecl(hasAnyName("size", "length")).bind("SizeMethod")),
-          WrongUse, NotInEmptyMethodOfContainer)
+          WrongUse, NotInEmptyMethodOfContainer,
+          unless(allOf(callee(cxxMethodDecl(hasName("length"))),
+                       on(expr(hasType(ExcludedLengthExprType))))))
           .bind("SizeCallExpr"),
       this);
 
@@ -198,7 +213,10 @@ void ContainerSizeEmptyCheck::registerMatchers(MatchFinder *Finder) {
                has(mapAnyOf(memberExpr, cxxDependentScopeMemberExpr)
                        .with(hasObjectExpression(ValidContainerExpr),
                              anyOf(matchMemberName("size"),
-                                   matchMemberName("length")))
+                                   matchMemberName("length")),
+                             unless(allOf(matchMemberName("length"),
+                                          hasObjectExpression(expr(hasType(
+                                              ExcludedLengthExprType))))))
                        .bind("MemberExpr")),
                WrongUse, NotInEmptyMethodOfContainer)
           .bind("SizeCallExpr"),
