@@ -2304,7 +2304,6 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   for (std::pair<EquivalenceClass, ClassSet> DisequalityEntry :
        DisequalityInfo) {
     EquivalenceClass Class = DisequalityEntry.first;
-    ClassSet DisequalClasses = DisequalityEntry.second;
     State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
@@ -2985,7 +2984,6 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   SymbolSet::Factory &SetFactory = State->get_context<SymbolSet>();
 
   ConstraintRangeTy Constraints = State->get<ConstraintRange>();
-  ConstraintRangeTy NewConstraints = Constraints;
   ConstraintRangeTy::Factory &ConstraintFactory =
       State->get_context<ConstraintRange>();
 

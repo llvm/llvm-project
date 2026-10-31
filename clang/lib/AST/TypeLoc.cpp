@@ -712,7 +712,6 @@ void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
     QualifierLoc = Builder.getWithLocInContext(Context);
   }
 
-  TemplateArgumentListInfo TAL(Loc, Loc);
   set(ElaboratedKeywordLoc, QualifierLoc,
       /*TemplateKeywordLoc=*/HasTemplateKeyword ? Loc : SourceLocation(),
       /*NameLoc=*/Loc, /*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);

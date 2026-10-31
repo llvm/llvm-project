@@ -5328,7 +5328,6 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
         PackLocIterator;
 
       TemplateArgumentListInfo *PackOutput = &Outputs;
-      TemplateArgumentListInfo New;
 
       if (TransformTemplateArguments(
               PackLocIterator(*this, In.getArgument().pack_begin()),
