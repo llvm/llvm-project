@@ -32,10 +32,13 @@
 #include "LoongArch.h"
 #include "LoongArchMachineFunctionInfo.h"
 #include "LoongArchSubtarget.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/InitializePasses.h"
 
 using namespace llvm;
 
@@ -45,11 +48,17 @@ using namespace llvm;
 STATISTIC(NumRemovedSExtW, "Number of removed sign-extensions");
 STATISTIC(NumTransformedToWInstrs,
           "Number of instructions transformed to W-ops");
+STATISTIC(NumHoistedSExtW,
+          "Number of sign-extensions hoisted into PHI predecessors");
 
 static cl::opt<bool>
     DisableSExtWRemoval("loongarch-disable-sextw-removal",
                         cl::desc("Disable removal of sign-extend insn"),
                         cl::init(false), cl::Hidden);
+static cl::opt<bool> DisableSExtWHoisting(
+    "loongarch-disable-sextw-hoisting",
+    cl::desc("Disable hoisting of sign-extend insn into outer PHI operands"),
+    cl::init(false), cl::Hidden);
 static cl::opt<bool>
     DisableCvtToDSuffix("loongarch-disable-cvt-to-d-suffix",
                         cl::desc("Disable convert to D suffix"),
@@ -65,8 +74,8 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool removeSExtWInstrs(MachineFunction &MF, const LoongArchInstrInfo &TII,
-                         const LoongArchSubtarget &ST,
-                         MachineRegisterInfo &MRI);
+                         const LoongArchSubtarget &ST, MachineRegisterInfo &MRI,
+                         const MachineLoopInfo &MLI);
   bool convertToDSuffixes(MachineFunction &MF, const LoongArchInstrInfo &TII,
                           const LoongArchSubtarget &ST,
                           MachineRegisterInfo &MRI);
@@ -76,6 +85,8 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addPreserved<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -85,8 +96,11 @@ public:
 } // end anonymous namespace
 
 char LoongArchOptWInstrs::ID = 0;
-INITIALIZE_PASS(LoongArchOptWInstrs, DEBUG_TYPE, LOONGARCH_OPT_W_INSTRS_NAME,
-                false, false)
+INITIALIZE_PASS_BEGIN(LoongArchOptWInstrs, DEBUG_TYPE,
+                      LOONGARCH_OPT_W_INSTRS_NAME, false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_END(LoongArchOptWInstrs, DEBUG_TYPE,
+                    LOONGARCH_OPT_W_INSTRS_NAME, false, false)
 
 FunctionPass *llvm::createLoongArchOptWInstrsPass() {
   return new LoongArchOptWInstrs();
@@ -505,9 +519,19 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
   return false;
 }
 
+using PHIOperand = std::pair<MachineInstr *, unsigned>;
+
+/// Return true if all definitions reaching \p SrcReg sign-extend their output.
+/// If \p PHIFixes is non-null, the incoming values of PHIs from blocks with a
+/// smaller loop depth than \p UseMBB are assumed to be sign-extended and the
+/// PHI operands are added to \p PHIFixes; the caller must then sign-extend
+/// them in their incoming blocks.
 static bool isSignExtendedW(Register SrcReg, const LoongArchSubtarget &ST,
                             const MachineRegisterInfo &MRI,
-                            SmallPtrSetImpl<MachineInstr *> &FixableDef) {
+                            SmallPtrSetImpl<MachineInstr *> &FixableDef,
+                            const MachineLoopInfo *MLI = nullptr,
+                            const MachineBasicBlock *UseMBB = nullptr,
+                            SmallSetVector<PHIOperand, 4> *PHIFixes = nullptr) {
   SmallSet<Register, 4> Visited;
   SmallVector<Register, 4> Worklist;
 
@@ -635,6 +659,16 @@ static bool isSignExtendedW(Register SrcReg, const LoongArchSubtarget &ST,
         if (!MI->getOperand(I).isReg())
           return false;
 
+        // A block with a smaller loop depth than UseMBB can't be inside
+        // UseMBB's innermost loop, so this also excludes sibling loops of the
+        // same depth that may be just as hot.
+        if (PHIFixes && MI->isPHI() &&
+            MLI->getLoopDepth(MI->getOperand(I + 1).getMBB()) <
+                MLI->getLoopDepth(UseMBB)) {
+          PHIFixes->insert({MI, I});
+          continue;
+        }
+
         if (!AddRegToWorkList(MI->getOperand(I).getReg()))
           return false;
       }
@@ -714,7 +748,8 @@ static unsigned getWOp(unsigned Opcode) {
 bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
                                             const LoongArchInstrInfo &TII,
                                             const LoongArchSubtarget &ST,
-                                            MachineRegisterInfo &MRI) {
+                                            MachineRegisterInfo &MRI,
+                                            const MachineLoopInfo &MLI) {
   if (DisableSExtWRemoval)
     return false;
 
@@ -728,13 +763,37 @@ bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
       Register SrcReg = MI.getOperand(1).getReg();
 
       SmallPtrSet<MachineInstr *, 4> FixableDefs;
+      SmallSetVector<PHIOperand, 4> PHIFixes;
 
       // If all users only use the lower bits, this sext.w is redundant.
       // Or if all definitions reaching MI sign-extend their output,
       // then sext.w is redundant.
       if (!hasAllWUsers(MI, ST, MRI) &&
-          !isSignExtendedW(SrcReg, ST, MRI, FixableDefs))
-        continue;
+          !isSignExtendedW(SrcReg, ST, MRI, FixableDefs)) {
+        // Otherwise, if the only values that are not known to be
+        // sign-extended reach MI through PHIs from outer loop levels,
+        // sign-extend them in their incoming blocks instead.
+        FixableDefs.clear();
+        if (DisableSExtWHoisting || MLI.getLoopDepth(&MBB) == 0 ||
+            !isSignExtendedW(SrcReg, ST, MRI, FixableDefs, &MLI, &MBB,
+                             &PHIFixes))
+          continue;
+        // Drop PHI operands that are already known to be sign-extended.
+        PHIFixes.remove_if([&](const PHIOperand &Op) {
+          SmallPtrSet<MachineInstr *, 4> OpFixableDefs;
+          if (!isSignExtendedW(Op.first->getOperand(Op.second).getReg(), ST,
+                               MRI, OpFixableDefs))
+            return false;
+          FixableDefs.insert_range(OpFixableDefs);
+          return true;
+        });
+        // Sign-extending a PHI operand changes the value seen by every user
+        // of the PHI, so all of them must only use the lower 32 bits.
+        if (any_of(PHIFixes, [&](const PHIOperand &Op) {
+              return !hasAllWUsers(*Op.first, ST, MRI);
+            }))
+          continue;
+      }
 
       Register DstReg = MI.getOperand(0).getReg();
       if (!SrcReg.isVirtual() ||
@@ -750,6 +809,22 @@ bool LoongArchOptWInstrs::removeSExtWInstrs(MachineFunction &MF,
         Fixable->clearFlag(MachineInstr::MIFlag::IsExact);
         LLVM_DEBUG(dbgs() << "     with " << *Fixable);
         ++NumTransformedToWInstrs;
+      }
+
+      // Sign-extend the PHI operands in their incoming blocks.
+      for (auto [PHI, OpIdx] : PHIFixes) {
+        MachineOperand &Op = PHI->getOperand(OpIdx);
+        MachineBasicBlock *InMBB = PHI->getOperand(OpIdx + 1).getMBB();
+        Register NewReg = MRI.createVirtualRegister(&LoongArch::GPRRegClass);
+        BuildMI(*InMBB, InMBB->getFirstTerminator(), PHI->getDebugLoc(),
+                TII.get(LoongArch::ADDI_W), NewReg)
+            .addReg(Op.getReg())
+            .addImm(0);
+        LLVM_DEBUG(dbgs() << "Sign-extending PHI operand " << OpIdx << " of "
+                          << *PHI << " in " << printMBBReference(*InMBB)
+                          << "\n");
+        Op.setReg(NewReg);
+        ++NumHoistedSExtW;
       }
 
       LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
@@ -854,7 +929,9 @@ bool LoongArchOptWInstrs::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   bool MadeChange = false;
-  MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI);
+  const MachineLoopInfo &MLI =
+      getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MadeChange |= removeSExtWInstrs(MF, TII, ST, MRI, MLI);
 
   if (!(DisableCvtToDSuffix || ST.preferWInst()))
     MadeChange |= convertToDSuffixes(MF, TII, ST, MRI);
