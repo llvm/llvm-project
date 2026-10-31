@@ -1,5 +1,15 @@
 # RUN: llc -mtriple=aarch64--- -run-pass=prolog-epilog -run-pass=machine-outliner \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:   -verify-machineinstrs %s -o %t
+# RUN: FileCheck %s --check-prefixes=CHECK,ADD < %t
+# RUN: FileCheck %s --check-prefixes=CHECK,SUB < %t
+# RUN: FileCheck %s --check-prefixes=CHECK,SHIFTED-SUB < %t
+# RUN: FileCheck %s --check-prefixes=CHECK,SUB-TO-ADD < %t
+# RUN: FileCheck %s --check-prefixes=CHECK,SP-WRITE < %t
+# RUN: FileCheck %s --check-prefixes=CHECK,OVERFLOW < %t
+# RUN: FileCheck %s --check-prefixes=CHECK,SHIFTED-ADD < %t
+
+# Check each outlined function separately so the checks do not depend on
+# their emission order. CHECK verifies their callers in every run.
 
 # Check that the outliner fixes up SP-derived add/sub immediates inside an
 # outlined sequence that contains a call and therefore saves LR on the stack.
@@ -586,52 +596,52 @@ body:             |
 
 ...
 
-# CHECK:       name:            [[ADD_FUNC]]
-# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
-# CHECK-NEXT:  BL @callee
-# CHECK-NEXT:  $x15 = ADDXri $sp, 64, 0
-# CHECK-NEXT:  $x15 = ADDXri $sp, 64, 0
-# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
-# CHECK-NEXT:  RET $lr
+# ADD:       name:            [[ADD_FUNC]]
+# ADD:       early-clobber $sp = STRXpre $lr, $sp, -16
+# ADD-NEXT:  BL @callee
+# ADD-NEXT:  $x15 = ADDXri $sp, 64, 0
+# ADD-NEXT:  $x15 = ADDXri $sp, 64, 0
+# ADD-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# ADD-NEXT:  RET $lr
 
-# CHECK:       name:            [[SUB_FUNC]]
-# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
-# CHECK-NEXT:  BL @callee
-# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
-# CHECK-NEXT:  $x15 = SUBXri $sp, 32, 0
-# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
-# CHECK-NEXT:  RET $lr
+# SUB:       name:            [[SUB_FUNC]]
+# SUB:       early-clobber $sp = STRXpre $lr, $sp, -16
+# SUB-NEXT:  BL @callee
+# SUB-NEXT:  $x15 = SUBXri $sp, 32, 0
+# SUB-NEXT:  $x15 = SUBXri $sp, 32, 0
+# SUB-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# SUB-NEXT:  RET $lr
 
-# CHECK:       name:            [[SHIFTED_SUB_FUNC]]
-# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
-# CHECK-NEXT:  BL @callee
-# CHECK-NEXT:  $x15 = SUBXri $sp, 4080, 0
-# CHECK-NEXT:  $x15 = SUBXri $sp, 4080, 0
-# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
-# CHECK-NEXT:  RET $lr
+# SHIFTED-SUB:       name:            [[SHIFTED_SUB_FUNC]]
+# SHIFTED-SUB:       early-clobber $sp = STRXpre $lr, $sp, -16
+# SHIFTED-SUB-NEXT:  BL @callee
+# SHIFTED-SUB-NEXT:  $x15 = SUBXri $sp, 4080, 0
+# SHIFTED-SUB-NEXT:  $x15 = SUBXri $sp, 4080, 0
+# SHIFTED-SUB-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# SHIFTED-SUB-NEXT:  RET $lr
 
-# CHECK:       name:            [[SUB_TO_ADD_FUNC]]
-# CHECK:       early-clobber $sp = STRXpre $lr, $sp, -16
-# CHECK-NEXT:  BL @callee
-# CHECK-NEXT:  $x15 = ADDXri $sp, 8, 0
-# CHECK-NEXT:  $x15 = ADDXri $sp, 8, 0
-# CHECK-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
-# CHECK-NEXT:  RET $lr
+# SUB-TO-ADD:       name:            [[SUB_TO_ADD_FUNC]]
+# SUB-TO-ADD:       early-clobber $sp = STRXpre $lr, $sp, -16
+# SUB-TO-ADD-NEXT:  BL @callee
+# SUB-TO-ADD-NEXT:  $x15 = ADDXri $sp, 8, 0
+# SUB-TO-ADD-NEXT:  $x15 = ADDXri $sp, 8, 0
+# SUB-TO-ADD-NEXT:  early-clobber $sp, $lr = LDRXpost $sp, 16
+# SUB-TO-ADD-NEXT:  RET $lr
 
-# CHECK:       name:            [[SP_WRITE_FUNC]]
-# CHECK-NOT:   STRXpre
-# CHECK:       $sp = SUBXri $sp, 16, 0
-# CHECK-NEXT:  $sp = ADDXri $sp, 16, 0
-# CHECK-NEXT:  RET $lr
+# SP-WRITE:       name:            [[SP_WRITE_FUNC]]
+# SP-WRITE-NOT:   STRXpre
+# SP-WRITE:       $sp = SUBXri $sp, 16, 0
+# SP-WRITE-NEXT:  $sp = ADDXri $sp, 16, 0
+# SP-WRITE-NEXT:  RET $lr
 
-# CHECK:       name:            [[OVERFLOW_FUNC]]
-# CHECK-NOT:   STRXpre
-# CHECK:       $x15 = ADDXri $sp, 4095, 0
-# CHECK-NEXT:  $x15 = ADDXri $sp, 4095, 0
-# CHECK-NEXT:  RET $lr
+# OVERFLOW:       name:            [[OVERFLOW_FUNC]]
+# OVERFLOW-NOT:   STRXpre
+# OVERFLOW:       $x15 = ADDXri $sp, 4095, 0
+# OVERFLOW-NEXT:  $x15 = ADDXri $sp, 4095, 0
+# OVERFLOW-NEXT:  RET $lr
 
-# CHECK:       name:            [[SHIFTED_ADD_FUNC]]
-# CHECK-NOT:   STRXpre
-# CHECK:       $x15 = ADDXri $sp, 1, 12
-# CHECK-NEXT:  $x15 = ADDXri $sp, 1, 12
-# CHECK-NEXT:  RET $lr
+# SHIFTED-ADD:       name:            [[SHIFTED_ADD_FUNC]]
+# SHIFTED-ADD-NOT:   STRXpre
+# SHIFTED-ADD:       $x15 = ADDXri $sp, 1, 12
+# SHIFTED-ADD-NEXT:  $x15 = ADDXri $sp, 1, 12
+# SHIFTED-ADD-NEXT:  RET $lr
