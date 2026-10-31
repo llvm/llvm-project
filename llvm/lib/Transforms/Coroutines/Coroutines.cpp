@@ -331,6 +331,7 @@ void coro::Shape::analyze(Function &F,
     RetconLowering.Dealloc = ContinuationId->getDeallocFunction();
     RetconLowering.ReturnBlock = nullptr;
     RetconLowering.IsFrameInlineInStorage = false;
+    RetconLowering.TypeId = ContinuationId->getTypeId();
     break;
   }
   default:
@@ -507,7 +508,12 @@ Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
     Size = Builder.CreateIntCast(Size,
                                  Alloc->getFunctionType()->getParamType(0),
                                  /*is signed*/ false);
-    auto *Call = Builder.CreateCall(Alloc, Size);
+    ConstantInt *TypeId = RetconLowering.TypeId;
+    CallInst *Call;
+    if (TypeId)
+      Call = Builder.CreateCall(Alloc, {Size, TypeId});
+    else
+      Call = Builder.CreateCall(Alloc, Size);
     propagateCallAttrsFromCallee(Call, Alloc);
     addCallToCallGraph(CG, Call, Alloc);
     return Call;
@@ -600,9 +606,16 @@ static void checkWFAlloc(const Instruction *I, Value *V) {
   if (!FT->getReturnType()->isPointerTy())
     fail(I, "llvm.coro.* allocator must return a pointer", F);
 
-  if (FT->getNumParams() != 1 ||
-      !FT->getParamType(0)->isIntegerTy())
-    fail(I, "llvm.coro.* allocator must take integer as only param", F);
+  if (FT->getNumParams() == 0 || FT->getNumParams() > 2)
+    fail(I, "llvm.coro.* allocator must take one or two parameters", F);
+
+  if (!FT->getParamType(0)->isIntegerTy())
+    fail(I, "llvm.coro.* allocator must take integer as its first parameter",
+         F);
+
+  if (FT->getNumParams() == 2 && !FT->getParamType(1)->isIntegerTy())
+    fail(I, "llvm.coro.* allocator must take integer as its second parameter",
+         F);
 }
 
 /// Check that the given value is a well-formed deallocator.
@@ -635,6 +648,9 @@ void AnyCoroIdRetconInst::checkWellFormed() const {
   checkWFRetconPrototype(this, getArgOperand(PrototypeArg));
   checkWFAlloc(this, getArgOperand(AllocArg));
   checkWFDealloc(this, getArgOperand(DeallocArg));
+  if (hasTypeId())
+    checkConstantInt(this, getArgOperand(TypeIdArg),
+                     "type ID argument to coro.id.retcon.* must be constant");
 }
 
 static void checkAsyncFuncPointer(const Instruction *I, Value *V) {
