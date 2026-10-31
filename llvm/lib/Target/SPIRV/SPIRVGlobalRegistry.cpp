@@ -1259,7 +1259,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::createSPIRVType(
                       AccQual, ExplicitLayoutRequired, EmitIR);
     unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
     const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
-    if (isLongVectorEXT(Ty) &&
+    if (isLongVectorEXT(Ty, STI.isKernel()) &&
         STI.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
       return getOpTypeVectorIdEXT(NumElts, El, MIRBuilder);
     return getOpTypeVector(NumElts, El, MIRBuilder);
