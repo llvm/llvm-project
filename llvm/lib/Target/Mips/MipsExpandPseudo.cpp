@@ -22,57 +22,40 @@
 #include "MipsInstrInfo.h"
 #include "MipsSubtarget.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "mips-pseudo"
+#define DEBUG_TYPE "mips-expand-pseudo"
 
 namespace {
-  class MipsExpandPseudo : public MachineFunctionPass {
-  public:
-    static char ID;
-    MipsExpandPseudo() : MachineFunctionPass(ID) {}
+class MipsExpandPseudoLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  MipsExpandPseudoLegacy() : MachineFunctionPass(ID) {}
 
-    const MipsInstrInfo *TII;
-    const MipsSubtarget *STI;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().setNoVRegs();
-    }
+  StringRef getPassName() const override {
+    return "Mips pseudo instruction expansion pass";
+  }
+};
+char MipsExpandPseudoLegacy::ID = 0;
+} // namespace
 
-    StringRef getPassName() const override {
-      return "Mips pseudo instruction expansion pass";
-    }
-
-  private:
-    bool expandAtomicCmpSwap(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator MBBI,
-                             MachineBasicBlock::iterator &NextMBBI);
-    bool expandAtomicCmpSwapSubword(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI,
-                                    MachineBasicBlock::iterator &NextMBBI);
-
-    bool expandAtomicBinOp(MachineBasicBlock &BB,
-                           MachineBasicBlock::iterator I,
-                           MachineBasicBlock::iterator &NMBBI, unsigned Size);
-    bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
-                                  MachineBasicBlock::iterator I,
-                                  MachineBasicBlock::iterator &NMBBI);
-
-    bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                  MachineBasicBlock::iterator &NMBB);
-    bool expandMBB(MachineBasicBlock &MBB);
-   };
-  char MipsExpandPseudo::ID = 0;
-}
-
-bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
-    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
-    MachineBasicBlock::iterator &NMBBI) {
+static bool expandAtomicCmpSwapSubword(MachineBasicBlock &BB,
+                                       MachineBasicBlock::iterator I,
+                                       MachineBasicBlock::iterator &NMBBI,
+                                       const MipsSubtarget *STI,
+                                       const MipsInstrInfo *TII) {
 
   MachineFunction *MF = BB.getParent();
 
@@ -198,9 +181,11 @@ bool MipsExpandPseudo::expandAtomicCmpSwapSubword(
   return true;
 }
 
-bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
-                                           MachineBasicBlock::iterator I,
-                                           MachineBasicBlock::iterator &NMBBI) {
+static bool expandAtomicCmpSwap(MachineBasicBlock &BB,
+                                MachineBasicBlock::iterator I,
+                                MachineBasicBlock::iterator &NMBBI,
+                                const MipsSubtarget *STI,
+                                const MipsInstrInfo *TII) {
 
   const unsigned Size =
       I->getOpcode() == Mips::ATOMIC_CMP_SWAP_I32_POSTRA ? 4 : 8;
@@ -298,9 +283,11 @@ bool MipsExpandPseudo::expandAtomicCmpSwap(MachineBasicBlock &BB,
   return true;
 }
 
-bool MipsExpandPseudo::expandAtomicBinOpSubword(
-    MachineBasicBlock &BB, MachineBasicBlock::iterator I,
-    MachineBasicBlock::iterator &NMBBI) {
+static bool expandAtomicBinOpSubword(MachineBasicBlock &BB,
+                                     MachineBasicBlock::iterator I,
+                                     MachineBasicBlock::iterator &NMBBI,
+                                     const MipsSubtarget *STI,
+                                     const MipsInstrInfo *TII) {
 
   MachineFunction *MF = BB.getParent();
 
@@ -705,10 +692,11 @@ bool MipsExpandPseudo::expandAtomicBinOpSubword(
   return true;
 }
 
-bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
-                                         MachineBasicBlock::iterator I,
-                                         MachineBasicBlock::iterator &NMBBI,
-                                         unsigned Size) {
+static bool expandAtomicBinOp(MachineBasicBlock &BB,
+                              MachineBasicBlock::iterator I,
+                              MachineBasicBlock::iterator &NMBBI, unsigned Size,
+                              const MipsSubtarget *STI,
+                              const MipsInstrInfo *TII) {
   MachineFunction *MF = BB.getParent();
 
   const bool ArePtrs64bit = STI->getABI().ArePtrs64bit();
@@ -1040,19 +1028,19 @@ bool MipsExpandPseudo::expandAtomicBinOp(MachineBasicBlock &BB,
   return true;
 }
 
-bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
-                                MachineBasicBlock::iterator MBBI,
-                                MachineBasicBlock::iterator &NMBB) {
+static bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NMBB,
+                     const MipsSubtarget *STI, const MipsInstrInfo *TII) {
 
   bool Modified = false;
 
   switch (MBBI->getOpcode()) {
   case Mips::ATOMIC_CMP_SWAP_I32_POSTRA:
   case Mips::ATOMIC_CMP_SWAP_I64_POSTRA:
-    return expandAtomicCmpSwap(MBB, MBBI, NMBB);
+    return expandAtomicCmpSwap(MBB, MBBI, NMBB, STI, TII);
   case Mips::ATOMIC_CMP_SWAP_I8_POSTRA:
   case Mips::ATOMIC_CMP_SWAP_I16_POSTRA:
-    return expandAtomicCmpSwapSubword(MBB, MBBI, NMBB);
+    return expandAtomicCmpSwapSubword(MBB, MBBI, NMBB, STI, TII);
   case Mips::ATOMIC_SWAP_I8_POSTRA:
   case Mips::ATOMIC_SWAP_I16_POSTRA:
   case Mips::ATOMIC_LOAD_NAND_I8_POSTRA:
@@ -1075,7 +1063,7 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_UMIN_I16_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I8_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I16_POSTRA:
-    return expandAtomicBinOpSubword(MBB, MBBI, NMBB);
+    return expandAtomicBinOpSubword(MBB, MBBI, NMBB, STI, TII);
   case Mips::ATOMIC_LOAD_ADD_I32_POSTRA:
   case Mips::ATOMIC_LOAD_SUB_I32_POSTRA:
   case Mips::ATOMIC_LOAD_AND_I32_POSTRA:
@@ -1087,7 +1075,7 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_MAX_I32_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I32_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I32_POSTRA:
-    return expandAtomicBinOp(MBB, MBBI, NMBB, 4);
+    return expandAtomicBinOp(MBB, MBBI, NMBB, 4, STI, TII);
   case Mips::ATOMIC_LOAD_ADD_I64_POSTRA:
   case Mips::ATOMIC_LOAD_SUB_I64_POSTRA:
   case Mips::ATOMIC_LOAD_AND_I64_POSTRA:
@@ -1099,32 +1087,33 @@ bool MipsExpandPseudo::expandMI(MachineBasicBlock &MBB,
   case Mips::ATOMIC_LOAD_MAX_I64_POSTRA:
   case Mips::ATOMIC_LOAD_UMIN_I64_POSTRA:
   case Mips::ATOMIC_LOAD_UMAX_I64_POSTRA:
-    return expandAtomicBinOp(MBB, MBBI, NMBB, 8);
+    return expandAtomicBinOp(MBB, MBBI, NMBB, 8, STI, TII);
   default:
     return Modified;
   }
 }
 
-bool MipsExpandPseudo::expandMBB(MachineBasicBlock &MBB) {
+static bool expandMBB(MachineBasicBlock &MBB, const MipsSubtarget *STI,
+                      const MipsInstrInfo *TII) {
   bool Modified = false;
 
   MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
   while (MBBI != E) {
     MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
+    Modified |= expandMI(MBB, MBBI, NMBBI, STI, TII);
     MBBI = NMBBI;
   }
 
   return Modified;
 }
 
-bool MipsExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
-  STI = &MF.getSubtarget<MipsSubtarget>();
-  TII = STI->getInstrInfo();
+static bool expandPseudosInMF(MachineFunction &MF) {
+  const MipsSubtarget *STI = &MF.getSubtarget<MipsSubtarget>();
+  const MipsInstrInfo *TII = STI->getInstrInfo();
 
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
-    Modified |= expandMBB(MBB);
+    Modified |= expandMBB(MBB, STI, TII);
 
   if (Modified)
     MF.RenumberBlocks();
@@ -1134,6 +1123,17 @@ bool MipsExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 
 /// createMipsExpandPseudoPass - returns an instance of the pseudo instruction
 /// expansion pass.
-FunctionPass *llvm::createMipsExpandPseudoPass() {
-  return new MipsExpandPseudo();
+FunctionPass *llvm::createMipsExpandPseudoLegacyPass() {
+  return new MipsExpandPseudoLegacy();
+}
+
+bool MipsExpandPseudoLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return expandPseudosInMF(MF);
+}
+
+PreservedAnalyses
+MipsExpandPseudoPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  return expandPseudosInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                               : PreservedAnalyses::all();
 }
