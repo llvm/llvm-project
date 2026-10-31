@@ -3475,14 +3475,17 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
 
 // In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
 // Lower these into a node returning the correct type which is zero-extended
-// back to the correct size.
+// back to the correct size. This has to be a target node: DAG combines assume
+// that the result of ISD::CTLZ and ISD::CTPOP is as wide as their operand.
 static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
   SDValue V = Op->getOperand(0);
   assert(V.getValueType() == MVT::i64 &&
          "Unexpected CTLZ/CTPOP type to legalize");
 
   SDLoc DL(Op);
-  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  unsigned Opcode =
+      Op->getOpcode() == ISD::CTLZ ? NVPTXISD::CLZ_B64 : NVPTXISD::POPC_B64;
+  SDValue CT = DAG.getNode(Opcode, DL, MVT::i32, V);
   return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
 }
 
