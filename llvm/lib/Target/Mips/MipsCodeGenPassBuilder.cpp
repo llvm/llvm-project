@@ -66,7 +66,7 @@ void MipsCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
 
   // The microMIPS size reduction pass performs instruction reselection for
   // instructions which can be remapped to a 16 bit instruction.
-  // TODO(boomanaiden154): Add MicroMipsSizeReducePass
+  addMachineFunctionPass(MicroMipsSizeReducePass(), PMW);
 
   // This pass inserts a nop instruction between two back-to-back multiplication
   // instructions when the "mfix4300" flag is passed.
