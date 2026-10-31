@@ -1,0 +1,26 @@
+## Unwind information and LLVM stack maps are not currently supported
+## by llvm-readobj for WebAssembly objects.
+## These options should print only the file summary.
+# RUN: llvm-readobj --unwind %p/Inputs/trivial.obj.wasm 2>&1 | FileCheck %s --check-prefixes=COMMON,EMPTY --match-full-lines
+# RUN: llvm-readobj --stackmap %p/Inputs/trivial.obj.wasm 2>&1 | FileCheck %s --check-prefixes=COMMON,EMPTY --match-full-lines
+
+## --all should still print the supported information.
+# RUN: llvm-readobj --all %p/Inputs/trivial.obj.wasm 2>&1 | FileCheck %s --check-prefixes=COMMON,ALL --match-full-lines
+
+# COMMON-NOT:  {{.}}
+# COMMON:      File: {{.*}}trivial.obj.wasm
+# COMMON-NEXT: Format: WASM
+# COMMON-NEXT: Arch: wasm32
+# COMMON-NEXT: AddressSize: 32bit
+# EMPTY-NOT:   {{.}}
+
+# ALL-NEXT: Version: 0x1
+# ALL-NEXT: Sections [
+# ALL:        Type: TYPE (0x1)
+# ALL:        Name: linking
+# ALL:      Relocations [
+# ALL-NEXT:   Section (4) CODE {
+# ALL-NEXT:     0x4 R_WASM_MEMORY_ADDR_SLEB .L.str 0
+# ALL:      Symbols [
+# ALL-NEXT:   Symbol {
+# ALL-NEXT:     Name: main
