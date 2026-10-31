@@ -1820,6 +1820,7 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

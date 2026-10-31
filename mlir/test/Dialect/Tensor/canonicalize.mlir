@@ -3267,3 +3267,34 @@ func.func @select_uniform_unselected_poison_tensor(%p: i1, %a: tensor<4xi32>) ->
   %x = arith.select %m, %a, %bad : tensor<4xi1>, tensor<4xi32>
   return %x : tensor<4xi32>
 }
+
+// -----
+
+// Non-constant size with constant index -> splat with static type + cast
+// CHECK-LABEL:   func.func @splat_dynamic_size_constant(
+// CHECK-SAME:      %[[ARG0:.*]]: f32) -> tensor<?xf32> {
+// CHECK:           %[[SPLAT:.*]] = tensor.splat %[[ARG0]] : tensor<4xf32>
+// CHECK:           %[[CAST:.*]] = tensor.cast %[[SPLAT]] : tensor<4xf32> to tensor<?xf32>
+// CHECK:           return %[[CAST]] : tensor<?xf32>
+// CHECK:         }
+func.func @splat_dynamic_size_constant(%v: f32) -> tensor<?xf32> {
+  %c4 = arith.constant 4 : index
+  %0 = tensor.splat %v[%c4] : tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+// Mixed sizes -> splat with semi-static type + cast
+// CHECK-LABEL:   func.func @splat_dynamic_size_mixed(
+// CHECK-SAME:      %[[ARG0:.*]]: f32,
+// CHECK-SAME:      %[[ARG1:.*]]: index) -> tensor<?x?xf32> {
+// CHECK:           %[[SPLAT:.*]] = tensor.splat %[[ARG0]]{{\[}}%[[ARG1]]] : tensor<?x4xf32>
+// CHECK:           %[[CAST:.*]] = tensor.cast %[[SPLAT]] : tensor<?x4xf32> to tensor<?x?xf32>
+// CHECK:           return %[[CAST]] : tensor<?x?xf32>
+// CHECK:         }
+func.func @splat_dynamic_size_mixed(%v: f32, %m: index) -> tensor<?x?xf32> {
+  %c4 = arith.constant 4 : index
+  %0 = tensor.splat %v[%m, %c4] : tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
