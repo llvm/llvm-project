@@ -902,8 +902,13 @@ KnownFPClass KnownFPClass::log(const KnownFPClass &KnownSrc_, DenormalMode Mode,
   return applyOutputDenormalMode(Known, Mode);
 }
 
-KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
-                                DenormalMode Mode) {
+KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc_,
+                                DenormalMode Mode, bool MayBeNSZ) {
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+
+  if (!KnownSrc.isKnownNever(fcZero) && MayBeNSZ)
+    KnownSrc |= fcZero;
+
   KnownFPClass Known;
   Known.knownNot(fcPosSubnormal);
 
@@ -912,16 +917,19 @@ KnownFPClass KnownFPClass::sqrt(const KnownFPClass &KnownSrc,
 
   Known.propagateNonSNaN(KnownSrc);
 
-  // Any negative value besides -0 returns a nan.
+  // Any negative value besides -0.0 returns a nan.
   if (KnownSrc.isKnownNeverNaN() && KnownSrc.cannotBeOrderedLessThanZero())
     Known.knownNot(fcNan);
 
-  // The only negative value that can be returned is -0 for -0 inputs.
+  // The only negative value that can be returned is -0.0 for -0.0 inputs.
   Known.knownNot(fcNegInf | fcNegSubnormal | fcNegNormal);
 
-  // If the input denormal mode could be PreserveSign, a negative
-  // subnormal input could produce a negative zero output.
-  if (KnownSrc.isKnownNeverLogicalNegZero(Mode))
+  // Only sqrt(+0.0) == +0.0.
+  if (KnownSrc.isKnownNever(fcPosZero))
+    Known.knownNot(fcPosZero);
+
+  // Only sqrt(-0.0) == -0.0.
+  if (KnownSrc.isKnownNever(fcNegZero))
     Known.knownNot(fcNegZero);
 
   return Known;

@@ -3254,6 +3254,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::sqrt: {
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+      const bool HasNSZ = FMF.noSignedZeros();
 
       // Be explicit about the DemandedSrcMask so we do not miss anything.
       FPClassTest DemandedSrcMask = fcNone;
@@ -3280,6 +3281,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcPosInf)
         DemandedSrcMask |= fcPosInf;
 
+      // nsz can flip the sign of an input zero, so a demanded zero of either
+      // sign demands both source zeros.
+      if ((DemandedMask & fcZero) && HasNSZ) {
+        DemandedSrcMask |= fcZero;
+        // Any subnormal that can flush to either zero is also demanded.
+        if (Mode.inputsMayBeZero())
+          DemandedSrcMask |= fcSubnormal;
+      }
+
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(I, 0, DemandedSrcMask, KnownSrc, SQ,
                                   Depth + 1))
@@ -3294,11 +3304,16 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           KnownSrc.isKnownNeverLogicalZero(Mode))
         return ConstantFP::getQNaN(VTy);
 
-      Known = KnownFPClass::sqrt(KnownSrc, Mode);
+      Known = KnownFPClass::sqrt(KnownSrc, Mode, HasNSZ);
       Known.knownNot(~DemandedMask);
 
-      if (Known.getKnownFPClasses() == fcZero) {
-        if (FMF.noSignedZeros())
+      // This copysign fold is only valid if the input does not change sign,
+      // which fails if input denormal flushing can change the sign. This is the
+      // case with negative-subnormals flushing to positive-zero under DAPZ.
+      if (Known.getKnownFPClasses() == fcZero &&
+          (!Mode.inputsMayBePositiveZero() ||
+           KnownSrc.isKnownNever(fcNegSubnormal))) {
+        if (HasNSZ)
           return ConstantFP::getZero(VTy);
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);

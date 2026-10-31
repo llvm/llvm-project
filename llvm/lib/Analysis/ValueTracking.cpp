@@ -5548,26 +5548,22 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       FPClassTest InterestedSrcs = InterestedClasses;
       if (InterestedClasses & fcQNan)
         InterestedSrcs |= KnownFPClass::OrderedLessThanZeroMask | fcSNan;
-      // Subnormals may flush to zero.
+      // Subnormals may flush to zero, and the NSZ flag may demand the other
+      // zero.
       if (InterestedClasses & fcZero)
-        InterestedSrcs |= fcSubnormal;
+        InterestedSrcs |= fcZero | fcSubnormal;
 
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedSrcs,
                           KnownSrc, Q, Depth + 1);
 
-      DenormalMode Mode = DenormalMode::getDynamic();
+      const Function *F = II->getFunction();
+      const fltSemantics &FltSem =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
-      bool HasNSZ = Q.IIQ.hasNoSignedZeros(II);
-      if (!HasNSZ) {
-        const Function *F = II->getFunction();
-        const fltSemantics &FltSem =
-            II->getType()->getScalarType()->getFltSemantics();
-        Mode = F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
-      }
-
-      Known = KnownFPClass::sqrt(KnownSrc, Mode);
-      if (HasNSZ)
-        Known.knownNot(fcNegZero);
+      const bool HasNSZ = cast<FPMathOperator>(II)->hasNoSignedZeros();
+      Known = KnownFPClass::sqrt(KnownSrc, Mode, HasNSZ);
 
       break;
     }
