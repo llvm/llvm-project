@@ -487,6 +487,14 @@ private:
   inferRegClassFromInstructionPattern(const TreePatternNode &N,
                                       unsigned ResIdx) const;
 
+  /// Return the class to use for the result of extracting sub-register \p
+  /// SubIdx from a register of class \p SuperRC, also accounting for the
+  /// result's value type \p Ty.
+  const CodeGenRegisterClass *
+  inferSubRegClassForType(const CodeGenRegisterClass &SuperRC,
+                          const CodeGenSubRegIndex &SubIdx,
+                          const TypeSetByHwMode &Ty) const;
+
   Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
                           unsigned InsnID, const TreePatternNode &Dst) const;
 
@@ -1902,8 +1910,11 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     }
 
     assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
+    const CodeGenRegisterClass *SubRegRC =
+        inferSubRegClassForType(*SuperClass, *SubIdx, Dst.getExtType(0));
+    assert(SubRegRC && "Couldn't find a matching subclass");
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
-                                                     *SrcRCDstRCPair->second);
+                                                     *SubRegRC);
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
                                                      *SrcRCDstRCPair->first);
   } else if (DstIName == "INSERT_SUBREG") {
@@ -2029,6 +2040,49 @@ GlobalISelEmitter::inferRegClassFromRegisterClassLike(
 }
 
 const CodeGenRegisterClass *
+GlobalISelEmitter::inferSubRegClassForType(const CodeGenRegisterClass &SuperRC,
+                                           const CodeGenSubRegIndex &SubIdx,
+                                           const TypeSetByHwMode &Ty) const {
+  const auto SubRCAndSubRegRC =
+      SuperRC.getMatchingSubClassWithSubRegs(CGRegs, &SubIdx);
+  if (!SubRCAndSubRegRC)
+    return nullptr;
+
+  const CodeGenRegisterClass *SubRegRC = SubRCAndSubRegRC->second;
+  if (!Ty.isValueTypeByHwMode(false))
+    return SubRegRC;
+
+  const ValueTypeByHwMode &VT = Ty.getValueTypeByHwMode();
+  if (SubRegRC->hasType(VT))
+    return SubRegRC;
+
+  // getMatchingSubClassWithSubRegs() breaks ties between classes covering the
+  // same registers by class order. That can select a class which happens to
+  // cover the right registers but cannot hold the extracted value: on X86,
+  // extracting sub_xmm from VR512 for a v4i32 result picks FR16X (an f16 class
+  // that is only 32 bits wide) instead of VR128X. Prefer a class that has the
+  // result type.
+  auto HasSameMembers = [SubRegRC](const CodeGenRegisterClass &RC) {
+    ArrayRef<const CodeGenRegister *> Members = RC.getMembers();
+    ArrayRef<const CodeGenRegister *> SubRegMembers = SubRegRC->getMembers();
+    if (Members.size() != SubRegMembers.size())
+      return false;
+    return llvm::all_of(Members, [SubRegMembers](const CodeGenRegister *Reg) {
+      return is_contained(SubRegMembers, Reg);
+    });
+  };
+
+  const CodeGenRegisterClass *Best = nullptr;
+  for (const CodeGenRegisterClass &RC : CGRegs.getRegClasses()) {
+    if (!RC.hasType(VT) || !HasSameMembers(RC))
+      continue;
+    if (!Best || RC.getNumValueTypes() > Best->getNumValueTypes())
+      Best = &RC;
+  }
+  return Best ? Best : SubRegRC;
+}
+
+const CodeGenRegisterClass *
 GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
                                                        unsigned ResIdx) const {
   const CodeGenInstruction &Inst = Target.getInstruction(N.getOperator());
@@ -2080,12 +2134,7 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
     if (!SubIdx)
       return nullptr;
 
-    const auto SubRCAndSubRegRC =
-        SuperRC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
-    if (!SubRCAndSubRegRC)
-      return nullptr;
-
-    return SubRCAndSubRegRC->second;
+    return inferSubRegClassForType(*SuperRC, *SubIdx, N.getExtType(0));
   }
 
   if (InstName == "SUBREG_TO_REG") {
