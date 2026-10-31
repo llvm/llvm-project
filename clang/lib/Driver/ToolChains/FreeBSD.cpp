@@ -24,107 +24,6 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
-                                      const InputInfo &Output,
-                                      const InputInfoList &Inputs,
-                                      const ArgList &Args,
-                                      const char *LinkingOutput) const {
-  const auto &ToolChain = static_cast<const FreeBSD &>(getToolChain());
-  const auto &D = getToolChain().getDriver();
-  const llvm::Triple &Triple = ToolChain.getTriple();
-  ArgStringList CmdArgs;
-
-  claimNoWarnArgs(Args);
-
-  // When building 32-bit code on FreeBSD/amd64, we have to explicitly
-  // instruct as in the base system to assemble 32-bit code.
-  switch (ToolChain.getArch()) {
-  default:
-    break;
-  case llvm::Triple::x86:
-    CmdArgs.push_back("--32");
-    break;
-  case llvm::Triple::ppc:
-  case llvm::Triple::ppcle:
-    CmdArgs.push_back("-a32");
-    break;
-  case llvm::Triple::mips:
-  case llvm::Triple::mipsel:
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el: {
-    StringRef CPUName;
-    StringRef ABIName;
-    mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
-
-    CmdArgs.push_back("-march");
-    CmdArgs.push_back(CPUName.data());
-
-    CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
-
-    if (Triple.isLittleEndian())
-      CmdArgs.push_back("-EL");
-    else
-      CmdArgs.push_back("-EB");
-
-    if (Arg *A = Args.getLastArg(options::OPT_G)) {
-      StringRef v = A->getValue();
-      CmdArgs.push_back(Args.MakeArgString("-G" + v));
-      A->claim();
-    }
-
-    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
-    break;
-  }
-  case llvm::Triple::arm:
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumb:
-  case llvm::Triple::thumbeb: {
-    arm::FloatABI ABI = arm::getARMFloatABI(ToolChain, Args);
-
-    if (ABI == arm::FloatABI::Hard)
-      CmdArgs.push_back("-mfpu=vfp");
-    else
-      CmdArgs.push_back("-mfpu=softvfp");
-
-    CmdArgs.push_back("-meabi=5");
-    break;
-  }
-  case llvm::Triple::sparcv9: {
-    std::string CPU = getCPUName(D, Args, Triple);
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, Triple));
-    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
-    break;
-  }
-  }
-
-  for (const Arg *A : Args.filtered(options::OPT_ffile_prefix_map_EQ,
-                                    options::OPT_fdebug_prefix_map_EQ)) {
-    StringRef Map = A->getValue();
-    if (!Map.contains('='))
-      D.Diag(diag::err_drv_invalid_argument_to_option)
-          << Map << A->getOption().getName();
-    else {
-      CmdArgs.push_back(Args.MakeArgString("--debug-prefix-map"));
-      CmdArgs.push_back(Args.MakeArgString(Map));
-    }
-    A->claim();
-  }
-
-  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
-
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
-
-  for (const auto &II : Inputs)
-    CmdArgs.push_back(II.getFilename());
-
-  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileCurCP(),
-                                         Exec, CmdArgs, Inputs, Output));
-}
-
 void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
@@ -454,10 +353,6 @@ void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,
 void FreeBSD::AddHIPIncludeArgs(const ArgList &DriverArgs,
                                 ArgStringList &CC1Args) const {
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
-}
-
-Tool *FreeBSD::buildAssembler() const {
-  return new tools::freebsd::Assembler(*this);
 }
 
 Tool *FreeBSD::buildLinker() const { return new tools::freebsd::Linker(*this); }

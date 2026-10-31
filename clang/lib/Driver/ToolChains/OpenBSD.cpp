@@ -25,85 +25,6 @@ using namespace clang::driver::toolchains;
 using namespace clang;
 using namespace llvm::opt;
 
-void openbsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
-                                      const InputInfo &Output,
-                                      const InputInfoList &Inputs,
-                                      const ArgList &Args,
-                                      const char *LinkingOutput) const {
-  const auto &ToolChain = static_cast<const OpenBSD &>(getToolChain());
-  const Driver &D = ToolChain.getDriver();
-  const llvm::Triple &Triple = ToolChain.getTriple();
-  ArgStringList CmdArgs;
-
-  claimNoWarnArgs(Args);
-
-  switch (ToolChain.getArch()) {
-  case llvm::Triple::x86:
-    // When building 32-bit code on OpenBSD/amd64, we have to explicitly
-    // instruct as in the base system to assemble 32-bit code.
-    CmdArgs.push_back("--32");
-    break;
-
-  case llvm::Triple::arm: {
-    StringRef MArch, MCPU;
-    arm::getARMArchCPUFromArgs(Args, MArch, MCPU, /*FromAs*/ true);
-    std::string Arch = arm::getARMTargetCPU(MCPU, MArch, Triple);
-    CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch));
-    break;
-  }
-
-  case llvm::Triple::ppc:
-    CmdArgs.push_back("-mppc");
-    CmdArgs.push_back("-many");
-    break;
-
-  case llvm::Triple::sparcv9: {
-    CmdArgs.push_back("-64");
-    std::string CPU = getCPUName(D, Args, Triple);
-    CmdArgs.push_back(sparc::getSparcAsmModeForCPU(CPU, Triple));
-    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
-    break;
-  }
-
-  case llvm::Triple::mips64:
-  case llvm::Triple::mips64el: {
-    StringRef CPUName;
-    StringRef ABIName;
-    mips::getMipsCPUAndABI(Args, Triple, CPUName, ABIName);
-
-    CmdArgs.push_back("-march");
-    CmdArgs.push_back(CPUName.data());
-
-    CmdArgs.push_back("-mabi");
-    CmdArgs.push_back(mips::getGnuCompatibleMipsABIName(ABIName).data());
-
-    if (Triple.isLittleEndian())
-      CmdArgs.push_back("-EL");
-    else
-      CmdArgs.push_back("-EB");
-
-    AddAssemblerKPIC(ToolChain, Args, CmdArgs);
-    break;
-  }
-
-  default:
-    break;
-  }
-
-  Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
-
-  CmdArgs.push_back("-o");
-  CmdArgs.push_back(Output.getFilename());
-
-  for (const auto &II : Inputs)
-    CmdArgs.push_back(II.getFilename());
-
-  const char *Exec = Args.MakeArgString(ToolChain.GetProgramPath("as"));
-  C.addCommand(std::make_unique<Command>(JA, *this,
-                                         ResponseFileSupport::AtFileCurCP(),
-                                         Exec, CmdArgs, Inputs, Output));
-}
-
 void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfo &Output,
                                    const InputInfoList &Inputs,
@@ -376,10 +297,6 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
   if (getVFS().exists(P))
     return std::string(P);
   return ToolChain::getCompilerRT(Args, Component, Type, IsFortran);
-}
-
-Tool *OpenBSD::buildAssembler() const {
-  return new tools::openbsd::Assembler(*this);
 }
 
 Tool *OpenBSD::buildLinker() const { return new tools::openbsd::Linker(*this); }
