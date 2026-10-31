@@ -1063,7 +1063,9 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
     if (ExpSCEV.user_empty())
       continue;
     Builder.setInsertPoint(&ExpSCEV);
-    VPValue *Expanded = Expander.expand(ExpSCEV.getSCEV());
+    VPValue *Expanded = Expander.expand(ExpSCEV);
+    if (Expanded == &ExpSCEV)
+      continue;
     ExpSCEV.replaceAllUsesWith(Expanded);
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.
