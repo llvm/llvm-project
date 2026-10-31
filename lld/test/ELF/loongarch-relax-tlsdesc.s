@@ -7,22 +7,22 @@
 ## Test the TLSDESC relaxation.
 # RUN: ld.lld --relax -shared -z now a.64.o c.64.o -o a.64.so
 # RUN: llvm-readobj -r -x .got a.64.so | FileCheck --check-prefix=GD64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.so | FileCheck %s --check-prefix=GD64
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -dr -h a.64.so | FileCheck %s --check-prefix=GD64
 
 ## Transition from TLSDESC to IE/LE. Also check --emit-relocs.
 # RUN: ld.lld -e 0 -z now --emit-relocs a.64.o c.64.o -o a.64.le
 # RUN: llvm-readobj -r -x .got a.64.le 2>&1 | FileCheck --check-prefix=LE64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.le | FileCheck %s --check-prefix=LE64
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -dr -h a.64.le | FileCheck %s --check-prefix=LE64
 
 # RUN: ld.lld --no-relax -e 0 -z now a.64.o c.64.o -o a.64.le.norelax
-# RUN: llvm-objdump --no-show-raw-insn -d -h a.64.le.norelax | FileCheck %s --check-prefix=LE64-NORELAX
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d -h a.64.le.norelax | FileCheck %s --check-prefix=LE64-NORELAX
 
 # RUN: ld.lld --relax -e 0 -z now --emit-relocs a.64.o c.64.so -o a.64.ie
 # RUN: llvm-readobj -r -x .got a.64.ie | FileCheck --check-prefix=IE64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -dr -h a.64.ie | FileCheck %s --check-prefix=IE64
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -dr -h a.64.ie | FileCheck %s --check-prefix=IE64
 
 # RUN: ld.lld --no-relax -e 0 -z now a.64.o c.64.so -o a.64.ie.norelax
-# RUN: llvm-objdump --no-show-raw-insn -d -h a.64.ie.norelax | FileCheck %s --check-prefix=IE64-NORELAX
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d -h a.64.ie.norelax | FileCheck %s --check-prefix=IE64-NORELAX
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x20460 R_LARCH_TLS_DESC64 - 0x7FF

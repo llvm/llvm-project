@@ -15,7 +15,7 @@
 # NOREL: no relocations
 
 # RUN: ld.lld -r b.o b.o a.o b.o b1.o c.o d.o -o out.ro
-# RUN: llvm-objdump -dr --no-show-raw-insn out.ro | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-show-raw-insn out.ro | FileCheck %s
 # RUN: llvm-readelf -r out.ro | FileCheck %s --check-prefix=CHECK-REL
 
 # CHECK:      <b0>:
@@ -61,7 +61,7 @@
 # RUN: llvm-mc -filetype=obj -triple=loongarch32 -mattr=+32s,+relax b.s -o b.32.o
 # RUN: ld.lld -r a.32.o b.32.o -o out.32.ro
 # RUN: ld.lld -Ttext=0x10000 out.32.ro -o out32
-# RUN: llvm-objdump -dr --no-show-raw-insn out32 | FileCheck %s --check-prefix=CHECK32
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-show-raw-insn out32 | FileCheck %s --check-prefix=CHECK32
 
 # CHECK32:      <_start>:
 # CHECK32-NEXT:   10000:    pcaddi $a0, 4
@@ -77,7 +77,7 @@
 ## Test CREL.
 # RUN: llvm-mc -filetype=obj -triple=loongarch64 -mattr=+relax --crel a.s -o acrel.o
 # RUN: ld.lld -r acrel.o b.o -o out.crel.ro
-# RUN: llvm-objdump -dr --no-show-raw-insn out.crel.ro | FileCheck %s --check-prefix=CHECKC
+# RUN: llvm-objdump --no-print-imm-hex -dr --no-show-raw-insn out.crel.ro | FileCheck %s --check-prefix=CHECKC
 
 # CHECKC:      <_start>:
 # CHECKC-NEXT:   0:    pcalau12i $a0, 0

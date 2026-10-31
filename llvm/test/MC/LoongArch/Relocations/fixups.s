@@ -1,7 +1,7 @@
 # RUN: llvm-mc --triple=loongarch64 %s --show-encoding \
 # RUN:     | FileCheck --check-prefix=CHECK-FIXUP %s
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %s \
-# RUN:     | llvm-objdump -d - | FileCheck --check-prefix=CHECK-INSTR %s
+# RUN:     | llvm-objdump --no-print-imm-hex -d - | FileCheck --check-prefix=CHECK-INSTR %s
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %s \
 # RUN:     | llvm-readobj -r - | FileCheck --check-prefix=CHECK-REL %s
 

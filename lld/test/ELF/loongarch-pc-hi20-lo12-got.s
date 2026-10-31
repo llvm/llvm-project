@@ -6,7 +6,7 @@
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 lone-ldr.s -o lone-ldr.o
 
 # RUN: ld.lld a.o -T within-range.t -o a
-# RUN: llvm-objdump -d --no-show-raw-insn a | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a | FileCheck %s
 
 ## This test verifies the encoding when the register $a0 is used.
 # CHECK:      pcalau12i $a0, 0
@@ -29,17 +29,17 @@
 # CHECK-NEXT: ld.d      $a5, $a6, -2048
 
 # RUN: ld.lld a.o -T underflow-range.t -o a-underflow
-# RUN: llvm-objdump -d --no-show-raw-insn a-underflow | FileCheck --check-prefix=OUTRANGE %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a-underflow | FileCheck --check-prefix=OUTRANGE %s
 
 # RUN: ld.lld a.o -T overflow-range.t -o a-overflow
-# RUN: llvm-objdump -d --no-show-raw-insn a-overflow | FileCheck --check-prefix=OUTRANGE %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a-overflow | FileCheck --check-prefix=OUTRANGE %s
 
 # OUTRANGE:      pcalau12i $a0, 1
 # OUTRANGE-NEXT: ld.d      $a0, $a0, 0
 
 ## Relocations do not appear in pairs, no relaxations should be applied.
 # RUN: ld.lld unpaired.o -T within-range.t  -o unpaired
-# RUN: llvm-objdump --no-show-raw-insn -d unpaired | FileCheck --check-prefix=UNPAIRED %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d unpaired | FileCheck --check-prefix=UNPAIRED %s
 
 # UNPAIRED:         pcalau12i $a0, 2
 # UNPAIRED-NEXT:    b         8
@@ -48,14 +48,14 @@
 
 ## Relocations do not appear in pairs, no relaxations should be applied.
 # RUN: ld.lld lone-ldr.o -T within-range.t -o lone-ldr
-# RUN: llvm-objdump --no-show-raw-insn -d lone-ldr | FileCheck --check-prefix=LONE-LDR %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d lone-ldr | FileCheck --check-prefix=LONE-LDR %s
 
 # LONE-LDR:         ld.d   $a0, $a0, -2048
 
 ## 32-bit code is mostly the same. We only test a few variants.
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 a.32.s -o a.32.o
 # RUN: ld.lld a.32.o -T within-range.t -o a32
-# RUN: llvm-objdump -d --no-show-raw-insn a32 | FileCheck --check-prefix=CHECK32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn a32 | FileCheck --check-prefix=CHECK32 %s
 
 ## This test verifies the encoding when the register $a0 is used.
 # CHECK32:      pcalau12i $a0, 0

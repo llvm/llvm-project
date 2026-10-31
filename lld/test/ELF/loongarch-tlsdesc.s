@@ -9,7 +9,7 @@
 
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o a.64.so
 # RUN: llvm-readobj -r -x .got a.64.so | FileCheck --check-prefix=GD64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -h -d a.64.so | FileCheck %s --check-prefix=GD64
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -h -d a.64.so | FileCheck %s --check-prefix=GD64
 
 # RUN: ld.lld -shared -z now a.64.o c.64.o -o rel.64.so -z rel
 # RUN: llvm-readobj -r -x .got rel.64.so | FileCheck --check-prefix=GD64-REL %s
@@ -17,17 +17,17 @@
 ## Transition from TLSDESC to IE/LE.
 # RUN: ld.lld -e 0 -z now a.64.o c.64.o -o a.64.le
 # RUN: llvm-readobj -r -x .got a.64.le 2>&1 | FileCheck --check-prefix=LE64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -d a.64.le | FileCheck --check-prefix=LE64 %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d a.64.le | FileCheck --check-prefix=LE64 %s
 
 # RUN: ld.lld -e 0 -z now a.64.o c.64.so -o a.64.ie
 # RUN: llvm-readobj -r -x .got a.64.ie | FileCheck --check-prefix=IE64-RELA %s
-# RUN: llvm-objdump --no-show-raw-insn -d a.64.ie | FileCheck --check-prefix=IE64 %s
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -d a.64.ie | FileCheck --check-prefix=IE64 %s
 
 ## 32-bit code is mostly the same. We only test a few variants.
 
 # RUN: ld.lld -shared -z now a.32.o c.32.o -o rel.32.so -z rel
 # RUN: llvm-readobj -r -x .got rel.32.so | FileCheck --check-prefix=GD32-REL %s
-# RUN: llvm-objdump --no-show-raw-insn -h -d rel.32.so | FileCheck %s --check-prefix=GD32
+# RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn -h -d rel.32.so | FileCheck %s --check-prefix=GD32
 
 # GD64-RELA:      .rela.dyn {
 # GD64-RELA-NEXT:   0x20400 R_LARCH_TLS_DESC64 - 0x7FF

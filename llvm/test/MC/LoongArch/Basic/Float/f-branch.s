@@ -3,10 +3,10 @@
 # RUN: llvm-mc %s --triple=loongarch64 --show-encoding \
 # RUN:     | FileCheck --check-prefixes=ASM-AND-OBJ,ASM %s
 # RUN: llvm-mc %s --triple=loongarch32 --filetype=obj \
-# RUN:     | llvm-objdump -d - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck --check-prefix=ASM-AND-OBJ %s
 # RUN: llvm-mc %s --triple=loongarch64 --filetype=obj \
-# RUN:     | llvm-objdump -d - \
+# RUN:     | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck --check-prefix=ASM-AND-OBJ %s
 
 # ASM-AND-OBJ: bceqz $fcc6, 12
