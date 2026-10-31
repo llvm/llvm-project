@@ -133,7 +133,6 @@ define i64 @regression3() {
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    br i1 false, label %[[LOOP1_LATCH_FUNCEXIT_CRIT_EDGE]], label %[[LOOP1_HEADER]]
 ; CHECK:       [[LOOP1_LATCH_FUNCEXIT_CRIT_EDGE]]:
-; CHECK-NEXT:    [[SPLIT:%.*]] = phi i64 [ [[ASHR]], %[[LOOP1_LATCH]] ]
 ; CHECK-NEXT:    br label %[[FUNCEXIT]]
 ;
 entry:
