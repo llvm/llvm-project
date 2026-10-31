@@ -230,6 +230,72 @@ long double test_powil(long double x, int y) {
 // OGCG:         call x86_fp80 @llvm.powi.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}})
 // OGCG:         ret x86_fp80
 
+// ldexp: float, double, long double, __float128
+
+float test_ldexpf(float x, int e) {
+  return __builtin_ldexpf(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexpf
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.float, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} float @test_ldexpf
+// LLVM:         call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+// LLVM:         ret float
+
+// OGCG-LABEL: define {{.*}} float @test_ldexpf
+// OGCG:         call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+// OGCG:         ret float
+
+double test_ldexp(double x, int e) {
+  return __builtin_ldexp(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexp
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.double, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} double @test_ldexp
+// LLVM:         call double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+// LLVM:         ret double
+
+// OGCG-LABEL: define {{.*}} double @test_ldexp
+// OGCG:         call double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+// OGCG:         ret double
+
+long double test_ldexpl(long double x, int e) {
+  return __builtin_ldexpl(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexpl
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.long_double<!cir.f80>, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} x86_fp80 @test_ldexpl
+// LLVM:         call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}})
+// LLVM:         ret x86_fp80
+
+// OGCG-LABEL: define {{.*}} x86_fp80 @test_ldexpl
+// OGCG:         call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}})
+// OGCG:         ret x86_fp80
+
+__float128 test_ldexpf128(__float128 x, int e) {
+  return __builtin_ldexpf128(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexpf128
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.f128, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} fp128 @test_ldexpf128
+// LLVM:         call fp128 @llvm.ldexp.f128.i32(fp128 %{{.*}}, i32 %{{.*}})
+// LLVM:         ret fp128
+
+// OGCG-LABEL: define {{.*}} fp128 @test_ldexpf128
+// OGCG:         call fp128 @llvm.ldexp.f128.i32(fp128 %{{.*}}, i32 %{{.*}})
+// OGCG:         ret fp128
+
 // FP comparison builtins: float
 
 void test_floats(float x, float y, int *out) {
