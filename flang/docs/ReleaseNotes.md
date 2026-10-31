@@ -163,6 +163,8 @@ page](https://llvm.org/releases/).
   equal the array's declared leading extent, so that the common case has a
   constant trip count.
 
+- Added `-b <arg>` on AIX, which passes `-b <arg>` to the linker.
+
 ## Windows Support
 
 ## Fortran Language Changes in Flang

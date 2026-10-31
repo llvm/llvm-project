@@ -1146,6 +1146,7 @@ def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
+  Visibility<[ClangOption, FlangOption]>,
   Group<Link_Group>;
 
 defm offload_uniform_block : BoolFOption<"offload-uniform-block",
