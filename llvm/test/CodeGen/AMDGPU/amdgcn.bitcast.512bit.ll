@@ -64395,6 +64395,7 @@ define <32 x i16> @bitcast_v64i8_to_v32i16(<64 x i8> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_load_ushort v34, off, s[0:3], s32 offset:36
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v47, off, s[0:3], s32 offset:28
 ; GFX9-NEXT:    buffer_load_ushort v59, off, s[0:3], s32 offset:24
 ; GFX9-NEXT:    buffer_load_ushort v61, off, s[0:3], s32 offset:20
@@ -76002,6 +76003,7 @@ define <32 x half> @bitcast_v64i8_to_v32f16(<64 x i8> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_load_ushort v34, off, s[0:3], s32 offset:36
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v47, off, s[0:3], s32 offset:28
 ; GFX9-NEXT:    buffer_load_ushort v59, off, s[0:3], s32 offset:24
 ; GFX9-NEXT:    buffer_load_ushort v61, off, s[0:3], s32 offset:20
@@ -86007,6 +86009,7 @@ define <32 x bfloat> @bitcast_v64i8_to_v32bf16(<64 x i8> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_store_dword v14, off, s[0:3], s32 offset:252 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_store_dword v13, off, s[0:3], s32 offset:256 ; 4-byte Folded Spill
 ; GFX9-NEXT:    buffer_load_ushort v34, off, s[0:3], s32 offset:36
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v47, off, s[0:3], s32 offset:28
 ; GFX9-NEXT:    buffer_load_ushort v59, off, s[0:3], s32 offset:24
 ; GFX9-NEXT:    buffer_load_ushort v61, off, s[0:3], s32 offset:20
