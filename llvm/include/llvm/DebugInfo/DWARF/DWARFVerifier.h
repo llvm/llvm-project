@@ -216,6 +216,15 @@ private:
   /// \returns Number of errors that occurred during verification.
   unsigned verifyDebugInfoSubprogram(const DWARFDie &Die);
 
+  /// Verifies that local types and imported entities of an out-of-line
+  /// subprogram (a subprogram with DW_AT_abstract_origin) are also present
+  /// in its abstract origin.
+  ///
+  /// Normally, they are shared by all instances of the subprogram, so if one
+  /// exists only in an out-of-line instance, it isn't visible from the inlined
+  /// ones. Reports a warning for each such entity.
+  void verifyDebugInfoLocalEntities(const DWARFDie &Die);
+
   /// Verify that all Die ranges are valid.
   ///
   /// This function currently checks for:
