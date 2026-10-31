@@ -16,12 +16,14 @@
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeEdit.h"
@@ -34,6 +36,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
@@ -61,6 +64,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+static cl::opt<bool> ShareRematerializedLoads(
+    "enable-remat-load-sharing", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Share invariant load rematerializations after register allocation"));
+
+STATISTIC(NumSharedRematLoads, "Number of shared rematerialized loads");
 STATISTIC(NumSpilledRanges,   "Number of spilled live ranges");
 STATISTIC(NumSnippets,        "Number of spilled snippets");
 STATISTIC(NumSpills,          "Number of spills inserted");
@@ -160,6 +169,7 @@ class InlineSpiller : public Spiller {
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
   LiveRegMatrix *Matrix = nullptr;
+  bool EnableRematLoadSharing;
 
   // Variables that are valid during spill(), but used by multiple methods.
   LiveRangeEdit *Edit = nullptr;
@@ -167,6 +177,13 @@ class InlineSpiller : public Spiller {
   int StackSlot;
   Register Original;
   AllocationOrder *Order = nullptr;
+
+  SmallDenseSet<Register, 32> RematerializedLoads;
+  bool isRematLoadCandidate(MachineInstr &MI);
+  bool tryShareRematerializedLoad(MachineInstr &KeepMI, Register KeepReg,
+                                  MachineInstr &DropMI,
+                                  ArrayRef<MCRegister> PhysRegs);
+  void shareRematerializedLoads();
 
   // All registers to spill to StackSlot, including the main register.
   SmallVector<Register, 8> RegsToSpill;
@@ -200,6 +217,10 @@ public:
       : MF(MF), LIS(Analyses.LIS), LSS(Analyses.LSS), VRM(VRM),
         MRI(MF.getRegInfo()), TII(*MF.getSubtarget().getInstrInfo()),
         TRI(*MF.getSubtarget().getRegisterInfo()), Matrix(Matrix),
+        EnableRematLoadSharing(
+            ShareRematerializedLoads.getNumOccurrences()
+                ? ShareRematerializedLoads
+                : MF.getSubtarget().enableRematLoadSharing()),
         HSpiller(Analyses, MF, VRM, Matrix), VRAI(VRAI) {}
 
   void spill(LiveRangeEdit &, AllocationOrder *Order = nullptr) override;
@@ -823,6 +844,8 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   }
   LLVM_DEBUG(dbgs() << "\t        " << UseIdx << '\t' << MI << '\n');
 
+  if (EnableRematLoadSharing && NewMI->mayLoad())
+    RematerializedLoads.insert(NewVReg);
   ++NumRemats;
   return true;
 }
@@ -1478,8 +1501,169 @@ void InlineSpiller::spill(LiveRangeEdit &edit, AllocationOrder *order) {
   Edit->calculateRegClassAndHint(MF, VRAI);
 }
 
+bool InlineSpiller::isRematLoadCandidate(MachineInstr &MI) {
+  if (MI.isBundled() || MI.peekDebugInstrNum() || !MI.hasOneMemOperand() ||
+      !MI.mayLoad() || MI.mayStore() || MI.hasUnmodeledSideEffects() ||
+      MI.getNumOperands() == 0)
+    return false;
+  const MachineOperand &Def = MI.getOperand(0);
+  if (!Def.isReg() || !Def.isDef() || !Def.getReg().isVirtual() ||
+      Def.getSubReg() || Def.isDead() || Def.isTied() ||
+      !RematerializedLoads.count(Def.getReg()) || !VRM.hasPhys(Def.getReg()) ||
+      !LIS.hasInterval(Def.getReg()) ||
+      MRI.getUniqueVRegDef(Def.getReg()) != &MI)
+    return false;
+  const MachineMemOperand *MMO = *MI.memoperands_begin();
+  if (!MMO->isLoad() || !MMO->isInvariant() || MMO->isVolatile() ||
+      MMO->isAtomic())
+    return false;
+  for (unsigned I = 1, E = MI.getNumOperands(); I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (MO.isRegMask() || (MO.isReg() && (MO.isDef() || MO.isUndef())) ||
+        (MO.isReg() && MO.readsReg() && MO.getReg().isPhysical() &&
+         !MRI.isConstantPhysReg(MO.getReg())))
+      return false;
+  }
+  return true;
+}
+
+bool InlineSpiller::tryShareRematerializedLoad(MachineInstr &KeepMI,
+                                               Register KeepReg,
+                                               MachineInstr &DropMI,
+                                               ArrayRef<MCRegister> PhysRegs) {
+  Register DropReg = DropMI.getOperand(0).getReg();
+  if (MRI.getRegClass(KeepReg) != MRI.getRegClass(DropReg) ||
+      !KeepMI.isIdenticalTo(DropMI, MachineInstr::IgnoreVRegDefs) ||
+      *KeepMI.memoperands_begin() != *DropMI.memoperands_begin())
+    return false;
+
+  SlotIndex DropIdx = LIS.getInstructionIndex(DropMI).getRegSlot(true);
+  if (!VirtRegAuxInfo::allUsesAvailableAt(&KeepMI, DropIdx, LIS, MRI, TII))
+    return false;
+
+  LiveInterval &KeepLI = LIS.getInterval(KeepReg);
+  LiveInterval &DropLI = LIS.getInterval(DropReg);
+  if (!KeepLI.containsOneValue() || !DropLI.containsOneValue() ||
+      KeepLI.beginIndex() >= DropLI.beginIndex() ||
+      KeepLI.endIndex() > DropLI.beginIndex())
+    return false;
+  for (Register R : {KeepReg, DropReg})
+    for (const MachineInstr &Use : MRI.reg_nodbg_instructions(R))
+      if (Use.getParent() != KeepMI.getParent() || Use.isBundled())
+        return false;
+
+  MCRegister KeepPhys = VRM.getPhys(KeepReg);
+  MCRegister DropPhys = VRM.getPhys(DropReg);
+  if (MRI.isReserved(KeepPhys) || MRI.isReserved(DropPhys))
+    return false;
+
+  // Query an over-approximation: every register unit is live over the complete
+  // combined span. Invalidate both before and after using a temporary range:
+  // virtual queries cache its address, and regmask queries cache its register.
+  LiveInterval Combined(KeepReg, KeepLI.weight());
+  SlotIndex Begin = KeepLI.beginIndex();
+  SlotIndex End = std::max(KeepLI.endIndex(), DropLI.endIndex());
+  VNInfo *VNI = Combined.getNextValue(Begin, LIS.getVNInfoAllocator());
+  Combined.addSegment(LiveRange::Segment(Begin, End, VNI));
+  Matrix->unassign(KeepLI);
+  Matrix->unassign(DropLI);
+  Matrix->invalidateVirtRegs();
+  MCRegister SharedPhys;
+  // An existing chain already has identity copies into KeepReg. Preserve
+  // their assignment so extending the chain cannot introduce physical moves.
+  auto TryPhys = [&](MCRegister Phys) {
+    if (Matrix->checkInterference(Combined, Phys) != LiveRegMatrix::IK_Free)
+      return false;
+    SharedPhys = Phys;
+    return true;
+  };
+  if (!TryPhys(KeepPhys) && KeepReg == KeepMI.getOperand(0).getReg() &&
+      !TryPhys(DropPhys))
+    for (MCRegister Phys : PhysRegs)
+      if (Phys != KeepPhys && Phys != DropPhys && TryPhys(Phys))
+        break;
+  Matrix->invalidateVirtRegs();
+  if (!SharedPhys) {
+    Matrix->assign(KeepLI, KeepPhys);
+    Matrix->assign(DropLI, DropPhys);
+    return false;
+  }
+
+  MachineInstrBuilder Copy =
+      BuildMI(*DropMI.getParent(), DropMI, DropMI.getDebugLoc(),
+              TII.get(TargetOpcode::COPY), DropReg)
+          .addReg(KeepReg);
+  // Retain the original operand uses at the same slot. This preserves their
+  // assigned lifetimes, including locations saved by LiveDebugVariables.
+  // VirtRegRewriter converts this identity COPY into a non-emitting KILL.
+  for (const MachineOperand &MO : DropMI.operands())
+    if (MO.isReg() && MO.readsReg() && MO.getReg().isVirtual())
+      Copy.addReg(MO.getReg(),
+                  RegState::Implicit | getKillRegState(MO.isKill()),
+                  MO.getSubReg());
+  LIS.ReplaceMachineInstrInMaps(DropMI, *Copy);
+  DropMI.eraseFromParent();
+
+  MRI.clearKillFlags(KeepReg);
+  MRI.clearKillFlags(DropReg);
+  LIS.removeInterval(KeepReg);
+  LIS.removeInterval(DropReg);
+  Matrix->assign(LIS.getInterval(KeepReg), SharedPhys);
+  Matrix->assign(LIS.getInterval(DropReg), SharedPhys);
+
+  Matrix->invalidateVirtRegs();
+  return true;
+}
+
+void InlineSpiller::shareRematerializedLoads() {
+  unsigned Merged = 0;
+  DenseMap<const TargetRegisterClass *, SmallSetVector<MCRegister, 8>>
+      RematPhysRegs;
+
+  // These registers already occur as destinations of actual invariant loads.
+  // Reusing one cannot add a physical register absent from the original loads.
+  for (MachineBasicBlock &MBB : MF)
+    for (MachineInstr &MI : MBB)
+      if (isRematLoadCandidate(MI)) {
+        Register Reg = MI.getOperand(0).getReg();
+        MCRegister Phys = VRM.getPhys(Reg);
+        auto &Pool = RematPhysRegs[MRI.getRegClass(Reg)];
+        if (!MRI.isReserved(Phys))
+          Pool.insert(Phys);
+      }
+
+  for (MachineBasicBlock &MBB : MF) {
+    DenseMap<Register, std::pair<MachineInstr *, Register>> Last;
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      if (!isRematLoadCandidate(MI))
+        continue;
+      Register Reg = MI.getOperand(0).getReg();
+      Register Root = VRM.getOriginal(Reg);
+      auto [Keep, Carrier] = Last.lookup(Root);
+      if (Keep && isRematLoadCandidate(*Keep) &&
+          tryShareRematerializedLoad(
+              *Keep, Carrier, MI,
+              RematPhysRegs[MRI.getRegClass(Reg)].getArrayRef())) {
+        ++Merged;
+        Last[Root] = {Keep, Reg};
+      } else {
+        Last[Root] = {&MI, Reg};
+      }
+    }
+  }
+  NumSharedRematLoads += Merged;
+  LLVM_DEBUG(dbgs() << "Shared " << Merged << " rematerialized loads\n");
+  if (Merged)
+    LLVM_DEBUG(
+        MF.verify(&LIS, LIS.getSlotIndexes(), "After remat sharing", &dbgs()));
+}
+
 /// Optimizations after all the reg selections and spills are done.
-void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
+void InlineSpiller::postOptimization() {
+  HSpiller.hoistAllSpills();
+  if (EnableRematLoadSharing && Matrix && RematerializedLoads.size() > 1)
+    shareRematerializedLoads();
+}
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
 void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
