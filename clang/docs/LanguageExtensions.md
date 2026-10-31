@@ -2264,6 +2264,49 @@ int foo() {
 }
 ```
 
+### String literal encoding in ASM statements
+
+On targets where the platform's default ordinary literal encoding differs from
+UTF-8 (such as z/OS, where the system default encoding is IBM-1047):
+
+* **String literals**: A string literal used as the template string in an
+  extended asm statement, as the instruction string in a basic asm statement,
+  or as the string specifying the assembler name or register in an asm label or
+  a global/local register variable declaration (such as `asm("...")` or
+  `__asm__("...")`) is parsed and interpreted using the target system's default
+  encoding (such as IBM-1047 on z/OS) rather than the literal encoding
+  specified by `-fexec-charset=`. This ensures that escape sequences (such as
+  octal or hexadecimal byte escapes) are interpreted as system/assembler code
+  points.
+
+* **Constexpr string expressions in ASM statements**: When a parenthesized
+  constant expression is provided in place of an `asm` string, string literals
+  within that constant expression are encoded according to the execution
+  character set specified by `-fexec-charset=` (the literal encoding), as
+  constant expression evaluation expects `char` sequences to operate in the
+  literal encoding.
+
+For example, on z/OS compiled with `-fexec-charset=UTF-8`:
+
+```c++
+constexpr std::string_view takeStringAndReturnEmptyStringView(const char *str) {
+  return std::string_view();
+}
+
+int main(void) {
+  // Template strings in asm statements are interpreted in the system encoding
+  // (IBM-1047 on z/OS).
+  asm("\t\x95\x96\x97"); // This generates a "nop" in IBM-1047
+
+  // String literals within the constexpr expression are encoded in the
+  // execution character set specified by -fexec-charset=.
+  // With -fexec-charset=IBM-1047, the string below is diagnosed as invalid
+  // because U+0130 cannot be represented in IBM-1047.
+  // With -fexec-charset=UTF-8, the string below is valid.
+  asm((takeStringAndReturnEmptyStringView("\N{LATIN CAPITAL LETTER I WITH DOT ABOVE}")));
+}
+```
+
 ## Objective-C Features
 
 ### Related result types
@@ -5650,6 +5693,14 @@ The builtins return 0 if the values are equal, or 1 if they are unequal.
 - `int __cdsg(void *oldptr, void *curptr, void *newword)`
 
   Generates a 16-byte compare-and-swap using the CDSG instruction.
+
+#### ASM string literal encoding
+
+On z/OS, the system default encoding is IBM-1047, which has implications for
+ASM strings. See
+[String literal encoding in ASM statements](#string-literal-encoding-in-asm-statements)
+for details.
+
 
 ## Extensions for Static Analysis
 
