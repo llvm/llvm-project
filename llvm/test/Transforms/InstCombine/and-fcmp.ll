@@ -4904,13 +4904,10 @@ define i1 @clang_builtin_isnormal_inf_check_neg_inf(half %x) {
   ret i1 %and
 }
 
-; Negative test
 define i1 @clang_builtin_isnormal_inf_check_not_inf(half %x) {
 ; CHECK-LABEL: @clang_builtin_isnormal_inf_check_not_inf(
 ; CHECK-NEXT:    [[FABS_X:%.*]] = call half @llvm.fabs.f16(half [[X:%.*]])
-; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord half [[X]], 0.000000e+00
-; CHECK-NEXT:    [[UEQ:%.*]] = fcmp uge half [[FABS_X]], 6.550400e+04
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ORD]], [[UEQ]]
+; CHECK-NEXT:    [[AND:%.*]] = fcmp oge half [[FABS_X]], 6.550400e+04
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
   %fabs.x = call half @llvm.fabs.f16(half %x)
@@ -5114,6 +5111,52 @@ define i1 @and_fcmp_reassoc4(i1 %x, double %a, double %b) {
   %and = and i1 %x, %cmp
   %retval = and i1 %cmp1, %and
   ret i1 %retval
+}
+
+define i1 @and_ord_ult_nonnan_const(double %x) {
+; CHECK-LABEL: @and_ord_ult_nonnan_const(
+; CHECK-NEXT:    [[R:%.*]] = fcmp olt double [[X:%.*]], f0x43E0000000000000
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %ord = fcmp ord double %x, 0.0
+  %lt = fcmp ult double %x, 0x43E0000000000000   ; 2^63
+  %r = and i1 %ord, %lt
+  ret i1 %r
+}
+
+define <2 x i1> @and_ord_uge_nonnan_const_vec_poison(<2 x double> %x) {
+; CHECK-LABEL: @and_ord_uge_nonnan_const_vec_poison(
+; CHECK-NEXT:    [[R:%.*]] = fcmp oge <2 x double> [[X:%.*]], <double 2.000000e+00, double poison>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ord = fcmp ord <2 x double> %x, zeroinitializer
+  %ge = fcmp uge <2 x double> %x, <double 2.0, double poison>
+  %r = and <2 x i1> %ord, %ge
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @and_ord_ult_nonnan_const_vec_nonsplat(<2 x double> %x) {
+; CHECK-LABEL: @and_ord_ult_nonnan_const_vec_nonsplat(
+; CHECK-NEXT:    [[R:%.*]] = fcmp olt <2 x double> [[X:%.*]], <double 2.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ord = fcmp ord <2 x double> %x, zeroinitializer
+  %lt = fcmp ult <2 x double> %x, <double 2.0, double 1.0>
+  %r = and <2 x i1> %ord, %lt
+  ret <2 x i1> %r
+}
+
+define <2 x i1> @and_ord_ult_nan_const_vec(<2 x double> %x) {
+; CHECK-LABEL: @and_ord_ult_nan_const_vec(
+; CHECK-NEXT:    [[ORD:%.*]] = fcmp ord <2 x double> [[X:%.*]], zeroinitializer
+; CHECK-NEXT:    [[LT:%.*]] = fcmp ult <2 x double> [[X]], <double 2.000000e+00, double +qnan>
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[ORD]], [[LT]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %ord = fcmp ord <2 x double> %x, zeroinitializer
+  %lt = fcmp ult <2 x double> %x, <double 2.0, double 0x7FF8000000000000>   ; one NaN lane
+  %r = and <2 x i1> %ord, %lt
+  ret <2 x i1> %r
 }
 
 declare half @llvm.fabs.f16(half)
