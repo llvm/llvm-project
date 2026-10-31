@@ -1358,6 +1358,11 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedBits(
 
     break;
   }
+  case Instruction::Mul:
+    // The low bit of X * X is the low bit of X, even with other users.
+    if (DemandedMask.isOne() && I->getOperand(0) == I->getOperand(1))
+      return I->getOperand(0);
+    [[fallthrough]];
   default:
     // Compute the Known bits to simplify things downstream.
     llvm::computeKnownBits(I, Known, Q, Depth);
