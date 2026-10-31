@@ -2,40 +2,30 @@
 ; RUN: opt < %s -passes=slp-vectorizer -S -mtriple=x86_64-- -mcpu=znver5 | FileCheck %s
 
 ;
-; Test 1: Backward loop-carried load at misaligned distance.
+; Test 1: Widened backward load at a misaligned distance.
 ;
-;   for (int i = 5; i < n; i += 4) {
-;     int t = A[i-5];                ; load 20 bytes (5*4) before store base
-;     A[i]   = t + 1;
-;     A[i+1] = t + 2;
-;     A[i+2] = t + 3;
-;     A[i+3] = t + 4;
-;   }
-;
-; After SLP with VF=4, the four stores would become a single 16-byte vector
-; store at A[i].  The load at A[i-5] is 20 bytes behind:
-;   20 % 16 = 4  -> misaligned, load straddles two pending vector stores
-;   20 / 16 = 1  -> store still hot in store buffer
-; The new check should bail out and leave the four-wide chain scalar.
+; The four consecutive loads A[i-5..i-2] widen to a 16-byte <4 x i32> load; the
+; four stores A[i..i+3] widen to a 16-byte <4 x i32> store. The load base is 20
+; bytes behind:
+;   20 % 16 = 4  -> misaligned; the 16-byte load overruns the 4 bytes left before
+;                   the window boundary, straddling two widened stores.
+;   20 / 16 = 1  -> store still hot in the store buffer.
+; So the STLF penalty makes the VF=4 store entry unprofitable and it stays
+; scalar.
 ;
 define void @stlf_conflict_backward_misaligned(ptr noalias %A, i64 %n) {
-;
-;
-;
 ; CHECK-LABEL: define void @stlf_conflict_backward_misaligned(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 5
-; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[B0:%.*]] = add i64 [[I]], -5
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -46,26 +36,33 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 5, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
 
-  %back.idx = sub i64 %i, 5
-  %back.gep = getelementptr inbounds i32, ptr %A, i64 %back.idx
-  %t = load i32, ptr %back.gep, align 4
+  %b0 = add i64 %i, -5
+  %b1 = add i64 %i, -4
+  %b2 = add i64 %i, -3
+  %b3 = add i64 %i, -2
+  %p0 = getelementptr inbounds i32, ptr %A, i64 %b0
+  %p1 = getelementptr inbounds i32, ptr %A, i64 %b1
+  %p2 = getelementptr inbounds i32, ptr %A, i64 %b2
+  %p3 = getelementptr inbounds i32, ptr %A, i64 %b3
+  %l0 = load i32, ptr %p0, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %l2 = load i32, ptr %p2, align 4
+  %l3 = load i32, ptr %p3, align 4
 
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
+  %t1 = add nsw i32 %l0, 1
+  %t2 = add nsw i32 %l1, 2
+  %t3 = add nsw i32 %l2, 3
+  %t4 = add nsw i32 %l3, 4
 
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -80,26 +77,22 @@ for.end:
 }
 
 ;
-; Test 2: Backward load at distance ALIGNED to vector store width.
+; Test 2: Narrow scalar load at a misaligned distance (precision control).
 ;
-;   for (int i = 4; i < n; i += 4) {
-;     int t = A[i-4];                ; load 16 bytes (4*4) before store base
-;     A[i]   = t + 1;  ...
-;   }
+; A single scalar i32 load A[i-1] broadcast to the four stores. It is 4 bytes
+; behind (4 % 16 = 4 -> misaligned) but the load is only 4 bytes wide, so it
+; fits entirely inside the 4 bytes left before the window boundary and never
+; straddles two widened stores. A 4-byte load can never overrun a 16-byte
+; window, so forwarding succeeds: the check must NOT fire and the chain widens.
 ;
-; Distance = 16, VectorStoreBytes = 16, 16 % 16 == 0 -> NOT misaligned.
-; The load lands exactly on a previous vector store, so STLF can forward.
-; The check should NOT fire; vectorization is allowed.
-;
-define void @stlf_no_conflict_backward_aligned(ptr noalias %A, i64 %n) {
-;
-; CHECK-LABEL: define void @stlf_no_conflict_backward_aligned(
+define void @stlf_no_conflict_narrow_scalar_load(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @stlf_no_conflict_narrow_scalar_load(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 4, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 4
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
 ; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
@@ -117,9 +110,9 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 4, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 1, %entry ], [ %i.next, %for.body ]
 
-  %back.idx = sub i64 %i, 4
+  %back.idx = sub i64 %i, 1
   %back.gep = getelementptr inbounds i32, ptr %A, i64 %back.idx
   %t = load i32, ptr %back.gep, align 4
 
@@ -131,12 +124,10 @@ for.body:
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -153,25 +144,23 @@ for.end:
 ;
 ; Test 3: Forward reference (load AHEAD of stores).
 ;
-; Positive pointer diff -> not a backward loop-carried dep, no STLF concern.
+; A widened load A[i+64..i+67] has a positive pointer diff, so it is not a
+; backward loop-carried dependence and cannot cause STLF on the widened store.
 ; Vectorization should proceed.
 ;
 define void @stlf_no_conflict_forward(ptr noalias %A, i64 %n) {
-;
 ; CHECK-LABEL: define void @stlf_no_conflict_forward(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[FWD_IDX:%.*]] = add nuw nsw i64 [[I]], 64
-; CHECK-NEXT:    [[FWD_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[FWD_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[FWD_GEP]], align 4
+; CHECK-NEXT:    [[F0:%.*]] = add nuw nsw i64 [[I]], 64
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[F0]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -184,24 +173,31 @@ entry:
 for.body:
   %i = phi i64 [ 0, %entry ], [ %i.next, %for.body ]
 
-  %fwd.idx = add nuw nsw i64 %i, 64
-  %fwd.gep = getelementptr inbounds i32, ptr %A, i64 %fwd.idx
-  %t = load i32, ptr %fwd.gep, align 4
+  %f0 = add nuw nsw i64 %i, 64
+  %f1 = add nuw nsw i64 %i, 65
+  %f2 = add nuw nsw i64 %i, 66
+  %f3 = add nuw nsw i64 %i, 67
+  %p0 = getelementptr inbounds i32, ptr %A, i64 %f0
+  %p1 = getelementptr inbounds i32, ptr %A, i64 %f1
+  %p2 = getelementptr inbounds i32, ptr %A, i64 %f2
+  %p3 = getelementptr inbounds i32, ptr %A, i64 %f3
+  %l0 = load i32, ptr %p0, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %l2 = load i32, ptr %p2, align 4
+  %l3 = load i32, ptr %p3, align 4
 
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
+  %t1 = add nsw i32 %l0, 1
+  %t2 = add nsw i32 %l1, 2
+  %t3 = add nsw i32 %l2, 3
+  %t4 = add nsw i32 %l3, 4
 
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -218,11 +214,10 @@ for.end:
 ;
 ; Test 4: Stores not in a loop (straight-line code).
 ;
-; STLF stalls only matter when the same code executes repeatedly and the
-; store buffer is hot.  Outside loops the check should not fire.
+; STLF stalls only matter when the same code executes repeatedly and the store
+; buffer is hot. Outside loops the check should not fire.
 ;
 define void @stlf_no_conflict_no_loop(ptr noalias %A) {
-;
 ; CHECK-LABEL: define void @stlf_no_conflict_no_loop(
 ; CHECK-SAME: ptr noalias [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 -5
@@ -255,57 +250,60 @@ define void @stlf_no_conflict_no_loop(ptr noalias %A) {
 ;
 ; Test 5: Load from a DIFFERENT underlying object.
 ;
-; The check restricts scanning to loads with the same underlying object as
-; the stores.  A load from an unrelated array can never cause STLF on the
-; widened store, so the check should not fire.
+; The check restricts scanning to loads with the same underlying object as the
+; stores. A widened load from an unrelated array B can never cause STLF on the
+; widened store to A, so the check should not fire.
 ;
-define void @stlf_no_conflict_different_base(ptr noalias %A, ptr noalias %B,
-;
+define void @stlf_no_conflict_different_base(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; CHECK-LABEL: define void @stlf_no_conflict_different_base(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[B_IDX:%.*]] = sub i64 [[I]], 5
-; CHECK-NEXT:    [[B_GEP:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[B_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[B_GEP]], align 4
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[B0:%.*]] = add i64 [[I]], -5
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[B0]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
-  i64 %n) {
 entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 5, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
 
-  %b.idx = sub i64 %i, 5
-  %b.gep = getelementptr inbounds i32, ptr %B, i64 %b.idx
-  %t = load i32, ptr %b.gep, align 4
+  %b0 = add i64 %i, -5
+  %b1 = add i64 %i, -4
+  %b2 = add i64 %i, -3
+  %b3 = add i64 %i, -2
+  %p0 = getelementptr inbounds i32, ptr %B, i64 %b0
+  %p1 = getelementptr inbounds i32, ptr %B, i64 %b1
+  %p2 = getelementptr inbounds i32, ptr %B, i64 %b2
+  %p3 = getelementptr inbounds i32, ptr %B, i64 %b3
+  %l0 = load i32, ptr %p0, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %l2 = load i32, ptr %p2, align 4
+  %l3 = load i32, ptr %p3, align 4
 
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
+  %t1 = add nsw i32 %l0, 1
+  %t2 = add nsw i32 %l1, 2
+  %t3 = add nsw i32 %l2, 3
+  %t4 = add nsw i32 %l3, 4
 
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -322,12 +320,11 @@ for.end:
 ;
 ; Test 6: Volatile load is skipped (not "simple").
 ;
-; A volatile load fails LoadInst::isSimple() and is never considered by the
-; STLF check, even at a clearly conflicting distance.  The check therefore
-; finds no offending load and vectorization proceeds.
+; A volatile load fails LoadInst::isSimple() and is never considered by the STLF
+; check, even at a clearly conflicting distance. The check finds no offending
+; load and vectorization proceeds.
 ;
 define void @stlf_volatile_load_skipped(ptr noalias %A, i64 %n) {
-;
 ; CHECK-LABEL: define void @stlf_volatile_load_skipped(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -366,12 +363,10 @@ for.body:
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -386,34 +381,28 @@ for.end:
 }
 
 ;
-; Test 7: Multiple conflicting loads in the same loop.
+; Test 7: Distance past the recency (NumItersForSafety) boundary.
 ;
-; Both A[i-5] (distance 20 bytes) and A[i-7] (distance 28 bytes) are
-; misaligned to a 16-byte vector store and within the safety window.  The
-; check fires on the first one encountered and bails out.
+; For i32 with VF=4: TypeByteSize=4, VectorStoreBytes=16, the store is assumed
+; hot only while Distance / 16 < 8 * 4 = 32. A widened load whose nearest element
+; is 128 elements back has all four element distances 524/520/516/512 bytes, each
+; 512/16 = 32 iterations away (NOT < 32), so the store is no longer in the buffer
+; even though the load is wide and (some elements) misaligned. The check does not
+; fire and vectorization proceeds.
 ;
-define void @stlf_multiple_conflicting_loads(ptr noalias %A, i64 %n) {
-;
-;
-;
-; CHECK-LABEL: define void @stlf_multiple_conflicting_loads(
+define void @stlf_no_conflict_iter_safety_boundary(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @stlf_no_conflict_iter_safety_boundary(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 7, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK5_IDX:%.*]] = sub i64 [[I]], 5
-; CHECK-NEXT:    [[BACK5_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK5_IDX]]
-; CHECK-NEXT:    [[T5:%.*]] = load i32, ptr [[BACK5_GEP]], align 4
-; CHECK-NEXT:    [[BACK7_IDX:%.*]] = sub i64 [[I]], 7
-; CHECK-NEXT:    [[BACK7_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK7_IDX]]
-; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[BACK7_GEP]], align 4
-; CHECK-NEXT:    [[SUM:%.*]] = add nsw i32 [[T5]], [[T7]]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 131, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[B0:%.*]] = add i64 [[I]], -131
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[B0]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SUM]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P0]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -424,31 +413,33 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 7, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 131, %entry ], [ %i.next, %for.body ]
 
-  %back5.idx = sub i64 %i, 5
-  %back5.gep = getelementptr inbounds i32, ptr %A, i64 %back5.idx
-  %t5 = load i32, ptr %back5.gep, align 4
+  %b0 = add i64 %i, -131
+  %b1 = add i64 %i, -130
+  %b2 = add i64 %i, -129
+  %b3 = add i64 %i, -128
+  %p0 = getelementptr inbounds i32, ptr %A, i64 %b0
+  %p1 = getelementptr inbounds i32, ptr %A, i64 %b1
+  %p2 = getelementptr inbounds i32, ptr %A, i64 %b2
+  %p3 = getelementptr inbounds i32, ptr %A, i64 %b3
+  %l0 = load i32, ptr %p0, align 4
+  %l1 = load i32, ptr %p1, align 4
+  %l2 = load i32, ptr %p2, align 4
+  %l3 = load i32, ptr %p3, align 4
 
-  %back7.idx = sub i64 %i, 7
-  %back7.gep = getelementptr inbounds i32, ptr %A, i64 %back7.idx
-  %t7 = load i32, ptr %back7.gep, align 4
-
-  %sum = add nsw i32 %t5, %t7
-  %t1 = add nsw i32 %sum, 1
-  %t2 = add nsw i32 %sum, 2
-  %t3 = add nsw i32 %sum, 3
-  %t4 = add nsw i32 %sum, 4
+  %t1 = add nsw i32 %l0, 1
+  %t2 = add nsw i32 %l1, 2
+  %t3 = add nsw i32 %l2, 3
+  %t4 = add nsw i32 %l3, 4
 
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -466,12 +457,11 @@ for.end:
 ; Test 8: getPointersDiff cannot determine a constant offset.
 ;
 ; The conflicting load uses a runtime index loaded from a separate array, so
-; SCEV cannot determine the byte offset relative to the stores.
-; getPointersDiff returns nullopt, the check skips this load, finds no
-; conflict, and vectorization proceeds.
+; SCEV cannot determine the byte offset relative to the stores. getPointersDiff
+; returns nullopt, the check skips this load, finds no conflict, and
+; vectorization proceeds.
 ;
 define void @stlf_pointer_diff_unknown(ptr noalias %A, ptr noalias %IdxA, i64 %n) {
-;
 ; CHECK-LABEL: define void @stlf_pointer_diff_unknown(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[IDXA:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -512,12 +502,10 @@ for.body:
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
-
   %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
   %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
   %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
   store i32 %t1, ptr %gep0, align 4
   store i32 %t2, ptr %gep1, align 4
   store i32 %t3, ptr %gep2, align 4
@@ -532,30 +520,32 @@ for.end:
 }
 
 ;
-; Test 9: Distance < VectorStoreBytes (load fully within previous vector
-; store).
+; Test 9: Scalar load that is WIDER than the widened store is not charged.
 ;
-; The backward load is only 1 element (4 bytes) before the stores; the entire
-; load lies inside the previous iteration's 16-byte vector store, so STLF
-; can forward.  The check's `Distance < VectorStoreBytes` early-continue path
-; catches this and allows vectorization.
+; i8 store chain, VF=4 => widened store window W = 4 bytes. A backward i64 load
+; (element size 8 > 4) sits at Distance = 4 and overruns the store window. The
+; load is not widened by this tree (it is gathered), and in the scalar loop it
+; already spans four separate i8 stores, so it cannot be forwarded either way:
+; widening the stores introduces no new hazard, and the chain vectorizes.
 ;
-define void @stlf_no_conflict_within_prev_store(ptr noalias %A, i64 %n) {
-;
-; CHECK-LABEL: define void @stlf_no_conflict_within_prev_store(
+define void @stlf_no_conflict_scalar_wider_load(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @stlf_no_conflict_scalar_wider_load(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 1
-; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[I]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], <i64 -4, i64 64, i64 128, i64 192>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], <4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> align 1 [[TMP5]], <4 x i1> splat (i1 true), <4 x i64> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i8> [[TMP7]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    store <4 x i8> [[TMP8]], ptr [[P0]], align 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -566,30 +556,44 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 1, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
 
-  %back.idx = sub i64 %i, 1
-  %back.gep = getelementptr inbounds i32, ptr %A, i64 %back.idx
-  %t = load i32, ptr %back.gep, align 4
+  %b0 = sub i64 %i, 4
+  %g0 = getelementptr inbounds i8, ptr %A, i64 %b0
+  %x0 = load i64, ptr %g0, align 1
+  %b1 = add i64 %i, 64
+  %g1 = getelementptr inbounds i8, ptr %A, i64 %b1
+  %x1 = load i64, ptr %g1, align 1
+  %b2 = add i64 %i, 128
+  %g2 = getelementptr inbounds i8, ptr %A, i64 %b2
+  %x2 = load i64, ptr %g2, align 1
+  %b3 = add i64 %i, 192
+  %g3 = getelementptr inbounds i8, ptr %A, i64 %b3
+  %x3 = load i64, ptr %g3, align 1
 
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
+  %t0 = trunc i64 %x0 to i8
+  %t1 = trunc i64 %x1 to i8
+  %t2 = trunc i64 %x2 to i8
+  %t3 = trunc i64 %x3 to i8
+
+  %s0 = add i8 %t0, 1
+  %s1 = add i8 %t1, 2
+  %s2 = add i8 %t2, 3
+  %s3 = add i8 %t3, 4
 
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
 
-  %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
-  %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
-  %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
-  %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
+  %p0 = getelementptr inbounds i8, ptr %A, i64 %i
+  %p1 = getelementptr inbounds i8, ptr %A, i64 %i1
+  %p2 = getelementptr inbounds i8, ptr %A, i64 %i2
+  %p3 = getelementptr inbounds i8, ptr %A, i64 %i3
 
-  store i32 %t1, ptr %gep0, align 4
-  store i32 %t2, ptr %gep1, align 4
-  store i32 %t3, ptr %gep2, align 4
-  store i32 %t4, ptr %gep3, align 4
+  store i8 %s0, ptr %p0, align 1
+  store i8 %s1, ptr %p1, align 1
+  store i8 %s2, ptr %p2, align 1
+  store i8 %s3, ptr %p3, align 1
 
   %i.next = add nuw nsw i64 %i, 4
   %cmp = icmp slt i64 %i.next, %n
@@ -600,34 +604,32 @@ for.end:
 }
 
 ;
-; Test 10: Loop body too large -> STLF check skipped.
+; Test 10: Aligned load wider than the element but CONTAINED (no crossing).
 ;
-; Same misaligned-distance shape as Test 1, but the third RUN line lowers
-; the SLP loop-size threshold to 10. The loop body is ~20 instructions
-; (well above 10 yet well below the default 128). With the default
-; threshold of 128 the check still runs and rejects vectorization, with
-; the STLF flag forced off vectorization is allowed, and with the
-; threshold lowered to 10 the loop is treated as large so the check is
-; skipped and vectorization is allowed.
+; Same shape as Test 9, but the backward load is i32 (element size 4 == W).
+; Starting aligned, it exactly fills one widened store window and does not
+; overrun into the next one, so it is NOT a forwarding conflict. Vectorization
+; must happen regardless of the STLF check, proving the load-width term does not
+; over-reject aligned, contained loads.
 ;
-define void @stlf_large_loop_bypassed(ptr noalias %A, i64 %n) {
-;
-;
-;
-; CHECK-LABEL: define void @stlf_large_loop_bypassed(
+define void @stlf_no_conflict_wider_contained_load(ptr noalias %A, i64 %n) {
+; CHECK-LABEL: define void @stlf_no_conflict_wider_contained_load(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[A]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 5
-; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i64> poison, i64 [[I]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP2]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i64> [[TMP3]], <i64 -4, i64 64, i64 128, i64 192>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP1]], <4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 1 [[TMP5]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i32> [[TMP6]] to <4 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = add <4 x i8> [[TMP7]], <i8 1, i8 2, i8 3, i8 4>
+; CHECK-NEXT:    store <4 x i8> [[TMP8]], ptr [[P0]], align 1
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -638,30 +640,44 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 5, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
 
-  %back.idx = sub i64 %i, 5
-  %back.gep = getelementptr inbounds i32, ptr %A, i64 %back.idx
-  %t = load i32, ptr %back.gep, align 4
+  %b0 = sub i64 %i, 4
+  %g0 = getelementptr inbounds i8, ptr %A, i64 %b0
+  %x0 = load i32, ptr %g0, align 1
+  %b1 = add i64 %i, 64
+  %g1 = getelementptr inbounds i8, ptr %A, i64 %b1
+  %x1 = load i32, ptr %g1, align 1
+  %b2 = add i64 %i, 128
+  %g2 = getelementptr inbounds i8, ptr %A, i64 %b2
+  %x2 = load i32, ptr %g2, align 1
+  %b3 = add i64 %i, 192
+  %g3 = getelementptr inbounds i8, ptr %A, i64 %b3
+  %x3 = load i32, ptr %g3, align 1
 
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
+  %t0 = trunc i32 %x0 to i8
+  %t1 = trunc i32 %x1 to i8
+  %t2 = trunc i32 %x2 to i8
+  %t3 = trunc i32 %x3 to i8
+
+  %s0 = add i8 %t0, 1
+  %s1 = add i8 %t1, 2
+  %s2 = add i8 %t2, 3
+  %s3 = add i8 %t3, 4
 
   %i1 = add nuw nsw i64 %i, 1
   %i2 = add nuw nsw i64 %i, 2
   %i3 = add nuw nsw i64 %i, 3
 
-  %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
-  %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
-  %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
-  %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
+  %p0 = getelementptr inbounds i8, ptr %A, i64 %i
+  %p1 = getelementptr inbounds i8, ptr %A, i64 %i1
+  %p2 = getelementptr inbounds i8, ptr %A, i64 %i2
+  %p3 = getelementptr inbounds i8, ptr %A, i64 %i3
 
-  store i32 %t1, ptr %gep0, align 4
-  store i32 %t2, ptr %gep1, align 4
-  store i32 %t3, ptr %gep2, align 4
-  store i32 %t4, ptr %gep3, align 4
+  store i8 %s0, ptr %p0, align 1
+  store i8 %s1, ptr %p1, align 1
+  store i8 %s2, ptr %p2, align 1
+  store i8 %s3, ptr %p3, align 1
 
   %i.next = add nuw nsw i64 %i, 4
   %cmp = icmp slt i64 %i.next, %n
@@ -672,100 +688,29 @@ for.end:
 }
 
 ;
-; Test 11: Distance just past NumItersForSafety boundary.
+; Test 11: Widened backward load at a misaligned distance, i64 (VF=2).
 ;
-; For i32 with VF=4: ElementSize=4, VectorStoreBytes=16,
-; NumItersForSafety = 8 * ElementSize = 32. The check fires only when
-; Distance / VectorStoreBytes < 32. With diff = -129 (load 129 elements
-; back), Distance = 516 bytes, 516 / 16 = 32 (NOT < 32), so the recency
-; predicate fails and the check does NOT fire even though 516 % 16 = 4
-; (misaligned). Vectorization proceeds.
-;
-define void @stlf_no_conflict_iter_safety_boundary(ptr noalias %A, i64 %n) {
-;
-; CHECK-LABEL: define void @stlf_no_conflict_iter_safety_boundary(
-; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 129, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 129
-; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BACK_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[BACK_GEP]], align 4
-; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i32> [[TMP1]], <i32 1, i32 2, i32 3, i32 4>
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_END]]:
-; CHECK-NEXT:    ret void
-;
-entry:
-  br label %for.body
-
-for.body:
-  %i = phi i64 [ 129, %entry ], [ %i.next, %for.body ]
-
-  %back.idx = sub i64 %i, 129
-  %back.gep = getelementptr inbounds i32, ptr %A, i64 %back.idx
-  %t = load i32, ptr %back.gep, align 4
-
-  %t1 = add nsw i32 %t, 1
-  %t2 = add nsw i32 %t, 2
-  %t3 = add nsw i32 %t, 3
-  %t4 = add nsw i32 %t, 4
-
-  %i1 = add nuw nsw i64 %i, 1
-  %i2 = add nuw nsw i64 %i, 2
-  %i3 = add nuw nsw i64 %i, 3
-
-  %gep0 = getelementptr inbounds i32, ptr %A, i64 %i
-  %gep1 = getelementptr inbounds i32, ptr %A, i64 %i1
-  %gep2 = getelementptr inbounds i32, ptr %A, i64 %i2
-  %gep3 = getelementptr inbounds i32, ptr %A, i64 %i3
-
-  store i32 %t1, ptr %gep0, align 4
-  store i32 %t2, ptr %gep1, align 4
-  store i32 %t3, ptr %gep2, align 4
-  store i32 %t4, ptr %gep3, align 4
-
-  %i.next = add nuw nsw i64 %i, 4
-  %cmp = icmp slt i64 %i.next, %n
-  br i1 %cmp, label %for.body, label %for.end
-
-for.end:
-  ret void
-}
-
-;
-; Test 12: Non-i32 element type (i64 VF=2).
-;
-; Verifies the byte-distance math works for wider types. With i64
-; (ElementSize=8) and VF=2: VectorStoreBytes=16, NumItersForSafety=64.
-; A load 3 elements back has Distance = 24 bytes, 24/16=1 < 64, and
-; 24%16=8 != 0, so the check fires.
+; Verifies the byte-distance math for wider types. Two consecutive i64 loads
+; A[i-3..i-2] widen to a 16-byte <2 x i64> load; the stores A[i..i+1] widen to a
+; 16-byte <2 x i64> store. The load base is 24 bytes behind:
+;   24 % 16 = 8  -> misaligned; the 16-byte load overruns the 8 bytes left
+;                   before the window boundary and straddles two widened stores.
+;   24 / 16 = 1  -> store still hot.
+; So the check fires and the store stays scalar.
 ;
 define void @stlf_conflict_backward_misaligned_i64(ptr noalias %A, i64 %n) {
-;
-;
-;
 ; CHECK-LABEL: define void @stlf_conflict_backward_misaligned_i64(
 ; CHECK-SAME: ptr noalias [[A:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 3, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[BACK_IDX:%.*]] = sub i64 [[I]], 3
-; CHECK-NEXT:    [[BACK_GEP:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[BACK_IDX]]
-; CHECK-NEXT:    [[T:%.*]] = load i64, ptr [[BACK_GEP]], align 8
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 8, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[B0:%.*]] = add i64 [[I]], -3
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[B0]]
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[I]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i64> poison, i64 [[T]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i64> [[TMP0]], <2 x i64> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i64> [[TMP1]], <i64 1, i64 2>
-; CHECK-NEXT:    store <2 x i64> [[TMP2]], ptr [[GEP0]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i64>, ptr [[P0]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[TMP0]], <i64 1, i64 2>
+; CHECK-NEXT:    store <2 x i64> [[TMP1]], ptr [[GEP0]], align 8
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_END:.*]]
@@ -776,20 +721,21 @@ entry:
   br label %for.body
 
 for.body:
-  %i = phi i64 [ 3, %entry ], [ %i.next, %for.body ]
+  %i = phi i64 [ 8, %entry ], [ %i.next, %for.body ]
 
-  %back.idx = sub i64 %i, 3
-  %back.gep = getelementptr inbounds i64, ptr %A, i64 %back.idx
-  %t = load i64, ptr %back.gep, align 8
+  %b0 = add i64 %i, -3
+  %b1 = add i64 %i, -2
+  %p0 = getelementptr inbounds i64, ptr %A, i64 %b0
+  %p1 = getelementptr inbounds i64, ptr %A, i64 %b1
+  %l0 = load i64, ptr %p0, align 8
+  %l1 = load i64, ptr %p1, align 8
 
-  %t1 = add nsw i64 %t, 1
-  %t2 = add nsw i64 %t, 2
+  %t1 = add nsw i64 %l0, 1
+  %t2 = add nsw i64 %l1, 2
 
   %i1 = add nuw nsw i64 %i, 1
-
   %gep0 = getelementptr inbounds i64, ptr %A, i64 %i
   %gep1 = getelementptr inbounds i64, ptr %A, i64 %i1
-
   store i64 %t1, ptr %gep0, align 8
   store i64 %t2, ptr %gep1, align 8
 
