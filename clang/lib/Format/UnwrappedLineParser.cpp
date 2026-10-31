@@ -1082,6 +1082,26 @@ void UnwrappedLineParser::parsePPDirective() {
   }
 }
 
+void UnwrappedLineParser::PPBranchSummary::add(const FormatToken &Tok) {
+  if (Tok.isOneOf(tok::l_paren, tok::l_square, tok::l_brace)) {
+    ++Depth;
+  } else if (Tok.isOneOf(tok::r_paren, tok::r_square, tok::r_brace)) {
+    --Depth;
+    MinDepth = std::min(MinDepth, Depth);
+  }
+  EndsWithTerminator = false;
+  if (Tok.isNoneOf(tok::semi, tok::r_brace))
+    return;
+  if (Terminators == 0 || Depth < TerminatorDepth) {
+    TerminatorDepth = Depth;
+    Terminators = 0;
+  }
+  if (Depth == TerminatorDepth) {
+    ++Terminators;
+    EndsWithTerminator = true;
+  }
+}
+
 void UnwrappedLineParser::conditionalCompilationCondition(bool Unreachable) {
   size_t Line = CurrentLines->size();
   if (CurrentLines == &PreprocessorDirectives)
@@ -1096,6 +1116,8 @@ void UnwrappedLineParser::conditionalCompilationCondition(bool Unreachable) {
 }
 
 void UnwrappedLineParser::conditionalCompilationStart(bool Unreachable) {
+  if (!PP.Stack.empty())
+    PP.Stack.back().Summary.HasNestedConditional = true;
   ++PP.BranchLevel;
   assert(PP.BranchLevel >= 0 &&
          PP.BranchLevel <= (int)PP.LevelBranchIndex.size());
@@ -1136,6 +1158,8 @@ void UnwrappedLineParser::conditionalCompilationEnd() {
 
 void UnwrappedLineParser::parsePPIf(bool IfDef) {
   bool IfNDef = FormatTok->is(tok::pp_ifndef);
+  if (!PP.Stack.empty())
+    PPConditionalDepths[FormatTok] = PP.Stack.back().Summary.Depth;
   nextToken();
   bool Unreachable = false;
   if (!IfDef && (FormatTok->is(tok::kw_false) || FormatTok->TokenText == "0"))
@@ -1173,6 +1197,7 @@ void UnwrappedLineParser::parsePPElse() {
   assert(PP.BranchLevel >= -1);
   if (PP.BranchLevel == -1)
     conditionalCompilationStart(/*Unreachable=*/true);
+  PPBranchSummaries[FormatTok] = PP.Stack.back().Summary;
   conditionalCompilationAlternative();
   --PP.BranchLevel;
   parsePPUnknown();
@@ -1180,6 +1205,8 @@ void UnwrappedLineParser::parsePPElse() {
 }
 
 void UnwrappedLineParser::parsePPEndIf() {
+  if (!PP.Stack.empty())
+    PPBranchSummaries[FormatTok] = PP.Stack.back().Summary;
   conditionalCompilationEnd();
   parsePPUnknown();
 }
@@ -2919,12 +2946,143 @@ void UnwrappedLineParser::keepAncestorBraces() {
   NestedTooDeep.push_back(false);
 }
 
+static const FormatToken *getPPKeyword(const UnwrappedLine &Line) {
+  if (!Line.InPPDirective)
+    return nullptr;
+  const auto IsNotComment = [](const UnwrappedLineNode &Node) {
+    return Node.Tok->isNot(tok::comment);
+  };
+  const auto End = Line.Tokens.end();
+  auto Hash = llvm::find_if(Line.Tokens, IsNotComment);
+  if (Hash == End || Hash->Tok->isNot(tok::hash))
+    return nullptr;
+  const auto Keyword = std::find_if(std::next(Hash), End, IsNotComment);
+  return Keyword == End ? nullptr : Keyword->Tok;
+}
+
 static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
   for (const auto &Token : llvm::reverse(Line.Tokens))
     if (Token.Tok->isNot(tok::comment))
       return Token.Tok;
 
   return nullptr;
+}
+
+static int getBracketDepthBefore(const SmallVectorImpl<UnwrappedLine> &Lines,
+                                 size_t BodyStart, size_t End,
+                                 SourceLocation Loc) {
+  int Depth = 0;
+  for (size_t I = BodyStart; I < End; ++I) {
+    if (Lines[I].InPPDirective)
+      continue;
+    for (const auto &Node : Lines[I].Tokens) {
+      const auto &Tok = *Node.Tok;
+      if (Tok.Tok.getLocation() >= Loc)
+        break;
+      if (Tok.isOneOf(tok::l_paren, tok::l_square, tok::l_brace))
+        ++Depth;
+      else if (Tok.isOneOf(tok::r_paren, tok::r_square, tok::r_brace))
+        --Depth;
+    }
+  }
+  return Depth;
+}
+
+// Find a closing brace position that encloses the same body in every branch.
+// Keep BodyEnd if it is safe, or move past #endif if every branch ends the body
+// there. Return null if neither is safe. Directives remain in source order in
+// CurrentLines, even when stored after the code line that contains them.
+FormatToken *UnwrappedLineParser::findRBraceToken(size_t BodyStart,
+                                                  FormatToken *BodyEnd) const {
+  struct Conditional {
+    // Bracket depth at #if, relative to the start of the body.
+    int Depth;
+    bool HasElse = false;
+    // A nested conditional changed the depth, but the branch summary omits it.
+    bool UnbalancedNested = false;
+    const PPBranchSummary *BodyBranch = nullptr;
+    SmallVector<const PPBranchSummary *, 2> Branches = {};
+  };
+  SmallVector<Conditional, 4> Open;
+  const auto BodyEndLoc = BodyEnd->Tok.getLocation();
+  for (size_t I = BodyStart, E = CurrentLines->size(); I < E; ++I) {
+    const auto &L = (*CurrentLines)[I];
+    const auto *Keyword = getPPKeyword(L);
+    if (!Keyword)
+      continue;
+    const bool Opens =
+        Keyword->isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef);
+    const bool Closes = Keyword->is(tok::pp_endif);
+    if (!Opens && !Closes &&
+        !Keyword->isOneOf(tok::pp_else, tok::pp_elif, tok::pp_elifdef,
+                          tok::pp_elifndef)) {
+      continue;
+    }
+    const auto Loc = Keyword->Tok.getLocation();
+    const bool InBody = Loc < BodyEndLoc;
+    if (!InBody && Open.empty())
+      return BodyEnd;
+    if (Opens) {
+      int Depth;
+      if (Open.empty()) {
+        Depth = getBracketDepthBefore(*CurrentLines, BodyStart, I, Loc);
+      } else {
+        // Inactive branches aren't in the body lines. Use their recorded depth.
+        const auto It = PPConditionalDepths.find(Keyword);
+        if (It == PPConditionalDepths.end())
+          return nullptr;
+        Depth = Open.back().Depth + It->second;
+      }
+      Open.push_back({Depth});
+      continue;
+    }
+    // The body crosses a branch boundary of an enclosing conditional.
+    if (Open.empty())
+      return nullptr;
+    auto &C = Open.back();
+    const auto Summary = PPBranchSummaries.find(Keyword);
+    if (Summary == PPBranchSummaries.end())
+      return nullptr;
+    if (Summary->second.HasNestedConditional && C.UnbalancedNested)
+      return nullptr;
+    C.UnbalancedNested = false;
+    if (!InBody && !C.BodyBranch)
+      C.BodyBranch = &Summary->second;
+    else
+      C.Branches.push_back(&Summary->second);
+    if (Keyword->is(tok::pp_else))
+      C.HasElse = true;
+    if (!Closes)
+      continue;
+    if (InBody) {
+      // A missing #else acts as an empty branch.
+      static const PPBranchSummary Empty;
+      if (!C.HasElse)
+        C.Branches.push_back(&Empty);
+      const auto *Reference = C.Branches.front();
+      for (const auto *Branch : C.Branches) {
+        if (Branch->Depth != Reference->Depth ||
+            (Branch->Terminators > 0 &&
+             Branch->TerminatorDepth + C.Depth <= 0)) {
+          return nullptr;
+        }
+      }
+      Open.pop_back();
+      if (Reference->Depth != 0 && !Open.empty())
+        Open.back().UnbalancedNested = true;
+      continue;
+    }
+    // Every branch must end the body here; a missing #else cannot do so.
+    if (!C.HasElse || !C.BodyBranch->endsOneStatement())
+      return nullptr;
+    for (const auto *Branch : C.Branches)
+      if (!(*Branch == *C.BodyBranch))
+        return nullptr;
+    if (Open.size() == 1)
+      return L.Tokens.back().Tok;
+    Open.pop_back();
+  }
+  return Open.empty() ? BodyEnd : nullptr;
 }
 
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
@@ -2936,8 +3094,8 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
               ? getLastNonComment(*Line)
               : Line->Tokens.back().Tok;
     assert(Tok);
-    if (Tok->BraceCount < 0) {
-      assert(Tok->BraceCount == -1);
+    if (Tok->BraceCount < 0 || RejectedBraceInsertions.contains(Tok)) {
+      assert(Tok->BraceCount >= -1);
       Tok = nullptr;
     } else {
       Tok->BraceCount = -1;
@@ -2955,29 +3113,19 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
     assert(!Line->InPPDirective);
     FormatToken *const LBraceTok = Tok;
     Tok = nullptr;
-    auto BodyEnd = CurrentLines->size();
-    while (BodyEnd > 0) {
-      const auto &L = (*CurrentLines)[--BodyEnd];
+    for (const auto &L : llvm::reverse(*CurrentLines)) {
       if (!L.InPPDirective && getLastNonComment(L)) {
         Tok = L.Tokens.back().Tok;
         break;
       }
     }
     assert(Tok);
-    // Don't insert the braces if they would enclose preprocessor directives.
-    bool EnclosesPPDirective = false;
-    for (size_t I = BodyStart; I <= BodyEnd && !EnclosesPPDirective; ++I) {
-      const auto &BodyLine = (*CurrentLines)[I];
-      EnclosesPPDirective =
-          BodyLine.InPPDirective ||
-          llvm::any_of(BodyLine.Tokens, [](const UnwrappedLineNode &Node) {
-            return Node.Tok->FirstAfterPPLine;
-          });
-    }
-    if (EnclosesPPDirective)
+    if (FormatToken *RBraceTok = findRBraceToken(BodyStart, Tok)) {
+      ++RBraceTok->BraceCount;
+    } else {
       LBraceTok->BraceCount = 0;
-    else
-      ++Tok->BraceCount;
+      RejectedBraceInsertions.insert(LBraceTok);
+    }
   }
 
   if (CheckEOF && eof())
@@ -5196,6 +5344,12 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
             Tokens->peekNextToken(/*SkipComment=*/true)->is(tok::eof)))) {
         PP.IncludeGuard = IG_Found;
       }
+    }
+
+    // Include inactive branches in the summaries.
+    if (!PP.Stack.empty() && !Line->InPPDirective &&
+        FormatTok->isNoneOf(tok::comment, tok::eof)) {
+      PP.Stack.back().Summary.add(*FormatTok);
     }
 
     if (!PP.Stack.empty() && (PP.Stack.back().Kind == PP_Unreachable) &&

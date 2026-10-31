@@ -161,6 +161,7 @@ private:
   void parseSquare(bool SkipLambda = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
+  FormatToken *findRBraceToken(size_t BodyStart, FormatToken *BodyEnd) const;
   void handleAttributes();
   bool handleCppAttributes();
   bool isBlockBegin(const FormatToken &Tok) const;
@@ -368,10 +369,36 @@ private:
     PP_Unreachable  // #if 0 or a conditional preprocessor block inside #if 0
   };
 
+  struct PPBranchSummary {
+    // Depths are relative to the start of the branch.
+    int Depth = 0;
+    int MinDepth = 0;
+    // Track `;` and `}` at the lowest depth where either occurs.
+    int TerminatorDepth = 0;
+    unsigned Terminators = 0;
+    bool EndsWithTerminator = false;
+    bool HasNestedConditional = false;
+
+    void add(const FormatToken &Tok);
+    // The branch may start partway through the statement.
+    bool endsOneStatement() const {
+      return !HasNestedConditional && Terminators == 1 && EndsWithTerminator &&
+             Depth == MinDepth && TerminatorDepth == MinDepth;
+    }
+    bool operator==(const PPBranchSummary &Other) const {
+      return Depth == Other.Depth && MinDepth == Other.MinDepth &&
+             TerminatorDepth == Other.TerminatorDepth &&
+             Terminators == Other.Terminators &&
+             EndsWithTerminator == Other.EndsWithTerminator &&
+             HasNestedConditional == Other.HasNestedConditional;
+    }
+  };
+
   struct PPBranch {
     PPBranch(PPBranchKind Kind, size_t Line) : Kind(Kind), Line(Line) {}
     PPBranchKind Kind;
     size_t Line;
+    PPBranchSummary Summary;
   };
 
   // Include guard search state. Used to fixup preprocessor indent levels
@@ -432,6 +459,15 @@ private:
     // Has just finished parsing a preprocessor line.
     bool AtEndOfPPLine = false;
   } PP;
+
+  // Branch summaries keyed by the ending keyword, kept across runs.
+  llvm::DenseMap<const FormatToken *, PPBranchSummary> PPBranchSummaries;
+
+  // Parent branch depth at each nested #if, including inactive branches.
+  llvm::DenseMap<const FormatToken *, int> PPConditionalDepths;
+
+  // Later preprocessor runs must not reverse a rejected insertion.
+  llvm::SmallPtrSet<const FormatToken *, 8> RejectedBraceInsertions;
 
   // The hash tokens of the parsed preprocessor directives. The lines of a
   // directive are kept when the token stream is rewound over it, so it is then
