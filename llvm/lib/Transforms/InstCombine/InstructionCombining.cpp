@@ -930,6 +930,131 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
   return replaceInstUsesWith(*I, R);
 }
 
+// (X << SX) | (Y << SY)
+//   IFF (for this fold)
+//    1) Both shifts are scalar integer SHLs.
+//    2) The amounts match one of these constant-offset forms:
+//         SY = SX + C
+//         SX = Base + C0, SY = Base + C1, C = C1 - C0
+//       with 0 < C < BitWidth.
+//    3) Both SHLs and the add computing SY have one use; SX is nonconstant.
+//    4) Y is not a variable lshr/ashr result.
+//
+//   -> (X | (Y << C)) << SX
+//
+// ((X << SX) | Acc) | (Y << SY)
+//   IFF (for this fold)
+//    1) The conditions above hold.
+//    2) The inner OR has one use.
+//
+//   -> ((X | (Y << C)) << SX) | Acc
+//
+// Commuted ORs are also matched. The use-count and variable-shift restrictions
+// are profitability guards.
+//
+// Core steps:
+//   1. Find the constant distance and choose the lower common shift amount.
+//   2. Apply the variable-shift profitability guards.
+//   3. Factor the common shift and keep the accumulator outside it.
+static Instruction *foldOrOfDisplacedShifts(BinaryOperator &I,
+                                            InstCombiner::BuilderTy &Builder) {
+  if (I.getOpcode() != Instruction::Or || !I.getType()->isIntegerTy())
+    return nullptr;
+
+  Value *LHS = I.getOperand(0);
+  Value *RHS = I.getOperand(1);
+  auto OneUseShl = m_OneUse(m_Shl(m_Value(), m_Value()));
+  if (!match(LHS, OneUseShl) && !match(RHS, OneUseShl))
+    return nullptr;
+
+  unsigned BitWidth = I.getType()->getScalarSizeInBits();
+  // Supported forms, computed with the amounts' APInt width:
+  //   High = Low + C1                   => Offset = C1
+  //   High = Base + C1, Low = Base + C0 => Offset = C1 - C0
+  auto GetOffset = [&](Value *High, Value *Low, APInt &Offset) {
+    // High's one-use add pays for the new constant shift when removed.
+    // Low remains the common amount and may have other users.
+    // A bare High = Base with Low = Base - C has no removable high add,
+    // so the original descending-chain case is intentionally excluded.
+    if (!High->hasOneUse())
+      return false;
+    ConstantInt *C0, *C1;
+    Value *Base;
+    if (match(High, m_c_Add(m_Specific(Low), m_ConstantInt(C1)))) {
+      Offset = C1->getValue();
+    } else if (match(High, m_c_Add(m_Value(Base), m_ConstantInt(C1))) &&
+               match(Low, m_c_Add(m_Specific(Base), m_ConstantInt(C0)))) {
+      Offset = C1->getValue() - C0->getValue();
+    } else {
+      return false;
+    }
+
+    // C = 0 is outside this rule; C >= BitWidth would poison the new SHL.
+    // The unsigned comparison also rejects negative distances.
+    return !Offset.isZero() && Offset.ult(BitWidth);
+  };
+
+  auto TryFold = [&](Value *ShiftOp, Value *OtherOp) -> Instruction * {
+    Value *X, *Y, *SX, *SY;
+    Value *Acc = nullptr;
+    if (!match(ShiftOp, m_OneUse(m_Shl(m_Value(Y), m_Value(SY)))))
+      return nullptr;
+
+    // Match a plain pair or ((X << SX) | Acc) | (Y << SY), in either order.
+    // One-use shifts and prefix OR let the old nodes die. The SHL/OR
+    // matchers already guarantee instruction nodes.
+    auto ShiftX = m_OneUse(m_Shl(m_Value(X), m_Value(SX)));
+    if (!match(OtherOp, ShiftX) &&
+        !match(OtherOp, m_OneUse(m_c_Or(ShiftX, m_Value(Acc)))))
+      return nullptr;
+
+    // Step 1: Find a constant distance and normalize to SY = SX + C.
+    // For fixed defined amounts, SX,SY < W (W = BitWidth). With 0 < C < W,
+    // SX + C <= 2W - 2 < 2^W for W >= 2, so no nowrap flags are needed.
+    // The offset bound excludes i1.
+    APInt Offset(BitWidth, 0);
+    if (GetOffset(SX, SY, Offset)) {
+      // SY is lower. Swap the values and amounts to keep SX lower.
+      std::swap(X, Y);
+      std::swap(SX, SY);
+    } else if (!GetOffset(SY, SX, Offset)) {
+      return nullptr;
+    }
+
+    // Step 2: Apply profitability guards for the variable-shift rewrite.
+    // Leave constant-shift canonicalization to the existing combines.
+    if (isa<Constant>(SX))
+      return nullptr;
+
+    // Avoid extending a variable right-shift extraction's dependency chain
+    // with the new constant shift. This is a profitability guard;
+    // constant right shifts remain eligible.
+    if (match(Y, m_Shr(m_Value(), m_Unless(m_ConstantInt()))))
+      return nullptr;
+
+    // Step 3: Build (X | (Y << C)) << SX. Do not copy nuw/nsw/disjoint:
+    // their promises need not hold for the new intermediate values.
+    // Packed's operands may overlap in bits discarded by the final shift.
+    // X, Y and Acc are not duplicated; shared undef choices can be correlated.
+    // Builder inserts intermediates; InstCombine inserts the returned root.
+    Value *Shifted =
+        Builder.CreateShl(Y, ConstantInt::get(I.getType(), Offset));
+    Value *Packed = Builder.CreateOr(X, Shifted);
+    if (!Acc)
+      return BinaryOperator::CreateShl(Packed, SX);
+
+    // Acc belongs outside the factored shift and must not be shifted by SX.
+    Value *Result = Builder.CreateShl(Packed, SX);
+    return BinaryOperator::CreateOr(Result, Acc);
+  };
+
+  // Failed attempts create no IR, so retrying the opposite order is safe.
+  // The worklist can fold longer chains incrementally.
+  if (Instruction *Result = TryFold(LHS, RHS))
+    return Result;
+  return TryFold(RHS, LHS);
+}
+
 // (Binop1 (Binop2 (logic_shift X, C), C1), (logic_shift Y, C))
 //   IFF
 //    1) the logic_shifts match
@@ -954,6 +1079,9 @@ Instruction *InstCombinerImpl::tryFoldInstWithCtpopWithNot(Instruction *I) {
 //   -> (arithmetic_shift Binop1((not X), Y), Amt)
 
 Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
+  if (Instruction *R = foldOrOfDisplacedShifts(I, Builder))
+    return R;
+
   const DataLayout &DL = I.getDataLayout();
   auto IsValidBinOpc = [](unsigned Opc) {
     switch (Opc) {
