@@ -238,7 +238,9 @@ infrastructure are described first, followed by tool-specific sections.
 
 - Improved {doc}`cppcoreguidelines-missing-std-forward
   <clang-tidy/checks/cppcoreguidelines/missing-std-forward>` check by diagnosing
-  unforwarded `auto&&` parameters in C++20 abbreviated function templates.
+  unforwarded `auto&&` parameters in C++20 abbreviated function templates. Also fixed
+  false positives for correctly forwarded parameters in generic lambdas,
+  including C++20 explicitly templated lambdas.
 
 - Improved {doc}`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check by treating
