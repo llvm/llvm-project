@@ -722,3 +722,19 @@ func.func @index_const_inside_loop(%mem: memref<1x8xi32>) {
   }
   return
 }
+
+// -----
+
+// A non-unit loop step cannot be vectorized as contiguous lanes: the scalar
+// loop touches iv, iv + step, ... while a plain transfer touches iv, iv + 1, ...
+// CHECK-LABEL: @non_unit_step_not_vectorized
+// CHECK:       affine.for %{{.*}} = -4 to 13 step 3
+// CHECK:         affine.store
+// CHECK-NOT:   vector.transfer_write
+func.func @non_unit_step_not_vectorized(%out: memref<32xi32>) {
+  %one = arith.constant 1 : i32
+  affine.for %iv = -4 to 13 step 3 {
+    affine.store %one, %out[%iv + 8] : memref<32xi32>
+  }
+  return
+}
