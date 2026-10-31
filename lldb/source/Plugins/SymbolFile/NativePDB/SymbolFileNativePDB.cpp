@@ -598,24 +598,26 @@ lldb::FunctionSP SymbolFileNativePDB::CreateFunction(PdbCompilandSymId func_id,
                    "Failed to deserialize ProcSym record: {0}");
     return nullptr;
   }
-  if (proc.FunctionType == TypeIndex::None())
-    return nullptr;
-  TypeSP func_type = GetOrCreateType(proc.FunctionType);
-  if (!func_type)
-    return nullptr;
 
-  PdbTypeSymId sig_id(proc.FunctionType, false);
+  TypeSP func_type;
+  uint64_t func_type_uid = LLDB_INVALID_UID;
+  if (!proc.FunctionType.isNoneType()) {
+    func_type = GetOrCreateType(proc.FunctionType);
+    PdbTypeSymId sig_id(proc.FunctionType, false);
+    func_type_uid = toOpaqueUid(sig_id);
+  }
 
   std::optional<llvm::StringRef> mangled_opt = FindMangledSymbol(
       SegmentOffset(proc.Segment, proc.CodeOffset), proc.FunctionType);
   Mangled mangled(mangled_opt.value_or(proc.Name));
 
   FunctionSP func_sp = std::make_shared<Function>(
-      &comp_unit, toOpaqueUid(func_id), toOpaqueUid(sig_id), mangled,
-      func_type.get(), func_addr,
-      AddressRanges{AddressRange(func_addr, sol.length)});
+      &comp_unit, toOpaqueUid(func_id), func_type_uid, mangled, func_type.get(),
+      func_addr, AddressRanges{AddressRange(func_addr, sol.length)});
 
   comp_unit.AddFunction(func_sp);
+  if (proc.FunctionType.isNoneType())
+    return func_sp;
 
   auto ts_or_err = GetTypeSystemForLanguage(comp_unit.GetLanguage());
   if (auto err = ts_or_err.takeError())
@@ -2792,6 +2794,9 @@ size_t SymbolFileNativePDB::ParseVariablesForBlock(PdbCompilandSymId block_id) {
                      "Failed to deserialize ProcSym record: {0}");
       return 0;
     }
+    if (proc.FunctionType.isNoneType())
+      break;
+
     CVType signature = m_index->tpi().getType(proc.FunctionType);
     if (signature.kind() == LF_PROCEDURE) {
       ProcedureRecord sig;
@@ -2964,6 +2969,9 @@ SymbolFileNativePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
 }
 
 Type *SymbolFileNativePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
+  if (type_uid == LLDB_INVALID_UID)
+    return nullptr;
+
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   auto iter = m_types.find(type_uid);
   // lldb should not be passing us non-sensical type uids.  the only way it
