@@ -94,6 +94,71 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The mulf has no fast-math flags, but the addf has. By default, they are
+// converted to a vector.contract, which keeps the flags that both carry (none).
+
+// CHECK-LABEL: @generic_matmul_uneven_fast_math_flags
+//   CHECK-NOT:   vector.multi_reduction
+//       CHECK:   vector.contract {indexing_maps =
+func.func @generic_matmul_uneven_fast_math_flags(%A: memref<8x16xf32>, %B: memref<16x32xf32>, %C: memref<8x32xf32>) {
+  linalg.generic {
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (k, n)>,
+                       affine_map<(m, n, k) -> (m, n)>],
+      iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%A, %B : memref<8x16xf32>, memref<16x32xf32>) outs(%C : memref<8x32xf32>) {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %mul = arith.mulf %a, %b : f32
+    %add = arith.addf %c, %mul fastmath<reassoc> : f32
+    linalg.yield %add : f32
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Same as above, but with allow_fast_math_flag_loss = false: the mulf and the
+// multi_reduction are not converted, so the reduction keeps its flags.
+
+// CHECK-LABEL: @generic_matmul_keep_fast_math_flags
+//   CHECK-NOT:   vector.contract
+//       CHECK:   arith.mulf
+//  CHECK-NEXT:   vector.multi_reduction <add>, %{{.+}}, %{{.+}} fastmath<reassoc> [2]
+func.func @generic_matmul_keep_fast_math_flags(%A: memref<8x16xf32>, %B: memref<16x32xf32>, %C: memref<8x32xf32>) {
+  linalg.generic {
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (k, n)>,
+                       affine_map<(m, n, k) -> (m, n)>],
+      iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%A, %B : memref<8x16xf32>, memref<16x32xf32>) outs(%C : memref<8x32xf32>) {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %mul = arith.mulf %a, %b : f32
+    %add = arith.addf %c, %mul fastmath<reassoc> : f32
+    linalg.yield %add : f32
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <allow_fast_math_flag_loss = false> : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // CHECK-LABEL: func @vectorization_test_2
 func.func @vectorization_test_2(%A: memref<8x16xf32>, %B: memref<16x32xf32>,
                          %C: memref<8x32xf32>) {

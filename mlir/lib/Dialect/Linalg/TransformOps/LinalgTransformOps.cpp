@@ -4311,7 +4311,8 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
     vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
 
   if (!getDisableMultiReductionToContractPatterns())
-    vector::populateVectorReductionToContractPatterns(patterns);
+    vector::populateVectorReductionToContractPatterns(
+        patterns, /*benefit=*/1, getAllowFastMathFlagLoss());
 
   vector::populateSinkVectorOpsPatterns(patterns);
 
