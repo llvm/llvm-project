@@ -77,7 +77,7 @@ define void @slt_stride2_guard_multi_exit(i64 %n, i64 %m) {
 ; CHECK-NEXT:  Determining loop execution counts for: @slt_stride2_guard_multi_exit
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:    exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated exit count for loop: (%m /u 2)
+; CHECK-NEXT:    predicated exit count for loop: (%m /u 2)<exact>
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
 ; CHECK-EMPTY:
@@ -85,15 +85,15 @@ define void @slt_stride2_guard_multi_exit(i64 %n, i64 %m) {
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 4611686018427387902
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((-1 + %n) /u 2)
 ; CHECK-NEXT:    symbolic max exit count for loop: ***COULDNOTCOMPUTE***
-; CHECK-NEXT:    predicated symbolic max exit count for loop: (%m /u 2)
+; CHECK-NEXT:    predicated symbolic max exit count for loop: (%m /u 2)<exact>
 ; CHECK-NEXT:     Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    symbolic max exit count for latch: ((-1 + %n) /u 2)
-; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 + %n) /u 2) umin (%m /u 2))
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is (((-1 + %n) /u 2) umin (%m /u 2)<exact>)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
-; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 + %n) /u 2) umin (%m /u 2))
+; CHECK-NEXT:  Loop %loop: Predicated symbolic max backedge-taken count is (((-1 + %n) /u 2) umin (%m /u 2)<exact>)
 ; CHECK-NEXT:   Predicates:
 ; CHECK-NEXT:      Equal predicate: (zext i1 (trunc i64 %m to i1) to i64) == 0
 ;
