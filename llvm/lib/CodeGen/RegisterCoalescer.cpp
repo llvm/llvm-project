@@ -1991,6 +1991,18 @@ void RegisterCoalescer::updateRegDefsUses(Register SrcReg, Register DstReg,
         MO.substVirtReg(DstReg, SubIdx, *TRI);
     }
 
+    // Rewriting a use can make an instruction read and partially define the
+    // same virtual register. Clear a stale undef flag in this case, since the
+    // partial definition now needs to preserve the value read from DstReg.
+    if (SubIdx != 0 && !DstIsPhys && !ErasedInstrs.count(UseMI) &&
+        !UseMI->isDebugInstr() && UseMI->readsVirtualRegister(DstReg)) {
+      for (MachineOperand &DefMO : UseMI->operands()) {
+        if (DefMO.isReg() && DefMO.isDef() && DefMO.getReg() == DstReg &&
+            DefMO.getSubReg() != 0 && DefMO.isUndef())
+          DefMO.setIsUndef(false);
+      }
+    }
+
     LLVM_DEBUG({
       dbgs() << "\t\tupdated: ";
       if (!UseMI->isDebugInstr())

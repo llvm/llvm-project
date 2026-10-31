@@ -1,0 +1,71 @@
+# RUN: llc -march=amdgcn -run-pass=register-coalescer -verify-machineinstrs %s -o - | FileCheck %s
+
+---
+name: stale_undef_after_subreg_join
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: stale_undef_after_subreg_join
+  ; CHECK: bb.0:
+  ; CHECK: %[[REG:[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; CHECK: bb.3:
+  ; CHECK: {{^ *}}%[[REG]].sub1:vreg_64 = COPY %[[REG]].sub0
+
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY %0.sub0
+    %2:vgpr_32 = COPY %0.sub1
+    %3:vgpr_32 = COPY %2
+    %4:vgpr_32 = COPY %1
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    %5:vgpr_32 = COPY %3
+    %6:vgpr_32 = COPY %4
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.2
+
+  bb.2:
+    successors: %bb.3
+
+    %7:vreg_64 = IMPLICIT_DEF
+    %8:vgpr_32 = COPY %7.sub0
+    %9:vgpr_32 = COPY %7.sub1
+    %5:vgpr_32 = COPY %9
+    %6:vgpr_32 = COPY %8
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.1, %bb.4
+
+    %10:vgpr_32 = COPY %5
+    %11:vgpr_32 = COPY %6
+    %3:vgpr_32 = COPY %11
+    %4:vgpr_32 = COPY %10
+    S_CBRANCH_EXECNZ %bb.1, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_ENDPGM 0, implicit %3, implicit %4
+...
+
+---
+name: stale_undef_on_sub0_after_subreg_join
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: stale_undef_on_sub0_after_subreg_join
+  ; CHECK: bb.0:
+  ; CHECK: %[[SUB0REG:[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+  ; CHECK: {{^ *}}%[[SUB0REG]].sub0:vreg_64 = COPY %[[SUB0REG]].sub1
+
+  bb.0:
+    liveins: $vgpr0_vgpr1
+
+    %0:vreg_64 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY %0.sub1
+    undef %0.sub0:vreg_64 = COPY %1
+    S_ENDPGM 0, implicit %0.sub0
+...
