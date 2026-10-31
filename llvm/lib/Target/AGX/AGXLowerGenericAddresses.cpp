@@ -24,6 +24,11 @@
 // without such casts are unchanged: their generic pointers are device
 // pointers. A private pointer is only meaningful in the thread that made it.
 //
+// With real calls (-agx-experimental-leaf-calls) a called function can receive
+// tagged pointers from its callers (Blender Cycles' BVH traversal writes the
+// kernel's private Intersection through one), so called functions test the
+// tags of every kind the module makes, casts of their own or not.
+//
 //===----------------------------------------------------------------------===//
 
 #include "AGX.h"
@@ -51,7 +56,15 @@ public:
   StringRef getPassName() const override {
     return "AGX Lower Generic Addresses";
   }
+  bool doInitialization(Module &M) override;
   bool runOnFunction(Function &F) override;
+
+private:
+  // Whether any function of the module makes generic pointers to threadgroup
+  // or private memory, scanned at the first function (doInitialization runs
+  // before AGXLowerAIR has given the module AGX's address spaces).
+  bool Scanned = false, ModuleHasShared = false, ModuleHasPrivate = false;
+  void scanModule(const Module &M);
 };
 
 } // namespace
@@ -137,7 +150,53 @@ static void setPointer(Instruction &I, Value *P) {
         AtomicCmpXchgInst::getPointerOperandIndex(), P);
 }
 
+/// Notes in \p HasShared / \p HasPrivate the tagged spaces that \p V, a cast
+/// instruction or constant expression, makes generic pointers to.
+static void noteToGeneric(const Value *V, bool &HasShared, bool &HasPrivate) {
+  const auto *Op = dyn_cast<Operator>(V);
+  if (!Op || Op->getOpcode() != Instruction::AddrSpaceCast ||
+      !Op->getType()->isPointerTy() ||
+      Op->getType()->getPointerAddressSpace() != Generic)
+    return;
+  unsigned Src = Op->getOperand(0)->getType()->getPointerAddressSpace();
+  if (Src == AGX::THREADGROUP_ADDRESS)
+    HasShared = true;
+  else if (Src == AGX::PRIVATE_ADDRESS)
+    HasPrivate = true;
+}
+
+bool AGXLowerGenericAddresses::doInitialization(Module &M) {
+  Scanned = ModuleHasShared = ModuleHasPrivate = false;
+  return false;
+}
+
+void AGXLowerGenericAddresses::scanModule(const Module &M) {
+  Scanned = true;
+  SmallVector<const Value *, 16> Work;
+  SmallPtrSet<const Value *, 16> Seen;
+  for (const Function &F : M)
+    for (const Instruction &I : instructions(F)) {
+      noteToGeneric(&I, ModuleHasShared, ModuleHasPrivate);
+      for (const Value *V : I.operands())
+        if (isa<ConstantExpr>(V) && Seen.insert(V).second)
+          Work.push_back(V);
+    }
+  while (!Work.empty()) {
+    const Value *V = Work.pop_back_val();
+    noteToGeneric(V, ModuleHasShared, ModuleHasPrivate);
+    for (const Value *O : cast<User>(V)->operands())
+      if (isa<ConstantExpr>(O) && Seen.insert(O).second)
+        Work.push_back(O);
+  }
+}
+
 bool AGXLowerGenericAddresses::runOnFunction(Function &F) {
+  // (at the first function, before any function's casts are lowered)
+  if (agxExperimentalLeafCallsEnabled() && !Scanned)
+    scanModule(*F.getParent());
+  bool Called = agxExperimentalLeafCallsEnabled() &&
+                F.getCallingConv() != CallingConv::AGX_KERNEL;
+
   // Constant casts of threadgroup globals become instructions first.
   SmallVector<Constant *, 4> Consts;
   for (GlobalVariable &G : F.getParent()->globals())
@@ -158,7 +217,12 @@ bool AGXLowerGenericAddresses::runOnFunction(Function &F) {
         FromGeneric.push_back(C);
       }
     }
-  if (ToGeneric.empty() && FromGeneric.empty())
+  // A called function may be given the module's tagged pointers.
+  if (Called) {
+    HasShared |= ModuleHasShared;
+    HasPrivate |= ModuleHasPrivate;
+  }
+  if (ToGeneric.empty() && FromGeneric.empty() && !HasShared && !HasPrivate)
     return Changed;
 
   LLVMContext &Ctx = F.getContext();
