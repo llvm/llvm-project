@@ -18,7 +18,7 @@ class StdAtomicTestCase(TestBase):
         var.SetPreferSyntheticValue(True)
         return var
 
-    def do_test(self, check_shared_ptr: bool = True):
+    def do_test(self):
         """Test that std::atomic is correctly printed by LLDB"""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)
 
@@ -110,18 +110,26 @@ class StdAtomicTestCase(TestBase):
         )
 
         # Atomic smart pointers, only available if supported by the library.
-        atomic_shared = self.get_variable("atomic_shared")
-        if check_shared_ptr and atomic_shared.IsValid():
+        shared_original = self.get_variable("s_value")
+        if shared_original.IsValid():
+            og_summary = shared_original.GetSummary()
+            og_addr = shared_original.GetChildAtIndex(0).GetValueAsAddress()
+
             # shared_pointer
-            val_shared = atomic_shared.child[0]
+            atomic_shared = self.get_variable("atomic_shared")
+            val_shared = atomic_shared.GetChildAtIndex(0)
             self.assertIsNotNone(val_shared, msg="atomic_shared child is None.")
             self.assertEqual(300, val_shared.deref.unsigned)
+            self.assertEqual(og_summary, atomic_shared.GetSummary())
+            self.assertEqual(og_addr, val_shared.GetValueAsAddress())
 
             # weak_pointer
             atomic_weak = self.get_variable("atomic_weak")
-            val_weak = atomic_weak.child[0]
+            val_weak = atomic_weak.GetChildAtIndex(0)
             self.assertIsNotNone(val_weak, msg="atomic_weak child is None.")
             self.assertEqual(300, val_weak.deref.unsigned)
+            self.assertEqual(og_summary, atomic_weak.GetSummary())
+            self.assertEqual(og_addr, val_weak.GetValueAsAddress())
 
     def verify_floating_point_equal(self, value: str, expected: float):
         self.assertAlmostEqual(float(value), float(expected), places=4)
@@ -141,4 +149,4 @@ class StdAtomicTestCase(TestBase):
     def test_msvcstl(self):
         # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
         self.build()
-        self.do_test(check_shared_ptr=False)
+        self.do_test()
