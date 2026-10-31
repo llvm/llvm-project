@@ -991,15 +991,20 @@ void RewriteInstance::discoverFileObjects() {
     SymbolRef Symbol;
   };
   std::vector<SymbolInfo> SortedSymbols;
-  auto isSymbolInMemory = [this](const SymbolRef &Sym) {
+  auto isSymbolInMemory = [](const SymbolRef &Sym) {
     if (cantFail(Sym.getType()) == SymbolRef::ST_File)
       return false;
     if (cantFail(Sym.getFlags()) & SymbolRef::SF_Absolute)
       return true;
     if (cantFail(Sym.getFlags()) & SymbolRef::SF_Undefined)
       return false;
-    BinarySection Section(*BC, *cantFail(Sym.getSection()));
-    return Section.isAllocatable();
+    const ELFSectionRef Section(*cantFail(Sym.getSection()));
+    const uint64_t SectionFlags = Section.getFlags();
+    // Match BinarySection::isAllocatable(), without constructing a temporary
+    // BinarySection for every symbol.
+    return (SectionFlags & ELF::SHF_ALLOC) &&
+           !(Section.getType() == ELF::SHT_NOBITS &&
+             (SectionFlags & ELF::SHF_TLS));
   };
   auto checkSymbolInSection = [this](const SymbolInfo &S) {
     // Sometimes, we encounter symbols with addresses outside their section. If
