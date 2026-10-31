@@ -2180,6 +2180,115 @@ static RowTy getDecompositionLinkRow(Value *V, const ConstraintTy &C,
   return NewVariables.empty() ? Row : RowTy();
 }
 
+/// Three-valued conjunction, where std::nullopt is "unknown".
+static std::optional<bool> kleeneAnd(std::optional<bool> A,
+                                     std::optional<bool> B) {
+  if (A == false || B == false)
+    return false;
+  if (A == true && B == true)
+    return true;
+  return std::nullopt;
+}
+
+/// Three-valued disjunction, where std::nullopt is "unknown".
+static std::optional<bool> kleeneOr(std::optional<bool> A,
+                                    std::optional<bool> B) {
+  if (A == true || B == true)
+    return true;
+  if (A == false && B == false)
+    return false;
+  return std::nullopt;
+}
+
+/// Checks the signed relation \p D \p Pred 0 against the signed system, where
+/// \p Pred is SLT or SLE. Returns true or false if the relation or its
+/// negation is implied, std::nullopt otherwise.
+///
+/// For the result of a signed min/max intrinsic the systems only contain the
+/// bounds that hold for both sides (smax(a, b) >= a and >= b, and smin(a, b) <=
+/// a and <= b). The other direction is a disjunction, which cannot be a fact.
+/// Handle it here by splitting a min/max result in \p D across its operands: \p
+/// D is monotonic in that result, so it is the max or the min of its values at
+/// each side, and the relation holds for all or for either of the sides
+/// respectively.
+static std::optional<bool>
+checkSignedDecompositionWithMinMax(CmpInst::Predicate Pred, Decomposition D,
+                                   ConstraintInfo &Info, unsigned Depth) {
+  assert((Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE) &&
+         "only < and <= are handled");
+  if (D.canonicalize())
+    return std::nullopt;
+
+  // Evaluate constants directly.
+  if (D.Vars.empty())
+    return Pred == CmpInst::ICMP_SLT ? D.Offset < 0 : D.Offset <= 0;
+
+  if (Depth != 0) {
+    for (const DecompEntry &E : D.Vars) {
+      auto *MM = dyn_cast<MinMaxIntrinsic>(E.Variable);
+      if (!MM || !MM->isSigned())
+        continue;
+      auto LHS = D.substitute(E.Variable, MM->getLHS(), Info);
+      auto RHS = D.substitute(E.Variable, MM->getRHS(), Info);
+      if (!LHS || !RHS)
+        return std::nullopt;
+      auto L = checkSignedDecompositionWithMinMax(Pred, *LHS, Info, Depth - 1);
+      auto R = checkSignedDecompositionWithMinMax(Pred, *RHS, Info, Depth - 1);
+      // D is an affine function of MM with slope E.Coefficient. If the slope
+      // is positive, then D(max(a, b)) = max(D(a), D(b)) and D(min(a, b)) =
+      // min(D(a), D(b)). If it is negative, max and min swap roles.
+      return (MM->getIntrinsicID() == Intrinsic::smax) == (E.Coefficient > 0)
+                 ? kleeneAnd(L, R)
+                 : kleeneOr(L, R);
+    }
+  }
+
+  // Build "D Pred 0" as a single constraint over known variables.
+  Decomposition Zero(int64_t(0));
+  SmallVector<Value *> NewVariables;
+  RowTy R = getRowForLessEqual(D, Zero, Info.getValue2Index(/*Signed=*/true),
+                               NewVariables);
+  if (R.empty() || !NewVariables.empty())
+    return std::nullopt;
+
+  // "D < 0" is "D <= -1". R[0] is -D.Offset, and getRowForLessEqual gives up if
+  // that overflows, so R[0] > INT64_MIN and subtracting one cannot wrap.
+  if (Pred == CmpInst::ICMP_SLT) {
+    assert(R[0].Coefficient != std::numeric_limits<int64_t>::min() &&
+           "getRowForLessEqual rejects an offset that cannot be negated");
+    --R[0].Coefficient;
+  }
+
+  ConstraintTy C(std::move(R), Info.getValue2Index(/*Signed=*/true).size(),
+                 /*IsSigned=*/true, /*IsEq=*/false, /*IsNe=*/false);
+  return C.isImpliedBy(Info.getCS(/*Signed=*/true));
+}
+
+/// Checks the signed relation \p A \p Pred \p B, splitting signed min/max
+/// results across their respective operands.
+static std::optional<bool> TryWithMinMaxDecomposition(CmpInst::Predicate Pred,
+                                                      Value *A, Value *B,
+                                                      ConstraintInfo &Info) {
+  if (!A->getType()->isIntegerTy())
+    return std::nullopt;
+
+  // Canonicalize to "<" and "<=".
+  if (Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE) {
+    Pred = CmpInst::getSwappedPredicate(Pred);
+    std::swap(A, B);
+  }
+
+  if (Pred != CmpInst::ICMP_SLT && Pred != CmpInst::ICMP_SLE)
+    return std::nullopt;
+
+  const DataLayout &DL = Info.getDataLayout();
+  Decomposition D = decompose(A, Info, /*IsSigned=*/true, DL);
+  if (D.sub(decompose(B, Info, /*IsSigned=*/true, DL)))
+    return std::nullopt;
+
+  return checkSignedDecompositionWithMinMax(Pred, D, Info, /*Depth=*/2);
+}
+
 static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
                                           Value *B, Instruction *CheckInst,
                                           ConstraintInfo &Info) {
@@ -2241,6 +2350,8 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
   if (auto ImpliedCondition = TryWithConstraint(R))
     return ImpliedCondition;
   if (auto ImpliedCondition = TryWithLinkedDecomposition(R))
+    return ImpliedCondition;
+  if (auto ImpliedCondition = TryWithMinMaxDecomposition(Pred, A, B, Info))
     return ImpliedCondition;
 
   // For non-negative operands unsigned queries can also be checked against the
