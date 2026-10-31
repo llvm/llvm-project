@@ -3,6 +3,7 @@
 @Addr = global i64 0, align 8
 @A = global ptr null, align 8
 @Idx = global i64 0, align 8
+declare void @Fn()
 
 define i64 @fun_BD12_Q() {
 ; CHECK-LABEL: fun_BD12_Q:
@@ -262,4 +263,55 @@ entry:
   %2 = tail call i64 asm "lay $0, $1", "=r,p"(ptr %arrayidx)
   store i64 %2, ptr @Addr
   ret i64 %2
+}
+
+; The address of a function is computed like that of any other global.
+define i64 @fun_Fn_Q() {
+; CHECK-LABEL: fun_Fn_Q:
+; CHECK: lgrl	%r1, Fn@GOT
+; CHECK: #APP
+; CHECK: lay	%r2, 0(%r1)
+entry:
+  %0 = tail call i64 asm "lay $0, $1", "=r,^ZQ"(ptr @Fn)
+  ret i64 %0
+}
+
+define i64 @fun_Fn_R() {
+; CHECK-LABEL: fun_Fn_R:
+; CHECK: lgrl	%r1, Fn@GOT
+; CHECK: #APP
+; CHECK: lay	%r2, 0(%r1)
+entry:
+  %0 = tail call i64 asm "lay $0, $1", "=r,^ZR"(ptr @Fn)
+  ret i64 %0
+}
+
+define i64 @fun_Fn_S() {
+; CHECK-LABEL: fun_Fn_S:
+; CHECK: lgrl	%r1, Fn@GOT
+; CHECK: #APP
+; CHECK: lay	%r2, 0(%r1)
+entry:
+  %0 = tail call i64 asm "lay $0, $1", "=r,^ZS"(ptr @Fn)
+  ret i64 %0
+}
+
+define i64 @fun_Fn_T() {
+; CHECK-LABEL: fun_Fn_T:
+; CHECK: lgrl	%r1, Fn@GOT
+; CHECK: #APP
+; CHECK: lay	%r2, 0(%r1)
+entry:
+  %0 = tail call i64 asm "lay $0, $1", "=r,^ZT"(ptr @Fn)
+  ret i64 %0
+}
+
+define i64 @fun_Fn_p() {
+; CHECK-LABEL: fun_Fn_p:
+; CHECK: lgrl	%r1, Fn@GOT
+; CHECK: #APP
+; CHECK: lay	%r2, 0(%r1)
+entry:
+  %0 = tail call i64 asm "lay $0, $1", "=r,p"(ptr @Fn)
+  ret i64 %0
 }
