@@ -3,7 +3,7 @@
 # RUN: rm -rf %t
 # RUN: cp -RL %{inputs}%{fs-sep}filter-failed %t
 #
-# RUN: not %{lit} %t
+# RUN: not %{lit-test-time-recording} %t
 #
 # RUN: echo "RUN: false" > %t%{fs-sep}new-fail.txt
 # RUN: echo "RUN: true"  > %t%{fs-sep}new-pass.txt
