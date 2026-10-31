@@ -15,35 +15,23 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; IC3-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC3:       [[VECTOR_BODY]]:
 ; IC3-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC3-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
-; IC3-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; IC3-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[INDEX]]
-; IC3-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
-; IC3-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 8
-; IC3-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; IC3-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; IC3-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; IC3-NEXT:    [[TMP6:%.*]] = freeze <4 x float> [[WIDE_LOAD]]
-; IC3-NEXT:    [[TMP7:%.*]] = freeze <4 x float> [[WIDE_LOAD3]]
+; IC3-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; IC3-NEXT:    [[TMP8:%.*]] = freeze <4 x float> [[WIDE_LOAD4]]
-; IC3-NEXT:    [[TMP3]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP6]])
-; IC3-NEXT:    [[TMP4]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP7]])
 ; IC3-NEXT:    [[TMP5]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI2]], <4 x float> [[TMP8]])
 ; IC3-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 12
 ; IC3-NEXT:    [[TMP12:%.*]] = fcmp uno <4 x float> [[TMP8]], [[TMP8]]
-; IC3-NEXT:    [[TMP10:%.*]] = fcmp uno <4 x float> [[TMP6]], [[TMP7]]
+; IC3-NEXT:    [[TMP10:%.*]] = or <4 x i1> [[TMP12]], [[TMP12]]
 ; IC3-NEXT:    [[TMP13:%.*]] = or <4 x i1> [[TMP10]], [[TMP12]]
 ; IC3-NEXT:    [[TMP14:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP13]])
 ; IC3-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IC3-NEXT:    [[TMP16:%.*]] = or i1 [[TMP14]], [[TMP15]]
 ; IC3-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IC3:       [[MIDDLE_BLOCK]]:
-; IC3-NEXT:    [[TMP17:%.*]] = select i1 [[TMP14]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP3]]
-; IC3-NEXT:    [[TMP18:%.*]] = select i1 [[TMP14]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP4]]
 ; IC3-NEXT:    [[TMP19:%.*]] = select i1 [[TMP14]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP5]]
 ; IC3-NEXT:    [[TMP20:%.*]] = select i1 [[TMP14]], i64 [[INDEX]], i64 [[N_VEC]]
-; IC3-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP17]], <4 x float> [[TMP18]])
+; IC3-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP19]], <4 x float> [[TMP19]])
 ; IC3-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[TMP19]])
 ; IC3-NEXT:    [[TMP21:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX5]])
 ; IC3-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -67,42 +55,25 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; IC4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC4:       [[VECTOR_BODY]]:
 ; IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
-; IC4-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; IC4-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; IC4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[INDEX]]
-; IC4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
-; IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 8
-; IC4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 12
-; IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; IC4-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; IC4-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
-; IC4-NEXT:    [[TMP9:%.*]] = freeze <4 x float> [[WIDE_LOAD]]
-; IC4-NEXT:    [[TMP10:%.*]] = freeze <4 x float> [[WIDE_LOAD4]]
-; IC4-NEXT:    [[TMP11:%.*]] = freeze <4 x float> [[WIDE_LOAD5]]
+; IC4-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; IC4-NEXT:    [[TMP8:%.*]] = freeze <4 x float> [[WIDE_LOAD6]]
-; IC4-NEXT:    [[TMP4]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP9]])
-; IC4-NEXT:    [[TMP5]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP10]])
-; IC4-NEXT:    [[TMP6]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI2]], <4 x float> [[TMP11]])
 ; IC4-NEXT:    [[TMP7]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI3]], <4 x float> [[TMP8]])
 ; IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
-; IC4-NEXT:    [[TMP26:%.*]] = fcmp uno <4 x float> [[TMP9]], [[TMP10]]
-; IC4-NEXT:    [[TMP28:%.*]] = fcmp uno <4 x float> [[TMP11]], [[TMP8]]
+; IC4-NEXT:    [[TMP28:%.*]] = fcmp uno <4 x float> [[TMP8]], [[TMP8]]
+; IC4-NEXT:    [[TMP5:%.*]] = or <4 x i1> [[TMP28]], [[TMP28]]
+; IC4-NEXT:    [[TMP26:%.*]] = or <4 x i1> [[TMP5]], [[TMP28]]
 ; IC4-NEXT:    [[TMP29:%.*]] = or <4 x i1> [[TMP26]], [[TMP28]]
 ; IC4-NEXT:    [[TMP13:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP29]])
 ; IC4-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IC4-NEXT:    [[TMP15:%.*]] = or i1 [[TMP13]], [[TMP14]]
 ; IC4-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IC4:       [[MIDDLE_BLOCK]]:
-; IC4-NEXT:    [[TMP16:%.*]] = select i1 [[TMP13]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP4]]
-; IC4-NEXT:    [[TMP17:%.*]] = select i1 [[TMP13]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP5]]
-; IC4-NEXT:    [[TMP18:%.*]] = select i1 [[TMP13]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP6]]
 ; IC4-NEXT:    [[TMP19:%.*]] = select i1 [[TMP13]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP7]]
 ; IC4-NEXT:    [[TMP20:%.*]] = select i1 [[TMP13]], i64 [[INDEX]], i64 [[N_VEC]]
-; IC4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP16]], <4 x float> [[TMP17]])
-; IC4-NEXT:    [[RDX_MINMAX7:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[TMP18]])
+; IC4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP19]], <4 x float> [[TMP19]])
+; IC4-NEXT:    [[RDX_MINMAX7:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[TMP19]])
 ; IC4-NEXT:    [[RDX_MINMAX8:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX7]], <4 x float> [[TMP19]])
 ; IC4-NEXT:    [[TMP21:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX8]])
 ; IC4-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
@@ -126,51 +97,27 @@ define float @fmaxnum(ptr %src, i64 %n) {
 ; IC5-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC5:       [[VECTOR_BODY]]:
 ; IC5-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC5-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; IC5-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; IC5-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; IC5-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; IC5-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP9:%.*]], %[[VECTOR_BODY]] ]
 ; IC5-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[INDEX]]
-; IC5-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 4
-; IC5-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 8
-; IC5-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 12
-; IC5-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[TMP0]], i64 16
-; IC5-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
-; IC5-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
-; IC5-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
-; IC5-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
-; IC5-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
-; IC5-NEXT:    [[TMP10:%.*]] = freeze <4 x float> [[WIDE_LOAD]]
-; IC5-NEXT:    [[TMP11:%.*]] = freeze <4 x float> [[WIDE_LOAD5]]
-; IC5-NEXT:    [[TMP12:%.*]] = freeze <4 x float> [[WIDE_LOAD6]]
-; IC5-NEXT:    [[TMP13:%.*]] = freeze <4 x float> [[WIDE_LOAD7]]
+; IC5-NEXT:    [[WIDE_LOAD8:%.*]] = load <4 x float>, ptr [[TMP0]], align 4
 ; IC5-NEXT:    [[TMP14:%.*]] = freeze <4 x float> [[WIDE_LOAD8]]
-; IC5-NEXT:    [[TMP5]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP10]])
-; IC5-NEXT:    [[TMP6]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP11]])
-; IC5-NEXT:    [[TMP7]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI2]], <4 x float> [[TMP12]])
-; IC5-NEXT:    [[TMP8]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI3]], <4 x float> [[TMP13]])
 ; IC5-NEXT:    [[TMP9]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI4]], <4 x float> [[TMP14]])
 ; IC5-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 20
 ; IC5-NEXT:    [[TMP22:%.*]] = fcmp uno <4 x float> [[TMP14]], [[TMP14]]
-; IC5-NEXT:    [[TMP18:%.*]] = fcmp uno <4 x float> [[TMP10]], [[TMP11]]
-; IC5-NEXT:    [[TMP20:%.*]] = fcmp uno <4 x float> [[TMP12]], [[TMP13]]
-; IC5-NEXT:    [[TMP21:%.*]] = or <4 x i1> [[TMP18]], [[TMP20]]
+; IC5-NEXT:    [[TMP21:%.*]] = or <4 x i1> [[TMP22]], [[TMP22]]
 ; IC5-NEXT:    [[TMP23:%.*]] = or <4 x i1> [[TMP21]], [[TMP22]]
-; IC5-NEXT:    [[TMP24:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP23]])
+; IC5-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP23]], [[TMP22]]
+; IC5-NEXT:    [[TMP7:%.*]] = or <4 x i1> [[TMP6]], [[TMP22]]
+; IC5-NEXT:    [[TMP24:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
 ; IC5-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IC5-NEXT:    [[TMP26:%.*]] = or i1 [[TMP24]], [[TMP25]]
 ; IC5-NEXT:    br i1 [[TMP26]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IC5:       [[MIDDLE_BLOCK]]:
-; IC5-NEXT:    [[TMP27:%.*]] = select i1 [[TMP24]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP5]]
-; IC5-NEXT:    [[TMP28:%.*]] = select i1 [[TMP24]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP6]]
-; IC5-NEXT:    [[TMP29:%.*]] = select i1 [[TMP24]], <4 x float> [[VEC_PHI2]], <4 x float> [[TMP7]]
-; IC5-NEXT:    [[TMP30:%.*]] = select i1 [[TMP24]], <4 x float> [[VEC_PHI3]], <4 x float> [[TMP8]]
 ; IC5-NEXT:    [[TMP31:%.*]] = select i1 [[TMP24]], <4 x float> [[VEC_PHI4]], <4 x float> [[TMP9]]
 ; IC5-NEXT:    [[TMP32:%.*]] = select i1 [[TMP24]], i64 [[INDEX]], i64 [[N_VEC]]
-; IC5-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP27]], <4 x float> [[TMP28]])
-; IC5-NEXT:    [[RDX_MINMAX9:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[TMP29]])
-; IC5-NEXT:    [[RDX_MINMAX10:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX9]], <4 x float> [[TMP30]])
+; IC5-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP31]], <4 x float> [[TMP31]])
+; IC5-NEXT:    [[RDX_MINMAX1:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX]], <4 x float> [[TMP31]])
+; IC5-NEXT:    [[RDX_MINMAX10:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX1]], <4 x float> [[TMP31]])
 ; IC5-NEXT:    [[RDX_MINMAX11:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[RDX_MINMAX10]], <4 x float> [[TMP31]])
 ; IC5-NEXT:    [[TMP33:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX11]])
 ; IC5-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]

@@ -18,11 +18,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2:       [[VECTOR_BODY]]:
 ; VF4IC2-NEXT:    [[TMP2:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], <i32 0, i32 8, i32 16, i32 24>
 ; VF4IC2-NEXT:    [[TMP3:%.*]] = ashr <4 x i32> [[BROADCAST_SPLAT]], <i32 32, i32 40, i32 48, i32 56>
-; VF4IC2-NEXT:    [[TMP4:%.*]] = icmp ne <4 x i32> [[TMP2]], zeroinitializer
-; VF4IC2-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP3]], zeroinitializer
-; VF4IC2-NEXT:    [[TMP17:%.*]] = freeze <4 x i1> [[TMP4]]
+; VF4IC2-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP2]], zeroinitializer
 ; VF4IC2-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP5]]
-; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP17]], [[TMP18]]
+; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP18]], [[TMP18]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; VF4IC2-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
@@ -33,7 +31,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP18]], i1 false)
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = add i64 4, [[TMP9]]
-; VF4IC2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP17]], i1 false)
+; VF4IC2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP18]], i1 false)
 ; VF4IC2-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP11]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP10]]

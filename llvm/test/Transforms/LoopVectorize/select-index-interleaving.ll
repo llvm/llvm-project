@@ -14,8 +14,7 @@ define i64 @test_vectorize_select_umin_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i64> [ splat (i64 50), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ splat (i64 50), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -24,11 +23,9 @@ define i64 @test_vectorize_select_umin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt <4 x i64> [[VEC_PHI4]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i64> [[VEC_PHI5]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP4]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[VEC_PHI4]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[VEC_PHI5]], <4 x i64> [[WIDE_LOAD6]])
-; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -38,11 +35,9 @@ define i64 @test_vectorize_select_umin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP6]], <4 x i64> splat (i64 -1)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP9]], 50
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 0, i64 [[TMP14]]
@@ -51,12 +46,12 @@ define i64 @test_vectorize_select_umin_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 50, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 50, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[MIN_VAL]], [[L]]
@@ -103,8 +98,7 @@ define i64 @test_vectorize_select_umin_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ splat (i64 50), %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ splat (i64 50), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -113,11 +107,9 @@ define i64 @test_vectorize_select_umin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp uge <4 x i64> [[VEC_PHI2]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp uge <4 x i64> [[VEC_PHI3]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[VEC_PHI2]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP6]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[VEC_PHI3]], <4 x i64> [[WIDE_LOAD4]])
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP4]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -127,11 +119,9 @@ define i64 @test_vectorize_select_umin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP6]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP12]], <4 x i64> [[TMP8]], <4 x i64> splat (i64 -9223372036854775808)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP14]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP14]], <4 x i64> [[TMP14]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP15]], -9223372036854775808
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP15]], i64 0
@@ -140,12 +130,12 @@ define i64 @test_vectorize_select_umin_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 50, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 50, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i64 [[MIN_VAL]], [[L]]
@@ -192,8 +182,7 @@ define i64 @test_vectorize_select_smin_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -202,11 +191,9 @@ define i64 @test_vectorize_select_smin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i64> [[VEC_PHI4]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i64> [[VEC_PHI5]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP4]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[VEC_PHI4]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[VEC_PHI5]], <4 x i64> [[WIDE_LOAD6]])
-; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -216,11 +203,9 @@ define i64 @test_vectorize_select_smin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP6]], <4 x i64> splat (i64 -1)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 0, i64 [[TMP14]]
@@ -229,12 +214,12 @@ define i64 @test_vectorize_select_smin_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[MIN_VAL]], [[L]]
@@ -281,8 +266,7 @@ define i64 @test_vectorize_select_smin_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -291,11 +275,9 @@ define i64 @test_vectorize_select_smin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sge <4 x i64> [[VEC_PHI2]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sge <4 x i64> [[VEC_PHI3]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[VEC_PHI2]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP6]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[VEC_PHI3]], <4 x i64> [[WIDE_LOAD4]])
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP4]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -305,11 +287,9 @@ define i64 @test_vectorize_select_smin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP6]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP12]], <4 x i64> [[TMP8]], <4 x i64> splat (i64 -9223372036854775808)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP14]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP14]], <4 x i64> [[TMP14]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP15]], -9223372036854775808
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP15]], i64 0
@@ -318,12 +298,12 @@ define i64 @test_vectorize_select_smin_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i64 [[MIN_VAL]], [[L]]
@@ -370,8 +350,7 @@ define i64 @test_vectorize_select_umax_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -380,11 +359,9 @@ define i64 @test_vectorize_select_umax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[VEC_PHI4]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[VEC_PHI5]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP4]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI4]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI5]], <4 x i64> [[WIDE_LOAD6]])
-; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -394,11 +371,9 @@ define i64 @test_vectorize_select_umax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP6]], <4 x i64> splat (i64 -1)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 0, i64 [[TMP14]]
@@ -407,12 +382,12 @@ define i64 @test_vectorize_select_umax_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[MIN_VAL]], [[L]]
@@ -459,8 +434,7 @@ define i64 @test_vectorize_select_umax_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -469,11 +443,9 @@ define i64 @test_vectorize_select_umax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule <4 x i64> [[VEC_PHI2]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ule <4 x i64> [[VEC_PHI3]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI2]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP6]] = call <4 x i64> @llvm.umax.v4i64(<4 x i64> [[VEC_PHI3]], <4 x i64> [[WIDE_LOAD4]])
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP4]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -483,11 +455,9 @@ define i64 @test_vectorize_select_umax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.umax.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP6]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP12]], <4 x i64> [[TMP8]], <4 x i64> splat (i64 -9223372036854775808)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP14]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP14]], <4 x i64> [[TMP14]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP15]], -9223372036854775808
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP15]], i64 0
@@ -496,12 +466,12 @@ define i64 @test_vectorize_select_umax_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ule i64 [[MIN_VAL]], [[L]]
@@ -548,8 +518,7 @@ define i64 @test_vectorize_select_smax_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ poison, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -558,11 +527,9 @@ define i64 @test_vectorize_select_smax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i64>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i64> [[VEC_PHI4]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i64> [[VEC_PHI5]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP4]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[VEC_PHI4]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[VEC_PHI5]], <4 x i64> [[WIDE_LOAD6]])
-; CHECK-NEXT:    [[TMP6]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV1]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -572,11 +539,9 @@ define i64 @test_vectorize_select_smax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP9]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP10]], <4 x i64> [[TMP6]], <4 x i64> splat (i64 -1)
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP4]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -1)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP12]], <4 x i64> [[TMP13]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.umin.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP13]])
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i64 @llvm.vector.reduce.umin.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP9]], 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = select i1 [[TMP15]], i64 0, i64 [[TMP14]]
@@ -585,12 +550,12 @@ define i64 @test_vectorize_select_smax_first_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[TMP16]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP9]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[MIN_VAL]], [[L]]
@@ -637,8 +602,7 @@ define i64 @test_vectorize_select_smax_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -647,11 +611,9 @@ define i64 @test_vectorize_select_smax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i64>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle <4 x i64> [[VEC_PHI2]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sle <4 x i64> [[VEC_PHI3]], [[WIDE_LOAD4]]
 ; CHECK-NEXT:    [[TMP5]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[VEC_PHI2]], <4 x i64> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[TMP6]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[VEC_PHI3]], <4 x i64> [[WIDE_LOAD4]])
-; CHECK-NEXT:    [[TMP7]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP4]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI1]]
+; CHECK-NEXT:    [[TMP8]] = select <4 x i1> [[TMP3]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 8
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -661,11 +623,9 @@ define i64 @test_vectorize_select_smax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP10]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP6]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i64> [[TMP7]], <4 x i64> splat (i64 -9223372036854775808)
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq <4 x i64> [[TMP5]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = select <4 x i1> [[TMP12]], <4 x i64> [[TMP8]], <4 x i64> splat (i64 -9223372036854775808)
-; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP13]], <4 x i64> [[TMP14]])
+; CHECK-NEXT:    [[RDX_MINMAX5:%.*]] = call <4 x i64> @llvm.smax.v4i64(<4 x i64> [[TMP14]], <4 x i64> [[TMP14]])
 ; CHECK-NEXT:    [[TMP15:%.*]] = call i64 @llvm.vector.reduce.smax.v4i64(<4 x i64> [[RDX_MINMAX5]])
 ; CHECK-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP15]], -9223372036854775808
 ; CHECK-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP15]], i64 0
@@ -674,12 +634,12 @@ define i64 @test_vectorize_select_smax_last_idx(ptr %src, i64 %n) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ [[RDX_SELECT]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX6:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX5:%.*]] = phi i64 [ [[TMP10]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX6]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ [[BC_MERGE_RDX5]], %[[SCALAR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV1]]
 ; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[MIN_VAL]], [[L]]
