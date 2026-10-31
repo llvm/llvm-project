@@ -6026,18 +6026,29 @@ static Expr *buildInitListValue(Sema &SemaRef, Expr *E) {
     return E;
   if (ILE->isTransparent())
     return buildInitListValue(SemaRef, ILE->getInit(0));
-  ASTContext &Context = SemaRef.Context;
   QualType Ty = ILE->getType();
   bool IsEmptyScalar = ILE->getNumInits() == 0 && Ty->isScalarType();
-  if (!SemaRef.getLangOpts().CPlusPlus)
-    return IsEmptyScalar ? new (Context) ImplicitValueInitExpr(Ty) : E;
-  if (!IsEmptyScalar && !Ty->isRecordType())
+  SourceLocation LBrace = ILE->getLBraceLoc();
+  if (!SemaRef.getLangOpts().CPlusPlus) {
+    if (!IsEmptyScalar)
+      return E;
+    ExprResult Zero = SemaRef.PerformImplicitConversion(
+        SemaRef.ActOnIntegerConstant(LBrace, 0).get(), Ty,
+        AssignmentAction::Converting);
+    return Zero.isUsable() ? Zero.get() : E;
+  }
+  InitListExpr *Syntactic = ILE->getSyntacticForm();
+  if ((!IsEmptyScalar && !Ty->isRecordType()) || !Syntactic)
     return E;
-  return CXXFunctionalCastExpr::Create(
-      Context, Ty, VK_PRValue,
-      Context.getTrivialTypeSourceInfo(Ty, ILE->getLBraceLoc()), CK_NoOp, ILE,
-      /*Path=*/nullptr, SemaRef.CurFPFeatureOverrides(), SourceLocation(),
-      SourceLocation());
+  Sema::TentativeAnalysisScope Trap(SemaRef);
+  ExprResult List = CaptureVars(SemaRef).TransformExpr(Syntactic);
+  if (List.isInvalid())
+    return E;
+  Expr *ListExpr = List.get();
+  ExprResult Value = SemaRef.BuildCXXTypeConstructExpr(
+      SemaRef.Context.getTrivialTypeSourceInfo(Ty, LBrace), LBrace, ListExpr,
+      ILE->getRBraceLoc(), /*ListInitialization=*/true);
+  return Value.isUsable() ? Value.get() : E;
 }
 
 static VarDecl *precomputeExpr(Sema &Actions,
