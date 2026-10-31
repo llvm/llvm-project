@@ -1148,10 +1148,11 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   setOperationAction(ISD::ADDRSPACECAST, {MVT::i32, MVT::i64}, Custom);
 
-  // atom.b128 is legal in PTX but since we don't represent i128 as a legal
-  // type, we need to custom lower it.
-  setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP}, MVT::i128,
-                     Custom);
+  // 128-bit atomic instructions are legal in PTX, but since i128 is not a
+  // legal type, we need to custom lower them.
+  setOperationAction({ISD::ATOMIC_CMP_SWAP, ISD::ATOMIC_SWAP, ISD::ATOMIC_LOAD,
+                      ISD::ATOMIC_STORE},
+                     MVT::i128, Custom);
 
   // Now deduce the information based on the above mentioned
   // actions
@@ -1159,7 +1160,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
 
   // PTX support for 16-bit CAS is emulated. Only use 32+
   setMinCmpXchgSizeInBits(STI.getMinCmpXchgSizeInBits());
-  setMaxAtomicSizeInBitsSupported(STI.hasAtomSwap128() ? 128 : 64);
+  // ld/st.b128 requires only sm_70, unlike the atom.*.b128 forms.
+  setMaxAtomicSizeInBitsSupported(STI.hasLdStB128() ? 128 : 64);
   setMaxDivRemBitWidthSupported(64);
   setMaxLargeFPConvertBitWidthSupported(64);
 
@@ -3657,6 +3659,27 @@ static SDValue lowerMSTORE(SDValue Op, SelectionDAG &DAG) {
   return NewSt;
 }
 
+static SDValue lowerAtomicStore128(SDNode *N, SelectionDAG &DAG) {
+  AtomicSDNode *AN = cast<AtomicSDNode>(N);
+  SDLoc dl(N);
+
+  SDValue Val = AN->getVal();
+  assert(Val.getValueType() == MVT::i128 &&
+         "Custom lowering for atomic128 only supports i128");
+
+  SDValue Ops[] = {AN->getOperand(0), // Chain
+                   AN->getBasePtr(),
+                   // Low part
+                   DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Val,
+                               DAG.getIntPtrConstant(0, dl)),
+                   // High part
+                   DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i64, Val,
+                               DAG.getIntPtrConstant(1, dl))};
+  return DAG.getMemIntrinsicNode(NVPTXISD::ATOMIC_STORE_B128, dl,
+                                 DAG.getVTList(MVT::Other), Ops, MVT::i128,
+                                 AN->getMemOperand());
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -3695,6 +3718,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
+  case ISD::ATOMIC_STORE:
+    return lowerAtomicStore128(Op.getNode(), DAG);
   case ISD::MSTORE: {
     assert(STI.has256BitVectorLoadStore(
                cast<MemSDNode>(Op.getNode())->getAddressSpace()) &&
@@ -7928,6 +7953,25 @@ static void replaceAtomicSwap128(SDNode *N, SelectionDAG &DAG,
   Results.push_back(Result.getValue(2));
 }
 
+static void replaceAtomicLoad128(SDNode *N, SelectionDAG &DAG,
+                                 SmallVectorImpl<SDValue> &Results) {
+  assert(N->getValueType(0) == MVT::i128 &&
+         "Custom lowering for atomic128 only supports i128");
+
+  AtomicSDNode *AN = cast<AtomicSDNode>(N);
+  SDLoc dl(N);
+
+  SDValue Ops[] = {AN->getOperand(0), // Chain
+                   AN->getBasePtr()};
+  SDVTList Tys = DAG.getVTList(MVT::i64, MVT::i64, MVT::Other);
+  SDValue Result = DAG.getMemIntrinsicNode(NVPTXISD::ATOMIC_LOAD_B128, dl, Tys,
+                                           Ops, MVT::i128, AN->getMemOperand());
+
+  Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i128,
+                                {Result.getValue(0), Result.getValue(1)}));
+  Results.push_back(Result.getValue(2));
+}
+
 void NVPTXTargetLowering::ReplaceNodeResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
   switch (N->getOpcode()) {
@@ -7952,6 +7996,9 @@ void NVPTXTargetLowering::ReplaceNodeResults(
   case ISD::ATOMIC_CMP_SWAP:
   case ISD::ATOMIC_SWAP:
     replaceAtomicSwap128(N, DAG, STI, Results);
+    return;
+  case ISD::ATOMIC_LOAD:
+    replaceAtomicLoad128(N, DAG, Results);
     return;
   }
 }
@@ -8110,12 +8157,13 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     uint64_t VecBytes = DL.getTypeStoreSize(VecTy).getFixedValue();
     uint64_t VecBits = DL.getTypeStoreSizeInBits(VecTy).getFixedValue();
+    // RMWs need SM 90 for 128-bit operations, unlike atomic loads/stores.
+    const unsigned MaxRMWBits = STI.hasAtomSwap128() ? 128 : 64;
 
     if (Op == AtomicRMWInst::BinOp::Xchg) {
       // Split exchanges that are too wide or insufficiently aligned until
       // each piece can be lowered atomically.
-      if (VecBits > getMaxAtomicSizeInBitsSupported() ||
-          AI->getAlign().value() < VecBytes)
+      if (VecBits > MaxRMWBits || AI->getAlign().value() < VecBytes)
         return AtomicExpansionKind::Expand;
 
       // Expand subword exchanges to a masked cmpxchg loop.
@@ -8137,7 +8185,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     // If the whole vector fits a single native cmpxchg, emit one wide
     // cmpxchg loop at the current width.
-    if (VecBits <= getMaxAtomicSizeInBitsSupported())
+    if (VecBits <= MaxRMWBits)
       return AtomicExpansionKind::CmpXChg;
 
     // If the vector is too wide for a single native cmpxchg, halve further to

@@ -242,12 +242,14 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::ATOMIC_LOAD_B128:
   case NVPTXISD::MLoad:
     if (tryLoad(N))
       return;
     break;
   case ISD::STORE:
   case ISD::ATOMIC_STORE:
+  case NVPTXISD::ATOMIC_STORE_B128:
     if (tryStore(N))
       return;
     break;
@@ -1081,6 +1083,16 @@ NVPTXDAGToDAGISel::getMemInstOrderingScope(MemSDNode *N) {
   auto InstructionOrdering = getInstructionOrdering(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
 
+  // b128 loads/stores were introduced in PTX 8.3, but system scope support
+  // requires PTX 8.4. Check the resolved scope, including volatile promotion.
+  if (N->getMemoryVT() == MVT::i128 && Scope == NVPTX::Scope::System &&
+      !Subtarget->hasSysScopeLdStB128())
+    CurDAG->getContext()->diagnose(DiagnosticInfoUnsupported(
+        CurDAG->getMachineFunction().getFunction(),
+        "NVPTX system scope b128 loads and stores require PTX ISA version 8.4 "
+        "or later",
+        N->getDebugLoc()));
+
   // Singlethread scope has no inter-thread synchronization requirements, so
   // the atomic operation is lowered as plain and the fence is skipped.
   // NotAtomic and Volatile operations naturally have Thread scope and must
@@ -1404,6 +1416,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::ATOMIC_LOAD_B128:
     UsedBytesMask = UINT32_MAX;
     break;
   case NVPTXISD::MLoad:
@@ -1437,19 +1450,31 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    Chain};
 
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
+  // The result of an i128 load is a pair of i64s, so TargetVT is i64 and would
+  // otherwise select LD_i64.
+  const bool IsB128 = N->getOpcode() == NVPTXISD::ATOMIC_LOAD_B128;
   const std::optional<unsigned> Opcode =
-      pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32, NVPTX::LD_i64);
+      IsB128 ? NVPTX::LD_i128
+             : pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32,
+                               NVPTX::LD_i64);
   if (!Opcode)
     return false;
 
-  SDNode *NVPTXLD = CurDAG->getMachineNode(*Opcode, DL, LD->getVTList(), Ops);
+  SDVTList VTs =
+      IsB128 ? CurDAG->getVTList(MVT::i128, MVT::Other) : LD->getVTList();
+  SDNode *NVPTXLD = CurDAG->getMachineNode(*Opcode, DL, VTs, Ops);
   if (!NVPTXLD)
     return false;
 
   MachineMemOperand *MemRef = LD->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(NVPTXLD), {MemRef});
 
-  ReplaceNode(LD, NVPTXLD);
+  SDNode *Result = NVPTXLD;
+  if (IsB128)
+    Result = CurDAG->getMachineNode(NVPTX::I128toV2I64, DL, LD->getVTList(),
+                                    {SDValue(NVPTXLD, 0), SDValue(NVPTXLD, 1)});
+
+  ReplaceNode(LD, Result);
   return true;
 }
 
@@ -1664,7 +1689,10 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   assert(ST->writeMem() && "Expected store");
   StoreSDNode *PlainStore = dyn_cast<StoreSDNode>(ST);
   AtomicSDNode *AtomicStore = dyn_cast<AtomicSDNode>(ST);
-  assert((PlainStore || AtomicStore) && "Expected store");
+  // i128 is not a legal type, so ATOMIC_STORE_B128 is neither of the above: it
+  // carries its value as a pair of 64-bit operands.
+  const bool IsB128 = N->getOpcode() == NVPTXISD::ATOMIC_STORE_B128;
+  assert((PlainStore || AtomicStore || IsB128) && "Expected store");
 
   // do not support pre/post inc/dec
   if (PlainStore && PlainStore->isIndexed())
@@ -1681,7 +1709,16 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
-  SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
+  SDValue Value;
+  if (IsB128) {
+    SDNode *Packed =
+        CurDAG->getMachineNode(NVPTX::V2I64toI128, DL, MVT::i128,
+                               {selectPossiblyImm(N->getOperand(2)),
+                                selectPossiblyImm(N->getOperand(3))});
+    Value = SDValue(Packed, 0);
+  } else {
+    Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
+  }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
          "Invalid width for store");
@@ -1707,8 +1744,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                    Chain};
 
   const std::optional<unsigned> Opcode =
-      pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i16,
-                      NVPTX::ST_i32, NVPTX::ST_i64);
+      IsB128 ? NVPTX::ST_i128
+             : pickOpcodeForVT(Value.getSimpleValueType().SimpleTy,
+                               NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
   if (!Opcode)
     return false;
 
