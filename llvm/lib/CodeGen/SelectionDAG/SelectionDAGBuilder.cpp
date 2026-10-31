@@ -11004,6 +11004,14 @@ void SelectionDAGBuilder::visitInlineAsm(const CallBase &Call,
 
       // Indirect output manifest as stores. Record output chains.
       if (OpInfo.isIndirect) {
+        // The store is only on the path to a callbr's default target, since
+        // the asm can branch to an indirect target before it.
+        if (IsCallBr && cast<CallBrInst>(Call).getNumIndirectDests())
+          DAG.getContext()->diagnose(DiagnosticInfoInlineAsm(
+              Call, "callbr cannot store indirect output for constraint '" +
+                        Twine(OpInfo.ConstraintCode) +
+                        "' on its indirect paths"));
+
         const Value *Ptr = OpInfo.CallOperandVal;
         assert(Ptr && "Expected value CallOperandVal for indirect asm operand");
         SDValue Store = DAG.getStore(Chain, getCurSDLoc(), Val, getValue(Ptr),
