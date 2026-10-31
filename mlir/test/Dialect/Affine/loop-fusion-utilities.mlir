@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -test-loop-fusion=test-loop-fusion-utilities -split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -test-loop-fusion=test-loop-fusion-utilities -split-input-file | FileCheck %s
 
 // CHECK-LABEL: func @slice_depth1_loop_nest() {
 func.func @slice_depth1_loop_nest() {
@@ -9,14 +9,13 @@ func.func @slice_depth1_loop_nest() {
   }
   affine.for %i1 = 0 to 5 {
     %1 = affine.load %0[%i1] : memref<100xf32>
-    "prevent.dce"(%1) : (f32) -> ()
+    "test.side_effect_op"() : () -> i32
   }
   // CHECK:      affine.for %[[IV0:.*]] = 0 to 5 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%[[IV0]]] : memref<100xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[%[[IV0]]] : memref<100xf32>
-  // CHECK-NEXT:   "prevent.dce"(%{{.*}}) : (f32) -> ()
-  // CHECK-NEXT: }
-  // CHECK-NEXT: return
+  // CHECK:      }
+  // CHECK:      return
   return
 }
 
@@ -81,7 +80,7 @@ func.func @should_fuse_avoiding_dependence_cycle() {
   affine.for %i1 = 0 to 10 {
     affine.store %cf7, %a[%i1] : memref<10xf32>
     %v1 = affine.load %c[%i1] : memref<10xf32>
-    "prevent.dce"(%v1) : (f32) -> ()
+    "test.side_effect_op"() : () -> i32
   }
   affine.for %i2 = 0 to 10 {
     %v2 = affine.load %b[%i2] : memref<10xf32>
@@ -95,15 +94,17 @@ func.func @should_fuse_avoiding_dependence_cycle() {
   // Then fuse this loop nest with loop2:
   //   {0, 1, 2}
   //
+  // CHECK-NOT:  affine.for
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT:   "prevent.dce"
-  // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NOT:  affine.for
+  // CHECK:        affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
   // CHECK-NEXT: }
+  // CHECK-NOT:  affine.for
   // CHECK-NEXT: return
   return
 }
