@@ -4073,6 +4073,7 @@ bool InitializationSequence::isAmbiguous() const {
   case FK_ParenthesizedListInitFailed:
   case FK_DesignatedInitForNonAggregate:
   case FK_HLSLInitListFlatteningFailed:
+  case FK_TemporaryAddressSpace:
     return false;
 
   case FK_ReferenceInitOverloadFailed:
@@ -6723,6 +6724,26 @@ static const FieldDecl *getConstField(const RecordDecl *RD) {
   return nullptr;
 }
 
+bool Sema::hasInvalidAddrSpForTemporary(QualType T) const {
+  // C++ [expr.type]/8.2.2:
+  //   If a pr-value initially has the type cv-T, where T is a
+  //   cv-unqualified non-class, non-array type, the type of the
+  //   expression is adjusted to T prior to any further analysis.
+  // Clang currently applies this rule to address spaces as well. For casts,
+  // the qualifiers are dropped in the cast constructor. This means that
+  // casts like `as1i(1)` where `as1i = __attribute__((address_space(1))) int`
+  // and `(as1i)1` are accepted because the address space is gone before
+  // initialization. `as1i{1}` and `as1i()` reach InitializeFrom with the
+  // written type. Exclude non-class, non-array types from the check
+  // below to avoid discrepancies between T{}, T(), (T)x and T(x).
+  LangAS AS = T.getAddressSpace();
+  if (AS == LangAS::Default || !(T->isRecordType() || T->isArrayType()))
+    return false;
+  LangAS TempAS =
+      getLangOpts().OpenCLCPlusPlus ? LangAS::opencl_private : LangAS::Default;
+  return !Qualifiers::isAddressSpaceSupersetOf(AS, TempAS, getASTContext());
+}
+
 void InitializationSequence::InitializeFrom(Sema &S,
                                             const InitializedEntity &Entity,
                                             const InitializationKind &Kind,
@@ -6762,6 +6783,12 @@ void InitializationSequence::InitializeFrom(Sema &S,
 
   // Almost everything is a normal sequence.
   setSequenceKind(NormalSequence);
+
+  if (Entity.getKind() == InitializedEntity::EK_Temporary &&
+      S.hasInvalidAddrSpForTemporary(DestType)) {
+    SetFailed(FK_TemporaryAddressSpace);
+    return;
+  }
 
   QualType SourceType;
   Expr *Initializer = nullptr;
@@ -9557,6 +9584,14 @@ bool InitializationSequence::Diagnose(Sema &S,
     break;
   }
 
+  case FK_TemporaryAddressSpace: {
+    Qualifiers QualsForPrinting;
+    QualsForPrinting.setAddressSpace(DestType.getAddressSpace());
+    S.Diag(Kind.getLocation(), diag::err_temporary_with_address_space)
+        << DestType << QualsForPrinting << Kind.getRange();
+    break;
+  }
+
   case FK_ExplicitConstructor: {
     S.Diag(Kind.getLocation(), diag::err_selected_explicit_constructor)
       << Args[0]->getSourceRange();
@@ -9758,6 +9793,10 @@ void InitializationSequence::dump(raw_ostream &OS) const {
 
     case FK_HLSLInitListFlatteningFailed:
       OS << "HLSL initialization list flattening failed";
+      break;
+
+    case FK_TemporaryAddressSpace:
+      OS << "temporary qualified with an address space";
       break;
     }
     OS << '\n';

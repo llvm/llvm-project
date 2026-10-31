@@ -3681,6 +3681,8 @@ def err_field_with_address_space : Error<
   "field may not be qualified with an address space">;
 def err_compound_literal_with_address_space : Error<
   "compound literal in function scope may not be qualified with an address space">;
+def err_temporary_with_address_space : Error<
+  "temporary of type %0 cannot be created in address space %1">;
 def err_compound_literal_with_vla_type : Error<
   "compound literal cannot be of variable-length array type">;
 def err_address_space_mismatch_templ_inst : Error<

@@ -15858,8 +15858,10 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
     //   of x = {} is x = T().
     InitializationKind Kind = InitializationKind::CreateDirectList(
         RHSExpr->getBeginLoc(), RHSExpr->getBeginLoc(), RHSExpr->getEndLoc());
-    InitializedEntity Entity =
-        InitializedEntity::InitializeTemporary(LHSExpr->getType());
+    // The address space of x applies to where it is stored. It should not
+    // be used to create the temporary.
+    InitializedEntity Entity = InitializedEntity::InitializeTemporary(
+        Context.removeAddrSpaceQualType(LHSExpr->getType()));
     InitializationSequence InitSeq(*this, Entity, Kind, RHSExpr);
     ExprResult Init = InitSeq.Perform(*this, Entity, Kind, RHSExpr);
     if (Init.isInvalid())
@@ -17761,6 +17763,9 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
+  // The value read is a prvalue, which does not keep the type's address space.
+  if (T.hasAddressSpace())
+    T = Context.removeAddrSpaceQualType(T);
   return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, VAKind);
 }
 
