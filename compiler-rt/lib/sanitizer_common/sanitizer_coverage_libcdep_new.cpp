@@ -257,6 +257,13 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp2, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_const_cmp8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_switch, void) {}
+// Argument and return value tracing (trace-args / trace-ret). Weak, empty
+// defaults so that a program built with -fsanitize-coverage=trace-args and
+// trace-ret links without a runtime consuming the values; libFuzzer, or the
+// user, provides a strong definition. Such a definition must tolerate a size of
+// zero, which the instrumentation passes for a value it cannot report.
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_args, void) {}
+SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_ret, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div4, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_div8, void) {}
 SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_trace_gep, void) {}
