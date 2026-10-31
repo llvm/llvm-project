@@ -224,13 +224,12 @@ body: |
     RET 0
 ...
 ---
-# A stack slot holds the whole register, so a subregister operand can be
-# folded only if the subregister starts at the beginning of the slot. Each of
-# these tests spills a value across an asm that clobbers every GPR, as above,
-# and passes its low byte, its second byte, or both to a "Qm" operand of a
-# second asm.
+# A stack slot holds the whole register, so a subregister operand is folded
+# at the subregister's offset in the slot. Each of these tests spills a value
+# across an asm that clobbers every GPR, as above, and passes its low byte,
+# its second byte, or both to a "Qm" operand of a second asm.
 #
-# The low byte (sub_8bit) is at the start of the slot, so it's folded.
+# The low byte (sub_8bit) is at offset 0.
 #
 #   void qm_low_byte(unsigned long a) {
 #     asm volatile("" : : : ALL_GPRS);
@@ -254,8 +253,7 @@ body: |
     RET 0
 ...
 ---
-# The second byte (sub_8bit_hi) is at byte 1 of the slot, so it gets a reload
-# instead of a fold to the start of the slot.
+# The second byte (sub_8bit_hi) is at offset 1.
 #
 #   void qm_high_byte(unsigned long a) {
 #     asm volatile("" : : : ALL_GPRS);
@@ -271,8 +269,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64_abcd = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GR8_ABCD_H foldable, [[MOV64rm]].sub_8bit_hi
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload attdialect, mem:m ops:5, %stack.0, 1, $noreg, 1, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: RET 0
     %0:gr64_abcd = COPY $rdi
     INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
@@ -280,8 +277,7 @@ body: |
     RET 0
 ...
 ---
-# Both bytes are subregisters of one value. Folding both operands would read
-# byte 0 for each, so neither is folded.
+# Both bytes are subregisters of one value, each folded at its own offset.
 #
 #   void qm_both_bytes(unsigned long a) {
 #     asm volatile("" : : : ALL_GPRS);
@@ -298,8 +294,7 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64_abcd = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, reguse:GR8_ABCD_L foldable, [[MOV64rm]].sub_8bit, reguse:GR8_ABCD_H foldable, [[MOV64rm]].sub_8bit_hi
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload attdialect, mem:m ops:5, %stack.0, 1, $noreg, 0, $noreg, mem:m ops:5, %stack.0, 1, $noreg, 1, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: RET 0
     %0:gr64_abcd = COPY $rdi
     INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
@@ -307,12 +302,14 @@ body: |
     RET 0
 ...
 ---
-# A def is folded along with the use tied to it, so neither is folded when the
-# tied use is the second byte.
+# A def is folded along with the use tied to it, both at the offset of the
+# def's subregister. The third asm keeps the value in its slot after the
+# second.
 #
 #   unsigned long qm_tied_high_byte(unsigned long a) {
 #     asm volatile("" : : : ALL_GPRS);
 #     asm volatile("" : "+Qm"(((unsigned char *)&a)[1]));
+#     asm volatile("" : : : ALL_GPRS);
 #     return a;
 #   }
 name: qm_tied_high_byte
@@ -325,13 +322,14 @@ body: |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: MOV64mr %stack.0, 1, $noreg, 0, $noreg, $rdi :: (store (s64) into %stack.0)
     ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
-    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]]:gr64_abcd = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
-    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, regdef:GR8_ABCD_H foldable, def [[MOV64rm]].sub_8bit_hi, reguse tiedto:$0, [[MOV64rm]].sub_8bit_hi(tied-def 3)
-    ; CHECK-NEXT: $rax = COPY [[MOV64rm]]
+    ; CHECK-NEXT: INLINEASM &"", sideeffect mayload maystore attdialect, mem:m ops:5, %stack.0, 1, $noreg, 1, $noreg, mem:m ops:5, %stack.0, 1, $noreg, 1, $noreg :: (load store (s64) on %stack.0)
+    ; CHECK-NEXT: INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
+    ; CHECK-NEXT: $rax = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
     ; CHECK-NEXT: RET 0, $rax
     %0:gr64_abcd = COPY $rdi
     INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
     INLINEASM &"", sideeffect attdialect, regdef:GR8_ABCD_H foldable, def %0.sub_8bit_hi, reguse tiedto:$0, %0.sub_8bit_hi(tied-def 3)
+    INLINEASM &"", sideeffect attdialect, clobber, implicit-def dead early-clobber $rax, clobber, implicit-def dead early-clobber $rbx, clobber, implicit-def dead early-clobber $rcx, clobber, implicit-def dead early-clobber $rdx, clobber, implicit-def dead early-clobber $rsi, clobber, implicit-def dead early-clobber $rdi, clobber, implicit-def dead early-clobber $rbp, clobber, implicit-def dead early-clobber $r8, clobber, implicit-def dead early-clobber $r9, clobber, implicit-def dead early-clobber $r10, clobber, implicit-def dead early-clobber $r11, clobber, implicit-def dead early-clobber $r12, clobber, implicit-def dead early-clobber $r13, clobber, implicit-def dead early-clobber $r14, clobber, implicit-def dead early-clobber $r15
     $rax = COPY %0
     RET 0, $rax
 ...

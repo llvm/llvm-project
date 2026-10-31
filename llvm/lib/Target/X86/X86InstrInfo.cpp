@@ -11050,10 +11050,11 @@ void X86InstrInfo::genAlternativeCodeSequence(
 
 // See also: X86DAGToDAGISel::SelectInlineAsmMemoryOperand().
 void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
-                                         int FI) const {
+                                         int FI, int64_t Offset) const {
   X86AddressMode M;
   M.BaseType = X86AddressMode::FrameIndexBase;
   M.Base.FrameIndex = FI;
+  M.Disp = Offset;
   M.getFullAddress(Ops);
 }
 

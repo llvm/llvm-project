@@ -2785,37 +2785,36 @@ bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   assert(OpId && "expected non-zero operand id");
   assert(isInlineAsm() && "should only be used on inline asm");
 
-  if (!getOperand(OpId).isReg())
-    return false;
-
-  if (isRegTiedToDefOperand(OpId))
-    return false;
-
+  const MachineOperand &MO = getOperand(OpId);
   const MachineOperand &MD = getOperand(OpId - 1);
-  if (!MD.isImm())
+  if (!MO.isReg() || !MD.isImm())
+    return false;
+
+  InlineAsm::Flag F(MD.getImm());
+  if (!F.isRegUseKind() && !F.isRegDefKind() && !F.isRegDefEarlyClobberKind())
     return false;
 
   // A memory operand replaces exactly one register, so one register of a
   // multi-register operand (e.g. an i128 in two GR64s) can't be folded.
-  InlineAsm::Flag F(MD.getImm());
-  if (F.getNumOperandRegisters() != 1)
+  if (!F.getRegMayBeFolded() || F.getNumOperandRegisters() != 1)
     return false;
 
-  // A memory operand refers to the start of the stack slot, which holds the
-  // whole register. A subregister is found there only if it's at bit offset 0
-  // on a little-endian target; e.g. x86's sub_8bit_hi is at byte 1. (The use
-  // tied to a def, which is folded along with it, has the def's subregister.)
-  if (unsigned SubReg = getOperand(OpId).getSubReg()) {
+  // A use tied to a def is folded along with the def, not on its own.
+  if (isRegTiedToDefOperand(OpId))
+    return false;
+
+  // The stack slot holds the whole register, so a subregister is folded at
+  // its offset in the slot, if it has one.
+  if (unsigned SubReg = MO.getSubReg()) {
     const MachineFunction &MF = *getMF();
-    if (!MF.getDataLayout().isLittleEndian() ||
-        MF.getSubtarget().getRegisterInfo()->getSubRegIdxOffset(SubReg) != 0)
-      return false;
+    unsigned Size, Offset;
+    return MO.getReg().isVirtual() &&
+           MF.getSubtarget().getInstrInfo()->getStackSlotRange(
+               MF.getRegInfo().getRegClass(MO.getReg()), SubReg, Size, Offset,
+               MF);
   }
 
-  if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
-    return F.getRegMayBeFolded();
-
-  return false;
+  return true;
 }
 
 bool MachineInstr::mayFoldInlineAsmReg(Register Reg) const {
