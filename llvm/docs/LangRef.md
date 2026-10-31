@@ -8915,6 +8915,43 @@ of the node are ignored.
 
 This metadata was previously spelled `amdgpu.ignore.denormal.mode`.
 
+(md_atomic.fp.aggregation)=
+
+#### '`atomic.fp.aggregation`' Metadata
+
+The `atomic.fp.aggregation` metadata may be attached to
+{ref}`atomicrmw <i_atomicrmw>` `fadd` and `fsub` instructions. It allows the
+value they store to be computed differently than by performing them one at a
+time. For example, a GPU target can add up the updates made by the lanes of a
+wavefront and apply the sum with one atomic operation.
+
+If several non-volatile operations of the same type to the same location all
+carry this metadata and are performed as a single update, their contributions
+(the value operand for `fadd`, its negation for `fsub`) may be added in any
+order and grouping, and the sum added to the value in memory once. Each addition
+uses the operations' type and {ref}`floating-point environment <floatenv>`,
+element by element for vector types. The sum of `n` bitwise-identical
+contributions `v` may also be computed as `n * v` with a single rounding,
+provided `n` is exactly representable in the type. The stored value can
+therefore differ from the result of every serial order of the operations by any
+amount, including being an infinity or a NaN where every serial result is
+finite, and the additions can raise different floating-point exceptions.
+
+The value returned by each operation is still that of performing the operations
+one at a time in an order the memory model allows. The metadata does not change
+the operations' atomicity, ordering or synchronization scope, or the handling of
+denormals, and does not by itself allow performing them as a single update.
+Dropping the metadata is always correct.
+
+The metadata must reference a single metadata node with no entries; the contents
+of the node are ignored.
+
+```llvm
+%old = atomicrmw fadd ptr %ptr, float %value monotonic, align 4, !atomic.fp.aggregation !0
+
+!0 = !{}
+```
+
 #### '`type`' Metadata
 
 See {doc}`TypeMetadata`.

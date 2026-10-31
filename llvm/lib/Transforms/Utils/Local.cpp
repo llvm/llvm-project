@@ -3045,7 +3045,9 @@ static void combineMetadata(Instruction *K, const Instruction *J,
           K->setMetadata(Kind, JMD);
         break;
       case LLVMContext::MD_nontemporal:
-        // Preserve !nontemporal if it is present on both instructions.
+      case LLVMContext::MD_atomic_fp_aggregation:
+        // Preserve !nontemporal and !atomic.fp.aggregation if they are
+        // present on both instructions.
         if (!AAOnly)
           K->setMetadata(Kind, JMD);
         break;
