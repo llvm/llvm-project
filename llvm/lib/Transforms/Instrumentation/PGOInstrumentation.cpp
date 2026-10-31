@@ -2172,7 +2172,7 @@ static bool annotateAllFunctions(
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
-    if (PGOViewCounts != PGOVCT_None &&
+    if (PGOViewCounts != PGOViewCountsType::None &&
         (ViewBlockFreqFuncName.empty() ||
          F.getName() == ViewBlockFreqFuncName)) {
       CycleInfo CI;
@@ -2181,22 +2181,22 @@ static bool annotateAllFunctions(
           std::make_unique<BranchProbabilityInfo>(F, CI);
       std::unique_ptr<BlockFrequencyInfo> NewBFI =
           std::make_unique<BlockFrequencyInfo>(F, *NewBPI, CI);
-      if (PGOViewCounts == PGOVCT_Graph)
+      if (PGOViewCounts == PGOViewCountsType::Graph)
         NewBFI->view();
-      else if (PGOViewCounts == PGOVCT_Text) {
+      else if (PGOViewCounts == PGOViewCountsType::Text) {
         dbgs() << "pgo-view-counts: " << Func.getFunc().getName() << "\n";
         NewBFI->print(dbgs());
       }
     }
-    if (Opts.pgo_view_raw_counts != PGOVCT_None &&
+    if (Opts.pgo_view_raw_counts != PGOViewCountsType::None &&
         (ViewBlockFreqFuncName.empty() ||
          F.getName() == ViewBlockFreqFuncName)) {
-      if (Opts.pgo_view_raw_counts == PGOVCT_Graph)
+      if (Opts.pgo_view_raw_counts == PGOViewCountsType::Graph)
         if (ViewBlockFreqFuncName.empty())
           WriteGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
         else
           ViewGraph(&Func, Twine("PGORawCounts_") + Func.getFunc().getName());
-      else if (Opts.pgo_view_raw_counts == PGOVCT_Text) {
+      else if (Opts.pgo_view_raw_counts == PGOViewCountsType::Text) {
         dbgs() << "pgo-view-raw-counts: " << Func.getFunc().getName() << "\n";
         Func.dumpInfo();
       }

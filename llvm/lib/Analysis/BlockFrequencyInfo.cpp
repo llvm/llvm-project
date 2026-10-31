@@ -75,9 +75,9 @@ cl::opt<PGOViewCountsType> PGOViewCounts(
              "-pgo-view-raw-counts instead. To limit graph "
              "display to only one function, use filtering option "
              "-view-bfi-func-name."),
-    cl::values(clEnumValN(PGOVCT_None, "none", "do not show."),
-               clEnumValN(PGOVCT_Graph, "graph", "show a graph."),
-               clEnumValN(PGOVCT_Text, "text", "show in text.")));
+    cl::values(clEnumValN(PGOViewCountsType::None, "none", "do not show."),
+               clEnumValN(PGOViewCountsType::Graph, "graph", "show a graph."),
+               clEnumValN(PGOViewCountsType::Text, "text", "show in text.")));
 
 cl::opt<std::string>
     PrintBFIFuncName("print-bfi-func-name", cl::Hidden,
@@ -88,7 +88,7 @@ cl::opt<std::string>
 namespace llvm {
 
 static GVDAGType getGVDT() {
-  if (PGOViewCounts == PGOVCT_Graph)
+  if (PGOViewCounts == PGOViewCountsType::Graph)
     return GVDT_Count;
   return ViewBlockFreqPropagationDAG;
 }
