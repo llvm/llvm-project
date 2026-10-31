@@ -1,0 +1,86 @@
+{
+  "CallGraph": [
+    {
+      "Function": {
+        "Names": [
+          "foo"
+        ],
+        "Address": 6032,
+        "Version": 0,
+        "IsIndirectTarget": true,
+        "TypeID": 4524972987496481828,
+        "NumDirectCallees": 0,
+        "DirectCallees": [],
+        "NumIndirectTargetTypeIDs": 0,
+        "IndirectTypeIDs": []
+      }
+    },
+    {
+      "Function": {
+        "Names": [
+          "bar"
+        ],
+        "Address": 6048,
+        "Version": 0,
+        "IsIndirectTarget": true,
+        "TypeID": 4524972987496481828,
+        "NumDirectCallees": 0,
+        "DirectCallees": [],
+        "NumIndirectTargetTypeIDs": 0,
+        "IndirectTypeIDs": []
+      }
+    },
+    {
+      "Function": {
+        "Names": [
+          "baz"
+        ],
+        "Address": 6064,
+        "Version": 0,
+        "IsIndirectTarget": true,
+        "TypeID": 3498816979441845844,
+        "NumDirectCallees": 0,
+        "DirectCallees": [],
+        "NumIndirectTargetTypeIDs": 0,
+        "IndirectTypeIDs": []
+      }
+    },
+    {
+      "Function": {
+        "Names": [
+          "main"
+        ],
+        "Address": 6080,
+        "Version": 0,
+        "IsIndirectTarget": true,
+        "TypeID": 18043682217572872138,
+        "NumDirectCallees": 3,
+        "DirectCallees": [
+          {
+            "Names": [
+              "foo"
+            ],
+            "Address": 6032
+          },
+          {
+            "Names": [
+              "bar"
+            ],
+            "Address": 6048
+          },
+          {
+            "Names": [
+              "baz"
+            ],
+            "Address": 6064
+          }
+        ],
+        "NumIndirectTargetTypeIDs": 2,
+        "IndirectTypeIDs": [
+          4524972987496481828,
+          3498816979441845844
+        ]
+      }
+    }
+  ]
+}
