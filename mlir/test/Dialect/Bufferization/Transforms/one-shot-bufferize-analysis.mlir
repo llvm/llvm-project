@@ -201,3 +201,44 @@ func.func @shorter_inplace_attr(%arg0: tensor<4xi32>) -> (tensor<4xi32>, tensor<
   // tensor operands.  The analysis must expand the annotation without crashing.
   return {__inplace_operands_attr__ = ["false"]} %arg0, %arg0 : tensor<4xi32>, tensor<4xi32>
 }
+
+// -----
+
+// A tensor yielded from `scf.index_switch` aliases with the switch's result,
+// just like `scf.if`. Writing to that result must therefore not modify a
+// non-writable input in place.
+// CHECK-LABEL: func @index_switch_non_writable(
+// CHECK-ALIAS-SETS-LABEL: func @index_switch_non_writable(
+func.func @index_switch_non_writable(%t: tensor<4xf32> {bufferization.writable = false},
+                                     %v: vector<4xf32>, %i: index) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK-ALIAS-SETS: %[[switch:.*]] = scf.index_switch
+  // CHECK-ALIAS-SETS-SAME: __opresult_alias_set_attr__ = {{.*}}%[[switch]]{{.*}}%arg0
+  %0 = scf.index_switch %i -> tensor<4xf32>
+  default {
+    scf.yield %t : tensor<4xf32>
+  }
+  // CHECK: vector.transfer_write {{.*}} {__inplace_operands_attr__ = ["none", "false", "none"]
+  %1 = vector.transfer_write %v, %0[%c0] {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
+  return %1 : tensor<4xf32>
+}
+
+// -----
+
+// Each `scf.index_switch` result aliases the correspondingly-indexed operand
+// yielded by every case and by the default region.
+// CHECK-ALIAS-SETS-LABEL: func @index_switch_multi_result(
+func.func @index_switch_multi_result(%a: tensor<4xf32> {bufferization.writable = false},
+                                     %b: tensor<4xf32>, %i: index)
+    -> (tensor<4xf32>, tensor<4xf32>) {
+  // CHECK-ALIAS-SETS: %[[sw:.*]]:2 = scf.index_switch
+  // CHECK-ALIAS-SETS-SAME: __opresult_alias_set_attr__ = {{.*}}"%[[sw]]#0", "%arg0"{{.*}}"%[[sw]]#1", "%arg1"
+  %0, %1 = scf.index_switch %i -> tensor<4xf32>, tensor<4xf32>
+  case 1 {
+    scf.yield %a, %b : tensor<4xf32>, tensor<4xf32>
+  }
+  default {
+    scf.yield %a, %b : tensor<4xf32>, tensor<4xf32>
+  }
+  return %0, %1 : tensor<4xf32>, tensor<4xf32>
+}
