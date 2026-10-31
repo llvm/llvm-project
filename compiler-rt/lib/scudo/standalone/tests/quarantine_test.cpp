@@ -19,10 +19,26 @@ void *FakePtr = reinterpret_cast<void *>(0xFA83FA83);
 const scudo::uptr BlockSize = 8UL;
 const scudo::uptr LargeBlockSize = 16384UL;
 
+// Batches allocated by the callback are preceded by a header, which stands in
+// for the chunk header the allocator checks.
+const scudo::uptr BatchHeaderSize = 16UL;
+const scudo::uptr BatchMagic = 0xBA7C4ED0UL;
+
+scudo::uptr *getBatchHeader(void *P) {
+  return reinterpret_cast<scudo::uptr *>(reinterpret_cast<scudo::uptr>(P) -
+                                         BatchHeaderSize);
+}
+
 struct QuarantineCallback {
   void recycle(void *P) { EXPECT_EQ(P, FakePtr); }
-  void *allocate(scudo::uptr Size) { return malloc(Size); }
-  void deallocate(void *P) { free(P); }
+  void *allocate(scudo::uptr Size) {
+    void *P = malloc(BatchHeaderSize + Size);
+    *static_cast<scudo::uptr *>(P) = BatchMagic;
+    return reinterpret_cast<void *>(reinterpret_cast<scudo::uptr>(P) +
+                                    BatchHeaderSize);
+  }
+  void deallocate(void *P) { free(getBatchHeader(P)); }
+  void checkBatch(void *P) { CHECK_EQ(*getBatchHeader(P), BatchMagic); }
 };
 
 typedef scudo::GlobalQuarantine<QuarantineCallback, void> QuarantineT;
@@ -31,8 +47,15 @@ typedef typename QuarantineT::CacheT CacheT;
 QuarantineCallback Cb;
 
 void deallocateCache(CacheT *Cache) {
-  while (scudo::QuarantineBatch *Batch = Cache->dequeueBatch())
+  while (scudo::QuarantineBatch *Batch = Cache->dequeueBatch(Cb))
     Cb.deallocate(Batch);
+}
+
+scudo::QuarantineBatch *allocateBatch() {
+  auto *B = static_cast<scudo::QuarantineBatch *>(
+      Cb.allocate(sizeof(scudo::QuarantineBatch)));
+  B->init(FakePtr, BlockSize);
+  return B;
 }
 
 TEST(ScudoQuarantineTest, QuarantineBatchMerge) {
@@ -133,13 +156,13 @@ TEST(ScudoQuarantineDeathTest, QuarantineBatchMergeOverflow) {
 TEST(ScudoQuarantineDeathTest, QuarantineCacheEnqueueInvalidCount) {
   CacheT Cache;
   Cache.init();
-  scudo::QuarantineBatch B;
-  B.init(FakePtr, BlockSize);
-  Cache.enqueueBatch(&B);
+  scudo::QuarantineBatch *B = allocateBatch();
+  Cache.enqueueBatch(B);
   // An oversized count bypasses enqueue's full-batch equality check.
-  B.Count = scudo::QuarantineBatch::MaxCount + 1;
+  B->Count = scudo::QuarantineBatch::MaxCount + 1;
   SCUDO_EXPECT_DEATH(Cache.enqueue(Cb, FakePtr, BlockSize), "Count");
-  EXPECT_EQ(Cache.dequeueBatch(), &B);
+  EXPECT_EQ(Cache.dequeueBatch(Cb), B);
+  Cb.deallocate(B);
 }
 
 TEST(ScudoQuarantineDeathTest, GlobalQuarantineRecycleInvalidCount) {
@@ -157,15 +180,82 @@ TEST(ScudoQuarantineDeathTest, GlobalQuarantineRecycleInvalidCount) {
   Cb.deallocate(B);
 }
 
+TEST(ScudoQuarantineDeathTest, QuarantineCacheDequeueBatchInvalidNext) {
+  CacheT Cache;
+  Cache.init();
+  scudo::QuarantineBatch *First = allocateBatch();
+  scudo::QuarantineBatch *Second = allocateBatch();
+  // A batch that the quarantine didn't allocate: its header doesn't check out.
+  scudo::QuarantineBatch *Forged = allocateBatch();
+  *getBatchHeader(Forged) = 0;
+  Cache.enqueueBatch(First);
+  Cache.enqueueBatch(Second);
+  // Corrupting a link leaves the header of the batch holding it intact, so the
+  // batch it leads to must be checked before it is used.
+  First->Next = Forged;
+  EXPECT_EQ(Cache.dequeueBatch(Cb), First);
+  SCUDO_EXPECT_DEATH(Cache.dequeueBatch(Cb), "BatchMagic");
+  Cb.deallocate(First);
+  Cb.deallocate(Second);
+  Cb.deallocate(Forged);
+}
+
+TEST(ScudoQuarantineDeathTest, QuarantineCacheMergeBatchesInvalidNext) {
+  CacheT Cache;
+  CacheT ToDeallocate;
+  Cache.init();
+  ToDeallocate.init();
+  // A full first batch can't be merged into, so the walk moves on from it.
+  scudo::QuarantineBatch *First = allocateBatch();
+  while (First->Count < scudo::QuarantineBatch::MaxCount)
+    First->push_back(FakePtr, BlockSize);
+  scudo::QuarantineBatch *Second = allocateBatch();
+  scudo::QuarantineBatch *Forged = allocateBatch();
+  *getBatchHeader(Forged) = 0;
+  Cache.enqueueBatch(First);
+  Cache.enqueueBatch(Second);
+  First->Next = Forged;
+  SCUDO_EXPECT_DEATH(Cache.mergeBatches(Cb, &ToDeallocate), "BatchMagic");
+  // Links to batches of the list pass the header check, but must not lead the
+  // walk back to the current batch, or past the last batch of the list.
+  First->Next = First;
+  SCUDO_EXPECT_DEATH(Cache.mergeBatches(Cb, &ToDeallocate), "Current");
+  First->Next = Second;
+  Second->Next = First;
+  SCUDO_EXPECT_DEATH(Cache.mergeBatches(Cb, &ToDeallocate), "List.size");
+  Cb.deallocate(First);
+  Cb.deallocate(Second);
+  Cb.deallocate(Forged);
+}
+
+TEST(ScudoQuarantineDeathTest, GlobalQuarantineRecycleInvalidNext) {
+  QuarantineT Quarantine;
+  CacheT Cache;
+  Cache.init();
+  Quarantine.init(1024UL << 10, 256UL << 10);
+  scudo::QuarantineBatch *First = allocateBatch();
+  scudo::QuarantineBatch *Second = allocateBatch();
+  scudo::QuarantineBatch *Forged = allocateBatch();
+  *getBatchHeader(Forged) = 0;
+  Cache.enqueueBatch(First);
+  Cache.enqueueBatch(Second);
+  // Recycling reaches the forged batch whether it merges batches or not.
+  First->Next = Forged;
+  SCUDO_EXPECT_DEATH(Quarantine.drainAndRecycle(&Cache, Cb), "BatchMagic");
+  Cb.deallocate(First);
+  Cb.deallocate(Second);
+  Cb.deallocate(Forged);
+}
+
 TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesEmpty) {
   CacheT Cache;
   CacheT ToDeallocate;
   Cache.init();
   ToDeallocate.init();
-  Cache.mergeBatches(&ToDeallocate);
+  Cache.mergeBatches(Cb, &ToDeallocate);
 
   EXPECT_EQ(ToDeallocate.getSize(), 0UL);
-  EXPECT_EQ(ToDeallocate.dequeueBatch(), nullptr);
+  EXPECT_EQ(ToDeallocate.dequeueBatch(Cb), nullptr);
 }
 
 TEST(SanitizerCommon, QuarantineCacheMergeBatchesOneBatch) {
@@ -176,13 +266,13 @@ TEST(SanitizerCommon, QuarantineCacheMergeBatchesOneBatch) {
 
   CacheT ToDeallocate;
   ToDeallocate.init();
-  Cache.mergeBatches(&ToDeallocate);
+  Cache.mergeBatches(Cb, &ToDeallocate);
 
   // Nothing to merge, nothing to deallocate.
   EXPECT_EQ(BlockSize + sizeof(scudo::QuarantineBatch), Cache.getSize());
 
   EXPECT_EQ(ToDeallocate.getSize(), 0UL);
-  EXPECT_EQ(ToDeallocate.dequeueBatch(), nullptr);
+  EXPECT_EQ(ToDeallocate.dequeueBatch(Cb), nullptr);
 
   deallocateCache(&Cache);
 }
@@ -202,7 +292,7 @@ TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesSmallBatches) {
 
   CacheT ToDeallocate;
   ToDeallocate.init();
-  Cache.mergeBatches(&ToDeallocate);
+  Cache.mergeBatches(Cb, &ToDeallocate);
 
   // Batches merged, one batch to deallocate.
   EXPECT_EQ(BlockSize * 2 + sizeof(scudo::QuarantineBatch), Cache.getSize());
@@ -230,7 +320,7 @@ TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesTooBigToMerge) {
 
   CacheT ToDeallocate;
   ToDeallocate.init();
-  Cache.mergeBatches(&ToDeallocate);
+  Cache.mergeBatches(Cb, &ToDeallocate);
 
   // Batches cannot be merged.
   EXPECT_EQ(BlockSize * NumBlocks * 2 + sizeof(scudo::QuarantineBatch) * 2,
@@ -262,7 +352,7 @@ TEST(ScudoQuarantineTest, QuarantineCacheMergeBatchesALotOfBatches) {
 
   CacheT ToDeallocate;
   ToDeallocate.init();
-  Cache.mergeBatches(&ToDeallocate);
+  Cache.mergeBatches(Cb, &ToDeallocate);
 
   // All blocks should fit Into 3 batches.
   EXPECT_EQ(BlockSize * NumBlocks +
