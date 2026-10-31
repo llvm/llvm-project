@@ -189,6 +189,10 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     assert(BaseDecl != Class && "Class cannot inherit from itself.");
 
+    // Skip invalid base declarations to avoid assert in getASTRecordLayout
+    if (BaseDecl->isInvalidDecl())
+      continue;
+
     CharUnits EmptySize;
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(BaseDecl);
     if (BaseDecl->isEmpty()) {
@@ -209,6 +213,10 @@ void EmptySubobjectMap::ComputeEmptySubobjectSizes() {
     const auto *MemberDecl =
         Context.getBaseElementType(FD->getType())->getAsCXXRecordDecl();
     if (!MemberDecl)
+      continue;
+
+    // Skip invalid member declarations to avoid assert in getASTRecordLayout
+    if (MemberDecl->isInvalidDecl())
       continue;
 
     CharUnits EmptySize;
@@ -378,6 +386,13 @@ EmptySubobjectMap::CanPlaceFieldSubobjectAtOffset(const CXXRecordDecl *RD,
 
   if (!CanPlaceSubobjectAtOffset(RD, Offset))
     return false;
+
+  // For invalid declarations, be permissive during error recovery.
+  // Return true to allow placement and avoid triggering assert in
+  // getASTRecordLayout. Layout constraints don't matter for types that are
+  // already marked invalid.
+  if (RD->isInvalidDecl())
+    return true;
 
   const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
 
