@@ -408,6 +408,10 @@ public:
   /// signed system implies it or because ValueTracking can prove it.
   bool isKnownNonNegative(Value *V);
 
+  /// Returns true if \p V is known to be negative, either because the signed
+  /// system implies it, or because ValueTracking can prove it.
+  bool isKnownNegative(Value *);
+
   /// Returns true if \p V is known to be positive, either because the signed
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
@@ -1101,6 +1105,13 @@ bool ConstraintInfo::isKnownNonNegative(Value *V) {
     return !CI->isNegative();
   return ::isKnownNonNegative(V, DL) ||
          doesHold(CmpInst::ICMP_SGE, V, ConstantInt::get(V->getType(), 0));
+}
+
+bool ConstraintInfo::isKnownNegative(Value *V) {
+  if (auto *CI = dyn_cast<ConstantInt>(V))
+    return CI->isNegative();
+  return ::isKnownNegative(V, DL) ||
+         doesHold(CmpInst::ICMP_SLT, V, ConstantInt::get(V->getType(), 0));
 }
 
 bool ConstraintInfo::isKnownPositive(Value *V) {
@@ -2610,12 +2621,30 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         // If samesign is present on the ICmp, simply flip the sign of the
         // predicate, transferring the information from the signed system to the
         // unsigned system, and viceversa.
-        if (Pred.hasSameSign())
+        if (Pred.hasSameSign()) {
           Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
                        CB.NumIn, CB.NumOut, DFSInStack);
-        else
+          // The operands also have the same sign: if one of them is known to
+          // be non-negative (or negative), so is the other.
+          if (A->getType()->isIntegerTy()) {
+            Constant *Zero = Constant::getNullValue(A->getType());
+            bool ANonNeg = Info.isKnownNonNegative(A);
+            bool BNonNeg = Info.isKnownNonNegative(B);
+            if (ANonNeg != BNonNeg) {
+              Info.addFact(CmpInst::ICMP_SGE, ANonNeg ? B : A, Zero, CB.NumIn,
+                           CB.NumOut, DFSInStack);
+            } else if (!ANonNeg) {
+              bool ANeg = Info.isKnownNegative(A);
+              bool BNeg = Info.isKnownNegative(B);
+              if (ANeg != BNeg)
+                Info.addFact(CmpInst::ICMP_SLT, ANeg ? B : A, Zero, CB.NumIn,
+                             CB.NumOut, DFSInStack);
+            }
+          }
+        } else {
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
                                      DFSInStack);
+        }
       }
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an
