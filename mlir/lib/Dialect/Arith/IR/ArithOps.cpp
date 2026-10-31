@@ -196,6 +196,19 @@ static int64_t getScalarOrElementWidth(Value value) {
   return getScalarOrElementWidth(value.getType());
 }
 
+/// Returns true if every value of `intValue`'s integer type converts exactly.
+static bool isExactIntToFPCast(Value intValue, Value fpValue, bool isSigned) {
+  auto fpTy = dyn_cast<FloatType>(getElementTypeOrSelf(fpValue.getType()));
+  int64_t intWidth = getScalarOrElementWidth(intValue);
+  if (!fpTy || intWidth <= 0)
+    return false;
+  // The magnitude bits must fit the mantissa and the exponent range.
+  int64_t magnitudeBits = intWidth - (isSigned ? 1 : 0);
+  return magnitudeBits <= fpTy.getFPMantissaWidth() &&
+         intWidth - 1 <=
+             APFloat::semanticsMaxExponent(fpTy.getFloatSemantics());
+}
+
 static FailureOr<APInt> getIntOrSplatIntValue(Attribute attr) {
   APInt value;
   if (matchPattern(attr, m_ConstantInt(&value)))
