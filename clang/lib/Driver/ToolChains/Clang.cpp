@@ -2011,7 +2011,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
 
   // Select the ABI to use.
   const char *ABIName = nullptr;
-  if (T.isOSBinFormatELF()) {
+  if (T.isOSBinFormatELF() && T.getOS() != llvm::Triple::Xbox360) {
     switch (getToolChain().getArch()) {
     case llvm::Triple::ppc64: {
       if (T.isPPC64ELFv2ABI())
