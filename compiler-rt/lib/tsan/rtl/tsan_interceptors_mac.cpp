@@ -444,7 +444,14 @@ TSAN_INTERCEPTOR(int, objc_sync_enter, id obj) {
   MutexPreLock(thr, pc, addr, MutexFlagWriteReentrant);
   int result = REAL(objc_sync_enter)(obj);
   CHECK_EQ(result, OBJC_SYNC_SUCCESS);
+  // MutexPostLock first records a 1-byte read access to addr, and only then
+  // does it do clock.Acquire on addr. Unfortunately, some users of
+  // __tsan_external_write also write to the same `addr` that is being
+  // synchronized on, resulting in a false positive data race report. Setting
+  // ThreadIgnore suppresses the 'read', and subsequent false positive.
+  ThreadIgnoreBegin(thr, 0);
   MutexPostLock(thr, pc, addr, MutexFlagWriteReentrant);
+  ThreadIgnoreEnd(thr);
   return result;
 }
 
