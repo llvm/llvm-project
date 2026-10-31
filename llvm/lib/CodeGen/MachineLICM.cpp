@@ -176,16 +176,10 @@ namespace {
              DenseMap<unsigned, std::vector<MachineInstr *>>>
         CSEMap;
 
-    enum {
-      SpeculateFalse   = 0,
-      SpeculateTrue    = 1,
-      SpeculateUnknown = 2
-    };
-
     // If a MBB does not dominate loop exiting blocks then it may not safe
-    // to hoist loads from this block.
-    // Tri-state: 0 - false, 1 - true, 2 - unknown
-    unsigned SpeculationState = SpeculateUnknown;
+    // to hoist loads from this block. Cached per loop for the current block,
+    // which is checked against both the outermost loop and its subloops.
+    SmallDenseMap<MachineLoop *, bool> GuaranteedToExecute;
 
   public:
     MachineLICMImpl(bool PreRegAlloc, Pass *LegacyPass,
@@ -650,7 +644,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop) {
           RUClobbers.set(static_cast<unsigned>(Unit));
     }
 
-    SpeculationState = SpeculateUnknown;
+    GuaranteedToExecute.clear();
     for (MachineInstr &MI : *BB)
       ProcessMI(&MI, RUDefs, RUClobbers, StoredFIs, Candidates, CurLoop);
   }
@@ -771,8 +765,9 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
 /// may not be safe to hoist.
 bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
                                             MachineLoop *CurLoop) {
-  if (SpeculationState != SpeculateUnknown)
-    return SpeculationState == SpeculateFalse;
+  auto [It, Inserted] = GuaranteedToExecute.try_emplace(CurLoop, true);
+  if (!Inserted)
+    return It->second;
 
   if (BB != CurLoop->getHeader()) {
     // Check loop exiting blocks.
@@ -780,12 +775,11 @@ bool MachineLICMImpl::IsGuaranteedToExecute(MachineBasicBlock *BB,
     CurLoop->getExitingBlocks(CurrentLoopExitingBlocks);
     for (MachineBasicBlock *CurrentLoopExitingBlock : CurrentLoopExitingBlocks)
       if (!MDTU->getDomTree().dominates(BB, CurrentLoopExitingBlock)) {
-        SpeculationState = SpeculateTrue;
+        It->second = false;
         return false;
       }
   }
 
-  SpeculationState = SpeculateFalse;
   return true;
 }
 
@@ -890,7 +884,7 @@ void MachineLICMImpl::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
     EnterScope(MBB);
 
     // Process the block
-    SpeculationState = SpeculateUnknown;
+    GuaranteedToExecute.clear();
     for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
       unsigned HoistRes = HoistResult::NotHoisted;
       HoistRes = Hoist(&MI, Preheader, CurLoop);
