@@ -362,5 +362,40 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
   }
 
+  // CHECK-LABEL: @zero_array_const
+  spirv.func @zero_array_const() -> (!spirv.array<4 x i32>) "None" {
+    // CHECK: spirv.Constant [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !spirv.array<4 x i32>
+    %0 = spirv.Constant [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !spirv.array<4 x i32>
+    spirv.ReturnValue %0 : !spirv.array<4 x i32>
+  }
+
+  // CHECK-LABEL: @zero_nested_array_const
+  spirv.func @zero_nested_array_const() -> (!spirv.array<2 x !spirv.array<2 x f32>>) "None" {
+    // CHECK: spirv.Constant {{\[}}[0.000000e+00 : f32, 0.000000e+00 : f32], [0.000000e+00 : f32, 0.000000e+00 : f32]] : !spirv.array<2 x !spirv.array<2 x f32>>
+    %0 = spirv.Constant [[0.0 : f32, 0.0 : f32], [0.0 : f32, 0.0 : f32]] : !spirv.array<2 x !spirv.array<2 x f32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x !spirv.array<2 x f32>>
+  }
+
+  // CHECK-LABEL: @zero_vector_array_const
+  spirv.func @zero_vector_array_const() -> (!spirv.array<2 x vector<2xi32>>) "None" {
+    // CHECK: spirv.Constant [dense<0> : vector<2xi32>, dense<0> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
+    %0 = spirv.Constant [dense<0> : vector<2xi32>, dense<0> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x vector<2xi32>>
+  }
+
+  // CHECK-LABEL: @zero_struct_const
+  spirv.func @zero_struct_const() -> (!spirv.struct<(i32, !spirv.array<2 x f32>)>) "None" {
+    // CHECK: spirv.Constant [0 : i32, [0.000000e+00 : f32, 0.000000e+00 : f32]] : !spirv.struct<(i32, !spirv.array<2 x f32>)>
+    %0 = spirv.Constant [0 : i32, [0.0 : f32, 0.0 : f32]] : !spirv.struct<(i32, !spirv.array<2 x f32>)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x f32>)>
+  }
+
+  // CHECK-LABEL: @zero_empty_struct_const
+  spirv.func @zero_empty_struct_const() -> (!spirv.struct<()>) "None" {
+    // CHECK: spirv.Constant [] : !spirv.struct<()>
+    %0 = spirv.Constant [] : !spirv.struct<()>
+    spirv.ReturnValue %0 : !spirv.struct<()>
+  }
+
   spirv.EntryPoint "GLCompute" @bool_const
 }

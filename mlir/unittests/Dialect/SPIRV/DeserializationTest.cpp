@@ -8,15 +8,21 @@
 //
 // The purpose of this file is to provide negative deserialization tests.
 // For positive deserialization tests, please use serialization and
-// deserialization for roundtripping.
+// deserialization for roundtripping, unless the serializer cannot produce the
+// SPIR-V binary in question.
 //
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/SPIRV/Deserialization.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Verifier.h"
 #include "mlir/Target/SPIRV/SPIRVBinaryUtils.h"
 #include "mlir/Target/SPIRV/SPIRVExtInstSets.h"
 #include "gmock/gmock.h"
@@ -57,6 +63,19 @@ protected:
     EXPECT_THAT(diagnostic->str(), StrEq(std::string(errorMessage)));
   }
 
+  /// Checks the module contains exactly one constant with the expected value.
+  void expectConstant(spirv::ModuleOp module, Type type, Attribute value) {
+    EXPECT_TRUE(succeeded(verify(module.getOperation())));
+
+    unsigned numConstants = 0;
+    module.walk([&](spirv::ConstantOp op) {
+      EXPECT_EQ(op.getType(), type);
+      EXPECT_EQ(op.getValue(), value);
+      ++numConstants;
+    });
+    EXPECT_EQ(numConstants, 1u);
+  }
+
   //===--------------------------------------------------------------------===//
   // SPIR-V builder methods
   //===--------------------------------------------------------------------===//
@@ -71,6 +90,18 @@ protected:
     uint32_t wordCount = 1 + operands.size();
     binary.push_back(spirv::getPrefixedOpcode(wordCount, op));
     binary.append(operands.begin(), operands.end());
+  }
+
+  void addMemoryModel() {
+    addInstruction(spirv::Opcode::OpMemoryModel,
+                   {static_cast<uint32_t>(spirv::AddressingModel::Logical),
+                    static_cast<uint32_t>(spirv::MemoryModel::GLSL450)});
+  }
+
+  void addName(uint32_t id, StringRef name) {
+    SmallVector<uint32_t, 4> operands = {id};
+    spirv::encodeStringLiteralInto(operands, name);
+    addInstruction(spirv::Opcode::OpName, operands);
   }
 
   uint32_t addDebugInfoExtInstImport() {
@@ -108,6 +139,55 @@ protected:
     return id;
   }
 
+  uint32_t addVectorType(uint32_t elementType, uint32_t count) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeVector, {id, elementType, count});
+    return id;
+  }
+
+  uint32_t addArrayType(uint32_t elementType, uint32_t countID) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeArray, {id, elementType, countID});
+    return id;
+  }
+
+  uint32_t addPointerType(uint32_t pointeeType) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypePointer,
+                   {id, static_cast<uint32_t>(spirv::StorageClass::Function),
+                    pointeeType});
+    return id;
+  }
+
+  uint32_t addIntConstant(uint32_t type, uint32_t value) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpConstant, {type, id, value});
+    return id;
+  }
+
+  uint32_t addConstantNull(uint32_t type) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpConstantNull, {type, id});
+    return id;
+  }
+
+  uint32_t addConstantComposite(uint32_t type,
+                                ArrayRef<uint32_t> constituents) {
+    auto id = nextID++;
+    SmallVector<uint32_t, 4> operands;
+    operands.push_back(type);
+    operands.push_back(id);
+    operands.append(constituents.begin(), constituents.end());
+    addInstruction(spirv::Opcode::OpConstantComposite, operands);
+    return id;
+  }
+
+  uint32_t addUndef(uint32_t type) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpUndef, {type, id});
+    return id;
+  }
+
   uint32_t addFunctionType(uint32_t retType, ArrayRef<uint32_t> paramTypes) {
     auto id = nextID++;
     SmallVector<uint32_t, 4> operands;
@@ -130,6 +210,15 @@ protected:
   void addFunctionEnd() { addInstruction(spirv::Opcode::OpFunctionEnd, {}); }
 
   void addReturn() { addInstruction(spirv::Opcode::OpReturn, {}); }
+
+  /// Adds a use of the constant so it is materialized during deserialization.
+  void addFunctionReturning(uint32_t type, uint32_t value) {
+    auto fnType = addFunctionType(type, {});
+    addFunction(type, fnType);
+    addInstruction(spirv::Opcode::OpLabel, {nextID++});
+    addInstruction(spirv::Opcode::OpReturnValue, {value});
+    addFunctionEnd();
+  }
 
 protected:
   SmallVector<uint32_t, 5> binary;
@@ -483,6 +572,233 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
   binary.append(typeDecl.begin(), typeDecl.end());
   ASSERT_FALSE(deserialize());
   expectDiagnostic("unexpected trailing words in OpMemberName instruction");
+}
+
+//===----------------------------------------------------------------------===//
+// Constants
+//===----------------------------------------------------------------------===//
+
+// The serializer emits OpConstantComposite for zero-valued arrays and structs,
+// so OpConstantNull of these types is only reachable from a SPIR-V binary and
+// cannot be covered by round-trip tests.
+
+TEST_F(DeserializationTest, ConstantNullArray) {
+  addHeader();
+  addMemoryModel();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  auto null = addConstantNull(arrayType);
+  addFunctionReturning(arrayType, null);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+
+  Builder builder(&context);
+  Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
+  Attribute zero = builder.getIntegerAttr(si32, 0);
+  expectConstant(module.get(), spirv::ArrayType::get(si32, 2),
+                 builder.getArrayAttr({zero, zero}));
+}
+
+TEST_F(DeserializationTest, ConstantNullNestedArray) {
+  addHeader();
+  addMemoryModel();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto three = addIntConstant(int32Type, 3);
+  auto innerType = addArrayType(int32Type, three);
+  auto outerType = addArrayType(innerType, two);
+  auto null = addConstantNull(outerType);
+  addFunctionReturning(outerType, null);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+
+  Builder builder(&context);
+  Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
+  Attribute zero = builder.getIntegerAttr(si32, 0);
+  Attribute inner = builder.getArrayAttr({zero, zero, zero});
+  expectConstant(module.get(),
+                 spirv::ArrayType::get(spirv::ArrayType::get(si32, 3), 2),
+                 builder.getArrayAttr({inner, inner}));
+}
+
+TEST_F(DeserializationTest, ConstantNullArrayOfVectors) {
+  addHeader();
+  addMemoryModel();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto vectorType = addVectorType(int32Type, 4);
+  auto arrayType = addArrayType(vectorType, two);
+  auto null = addConstantNull(arrayType);
+  addFunctionReturning(arrayType, null);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+
+  Builder builder(&context);
+  Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
+  VectorType vector = VectorType::get({4}, si32);
+  Attribute zero = builder.getZeroAttr(vector);
+  expectConstant(module.get(), spirv::ArrayType::get(vector, 2),
+                 builder.getArrayAttr({zero, zero}));
+}
+
+TEST_F(DeserializationTest, ConstantNullStruct) {
+  addHeader();
+  addMemoryModel();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  auto structType = addStructType({int32Type, arrayType});
+  auto null = addConstantNull(structType);
+  addFunctionReturning(structType, null);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+
+  Builder builder(&context);
+  Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
+  Attribute zero = builder.getIntegerAttr(si32, 0);
+  Attribute array = builder.getArrayAttr({zero, zero});
+  expectConstant(module.get(),
+                 spirv::StructType::get({si32, spirv::ArrayType::get(si32, 2)}),
+                 builder.getArrayAttr({zero, array}));
+}
+
+TEST_F(DeserializationTest, ConstantNullEmptyStruct) {
+  addHeader();
+  addMemoryModel();
+  auto structType = addStructType({});
+  auto null = addConstantNull(structType);
+  addFunctionReturning(structType, null);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+
+  Builder builder(&context);
+  expectConstant(module.get(), spirv::StructType::getEmpty(&context),
+                 builder.getArrayAttr({}));
+}
+
+TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeVectorMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  addConstantComposite(vectorType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeNullConstituent) {
+  addHeader();
+  addMemoryModel();
+  auto int32Type = addIntType(32);
+  auto one = addIntConstant(int32Type, 1);
+  auto two = addIntConstant(int32Type, 2);
+  auto innerType = addArrayType(int32Type, two);
+  auto outerType = addArrayType(innerType, two);
+  auto null = addConstantNull(innerType);
+  auto inner = addConstantComposite(innerType, {one, two});
+  auto outer = addConstantComposite(outerType, {null, inner});
+  addFunctionReturning(outerType, outer);
+
+  OwningOpRef<spirv::ModuleOp> module = deserialize();
+  ASSERT_TRUE(module);
+
+  Builder builder(&context);
+  Type si32 = builder.getIntegerType(32, /*isSigned=*/true);
+  Attribute zero = builder.getIntegerAttr(si32, 0);
+  Attribute zeros = builder.getArrayAttr({zero, zero});
+  Attribute oneTwo = builder.getArrayAttr(
+      {builder.getIntegerAttr(si32, 1), builder.getIntegerAttr(si32, 2)});
+  expectConstant(module.get(),
+                 spirv::ArrayType::get(spirv::ArrayType::get(si32, 2), 2),
+                 builder.getArrayAttr({zeros, oneTwo}));
+}
+
+TEST_F(DeserializationTest, ConstantNullPointerFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto pointerType = addPointerType(int32Type);
+  addConstantNull(pointerType);
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "unsupported OpConstantNull type: '!spirv.ptr<si32, Function>'");
+}
+
+TEST_F(DeserializationTest, ConstantNullArrayOfPointersFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto pointerType = addPointerType(int32Type);
+  auto arrayType = addArrayType(pointerType, two);
+  addConstantNull(arrayType);
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unsupported OpConstantNull type: "
+                   "'!spirv.array<2 x !spirv.ptr<si32, Function>>'");
+}
+
+TEST_F(DeserializationTest, ConstantNullIdentifiedStructFailure) {
+  addHeader();
+  SmallVector<uint32_t, 5> typeDecl;
+  std::swap(typeDecl, binary);
+
+  auto int32Type = addIntType(32);
+  auto structType = addStructType({int32Type});
+  addConstantNull(structType);
+  std::swap(typeDecl, binary);
+
+  // A struct with a name is deserialized into an identified struct.
+  addName(structType, "S");
+
+  binary.append(typeDecl.begin(), typeDecl.end());
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "unsupported OpConstantNull type: '!spirv.struct<S, (si32)>'");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeUndefConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  auto undef = addUndef(int32Type);
+  addConstantComposite(arrayType, {two, undef});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #1 <id> " + Twine(undef) +
+                    " is an OpUndef, which cannot be represented in "
+                    "spirv.Constant")
+                       .str());
+}
+
+TEST_F(DeserializationTest, ConstantCompositeNonConstantConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {int32Type, two});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #0 <id> " +
+                    Twine(int32Type) + " must come from a normal constant")
+                       .str());
 }
 
 //===----------------------------------------------------------------------===//
