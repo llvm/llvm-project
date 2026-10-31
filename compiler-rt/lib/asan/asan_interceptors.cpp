@@ -601,6 +601,8 @@ INTERCEPTOR(char*, strcat, char* to, const char* from) {
       CHECK_RANGES_OVERLAP("strcat", to, from_length + to_length + 1, from,
                            from_length + 1);
     }
+    internal_memcpy(to + to_length, from, from_length + 1);
+    return to;
   }
   return REAL(strcat)(to, from);
 }
@@ -620,6 +622,9 @@ INTERCEPTOR(char*, strncat, char* to, const char* from, usize size) {
       CHECK_RANGES_OVERLAP("strncat", to, to_length + from_length + 1, from,
                            copy_length);
     }
+    internal_memcpy(to + to_length, from, from_length);
+    to[to_length + from_length] = '\0';
+    return to;
   }
   return REAL(strncat)(to, from, size);
 }
