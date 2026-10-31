@@ -1443,6 +1443,36 @@ private:
     --NextSlot;
   }
 
+  /// Roll back the last consumed slot, \p Slot, after its operation failed
+  /// with \p Err before being submitted. Otherwise, the following operations
+  /// and synchronizations would wait forever for the slot's output signal.
+  /// Unless \p RunReleaseActions is false, perform the slot's release actions,
+  /// which free the resources the operation took over, but none of its other
+  /// actions. Release the output signal.
+  Error rollbackFailedOperation(uint32_t Slot, Error Err,
+                                bool RunReleaseActions = true) {
+    StreamSlotTy &FailedSlot = Slots[Slot];
+    AMDGPUSignalTy *OutputSignal = FailedSlot.Signal;
+    if (RunReleaseActions) {
+      for (auto [Callback, ActionArg] :
+           llvm::zip(FailedSlot.Callbacks, FailedSlot.ActionArgs)) {
+        if (Callback == releaseBufferAction)
+          Err = joinErrors(std::move(Err), releaseBufferAction(&ActionArg));
+        else if (Callback == releaseSignalAction)
+          Err = joinErrors(std::move(Err), releaseSignalAction(&ActionArg));
+      }
+    }
+    rollbackConsumedSlot(Slot);
+    return joinErrors(std::move(Err), releaseUnusedSignal(OutputSignal));
+  }
+
+  /// Release \p Signal, which no stream slot holds.
+  Error releaseUnusedSignal(AMDGPUSignalTy *Signal) {
+    if (Signal->decreaseUseCount())
+      return SignalManager.returnResource(Signal);
+    return Plugin::success();
+  }
+
   /// Complete all pending post actions and reset the stream after synchronizing
   /// or positively querying the stream.
   Error complete() {
@@ -1507,10 +1537,12 @@ private:
 
     // Setup the post action to release the signal.
     if (auto Err = Slots[Curr].schedReleaseSignal(OtherSignal, &SignalManager))
-      return Err;
+      return rollbackFailedOperation(Curr, std::move(Err));
 
     // Push a barrier into the queue with both input signals.
-    return Queue->pushBarrier(OutputSignal, InputSignal, OtherSignal);
+    if (auto Err = Queue->pushBarrier(OutputSignal, InputSignal, OtherSignal))
+      return rollbackFailedOperation(Curr, std::move(Err));
+    return Plugin::success();
   }
 
   /// Callback for running a specific asynchronous operation. This callback is
@@ -1630,13 +1662,13 @@ public:
 
     // Setup the post action to release the kernel args buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
-      return Err;
+      return rollbackFailedOperation(Curr, std::move(Err));
 
     if (ProfilerSpecificData) {
       if (auto Err = Slots[Curr].schedProfilerKernelTiming(
               ProfilerPtr, Agent, OutputSignal, TicksToTime,
               ProfilerSpecificData))
-        return Err;
+        return rollbackFailedOperation(Curr, std::move(Err));
     }
 
     // If we are running an RPC server we want to wake up the server thread
@@ -1648,7 +1680,7 @@ public:
     if (auto Err = Queue->pushKernelLaunch(Kernel, KernelArgs, NumThreads,
                                            NumBlocks, GroupSize, StackSize,
                                            OutputSignal, InputSignal))
-      return Err;
+      return rollbackFailedOperation(Curr, std::move(Err));
 
     // Register a callback to indicate when the kernel is complete.
     if (Device.getRPCServer()) {
@@ -1683,14 +1715,18 @@ public:
     // Issue the async memory copy.
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src,
-                                     Agent, CopySize, 1, &InputSignalRaw,
-                                     OutputSignal->get());
+      if (auto Err = hsa_utils::asyncMemCopy(
+              UseMultipleSdmaEngines, Dst, Agent, Src, Agent, CopySize, 1,
+              &InputSignalRaw, OutputSignal->get()))
+        return rollbackFailedOperation(Curr, std::move(Err));
+      return Plugin::success();
     }
 
-    return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Src,
-                                   Agent, CopySize, 0, nullptr,
-                                   OutputSignal->get());
+    if (auto Err = hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent,
+                                           Src, Agent, CopySize, 0, nullptr,
+                                           OutputSignal->get()))
+      return rollbackFailedOperation(Curr, std::move(Err));
+    return Plugin::success();
   }
 
   /// Push an asynchronous memory copy device-to-host involving an unpinned
@@ -1718,9 +1754,16 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignals[0]);
 
+    // If the first step cannot be issued, undo it and release the unused
+    // second output signal.
+    auto RollbackFirstStep = [&](Error Err) {
+      Err = rollbackFailedOperation(Curr, std::move(Err));
+      return joinErrors(std::move(Err), releaseUnusedSignal(OutputSignals[1]));
+    };
+
     // Setup the post action for releasing the intermediate buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
-      return Err;
+      return RollbackFirstStep(std::move(Err));
 
     // Issue the first step: device to host transfer. Avoid defining the input
     // dependency if already satisfied.
@@ -1729,12 +1772,12 @@ public:
       if (auto Err = hsa_utils::asyncMemCopy(
               UseMultipleSdmaEngines, Inter, Agent, Src, Agent, CopySize, 1,
               &InputSignalRaw, OutputSignals[0]->get()))
-        return Err;
+        return RollbackFirstStep(std::move(Err));
     } else {
       if (auto Err = hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Inter,
                                              Agent, Src, Agent, CopySize, 0,
                                              nullptr, OutputSignals[0]->get()))
-        return Err;
+        return RollbackFirstStep(std::move(Err));
     }
 
     // Consume another stream slot and compute dependencies.
@@ -1743,8 +1786,10 @@ public:
 
     // The std::memcpy is done asynchronously using an async handler. We store
     // the function's information in the action but it's not actually an action.
+    // If the second step cannot be issued, only undo it: the first one is in
+    // flight and releases the intermediate buffer on completion.
     if (auto Err = Slots[Curr].schedHostMemoryCopy(Dst, Inter, CopySize))
-      return Err;
+      return rollbackFailedOperation(Curr, std::move(Err));
 
     // Make changes on this slot visible to the async handler's thread.
     std::atomic_thread_fence(std::memory_order_release);
@@ -1754,7 +1799,10 @@ public:
         InputSignal->get(), HSA_SIGNAL_CONDITION_EQ, 0, asyncActionCallback,
         (void *)&Slots[Curr]);
 
-    return Plugin::check(Status, "error in hsa_amd_signal_async_handler: %s");
+    if (auto Err =
+            Plugin::check(Status, "error in hsa_amd_signal_async_handler: %s"))
+      return rollbackFailedOperation(Curr, std::move(Err));
+    return Plugin::success();
   }
 
   /// Push an asynchronous memory copy host-to-device involving an unpinned
@@ -1785,14 +1833,26 @@ public:
     // Consume stream slot and compute dependencies.
     auto [Curr, InputSignal] = consume(OutputSignal);
 
+    // Whether an async handler copies to the intermediate buffer, which then
+    // must not be released before that copy completes.
+    bool InterInUse = false;
+
     // Issue the first step: host to host transfer.
     if (InputSignal && InputSignal->load()) {
+      // If the first step cannot be issued, undo it, and release the unused
+      // second output signal and the intermediate buffer.
+      auto RollbackFirstStep = [&](Error Err) {
+        Err = rollbackFailedOperation(Curr, std::move(Err));
+        Err = joinErrors(std::move(Err), releaseUnusedSignal(OutputSignals[1]));
+        return joinErrors(std::move(Err), MemoryManager.deallocate(Inter));
+      };
+
       // The std::memcpy is done asynchronously using an async handler. We store
       // the function's information in the action but it is not actually a
       // post action.
       if (auto Err =
               Slots[Curr].schedHostMemoryCopy(Inter, Src, CopySize, NumTimes))
-        return Err;
+        return RollbackFirstStep(std::move(Err));
 
       // Make changes on this slot visible to the async handler's thread.
       std::atomic_thread_fence(std::memory_order_release);
@@ -1803,7 +1863,8 @@ public:
 
       if (auto Err = Plugin::check(Status,
                                    "error in hsa_amd_signal_async_handler: %s"))
-        return Err;
+        return RollbackFirstStep(std::move(Err));
+      InterInUse = true;
 
       // Let's use now the second output signal.
       OutputSignal = OutputSignals[1];
@@ -1824,21 +1885,33 @@ public:
         return Err;
     }
 
+    // If the second step cannot be issued, undo it. The intermediate buffer is
+    // released with it, unless the async handler still copies to it; then, it
+    // leaks.
+    auto RollbackSecondStep = [&](Error Err) {
+      return rollbackFailedOperation(Curr, std::move(Err),
+                                     /*RunReleaseActions=*/!InterInUse);
+    };
+
     // Setup the post action to release the intermediate pinned buffer.
     if (auto Err = Slots[Curr].schedReleaseBuffer(Inter, MemoryManager))
-      return Err;
+      return RollbackSecondStep(std::move(Err));
 
     // Issue the second step: host to device transfer. Avoid defining the input
     // dependency if already satisfied.
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                     Agent, CopySize * NumTimes, 1,
-                                     &InputSignalRaw, OutputSignal->get());
+      if (auto Err = hsa_utils::asyncMemCopy(
+              UseMultipleSdmaEngines, Dst, Agent, Inter, Agent,
+              CopySize * NumTimes, 1, &InputSignalRaw, OutputSignal->get()))
+        return RollbackSecondStep(std::move(Err));
+      return Plugin::success();
     }
-    return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent, Inter,
-                                   Agent, CopySize * NumTimes, 0, nullptr,
-                                   OutputSignal->get());
+    if (auto Err = hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, Agent,
+                                           Inter, Agent, CopySize * NumTimes, 0,
+                                           nullptr, OutputSignal->get()))
+      return RollbackSecondStep(std::move(Err));
+    return Plugin::success();
   }
 
   // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
@@ -1864,13 +1937,17 @@ public:
 
     if (InputSignal && InputSignal->load()) {
       hsa_signal_t InputSignalRaw = InputSignal->get();
-      return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
-                                     SrcAgent, CopySize, 1, &InputSignalRaw,
-                                     OutputSignal->get());
+      if (auto Err = hsa_utils::asyncMemCopy(
+              UseMultipleSdmaEngines, Dst, DstAgent, Src, SrcAgent, CopySize, 1,
+              &InputSignalRaw, OutputSignal->get()))
+        return rollbackFailedOperation(Curr, std::move(Err));
+      return Plugin::success();
     }
-    return hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst, DstAgent, Src,
-                                   SrcAgent, CopySize, 0, nullptr,
-                                   OutputSignal->get());
+    if (auto Err = hsa_utils::asyncMemCopy(UseMultipleSdmaEngines, Dst,
+                                           DstAgent, Src, SrcAgent, CopySize, 0,
+                                           nullptr, OutputSignal->get()))
+      return rollbackFailedOperation(Curr, std::move(Err));
+    return Plugin::success();
   }
 
   Error pushHostCallback(HostFnType Callback, void *UserData) {
@@ -1881,13 +1958,12 @@ public:
     OutputSignal->reset();
     OutputSignal->increaseUseCount();
 
-    AMDGPUSignalTy *InputSignal;
-    {
-      std::lock_guard<std::mutex> Lock(Mutex);
+    // Keep the stream locked until the callback is registered, so that its slot
+    // can still be rolled back if that fails.
+    std::lock_guard<std::mutex> Lock(Mutex);
 
-      // Consume stream slot and compute dependencies.
-      InputSignal = consume(OutputSignal).second;
-    }
+    // Consume stream slot and compute dependencies.
+    auto [Curr, InputSignal] = consume(OutputSignal);
 
     auto *CallbackData = new CallbackDataType{Callback, UserData, OutputSignal};
     if (InputSignal && InputSignal->load()) {
@@ -1895,7 +1971,12 @@ public:
           InputSignal->get(), HSA_SIGNAL_CONDITION_EQ, 0, callbackWrapper,
           CallbackData);
 
-      return Plugin::check(Status, "error in hsa_amd_signal_async_handler: %s");
+      if (auto Err = Plugin::check(
+              Status, "error in hsa_amd_signal_async_handler: %s")) {
+        delete CallbackData;
+        return rollbackFailedOperation(Curr, std::move(Err));
+      }
+      return Plugin::success();
     }
 
     // No dependencies - schedule it now.
