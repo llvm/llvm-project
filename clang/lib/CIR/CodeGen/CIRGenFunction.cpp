@@ -1362,13 +1362,13 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
   case Expr::CXXConstCastExprClass:
-    return emitCastLValue(cast<CastExpr>(e));
   case Expr::CXXAddrspaceCastExprClass:
+    return emitCastLValue(cast<CastExpr>(e));
   case Expr::ObjCBridgedCastExprClass:
     // TODO(cir): These can just be moved into the cast handling above, but
     //            they need test cases.
     getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: addrspace or ObjC bridged cast");
+                               "emitLValue: ObjC bridged cast");
     return LValue();
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));

@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -x clcpp -triple spir64 -cl-std=clc++ -fclangir -emit-cir %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -x clcpp -triple spir64 -cl-std=clc++ -emit-llvm -O0 %s -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+
+struct S {
+  int x;
+};
+
+// CIR-LABEL: cir.func {{.*}} @_Z3barPU3AS11S
+// OGCG-LABEL: define {{.*}} @_Z3barPU3AS11S
+void bar(__global S *s) {
+  // CIR: %[[LOAD:.*]] = cir.load align(8) %{{.*}} : !cir.ptr<!cir.ptr<!rec_S, target_address_space(1)>>, !cir.ptr<!rec_S, target_address_space(1)>
+  // CIR: %[[CAST:.*]] = cir.cast address_space %[[LOAD]] : !cir.ptr<!rec_S, target_address_space(1)> -> !cir.ptr<!rec_S, target_address_space(4)>
+  // CIR: %[[MEM:.*]] = cir.get_member %[[CAST]][0] {name = "x"} : !cir.ptr<!rec_S, target_address_space(4)> -> !cir.ptr<!s32i, target_address_space(4)>
+  // CIR: cir.store align(4) %{{.*}}, %[[MEM]] : !s32i, !cir.ptr<!s32i, target_address_space(4)>
+
+  // OGCG: %[[LOAD_OGCG:.*]] = load ptr addrspace(1), ptr %{{.*}}, align 8
+  // OGCG: %[[CAST_OGCG:.*]] = addrspacecast ptr addrspace(1) %[[LOAD_OGCG]] to ptr addrspace(4)
+  // OGCG: %[[MEM_OGCG:.*]] = getelementptr inbounds nuw %struct.S, ptr addrspace(4) %[[CAST_OGCG]], i32 0, i32 0
+  // OGCG: store i32 1, ptr addrspace(4) %[[MEM_OGCG]], align 4
+  addrspace_cast<__generic S *>(s)->x = 1;
+}
