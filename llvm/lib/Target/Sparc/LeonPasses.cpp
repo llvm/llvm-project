@@ -319,9 +319,6 @@ bool ErrataWorkaround::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
-    : MachineFunctionPass(ID) {}
-
 //*****************************************************************************
 //**** InsertNOPLoad pass
 //*****************************************************************************
@@ -334,10 +331,10 @@ LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
 //
 char InsertNOPLoad::ID = 0;
 
-InsertNOPLoad::InsertNOPLoad() : LEONMachineFunctionPass(ID) {}
+InsertNOPLoad::InsertNOPLoad() : MachineFunctionPass(ID) {}
 
 bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->insertNOPLoad())
     return false;
 
@@ -373,10 +370,10 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
 
 char DetectRoundChange::ID = 0;
 
-DetectRoundChange::DetectRoundChange() : LEONMachineFunctionPass(ID) {}
+DetectRoundChange::DetectRoundChange() : MachineFunctionPass(ID) {}
 
 bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->detectRoundChange())
     return false;
 
@@ -423,10 +420,10 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
 //
 char FixAllFDIVSQRT::ID = 0;
 
-FixAllFDIVSQRT::FixAllFDIVSQRT() : LEONMachineFunctionPass(ID) {}
+FixAllFDIVSQRT::FixAllFDIVSQRT() : MachineFunctionPass(ID) {}
 
 bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->fixAllFDIVSQRT())
     return false;
 
