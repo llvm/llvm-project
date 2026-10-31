@@ -587,6 +587,9 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
 /// wide to fit (a `_BitInt` over 128 bits), is passed via a pointer (sret
 /// for returns, byval for arguments).
 ///
+/// IndirectAliased: an argument passed as a pointer to the caller's object
+/// with no copy implied (byref), in the address space the classifier names.
+///
 /// Ignore: a void return, or an empty record dropped from the signature.
 static std::optional<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
@@ -679,14 +682,16 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
     return ArgClassification::getExtend(extendedTy, info.isSignExt());
   }
-  // ArgClassification has no address space for the indirect pointer yet.
-  if (info.isIndirectAliased() ||
-      (info.isIndirect() && info.getIndirectAddrSpace() != 0))
+  // The rewriter has no address space for the Indirect pointer yet.
+  if (info.isIndirect() && info.getIndirectAddrSpace() != 0)
     return std::nullopt;
   if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal(),
                                           info.getIndirectAddrSpace());
+  if (info.isIndirectAliased())
+    return ArgClassification::getIndirectAliased(info.getIndirectAlign(),
+                                                 info.getIndirectAddrSpace());
   // AArch64 pure scalable aggregates use CoerceAndExpand. This bridge lowers
   // x86_64 classifications only.
   assert(!info.isCoerceAndExpand() &&
@@ -856,12 +861,13 @@ CIRABIClassifierCommon::classifyVariadicCall(
 }
 
 /// Whether \p fc gives the callee access to memory through a pointer the ABI
-/// introduced: an sret slot for an indirect return, or an indirect argument.
+/// introduced: an sret slot for an indirect return, or an indirect or byref
+/// argument.
 static bool hasIndirectSlot(const FunctionClassification &fc) {
   if (fc.returnInfo.kind == ArgKind::Indirect)
     return true;
   return llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
-    return ac.kind == ArgKind::Indirect;
+    return ac.kind == ArgKind::Indirect || ac.kind == ArgKind::IndirectAliased;
   });
 }
 
