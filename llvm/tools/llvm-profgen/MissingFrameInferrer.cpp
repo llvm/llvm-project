@@ -34,12 +34,6 @@ STATISTIC(TailCallFuncMultipleTailCalls,
           "Number of functions with multiple tail call sites");
 STATISTIC(TailCallMaxTailCallPath, "Length of the longest tail call path");
 
-static cl::opt<uint32_t>
-    MaximumSearchDepth("max-search-depth", cl::init(UINT32_MAX - 1),
-                       cl::desc("The maximum levels the DFS-based missing "
-                                "frame search should go with"),
-                       cl::cat(ProfGenCategory));
-
 void MissingFrameInferrer::initialize(
     const ContextSampleCounterMap *SampleCounters) {
   // Refine call edges based on LBR samples.
@@ -134,21 +128,47 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
   // source and target frame address on the a tail call graph that consists of
   // only tail call edges. Note that only a unique path counts. Multiple paths
   // are treated unreachable.
-  if (From == To)
+  if (From == To) {
+    ++NumFoundPaths;
     return 1;
+  }
 
   // Ignore cyclic paths. Since we are doing a recursive DFS walk, if the source
   // frame being visited is already in the stack, it means we are seeing a
-  // cycle. This is done before querying the cached result because the cached
-  // result may be computed based on the same path. Consider the following case:
-  //     A -> B, B -> A, A -> D
-  // When computing unique reachablity from A to D, the cached result for (B,D)
-  // should not be counted since the unique path B->A->D is basically the same
-  // path as A->D. Counting that with invalidate the uniqueness from A to D.
+  // cycle. Frames stay visited after the walk returns from them, so each frame
+  // is walked once.
   if (Visiting.contains(From))
     return 0;
 
-  // If already computed, return the cached result.
+  uint64_t Pos = Path.size();
+
+  // DFS walk each outgoing tail call edges.
+  auto It = FuncToTailCallMap.find(From);
+  if (It == FuncToTailCallMap.end())
+    return 0;
+
+  Visiting.insert(From);
+  uint64_t NumPaths = 0;
+  for (auto TailCall : It->second) {
+    NumPaths += computeUniqueTailCallPath(TailCall, To, Path);
+    // Stop analyzing the remaining if we are already seeing more than one
+    // reachable paths.
+    if (NumFoundPaths > 1)
+      break;
+  }
+
+  // Undo already-computed path if it is not unique.
+  if (NumPaths != 1) {
+    Path.pop_back_n(Path.size() - Pos);
+  }
+
+  return NumPaths;
+}
+
+uint64_t MissingFrameInferrer::searchUniqueTailCallPath(
+    BinaryFunction *From, BinaryFunction *To, SmallVectorImpl<uint64_t> &Path) {
+  // If already computed, return the cached result. The result of a walk
+  // depends on the frames visited before it, so only whole searches are cached.
   auto I = UniquePaths.find({From, To});
   if (I != UniquePaths.end()) {
     Path.append(I->second.begin(), I->second.end());
@@ -161,31 +181,12 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
   }
 
   uint64_t Pos = Path.size();
-
-  // DFS walk each outgoing tail call edges.
-  // Bail out if we are already at the the maximum searching depth.
-  if (CurSearchingDepth == MaximumSearchDepth)
-    return 0;
-
-  auto It = FuncToTailCallMap.find(From);
-  if (It == FuncToTailCallMap.end())
-    return 0;
-
-  CurSearchingDepth++;
-  Visiting.insert(From);
-  uint64_t NumPaths = 0;
-  for (auto TailCall : It->second) {
-    NumPaths += computeUniqueTailCallPath(TailCall, To, Path);
-    // Stop analyzing the remaining if we are already seeing more than one
-    // reachable paths.
-    if (NumPaths > 1)
-      break;
-  }
-  CurSearchingDepth--;
-  Visiting.erase(From);
-
-  // Undo already-computed path if it is not unique.
-  if (NumPaths != 1) {
+  Visiting.clear();
+  NumFoundPaths = 0;
+  uint64_t NumPaths = computeUniqueTailCallPath(From, To, Path);
+  if (NumPaths == 1 &&
+      hasOtherTailCallPath(ArrayRef(Path).drop_front(Pos), To)) {
+    NumPaths = 2;
     Path.pop_back_n(Path.size() - Pos);
   }
 
@@ -194,8 +195,6 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
     UniquePaths[{From, To}].assign(Path.begin() + Pos, Path.end());
 #if LLVM_ENABLE_STATS
     auto &LocalPath = UniquePaths[{From, To}];
-    assert((LocalPath.size() <= MaximumSearchDepth + 1) &&
-           "Path should not be longer than the maximum searching depth");
     TailCallMaxTailCallPath = std::max(uint64_t(LocalPath.size()),
                                        TailCallMaxTailCallPath.getValue());
 #endif
@@ -204,6 +203,35 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
   }
 
   return NumPaths;
+}
+
+bool MissingFrameInferrer::hasOtherTailCallPath(ArrayRef<uint64_t> Path,
+                                                BinaryFunction *To) {
+  // Another simple path leaves this one at a frame through another tail call
+  // and rejoins it at a later frame, from which `To` is reachable. Walk from
+  // the frames of the path in order, keeping frames visited: the frames
+  // visited without reaching `To` reach no later frame of the path.
+  SmallVector<BinaryFunction *, 8> Funcs;
+  for (uint64_t Site : Path)
+    Funcs.push_back(Binary->findFuncRange(Site)->Func);
+  Funcs.push_back(To);
+  Visiting.clear();
+  // Count the path itself, so that a walk stops at the first path it finds.
+  NumFoundPaths = 1;
+  SmallVector<uint64_t, 8> OtherPath;
+  for (auto [I, PathSite] : enumerate(Path)) {
+    Visiting.insert(Funcs[I]);
+    for (uint64_t Site : FuncToTailCallMap.find(Funcs[I])->second) {
+      auto It = TailCallEdgesF.find(Site);
+      if (It == TailCallEdgesF.end())
+        continue;
+      for (BinaryFunction *Target : It->second)
+        if ((Site != PathSite || Target != Funcs[I + 1]) &&
+            computeUniqueTailCallPath(Target, To, OtherPath))
+          return true;
+    }
+  }
+  return false;
 }
 
 uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
@@ -217,7 +245,7 @@ uint64_t MissingFrameInferrer::computeUniqueTailCallPath(
     NumPaths += computeUniqueTailCallPath(Target, To, Path);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.
-    if (NumPaths > 1)
+    if (NumFoundPaths > 1)
       break;
   }
 
@@ -253,12 +281,9 @@ bool MissingFrameInferrer::inferMissingFrames(
   if (!TailCallTargetFuncs.contains(ToFRange->Func))
     return false;
 
-  Visiting.clear();
-  CurSearchingDepth = 0;
   uint64_t NumPaths = 0;
   for (auto Target : It->second) {
-    NumPaths +=
-        computeUniqueTailCallPath(Target, ToFRange->Func, UniquePath);
+    NumPaths += searchUniqueTailCallPath(Target, ToFRange->Func, UniquePath);
     // Stop analyzing the remaining if we are already seeing more than one
     // reachable paths.
     if (NumPaths > 1)
