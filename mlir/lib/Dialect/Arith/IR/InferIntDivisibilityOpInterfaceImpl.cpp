@@ -42,6 +42,16 @@ inferBinaryGCDResultDivisibility(OpTy op, ArrayRef<IntegerDivisibility> argDivs,
   setResultDivs(op.getResult(), lhsDiv.getUnion(rhsDiv));
 }
 
+// Overflow-free product of two divisors; falls back to the largest
+// power-of-two factor when the product exceeds uint64_t.
+static uint64_t mulDivisibilities(uint64_t a, uint64_t b) {
+  APInt product = APInt(128, a) * APInt(128, b);
+  if (product.getActiveBits() <= 64)
+    return product.getZExtValue();
+  unsigned trailingZeros = product.countr_zero();
+  return uint64_t(1) << (trailingZeros >= 63 ? 63 : trailingZeros);
+}
+
 void ConstantOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
                                          SetIntDivisibilityFn setResultDivs) {
   auto constAttr = dyn_cast_if_present<IntegerAttr>(getValue());
@@ -88,8 +98,16 @@ void MulIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
   auto lhsDivisibility = getDivisibilityOfOperand(getLhs(), argDivs[0]);
   auto rhsDivisibility = getDivisibilityOfOperand(getRhs(), argDivs[1]);
 
-  uint64_t mulUDiv = lhsDivisibility.udiv() * rhsDivisibility.udiv();
-  uint64_t mulSDiv = lhsDivisibility.sdiv() * rhsDivisibility.sdiv();
+  uint64_t fullUDiv =
+      mulDivisibilities(lhsDivisibility.udiv(), rhsDivisibility.udiv());
+  uint64_t fullSDiv =
+      mulDivisibilities(lhsDivisibility.sdiv(), rhsDivisibility.sdiv());
+
+  // `v & -v` is the largest power-of-two divisor (all that wrapping keeps);
+  // nuw/nsw keep the full unsigned/signed divisor. Maps the 1/0 sentinels to
+  // themselves.
+  uint64_t mulUDiv = hasNoUnsignedWrap() ? fullUDiv : (fullUDiv & -fullUDiv);
+  uint64_t mulSDiv = hasNoSignedWrap() ? fullSDiv : (fullSDiv & -fullSDiv);
 
   setResultDivs(getResult(), ConstantIntDivisibility(mulUDiv, mulSDiv));
 }
