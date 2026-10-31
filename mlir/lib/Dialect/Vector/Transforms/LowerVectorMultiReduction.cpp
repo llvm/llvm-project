@@ -356,6 +356,10 @@ struct TwoDimMultiReductionToElementWise
     if (multiReductionOp.isReducedDim(1) || !multiReductionOp.isReducedDim(0))
       return failure();
 
+    if (multiReductionOp.getSourceVectorType().getScalableDims()[0])
+      return rewriter.notifyMatchFailure(
+          multiReductionOp, "cannot scalarize a scalable outer dimension");
+
     Value mask = maskingOp ? maskingOp.getMask() : Value();
 
     auto loc = multiReductionOp.getLoc();
@@ -413,6 +417,10 @@ struct TwoDimMultiReductionToReduction
 
     if (multiReductionOp.isReducedDim(0) || !multiReductionOp.isReducedDim(1))
       return failure();
+
+    if (multiReductionOp.getSourceVectorType().getScalableDims()[0])
+      return rewriter.notifyMatchFailure(
+          multiReductionOp, "cannot scalarize a scalable outer dimension");
 
     Value mask = maskingOp ? maskingOp.getMask() : nullptr;
 
