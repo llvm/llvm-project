@@ -24845,9 +24845,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (V != InVec) {
         V = PropagateIRFlags(V);
         // Wrap flags of the original trunc do not hold for a demoted result.
-        if (It != MinBWs.end())
-          if (auto *TI = dyn_cast<TruncInst>(V))
-            TI->dropPoisonGeneratingFlags();
+        if (auto *TI = dyn_cast<TruncInst>(V); TI && It != MinBWs.end())
+          TI->dropPoisonGeneratingFlags();
       }
       V = FinalShuffle(V, E);
 
