@@ -356,6 +356,11 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
+/// Does this function request a prologue stack-limit check?
+bool MachineFunction::hasStackLimitCheck() const {
+  return getFunction().hasFnAttribute("stack-limit-variable");
+}
+
 Align MachineFunction::getPreferredAlignment() const {
   Align PrefAlignment;
 
