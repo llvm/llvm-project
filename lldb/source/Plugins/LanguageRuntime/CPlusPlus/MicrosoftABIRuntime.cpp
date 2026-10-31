@@ -402,8 +402,7 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTopFromAST(
 
   TypeSystemClangSP ts = dyn_type.GetTypeSystem<TypeSystemClang>();
   if (!ts || ts != in_base_type.GetTypeSystem<TypeSystemClang>()) {
-    LLDB_LOG(GetLog(LLDBLog::Object),
-             "{0:x16}: '{1}' and '{2}' are from different type systems",
+    LLDB_LOG(log, "{0:x16}: '{1}' and '{2}' are from different type systems",
              in_value.GetPointerValue().address,
              in_decl->getDeclName().getAsString(),
              target_decl->getDeclName().getAsString());
@@ -413,8 +412,7 @@ std::optional<int64_t> MicrosoftABIRuntime::GetOffsetToTopFromAST(
   std::optional<size_t> offset = GetOffsetOfBaseFromAST(
       ts->getASTContext(), target_decl, in_decl, vtable_components);
   if (!offset) {
-    LLDB_LOG(GetLog(LLDBLog::Object),
-             "{0:x16}: failed to find offset of '{1}' in '{2}'",
+    LLDB_LOG(log, "{0:x16}: failed to find offset of '{1}' in '{2}'",
              in_value.GetPointerValue().address,
              in_decl->getDeclName().getAsString(),
              target_decl->getDeclName().getAsString());
