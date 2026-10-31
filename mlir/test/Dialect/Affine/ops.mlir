@@ -100,6 +100,23 @@ func.func @affine_max(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+// CHECK-LABEL: @affine_min_max_dim_bounds
+func.func @affine_min_max_dim_bounds(%n: index) {
+  affine.for %tile = 0 to 4 {
+    // CHECK: %[[LOWER:.*]] = affine.max
+    %lower = affine.max affine_map<(d0) -> (3, d0 * 4)>(%tile)
+    // CHECK: %[[UPPER:.*]] = affine.min
+    %upper = affine.min affine_map<(d0)[s0] -> (d0 * 4 + 4, s0)>(%tile)[%n]
+    // CHECK: affine.for %{{.*}} = #{{.*}}(%[[LOWER]]) to #{{.*}}(%[[UPPER]])
+    affine.for %point = affine_map<(d0) -> (d0)>(%lower)
+                        to affine_map<(d0) -> (d0)>(%upper) {
+    }
+  }
+  return
+}
+
+// -----
+
 func.func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index

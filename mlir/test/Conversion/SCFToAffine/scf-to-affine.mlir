@@ -270,21 +270,28 @@ func.func @max_lb_symbol_dynamic_step(%step: index, %K: index) {
 
 // -----
 
-// CHECK-LABEL: @max_lb_iv_dynamic_step_not_raised
-// CHECK:         affine.for %{{.*}} = 0 to %{{.*}} {
-// CHECK:           scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-// CHECK-NOT:     affine.for
+// CHECK: #[[$LB_MAP:.+]] = affine_map<(d0)[s0] -> (0, -d0 + s0)>
+// CHECK: #[[$UB_MAP:.+]] = affine_map<(d0)[s0, s1] -> ((-d0 + s0 + s1 - 1) floordiv s0)>
+// CHECK: #[[$IV_MAP:.+]] = affine_map<(d0, d1)[s0] -> (d0 + d1 * s0)>
+// CHECK-LABEL:   func.func @max_lb_iv_dynamic_step_raised(
+// CHECK-SAME:      %[[N:.*]]: index, %[[UB:.*]]: index, %[[K:.*]]: index,
+// CHECK-SAME:      %[[STEP:.*]]: index) {
+// CHECK:           affine.for %[[I:.*]] = 0 to %[[N]] {
+// CHECK:             %[[LB:.*]] = affine.max #[[$LB_MAP]](%[[I]])[%[[K]]]
+// CHECK:             affine.for %[[NEW_J:.*]] = 0 to #[[$UB_MAP]](%[[LB]])[%[[STEP]], %[[UB]]] {
+// CHECK:               %[[OLD_J:.*]] = affine.apply #[[$IV_MAP]](%[[LB]], %[[NEW_J]])[%[[STEP]]]
+// CHECK:               func.call @some_func(%[[I]], %[[OLD_J]]) : (index, index) -> ()
 
 #lb_map = affine_map<(i)[K] -> (0, K - i)>
 
 func.func private @some_func(%i: index, %j: index)
 
-func.func @max_lb_iv_dynamic_step_not_raised(%n: index, %ub: index, %k: index,
-                                             %step: index) {
+func.func @max_lb_iv_dynamic_step_raised(%n: index, %ub: index, %k: index,
+                                         %step: index) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   scf.for %i = %c0 to %n step %c1 {
-    %lb = affine.max #lb_map(%i)[%k] // this lb prevents the inner scf.for from raising
+    %lb = affine.max #lb_map(%i)[%k]
     scf.for %j = %lb to %ub step %step {
       func.call @some_func(%i, %j) : (index, index) -> ()
     }
