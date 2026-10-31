@@ -29,7 +29,22 @@ ${PROGNAME} [options] <BUILDER>
                     this is '<llvm-root>/build/<builder>'.
 
 Environment variables
-CMAKE               The cmake binary to use. This variable is optional.
+CMAKE               The cmake binary to use. This variable is optional. When
+                    unset, the cmake found on PATH is used if it is at least
+                    version 3.31; otherwise a pinned CMake is downloaded (or
+                    built from source) and cached.
+
+HOST_CC, HOST_CXX   Host compilers used only when CMake has to be bootstrapped
+                    from source, defaulting to cc and c++. These are
+                    independent of the runtime's CC and CXX.
+
+CMAKE_BOOTSTRAP_JOBS
+                    Number of parallel jobs when bootstrapping CMake from
+                    source (default: number of online processors).
+
+XDG_CACHE_HOME      Parent of the cache directory for the provisioned CMake,
+                    stored in <XDG_CACHE_HOME>/libcxx/ (default: ~/.cache).
+                    Keep it outside --build-dir, which the build wipes.
 
 NINJA               The ninja binary to use, this value is used by CMake. This
                     variable is optional.
@@ -100,10 +115,6 @@ MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
 BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 INSTALL_DIR="${BUILD_DIR}/install"
 
-if [ -z ${CMAKE+x} ]; then
-    CMAKE=cmake
-fi
-
 if [ -z ${NINJA+x} ]; then
     NINJA=ninja
 else
@@ -120,9 +131,12 @@ if [ -z ${CXX+x} ]; then
     exit 1
 fi
 
+source "${MONOREPO_ROOT}/libcxx/utils/ci/ensure-cmake.sh"
+ensure-cmake
+
 # Print the version of a few tools to aid diagnostics in some cases
 step "Diagnose tools in use"
-${CMAKE} --version
+"${CMAKE}" --version
 ${NINJA} --version
 ${CC} --version
 ${CXX} --version
@@ -139,7 +153,7 @@ function generate-cmake-base() {
     export PATH="$PATH:/opt/compiler-explorer/clang-trunk/bin"
 
     # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
-    ${CMAKE} \
+    "${CMAKE}" \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
           -GNinja \
@@ -219,7 +233,7 @@ function test-armv7m-picolibc() {
     # architecture name, which is not what Clang's driver expects to find.
     # The install location will however be wrong with
     # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON, so we correct that below.
-    ${CMAKE} \
+    "${CMAKE}" \
         -S "${MONOREPO_ROOT}/compiler-rt" \
         -B "${BUILD_DIR}/compiler-rt" \
         -GNinja \
@@ -473,7 +487,7 @@ bootstrapping-build)
     fi
 
     step "Generating CMake"
-    ${CMAKE} \
+    "${CMAKE}" \
           -S "${MONOREPO_ROOT}/llvm" \
           -B "${BUILD_DIR}" \
           -GNinja \
@@ -689,7 +703,7 @@ apple-system|apple-system-hardened)
 
     # In the Apple system configuration, we build libc++ and libunwind separately.
     step "Installing libc++ and libc++abi in Apple-system configuration"
-    ${CMAKE} \
+    "${CMAKE}" \
         -S "${MONOREPO_ROOT}/runtimes" \
         -B "${BUILD_DIR}/cxx" \
         -GNinja \
@@ -706,7 +720,7 @@ apple-system|apple-system-hardened)
         -DLIBCXXABI_TEST_PARAMS="${params}"
 
     step "Installing libunwind in Apple-system configuration"
-    ${CMAKE} \
+    "${CMAKE}" \
         -S "${MONOREPO_ROOT}/runtimes" \
         -B "${BUILD_DIR}/unwind" \
         -GNinja \
