@@ -65,11 +65,9 @@ using namespace llvm::memprof;
 
 #define DEBUG_TYPE "module-summary-analysis"
 
-namespace llvm {
-unsigned getMaxSummaryIndirectEdges(const LLVMContext &C) {
+unsigned llvm::getMaxSummaryIndirectEdges(const LLVMContext &C) {
   return getAnalysisOptions(C).module_summary_max_indirect_edges;
 }
-} // namespace llvm
 
 // Walk through the operands of a given User via worklist iteration and populate
 // the set of GlobalValue references encountered. Invoked either on an

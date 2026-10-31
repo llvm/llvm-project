@@ -44,17 +44,17 @@ namespace llvm {
 cl::opt<bool> UseIterativeBFIInference(
     "use-iterative-bfi-inference", cl::Hidden,
     cl::desc("Apply an iterative post-processing to infer correct BFI counts"));
+} // namespace llvm
 
-bool shouldCheckBFIUnknownBlockQueries(const LLVMContext &C) {
+bool llvm::shouldCheckBFIUnknownBlockQueries(const LLVMContext &C) {
   return getAnalysisOptions(C).check_bfi_unknown_block_queries;
 }
-unsigned getIterativeBFIMaxIterationsPerBlock(const LLVMContext &C) {
+unsigned llvm::getIterativeBFIMaxIterationsPerBlock(const LLVMContext &C) {
   return getAnalysisOptions(C).iterative_bfi_max_iterations_per_block;
 }
-double getIterativeBFIPrecision(const LLVMContext &C) {
+double llvm::getIterativeBFIPrecision(const LLVMContext &C) {
   return getAnalysisOptions(C).iterative_bfi_precision;
 }
-} // namespace llvm
 
 ScaledNumber<uint64_t> BlockMass::toScaled() const {
   if (isFull())

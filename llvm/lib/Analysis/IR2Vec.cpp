@@ -36,17 +36,12 @@ using namespace ir2vec;
 STATISTIC(VocabMissCounter,
           "Number of lookups to entities not present in the vocabulary");
 
-namespace llvm {
-namespace ir2vec {
-StringRef getVocabFile(const LLVMContext &C) {
+StringRef llvm::ir2vec::getVocabFile(const LLVMContext &C) {
   return getAnalysisOptions(C).ir2vec_vocab_path;
 }
-IR2VecKind getEmbeddingKind(const LLVMContext &C) {
+IR2VecKind llvm::ir2vec::getEmbeddingKind(const LLVMContext &C) {
   return getAnalysisOptions(C).ir2vec_kind;
 }
-
-} // namespace ir2vec
-} // namespace llvm
 
 AnalysisKey IR2VecVocabAnalysis::Key;
 

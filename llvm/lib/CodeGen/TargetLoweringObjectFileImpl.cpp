@@ -686,7 +686,8 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
         raw_svector_ostream(SectionPrefix) << ".unlikely";
         break;
       case MachineFunctionDataHotness::Hot: {
-        if (shouldPreserveHotDataSectionPrefix(GO->getContext()))
+        if (StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+                GO->getContext()))
           raw_svector_ostream(SectionPrefix) << ".hot";
         break;
       }
@@ -706,9 +707,11 @@ getELFSectionNameForGlobal(const GlobalObject *GO, SectionKind Kind,
     bool AddSectionPrefix = true;
     if (Kind.isReadOnly() || Kind.isReadOnlyWithRel() || Kind.isData() ||
         Kind.isBSS()) {
-      AddSectionPrefix = TM.getEnableStaticDataPartitioning() &&
-                         (!SectionPrefix.starts_with(".hot") ||
-                          shouldPreserveHotDataSectionPrefix(GO->getContext()));
+      AddSectionPrefix =
+          TM.getEnableStaticDataPartitioning() &&
+          (!SectionPrefix.starts_with(".hot") ||
+           StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+               GO->getContext()));
     }
 
     if (AddSectionPrefix) {

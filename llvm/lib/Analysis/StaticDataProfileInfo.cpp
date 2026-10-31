@@ -13,14 +13,17 @@
 
 using namespace llvm;
 
-namespace llvm {
-bool shouldPreserveHotDataSectionPrefix(const LLVMContext &C) {
+bool StaticDataProfileInfo::shouldPreserveHotDataSectionPrefix(
+    const LLVMContext &C) {
   return getAnalysisOptions(C).preserve_hot_data_section_prefix;
 }
-bool shouldAnnotateStringLiteralSectionPrefix(const LLVMContext &C) {
+
+bool llvm::memprof::shouldAnnotateStringLiteralSectionPrefix(
+    const LLVMContext &C) {
   return getAnalysisOptions(C).memprof_annotate_string_literal_section_prefix;
 }
 
+namespace llvm {
 namespace memprof {
 // Returns true iff the global variable has custom section either by
 // __attribute__((section("name")))
