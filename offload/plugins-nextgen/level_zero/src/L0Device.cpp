@@ -210,7 +210,7 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
   if (auto Err =
           MemAllocator.initDevicePools(*this, Options, L0Driver.getZeContext()))
     return Err;
-  L0Driver.getHostMemAllocator().updateMaxAllocSize(*this);
+  getMemAllocator(TARGET_ALLOC_HOST).updateMaxAllocSize(*this);
   reportDeviceInfo();
   return Plugin::success();
 }
