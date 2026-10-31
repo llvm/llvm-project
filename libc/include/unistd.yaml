@@ -96,6 +96,10 @@ macros:
     macro_header: unistd-macros.h
   - macro_name: F_TEST
     macro_header: unistd-macros.h
+  - macro_name: CLOSE_RANGE_UNSHARE
+    macro_header: unistd-macros.h
+  - macro_name: CLOSE_RANGE_CLOEXEC
+    macro_header: unistd-macros.h
 types:
   - type_name: uid_t
   - type_name: gid_t
@@ -185,6 +189,14 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: close_range
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: unsigned int
+      - type: unsigned int
+      - type: unsigned int
   - name: dup
     standards:
       - posix

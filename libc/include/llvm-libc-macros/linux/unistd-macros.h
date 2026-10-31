@@ -14,6 +14,8 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
 
+#include <linux/close_range.h>
+
 // Values for mode argument to the access(...) function.
 #define F_OK 0
 #define X_OK 1
@@ -112,6 +114,6 @@
     } while (__result == -1L && errno == EINTR);                               \
     __result;                                                                  \
   }))
-#endif
+#endif // TEMP_FAILURE_RETRY
 
 #endif // LLVM_LIBC_MACROS_LINUX_UNISTD_MACROS_H
