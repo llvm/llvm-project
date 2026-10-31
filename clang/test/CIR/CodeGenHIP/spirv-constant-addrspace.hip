@@ -63,6 +63,15 @@ __device__ int get_shared() {
 // LLVM-LABEL: define{{.*}} i32 @_Z6get_ocPU3AS2i(ptr addrspace(2)
 __device__ int get_oc(__attribute__((opencl_constant)) int *p) { return *p; }
 
+// Function addresses are in the program address space 4.
+// CIR-LABEL: cir.func{{.*}} @_Z7take_fnv
+// CIR: cir.get_global @_Z6fn_refv : !cir.ptr<!cir.func<()>, target_address_space(4)>
+// LLVM-LABEL: define{{.*}} void @_Z7take_fnv
+// LLVM: call{{.*}} @_Z6use_fnPFvvE(ptr addrspace(4) noundef @_Z6fn_refv)
+__device__ void fn_ref();
+__device__ void use_fn(void (*)());
+__device__ void take_fn() { use_fn(fn_ref); }
+
 // Function aliases point into the program address space 4.
 extern "C" __device__ int alias_target() { return 1; }
 [[gnu::alias("alias_target")]] __device__ int alias();

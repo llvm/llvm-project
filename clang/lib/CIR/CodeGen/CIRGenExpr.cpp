@@ -1009,7 +1009,9 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
   assert(!cir::MissingFeatures::sanitizers());
 
   mlir::Type fnTy = funcOp.getFunctionType();
-  mlir::Type ptrTy = cir::PointerType::get(fnTy);
+  mlir::ptr::MemorySpaceAttrInterface fnAddrSpace =
+      cgf.cgm.getTypes().getPointerAddressSpace(fd->getType());
+  mlir::Type ptrTy = cir::PointerType::get(fnTy, fnAddrSpace);
   mlir::Value addr;
 
   // On the HIP host, a reference to a __global__ kernel must resolve to the
@@ -1033,7 +1035,7 @@ static LValue emitFunctionDeclLValue(CIRGenFunction &cgf, const Expr *e,
 
   if (funcOp.getFunctionType() != cgf.convertType(fd->getType())) {
     fnTy = cgf.convertType(fd->getType());
-    ptrTy = cir::PointerType::get(fnTy);
+    ptrTy = cir::PointerType::get(fnTy, fnAddrSpace);
 
     addr = cir::CastOp::create(cgf.getBuilder(), addr.getLoc(), ptrTy,
                                cir::CastKind::bitcast, addr);
