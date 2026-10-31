@@ -334,6 +334,10 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                 Info.CallConv == CallingConv::X86_64_SysV))
     return false;
 
+  // TODO: musttail must not be lowered as an ordinary call.
+  if (Info.IsMustTailCall)
+    return false;
+
   unsigned AdjStackDown = TII.getCallFrameSetupOpcode();
   auto CallSeqStart = MIRBuilder.buildInstr(AdjStackDown);
 
