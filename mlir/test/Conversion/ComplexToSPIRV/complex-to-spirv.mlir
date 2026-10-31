@@ -371,3 +371,111 @@ func.func @complex_cos_opencl(%arg: complex<f32>) -> complex<f32> {
 //       CHECK:   spirv.CL.cosh
 
 }
+
+// -----
+
+func.func @complex_sqrt(%arg: complex<f32>) -> complex<f32> {
+  %sqrt = complex.sqrt %arg : complex<f32>
+  return %sqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sqrt
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ABSRE:.+]] = spirv.GL.FAbs %[[RE]] : f32
+//       CHECK:   %[[ABSIM:.+]] = spirv.GL.FAbs %[[IM]] : f32
+//       CHECK:   %[[MAX:.+]] = spirv.GL.FMax %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[MIN:.+]] = spirv.GL.FMin %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[RATIO:.+]] = spirv.FDiv %[[MIN]], %[[MAX]] : f32
+//       CHECK:   %[[RATIOSQ:.+]] = spirv.FMul %[[RATIO]], %[[RATIO]] : f32
+//       CHECK:   %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RATIOSQ]], %[[ONE]] : f32
+//       CHECK:   %[[SQRT:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.FMul %[[MAX]], %[[SQRT]] : f32
+//       CHECK:   %[[FINALABS:.+]] = spirv.GL.Sqrt %[[ABS]] : f32
+//       CHECK:   %[[ANGLE:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   %[[SCALE:.+]] = spirv.Constant 5.000000e-01 : f32
+//       CHECK:   %[[SCALEDANGLE:.+]] = spirv.FMul %[[ANGLE]], %[[SCALE]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[FINALABS]], %[[COS]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[FINALABS]], %[[SIN]] : f32
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[REZ:.+]] = spirv.FOrdEqual %[[RE]], %[[ZERO]] : f32
+//       CHECK:   %[[IMZ:.+]] = spirv.FOrdEqual %[[IM]], %[[ZERO]] : f32
+//       CHECK:   %[[ISZERO:.+]] = spirv.LogicalAnd %[[REZ]], %[[IMZ]] : i1
+//       CHECK:   %[[ZRE:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[ZIM:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[SELRE:.+]] = spirv.Select %[[ISZERO]], %[[ZRE]], %[[RESRE]] : i1, f32
+//       CHECK:   %[[SELIM:.+]] = spirv.Select %[[ISZERO]], %[[ZIM]], %[[RESIM]] : i1, f32
+//       CHECK:   spirv.CompositeConstruct %[[SELRE]], %[[SELIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+func.func @complex_rsqrt(%arg: complex<f32>) -> complex<f32> {
+  %rsqrt = complex.rsqrt %arg : complex<f32>
+  return %rsqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_rsqrt
+//  CHECK-SAME: %[[ARG:.+]]: complex<f32>
+//       CHECK:   %[[V:.+]] = builtin.unrealized_conversion_cast %[[ARG]] : complex<f32> to vector<2xf32>
+//       CHECK:   %[[RE:.+]] = spirv.CompositeExtract %[[V]][0 : i32] : vector<2xf32>
+//       CHECK:   %[[IM:.+]] = spirv.CompositeExtract %[[V]][1 : i32] : vector<2xf32>
+//       CHECK:   %[[ABSRE:.+]] = spirv.GL.FAbs %[[RE]] : f32
+//       CHECK:   %[[ABSIM:.+]] = spirv.GL.FAbs %[[IM]] : f32
+//       CHECK:   %[[MAX:.+]] = spirv.GL.FMax %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[MIN:.+]] = spirv.GL.FMin %[[ABSRE]], %[[ABSIM]] : f32
+//       CHECK:   %[[RATIO:.+]] = spirv.FDiv %[[MIN]], %[[MAX]] : f32
+//       CHECK:   %[[RATIOSQ:.+]] = spirv.FMul %[[RATIO]], %[[RATIO]] : f32
+//       CHECK:   %[[ONE:.+]] = spirv.Constant 1.000000e+00 : f32
+//       CHECK:   %[[SUM:.+]] = spirv.FAdd %[[RATIOSQ]], %[[ONE]] : f32
+//       CHECK:   %[[SQRT:.+]] = spirv.GL.Sqrt %[[SUM]] : f32
+//       CHECK:   %[[ABS:.+]] = spirv.FMul %[[MAX]], %[[SQRT]] : f32
+//       CHECK:   %[[FINALABS:.+]] = spirv.GL.InverseSqrt %[[ABS]] : f32
+//       CHECK:   %[[ANGLE:.+]] = spirv.GL.Atan2 %[[IM]], %[[RE]] : f32
+//       CHECK:   %[[SCALE:.+]] = spirv.Constant -5.000000e-01 : f32
+//       CHECK:   %[[SCALEDANGLE:.+]] = spirv.FMul %[[ANGLE]], %[[SCALE]] : f32
+//       CHECK:   %[[COS:.+]] = spirv.GL.Cos %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[SIN:.+]] = spirv.GL.Sin %[[SCALEDANGLE]] : f32
+//       CHECK:   %[[RESRE:.+]] = spirv.FMul %[[FINALABS]], %[[COS]] : f32
+//       CHECK:   %[[RESIM:.+]] = spirv.FMul %[[FINALABS]], %[[SIN]] : f32
+//       CHECK:   %[[ZERO:.+]] = spirv.Constant 0.000000e+00 : f32
+//       CHECK:   %[[REZ:.+]] = spirv.FOrdEqual %[[RE]], %[[ZERO]] : f32
+//       CHECK:   %[[IMZ:.+]] = spirv.FOrdEqual %[[IM]], %[[ZERO]] : f32
+//       CHECK:   %[[ISZERO:.+]] = spirv.LogicalAnd %[[REZ]], %[[IMZ]] : i1
+//       CHECK:   %[[ZRE:.+]] = spirv.Constant 0x7F800000 : f32
+//       CHECK:   %[[ZIM:.+]] = spirv.Constant 0x7FC00000 : f32
+//       CHECK:   %[[SELRE:.+]] = spirv.Select %[[ISZERO]], %[[ZRE]], %[[RESRE]] : i1, f32
+//       CHECK:   %[[SELIM:.+]] = spirv.Select %[[ISZERO]], %[[ZIM]], %[[RESIM]] : i1, f32
+//       CHECK:   spirv.CompositeConstruct %[[SELRE]], %[[SELIM]] : (f32, f32) -> vector<2xf32>
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>
+} {
+
+func.func @complex_sqrt_opencl(%arg: complex<f32>) -> complex<f32> {
+  %sqrt = complex.sqrt %arg : complex<f32>
+  return %sqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_sqrt_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.atan2
+
+func.func @complex_rsqrt_opencl(%arg: complex<f32>) -> complex<f32> {
+  %rsqrt = complex.rsqrt %arg : complex<f32>
+  return %rsqrt : complex<f32>
+}
+
+// CHECK-LABEL: func.func @complex_rsqrt_opencl
+//       CHECK:   spirv.CL.sqrt
+//       CHECK:   spirv.CL.rsqrt
+//       CHECK:   spirv.CL.atan2
+
+}

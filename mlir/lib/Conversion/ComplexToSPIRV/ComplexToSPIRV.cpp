@@ -429,6 +429,69 @@ struct TrigonometricOpPattern final : OpConversionPattern<ComplexOp> {
     return success();
   }
 };
+
+enum class SqrtKind { Sqrt, Rsqrt };
+
+/// Lowers complex.sqrt/rsqrt following the trigonometric form
+/// sqrt(z) = sqrt(abs) * (cos(angle/2) + i*sin(angle/2))
+/// rsqrt(z) = rsqrt(abs) * (cos(-angle/2) + i*sin(-angle/2))
+/// where angle = atan2(im, re). Atan2 is undefined for zero input, so zero
+/// maps to 0 for sqrt and to inf + i*nan for rsqrt.
+template <SqrtKind Kind, typename SqrtOp, typename RsqrtOp, typename FAbsOp,
+          typename FMaxOp, typename FMinOp, typename SinOp, typename CosOp,
+          typename Atan2Op,
+          typename ComplexOp = std::conditional_t<
+              Kind == SqrtKind::Sqrt, complex::SqrtOp, complex::RsqrtOp>>
+struct SqrtOpPattern final : OpConversionPattern<ComplexOp> {
+  using OpConversionPattern<ComplexOp>::OpConversionPattern;
+  using OpAdaptor = typename ComplexOp::Adaptor;
+
+  LogicalResult
+  matchAndRewrite(ComplexOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+    Type elemType = re.getType();
+
+    bool isSqrt = Kind == SqrtKind::Sqrt;
+    Value abs =
+        createComplexAbs<SqrtOp, FAbsOp, FMaxOp, FMinOp>(rewriter, loc, re, im);
+    Value finalAbs = isSqrt ? Value(SqrtOp::create(rewriter, loc, abs))
+                            : Value(RsqrtOp::create(rewriter, loc, abs));
+    Value angle = Atan2Op::create(rewriter, loc, im, re);
+    Value scale =
+        createFPConstant(rewriter, loc, elemType, isSqrt ? 0.5 : -0.5);
+    Value scaledAngle = spirv::FMulOp::create(rewriter, loc, angle, scale);
+    Value cos = CosOp::create(rewriter, loc, scaledAngle);
+    Value sin = SinOp::create(rewriter, loc, scaledAngle);
+    Value resultRe = spirv::FMulOp::create(rewriter, loc, finalAbs, cos);
+    Value resultIm = spirv::FMulOp::create(rewriter, loc, finalAbs, sin);
+
+    Value isZero = createIsZero(rewriter, loc, re, im);
+    Value zeroRe = createFPConstant(
+        rewriter, loc, elemType,
+        isSqrt ? 0.0 : std::numeric_limits<double>::infinity());
+    Value zeroIm = createFPConstant(
+        rewriter, loc, elemType,
+        isSqrt ? 0.0 : std::numeric_limits<double>::quiet_NaN());
+    resultRe = spirv::SelectOp::create(rewriter, loc, isZero, zeroRe, resultRe);
+    resultIm = spirv::SelectOp::create(rewriter, loc, isZero, zeroIm, resultIm);
+
+    rewriter.replaceOpWithNewOp<spirv::CompositeConstructOp>(
+        op, spirvType, llvm::ArrayRef<Value>{resultRe, resultIm});
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -465,4 +528,18 @@ void mlir::populateComplexToSPIRVPatterns(
            TrigonometricOpPattern<SinCos::Cos, spirv::CLSinOp, spirv::CLCosOp,
                                   spirv::CLSinhOp, spirv::CLCoshOp>>(
           typeConverter, context);
+  patterns.add<
+      SqrtOpPattern<SqrtKind::Sqrt, spirv::GLSqrtOp, spirv::GLInverseSqrtOp,
+                    spirv::GLFAbsOp, spirv::GLFMaxOp, spirv::GLFMinOp,
+                    spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op>,
+      SqrtOpPattern<SqrtKind::Sqrt, spirv::CLSqrtOp, spirv::CLRsqrtOp,
+                    spirv::CLFAbsOp, spirv::CLFMaxOp, spirv::CLFMinOp,
+                    spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op>,
+      SqrtOpPattern<SqrtKind::Rsqrt, spirv::GLSqrtOp, spirv::GLInverseSqrtOp,
+                    spirv::GLFAbsOp, spirv::GLFMaxOp, spirv::GLFMinOp,
+                    spirv::GLSinOp, spirv::GLCosOp, spirv::GLAtan2Op>,
+      SqrtOpPattern<SqrtKind::Rsqrt, spirv::CLSqrtOp, spirv::CLRsqrtOp,
+                    spirv::CLFAbsOp, spirv::CLFMaxOp, spirv::CLFMinOp,
+                    spirv::CLSinOp, spirv::CLCosOp, spirv::CLAtan2Op>>(
+      typeConverter, context);
 }
