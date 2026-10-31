@@ -12,6 +12,7 @@
 ; O0-NEXT: function
 ; O0-NEXT:   expand-ir-insts<O0>
 ; O0-NEXT: nvvm-reflect
+; O0-NEXT: nvptx-canonicalize-dynamic-shared
 ; O0-NEXT: nvptx-assign-valid-global-names
 ; O0-NEXT: generic-to-nvvm
 ; O0-NEXT: expand-variadics
@@ -76,6 +77,7 @@
 ; O2-NEXT: function
 ; O2-NEXT:   expand-ir-insts<O2>
 ; O2-NEXT: nvvm-reflect
+; O2-NEXT: nvptx-canonicalize-dynamic-shared
 ; O2-NEXT: function
 ; O2-NEXT:   nvptx-image-optimizer
 ; O2-NEXT: nvptx-assign-valid-global-names
