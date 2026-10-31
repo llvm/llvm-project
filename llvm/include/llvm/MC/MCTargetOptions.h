@@ -14,6 +14,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Compression.h"
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -34,6 +35,9 @@ enum class RelocSectionSymType {
 };
 
 class StringRef;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
 class MCTargetOptions {
 public:
@@ -71,6 +75,9 @@ public:
 
   bool X86Sse2Avx = false;
 
+  // Disable the integrated assembler.
+  bool DisableIntegratedAS = false;
+
   // For ELF relocations, controls section symbol conversion.
   RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
 
@@ -79,6 +86,9 @@ public:
   EmitDwarfUnwindType EmitDwarfUnwind;
 
   int DwarfVersion = 0;
+
+  /// If greater than 0, overrides the default MCAsmInfo binutils version.
+  std::pair<int, int> BinutilsVersion = {0, 0};
 
   enum DwarfDirectory {
     // Force disable
@@ -126,7 +136,16 @@ public:
   // (personality/LSDA/TType already default to sdata8).
   bool LargeEHEncoding = false;
 
+  // The library options of the compilation, usually its LLVMContext's.
+  // TODO: Make it non-null once every tool sets it. Null means the global
+  // values.
+  const cl::LibraryOptionsContext *LibraryOptions = nullptr;
+
   LLVM_ABI MCTargetOptions();
+
+  /// Parse a binutils version string ("major[.minor]" or "none") into a
+  /// (major, minor) pair. "none" maps to {INT_MAX, INT_MAX}.
+  LLVM_ABI static std::pair<int, int> parseBinutilsVersion(StringRef Version);
 
   /// getABIName - If this returns a non-empty string this represents the
   /// textual name of the ABI that we want the backend to use, e.g. o32, or

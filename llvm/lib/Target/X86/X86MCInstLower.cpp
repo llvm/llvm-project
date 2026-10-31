@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -44,6 +45,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCSection.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -55,14 +57,6 @@
 #include <string>
 
 using namespace llvm;
-
-static cl::opt<bool> EnableBranchHint("enable-branch-hint",
-                                      cl::desc("Enable branch hint."),
-                                      cl::init(false), cl::Hidden);
-static cl::opt<unsigned> BranchHintProbabilityThreshold(
-    "branch-hint-probability-threshold",
-    cl::desc("The probability threshold of enabling branch hint."),
-    cl::init(50), cl::Hidden);
 
 namespace {
 
@@ -669,9 +663,8 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
   // target cpu.  15-bytes is the longest single NOP instruction, but some
   // platforms can't decode the longest forms efficiently.
   unsigned MaxNopLength = 1;
+  unsigned BaseReg = X86::RAX;
   if (Subtarget->is64Bit()) {
-    // FIXME: We can use NOOPL on 32-bit targets with FeatureNOPL, but the
-    // IndexReg/BaseReg below need to be updated.
     if (Subtarget->hasFeature(X86::TuningFast7ByteNOP))
       MaxNopLength = 7;
     else if (Subtarget->hasFeature(X86::TuningFast15ByteNOP))
@@ -680,16 +673,18 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
       MaxNopLength = 11;
     else
       MaxNopLength = 10;
-  } if (Subtarget->is32Bit())
+  } else if (Subtarget->is32Bit() && Subtarget->hasFeature(X86::FeatureNOPL)) {
+    BaseReg = X86::EAX;
+    MaxNopLength = 10;
+  } else if (Subtarget->is32Bit())
     MaxNopLength = 2;
 
   // Cap a single nop emission at the profitable value for the target
   NumBytes = std::min(NumBytes, MaxNopLength);
 
   unsigned NopSize;
-  unsigned Opc, BaseReg, ScaleVal, IndexReg, Displacement, SegmentReg;
+  unsigned Opc, ScaleVal, IndexReg, Displacement, SegmentReg;
   IndexReg = Displacement = SegmentReg = 0;
-  BaseReg = X86::RAX;
   ScaleVal = 1;
   switch (NumBytes) {
   case 0:
@@ -716,13 +711,13 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
     NopSize = 5;
     Opc = X86::NOOPL;
     Displacement = 8;
-    IndexReg = X86::RAX;
+    IndexReg = BaseReg;
     break;
   case 6:
     NopSize = 6;
     Opc = X86::NOOPW;
     Displacement = 8;
-    IndexReg = X86::RAX;
+    IndexReg = BaseReg;
     break;
   case 7:
     NopSize = 7;
@@ -733,19 +728,19 @@ static unsigned emitNop(MCStreamer &OS, unsigned NumBytes,
     NopSize = 8;
     Opc = X86::NOOPL;
     Displacement = 512;
-    IndexReg = X86::RAX;
+    IndexReg = BaseReg;
     break;
   case 9:
     NopSize = 9;
     Opc = X86::NOOPW;
     Displacement = 512;
-    IndexReg = X86::RAX;
+    IndexReg = BaseReg;
     break;
   default:
     NopSize = 10;
     Opc = X86::NOOPW;
     Displacement = 512;
-    IndexReg = X86::RAX;
+    IndexReg = BaseReg;
     SegmentReg = X86::CS;
     break;
   }
@@ -892,6 +887,24 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
                                      X86MCInstLower &MCIL) {
   bool Is64Bits = Subtarget->is64Bit();
   MCContext &Ctx = OutStreamer->getContext();
+
+  if (MF->getFunction().hasFnAttribute("mrecord-mcount")) {
+    MCSymbol *DotSym = OutContext.createTempSymbol();
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(
+        Ctx.getELFSection("__mcount_loc", ELF::SHT_PROGBITS, ELF::SHF_ALLOC));
+    OutStreamer->emitSymbolValue(DotSym, Is64Bits ? 8 : 4);
+    OutStreamer->popSection();
+    OutStreamer->emitLabel(DotSym);
+  }
+
+  if (MF->getFunction().hasFnAttribute("mnop-mcount")) {
+    // Insert a NOP stream which can be rewritten into a 5-byte CALL
+    // instruction at runtime.
+    emitX86Nops(*OutStreamer, 5, Subtarget);
+    return;
+  }
+
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
   const MCSymbolRefExpr *Op = MCSymbolRefExpr::create(fentry, Ctx);
 
@@ -959,7 +972,8 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   uint64_t ShadowBase;
   int MappingScale;
   bool OrShadowOffset;
-  getAddressSanitizerParams(TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
+  getAddressSanitizerParams(MF->getFunction().getContext(),
+                            TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
                             &ShadowBase, &MappingScale, &OrShadowOffset);
 
   StringRef Name = AccessInfo.IsWrite ? "store" : "load";
@@ -2652,13 +2666,14 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Two instruction prefixes (2EH for branch not-taken and 3EH for branch
     // taken) are used as branch hints. Here we add branch taken prefix for
     // jump instruction with higher probability than threshold.
-    if (getSubtarget().hasBranchHint() && EnableBranchHint) {
-      const MachineBranchProbabilityInfo *MBPI =
-          &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+    if (getSubtarget().hasBranchHint() &&
+        getSubtarget().getCLOpts().enable_branch_hint) {
+      const MachineBranchProbabilityInfo *MBPI = GetMBPI(*MF);
       MachineBasicBlock *DestBB = MI->getOperand(0).getMBB();
       BranchProbability EdgeProb =
           MBPI->getEdgeProbability(MI->getParent(), DestBB);
-      BranchProbability Threshold(BranchHintProbabilityThreshold, 100);
+      BranchProbability Threshold(
+          getSubtarget().getCLOpts().branch_hint_probability_threshold, 100);
       if (EdgeProb > Threshold)
         EmitAndCountInstruction(MCInstBuilder(X86::DS_PREFIX));
     }
@@ -2779,7 +2794,7 @@ void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
   // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
   // (Don't let the name fool you: Itanium refers to table-based exception
   // handling, not the Itanium architecture.)
-  if (MAI.getExceptionHandlingType() != ExceptionHandling::WinEH ||
+  if (getModuleExceptionModel() != ExceptionHandling::WinEH ||
       MAI.getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
     return;
   }

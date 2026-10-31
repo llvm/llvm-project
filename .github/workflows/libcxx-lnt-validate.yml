@@ -1,0 +1,82 @@
+# This file defines a reusable workflow that validates the inputs of the benchmarking workflows and
+# outputs the `setup` of the selected LNT machine, as defined in machines.json. Any override of the
+# benchmark suite version is also applied on top.
+#
+# See libcxx/utils/ci/lnt/README.md for a description of machines.json.
+
+name: "[libc++] Validate benchmark inputs"
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    inputs:
+      lnt-machine:
+        description: 'The LNT machine configuration to use when benchmarking'
+        required: true
+        type: string
+      benchmark-suite-override:
+        description: 'Override the version of the benchmark suite to use (a LLVM monorepo SHA)'
+        required: false
+        type: string
+      submit-lnt:
+        description: 'Whether the results are going to be submitted to LNT'
+        required: true
+        type: boolean
+    outputs:
+      setup:
+        description: 'The setup of the selected machine, as a JSON object'
+        value: ${{ jobs.validate.outputs.setup }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-26.04
+    outputs:
+      setup: ${{ steps.validate.outputs.setup }}
+    steps:
+      - name: Checkout the machine definitions
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Disabling cone mode allows checking out exactly the single file we need.
+          sparse-checkout: libcxx/utils/ci/lnt/machines.json
+          sparse-checkout-cone-mode: false
+
+      - name: Validate the inputs and select the machine setup
+        id: validate
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          LNT_MACHINE: ${{ inputs.lnt-machine }}
+          BENCHMARK_SUITE_OVERRIDE: ${{ inputs.benchmark-suite-override }}
+          SUBMIT_LNT: ${{ inputs.submit-lnt }}
+        with:
+          script: |
+            const config = JSON.parse(require('fs').readFileSync('libcxx/utils/ci/lnt/machines.json', 'utf8'));
+
+            const requested = process.env.LNT_MACHINE;
+            const selected = config.filter(cfg => cfg['lnt-machine'] === requested);
+            if (selected.length !== 1) {
+              const known = config.map(cfg => cfg['lnt-machine']).join(', ');
+              core.setFailed(`Expected exactly one LNT machine named '${requested}', found ${selected.length} `
+                             + `(known machines: ${known})`);
+              return;
+            }
+
+            // Honor any benchmark suite version override, but make sure we don't submit to LNT with a benchmark
+            // suite version that differs from what's specified in machines.json. This would fail at submission
+            // time anyway, only much later.
+            const setup = selected[0].setup;
+            const pinned = setup['benchmark-suite-version'];
+            const version_override = (process.env.BENCHMARK_SUITE_OVERRIDE || '').trim().toLowerCase();
+            if (process.env.SUBMIT_LNT === 'true' && version_override && version_override !== pinned) {
+              core.setFailed(`Refusing to submit results for ${requested}, since the benchmark suite was `
+                             + `overridden to version ${version_override}, which is different from the version `
+                             + `pinned in machines.json (${pinned}).`);
+              return;
+            }
+
+            if (version_override) {
+              setup['benchmark-suite-version'] = version_override;
+            }
+            core.setOutput('setup', JSON.stringify(setup));

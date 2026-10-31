@@ -27,16 +27,16 @@ auto use_derived(Derived *d) {
   return __builtin_launder(d);
 }
 // CIR-LABEL: cir.func{{.*}}@_Z11use_derivedP7Derived
-// CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_Derived>>
+// CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR: %[[ARG_LOAD:.*]] = cir.load align(8) %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
 // CIR: cir.store %[[ARG_LOAD]], %[[RET_ALLOCA]] : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR: %[[RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
 // CIR: cir.return %[[RET]] : !cir.ptr<!rec_Derived>
 //
 // LLVM-LABEL: define {{.*}}@_Z11use_derivedP7Derived
-// LLVM: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
 // LLVM: store ptr %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
 // LLVM: %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
@@ -48,8 +48,8 @@ auto use_derived(Derived *d) {
 // OGCG: ret ptr %[[ARG_LOAD]]
 //
 // CIR-STRICT-LABEL: cir.func{{.*}}@_Z11use_derivedP7Derived
-// CIR-STRICT: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR-STRICT: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_Derived>>
+// CIR-STRICT: %[[ARG_ALLOCA:.*]] = cir.alloca "d" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Derived>>
 // CIR-STRICT: %[[LOAD_ARG:.*]] = cir.load align(8) %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_Derived>>, !cir.ptr<!rec_Derived>
 // CIR-STRICT: %[[LAUNDER:.*]] = cir.launder %[[LOAD_ARG]]  : !cir.ptr<!rec_Derived>
 // CIR-STRICT: cir.store %[[LAUNDER]], %[[RET_ALLOCA]] : !cir.ptr<!rec_Derived>, !cir.ptr<!cir.ptr<!rec_Derived>>
@@ -57,8 +57,8 @@ auto use_derived(Derived *d) {
 // CIR-STRICT: cir.return %[[RET]] : !cir.ptr<!rec_Derived>
 //
 // LLVM-STRICT-LABEL: define {{.*}}@_Z11use_derivedP7Derived
-// LLVM-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVM-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
 // LLVM-STRICT: %[[LAUNDER:.*]] = call ptr @llvm.launder.invariant.group.p0(ptr %[[ARG_LOAD]])
 // LLVM-STRICT: store ptr %[[LAUNDER]], ptr %[[RET_ALLOCA]]
@@ -76,15 +76,15 @@ auto use_vm(VirtMem *vm) {
   return __builtin_launder(vm);
 }
 // CIR-LABEL: cir.func {{.*}}@_Z6use_vmP7VirtMem
-// CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "vm" {{.*}} init : !cir.ptr<!cir.ptr<!rec_VirtMem>>
 // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_VirtMem>>
+// CIR: %[[ARG_ALLOCA:.*]] = cir.alloca "vm" {{.*}} init : !cir.ptr<!cir.ptr<!rec_VirtMem>>
 // CIR: cir.store %[[ARG_LOAD]], %[[RET_ALLOCA]] : !cir.ptr<!rec_VirtMem>, !cir.ptr<!cir.ptr<!rec_VirtMem>>
 // CIR: %[[RET:.*]] = cir.load %[[RET_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtMem>>, !cir.ptr<!rec_VirtMem>
 // CIR: cir.return %[[RET]] : !cir.ptr<!rec_VirtMem>
 //
 // LLVM-LABEL: define {{.*}}@_Z6use_vmP7VirtMem
-// LLVM: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVM: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
 // LLVM: store ptr %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
 // LLVM: %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
@@ -96,8 +96,8 @@ auto use_vm(VirtMem *vm) {
 // OGCG: ret ptr %[[ARG_LOAD]]
 //
 // CIR-STRICT-LABEL: cir.func {{.*}}@_Z6use_vmP7VirtMem
-// CIR-STRICT: %[[ARG_ALLOCA:.*]] = cir.alloca "vm" {{.*}} init : !cir.ptr<!cir.ptr<!rec_VirtMem>>
 // CIR-STRICT: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_VirtMem>>
+// CIR-STRICT: %[[ARG_ALLOCA:.*]] = cir.alloca "vm" {{.*}} init : !cir.ptr<!cir.ptr<!rec_VirtMem>>
 // CIR-STRICT: %[[LOAD_ARG:.*]] = cir.load align(8) %[[ARG_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_VirtMem>>, !cir.ptr<!rec_VirtMem>
 // CIR-STRICT: %[[LAUNDER:.*]] = cir.launder %[[LOAD_ARG]] : !cir.ptr<!rec_VirtMem>
 // CIR-STRICT: cir.store %[[LAUNDER]], %[[RET_ALLOCA]] : !cir.ptr<!rec_VirtMem>, !cir.ptr<!cir.ptr<!rec_VirtMem>>
@@ -105,8 +105,8 @@ auto use_vm(VirtMem *vm) {
 // CIR-STRICT: cir.return %[[RET]] : !cir.ptr<!rec_VirtMem>
 //
 // LLVM-STRICT-LABEL: define {{.*}}@_Z6use_vmP7VirtMem
-// LLVM-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[RET_ALLOCA:.*]] = alloca ptr
+// LLVM-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
 // LLVM-STRICT: %[[LAUNDER:.*]] = call ptr @llvm.launder.invariant.group.p0(ptr %[[ARG_LOAD]])
 // LLVM-STRICT: store ptr %[[LAUNDER]], ptr %[[RET_ALLOCA]]

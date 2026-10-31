@@ -132,6 +132,12 @@ namespace strcmp {
   static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
   static_assert(__builtin_strncmp(0, 0, 0) == 0);
   static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
+
+
+  constexpr char missingInit[] = bar__; // both-error {{use of undeclared identifier 'bar__'}} \
+                                        // ref-note {{declared here}}
+  static_assert(__builtin_strcmp(missingInit, "bar") == 0, ""); // both-error {{not an integral constant expression}} \
+                                                                // ref-note {{initializer of 'missingInit' is unknown}}
 }
 
 namespace WcsCmp {
@@ -180,7 +186,7 @@ namespace WcsCmp {
 
 /// Copied from constant-expression-cxx11.cpp
 namespace strlen {
-constexpr const char *a = "foo\0quux";
+  constexpr const char *a = "foo\0quux";
   constexpr char b[] = "foo\0quux";
   constexpr int f() { return 'u'; }
   constexpr char c[] = { 'f', 'o', 'o', 0, 'q', f(), 'u', 'x', 0 };
@@ -339,6 +345,26 @@ namespace isfpclass {
   char isfpclass_snan_1   [!__builtin_isfpclass(__builtin_nans(""), 0x0002) ? 1 : -1]; // fcQNan
   char isfpclass_snan_2   [__builtin_isfpclass(__builtin_nansl(""), 0x0207) ? 1 : -1]; // ~fcFinite
   char isfpclass_snan_3   [!__builtin_isfpclass(__builtin_nans(""), 0x01F8) ? 1 : -1]; // fcFinite
+
+
+  int foo() {
+    int a = 1; // #decla
+    char A[__builtin_isfpclass(1.0f, a)];
+#if __cplusplus >= 202002L
+                                          // both-warning@-2 {{variable length arrays}} \
+                                          // both-note@-2 {{read of non-const variable 'a'}} \
+                                          // both-note@#decla {{declared here}}
+#endif
+  }
+
+  constexpr float a = 1.0f;
+  static_assert(__builtin_isfpclass(1.0f, a) == 0);
+
+  enum class EC { A, B };
+  static_assert(__builtin_isfpclass(1.0f, EC::A) == 0); // both-error {{passing 'isfpclass::EC' to parameter of incompatible type 'int'}}
+  struct foostruct {};
+  static_assert(__builtin_isfpclass(1.0f, foostruct{}) == 0); // both-error {{passing 'foostruct' to parameter of incompatible type 'int'}}
+
 }
 
 namespace signbit {
@@ -1799,11 +1825,13 @@ namespace Strchr {
   static_assert(__builtin_strchr(kStr, 'd') == nullptr);
   static_assert(__builtin_strchr(kStr, 'e') == nullptr);
   static_assert(__builtin_strchr(kStr, '\0') == kStr + 5);
-  static_assert(__builtin_strchr(kStr, 'a' + 256) == nullptr);
-  static_assert(__builtin_strchr(kStr, 'a' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, 'a' + 256) == kStr); // adding 256 should wrap around to same character
+  static_assert(__builtin_strchr(kStr, 'a' - 256) == kStr); // subtracting 256 should wrap around to same character
   static_assert(__builtin_strchr(kStr, '\xff') == kStr + 4);
-  static_assert(__builtin_strchr(kStr, '\xff' + 256) == nullptr);
-  static_assert(__builtin_strchr(kStr, '\xff' - 256) == nullptr);
+  static_assert(__builtin_strchr(kStr, '\xff' + 256) == kStr + 4);
+  static_assert(__builtin_strchr(kStr, '\xff' - 256) == kStr + 4);
+  constexpr char kStr2[] = "\x80\x41";
+  static_assert(__builtin_strchr(kStr2, 128) == kStr2);
   static_assert(__builtin_strchr(kFoo, 'o') == kFoo + 1);
   static_assert(__builtin_strchr(kFoo, 'x') == nullptr); // both-error {{not an integral constant}} \
                                                          // both-note {{dereferenced one-past-the-end}}
@@ -1885,6 +1913,11 @@ namespace WMemCpy {
                                                                     // both-note {{source of 'wmemcpy' is nullptr}}
   static_assert(__builtin_wmemcpy(null, &global, sizeof(wchar_t))); // both-error {{}} \
                                                                     // both-note {{destination of 'wmemcpy' is nullptr}}
+
+  static_assert(__builtin_wmemcpy(L"foobar", L"bazqux", 6), ""); // both-warning {{conversion from string literal}} \
+                                                                 // both-error {{}} \
+                                                                 // both-note {{assignment to object}} \
+                                                                 // both-note {{temporary created here}}
 }
 
 namespace WMemMove {
@@ -2014,10 +2047,16 @@ namespace WithinLifetime {
     constexpr const int &temp = 0; // both-error {{must be initialized by a constant expression}} \
                                    // both-note {{reference to temporary is not a constant expression}} \
                                    // both-note {{temporary created here}} \
-                                   // ref-note {{declared here}}
-    static_assert(__builtin_is_within_lifetime(&temp)); // ref-error {{not an integral constant expression}} \
-                                                        // ref-note {{initializer of 'temp' is not a constant expression}}
+                                   // both-note {{declared here}}
+    static_assert(__builtin_is_within_lifetime(&temp)); // both-error {{not an integral constant expression}} \
+                                                        // both-note {{initializer of 'temp' is not a constant expression}}
   }
+
+
+  static_assert(__builtin_is_within_lifetime("")); // both-error {{not an integral constant expression}} \
+                                                   // both-note-re {{read of object {{.*}} whose value is not known}} \
+                                                   // both-note {{temporary created here}}
+
 }
 
 #ifdef __SIZEOF_INT128__
@@ -2126,4 +2165,14 @@ namespace SubCb {
 namespace ReduceMin {
   typedef float v4f __attribute__((__vector_size__(16)));
   static_assert(__builtin_reduce_min((v4f){1.123, 2.123, 3.123, 4.123}) == 0); // both-error {{not an integral constant expression}}
+}
+
+namespace Rejected {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    __builtin_alloca(10 / 0); // both-note 2{{subexpression not valid in a constant expression}} \
+                              // both-warning {{division by zero is undefined}}
+    return 1;
+  }
+  static_assert(foo() == 1); // both-error {{not an integral constant expression}} \
+                             // both-note {{in call to}}
 }

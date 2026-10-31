@@ -31,6 +31,23 @@ bool llvm::emitPredicateDag(
       OS << ')';
       return Err;
     }
+
+    if (OpName == "none_of") {
+      if (D->getNumArgs() == 0)
+        PrintFatalError(Owner, "'none_of' requires at least one operand");
+      OS << "!(";
+      ListSeparator LS(" || ");
+      for (const Init *Arg : D->getArgs()) {
+        OS << LS;
+        if (emitPredicateDag(Owner, *Arg, /*ParenIfBinOp=*/D->getNumArgs() > 1,
+                             OS, EmitLeaf))
+          return true;
+      }
+
+      OS << ')';
+      return false;
+    }
+
     if (OpName == "any_of" || OpName == "all_of") {
       if (D->getNumArgs() == 0)
         PrintFatalError(Owner,
@@ -49,7 +66,7 @@ bool llvm::emitPredicateDag(
       return false;
     }
     PrintFatalError(Owner, "unknown predicate dag operator '" + OpName +
-                               "'; expected all_of/any_of/not");
+                               "'; expected all_of/any_of/none_of/not");
   }
 
   // Any non-dag operand (or the base leaf) is emitted by the caller, which

@@ -4,7 +4,7 @@
 define void @null_ptr_is_valid_call_with_null() #0 {
 ; CHECK-LABEL: define void @null_ptr_is_valid_call_with_null(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    call void @store_as0(ptr noalias nofree noundef writeonly null) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @store_as0(ptr noalias nofree noundef writeonly captures(none) null) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   call void @store_as0(ptr null)
@@ -56,6 +56,6 @@ attributes #0 = { null_pointer_is_valid }
 ; CHECK: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(write) }
 ; CHECK: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind null_pointer_is_valid willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CHECK: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
+; CHECK: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CHECK: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn memory(write) }
 ;.

@@ -1411,6 +1411,8 @@ struct B : public A {
 
   B(int (*)[4]) : A(foo()) {}
   // expected-warning@-1 {{base_class_access::A' is uninitialized when used here to access 'base_class_access::A::foo'}}
+
+  virtual void f() = 0;
 };
 
 struct C {
@@ -1426,6 +1428,22 @@ struct D : public C, public A {
 
   D(int (*)[4]) : C(foo()) {}
   // expected-warning@-1 {{base_class_access::A' is uninitialized when used here to access 'base_class_access::A::foo'}}
+};
+
+struct E : public virtual A {
+  E(int (*)[3]) : A(i) {}
+  // expected-warning@-1 {{base class 'base_class_access::A' is uninitialized when used here to access 'base_class_access::A::i'}}
+
+  E(int (*)[4]) : A(foo()) {}
+  // expected-warning@-1 {{base_class_access::A' is uninitialized when used here to access 'base_class_access::A::foo'}}
+};
+
+// Accessing virtual base class members from an abstract class is fine.
+struct F : public virtual A, public C {
+  F(int (*)[3]) : C(i) {}
+  F(int (*)[4]) : C(foo()) {}
+
+  virtual void f() = 0;
 };
 
 }

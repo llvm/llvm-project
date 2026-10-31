@@ -68,7 +68,11 @@ The *ownership* model is encoded in the naming convention as follows.
 If the code owns an object, it is responsible for destroying the object when it
 is no longer necessary. If an object that owns other objects is destroyed, any
 handles to those objects become invalid. Note that types and attributes are
-owned by the `MlirContext` in which they were created.
+owned by the `MlirContext` in which they were created. The context also provides
+`mlirContextBeginTransientScope(MlirContext)` and
+`mlirContextEndTransientScope(MlirContext)` to manage transient scopes: types,
+attributes, affine expressions, and unregistered operations created within a
+transient scope are invalidated and reclaimed when the transient scope ends.
 
 ### Nullity
 

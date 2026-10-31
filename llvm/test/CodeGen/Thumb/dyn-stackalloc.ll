@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_GREEDY
-; RUN: llc < %s -mtriple=thumb-apple-darwin -disable-cgp-branch-opts -disable-post-ra -regalloc=basic -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_BASIC
+; RUN: llc < %s -mtriple=thumb-apple-darwin -cgp-branch-opts=0 -disable-post-ra -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_GREEDY
+; RUN: llc < %s -mtriple=thumb-apple-darwin -cgp-branch-opts=0 -disable-post-ra -regalloc=basic -verify-machineinstrs | FileCheck %s -check-prefix=CHECK -check-prefix=RA_BASIC
 
 	%struct.state = type { i32, ptr, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i64, i64, i64, i64, i64, i64, ptr }
 	%struct.info = type { i32, i32, i32, i32, i32, i32, i32, ptr }

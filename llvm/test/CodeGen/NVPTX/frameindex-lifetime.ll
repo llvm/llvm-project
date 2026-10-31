@@ -37,7 +37,7 @@
 
 ;; This test is intended to verify that we don't crash when -opt-bisect-limit
 ;; is used in conjunction with lifetime markers. Previously, later passes
-;; would not handle these intructions correctly and relied on earlier passes
+;; would not handle these instructions correctly and relied on earlier passes
 ;; to remove them.
 
 declare void @bar(ptr)

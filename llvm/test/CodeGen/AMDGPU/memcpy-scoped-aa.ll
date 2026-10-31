@@ -5,7 +5,7 @@
 
 ; Re-evaluate the slot numbers of scopes as that numbering could be changed run-by-run.
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"bax"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"bax"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %p"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"bax: %q"}
 ; MIR-DAG: ![[SET0:[0-9]+]] = !{![[SCOPE0]]}
@@ -13,7 +13,7 @@
 
 ; MIR-LABEL: name: test_memcpy
 ; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy:
@@ -33,7 +33,7 @@ define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocaptur
 
 ; MIR-LABEL: name: test_memcpy_inline
 ; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memcpy_inline(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy_inline:
@@ -53,7 +53,7 @@ define i32 @test_memcpy_inline(ptr addrspace(1) nocapture %p, ptr addrspace(1) n
 
 ; MIR-LABEL: name: test_memmove
 ; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memmove(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memmove on %p.
 ; CHECK-LABEL: test_memmove:
@@ -72,7 +72,7 @@ define i32 @test_memmove(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocaptu
 }
 
 ; MIR-LABEL: name: test_memset
-; MIR: GLOBAL_STORE_DWORDX4 killed %{{[0-9]+}}, killed %{{[0-9]+}}, 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, %{{[0-9]+}}, 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
 define i32 @test_memset(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memset on %p.
 ; CHECK-LABEL: test_memset:
@@ -94,7 +94,7 @@ declare void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noalias nocapture wr
 declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg)
 declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg)
 
-!0 = distinct !{!0, !"bax"}
+!0 = distinct !{!0, i1 false, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}
 !2 = !{!1}
 !3 = distinct !{!3, !0, !"bax: %q"}

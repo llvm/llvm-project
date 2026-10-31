@@ -7,6 +7,7 @@ unittest("ARMTests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target/ARM:ARMGenSDNodeInfo",
+    "//llvm/lib/Target/ARM:ARMGenTargetDef",
     "//llvm/lib/Target/ARM:LLVMARMCodeGen",
     "//llvm/lib/Target/ARM/MCTargetDesc",
     "//llvm/lib/Target/ARM/TargetInfo",

@@ -7,10 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/lrintf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/lrintf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(long, lrintf128, (float128 x)) { return math::lrintf128(x); }
+using LIBC_NAMESPACE::fputil::Float128;
+
+LLVM_LIBC_FUNCTION(long, lrintf128, (float128 x)) {
+  return math::lrintf128(cpp::bit_cast<Float128>(x));
+}
 
 } // namespace LIBC_NAMESPACE_DECL

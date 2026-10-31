@@ -20,7 +20,7 @@ using LlvmLibcAsinfExhaustiveTest =
 static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
-TEST_F(LlvmLibcAsinfExhaustiveTest, PostiveRange) {
+TEST_F(LlvmLibcAsinfExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
 }
 

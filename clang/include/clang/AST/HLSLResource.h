@@ -26,7 +26,6 @@
 namespace clang {
 
 class HLSLResourceBindingAttr;
-class HLSLRVkBindingAttr;
 
 namespace hlsl {
 
@@ -107,6 +106,12 @@ inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
         "We cannot get the dimension of a resource with unknown dimension.");
   }
   llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
+}
+
+// Returns true if sampling operations on a resource of this dimension take a
+// texel-space offset operand.
+inline bool hasResourceOffset(llvm::dxil::ResourceDimension Dim) {
+  return Dim != llvm::dxil::ResourceDimension::Cube;
 }
 
 // Returns true if the second field of the record is a counter resource handle

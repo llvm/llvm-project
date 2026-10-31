@@ -1,5 +1,13 @@
 #pragma clang system_header
 
+template <typename F>
+void takeLambda(F);
+
+template <typename T>
+inline void lambdaInSystemHeader(T* obj) {
+  takeLambda([obj] { obj->method(); });
+}
+
 template <typename T, typename CreateFunction>
 void callMethod(CreateFunction createFunction) {
   createFunction()->method();

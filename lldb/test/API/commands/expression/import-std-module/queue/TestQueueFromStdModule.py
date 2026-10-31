@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 class TestQueue(TestBase):
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIf(
         compiler="clang",
         compiler_version=[">", "16.0"],

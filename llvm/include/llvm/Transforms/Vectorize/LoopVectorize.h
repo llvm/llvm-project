@@ -57,7 +57,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_LOOPVECTORIZE_H
 
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include <functional>
@@ -66,6 +65,7 @@ namespace llvm {
 
 class AssumptionCache;
 class BlockFrequencyInfo;
+class BranchProbabilityInfo;
 class DemandedBits;
 class DominatorTree;
 class Function;
@@ -78,9 +78,6 @@ class ProfileSummaryInfo;
 class ScalarEvolution;
 class TargetLibraryInfo;
 class TargetTransformInfo;
-
-LLVM_ABI extern cl::opt<bool> EnableLoopInterleaving;
-LLVM_ABI extern cl::opt<bool> EnableLoopVectorization;
 
 struct LoopVectorizeOptions {
   /// If false, consider all loops for interleaving.
@@ -146,6 +143,7 @@ public:
   TargetTransformInfo *TTI;
   DominatorTree *DT;
   std::function<BlockFrequencyInfo &()> GetBFI;
+  std::function<const BranchProbabilityInfo &()> GetBPI;
   TargetLibraryInfo *TLI;
   DemandedBits *DB;
   AssumptionCache *AC;
@@ -153,7 +151,8 @@ public:
   OptimizationRemarkEmitter *ORE;
   ProfileSummaryInfo *PSI;
   AAResults *AA;
-  FunctionAnalysisManager *FAM = nullptr;
+
+  bool CFGChanged = false;
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   LLVM_ABI void

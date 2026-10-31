@@ -516,6 +516,17 @@ bool isOpenMPCapturingDirective(OpenMPDirectiveKind DKind);
 /// otherwise - false.
 bool isOpenMPOrderConcurrentNestableDirective(OpenMPDirectiveKind DKind,
                                               const LangOptions &LangOpts);
+
+/// Checks if the specified directive is a simdizable directive, i.e. a
+/// directive that may be encountered during execution of a simd region.
+/// \param DKind Specified directive.
+/// \param BindKind Binding of a loop directive; ignored for other directives.
+/// \param LangOpts Used for getting the OpenMP version.
+/// \return true - if the above condition is met for this directive
+/// otherwise - false.
+bool isOpenMPSimdizableDirective(OpenMPDirectiveKind DKind,
+                                 OpenMPBindClauseKind BindKind,
+                                 const LangOptions &LangOpts);
 }
 
 template <>

@@ -7,7 +7,7 @@ define i1 @inf0(double %arg) {
 ; CHECK-LABEL: @inf0(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp = fcmp ogt double %arg, 0x7FF0000000000000
+  %tmp = fcmp ogt double %arg, +inf
   ret i1 %tmp
 }
 
@@ -16,7 +16,7 @@ define i1 @inf0_fabs(double %arg) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %fabs.arg = call double @llvm.fabs.f64(double %arg)
-  %tmp = fcmp ogt double %fabs.arg, 0x7FF0000000000000
+  %tmp = fcmp ogt double %fabs.arg, +inf
   ret i1 %tmp
 }
 
@@ -24,7 +24,7 @@ define i1 @inf1(double %arg) {
 ; CHECK-LABEL: @inf1(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp = fcmp ule double %arg, 0x7FF0000000000000
+  %tmp = fcmp ule double %arg, +inf
   ret i1 %tmp
 }
 
@@ -33,7 +33,7 @@ define i1 @inf1_fabs(double %arg) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %fabs.arg = call double @llvm.fabs.f64(double %arg)
-  %tmp = fcmp ule double %fabs.arg, 0x7FF0000000000000
+  %tmp = fcmp ule double %fabs.arg, +inf
   ret i1 %tmp
 }
 
@@ -43,7 +43,7 @@ define i1 @ninf0(double %arg) {
 ; CHECK-LABEL: @ninf0(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %tmp = fcmp olt double %arg, 0xFFF0000000000000
+  %tmp = fcmp olt double %arg, -inf
   ret i1 %tmp
 }
 
@@ -52,7 +52,7 @@ define i1 @ninf0_fabs(double %arg) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %fabs.arg = call double @llvm.fabs.f64(double %arg)
-  %tmp = fcmp olt double %fabs.arg, 0xFFF0000000000000
+  %tmp = fcmp olt double %fabs.arg, -inf
   ret i1 %tmp
 }
 
@@ -60,7 +60,7 @@ define i1 @ninf1(double %arg) {
 ; CHECK-LABEL: @ninf1(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %tmp = fcmp uge double %arg, 0xFFF0000000000000
+  %tmp = fcmp uge double %arg, -inf
   ret i1 %tmp
 }
 
@@ -69,7 +69,7 @@ define i1 @ninf1_fabs(double %arg) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %fabs.arg = call double @llvm.fabs.f64(double %arg)
-  %tmp = fcmp uge double %fabs.arg, 0xFFF0000000000000
+  %tmp = fcmp uge double %fabs.arg, -inf
   ret i1 %tmp
 }
 
@@ -924,7 +924,7 @@ define i1 @minnum_une_nan_min_constant(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %min = call float @llvm.minnum.f32(float %x, float 0x7FF8000000000000)
+  %min = call float @llvm.minnum.f32(float %x, float +qnan)
   %cmp = fcmp une float %min, 1.0
   ret i1 %cmp
 }
@@ -1097,7 +1097,7 @@ define i1 @maxnum_une_nan_max_constant(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp une float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %max = call float @llvm.maxnum.f32(float %x, float 0x7FF8000000000000)
+  %max = call float @llvm.maxnum.f32(float %x, float +qnan)
   %cmp = fcmp une float %max, 1.0
   ret i1 %cmp
 }
@@ -1663,7 +1663,7 @@ define i1 @pr58046(i64 %arg) {
   %fp = uitofp i64 %arg to double
   %mul = fmul double -0.000000e+00, %fp
   %div = fdiv double 1.000000e+00, %mul
-  %cmp = fcmp oeq double %div, 0xFFF0000000000000
+  %cmp = fcmp oeq double %div, -inf
   ret i1 %cmp
 }
 
@@ -1712,7 +1712,7 @@ define i1 @is_infinite(float %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %xabs = call ninf float @llvm.fabs.f32(float %x)
-  %r = fcmp oeq float %xabs, 0x7FF0000000000000
+  %r = fcmp oeq float %xabs, +inf
   ret i1 %r
 }
 
@@ -1724,9 +1724,9 @@ define i1 @is_infinite_assumed_finite(float %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %xabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp one float %xabs, 0x7FF0000000000000
+  %not.inf = fcmp one float %xabs, +inf
   call void @llvm.assume(i1 %not.inf)
-  %r = fcmp oeq float %xabs, 0x7FF0000000000000
+  %r = fcmp oeq float %xabs, +inf
   ret i1 %r
 }
 
@@ -1738,9 +1738,9 @@ define i1 @une_inf_assumed_not_inf(float %x) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %xabs = call float @llvm.fabs.f32(float %x)
-  %not.inf = fcmp one float %xabs, 0x7FF0000000000000
+  %not.inf = fcmp one float %xabs, +inf
   call void @llvm.assume(i1 %not.inf)
-  %r = fcmp une float %xabs, 0x7FF0000000000000
+  %r = fcmp une float %xabs, +inf
   ret i1 %r
 }
 
@@ -1749,7 +1749,7 @@ define <2 x i1> @is_infinite_neg(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x42 = fadd ninf <2 x float> %x, <float 42.0, float 42.0>
-  %r = fcmp oeq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
+  %r = fcmp oeq <2 x float> %x42, <float -inf, float -inf>
   ret <2 x i1> %r
 }
 
@@ -1762,7 +1762,7 @@ define i1 @is_infinite_or_nan(float %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x42 = fadd ninf float %x, 42.0
-  %r = fcmp ueq float %x42, 0xFFF0000000000000
+  %r = fcmp ueq float %x42, -inf
   ret i1 %r
 }
 
@@ -1771,7 +1771,7 @@ define i1 @is_infinite_or_nan2(float %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %xabs = call nnan ninf float @llvm.fabs.f32(float %x)
-  %r = fcmp ueq float %xabs, 0x7FF0000000000000
+  %r = fcmp ueq float %xabs, +inf
   ret i1 %r
 }
 
@@ -1783,9 +1783,9 @@ define i1 @is_infinite_or_nan2_assume(float %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %xabs = call float @llvm.fabs.f32(float %x)
-  %is.inf.or.nan = fcmp one float %xabs, 0x7FF0000000000000
+  %is.inf.or.nan = fcmp one float %xabs, +inf
   call void @llvm.assume(i1 %is.inf.or.nan)
-  %r = fcmp ueq float %xabs, 0x7FF0000000000000
+  %r = fcmp ueq float %xabs, +inf
   ret i1 %r
 }
 
@@ -1794,7 +1794,7 @@ define <2 x i1> @is_infinite_neg_or_nan(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
   %x42 = fadd nnan ninf <2 x float> %x, <float 42.0, float 42.0>
-  %r = fcmp ueq <2 x float> %x42, <float 0xFFF0000000000000, float 0xFFF0000000000000>
+  %r = fcmp ueq <2 x float> %x42, <float -inf, float -inf>
   ret <2 x i1> %r
 }
 
@@ -1804,7 +1804,7 @@ define i1 @is_finite_or_nan(i1 %c, double %x) {
 ;
   %xx = fmul ninf double %x, %x
   %s = select i1 %c, double 42.0, double %xx
-  %r = fcmp une double %s, 0x7FF0000000000000
+  %r = fcmp une double %s, +inf
   ret i1 %r
 }
 
@@ -1813,7 +1813,7 @@ define <2 x i1> @is_finite_or_nan_commute(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
-  %r = fcmp une <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
+  %r = fcmp une <2 x float> <float +inf, float +inf>, %cast
   ret <2 x i1> %r
 }
 
@@ -1826,7 +1826,7 @@ define i1 @is_finite_and_ordered(double %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xx = fmul ninf double %x, %x
-  %r = fcmp one double %xx, 0x7FF0000000000000
+  %r = fcmp one double %xx, +inf
   ret i1 %r
 }
 
@@ -1836,7 +1836,7 @@ define i1 @is_finite(i1 %c, double %x) {
 ;
   %xx = fmul nnan ninf double %x, %x
   %s = select i1 %c, double 42.0, double %xx
-  %r = fcmp one double %s, 0x7FF0000000000000
+  %r = fcmp one double %s, +inf
   ret i1 %r
 }
 
@@ -1848,10 +1848,10 @@ define i1 @is_finite_assume(i1 %c, double %x) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %xabs = call double @llvm.fabs.f64(double %x)
-  %is.inf.or.nan = fcmp one double %xabs, 0x7FF0000000000000
+  %is.inf.or.nan = fcmp one double %xabs, +inf
   call void @llvm.assume(i1 %is.inf.or.nan)
   %s = select i1 %c, double 42.0, double %x
-  %r = fcmp one double %s, 0x7FF0000000000000
+  %r = fcmp one double %s, +inf
   ret i1 %r
 }
 
@@ -1860,7 +1860,7 @@ define <2 x i1> @is_finite_commute(<2 x i8> %x) {
 ; CHECK-NEXT:    ret <2 x i1> splat (i1 true)
 ;
   %cast = uitofp <2 x i8> %x to <2 x float>
-  %r = fcmp one <2 x float> <float 0x7FF0000000000000, float 0x7FF0000000000000>, %cast
+  %r = fcmp one <2 x float> <float +inf, float +inf>, %cast
   ret <2 x i1> %r
 }
 
@@ -1918,7 +1918,7 @@ define i1 @ogt_zero_fabs_select_negone_or_pinf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float -1.0, float 0x7FF0000000000000
+  %select = select i1 %cond, float -1.0, float +inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp ogt float %fabs, 0.0
   ret i1 %one
@@ -1930,7 +1930,7 @@ define i1 @ogt_zero_fabs_select_one_or_ninf(i1 %cond) {
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
-  %select = select i1 %cond, float 1.0, float 0xFFF0000000000000
+  %select = select i1 %cond, float 1.0, float -inf
   %fabs = call float @llvm.fabs.f32(float %select)
   %one = fcmp ogt float %fabs, 0.0
   ret i1 %one

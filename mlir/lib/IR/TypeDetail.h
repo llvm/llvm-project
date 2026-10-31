@@ -135,9 +135,6 @@ struct TupleTypeStorage final
   unsigned numElements;
 };
 
-/// Checks if the memorySpace has supported Attribute type.
-bool isSupportedMemorySpace(Attribute memorySpace);
-
 /// Wraps deprecated integer memory space to the new Attribute form.
 Attribute wrapIntegerMemorySpace(unsigned memorySpace, MLIRContext *ctx);
 

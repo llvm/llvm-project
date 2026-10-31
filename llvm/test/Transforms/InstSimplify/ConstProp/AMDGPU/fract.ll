@@ -76,11 +76,11 @@ define void @test_f32(ptr %p) {
   store volatile float %ptiny, ptr %p
   %ntiny = call float @llvm.amdgcn.fract.f32(float 0xB810000000000000) ; -min normal
   store volatile float %ntiny, ptr %p
-  %pinf = call float @llvm.amdgcn.fract.f32(float 0x7FF0000000000000) ; +inf
+  %pinf = call float @llvm.amdgcn.fract.f32(float +inf) ; +inf
   store volatile float %pinf, ptr %p
-  %ninf = call float @llvm.amdgcn.fract.f32(float 0xFFF0000000000000) ; -inf
+  %ninf = call float @llvm.amdgcn.fract.f32(float -inf) ; -inf
   store volatile float %ninf, ptr %p
-  %nan = call float @llvm.amdgcn.fract.f32(float 0x7FF8000000000000) ; nan
+  %nan = call float @llvm.amdgcn.fract.f32(float +qnan) ; nan
   store volatile float %nan, ptr %p
   ret void
 }
@@ -116,11 +116,11 @@ define void @test_f64(ptr %p) {
   store volatile double %ptiny, ptr %p
   %ntiny = call double @llvm.amdgcn.fract.f64(double -2.0e-308) ; -min normal
   store volatile double %ntiny, ptr %p
-  %pinf = call double @llvm.amdgcn.fract.f64(double 0x7FF0000000000000) ; +inf
+  %pinf = call double @llvm.amdgcn.fract.f64(double +inf) ; +inf
   store volatile double %pinf, ptr %p
-  %ninf = call double @llvm.amdgcn.fract.f64(double 0xFFF0000000000000) ; -inf
+  %ninf = call double @llvm.amdgcn.fract.f64(double -inf) ; -inf
   store volatile double %ninf, ptr %p
-  %nan = call double @llvm.amdgcn.fract.f64(double 0x7FF8000000000000) ; nan
+  %nan = call double @llvm.amdgcn.fract.f64(double +qnan) ; nan
   store volatile double %nan, ptr %p
   ret void
 }

@@ -3,7 +3,7 @@
 
 ; Ensure the scoped AA metadata is still retained after store merging.
 
-; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, !"domain"}
+; MIR-DAG: ![[DOMAIN:[0-9]+]] = distinct !{!{{[0-9]+}}, i1 false, !"domain"}
 ; MIR-DAG: ![[SCOPE0:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"scope 0"}
 ; MIR-DAG: ![[SCOPE1:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"scope 1"}
 ; MIR-DAG: ![[SCOPE2:[0-9]+]] = distinct !{!{{[0-9]+}}, ![[DOMAIN]], !"scope 2"}
@@ -21,7 +21,7 @@ define void @blam0(ptr %g0, ptr %g1) {
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY $x0
   ; MIR-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (s64) from %ir.g0, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   STRDui killed [[LDRDui]], [[COPY]], 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope !3, !noalias !0)
+  ; MIR-NEXT:   STRDui [[LDRDui]], [[COPY]], 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope !3, !noalias !0)
   ; MIR-NEXT:   RET_ReallyLR
   %tmp4 = getelementptr inbounds <3 x float>, ptr %g1, i64 0, i64 0
   %tmp5 = load <3 x float>, ptr %g0, align 4, !alias.scope !0, !noalias !1
@@ -43,7 +43,7 @@ define void @blam1(ptr %g0, ptr %g1) {
   ; MIR-NEXT:   [[COPY:%[0-9]+]]:gpr64common = COPY $x1
   ; MIR-NEXT:   [[COPY1:%[0-9]+]]:gpr64common = COPY $x0
   ; MIR-NEXT:   [[LDRDui:%[0-9]+]]:fpr64 = LDRDui [[COPY1]], 0 :: (load (s64) from %ir.g0, align 4, !alias.scope !0, !noalias !3)
-  ; MIR-NEXT:   STRDui killed [[LDRDui]], [[COPY]], 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope !9, !noalias !10)
+  ; MIR-NEXT:   STRDui [[LDRDui]], [[COPY]], 0 :: (store (s64) into %ir.tmp41, align 4, !alias.scope !9, !noalias !10)
   ; MIR-NEXT:   RET_ReallyLR
   %tmp4 = getelementptr inbounds <3 x float>, ptr %g1, i64 0, i64 0
   %tmp5 = load <3 x float>, ptr %g0, align 4, !alias.scope !0, !noalias !1
@@ -60,7 +60,7 @@ define void @blam1(ptr %g0, ptr %g1) {
 !1 = !{!3}
 !2 = !{!2, !4, !"scope 0"}
 !3 = !{!3, !4, !"scope 1"}
-!4 = !{!4, !"domain"}
+!4 = !{!4, i1 false, !"domain"}
 !5 = !{!7}
 !6 = !{!8}
 !7 = !{!7, !4, !"scope 2"}

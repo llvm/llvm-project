@@ -1,4 +1,5 @@
 add_flang_library(FIRSupport
+  AllocationPolicy.cpp
   DataLayout.cpp
   InitFIR.cpp
   InternalNames.cpp
@@ -11,6 +12,7 @@ add_flang_library(FIRSupport
 
   LINK_LIBS
   FIRDialect
+  FIRDialectSupport
   MIFDialect
 
   LINK_COMPONENTS

@@ -111,6 +111,76 @@ TEST(ClangTidyDiagnosticConsumer, InvalidSourceLocationRangesIgnored) {
   EXPECT_EQ(1ul, Errors[3].Message.Ranges.size());
 }
 
+#ifdef _WIN32
+
+namespace {
+class LineFilterTestCheck : public ClangTidyCheck {
+public:
+  LineFilterTestCheck(StringRef Name, ClangTidyContext *Context)
+      : ClangTidyCheck(Name, Context) {}
+  void registerMatchers(ast_matchers::MatchFinder *Finder) override {
+    Finder->addMatcher(ast_matchers::varDecl().bind("var"), this);
+  }
+  void check(const ast_matchers::MatchFinder::MatchResult &Result) override {
+    diag(Result.Nodes.getNodeAs<VarDecl>("var")->getLocation(), "variable");
+  }
+};
+} // namespace
+
+TEST(ClangTidyDiagnosticConsumer, LineFilterNormalizesWindowsPaths) {
+  const auto ParsedDiagnosticsFor = [](StringRef FileName,
+                                       StringRef LineFilter) {
+    ClangTidyGlobalOptions GlobalOptions;
+    EXPECT_FALSE(parseLineFilter(LineFilter, GlobalOptions));
+    std::vector<ClangTidyError> Errors;
+    runCheckOnCode<LineFilterTestCheck>("int x;", &Errors, FileName, {},
+                                        ClangTidyOptions(), {}, GlobalOptions);
+    return Errors;
+  };
+  const auto DiagnosticsFor =
+      [](StringRef FileName, StringRef FilterName,
+         std::vector<FileFilter::LineRange> LineRanges = {}) {
+        ClangTidyGlobalOptions GlobalOptions;
+        GlobalOptions.LineFilter.push_back(
+            {FilterName.str(), std::move(LineRanges)});
+        std::vector<ClangTidyError> Errors;
+        runCheckOnCode<LineFilterTestCheck>("int x;", &Errors, FileName, {},
+                                            ClangTidyOptions(), {},
+                                            GlobalOptions);
+        return Errors;
+      };
+
+  EXPECT_EQ(1u, ParsedDiagnosticsFor(R"(C:\root\project\src\input.cc)",
+                                     R"([{"name":"project/src/input.cc"}])")
+                    .size());
+  EXPECT_EQ(1u, ParsedDiagnosticsFor(R"(C:\root\project\src\input.cc)",
+                                     R"([{"name":"project\\src\\input.cc"}])")
+                    .size());
+  EXPECT_EQ(1u, ParsedDiagnosticsFor("C:/root/project/src/input.cc",
+                                     R"([{"name":"project/src/input.cc"}])")
+                    .size());
+  EXPECT_EQ(1u, ParsedDiagnosticsFor("C:/root/project/src/input.cc",
+                                     R"([{"name":"project\\src\\input.cc"}])")
+                    .size());
+
+  EXPECT_EQ(
+      1u, DiagnosticsFor(R"(C:\root\project\src\input.cc)", "input.cc").size());
+  EXPECT_EQ(
+      1u,
+      DiagnosticsFor(R"(C:\root\project\src\input.cc)", "src/input.cc").size());
+  EXPECT_TRUE(
+      DiagnosticsFor(R"(C:\root\project\src\input.cc)", "other/src/input.cc")
+          .empty());
+
+  EXPECT_EQ(1u, DiagnosticsFor(R"(C:\root\project\src\input.cc)",
+                               "project/src/input.cc", {{1, 1}})
+                    .size());
+  EXPECT_TRUE(DiagnosticsFor(R"(C:\root\project\src\input.cc)",
+                             "project/src/input.cc", {{2, 2}})
+                  .empty());
+}
+#endif
+
 } // namespace test
 } // namespace tidy
 } // namespace clang

@@ -16,7 +16,6 @@
 #include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <vector>
@@ -29,8 +28,17 @@ bool Target::isValidFeatureListFormat(StringRef Features) {
   if (Features.empty())
     return true;
 
-  static const llvm::Regex pattern("^([+-][^,]+)(,[+-][^,]+)*,?$");
-  return pattern.match(Features);
+  // Each feature starts with '+'/'-' followed by at least one non-comma
+  // character. Features are comma-separated with an optional trailing comma.
+  for (size_t I = 0, E = Features.size(); I != E; ++I) {
+    if (I == 0 || Features[I - 1] == ',') {
+      // At the start of a feature: must have a sign and a non-empty name.
+      if ((Features[I] != '+' && Features[I] != '-') ||
+          I + 1 == Features.size() || Features[I + 1] == ',')
+        return false;
+    }
+  }
+  return true;
 }
 
 MCStreamer *Target::createMCObjectStreamer(
@@ -154,7 +162,8 @@ const Target *TargetRegistry::lookupTarget(const Triple &TT,
                                            std::string &Error) {
   // Provide special warning when no targets are initialized.
   if (targets().begin() == targets().end()) {
-    Error = "Unable to find target for this triple (no targets are registered)";
+    Error = "Unable to find target for triple \"" + TT.str() +
+            "\" (no targets are registered)";
     return nullptr;
   }
   Triple::ArchType Arch = TT.getArch();

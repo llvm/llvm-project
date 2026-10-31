@@ -83,7 +83,6 @@ Environment::Environment(StringRef Code, StringRef FileName,
 TokenAnalyzer::TokenAnalyzer(const Environment &Env, const FormatStyle &Style)
     : Style(Style), LangOpts(getFormattingLangOpts(Style)), Env(Env),
       AffectedRangeMgr(Env.getSourceManager(), Env.getCharRanges()),
-      UnwrappedLines(1),
       Encoding(encoding::detectEncoding(
           Env.getSourceManager().getBufferData(Env.getFileID()))) {
   LLVM_DEBUG(
@@ -104,20 +103,19 @@ TokenAnalyzer::process(bool SkipAnnotation) {
                        IdentTable);
   ArrayRef<FormatToken *> Toks(Lex.lex());
   SmallVector<FormatToken *, 10> Tokens(Toks);
-  UnwrappedLineParser Parser(Env.getSourceManager(), Style, Lex.getKeywords(),
-                             Env.getFirstStartColumn(), Tokens, *this,
-                             Allocator, IdentTable);
-  Parser.parse();
-  assert(UnwrappedLines.back().empty());
+
   unsigned Penalty = 0;
-  for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
-    const auto &Lines = UnwrappedLines[Run];
+  unsigned Run = 0;
+  bool HasError = false;
+  OnFinishRun = [&]() {
+    if (HasError)
+      return;
     LLVM_DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
     SmallVector<AnnotatedLine *, 16> AnnotatedLines;
-    AnnotatedLines.reserve(Lines.size());
+    AnnotatedLines.reserve(UnwrappedLines.size());
 
     TokenAnnotator Annotator(Style, Lex.getKeywords());
-    for (const UnwrappedLine &Line : Lines) {
+    for (const UnwrappedLine &Line : UnwrappedLines) {
       AnnotatedLines.push_back(new AnnotatedLine(Line));
       if (!SkipAnnotation)
         Annotator.annotate(*AnnotatedLines.back());
@@ -133,6 +131,7 @@ TokenAnalyzer::process(bool SkipAnnotation) {
     });
     for (AnnotatedLine *Line : AnnotatedLines)
       delete Line;
+    ++Run;
 
     Penalty += RunResult.second;
     for (const auto &R : RunResult.first) {
@@ -141,20 +140,27 @@ TokenAnalyzer::process(bool SkipAnnotation) {
       // Replacements to indicate failure.
       if (Err) {
         llvm::errs() << llvm::toString(std::move(Err)) << "\n";
-        return {tooling::Replacements(), 0};
+        HasError = true;
+        return;
       }
     }
-  }
+  };
+  UnwrappedLineParser Parser(Env.getSourceManager(), Style, Lex.getKeywords(),
+                             Env.getFirstStartColumn(), Tokens, *this,
+                             Allocator, IdentTable);
+  Parser.parse();
+  if (HasError)
+    return {tooling::Replacements(), 0};
   return {Result, Penalty};
 }
 
 void TokenAnalyzer::consumeUnwrappedLine(const UnwrappedLine &TheLine) {
-  assert(!UnwrappedLines.empty());
-  UnwrappedLines.back().push_back(TheLine);
+  UnwrappedLines.push_back(TheLine);
 }
 
 void TokenAnalyzer::finishRun() {
-  UnwrappedLines.push_back(SmallVector<UnwrappedLine, 16>());
+  OnFinishRun();
+  UnwrappedLines.clear();
 }
 
 } // end namespace format

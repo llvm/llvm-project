@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
-; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all -unique-basic-block-section-names -split-machine-functions | FileCheck %s -check-prefix=LINUX-SECTIONS
+; RUN: llc < %s -mtriple=x86_64-pc-linux -function-sections -basic-block-sections=all -unique-basic-block-section-names -function-splitting=all | FileCheck %s -check-prefix=LINUX-SECTIONS
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu  -function-sections -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 ; RUN: llc < %s -mtriple=i386-unknown-linux-gnu  -basic-block-sections=all -unique-basic-block-section-names | FileCheck %s -check-prefix=LINUX-SECTIONS
 

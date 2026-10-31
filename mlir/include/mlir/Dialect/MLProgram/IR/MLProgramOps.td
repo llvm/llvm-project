@@ -28,7 +28,7 @@ class MLProgram_Op<string mnemonic, list<Trait> traits = []> :
 //===----------------------------------------------------------------------===//
 
 def MLProgram_FuncOp : MLProgram_Op<"func", [
-    FunctionOpInterface, IsolatedFromAbove,
+    SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
     RegionKindInterface, Symbol
   ]> {
   let summary = "Function containing a single `SSACFG` region";
@@ -98,7 +98,7 @@ def MLProgram_FuncOp : MLProgram_Op<"func", [
 //===----------------------------------------------------------------------===//
 
 def MLProgram_GlobalOp : MLProgram_Op<"global", [
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ]> {
   let summary = "Module level declaration of a global variable";
   let description = [{
@@ -387,7 +387,7 @@ def MLProgram_GlobalStoreGraphOp : MLProgram_Op<"global_store_graph", [
 //===----------------------------------------------------------------------===//
 
 def MLProgram_SubgraphOp : MLProgram_Op<"subgraph", [
-    FunctionOpInterface, HasOnlyGraphRegion,
+    SymbolName, SymbolVisibility, FunctionOpInterface, HasOnlyGraphRegion,
     IsolatedFromAbove, RegionKindInterface, SingleBlock, Symbol
   ]> {
   let summary = "An function containing a single `Graph` region";

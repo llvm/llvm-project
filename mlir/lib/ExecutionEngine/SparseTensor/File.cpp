@@ -187,6 +187,13 @@ void SparseTensorReader::readExtFROSTTHeader() {
     fprintf(stderr, "Cannot find metadata in %s\n", filename);
     exit(1);
   }
+  if (idata[0] > kMaxRank) {
+    fprintf(stderr,
+            "Tensor rank %" PRIu64 " exceeds maximum supported rank %" PRIu64
+            " in %s\n",
+            idata[0], kMaxRank, filename);
+    exit(1);
+  }
   // Followed by a line with the dimension sizes (one per rank).
   for (uint64_t r = 0; r < idata[0]; r++) {
     if (fscanf(file, "%" PRIu64, idata + 2 + r) != 1) {

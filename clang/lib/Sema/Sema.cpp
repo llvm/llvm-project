@@ -227,9 +227,10 @@ public:
   }
   void PragmaDiagnostic(SourceLocation Loc, StringRef Namespace,
                         diag::Severity Mapping, StringRef Str) override {
-    // The pragma changed diagnostic severities; drop any cached analysis
-    // warning policies derived from the previous state.
+    // The pragma changed diagnostic severities; drop any cached state
+    // derived from the previous one.
     S->AnalysisWarnings.clearPolicyCache();
+    S->clearDocumentationDiagsCache();
 
     // If one of the analysis-based diagnostics was enabled while processing
     // a function, we want to note it in the analysis-based warnings so they
@@ -328,7 +329,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
       GlobalNewDeleteDeclared(false), DisableTypoCorrection(false),
       TyposCorrected(0), IsBuildingRecoveryCallExpr(false),
       CurrentInstantiationScope(nullptr), NonInstantiationEntries(0),
-      ArgPackSubstIndex(std::nullopt), SatisfactionCache(Context) {
+      ArgPackSubstIndex(std::nullopt) {
   assert(pp.TUKind == TUKind);
   TUScope = nullptr;
 
@@ -626,11 +627,7 @@ Sema::~Sema() {
     ExternalSema->ForgetSema();
 
   // Delete cached satisfactions.
-  std::vector<ConstraintSatisfaction *> Satisfactions;
-  Satisfactions.reserve(SatisfactionCache.size());
-  for (auto &Node : SatisfactionCache)
-    Satisfactions.push_back(&Node);
-  for (auto *Node : Satisfactions)
+  for (auto [_, Node] : SatisfactionCache)
     delete Node;
 
   threadSafety::threadSafetyCleanup(ThreadSafetyDeclCache);
@@ -1415,8 +1412,18 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Module *CurrentModule = getCurrentModule();
       CurrentModule && CurrentModule->isInterfaceOrPartition()) {
     auto DoesModNeedInit = [this](Module *M) {
-      if (!getASTContext().getModuleInitializers(M).empty())
-        return true;
+      for (Decl *D : getASTContext().getModuleInitializers(M)) {
+        auto *VD = dyn_cast<VarDecl>(D);
+        // TLS initialization is not handled by the TU's global initializer.
+        if (!VD || VD->getTLSKind() != VarDecl::TLS_None)
+          continue;
+
+        if (const VarDecl *InitDecl = VD->getInitializingDeclaration();
+            (InitDecl && !InitDecl->hasConstantInitialization()) ||
+            VD->needsDestruction(getASTContext()) ==
+                QualType::DK_cxx_destructor)
+          return true;
+      }
       for (auto [Exported, _] : M->Exports)
         if (Exported->isNamedModuleInterfaceHasInit())
           return true;
@@ -1537,6 +1544,20 @@ void Sema::ActOnEndOfTranslationUnit() {
           VD->getLocation());
 
       Diag(VD->getLocation(), DiagID) << Type << EmitCppCompat;
+    }
+
+    // Uninitialized tentative definitions are zero-initialized (C17 6.9.2p2) so
+    // diagnose fields requiring explicit initialization.
+    if (!VD->isInvalidDecl() && !getLangOpts().CPlusPlus &&
+        !VD->getAnyInitializer()) {
+      if (const RecordDecl *RD = Type->getAsRecordDecl();
+          RD && RD->hasUninitializedExplicitInitFields()) {
+        Diag(VD->getLocation(), diag::warn_field_requires_explicit_init)
+            << /*Var-in-Record=*/1 << RD;
+        for (const FieldDecl *FD : RD->fields())
+          if (FD->hasAttr<ExplicitInitAttr>())
+            Diag(FD->getLocation(), diag::note_entity_declared_at) << FD;
+      }
     }
 
     // Notify the consumer that we've completed a tentative definition.
@@ -2084,9 +2105,16 @@ public:
       return;
     InUsePath.insert(FD);
     UsePath.push_back(FD);
-    if (auto *S = FD->getBody()) {
-      this->Visit(S);
+    const FunctionDecl *Definition = nullptr;
+    auto *Body = FD->getBody(Definition);
+    if (Body)
+      this->Visit(Body);
+
+    if (auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(Definition)) {
+      for (auto *Init : Ctor->inits())
+        this->Visit(Init->getInit());
     }
+
     if (CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(FD))
       asImpl().VisitCalledDestructors(Dtor);
     UsePath.pop_back();
@@ -2251,7 +2279,9 @@ Sema::SemaDiagnosticBuilder::~SemaDiagnosticBuilder() {
 Sema::SemaDiagnosticBuilder
 Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
-  if (LangOpts.OpenMP)
+  // OpenMPSimd is set only for -fopenmp-simd without -fopenmp. It has no device
+  // compilation and ignores 'declare target', so there is nothing to defer for.
+  if (LangOpts.OpenMP && !LangOpts.OpenMPSimd)
     return LangOpts.OpenMPIsTargetDevice
                ? OpenMP().diagIfOpenMPDeviceCode(Loc, DiagID, FD)
                : OpenMP().diagIfOpenMPHostCode(Loc, DiagID, FD);
@@ -2739,10 +2769,79 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
   return nullptr;
 }
 
+bool Sema::shouldRetainCommentsInAST(SourceLocation Loc) {
+  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
+      SourceMgr.isInSystemHeader(Loc))
+    return false;
+
+  if (LangOpts.CommentOpts.ParseAllComments)
+    return true;
+
+  if (LangOpts.CommentOpts.RetainComments)
+    return true;
+
+  // When building a PCH the comments are serialized into the AST file
+  // so downstream consumers like clangd) can retrieve documentation, and the
+  // incremental/REPL front end may query them interactively.
+  if (TUKind != TU_Complete)
+    return true;
+
+  if (PP.isCodeCompletionEnabled())
+    return true;
+
+  // Keep the comment if a documentation warning is enabled at its location.
+  // Checking the location, rather than globally, is what makes a warning
+  // turned on by a `#pragma clang diagnostic` take effect.
+  return areDocumentationDiagsEnabled(Loc);
+}
+
+bool Sema::computeDocumentationDiagsAt(SourceLocation Loc) const {
+  return !Diags.areAllIgnored("documentation", Loc) ||
+         !Diags.areAllIgnored("documentation-pedantic", Loc);
+}
+
+void Sema::clearDocumentationDiagsCache() {
+  DocDiagsStateKey = nullptr;
+  DocDiagsExactComputed = 0;
+}
+
+bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
+  // Under a suppression mapping the severity depends on the file path rather
+  // than the diagnostic state, so there is nothing stable to key a cache on.
+  if (Loc.isInvalid() || Diags.hasDiagSuppressionMapping())
+    return computeDocumentationDiagsAt(Loc);
+
+  const void *StateKey = Diags.getDiagStateKeyForLoc(Loc);
+  if (StateKey != DocDiagsStateKey) {
+    DocDiagsStateKey = StateKey;
+    {
+      // Answer as if Loc were not in a system header.
+      ForceSystemWarningsRAII ShowSystemWarnings(Diags);
+      DocDiagsEnabledIgnoringSystem = computeDocumentationDiagsAt(Loc);
+    }
+    DocDiagsExactComputed = 0;
+  }
+
+  if (!DocDiagsEnabledIgnoringSystem)
+    return false;
+
+  DiagStateSystemClass SysClass = Diags.getDiagStateSystemClassForLoc(Loc);
+  if (SysClass == DiagStateSystemClass::UserCode)
+    return true;
+
+  const unsigned Bit = 1u << static_cast<unsigned>(SysClass);
+  if (!(DocDiagsExactComputed & Bit)) {
+    DocDiagsExactComputed |= Bit;
+    if (computeDocumentationDiagsAt(Loc))
+      DocDiagsExactEnabled |= Bit;
+    else
+      DocDiagsExactEnabled &= ~Bit;
+  }
+  return (DocDiagsExactEnabled & Bit) != 0;
+}
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!LangOpts.RetainCommentsFromSystemHeaders &&
-      SourceMgr.isInSystemHeader(Comment.getBegin()))
+  if (!shouldRetainCommentsInAST(Comment.getBegin()))
     return;
   RawComment RC(SourceMgr, Comment, LangOpts.CommentOpts, false);
   if (RC.isAlmostTrailingComment() || RC.hasUnsupportedSplice(SourceMgr)) {

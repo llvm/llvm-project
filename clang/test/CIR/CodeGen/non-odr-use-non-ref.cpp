@@ -6,7 +6,7 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 static int a[10]{};
-// CIR: cir.global "private" internal dso_local @_ZL1a = #cir.zero : !cir.array<!s32i x 10> {alignment = 16 : i64}
+// CIR: cir.global "private" internal dso_local @_ZL1a = #cir.zero : !cir.array<!s32i x 10> align(16)
 // LLVM: @_ZL1a = internal global [10 x i32] zeroinitializer, align 16
 
 struct NonTrivialDestructor {

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=aarch64-win32-msvc | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-unknown-uefi | FileCheck %s
 ; RUN: llc < %s -mtriple=aarch64-win32-gnu | FileCheck -check-prefix=MINGW %s
 
 define double @double() {

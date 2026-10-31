@@ -1,0 +1,21 @@
+# RUN: yaml2obj %s | not llvm-objdump -s - 2>&1 | FileCheck %s
+
+# Check that a common data symbol cannot have an alignment > 32.
+
+# CHECK: invalid common symbol alignment: `foo` (alignment: 33)
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CUSTOM
+    Name:            linking
+    Version:         2
+    SymbolTable:
+      - Index:           0
+        Kind:            DATA
+        Name:            foo
+        Flags:           [ BINDING_COMMON ]
+        Size:            4
+        Align:           33
+...

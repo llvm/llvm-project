@@ -86,7 +86,7 @@ void Remark::print(llvm::raw_ostream &os, bool printLocation) const {
     os << "Function=" << getFunction() << " | ";
 
   if (printLocation) {
-    if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(getLocation())) {
+    if (auto flc = getLocation()->findInstanceOf<FileLineColLoc>()) {
       os << " @" << flc.getFilename() << ":" << flc.getLine() << ":"
          << flc.getColumn();
     }
@@ -137,7 +137,9 @@ llvm::remarks::Type Remark::getRemarkType() const {
 
 llvm::remarks::Remark Remark::generateRemark() const {
   auto locLambda = [&]() -> llvm::remarks::RemarkLocation {
-    if (auto flc = dyn_cast<FileLineColLoc>(getLocation()))
+    // Remarks are often emitted at name, fused or call-site locations wrapping
+    // a file location; use the first file location found inside.
+    if (auto flc = getLocation()->findInstanceOf<FileLineColLoc>())
       return {flc.getFilename(), flc.getLine(), flc.getColumn()};
     return {"<unknown file>", 0, 0};
   };
@@ -203,6 +205,23 @@ bool RemarkEngine::isAnalysisOptRemarkEnabled(StringRef categoryName) const {
 
 bool RemarkEngine::isFailedOptRemarkEnabled(StringRef categoryName) const {
   return failedFilter && failedFilter->match(categoryName);
+}
+
+bool RemarkEngine::isRemarkEnabled(RemarkKind kind,
+                                   StringRef categoryName) const {
+  switch (kind) {
+  case RemarkKind::RemarkUnknown:
+    return false;
+  case RemarkKind::RemarkPassed:
+    return isPassedOptRemarkEnabled(categoryName);
+  case RemarkKind::RemarkMissed:
+    return isMissedOptRemarkEnabled(categoryName);
+  case RemarkKind::RemarkFailure:
+    return isFailedOptRemarkEnabled(categoryName);
+  case RemarkKind::RemarkAnalysis:
+    return isAnalysisOptRemarkEnabled(categoryName);
+  }
+  llvm_unreachable("Unknown remark kind");
 }
 
 InFlightRemark RemarkEngine::emitOptimizationRemark(Location loc,
@@ -351,11 +370,22 @@ RemarkEmittingPolicyFinal::RemarkEmittingPolicyFinal() = default;
 void RemarkEmittingPolicyFinal::finalize() {
   assert(reportImpl && "reportImpl is not set");
 
+  // Take the pending remarks so that a second finalize(), e.g. from the engine
+  // destructor after an explicit call, does not emit them again. IDs are
+  // assigned in creation order; sorting by them keeps the output independent
+  // of the set's hash layout.
+  std::vector<detail::Remark> remarks(postponedRemarks.begin(),
+                                      postponedRemarks.end());
+  postponedRemarks.clear();
+  llvm::sort(remarks, [](const auto &lhs, const auto &rhs) {
+    return lhs.getId().getValue() < rhs.getId().getValue();
+  });
+
   // Build ID -> Remark* lookup for resolving related remark references.
   llvm::DenseMap<uint64_t, const detail::Remark *> idMap;
   llvm::DenseSet<uint64_t> childIds; // IDs referenced as children
 
-  for (const auto &remark : postponedRemarks) {
+  for (const auto &remark : remarks) {
     if (remark.getId())
       idMap[remark.getId().getValue()] = &remark;
     for (auto relId : remark.getRelatedRemarkIds())
@@ -366,8 +396,8 @@ void RemarkEmittingPolicyFinal::finalize() {
   // Parent remarks are emitted first, followed by their related (child)
   // remarks. Child-only remarks are skipped at the top level to avoid
   // duplication.
-  for (const auto &remark : postponedRemarks) {
-    if (remark.getId() && childIds.count(remark.getId().getValue()))
+  for (const auto &remark : remarks) {
+    if (remark.getId() && childIds.contains(remark.getId().getValue()))
       continue; // will be printed grouped under its parent
 
     reportImpl(remark);

@@ -49,7 +49,7 @@ struct __merge {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires mergeable<_InIter1, _InIter2, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr merge_result<_InIter1, _InIter2, _OutIter> operator()(
+  constexpr merge_result<_InIter1, _InIter2, _OutIter> operator()(
       _InIter1 __first1,
       _Sent1 __last1,
       _InIter2 __first2,
@@ -68,7 +68,7 @@ struct __merge {
             class _Proj1 = identity,
             class _Proj2 = identity>
     requires mergeable<iterator_t<_Range1>, iterator_t<_Range2>, _OutIter, _Comp, _Proj1, _Proj2>
-  _LIBCPP_HIDE_FROM_ABI constexpr merge_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>, _OutIter>
+  constexpr merge_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>, _OutIter>
   operator()(_Range1&& __range1,
              _Range2&& __range2,
              _OutIter __result,
@@ -94,9 +94,7 @@ struct __merge {
              class _Comp,
              class _Proj1,
              class _Proj2>
-  _LIBCPP_HIDE_FROM_ABI static constexpr merge_result<__remove_cvref_t<_InIter1>,
-                                                      __remove_cvref_t<_InIter2>,
-                                                      __remove_cvref_t<_OutIter>>
+  static constexpr merge_result<__remove_cvref_t<_InIter1>, __remove_cvref_t<_InIter2>, __remove_cvref_t<_OutIter>>
   __merge_impl(_InIter1&& __first1,
                _Sent1&& __last1,
                _InIter2&& __first2,

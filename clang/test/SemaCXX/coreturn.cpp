@@ -138,3 +138,82 @@ VoidTagReturnValue test11(bool b) {
   if (b)
     co_return 42;
 } // expected-warning {{non-void coroutine does not return a value in all control paths}}
+
+namespace dependent_void_coreturn {
+struct coro {
+  struct promise_type {
+    coro get_return_object();
+    suspend_never initial_suspend();
+    suspend_never final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+  };
+};
+
+struct Ctx {
+  template <typename T>
+  T &get();
+  void f(int);
+};
+
+template <typename T>
+coro f(Ctx &ctx) {
+  auto &v = ctx.get<T>();
+  co_return ctx.f(v);
+}
+
+void use(Ctx &ctx) { f<int>(ctx); }
+}
+
+namespace dependent_coreturn_lambda_capture {
+// A variable of the enclosing function referenced only from the type-dependent
+// operand of a co_return must still be captured by the enclosing lambda.
+struct coro_void {
+  struct promise_type {
+    coro_void get_return_object();
+    suspend_never initial_suspend();
+    suspend_never final_suspend() noexcept;
+    void unhandled_exception();
+    void return_void();
+  };
+};
+
+struct coro_value {
+  struct promise_type {
+    coro_value get_return_object();
+    suspend_never initial_suspend();
+    suspend_never final_suspend() noexcept;
+    void unhandled_exception();
+    void return_value(int);
+  };
+};
+
+template <typename T> void use_void(int &, T);
+template <typename T> int use_value(int &, T);
+
+// Instantiates the generic lambda from a context that no longer has the
+// enclosing function's scopes on the stack.
+template <typename F> void call(F f) {
+  int t = 0;
+  f(t);
+}
+
+void captured_by_dependent_coreturn(int p) {
+  call([&](auto &t) -> coro_void {
+    if (t)
+      co_return;
+    co_return use_void(p, t);
+  });
+  call([&](auto &t) -> coro_value {
+    if (t)
+      co_return 0;
+    co_return use_value(p, t);
+  });
+  // Same, but the co_return is reached after a co_await rather than after
+  // another co_return.
+  call([&](auto &t) -> coro_void {
+    co_await suspend_never{};
+    co_return use_void(p, t);
+  });
+}
+} // namespace dependent_coreturn_lambda_capture

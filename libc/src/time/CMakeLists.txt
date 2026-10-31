@@ -22,6 +22,7 @@ add_object_library(
     time_utils.h
   DEPENDS
     .time_constants
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
     libc.hdr.types.size_t
     libc.hdr.types.struct_tm
@@ -33,7 +34,6 @@ add_object_library(
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.libc_assert
-    libc.src.__support.libc_errno
     libc.src.__support.macros.config
     libc.src.__support.uint128
 )
@@ -298,4 +298,60 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.clock_settime
+)
+
+add_entrypoint_object(
+  timer_create
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_create
+)
+
+add_entrypoint_object(
+  timer_delete
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_delete
+)
+
+add_entrypoint_object(
+  timer_getoverrun
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_getoverrun
+)
+
+add_entrypoint_object(
+  timer_gettime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_gettime
+)
+
+add_entrypoint_object(
+  timer_settime
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.timer_settime
+)
+
+add_entrypoint_object(
+  tz_variables
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tz_variables
+)
+
+add_entrypoint_object(
+  tzset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.tzset
+)
+
+add_entrypoint_object(
+  clock_getcpuclockid
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.clock_getcpuclockid
 )

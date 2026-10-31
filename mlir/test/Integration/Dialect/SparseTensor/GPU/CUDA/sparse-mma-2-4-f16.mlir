@@ -193,8 +193,7 @@ module attributes {gpu.container_module} {
       // Sparsity selector. For 16x8x32, the default "0" means threads T0/T1
       // within each group of four threads contribute metadata.
       %d = nvgpu.mma.sp.sync(%A_data, %B_data, %accum)
-           metadata(%meta)
-           {mmaShape = [16, 8, 32]} : (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+           metadata(%meta) mmaShape = [16, 8, 32] : (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
 
       //===----------------------------------------------------------------------===//
       // Write back results to gpu global memory

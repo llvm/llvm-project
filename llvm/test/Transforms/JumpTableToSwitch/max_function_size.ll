@@ -4,10 +4,17 @@
 @func_array0 = constant [2 x ptr] [ptr @func0, ptr @large_func]
 
 define i32 @func0() {
+; CHECK-LABEL: define i32 @func0() {
+; CHECK-NEXT:    ret i32 1
+;
   ret i32 1
 }
 
 define i32 @large_func() {
+; CHECK-LABEL: define i32 @large_func() {
+; CHECK-NEXT:    [[X:%.*]] = add i32 1, 2
+; CHECK-NEXT:    ret i32 [[X]]
+;
   %x = add i32 1, 2
   ret i32 %x
 }

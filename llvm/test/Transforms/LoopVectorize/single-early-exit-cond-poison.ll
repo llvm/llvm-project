@@ -31,9 +31,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i64 3
 ; VF4IC2-NEXT:    br label %[[RETURN:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
-; VF4IC2-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
+; VF4IC2-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP18]], i1 false)
 ; VF4IC2-NEXT:    [[TMP10:%.*]] = add i64 4, [[TMP9]]
-; VF4IC2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
+; VF4IC2-NEXT:    [[TMP11:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP17]], i1 false)
 ; VF4IC2-NEXT:    [[TMP12:%.*]] = add i64 0, [[TMP11]]
 ; VF4IC2-NEXT:    [[TMP13:%.*]] = icmp ne i64 [[TMP11]], 4
 ; VF4IC2-NEXT:    [[TMP14:%.*]] = select i1 [[TMP13]], i64 [[TMP12]], i64 [[TMP10]]
@@ -63,7 +63,7 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i64 7
 ; VF8IC1-NEXT:    br label %[[RETURN:.*]]
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
-; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP2]], i1 false)
+; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP8]], i1 false)
 ; VF8IC1-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP5]] to i32
 ; VF8IC1-NEXT:    br label %[[RETURN]]
 ; VF8IC1:       [[RETURN]]:

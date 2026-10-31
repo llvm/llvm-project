@@ -33,6 +33,7 @@ spirv.module Logical GLSL450 {
   spirv.func @foo() -> () "None" {
     // expected-error @+1 {{expected spirv.GlobalVariable symbol}}
     %0 = spirv.mlir.addressof @var2 : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Input>
+    spirv.Return
   }
 }
 
@@ -43,6 +44,7 @@ spirv.module Logical GLSL450 {
   spirv.func @foo() -> () "None" {
     // expected-error @+1 {{result type mismatch with the referenced global variable's type}}
     %0 = spirv.mlir.addressof @var1 : !spirv.ptr<f32, Input>
+    spirv.Return
   }
 }
 
@@ -560,6 +562,19 @@ spirv.module Logical GLSL450 {
    spirv.EntryPoint "GLCompute" @do_nothing
    // expected-error @+1 {{'spirv.ExecutionModeId' op expected 3 value operand(s), got 2}}
    spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 3 : i32
+   spirv.SpecConstant @y = 4 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op cannot find symbol referenced by value operand: z}}
+   spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, @z
 }
 
 // -----

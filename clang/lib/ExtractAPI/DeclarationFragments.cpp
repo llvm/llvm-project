@@ -1011,10 +1011,9 @@ DeclarationFragmentsBuilder::getFragmentsForTemplateParameters(
     if (const auto *TemplateParam =
             dyn_cast<TemplateTypeParmDecl>(ParameterArray[i])) {
       if (TemplateParam->hasTypeConstraint())
-        Fragments.append(TemplateParam->getTypeConstraint()
-                             ->getNamedConcept()
-                             ->getName()
-                             .str(),
+        Fragments.append(extractapi::getTypeConstraintSpelling(
+                             TemplateParam->getTypeConstraint(),
+                             TemplateParam->getASTContext()),
                          DeclarationFragments::FragmentKind::TypeIdentifier);
       else if (TemplateParam->wasDeclaredWithTypename())
         Fragments.append("typename",

@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<simplify>' -polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck -match-full-lines %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<simplify>' -plugin-arg=Polly,-polly-print-simplify -disable-output -aa-pipeline=basic-aa < %s | FileCheck -match-full-lines %s
 ;
 ; Remove a store that is overwritten by another store in the same statement.
 ; Check that even multiple stores are removed.

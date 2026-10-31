@@ -27,7 +27,7 @@
 #include <sys/ptrace.h>
 #include <unistd.h>
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 using namespace lldb;
@@ -244,8 +244,8 @@ Status NativeProcessAIX::ReadMemory(const ProcessAddress &process_addr,
   return Status("unsupported");
 }
 
-Status NativeProcessAIX::WriteMemory(lldb::addr_t addr, const void *buf,
-                                     size_t size, size_t &bytes_written) {
+Status NativeProcessAIX::DoWriteMemory(lldb::addr_t addr, const void *buf,
+                                       size_t size, size_t &bytes_written) {
   return Status("unsupported");
 }
 

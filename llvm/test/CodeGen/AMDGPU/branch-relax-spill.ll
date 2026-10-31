@@ -336,14 +336,14 @@ define amdgpu_kernel void @spill(ptr addrspace(1) %arg, i32 %cnd) #0 {
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
 ; CHECK-NEXT:  .LBB0_1: ; %bb2
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_branch .LBB0_2
 ; CHECK-NEXT:  .LBB0_4: ; %bb3
@@ -1268,14 +1268,14 @@ define void @spill_func(ptr addrspace(1) %arg) #0 {
 ; CHECK-NEXT:    s_setpc_b64 s[0:1]
 ; CHECK-NEXT:  .LBB1_1: ; %bb2
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
-; CHECK-NEXT:    v_nop_e64
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
+; CHECK-NEXT:    v_nop
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_branch .LBB1_2
 ; CHECK-NEXT:  .LBB1_4: ; %bb3

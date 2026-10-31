@@ -23,6 +23,7 @@
 namespace llvm {
 
 class LanaiTargetMachine : public CodeGenTargetMachineImpl {
+  const LanaiOptions &CLOpts;
   LanaiSubtarget Subtarget;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
 
@@ -33,6 +34,8 @@ public:
                      std::optional<Reloc::Model> RM,
                      std::optional<CodeModel::Model> CodeModel,
                      CodeGenOptLevel OptLevel, bool JIT);
+
+  const LanaiOptions &getCLOpts() const { return CLOpts; }
 
   const LanaiSubtarget *
   getSubtargetImpl(const llvm::Function & /*Fn*/) const override {

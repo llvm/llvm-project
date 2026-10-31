@@ -217,7 +217,7 @@ static Operation *getCommonDefiningOp(const ValueVector &values) {
 static bool isPureTypeConversion(const ValueVector &values) {
   assert(!values.empty() && "expected non-empty value vector");
   Operation *op = getCommonDefiningOp(values);
-  return op && op->hasAttr(kPureTypeConversionMarker);
+  return op && op->hasDiscardableAttr(kPureTypeConversionMarker);
 }
 
 ValueVector ConversionValueMapping::lookup(const ValueVector &from) const {
@@ -683,7 +683,8 @@ public:
   ModifyOperationRewrite(ConversionPatternRewriterImpl &rewriterImpl,
                          Operation *op)
       : OperationRewrite(Kind::ModifyOperation, rewriterImpl, op),
-        name(op->getName()), loc(op->getLoc()), attrs(op->getAttrDictionary()),
+        name(op->getName()), loc(op->getLoc()),
+        attrs(op->getDiscardableAttrDictionary()),
         operands(op->operand_begin(), op->operand_end()),
         successors(op->successor_begin(), op->successor_end()) {
     if (PropertyRef prop = op->getPropertiesStorage()) {
@@ -721,7 +722,7 @@ public:
 
   void rollback() override {
     op->setLoc(loc);
-    op->setAttrs(attrs);
+    op->setDiscardableAttrs(attrs);
     op->setOperands(operands);
     for (const auto &it : llvm::enumerate(successors))
       op->setSuccessor(it.value(), it.index());
@@ -1723,10 +1724,11 @@ ValueRange ConversionPatternRewriterImpl::buildUnresolvedMaterialization(
   if (config.attachDebugMaterializationKind) {
     StringRef kindStr =
         kind == MaterializationKind::Source ? "source" : "target";
-    convertOp->setAttr("__kind__", builder.getStringAttr(kindStr));
+    convertOp->setDiscardableAttr("__kind__", builder.getStringAttr(kindStr));
   }
   if (isPureTypeConversion)
-    convertOp->setAttr(kPureTypeConversionMarker, builder.getUnitAttr());
+    convertOp->setDiscardableAttr(kPureTypeConversionMarker,
+                                  builder.getUnitAttr());
 
   // Register the materialization.
   unresolvedMaterializations[convertOp] =
@@ -2235,12 +2237,19 @@ void ConversionPatternRewriter::replaceAllUsesWith(Value from, ValueRange to) {
   impl->replaceValueUses(from, to, impl->currentTypeConverter);
 }
 
-void ConversionPatternRewriter::replaceUsesWithIf(
+bool ConversionPatternRewriter::replaceUsesWithIf(
     Value from, ValueRange to, function_ref<bool(OpOperand &)> functor,
     bool *allUsesReplaced) {
   assert(!allUsesReplaced &&
          "allUsesReplaced is not supported in a dialect conversion");
-  impl->replaceValueUses(from, to, impl->currentTypeConverter, functor);
+  bool replaced = false;
+  impl->replaceValueUses(from, to, impl->currentTypeConverter,
+                         [&](OpOperand &operand) {
+                           bool replace = functor(operand);
+                           replaced |= replace;
+                           return replace;
+                         });
+  return replaced;
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
@@ -3503,7 +3512,7 @@ LogicalResult OperationConverter::applyConversion(ArrayRef<Operation *> ops) {
 
   // Drop markers.
   for (UnrealizedConversionCastOp castOp : remainingCastOps)
-    castOp->removeAttr(kPureTypeConversionMarker);
+    castOp->removeDiscardableAttr(kPureTypeConversionMarker);
 
   // Try to legalize all unresolved materializations.
   if (rewriter.getConfig().buildMaterializations) {
@@ -3920,7 +3929,7 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
 
 struct AnyFunctionOpInterfaceSignatureConversion
     : public OpInterfaceConversionPattern<FunctionOpInterface> {
-  using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(FunctionOpInterface funcOp, ArrayRef<Value> /*operands*/,
@@ -3947,7 +3956,8 @@ mlir::convertOpResultTypes(Operation *op, ValueRange operands,
     return rewriter.notifyMatchFailure(loc, "couldn't convert return types");
 
   newOp.addTypes(newResultTypes);
-  newOp.addAttributes(op->getAttrs());
+  newOp.addAttributes(op->getDiscardableAttrDictionary().getValue());
+  newOp.propertiesAttr = op->getPropertiesAsAttribute();
   return rewriter.create(newOp);
 }
 

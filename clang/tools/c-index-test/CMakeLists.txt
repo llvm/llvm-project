@@ -20,6 +20,15 @@ if(NOT MSVC)
   endif()
 endif()
 
+if (ZOS)
+  # _XOPEN_SOURCE_EXTENDED=1 needs to be defined to
+  # call basename
+  set_property(
+    SOURCE c-index-test.c
+    PROPERTY COMPILE_DEFINITIONS "_XOPEN_SOURCE_EXTENDED=1"
+  )
+endif()
+
 if (LLVM_BUILD_STATIC)
   target_link_libraries(c-index-test
     PRIVATE

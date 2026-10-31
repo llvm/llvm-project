@@ -31,9 +31,9 @@
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_nothrow_assignable.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_relocatable.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_trivially_destructible.h>
-#include <__type_traits/is_trivially_relocatable.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 
@@ -416,7 +416,8 @@ public:
     auto __last      = __first + __n;
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__first), std::__to_address(__last), std::__to_address(__new_begin));
-    __set_valid_range(__new_begin, end());
+    __set_valid_range(__new_begin, __size_ + __n);
+
     __n = 0;
 
     __swap_layouts(__first, __n, __capacity);

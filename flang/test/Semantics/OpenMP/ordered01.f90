@@ -10,7 +10,7 @@ program main
 
   !$omp do ordered
   do i = 1, N
-    !ERROR: At most one THREADS clause can appear on ORDERED directive
+    !ERROR: At most one THREADS clause can appear on ORDERED (block-associated) directive
     !$omp ordered threads threads
     arrayA(i) = i
     !$omp end ordered
@@ -19,7 +19,7 @@ program main
 
   !$omp simd
   do i = 1, N
-    !ERROR: At most one SIMD clause can appear on ORDERED directive
+    !ERROR: At most one SIMD clause can appear on ORDERED (block-associated) directive
     !$omp ordered simd simd
     arrayA(i) = i
     !$omp end ordered
@@ -28,7 +28,7 @@ program main
 
   !$omp do simd ordered
   do i = 1, N
-    !ERROR: At most one SIMD clause can appear on ORDERED directive
+    !ERROR: At most one SIMD clause can appear on ORDERED (block-associated) directive
     !$omp ordered simd simd
     arrayA(i) = i
     !$omp end ordered
@@ -49,6 +49,10 @@ program main
     !ERROR: Only SINK or SOURCE dependence types are allowed when ORDERED construct is a standalone construct with no ORDERED region
     !$omp ordered depend(out: arrayC) depend(in: arrayB)
     arrayC(i) = baz(arrayB(i-1))
+    !ERROR: Iteration vector must be specified with SINK dependence type
+    !$omp ordered depend(sink)
+    !ERROR: Iteration vector may not be specified with SOURCE dependence type
+    !$omp ordered depend(source: i - 2)
   end do
   !$omp end do
 

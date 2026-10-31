@@ -35,6 +35,17 @@ def FastmathFlagsInterface : OpInterface<"FastmathFlagsInterface"> {
         return op.getFastmathFlagsAttr();
       }]
       >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the FastmathFlagsAttr attribute for the operation",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setFastmathAttr",
+      /*args=*/        (ins "::mlir::LLVM::FastmathFlagsAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setFastmathFlagsAttr(attr);
+      }]
+      >,
     StaticInterfaceMethod<
       /*desc=*/        [{Returns the name of the FastmathFlagsAttr attribute
                          for the operation}],
@@ -327,6 +338,41 @@ def DereferenceableOpInterface : OpInterface<"DereferenceableOpInterface"> {
       /*defaultImpl=*/ [{
         auto op = cast<ConcreteOp>(this->getOperation());
         op.setDereferenceableAttr(attr);
+      }]
+      >
+  ];
+}
+
+def RangeOpInterface : OpInterface<"RangeOpInterface"> {
+  let description = [{
+    An interface for operations that can carry range metadata. The default
+    implementations expect a ConstantRangeAttr named `range`.
+  }];
+
+  let cppNamespace = "::mlir::LLVM";
+  let verify = [{ return detail::verifyRangeOpInterface($_op); }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/        "Returns the range attribute or nullptr",
+      /*returnType=*/  "::mlir::LLVM::ConstantRangeAttr",
+      /*methodName=*/  "getRangeOrNull",
+      /*args=*/        (ins),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        return op.getRangeAttr();
+      }]
+      >,
+    InterfaceMethod<
+      /*desc=*/        "Sets the range attribute",
+      /*returnType=*/  "void",
+      /*methodName=*/  "setRange",
+      /*args=*/        (ins "::mlir::LLVM::ConstantRangeAttr":$attr),
+      /*methodBody=*/  [{}],
+      /*defaultImpl=*/ [{
+        auto op = cast<ConcreteOp>(this->getOperation());
+        op.setRangeAttr(attr);
       }]
       >
   ];

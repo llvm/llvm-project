@@ -8,7 +8,9 @@ define zeroext i16 @test1(i16 zeroext %x) nounwind {
 ; CHECK-NEXT:    mulu #-1985, %d0
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    lsr.w #5, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
 entry:
 	%div = udiv i16 %x, 33
@@ -23,7 +25,9 @@ define zeroext i16 @test2(i8 signext %x, i16 zeroext %c) {
 ; CHECK-NEXT:    mulu #-21845, %d0
 ; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    lsr.w #1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
 entry:
   %div = udiv i16 %c, 3
@@ -34,12 +38,14 @@ define zeroext i8 @test3(i8 zeroext %x, i8 zeroext %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    clr.w %d0
 ; CHECK-NEXT:    move.b (11,%sp), %d0
-; CHECK-NEXT:    and.l #255, %d0
 ; CHECK-NEXT:    muls #171, %d0
 ; CHECK-NEXT:    moveq #9, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
 entry:
   %div = udiv i8 %c, 3
@@ -122,7 +128,7 @@ define i8 @test8(i8 %x) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.b (7,%sp), %d0
 ; CHECK-NEXT:    lsr.b #1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.w #255, %d0
 ; CHECK-NEXT:    muls #211, %d0
 ; CHECK-NEXT:    moveq #13, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0
@@ -137,7 +143,7 @@ define i8 @test9(i8 %x) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.b (7,%sp), %d0
 ; CHECK-NEXT:    lsr.b #2, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    and.w #255, %d0
 ; CHECK-NEXT:    muls #71, %d0
 ; CHECK-NEXT:    moveq #11, %d1
 ; CHECK-NEXT:    lsr.w %d1, %d0

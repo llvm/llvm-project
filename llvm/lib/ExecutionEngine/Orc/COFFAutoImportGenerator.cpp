@@ -99,7 +99,8 @@ COFFAutoImportGenerator::createStubsGraph(const SymbolMap &Resolved) {
   Triple TT = ES.getTargetTriple();
 
   auto G = std::make_unique<jitlink::LinkGraph>(
-      "<AUTOIMPORT_STUBS>", ES.getSymbolStringPool(), TT, SubtargetFeatures(),
+      "<AUTOIMPORT_STUBS>", ES.getSymbolStringPool(), TT,
+      TT.getArchPointerBitWidth() / 8, SubtargetFeatures(),
       jitlink::getGenericEdgeKindName);
   jitlink::Section &Sec =
       G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);

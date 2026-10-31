@@ -12,6 +12,7 @@
 #include "llvm/ExecutionEngine/Orc/Debugging/VTuneSupportPlugin.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
+#include "llvm/ExecutionEngine/Orc/SPSProxySpec.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -22,6 +23,27 @@ static constexpr StringRef UnregisterVTuneImplName =
     "llvm_orc_unregisterVTuneImpl";
 static constexpr StringRef RegisterTestVTuneImplName =
     "llvm_orc_test_registerVTuneImpl";
+
+// Controller-interface descriptors for the executor's VTune-support wrapper
+// calls.
+namespace llvm::orc::vtune_sps_ci {
+struct UnregisterVTuneImpl {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c(UnregisterVTuneImplName);
+  using SPSSig = void(shared::SPSVTuneUnloadedMethodIDs);
+};
+} // namespace llvm::orc::vtune_sps_ci
+
+VTuneSupportPlugin::VTuneSupportPlugin(ExecutorProcessControl &EPC,
+                                       ExecutorAddr RegisterImplAddr,
+                                       ExecutorAddr UnregisterImplAddr,
+                                       bool EmitDebugInfo)
+    : EPC(EPC), RegisterVTuneImplAddr(RegisterImplAddr),
+      UnregisterVTuneImpl(
+          sps::ProxySpec<Proxy<void(VTuneUnloadedMethodIDs)>,
+                         vtune_sps_ci::UnregisterVTuneImpl>::dispatch,
+          UnregisterImplAddr),
+      EmitDebugInfo(EmitDebugInfo) {}
 
 static VTuneMethodBatch getMethodBatch(LinkGraph &G, bool EmitDebugInfo) {
   VTuneMethodBatch Batch;
@@ -133,7 +155,7 @@ Error VTuneSupportPlugin::notifyFailed(MaterializationResponsibility &MR) {
 
 Error VTuneSupportPlugin::notifyRemovingResources(JITDylib &JD, ResourceKey K) {
   // Unregistration not required if not provided
-  if (!UnregisterVTuneImplAddr) {
+  if (!UnregisterVTuneImpl) {
     return Error::success();
   }
   VTuneUnloadedMethodIDs UnloadedIDs;
@@ -146,8 +168,7 @@ Error VTuneSupportPlugin::notifyRemovingResources(JITDylib &JD, ResourceKey K) {
     UnloadedIDs = std::move(I->second);
     LoadedMethodIDs.erase(I);
   }
-  if (auto Err = EPC.callSPSWrapper<void(shared::SPSVTuneUnloadedMethodIDs)>(
-          UnregisterVTuneImplAddr, UnloadedIDs))
+  if (auto Err = UnregisterVTuneImpl(EPC.getExecutionSession(), UnloadedIDs))
     return Err;
 
   return Error::success();

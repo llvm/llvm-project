@@ -45,7 +45,21 @@ def FIRToLLVMLowering : Pass<"fir-to-llvm-ir", "mlir::ModuleOp"> {
            "std::string", /*default=*/"",
            "Name of the function to call to allocate CUDA Fortran descriptors. "
            "Must have the same signature as CUFAllocDescriptor. "
-           "Defaults to CUFAllocDescriptor.">
+           "Defaults to CUFAllocDescriptor.">,
+    Option<"cudaDescriptorFreeFunction", "cuda-descriptor-free-function",
+           "std::string", /*default=*/"",
+           "Name of the function to call to free CUDA Fortran descriptors "
+           "allocated by the alloc function. "
+           "Must have the same signature as CUFFreeDescriptor. "
+           "Defaults to CUFFreeDescriptor.">,
+    Option<"unifiedHeapAllocSuffix", "unified-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the unified heap allocation mode.">,
+    Option<"managedHeapAllocSuffix", "managed-heap-alloc-suffix", "std::string",
+           /*default=*/"", "Suffix of the allocator entry points used for "
+           "allocations marked with the managed heap allocation mode.">,
+    Option<"lowerMemRef", "lower-memref", "bool", /*default=*/"false",
+           "Also convert memref dialect operations.">
   ];
 }
 
@@ -123,7 +137,6 @@ def BoxedProcedurePass : Pass<"boxed-procedure", "mlir::ModuleOp"> {
            "for W^X compliance. When enabled, internal procedure pointers "
            "use a runtime-managed pool of executable trampolines with "
            "separate data region, avoiding the need for an executable stack.">];
-  let dependentDialects = ["mlir::LLVM::LLVMDialect"];
 }
 
 def LowerRepackArraysPass : Pass<"lower-repack-arrays", "mlir::ModuleOp"> {

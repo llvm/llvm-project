@@ -23,6 +23,7 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVM.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
+#include "mlir/Conversion/MathToEmitC/MathToEmitC.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -42,8 +43,10 @@
 #include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
+#include "mlir/Dialect/Math/TransformOps/MathTransformOps.h"
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
 #include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Extensions/AllExtensions.h"
@@ -70,6 +73,7 @@
 /// individually register the specific extensions that are useful for the
 /// pipelines and transformations you are using.
 void mlir::registerAllExtensions(DialectRegistry &registry) {
+  acc::registerAllExtensions(registry);
   // Register all conversions to LLVM extensions.
   registerConvertArithToEmitCInterface(registry);
   arith::registerConvertArithToLLVMInterface(registry);
@@ -81,6 +85,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   registerConvertFuncToEmitCInterface(registry);
   registerConvertFuncToLLVMInterface(registry);
   index::registerConvertIndexToLLVMInterface(registry);
+  registerConvertMathToEmitCInterface(registry);
   registerConvertMathToLLVMInterface(registry);
   mpi::registerConvertMPIToLLVMInterface(registry);
   registerConvertMemRefToEmitCInterface(registry);
@@ -102,6 +107,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   func::registerTransformDialectExtension(registry);
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
+  math::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
   nvgpu::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);

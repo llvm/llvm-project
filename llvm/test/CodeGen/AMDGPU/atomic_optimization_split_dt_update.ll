@@ -34,30 +34,16 @@ define amdgpu_kernel void @ham(ptr addrspace(4) %arg) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 [[TMP1]], i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.amdgcn.mbcnt.hi(i32 [[TMP3]], i32 [[TMP4]])
-; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.amdgcn.ballot.i64(i1 true)
-; CHECK-NEXT:    br label [[COMPUTELOOP:%.*]]
-; CHECK:       7:
-; CHECK-NEXT:    [[TMP8:%.*]] = atomicrmw add ptr addrspace(1) [[ADDRSPACECAST]], i32 [[TMP13:%.*]] syncscope("agent-one-as") monotonic, align 4
-; CHECK-NEXT:    br label [[TMP9:%.*]]
-; CHECK:       9:
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.wave.reduce.add.i32(i32 [[PHI]], i32 1)
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[TMP5]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP10:%.*]], label [[TMP9:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP8:%.*]] = atomicrmw add ptr addrspace(1) [[ADDRSPACECAST]], i32 [[TMP13]] syncscope("agent-one-as") monotonic, align 4
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       10:
 ; CHECK-NEXT:    br label [[BB8]]
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br label [[BB4]]
-; CHECK:       ComputeLoop:
-; CHECK-NEXT:    [[ACCUMULATOR:%.*]] = phi i32 [ 0, [[BB7]] ], [ [[TMP13]], [[COMPUTELOOP]] ]
-; CHECK-NEXT:    [[ACTIVEBITS:%.*]] = phi i64 [ [[TMP6]], [[BB7]] ], [ [[TMP16:%.*]], [[COMPUTELOOP]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.cttz.i64(i64 [[ACTIVEBITS]], i1 true)
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-; CHECK-NEXT:    [[TMP12:%.*]] = call i32 @llvm.amdgcn.readlane.i32(i32 [[PHI]], i32 [[TMP11]])
-; CHECK-NEXT:    [[TMP13]] = add i32 [[ACCUMULATOR]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = shl i64 1, [[TMP10]]
-; CHECK-NEXT:    [[TMP15:%.*]] = xor i64 [[TMP14]], -1
-; CHECK-NEXT:    [[TMP16]] = and i64 [[ACTIVEBITS]], [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[TMP16]], 0
-; CHECK-NEXT:    br i1 [[TMP17]], label [[COMPUTEEND:%.*]], label [[COMPUTELOOP]]
-; CHECK:       ComputeEnd:
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[TMP5]], 0
-; CHECK-NEXT:    br i1 [[TMP18]], label [[TMP7:%.*]], label [[TMP9]]
 ;
 bb:
   %call = tail call i32 @quux()

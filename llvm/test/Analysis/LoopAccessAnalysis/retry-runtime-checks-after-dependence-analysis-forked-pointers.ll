@@ -7,6 +7,10 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -80,6 +84,10 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            %l1 = load float, ptr %gep.a.iv, align 4 ->
+; CHECK-NEXT:            store float %ad, ptr %gep.a.iv, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -163,7 +171,6 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_m
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -212,7 +219,6 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_m
 ; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -242,6 +248,45 @@ loop:
   %iv2.next = add i64 %iv2, 2
   %exitcond = icmp eq i64 %iv.next, %n
   br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The bounds of the second pointer of the forked store cannot be computed: the
+; step direction is unknown and evaluating at the symbolic max BTC may wrap. The
+; store must not be inserted partially.
+define void @forked_ptr_with_uncomputable_bounds(ptr %P, ptr %S, i32 %step.a, i32 %step.b, i1 %c) {
+; CHECK-LABEL: 'forked_ptr_with_uncomputable_bounds'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-NEXT:        Group GRP0:
+; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
+; CHECK-NEXT:      Generated run-time checks are incomplete
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %step = add i32 %step.a, %step.b
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %ptr.iv = phi ptr [ %P, %entry ], [ %ptr.iv.next, %loop ]
+  %l = load i32, ptr %S, align 4
+  %select = select i1 %c, ptr %S, ptr %ptr.iv
+  store i32 %l, ptr %select, align 4
+  %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i32 %step
+  %iv.next = add nsw i32 %iv, 1
+  %ec = icmp slt i32 %iv.next, %l
+  br i1 %ec, label %loop, label %exit
 
 exit:
   ret void

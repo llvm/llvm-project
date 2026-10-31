@@ -29,13 +29,13 @@ public:
                       MachineDominatorTree *MDT, const LegalizerInfo *LI,
                       const SPIRVSubtarget &STI);
 
-  bool matchLengthToDistance(MachineInstr &MI) const;
-  void applySPIRVDistance(MachineInstr &MI) const;
+  bool matchFDivToNormalize(MachineInstr &MI) const;
+  void applySPIRVNormalize(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;
   void applySPIRVFaceForward(MachineInstr &MI) const;
-  bool matchMatrixTranspose(MachineInstr &MI) const;
+  bool matchDegrees(Register LHS, Register RHS, Register &MatchInfo) const;
+  void applyDegrees(MachineInstr &MI, Register &MatchInfo) const;
   void applyMatrixTranspose(MachineInstr &MI) const;
-  bool matchMatrixMultiply(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
 
 private:

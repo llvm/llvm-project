@@ -8,11 +8,6 @@
 
 # Design: Fortran IR
 
-```{contents}
----
-local:
----
-```
 
 ## Introduction
 

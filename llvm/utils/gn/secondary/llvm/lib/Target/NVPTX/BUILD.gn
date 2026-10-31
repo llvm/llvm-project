@@ -26,6 +26,7 @@ static_library("LLVMNVPTXCodeGen") {
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",

@@ -80,6 +80,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
@@ -131,7 +132,7 @@ static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
 // Embedding-specific options
 static cl::opt<std::string>
     FunctionName("function", cl::desc("Process specific function only"),
-                 cl::value_desc("name"), cl::Optional, cl::init(""),
+                 cl::value_desc("name"), cl::init(""),
                  cl::sub(EmbeddingsSubCmd), cl::cat(CommonCategory));
 
 static cl::opt<EmbeddingLevel>
@@ -154,7 +155,7 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    // and this value will be populated in the var VocabFile
+    StringRef VocabFile = ir2vec::getVocabFile(M.getContext());
     if (VocabFile.empty()) {
       return createStringError(
           errc::invalid_argument,
@@ -208,13 +209,14 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
     if (TheTriple.getTriple().empty())
       TheTriple.setTriple(sys::getDefaultTargetTriple());
 
-    auto TMOrErr = codegen::createTargetMachineForTriple(TheTriple);
+    auto TMOrErr = codegen::createTargetMachineForTriple(
+        Ctx.Context.getLibraryOptions(), TheTriple);
     if (!TMOrErr) {
       Err.print(ToolName, errs());
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
-    return Ctx.TM->createDataLayout().getStringRepresentation();
+    return TheTriple.computeDataLayout();
   };
 
   Ctx.M = MIR->parseIRModule(SetDataLayout);
@@ -315,8 +317,10 @@ static Error processModuleForEmbeddings(MIRContext &Ctx, raw_ostream &OS) {
 }
 
 /// Main entry point for MIR processing
-static Error processModule(const std::string &InputFile, raw_ostream &OS) {
+static Error processModule(const cl::LibraryOptionsContext &LibraryOptions,
+                           const std::string &InputFile, raw_ostream &OS) {
   MIRContext Ctx;
+  Ctx.Context.getLibraryOptions().assign(LibraryOptions);
 
   // Setup MIR context (parse file, setup target machine, etc.)
   if (auto Err = setupMIRContext(InputFile, Ctx))
@@ -346,11 +350,12 @@ int main(int argc, char **argv) {
   using namespace llvm::mir2vec;
 
   InitLLVM X(argc, argv);
-  // Show Common, IR2Vec and MIR2Vec option categories
+  // Show Common and MIR2Vec option categories
   cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *>{
-      &CommonCategory, &ir2vec::IR2VecCategory, &mir2vec::MIR2VecCategory});
-  cl::ParseCommandLineOptions(
-      argc, argv,
+      &CommonCategory, &mir2vec::MIR2VecCategory});
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(
+      LibraryOptions, ArrayRef(argv, argc),
       "IR2Vec/MIR2Vec - Embedding Generation Tool\n"
       "Generates embeddings for a given LLVM IR or MIR and "
       "supports triplet generation for vocabulary "
@@ -376,6 +381,7 @@ int main(int argc, char **argv) {
     // Parse the input LLVM IR file or stdin
     SMDiagnostic Err;
     LLVMContext Context;
+    Context.getLibraryOptions().assign(LibraryOptions);
     std::unique_ptr<Module> M = parseIRFile(InputFilename, Err, Context);
     if (!M) {
       Err.print(ToolName, errs());
@@ -398,7 +404,7 @@ int main(int argc, char **argv) {
     InitializeAllAsmPrinters();
     static codegen::RegisterCodeGenFlags CGF;
 
-    if (Error Err = mir2vec::processModule(InputFilename, OS)) {
+    if (Error Err = mir2vec::processModule(LibraryOptions, InputFilename, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {
         WithColor::error(errs(), ToolName) << EIB.message() << "\n";
       });

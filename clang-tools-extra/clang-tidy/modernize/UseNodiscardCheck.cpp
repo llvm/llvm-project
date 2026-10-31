@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseNodiscardCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::modernize {
 
@@ -28,10 +30,6 @@ static bool doesNoDiscardMacroExist(ASTContext &Context,
 }
 
 namespace {
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  // Don't put ``[[nodiscard]]`` in front of operators.
-  return Node.isOverloadedOperator();
-}
 AST_MATCHER(CXXMethodDecl, isConversionOperator) {
   // Don't put ``[[nodiscard]]`` in front of a conversion decl
   // like operator bool().

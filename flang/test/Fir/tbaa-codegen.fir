@@ -17,7 +17,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
   func.func @_QPsimple(%arg0: !fir.box<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
     %c1 = arith.constant 1 : index
     %c2 = arith.constant 2 : index
-    %0 = fir.declare %arg0 {fortran_attrs = #fir.var_attrs<intent_inout>, uniq_name = "_QFfuncEa"} : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+    %0 = fir.declare %arg0 uniq_name("_QFfuncEa") fortran_attrs<intent_inout> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %1 = fir.rebox %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
     %2 = fir.array_coor %1 %c2 : (!fir.box<!fir.array<?xi32>>, index) -> !fir.ref<i32>
     %3 = fir.load %2 {tbaa = [#tbaa_tag]} : !fir.ref<i32>

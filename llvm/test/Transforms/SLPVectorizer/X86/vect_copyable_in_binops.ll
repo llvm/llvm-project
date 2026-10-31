@@ -445,7 +445,7 @@ define void @add1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float -0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc arcp contract afn <4 x float> [[TMP0]], <float -0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -476,7 +476,7 @@ define void @sub0f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float -3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -570,7 +570,7 @@ define void @addsub0f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float 3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float 3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -600,7 +600,7 @@ define void @addsub1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -3.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc arcp contract afn <4 x float> [[TMP0]], <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -3.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -631,7 +631,7 @@ define void @mulf(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc nsz arcp contract afn <4 x float> [[TMP0]], <float 2.570000e+02, float -3.000000e+00, float 1.000000e+00, float -9.000000e+00>
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp contract afn <4 x float> [[TMP0]], <float 2.570000e+02, float -3.000000e+00, float 1.000000e+00, float -9.000000e+00>
 ; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;

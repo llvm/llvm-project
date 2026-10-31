@@ -1,5 +1,5 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-cxx-exceptions -enable-emscripten-sjlj -S | FileCheck %s
-; RUN: llc < %s -enable-emscripten-cxx-exceptions -enable-emscripten-sjlj -verify-machineinstrs
+; RUN: opt < %s -wasm-lower-em-ehsjlj -enable-emscripten-sjlj -S | FileCheck %s
+; RUN: llc < %s -exception-model=emscripten -enable-emscripten-sjlj -verify-machineinstrs
 
 ; Tests for cases when exception handling and setjmp/longjmp handling are mixed.
 
@@ -152,7 +152,7 @@ throw:                                            ; preds = %if.end, %entry
 
 ; The same case with @rethrow_longjmp, but there are multiple function calls
 ; that can possibly longjmp (instead of throwing exception) so we have to
-; rethrow them. Here we test if we correclty generate only one 'rethrow.longjmp'
+; rethrow them. Here we test if we correctly generate only one 'rethrow.longjmp'
 ; BB and share it for multiple calls.
 define void @rethrow_longjmp_multi() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @rethrow_longjmp_multi
@@ -237,8 +237,8 @@ if.end:                                           ; preds = %entry
 ; noreturn instructions, because they are supposed to return.
 ; CHECK:   if.end:
 ; CHECK-NOT: tail call void @free
-; CHECK-NOT: call cc99 void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null) #
-; CHECK:     call cc99 void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null)
+; CHECK-NOT: call wasm_emscripten_invokecc void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null) #
+; CHECK:     call wasm_emscripten_invokecc void @__invoke_void_ptr_ptr_ptr(ptr @__cxa_throw, ptr %exception, ptr @_ZTIi, ptr null)
 
 lpad:                                             ; preds = %if.end
   %0 = landingpad { ptr, i32 }
@@ -270,3 +270,6 @@ declare ptr @__cxa_allocate_exception(i32)
 attributes #0 = { returns_twice }
 attributes #1 = { noreturn }
 attributes #2 = { nounwind }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"exception-model", !"emscripten"}

@@ -5,11 +5,7 @@
 define i64 @umulh_variant(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh_variant(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umulh.i64(i64 [[Y]], i64 [[X]])
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -37,11 +33,7 @@ define i64 @umulh_variant(i64 %x, i64 %y) {
 define i32 @umulh_variant_i32(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @umulh_variant_i32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 32
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i64 [[TMP4]] to i32
+; CHECK-NEXT:    [[HW64:%.*]] = call i32 @llvm.umulh.i32(i32 [[Y]], i32 [[X]])
 ; CHECK-NEXT:    ret i32 [[HW64]]
 ;
   %x_lo = and i32 %x, u0xffff
@@ -69,11 +61,7 @@ define i32 @umulh_variant_i32(i32 %x, i32 %y) {
 define <2 x i32> @umulh_variant_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @umulh_variant_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw <2 x i64> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP3]], splat (i64 32)
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw <2 x i64> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[HW64:%.*]] = call <2 x i32> @llvm.umulh.v2i32(<2 x i32> [[Y]], <2 x i32> [[X]])
 ; CHECK-NEXT:    ret <2 x i32> [[HW64]]
 ;
   %x_lo = and <2 x i32> %x, <i32 u0xffff, i32 u0xffff>
@@ -101,11 +89,7 @@ define <2 x i32> @umulh_variant_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define i128 @umulh_variant_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: define i128 @umulh_variant_i128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i128 [[Y]] to i256
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i128 [[X]] to i256
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i256 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i256 [[TMP3]], 128
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i256 [[TMP4]] to i128
+; CHECK-NEXT:    [[HW64:%.*]] = call i128 @llvm.umulh.i128(i128 [[Y]], i128 [[X]])
 ; CHECK-NEXT:    ret i128 [[HW64]]
 ;
   %x_lo = and i128 %x, u0xffffffffffffffff
@@ -133,11 +117,7 @@ define i128 @umulh_variant_i128(i128 %x, i128 %y) {
 define i64 @umulh_variant_commuted(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh_variant_commuted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -350,11 +330,7 @@ define i64 @umulh_variant__mul_use__t0(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
 ; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[Y]], i64 [[X]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -388,11 +364,7 @@ define i64 @umulh_variant__mul_use__t1(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
 ; CHECK-NEXT:    [[T1:%.*]] = mul nuw i64 [[Y_LO]], [[X_HI]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[Y]], i64 [[X]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -426,11 +398,7 @@ define i64 @umulh_variant__mul_use__t2(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    [[T2:%.*]] = mul nuw i64 [[Y_HI]], [[X_LO]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T2]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[Y]], i64 [[X]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -511,11 +479,7 @@ define i64 @umulh_variant__mul_use__t0_hi(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
 ; CHECK-NEXT:    [[T0_HI:%.*]] = lshr i64 [[T0]], 32
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[T0_HI]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[Y]], i64 [[X]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   %x_lo = and i64 %x, 4294967295
@@ -821,11 +785,7 @@ define [2 x i64] @XXH_mult64to128(i64 noundef %lhs, i64 noundef %rhs) {
 ; CHECK-LABEL: define [2 x i64] @XXH_mult64to128(
 ; CHECK-SAME: i64 noundef [[LHS:%.*]], i64 noundef [[RHS:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i64 [[RHS]] to i128
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[LHS]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i128 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = lshr i128 [[TMP2]], 64
-; CHECK-NEXT:    [[ADD16:%.*]] = trunc nuw i128 [[TMP3]] to i64
+; CHECK-NEXT:    [[ADD16:%.*]] = call i64 @llvm.umulh.i64(i64 [[RHS]], i64 [[LHS]])
 ; CHECK-NEXT:    [[SHR102:%.*]] = mul i64 [[LHS]], [[RHS]]
 ; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x i64] poison, i64 [[SHR102]], 0
 ; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x i64] [[DOTFCA_0_INSERT]], i64 [[ADD16]], 1

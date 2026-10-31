@@ -48,7 +48,7 @@ struct NSFastEnumerationState;
 + (void)foreach: (NSArray *)array
 {
   __block id result;
-  // PGOGEN: store {{.*}} @[[FRC]], i32 0, i32 1
+  // PGOGEN: store {{.*}} @[[FRC]], i64 8
   // PGOUSE: br {{.*}} !prof ![[FR1:[0-9]+]]
   // PGOUSE: br {{.*}} !prof ![[FR2:[0-9]+]]
   for (id x in array) {
@@ -57,7 +57,7 @@ struct NSFastEnumerationState;
     // PGOGEN: store {{.*}} @[[BLC]]
     ^{
       static int init = 0;
-      // PGOGEN: store {{.*}} @[[BLC]], i32 0, i32 1
+      // PGOGEN: store {{.*}} @[[BLC]], i64 8
       // PGOUSE: br {{.*}} !prof ![[BL1:[0-9]+]]
       if (init)
         result = x;

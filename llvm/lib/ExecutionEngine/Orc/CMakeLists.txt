@@ -32,6 +32,8 @@ add_llvm_component_library(LLVMOrcJIT
   IndirectionUtils.cpp
   InProcessEPC.cpp
   InProcessMemoryAccess.cpp
+  InstanceSymbolGenerator.cpp
+  InstanceSymbolGeneratorSPS.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
   IRPartitionLayer.cpp
@@ -44,7 +46,6 @@ add_llvm_component_library(LLVMOrcJIT
   LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
   LookupAndApply.cpp
-  LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachO.cpp
   MachOPlatform.cpp
@@ -59,6 +60,7 @@ add_llvm_component_library(LLVMOrcJIT
   RTDyldObjectLinkingLayer.cpp
   SectCreate.cpp
   SelfExecutorProcessControl.cpp
+  SharedMemoryMapSPS.cpp
   SimpleMemoryMapSPS.cpp
   SimpleRemoteEPC.cpp
   SimpleRemoteMemoryMapper.cpp

@@ -144,6 +144,52 @@ void nestedMultiLine() {
   // CHECK-FIXES-NEXT:   };
 }
 
+// #endif before '}' is not a missing trailing comma.
+enum color_t {
+  COLOR_RED = 0,
+  COLOR_GREEN = 1,
+  COLOR_BLUE = 2,
+  COLOR_CYAN = 3,
+#ifdef USE_MAGENTA
+  COLOR_LAST = COLOR_CYAN,
+#else
+  COLOR_LAST = COLOR_BLUE,
+#endif
+};
+
+enum GuardedEnumerator {
+  GE_A,
+  GE_B,
+#ifdef USE_EXTRA
+  GE_C,
+#endif
+};
+
+enum EndsWithEndifName {
+  foo,
+  endif
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:8: warning: enum should have a trailing comma
+// CHECK-FIXES: enum EndsWithEndifName {
+// CHECK-FIXES-NEXT:   foo,
+// CHECK-FIXES-NEXT:   endif,
+// CHECK-FIXES-NEXT: };
+
+enum NullDirectiveBefore {
+#
+  ND_A
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:7: warning: enum should have a trailing comma
+// CHECK-FIXES: enum NullDirectiveBefore {
+// CHECK-FIXES-NEXT: #
+// CHECK-FIXES-NEXT:   ND_A,
+// CHECK-FIXES-NEXT: };
+
+enum NullDirectiveAfter {
+  ND_B,
+#
+};
+
 // Macros are ignored
 #define ENUM(n, a, b) enum n { a, b }
 #define INIT {1, 2}

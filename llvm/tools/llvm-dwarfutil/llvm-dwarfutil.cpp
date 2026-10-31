@@ -20,6 +20,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
@@ -39,25 +40,13 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Options.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
+#define OPTTABLE_CODE
 #include "Options.inc"
-#undef OPTION
-};
 
-class DwarfutilOptTable : public opt::GenericOptTable {
+class DwarfutilOptTable : public opt::OptTable {
 public:
-  DwarfutilOptTable()
-      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  DwarfutilOptTable() : opt::OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -142,6 +131,29 @@ static Error validateAndSetOptions(opt::InputArgList &Args, Options &Options) {
       return createStringError(
           std::errc::invalid_argument,
           formatv("unknown build-accelerator value: '{0}'", S).str().c_str());
+  }
+
+  if (opt::Arg *Compression = Args.getLastArg(OPT_compress_debug_sections)) {
+    StringRef S = Compression->getValue();
+
+    if (S == "none")
+      Options.CompressionType = DebugCompressionType::None;
+    else if (S == "zlib")
+      Options.CompressionType = DebugCompressionType::Zlib;
+    else if (S == "zstd")
+      Options.CompressionType = DebugCompressionType::Zstd;
+    else
+      return createStringError(
+          std::errc::invalid_argument,
+          formatv("unknown compress-debug-sections value: '{0}'", S)
+              .str()
+              .c_str());
+
+    if (*Options.CompressionType != DebugCompressionType::None) {
+      if (const char *Reason = compression::getReasonIfUnsupported(
+              compression::formatFor(*Options.CompressionType)))
+        return createStringError(std::errc::invalid_argument, Reason);
+    }
   }
 
   if (Options.Verbose) {
@@ -250,6 +262,101 @@ protected:
   uint64_t current_pos() const override { return OS.tell(); }
 };
 
+// Returns the compression type for the linked debug sections. Unless it is
+// specified explicitly, the linked debug sections are compressed using the
+// same format as the input debug sections.
+static Expected<DebugCompressionType>
+getLinkedDebugInfoCompressionType(const Options &Opts, ObjectFile &InputFile) {
+  if (Opts.CompressionType)
+    return *Opts.CompressionType;
+
+  for (SectionRef Sec : InputFile.sections()) {
+    if (!Sec.isCompressed())
+      continue;
+
+    Expected<StringRef> SecName = Sec.getName();
+    if (!SecName)
+      return SecName.takeError();
+    if (!isDebugSection(*SecName))
+      continue;
+
+    Expected<StringRef> SecData = Sec.getContents();
+    if (!SecData)
+      return SecData.takeError();
+    // ch_type is a 32-bit field at offset 0 of both Elf32_Chdr and Elf64_Chdr.
+    if (SecData->size() < sizeof(uint32_t))
+      continue;
+    uint32_t ChType = InputFile.isLittleEndian()
+                          ? support::endian::read32le(SecData->data())
+                          : support::endian::read32be(SecData->data());
+
+    DebugCompressionType CompressionType;
+    switch (ChType) {
+    case ELF::ELFCOMPRESS_ZLIB:
+      CompressionType = DebugCompressionType::Zlib;
+      break;
+    case ELF::ELFCOMPRESS_ZSTD:
+      CompressionType = DebugCompressionType::Zstd;
+      break;
+    default:
+      continue;
+    }
+
+    if (compression::getReasonIfUnsupported(
+            compression::formatFor(CompressionType)))
+      continue;
+
+    return CompressionType;
+  }
+
+  return DebugCompressionType::None;
+}
+
+// Executes objcopy. The debug sections copied from the input file are
+// (de)compressed by objcopy as requested by --[no-]compress-debug-sections, or
+// copied as is if the option is not specified. The linked debug sections
+// (Config.AddSection) are compressed using the compression type returned by
+// getLinkedDebugInfoCompressionType().
+static Error executeObjcopyAndCompress(objcopy::ConfigManager &Config,
+                                       const Options &Opts,
+                                       ObjectFile &InputFile,
+                                       raw_ostream &OutFile) {
+  if (Opts.CompressionType == DebugCompressionType::None)
+    Config.Common.DecompressDebugSections = true;
+  else if (Opts.CompressionType)
+    Config.Common.CompressionType = *Opts.CompressionType;
+
+  if (Config.Common.AddSection.empty())
+    return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+
+  Expected<DebugCompressionType> CompressionType =
+      getLinkedDebugInfoCompressionType(Opts, InputFile);
+  if (!CompressionType)
+    return CompressionType.takeError();
+  if (*CompressionType == DebugCompressionType::None)
+    return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+
+  // objcopy compresses debug sections before adding new ones, thus the linked
+  // debug sections would be left uncompressed. Compress them by running
+  // objcopy on the intermediate result.
+  SmallString<0> Buffer;
+  raw_svector_ostream BufferStream(Buffer);
+  if (Error Err =
+          objcopy::executeObjcopyOnBinary(Config, InputFile, BufferStream))
+    return Err;
+
+  Expected<std::unique_ptr<ObjectFile>> Obj = ObjectFile::createObjectFile(
+      MemoryBufferRef(Buffer, Config.Common.OutputFilename));
+  if (!Obj)
+    return Obj.takeError();
+
+  objcopy::ConfigManager CompressConfig;
+  CompressConfig.Common.InputFilename = Config.Common.OutputFilename;
+  CompressConfig.Common.OutputFilename = Config.Common.OutputFilename;
+  CompressConfig.Common.CompressionType = *CompressionType;
+  return objcopy::executeObjcopyOnBinary(CompressConfig, **Obj, OutFile);
+}
+
 static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
                                                 ObjectFile &InputFile) {
   objcopy::ConfigManager Config;
@@ -262,8 +369,8 @@ static Expected<uint32_t> saveSeparateDebugInfo(const Options &Opts,
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
-            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
-                                                            CRCBuffer))
+            if (Error Err = executeObjcopyAndCompress(Config, Opts, InputFile,
+                                                      CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -374,8 +481,8 @@ saveSeparateLinkedDebugInfo(const Options &Opts, ObjectFile &InputFile,
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
             raw_crc_ostream CRCBuffer(OutFile);
 
-            if (Error Err = objcopy::executeObjcopyOnBinary(Config, InputFile,
-                                                            CRCBuffer))
+            if (Error Err = executeObjcopyAndCompress(Config, Opts, InputFile,
+                                                      CRCBuffer))
               return Err;
 
             WrittenFileCRC32 = CRCBuffer.getCRC32();
@@ -400,7 +507,7 @@ static Error saveSingleLinkedDebugInfo(const Options &Opts,
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+            return executeObjcopyAndCompress(Config, Opts, InputFile, OutFile);
           }))
     return Err;
 
@@ -436,7 +543,7 @@ static Error saveCopyOfFile(const Options &Opts, ObjectFile &InputFile) {
 
   if (Error Err = writeToOutput(
           Config.Common.OutputFilename, [&](raw_ostream &OutFile) -> Error {
-            return objcopy::executeObjcopyOnBinary(Config, InputFile, OutFile);
+            return executeObjcopyAndCompress(Config, Opts, InputFile, OutFile);
           }))
     return Err;
 

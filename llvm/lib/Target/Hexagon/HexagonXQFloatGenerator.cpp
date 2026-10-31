@@ -74,7 +74,7 @@
 // ================================================================================================================================================
 //            |                              | |                               |
 //            |    Inputs to add/subtarct    |                  Inputs to
-//            multiplication instuctions              |     Non-HVX floating
+//            multiplication instructions              |     Non-HVX floating
 //            point    | |    instructions              | |          instruction
 //            | |                              | | |
 // ===============================================================================================================================================|
@@ -177,7 +177,7 @@ static constexpr unsigned XQFPAdd16[] = {
     // vector add instructions
     Hexagon::V6_vadd_hf, Hexagon::V6_vadd_qf16, Hexagon::V6_vadd_qf16_mix,
 
-    // vector subtract intrutions
+    // vector subtract instruction
     Hexagon::V6_vsub_hf, Hexagon::V6_vsub_qf16, Hexagon::V6_vsub_qf16_mix,
     Hexagon::V6_vsub_hf_mix};
 
@@ -366,9 +366,8 @@ bool VectorConvertRemove::checkHVXUses32(MachineInstr *MI,
                                          MachineInstr *UseMI) {
   Register convReg = MI->getOperand(0).getReg();
   // Iterate over all uses of the Def we are analyzing
-  for (auto &MO : make_range(MRI->use_begin(convReg), MRI->use_end())) {
-    MachineInstr *UMI = MO.getParent();
-    if (UMI == UseMI)
+  for (MachineInstr &UMI : MRI->use_instructions(convReg)) {
+    if (&UMI == UseMI)
       continue;
     // Since the convert cannot be deleted, we set the operand as NOT kill
     MI->getOperand(1).setIsKill(false);
@@ -383,9 +382,8 @@ bool VectorConvertRemove::checkHVXUses16(MachineInstr *MI,
                                          MachineInstr *UseMI) {
   Register convReg = MI->getOperand(0).getReg();
   // Iterate over all uses of the Def we are analyzing
-  for (auto &MO : make_range(MRI->use_begin(convReg), MRI->use_end())) {
-    MachineInstr *UMI = MO.getParent();
-    if (UMI == UseMI)
+  for (MachineInstr &UMI : MRI->use_instructions(convReg)) {
+    if (&UMI == UseMI)
       continue;
     // Since the convert cannot be deleted, we set the operand as NOT kill
     MI->getOperand(1).setIsKill(false);
@@ -821,7 +819,7 @@ bool HexagonXQFloatGenerator::checkIfInputFromMult16(Register Reg) {
     return llvm::is_contained(XQFPMult16, Def->getOpcode());
 }
 
-// Generates sf = qf32 instruction or hf = qf16 intruction
+// Generates sf = qf32 instruction or hf = qf16 instruction
 void HexagonXQFloatGenerator::createConvertInstr(MachineInstr *UseMI,
                                                  Register &NewR, Register &OldR,
                                                  bool is32bit) {

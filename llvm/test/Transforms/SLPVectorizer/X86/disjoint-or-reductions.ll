@@ -416,3 +416,32 @@ define i64 @bitcast_loads_i32(ptr noalias %p, ptr noalias %p1) {
   ret i64 %or0123
 }
 
+define i32 @mixed_sext_zext_loads(ptr %p) {
+; CHECK-LABEL: @mixed_sext_zext_loads(
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i8> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shl <4 x i32> [[TMP4]], <i32 0, i32 8, i32 16, i32 24>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP5]])
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+  %v0 = load i8, ptr %p, align 1
+  %p1 = getelementptr inbounds i8, ptr %p, i64 1
+  %v1 = load i8, ptr %p1, align 1
+  %p2 = getelementptr inbounds i8, ptr %p, i64 2
+  %v2 = load i8, ptr %p2, align 1
+  %p3 = getelementptr inbounds i8, ptr %p, i64 3
+  %v3 = load i8, ptr %p3, align 1
+  %z0 = zext i8 %v0 to i32
+  %z1 = sext i8 %v1 to i32
+  %z2 = zext i8 %v2 to i32
+  %z3 = zext i8 %v3 to i32
+  %s1 = shl i32 %z1, 8
+  %s2 = shl i32 %z2, 16
+  %s3 = shl i32 %z3, 24
+  %o1 = or disjoint i32 %z0, %s1
+  %o2 = or disjoint i32 %o1, %s2
+  %o3 = or disjoint i32 %o2, %s3
+  ret i32 %o3
+}

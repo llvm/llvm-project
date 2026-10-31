@@ -20,13 +20,13 @@ define void @test_extractelement_legalization_storereuse(<4 x i32> %a, ptr nocap
 ; CHECK-NEXT:    movdqa %xmm0, (%edx)
 ; CHECK-NEXT:    movl (%edx), %esi
 ; CHECK-NEXT:    movl 4(%edx), %edi
-; CHECK-NEXT:    shll $4, %ecx
+; CHECK-NEXT:    shll $4, %eax
 ; CHECK-NEXT:    movl 8(%edx), %ebx
 ; CHECK-NEXT:    movl 12(%edx), %edx
-; CHECK-NEXT:    movl %esi, 12(%eax,%ecx)
-; CHECK-NEXT:    movl %edi, (%eax,%ecx)
-; CHECK-NEXT:    movl %ebx, 8(%eax,%ecx)
-; CHECK-NEXT:    movl %edx, 4(%eax,%ecx)
+; CHECK-NEXT:    movl %esi, 12(%ecx,%eax)
+; CHECK-NEXT:    movl %edi, (%ecx,%eax)
+; CHECK-NEXT:    movl %ebx, 8(%ecx,%eax)
+; CHECK-NEXT:    movl %edx, 4(%ecx,%eax)
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx

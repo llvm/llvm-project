@@ -12,8 +12,8 @@ module m1
 !CHECK: op.fluffy., PUBLIC: UserReductionDetails TYPE(t1)
 !CHECK: t1, PUBLIC: DerivedType components: val
 !CHECK: OtherConstruct scope: size=8 alignment=4 sourceRange=0 bytes
-!CHECK: omp_in size=4 offset=0: ObjectEntity type: TYPE(t1)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: TYPE(t1)
+!CHECK: omp_in (OmpInVar) size=4 offset=0: ObjectEntity type: TYPE(t1)
+!CHECK: omp_out (OmpOutVar) size=4 offset=4: ObjectEntity type: TYPE(t1)
 contains
   function my_mul(x, y)
     type (t1), intent (in) :: x, y

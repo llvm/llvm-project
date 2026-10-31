@@ -41,12 +41,12 @@ private:
   const llvm::abi::Type *convertBuiltinType(const clang::BuiltinType *BT);
   const llvm::abi::Type *convertArrayType(const clang::ArrayType *AT);
   const llvm::abi::Type *convertVectorType(const clang::VectorType *VT);
+  const llvm::abi::Type *convertSVEBuiltinType(const clang::BuiltinType *BT);
   const llvm::abi::Type *convertRecordType(const clang::RecordType *RT);
   const llvm::abi::Type *convertEnumType(const clang::EnumType *ET);
   const llvm::abi::Type *convertComplexType(const ComplexType *CT);
   const llvm::abi::Type *
   convertMemberPointerType(const clang::MemberPointerType *MPT);
-  const llvm::abi::Type *convertMatrixType(const ConstantMatrixType *MT);
 
   const llvm::abi::RecordType *convertStructType(const clang::RecordDecl *RD);
   const llvm::abi::RecordType *convertUnionType(const clang::RecordDecl *RD);
@@ -57,10 +57,7 @@ private:
                         SmallVectorImpl<llvm::abi::FieldInfo> &Fields,
                         const clang::ASTRecordLayout &Layout);
 
-  llvm::TypeSize getTypeSize(clang::QualType QT) const;
   llvm::Align getTypeAlign(clang::QualType QT) const;
-  uint64_t getPointerSize() const;
-  uint64_t getPointerAlign() const;
 
 public:
   explicit QualTypeMapper(clang::ASTContext &Ctx, const llvm::DataLayout &DL,

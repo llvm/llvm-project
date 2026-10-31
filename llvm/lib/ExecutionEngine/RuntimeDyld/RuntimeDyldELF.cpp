@@ -1069,6 +1069,7 @@ void RuntimeDyldELF::resolvePPC32Relocation(const SectionEntry &Section,
                                             uint64_t Offset, uint64_t Value,
                                             uint32_t Type, int64_t Addend) {
   uint8_t *LocalAddress = Section.getAddressWithOffset(Offset);
+  uint32_t FinalAddress = Section.getLoadAddressWithOffset(Offset);
   switch (Type) {
   default:
     report_fatal_error("Relocation type not implemented yet!");
@@ -1081,6 +1082,26 @@ void RuntimeDyldELF::resolvePPC32Relocation(const SectionEntry &Section,
     break;
   case ELF::R_PPC_ADDR16_HA:
     writeInt16BE(LocalAddress, applyPPCha(Value + Addend));
+    break;
+  case ELF::R_PPC_ADDR32:
+    writeInt32BE(LocalAddress, Value + Addend);
+    break;
+  case ELF::R_PPC_REL16_LO:
+    writeInt16BE(LocalAddress, applyPPClo(Value - FinalAddress + Addend));
+    break;
+  case ELF::R_PPC_REL16_HA:
+    writeInt16BE(LocalAddress, applyPPCha(Value - FinalAddress + Addend));
+    break;
+  case ELF::R_PPC_REL24: {
+    int32_t Delta = static_cast<int32_t>(Value - FinalAddress + Addend);
+    if (SignExtend32<26>(Delta) != Delta)
+      report_fatal_error("Relocation R_PPC_REL24 overflow");
+    // Keep the opcode and the AA and LK bits.
+    uint32_t Inst = readBytesUnaligned(LocalAddress, 4);
+    writeInt32BE(LocalAddress, (Inst & 0xFC000003) | (Delta & 0x03FFFFFC));
+  } break;
+  case ELF::R_PPC_REL32:
+    writeInt32BE(LocalAddress, Value - FinalAddress + Addend);
     break;
   }
 }
@@ -1983,6 +2004,38 @@ RuntimeDyldELF::processRelocationRef(
       processSimpleRelocation(SectionID, Offset, RelType, Value);
     }
 
+  } else if (Arch == Triple::ppc) {
+    if (RelType == ELF::R_PPC_PLTREL24) {
+      // The addend selects the GOT pointer of a PLT call stub. It is not an
+      // offset from the symbol.
+      Value.Addend -= Addend;
+      RelType = ELF::R_PPC_REL24;
+    }
+
+    // A branch needs a stub if its target is external or out of range.
+    SectionEntry &Section = Sections[SectionID];
+    bool NeedsStub = RelType == ELF::R_PPC_REL24 &&
+                     (Value.SymbolName ||
+                      !isInt<26>(Sections[Value.SectionID].getAddressWithOffset(
+                                     Value.Addend) -
+                                 Section.getAddressWithOffset(Offset)));
+    if (!NeedsStub) {
+      processSimpleRelocation(SectionID, Offset, RelType, Value);
+    } else {
+      auto [It, Inserted] = Stubs.try_emplace(Value, Section.getStubOffset());
+      if (Inserted) {
+        createStubFunction(Section.getAddressWithOffset(It->second));
+        // The relocations apply to the low half of the lis and the ori.
+        processSimpleRelocation(SectionID, It->second + 2, ELF::R_PPC_ADDR16_HI,
+                                Value);
+        processSimpleRelocation(SectionID, It->second + 6, ELF::R_PPC_ADDR16_LO,
+                                Value);
+        Section.advanceStubOffset(getMaxStubSize());
+      }
+      resolveRelocation(Section, Offset,
+                        Section.getLoadAddressWithOffset(It->second), RelType,
+                        0);
+    }
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     if (RelType == ELF::R_PPC64_REL24) {
       // Determine ABI variant in use for this object.
@@ -2674,6 +2727,7 @@ size_t RuntimeDyldELF::getGOTEntrySize() {
     break;
   case Triple::x86:
   case Triple::arm:
+  case Triple::ppc:
   case Triple::thumb:
     Result = sizeof(uint32_t);
     break;

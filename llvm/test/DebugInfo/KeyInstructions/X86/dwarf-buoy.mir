@@ -1,8 +1,8 @@
-# RUN: llc %s --start-after=livedebugvalues --dwarf-use-key-instructions --filetype=obj -o - \
+# RUN: llc %s --start-after=live-debug-values --dwarf-use-key-instructions --filetype=obj -o - \
 # RUN: | llvm-objdump -d - --no-show-raw-insn \
 # RUN: | FileCheck %s --check-prefix=OBJ
 
-# RUN: llc %s --start-after=livedebugvalues --dwarf-use-key-instructions --filetype=obj -o - \
+# RUN: llc %s --start-after=live-debug-values --dwarf-use-key-instructions --filetype=obj -o - \
 # RUN: | llvm-dwarfdump - --debug-line \
 # RUN: | FileCheck %s --check-prefix=DBG
 

@@ -79,6 +79,9 @@ public:
       return contains(A.getKindAsString());
     return contains(A.getKindAsEnum());
   }
+
+  /// Return true if the mask contains no attributes.
+  bool empty() const { return Attrs.none() && TargetDepAttrs.empty(); }
 };
 
 } // end namespace llvm

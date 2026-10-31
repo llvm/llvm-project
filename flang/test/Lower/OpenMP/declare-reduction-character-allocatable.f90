@@ -19,7 +19,7 @@ program test_character_reduction
 end program test_character_reduction
 
 ! Verify the declare_reduction is generated with reference type for character
-! CHECK-LABEL: omp.declare_reduction @_QQFchar_max_byref_c8 : !fir.ref<!fir.char<1>>
+! CHECK-LABEL: omp.declare_reduction @_QQFchar_max_byref_c8 byref_element_type({{.*}}) : !fir.ref<!fir.char<1>>
 ! CHECK: init {
 ! CHECK: omp.yield
 

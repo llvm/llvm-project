@@ -76,7 +76,7 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   PoolSizeMax = UserPoolSize << 20; // Covert MB to B.
   PoolSize = 0;
 
-  auto Context = Allocator->L0Context->getZeContext();
+  auto Context = Allocator->ZeContext;
   const auto Device = Allocator->Device;
 
   // Check page size used for this allocation kind to decide minimum.
@@ -380,11 +380,13 @@ bool MemAllocatorTy::MemAllocInfoMapTy::remove(void *Ptr,
 }
 
 Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
-                                      const L0OptionsTy &Options) {
+                                      const L0OptionsTy &Options,
+                                      ze_context_handle_t ZeCtx) {
   SupportsLargeMem = L0Device.supportsLargeMem();
   IsHostMem = false;
   Device = &L0Device;
-  L0Context = &L0Device.getL0Context();
+  L0Driver = &L0Device.getL0Driver();
+  ZeContext = ZeCtx;
   for (auto Kind : {TARGET_ALLOC_DEVICE, TARGET_ALLOC_SHARED}) {
     if (Options.MemPoolConfig[Kind].Use) {
       std::lock_guard<std::mutex> Lock(Mtx);
@@ -403,11 +405,13 @@ Error MemAllocatorTy::initDevicePools(L0DeviceTy &L0Device,
   return Plugin::success();
 }
 
-Error MemAllocatorTy::initHostPool(L0ContextTy &Driver,
-                                   const L0OptionsTy &Option) {
+Error MemAllocatorTy::initHostPool(L0DriverTy &Driver,
+                                   const L0OptionsTy &Option,
+                                   ze_context_handle_t ZeCtx) {
   SupportsLargeMem = Driver.supportsLargeMem();
   IsHostMem = true;
-  L0Context = &Driver;
+  L0Driver = &Driver;
+  ZeContext = ZeCtx;
   if (Option.MemPoolConfig[TARGET_ALLOC_HOST].Use) {
     std::lock_guard<std::mutex> Lock(Mtx);
     Pools[TARGET_ALLOC_HOST] = std::make_unique<MemPoolTy>();
@@ -426,7 +430,7 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
     // MaxAllocSize should be the minimum of all devices from the driver.
     if (MaxAllocSize > maxMemAllocSize) {
       MaxAllocSize = maxMemAllocSize;
-      ODBG(OLDT_Alloc) << "Updated MaxAllocSize for driver " << L0Context
+      ODBG(OLDT_Alloc) << "Updated MaxAllocSize for driver " << L0Driver
                        << " to " << MaxAllocSize;
     }
     return;
@@ -439,11 +443,11 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
 
 /// Release resources and report statistics if requested.
 Error MemAllocatorTy::deinit() {
-  if (!L0Context)
+  if (!L0Driver)
     return Plugin::success();
 
   std::lock_guard<std::mutex> Lock(Mtx);
-  if (!L0Context)
+  if (!L0Driver)
     return Plugin::success();
   // Release RTL-owned memory.
   for (auto *M : MemOwned) {
@@ -496,7 +500,7 @@ Error MemAllocatorTy::deinit() {
   });
 
   // Mark as deinitialized.
-  L0Context = nullptr;
+  L0Driver = nullptr;
   return Plugin::success();
 }
 
@@ -654,7 +658,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
   }
 
   auto zeDevice = Device ? Device->getZeDevice() : nullptr;
-  auto zeContext = L0Context->getZeContext();
+  auto zeContext = ZeContext;
   bool MakeResident = false;
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
@@ -690,7 +694,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
 }
 
 Error MemAllocatorTy::deallocFromL0(void *Ptr) {
-  CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
+  CALL_ZE_RET_ERROR(zeMemFree, ZeContext, Ptr);
   ODBG(OLDT_Alloc) << "Freed device pointer " << Ptr;
   return Plugin::success();
 }

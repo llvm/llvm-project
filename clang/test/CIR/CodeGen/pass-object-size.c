@@ -8,8 +8,6 @@
 void b(void *__attribute__((pass_object_size(0))));
 void e(void *__attribute__((pass_object_size(2))));
 
-// CIR: cir.func private @b(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
-
 void test_constant() {
   int a;
   b(&a);
@@ -21,13 +19,13 @@ void test_constant() {
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   cir.call @b(%[[CAST]], %[[SIZE]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> ()
 
-// CIR: cir.func private @e(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
-
-// LLVM: declare void @b(ptr noundef, i64 noundef)
+// CIR: cir.func private @b(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
 
 // LLVM: define dso_local void @test_constant()
 // LLVM:   %[[ALLOCA:.*]] = alloca i32
 // LLVM:   call void @b(ptr noundef %[[ALLOCA]], i64 noundef 4)
+
+// LLVM: declare void @b(ptr noundef, i64 noundef)
 
 // OGCG: define dso_local void @test_constant()
 // OGCG:   %[[A:.*]] = alloca i32
@@ -49,6 +47,8 @@ void test_vla(int n) {
 // CIR:   %[[CAST2:.*]] = cir.cast bitcast %[[VLA]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR:   %[[SIZE2:.*]] = cir.objsize min nullunknown %[[CAST2]] : !cir.ptr<!void> -> !u64i
 // CIR:   cir.call @e(%[[CAST2]], %[[SIZE2]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> ()
+
+// CIR: cir.func private @e(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
 
 // LLVM: define dso_local void @test_vla(i32 noundef %{{.*}})
 // LLVM:   %[[VLA:.*]] = alloca i32, i64 %{{.*}}, align 16
@@ -76,13 +76,13 @@ void test_variadic_no_varargs(void) {
   v(&a);
 }
 
-// CIR: cir.func private @v(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}, ...)
-
 // CIR: cir.func {{.*}} @test_variadic_no_varargs()
 // CIR:   %[[ALLOCA:.*]] = cir.alloca {{.*}} : !cir.ptr<!s32i>
 // CIR:   %[[CAST:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<4> : !u64i
 // CIR:   cir.call @v(%[[CAST]], %[[SIZE]]) : (!cir.ptr<!void> {{.*}}, !u64i {{.*}}) -> ()
+
+// CIR: cir.func private @v(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}, ...)
 
 // LLVM: define dso_local void @test_variadic_no_varargs()
 // LLVM:   %[[ALLOCA:.*]] = alloca i32

@@ -8,11 +8,6 @@
 
 # Semantic Analysis
 
-```{contents}
----
-local:
----
-```
 
 The semantic analysis pass determines if a syntactically correct Fortran
 program is legal by enforcing the constraints of the language.

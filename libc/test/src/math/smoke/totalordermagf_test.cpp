@@ -10,4 +10,4 @@
 
 #include "src/math/totalordermagf.h"
 
-LIST_TOTALORDERMAG_TESTS(float, LIBC_NAMESPACE::totalordermagf)
+LIST_TOTALORDERMAG_TESTS(Totalordermagf, float, LIBC_NAMESPACE::totalordermagf)

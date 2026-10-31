@@ -32,6 +32,36 @@ private:
   bool convertComplexTypes = false;
   bool convertScalarTypesOnly = false;
 
+  mlir::MemRefType convertMemrefBaseType(mlir::Type baseTy) const {
+    if (auto charTy = mlir::dyn_cast<fir::CharacterType>(baseTy)) {
+      unsigned kind = charTy.getFKind();
+      unsigned bitWidth = kindMapping.getCharacterBitsize(kind);
+      mlir::Type elTy = mlir::IntegerType::get(charTy.getContext(), bitWidth);
+
+      if (charTy.hasConstantLen() && charTy.getLen() == 1)
+        return mlir::MemRefType::get({}, elTy);
+      if (charTy.hasConstantLen())
+        return mlir::MemRefType::get({charTy.getLen()}, elTy);
+      return mlir::MemRefType::get({mlir::ShapedType::kDynamic}, elTy);
+    }
+
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(baseTy)) {
+      mlir::Type ty = convertType(seqTy.getElementType());
+      llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
+      llvm::SmallVector<int64_t> shape;
+      for (auto it = firShape.rbegin(); it != firShape.rend(); ++it)
+        shape.push_back(*it);
+      assert(mlir::BaseMemRefType::isValidElementType(ty) &&
+             "got invalid memref element type from array fir type");
+      return mlir::MemRefType::get(shape, ty);
+    }
+
+    mlir::Type ty = convertType(baseTy);
+    assert(mlir::BaseMemRefType::isValidElementType(ty) &&
+           "got invalid memref element type from scalar fir type");
+    return mlir::MemRefType::get({}, ty);
+  }
+
 public:
   explicit FIRToMemRefTypeConverter(mlir::ModuleOp mod)
       : kindMapping(fir::getKindMapping(mod)) {
@@ -64,18 +94,25 @@ public:
   void setConvertScalarTypesOnly(bool value) { convertScalarTypesOnly = value; }
 
   /// Return true if the given FIR type can be converted to a MemRef-typed
-  /// descriptor (i.e. is a supported base element for MemRef converting).
+  /// descriptor. Uses the same `dyn_cast_ptrEleTy` / `box` recursion as
+  /// `convertMemrefType`. Nested pointers such as
+  /// `!fir.ref<!fir.heap<!fir.array<?xf32>>>` hold a heap address, not the
+  /// array, and are not convertible.
   bool convertibleMemrefType(mlir::Type ty) {
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty))
-      return convertibleMemrefType(refTy.getElementType());
-    else if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(ty))
-      return convertibleMemrefType(pointerTy.getElementType());
-    else if (auto heapTy = mlir::dyn_cast<fir::HeapType>(ty))
-      return convertibleMemrefType(heapTy.getElementType());
-    else if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
-      return convertibleMemrefType(seqTy.getElementType());
+    if (mlir::Type pointee = fir::dyn_cast_ptrEleTy(ty))
+      ty = pointee;
     else if (auto boxTy = mlir::dyn_cast<fir::BoxType>(ty))
       return convertibleMemrefType(boxTy.getElementType());
+
+    // convertMemrefType peels only one pointer wrapper. A remaining pointer
+    // or box is not a valid memref element.
+    if (fir::isa_ref_type(ty) || fir::isa_box_type(ty))
+      return false;
+
+    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+      ty = seqTy.getElementType();
+    if (fir::isa_ref_type(ty) || fir::isa_box_type(ty))
+      return false;
 
     setConvertScalarTypesOnly(true);
     bool result = convertibleType(ty);
@@ -140,64 +177,19 @@ public:
 
   /// Convert a FIR element / aggregate type to a MemRef descriptor type.
   mlir::MemRefType convertMemrefType(mlir::Type firTy) const {
-    auto convertBaseType = [&](mlir::Type firTy) -> mlir::MemRefType {
-      if (auto charTy = mlir::dyn_cast<fir::CharacterType>(firTy)) {
-        unsigned kind = charTy.getFKind();
-        unsigned bitWidth = kindMapping.getCharacterBitsize(kind);
-        mlir::Type elTy = mlir::IntegerType::get(charTy.getContext(), bitWidth);
-
-        if (charTy.hasConstantLen() && charTy.getLen() == 1) {
-          return mlir::MemRefType::get({}, elTy);
-        } else if (charTy.hasConstantLen()) {
-          int64_t len = charTy.getLen();
-          return mlir::MemRefType::get({len}, elTy);
-        } else {
-          return mlir::MemRefType::get({mlir::ShapedType::kDynamic}, elTy);
-        }
-      }
-
-      if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(firTy)) {
-        auto elTy = seqTy.getElementType();
-        mlir::Type ty = convertType(elTy);
-
-        llvm::ArrayRef<int64_t> firShape = seqTy.getShape();
-        llvm::SmallVector<int64_t> shape;
-        for (auto it = firShape.rbegin(); it != firShape.rend(); ++it)
-          shape.push_back(*it);
-
-        assert(mlir::BaseMemRefType::isValidElementType(ty) &&
-               "got invalid memref element type from array fir type");
-        return mlir::MemRefType::get(shape, ty);
-      }
-
-      mlir::Type ty = convertType(firTy);
-      assert(mlir::BaseMemRefType::isValidElementType(ty) &&
-             "got invalid memref element type from scalar fir type");
-      return mlir::MemRefType::get({}, ty);
-    };
-
-    if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(firTy))
-      return convertBaseType(refTy.getElementType());
-
-    if (auto pointerTy = mlir::dyn_cast<fir::PointerType>(firTy))
-      return convertBaseType(pointerTy.getElementType());
-
-    if (auto heapTy = mlir::dyn_cast<fir::HeapType>(firTy))
-      return convertBaseType(heapTy.getElementType());
+    if (mlir::Type pointee = fir::dyn_cast_ptrEleTy(firTy))
+      return convertMemrefBaseType(pointee);
 
     if (auto boxTy = mlir::dyn_cast<fir::BoxType>(firTy)) {
-      auto elTy = boxTy.getElementType();
-
-      auto memRefTy = convertMemrefType(elTy);
-      mlir::MemRefType dynTy = mlir::MemRefType::Builder(memRefTy).setLayout(
+      mlir::MemRefType memRefTy = convertMemrefType(boxTy.getElementType());
+      return mlir::MemRefType::Builder(memRefTy).setLayout(
           mlir::StridedLayoutAttr::get(
               memRefTy.getContext(), mlir::ShapedType::kDynamic,
               llvm::SmallVector<int64_t>(memRefTy.getRank(),
                                          mlir::ShapedType::kDynamic)));
-      return dynTy;
     }
 
-    return convertBaseType(firTy);
+    return convertMemrefBaseType(firTy);
   }
 };
 

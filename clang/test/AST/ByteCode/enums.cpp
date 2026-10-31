@@ -53,3 +53,22 @@ namespace B {
   enum E : bool { Zero, One };
   static_assert((int)(E)2 == 1, "");
 } // namespace B
+
+namespace C {
+enum class E : bool { Zero, One };
+constexpr E from_double(double d) { return static_cast<E>(d); }
+
+static_assert(static_cast<E>(0.0) == E::Zero, "");
+static_assert(static_cast<E>(-0.0) == E::Zero, "");
+static_assert(static_cast<E>(0.5) == E::One, "");
+static_assert(static_cast<E>(-0.5) == E::One, "");
+static_assert(static_cast<E>(2.5) == E::One, "");
+static_assert(static_cast<E>(__builtin_nan("")) == E::One, "");
+
+static_assert(from_double(0.0) == E::Zero, "");
+static_assert(from_double(-0.0) == E::Zero, "");
+static_assert(from_double(0.5) == E::One, "");
+static_assert(from_double(-0.5) == E::One, "");
+static_assert(from_double(2.5) == E::One, "");
+static_assert(from_double(__builtin_nan("")) == E::One, "");
+} // namespace C

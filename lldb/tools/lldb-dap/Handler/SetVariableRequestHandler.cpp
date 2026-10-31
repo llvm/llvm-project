@@ -23,8 +23,15 @@ static lldb::SBValue EvaluateExpression(lldb::SBTarget &target,
                                         const std::string &expression) {
   const char *expression_cstr = expression.c_str();
 
-  if (frame)
+  lldb::SBValue value;
+  if (frame) {
+    value = frame.GetValueForVariablePathWithMode(
+        expression_cstr, lldb::eDILModeFull, lldb::eDynamicDontRunTarget);
+    if (value)
+      return value;
+
     return frame.EvaluateExpression(expression_cstr);
+  }
 
   // Evaluate expression in global scope.
   return target.EvaluateExpression(expression_cstr);
@@ -43,9 +50,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
 
   if (args.variablesReference.Kind() == eReferenceKindInvalid) {
     return llvm::make_error<DAPError>(
-        llvm::formatv("invalid reference {}",
-                      args.variablesReference.AsUInt32())
-            .str(),
+        llvm::formatv("invalid reference {}", args.variablesReference),
         llvm::inconvertibleErrorCode(),
         /*show_user=*/false);
   }
@@ -98,7 +103,7 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
     body.memoryReference = addr;
 
   if (ValuePointsToCode(variable))
-    body.valueLocationReference = PackLocation(new_var_ref.AsUInt32(), true);
+    body.valueLocationReference = PackLocation(new_var_ref, true);
 
   // Also send invalidated event to signal client that some variables
   // (e.g. references) can be changed.

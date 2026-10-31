@@ -518,6 +518,10 @@ public:
   void handleAttrWithDelayedArgs(Sema &S, Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Stmt *St) const;
+  // This function stub exists for parity with the declaration and statement
+  // checking code so that checkCommonAttributeFeatures() can work generically
+  // on types.
+  bool diagnoseAppertainsTo(class Sema &S, QualType T) const { return true; }
   bool diagnoseMutualExclusion(class Sema &S, const Decl *D) const;
   // This function stub exists for parity with the declaration checking code so
   // that checkCommonAttributeFeatures() can work generically on declarations
@@ -525,6 +529,10 @@ public:
   bool diagnoseMutualExclusion(class Sema &S, const Stmt *St) const {
     return true;
   }
+  // This function stub exists for parity with the declaration and statement
+  // checking code so that checkCommonAttributeFeatures() can work generically
+  // on types.
+  bool diagnoseMutualExclusion(class Sema &S, QualType T) const { return true; }
   bool appliesToDecl(const Decl *D, attr::SubjectMatchRule MatchRule) const;
   void getMatchRules(const LangOptions &LangOpts,
                      SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>>
@@ -576,21 +584,34 @@ public:
     }
   }
 
-  /// If this is an OpenCL address space attribute, returns its SYCL
-  /// representation in LangAS, otherwise returns default address space.
+  /// If this is a SYCL address space attribute, returns its SYCL
+  /// representation in LangAS.
   LangAS asSYCLLangAS() const {
-    switch (getKind()) {
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
       return LangAS::sycl_global;
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::sycl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::sycl_global_host;
-    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
       return LangAS::sycl_local;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
       return LangAS::sycl_private;
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
+      return LangAS::sycl_generic;
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+      return LangAS::sycl_constant;
+    // The OpenCL address space attributes are available to enable
+    // implicit conversions between OpenCL address space attributes and
+    // SYCL address space attributes when targeting the OpenCL execution
+    // environments.
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
+      return asOpenCLLangAS();
     default:
       return LangAS::Default;
     }

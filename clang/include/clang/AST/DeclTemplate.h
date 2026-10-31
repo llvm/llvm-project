@@ -316,7 +316,7 @@ class DefaultArgStorage {
 
   static ParmDecl *getParmOwningDefaultArg(ParmDecl *Parm) {
     const DefaultArgStorage &Storage = Parm->getDefaultArgStorage();
-    if (auto *Prev = Storage.ValueOrInherited.template dyn_cast<ParmDecl *>())
+    if (auto *Prev = dyn_cast<ParmDecl *>(Storage.ValueOrInherited))
       Parm = Prev;
     assert(!isa<ParmDecl *>(Parm->getDefaultArgStorage().ValueOrInherited) &&
            "should only be one level of indirection");
@@ -337,9 +337,9 @@ public:
   /// default argument is visible.
   ArgType get() const {
     const DefaultArgStorage *Storage = this;
-    if (const auto *Prev = ValueOrInherited.template dyn_cast<ParmDecl *>())
+    if (const auto *Prev = dyn_cast<ParmDecl *>(ValueOrInherited))
       Storage = &Prev->getDefaultArgStorage();
-    if (const auto *C = Storage->ValueOrInherited.template dyn_cast<Chain *>())
+    if (const auto *C = dyn_cast<Chain *>(Storage->ValueOrInherited))
       return C->Value;
     return cast<ArgType>(Storage->ValueOrInherited);
   }
@@ -347,9 +347,9 @@ public:
   /// Get the parameter from which we inherit the default argument, if any.
   /// This is the parameter on which the default argument was actually written.
   const ParmDecl *getInheritedFrom() const {
-    if (const auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>())
+    if (const auto *D = dyn_cast<ParmDecl *>(ValueOrInherited))
       return D;
-    if (const auto *C = ValueOrInherited.template dyn_cast<Chain *>())
+    if (const auto *C = dyn_cast<Chain *>(ValueOrInherited))
       return C->PrevDeclWithDefaultArg;
     return nullptr;
   }
@@ -778,16 +778,19 @@ protected:
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                         void *&InsertPos, ProfileArguments... ProfileArgs);
+                         llvm::FoldingSetInsertToken &InsertToken,
+                         ProfileArguments... ProfileArgs);
 
   template <class EntryType, typename... ProfileArguments>
   typename SpecEntryTraits<EntryType>::DeclType *
   findSpecializationLocally(llvm::FoldingSetVector<EntryType> &Specs,
-                            void *&InsertPos, ProfileArguments... ProfileArgs);
+                            llvm::FoldingSetInsertToken &InsertToken,
+                            ProfileArguments... ProfileArgs);
 
   template <class Derived, class EntryType>
   void addSpecializationImpl(llvm::FoldingSetVector<EntryType> &Specs,
-                             EntryType *Entry, void *InsertPos);
+                             EntryType *Entry,
+                             llvm::FoldingSetInsertToken InsertToken);
 
   struct CommonBase {
     CommonBase() : InstantiatedFromMember(nullptr, false) {}
@@ -822,7 +825,6 @@ public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTReader;
-  template <class decl_type> friend class RedeclarableTemplate;
 
   /// Retrieves the canonical declaration of this template.
   RedeclarableTemplateDecl *getCanonicalDecl() override {
@@ -983,10 +985,10 @@ protected:
 
   /// Add a specialization of this function template.
   ///
-  /// \param InsertPos Insert position in the FoldingSetVector, must have been
-  ///        retrieved by an earlier call to findSpecialization().
-  void addSpecialization(FunctionTemplateSpecializationInfo* Info,
-                         void *InsertPos);
+  /// \param InsertToken Insert token, must have been retrieved by an earlier
+  /// call to findSpecialization().
+  void addSpecialization(FunctionTemplateSpecializationInfo *Info,
+                         llvm::FoldingSetInsertToken InsertToken);
 
 public:
   friend class ASTDeclReader;
@@ -1029,7 +1031,7 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   FunctionDecl *findSpecialization(ArrayRef<TemplateArgument> Args,
-                                   void *&InsertPos);
+                                   llvm::FoldingSetInsertToken &InsertToken);
 
   FunctionTemplateDecl *getCanonicalDecl() override {
     return cast<FunctionTemplateDecl>(
@@ -1990,7 +1992,7 @@ public:
                      ClassTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return PartialSpec->PartialSpecialization;
 
     return cast<ClassTemplateDecl *>(SpecializedTemplate);
@@ -2009,7 +2011,7 @@ public:
   /// itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
@@ -2338,11 +2340,13 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   ClassTemplateSpecializationDecl *
-  findSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
+  findSpecialization(ArrayRef<TemplateArgument> Args,
+                     llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified specialization knowing that it is not already
-  /// in. InsertPos must be obtained from findSpecialization.
-  void AddSpecialization(ClassTemplateSpecializationDecl *D, void *InsertPos);
+  /// in. InsertToken must be obtained from findSpecialization.
+  void AddSpecialization(ClassTemplateSpecializationDecl *D,
+                         llvm::FoldingSetInsertToken InsertToken);
 
   ClassTemplateDecl *getCanonicalDecl() override {
     return cast<ClassTemplateDecl>(
@@ -2382,12 +2386,13 @@ public:
   /// exists, otherwise return the insertion point.
   ClassTemplatePartialSpecializationDecl *
   findPartialSpecialization(ArrayRef<TemplateArgument> Args,
-                            TemplateParameterList *TPL, void *&InsertPos);
+                            TemplateParameterList *TPL,
+                            llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified partial specialization knowing that it is not
-  /// already in. InsertPos must be obtained from findPartialSpecialization.
+  /// already in. InsertToken must be obtained from findPartialSpecialization.
   void AddPartialSpecialization(ClassTemplatePartialSpecializationDecl *D,
-                                void *InsertPos);
+                                llvm::FoldingSetInsertToken InsertToken);
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(
@@ -2523,7 +2528,7 @@ public:
   }
 
   NamedDecl *getFriendDecl() const override {
-    if (NamedDecl *ND = Friend.dyn_cast<NamedDecl *>())
+    if (NamedDecl *ND = dyn_cast_if_present<NamedDecl *>(Friend))
       return ND;
     return Template.getAsTemplateDecl();
   }
@@ -2760,7 +2765,7 @@ public:
   llvm::PointerUnion<VarTemplateDecl *, VarTemplatePartialSpecializationDecl *>
   getSpecializedTemplateOrPartial() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return PartialSpec->PartialSpecialization;
 
     return cast<VarTemplateDecl *>(SpecializedTemplate);
@@ -2779,7 +2784,7 @@ public:
   /// specialization itself.
   const TemplateArgumentList &getTemplateInstantiationArgs() const {
     if (const auto *PartialSpec =
-            SpecializedTemplate.dyn_cast<SpecializedPartialSpecialization *>())
+            dyn_cast<SpecializedPartialSpecialization *>(SpecializedTemplate))
       return *PartialSpec->TemplateArgs;
 
     return getTemplateArgs();
@@ -3097,11 +3102,13 @@ public:
   /// Return the specialization with the provided arguments if it exists,
   /// otherwise return the insertion point.
   VarTemplateSpecializationDecl *
-  findSpecialization(ArrayRef<TemplateArgument> Args, void *&InsertPos);
+  findSpecialization(ArrayRef<TemplateArgument> Args,
+                     llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified specialization knowing that it is not already
-  /// in. InsertPos must be obtained from findSpecialization.
-  void AddSpecialization(VarTemplateSpecializationDecl *D, void *InsertPos);
+  /// in. InsertToken must be obtained from findSpecialization.
+  void AddSpecialization(VarTemplateSpecializationDecl *D,
+                         llvm::FoldingSetInsertToken InsertToken);
 
   VarTemplateDecl *getCanonicalDecl() override {
     return cast<VarTemplateDecl>(RedeclarableTemplateDecl::getCanonicalDecl());
@@ -3139,12 +3146,13 @@ public:
   /// exists, otherwise return the insertion point.
   VarTemplatePartialSpecializationDecl *
   findPartialSpecialization(ArrayRef<TemplateArgument> Args,
-                            TemplateParameterList *TPL, void *&InsertPos);
+                            TemplateParameterList *TPL,
+                            llvm::FoldingSetInsertToken &InsertToken);
 
   /// Insert the specified partial specialization knowing that it is not
-  /// already in. InsertPos must be obtained from findPartialSpecialization.
+  /// already in. InsertToken must be obtained from findPartialSpecialization.
   void AddPartialSpecialization(VarTemplatePartialSpecializationDecl *D,
-                                void *InsertPos);
+                                llvm::FoldingSetInsertToken InsertToken);
 
   /// Retrieve the partial specializations as an ordered list.
   void getPartialSpecializations(
@@ -3461,9 +3469,9 @@ public:
 };
 
 inline NamedDecl *getAsNamedDecl(TemplateParameter P) {
-  if (auto *PD = P.dyn_cast<TemplateTypeParmDecl *>())
+  if (auto *PD = dyn_cast<TemplateTypeParmDecl *>(P))
     return PD;
-  if (auto *PD = P.dyn_cast<NonTypeTemplateParmDecl *>())
+  if (auto *PD = dyn_cast<NonTypeTemplateParmDecl *>(P))
     return PD;
   return cast<TemplateTemplateParmDecl *>(P);
 }

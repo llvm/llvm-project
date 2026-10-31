@@ -68,3 +68,27 @@ define float @float_negative_zero(ptr %pf) nounwind {
 ; CHECKZFINX-NEXT:    ret
   ret float -0.0
 }
+
+define float @poison() nounwind {
+; CHECK-LABEL: poison:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: poison:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    ret
+  ret float poison
+}
+
+define float @undef() nounwind {
+; CHECK-LABEL: undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fmv.w.x fa0, zero
+; CHECK-NEXT:    ret
+;
+; CHECKZFINX-LABEL: undef:
+; CHECKZFINX:       # %bb.0:
+; CHECKZFINX-NEXT:    ret
+  ret float undef
+}

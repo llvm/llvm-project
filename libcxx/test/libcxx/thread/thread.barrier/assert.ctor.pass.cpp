@@ -24,7 +24,7 @@
 int main(int, char**) {
   {
     TEST_LIBCPP_ASSERT_FAILURE(
-        [] { std::barrier<> b(-1); }(),
+        [] { [[maybe_unused]] std::barrier<> b(-1); }(),
         "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
   }
 
@@ -32,7 +32,7 @@ int main(int, char**) {
     TEST_LIBCPP_ASSERT_FAILURE(
         [] {
           auto completion = []() {};
-          std::barrier<decltype(completion)> b(-1, completion);
+          [[maybe_unused]] std::barrier<decltype(completion)> b(-1, completion);
         }(),
         "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
   }

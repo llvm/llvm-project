@@ -280,11 +280,12 @@ struct OpWithLayout : public Op<OpWithLayout, DataLayoutOpInterface::Trait> {
   static StringRef getOperationName() { return "dltest.op_with_layout"; }
 
   DataLayoutSpecInterface getDataLayoutSpec() {
-    return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+    return getOperation()->getDiscardableAttrOfType<DataLayoutSpecInterface>(
+        kAttrName);
   }
 
   TargetSystemSpecInterface getTargetSystemSpec() {
-    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
+    return getOperation()->getDiscardableAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
   }
 
@@ -332,11 +333,12 @@ struct OpWith7BitByte
   static StringRef getOperationName() { return "dltest.op_with_7bit_byte"; }
 
   DataLayoutSpecInterface getDataLayoutSpec() {
-    return getOperation()->getAttrOfType<DataLayoutSpecInterface>(kAttrName);
+    return getOperation()->getDiscardableAttrOfType<DataLayoutSpecInterface>(
+        kAttrName);
   }
 
   TargetSystemSpecInterface getTargetSystemSpec() {
-    return getOperation()->getAttrOfType<TargetSystemSpecInterface>(
+    return getOperation()->getDiscardableAttrOfType<TargetSystemSpecInterface>(
         kTargetSystemDescAttrName);
   }
 
@@ -509,6 +511,33 @@ module {}
   EXPECT_EQ(layout.getManglingMode(), Attribute());
 }
 
+TEST(DataLayout, AllocSize) {
+  const char *ir = R"MLIR(
+module {}
+  )MLIR";
+
+  DialectRegistry registry;
+  registry.insert<DLTIDialect, DLTestDialect>();
+  MLIRContext ctx(registry);
+
+  OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
+  DataLayout layout(module.get());
+  Type i42 = IntegerType::get(&ctx, 42);
+  EXPECT_EQ(layout.getTypeSize(i42), 6u);
+  EXPECT_EQ(layout.getTypeAllocSize(i42), 8u);
+  EXPECT_EQ(layout.getTypeAllocSize(Float16Type::get(&ctx)), 2u);
+
+  Type i72 = IntegerType::get(&ctx, 72);
+  EXPECT_EQ(layout.getTypeSize(i72), 9u);
+  EXPECT_EQ(layout.getTypeABIAlignment(i72), 4u);
+  EXPECT_EQ(layout.getTypeAllocSize(i72), 12u);
+
+  auto scalableVec = VectorType::get({1}, i42, /*scalableDims=*/{true});
+  EXPECT_EQ(layout.getTypeSize(scalableVec), llvm::TypeSize::getScalable(6));
+  EXPECT_EQ(layout.getTypeAllocSize(scalableVec),
+            llvm::TypeSize::getScalable(8));
+}
+
 TEST(DataLayout, NullSpec) {
   const char *ir = R"MLIR(
 "dltest.op_with_layout"() : () -> ()
@@ -629,6 +658,8 @@ TEST(DataLayout, SpecWithEntries) {
   EXPECT_EQ(layout.getTypeSizeInBits(Float16Type::get(&ctx)), 48u);
   EXPECT_EQ(layout.getTypeABIAlignment(IntegerType::get(&ctx, 42)), 8u);
   EXPECT_EQ(layout.getTypeABIAlignment(Float16Type::get(&ctx)), 8u);
+  EXPECT_EQ(layout.getTypeAllocSize(IntegerType::get(&ctx, 42)), 8u);
+  EXPECT_EQ(layout.getTypeAllocSize(Float16Type::get(&ctx)), 8u);
   EXPECT_EQ(layout.getTypePreferredAlignment(IntegerType::get(&ctx, 42)), 16u);
   EXPECT_EQ(layout.getTypePreferredAlignment(Float16Type::get(&ctx)), 16u);
   EXPECT_EQ(layout.getTypeIndexBitwidth(Float16Type::get(&ctx)), std::nullopt);
@@ -732,7 +763,7 @@ TEST(DataLayout, CacheInvalidation) {
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 6u);
 
   // Replace the data layout spec with a new, empty spec.
-  op->setAttr(kAttrName, CustomDataLayoutSpec::get(&ctx, {}));
+  op->setDiscardableAttr(kAttrName, CustomDataLayoutSpec::get(&ctx, {}));
 
   // Data layout is no longer valid and should trigger assertion when queried.
 #ifndef NDEBUG

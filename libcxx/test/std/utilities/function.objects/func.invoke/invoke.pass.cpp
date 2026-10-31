@@ -420,6 +420,7 @@ int main(int, char**) {
     bullet_three_four_tests();
     bullet_five_tests();
     noexcept_test();
+    union_tests();
 
   return 0;
 }

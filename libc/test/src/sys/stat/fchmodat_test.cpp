@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_stat.h"
@@ -64,4 +65,44 @@ TEST_F(LlvmLibcFchmodatTest, NonExistentFile) {
   ASSERT_THAT(
       LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR, 0),
       Fails(ENOENT));
+}
+
+TEST_F(LlvmLibcFchmodatTest, Flags) {
+  constexpr const char *TEST_FILE = "testdata/fchmodat_flags.test";
+  int fd = LIBC_NAMESPACE::open(TEST_FILE, O_CREAT | O_WRONLY, S_IRWXU);
+  ASSERT_GT(fd, 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+
+  int ret = LIBC_NAMESPACE::fchmodat(AT_FDCWD, TEST_FILE, S_IRUSR,
+                                     AT_SYMLINK_NOFOLLOW);
+  if (ret == 0) {
+    // SYS_fchmodat2 is supported by the kernel.
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_THAT(LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR,
+                                         AT_SYMLINK_NOFOLLOW),
+                Fails(ENOENT));
+    // Test AT_EMPTY_PATH on an open file descriptor.
+    fd = LIBC_NAMESPACE::open(TEST_FILE, O_PATH);
+    ASSERT_GT(fd, 0);
+    ASSERT_ERRNO_SUCCESS();
+    EXPECT_THAT(LIBC_NAMESPACE::fchmodat(fd, "", S_IRWXU, AT_EMPTY_PATH),
+                Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
+
+    ASSERT_THAT(LIBC_NAMESPACE::fchmodat(AT_FDCWD, TEST_FILE, S_IRUSR, -1),
+                Fails(EINVAL));
+  } else {
+    // Kernel or compile-time headers do not support fchmodat2; non-zero flags
+    // fail with ENOTSUP.
+    ASSERT_ERRNO_EQ(ENOTSUP);
+    ASSERT_THAT(LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR,
+                                         AT_SYMLINK_NOFOLLOW),
+                Fails(ENOTSUP));
+    ASSERT_THAT(
+        LIBC_NAMESPACE::fchmodat(AT_FDCWD, TEST_FILE, S_IRUSR, AT_EMPTY_PATH),
+        Fails(ENOTSUP));
+    ASSERT_THAT(LIBC_NAMESPACE::fchmodat(AT_FDCWD, TEST_FILE, S_IRUSR, -1),
+                Fails(ENOTSUP));
+  }
 }

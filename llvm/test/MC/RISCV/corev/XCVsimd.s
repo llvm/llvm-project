@@ -2943,19 +2943,19 @@ cv.extract.h t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x02,0x03,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extract.h t3, t4, 32
-# CHECK-INSTR: cv.extract.h t3, t4, 32
-# CHECK-ENCODING: [0x7b,0x8e,0x0e,0xb9]
+cv.extract.h t3, t4, 1
+# CHECK-INSTR: cv.extract.h t3, t4, 1
+# CHECK-ENCODING: [0x7b,0x8e,0x0e,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extract.h a0, a1, 7
-# CHECK-INSTR: cv.extract.h a0, a1, 7
-# CHECK-ENCODING: [0x7b,0x85,0x35,0xba]
+cv.extract.h a0, a1, 0
+# CHECK-INSTR: cv.extract.h a0, a1, 0
+# CHECK-ENCODING: [0x7b,0x85,0x05,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extract.h s0, s1, 63
-# CHECK-INSTR: cv.extract.h s0, s1, 63
-# CHECK-ENCODING: [0x7b,0x84,0xf4,0xbb]
+cv.extract.h s0, s1, 1
+# CHECK-INSTR: cv.extract.h s0, s1, 1
+# CHECK-ENCODING: [0x7b,0x84,0x04,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -2967,19 +2967,19 @@ cv.extract.b t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x12,0x03,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extract.b t3, t4, 32
-# CHECK-INSTR: cv.extract.b t3, t4, 32
-# CHECK-ENCODING: [0x7b,0x9e,0x0e,0xb9]
+cv.extract.b t3, t4, 1
+# CHECK-INSTR: cv.extract.b t3, t4, 1
+# CHECK-ENCODING: [0x7b,0x9e,0x0e,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extract.b a0, a1, 7
-# CHECK-INSTR: cv.extract.b a0, a1, 7
-# CHECK-ENCODING: [0x7b,0x95,0x35,0xba]
+cv.extract.b a0, a1, 2
+# CHECK-INSTR: cv.extract.b a0, a1, 2
+# CHECK-ENCODING: [0x7b,0x95,0x15,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extract.b s0, s1, 63
-# CHECK-INSTR: cv.extract.b s0, s1, 63
-# CHECK-ENCODING: [0x7b,0x94,0xf4,0xbb]
+cv.extract.b s0, s1, 3
+# CHECK-INSTR: cv.extract.b s0, s1, 3
+# CHECK-ENCODING: [0x7b,0x94,0x14,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -2991,19 +2991,19 @@ cv.extractu.h t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x22,0x03,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extractu.h t3, t4, 32
-# CHECK-INSTR: cv.extractu.h t3, t4, 32
-# CHECK-ENCODING: [0x7b,0xae,0x0e,0xb9]
+cv.extractu.h t3, t4, 1
+# CHECK-INSTR: cv.extractu.h t3, t4, 1
+# CHECK-ENCODING: [0x7b,0xae,0x0e,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extractu.h a0, a1, 7
-# CHECK-INSTR: cv.extractu.h a0, a1, 7
-# CHECK-ENCODING: [0x7b,0xa5,0x35,0xba]
+cv.extractu.h a0, a1, 0
+# CHECK-INSTR: cv.extractu.h a0, a1, 0
+# CHECK-ENCODING: [0x7b,0xa5,0x05,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extractu.h s0, s1, 63
-# CHECK-INSTR: cv.extractu.h s0, s1, 63
-# CHECK-ENCODING: [0x7b,0xa4,0xf4,0xbb]
+cv.extractu.h s0, s1, 1
+# CHECK-INSTR: cv.extractu.h s0, s1, 1
+# CHECK-ENCODING: [0x7b,0xa4,0x04,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -3015,19 +3015,19 @@ cv.extractu.b t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x32,0x03,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extractu.b t3, t4, 32
-# CHECK-INSTR: cv.extractu.b t3, t4, 32
-# CHECK-ENCODING: [0x7b,0xbe,0x0e,0xb9]
+cv.extractu.b t3, t4, 1
+# CHECK-INSTR: cv.extractu.b t3, t4, 1
+# CHECK-ENCODING: [0x7b,0xbe,0x0e,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extractu.b a0, a1, 7
-# CHECK-INSTR: cv.extractu.b a0, a1, 7
-# CHECK-ENCODING: [0x7b,0xb5,0x35,0xba]
+cv.extractu.b a0, a1, 2
+# CHECK-INSTR: cv.extractu.b a0, a1, 2
+# CHECK-ENCODING: [0x7b,0xb5,0x15,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.extractu.b s0, s1, 63
-# CHECK-INSTR: cv.extractu.b s0, s1, 63
-# CHECK-ENCODING: [0x7b,0xb4,0xf4,0xbb]
+cv.extractu.b s0, s1, 3
+# CHECK-INSTR: cv.extractu.b s0, s1, 3
+# CHECK-ENCODING: [0x7b,0xb4,0x14,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -3039,19 +3039,19 @@ cv.insert.h t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x42,0x03,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.insert.h t3, t4, 32
-# CHECK-INSTR: cv.insert.h t3, t4, 32
-# CHECK-ENCODING: [0x7b,0xce,0x0e,0xb9]
+cv.insert.h t3, t4, 1
+# CHECK-INSTR: cv.insert.h t3, t4, 1
+# CHECK-ENCODING: [0x7b,0xce,0x0e,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.insert.h a0, a1, 7
-# CHECK-INSTR: cv.insert.h a0, a1, 7
-# CHECK-ENCODING: [0x7b,0xc5,0x35,0xba]
+cv.insert.h a0, a1, 0
+# CHECK-INSTR: cv.insert.h a0, a1, 0
+# CHECK-ENCODING: [0x7b,0xc5,0x05,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.insert.h s0, s1, 63
-# CHECK-INSTR: cv.insert.h s0, s1, 63
-# CHECK-ENCODING: [0x7b,0xc4,0xf4,0xbb]
+cv.insert.h s0, s1, 1
+# CHECK-INSTR: cv.insert.h s0, s1, 1
+# CHECK-ENCODING: [0x7b,0xc4,0x04,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -3063,19 +3063,19 @@ cv.insert.b t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x52,0x03,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.insert.b t3, t4, 32
-# CHECK-INSTR: cv.insert.b t3, t4, 32
-# CHECK-ENCODING: [0x7b,0xde,0x0e,0xb9]
+cv.insert.b t3, t4, 1
+# CHECK-INSTR: cv.insert.b t3, t4, 1
+# CHECK-ENCODING: [0x7b,0xde,0x0e,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.insert.b a0, a1, 7
-# CHECK-INSTR: cv.insert.b a0, a1, 7
-# CHECK-ENCODING: [0x7b,0xd5,0x35,0xba]
+cv.insert.b a0, a1, 2
+# CHECK-INSTR: cv.insert.b a0, a1, 2
+# CHECK-ENCODING: [0x7b,0xd5,0x15,0xb8]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.insert.b s0, s1, 63
-# CHECK-INSTR: cv.insert.b s0, s1, 63
-# CHECK-ENCODING: [0x7b,0xd4,0xf4,0xbb]
+cv.insert.b s0, s1, 3
+# CHECK-INSTR: cv.insert.b s0, s1, 3
+# CHECK-ENCODING: [0x7b,0xd4,0x14,0xba]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -3135,19 +3135,19 @@ cv.shuffle.sci.h t0, t1, 0
 # CHECK-ENCODING: [0xfb,0x62,0x03,0xc0]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.shuffle.sci.h t3, t4, 32
-# CHECK-INSTR: cv.shuffle.sci.h t3, t4, 32
-# CHECK-ENCODING: [0x7b,0xee,0x0e,0xc1]
+cv.shuffle.sci.h t3, t4, 1
+# CHECK-INSTR: cv.shuffle.sci.h t3, t4, 1
+# CHECK-ENCODING: [0x7b,0xee,0x0e,0xc2]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.shuffle.sci.h a0, a1, 7
-# CHECK-INSTR: cv.shuffle.sci.h a0, a1, 7
-# CHECK-ENCODING: [0x7b,0xe5,0x35,0xc2]
+cv.shuffle.sci.h a0, a1, 2
+# CHECK-INSTR: cv.shuffle.sci.h a0, a1, 2
+# CHECK-ENCODING: [0x7b,0xe5,0x15,0xc0]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
-cv.shuffle.sci.h s0, s1, 63
-# CHECK-INSTR: cv.shuffle.sci.h s0, s1, 63
-# CHECK-ENCODING: [0x7b,0xe4,0xf4,0xc3]
+cv.shuffle.sci.h s0, s1, 3
+# CHECK-INSTR: cv.shuffle.sci.h s0, s1, 3
+# CHECK-ENCODING: [0x7b,0xe4,0x14,0xc2]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
 
 //===----------------------------------------------------------------------===//
@@ -5285,4 +5285,3 @@ cv.sub.div8 s0, s1, s2
 # CHECK-INSTR: cv.sub.div8 s0, s1, s2
 # CHECK-ENCODING: [0x7b,0xe4,0x24,0x75]
 # CHECK-NO-EXT: instruction requires the following: 'XCVsimd' (CORE-V SIMD ALU){{$}}
-

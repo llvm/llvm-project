@@ -48,7 +48,7 @@ stack:
   - { id: 1, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
-  - { bb: 0, offset: 9, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 9, fwdArgRegs:
       - { arg: 2, reg: '$w2' } }
 body:             |
   bb.0 (%ir-block.2):

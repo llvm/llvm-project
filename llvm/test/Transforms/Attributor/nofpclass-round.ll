@@ -231,9 +231,9 @@ define float @ret_round_nopsub(float nofpclass(psub) %arg0) {
 }
 
 define float @ret_round_nonorm_nosub(float nofpclass(norm sub) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_round_nonorm_nosub
+; CHECK-LABEL: define nofpclass(sub norm) float @ret_round_nonorm_nosub
 ; CHECK-SAME: (float nofpclass(sub norm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.round.f32(float nofpclass(sub norm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub norm) float @llvm.round.f32(float nofpclass(sub norm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 ; LIGHT-LABEL: define float @ret_round_nonorm_nosub
@@ -246,9 +246,9 @@ define float @ret_round_nonorm_nosub(float nofpclass(norm sub) %arg0) {
 }
 
 define float @ret_round_nopnorm_nopsub(float nofpclass(pnorm psub) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_round_nopnorm_nopsub
+; CHECK-LABEL: define nofpclass(sub pnorm) float @ret_round_nopnorm_nopsub
 ; CHECK-SAME: (float nofpclass(psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.round.f32(float nofpclass(psub pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub pnorm) float @llvm.round.f32(float nofpclass(psub pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 ; LIGHT-LABEL: define float @ret_round_nopnorm_nopsub
@@ -261,9 +261,9 @@ define float @ret_round_nopnorm_nopsub(float nofpclass(pnorm psub) %arg0) {
 }
 
 define float @ret_round_nonnorm_nonsub(float nofpclass(nnorm nsub) %arg0) {
-; CHECK-LABEL: define nofpclass(sub) float @ret_round_nonnorm_nonsub
+; CHECK-LABEL: define nofpclass(sub nnorm) float @ret_round_nonnorm_nonsub
 ; CHECK-SAME: (float nofpclass(nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub) float @llvm.round.f32(float nofpclass(nsub nnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(sub nnorm) float @llvm.round.f32(float nofpclass(nsub nnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 ; LIGHT-LABEL: define float @ret_round_nonnorm_nonsub
@@ -366,9 +366,9 @@ define ppc_fp128 @ret_round_nonan_ppcf128(ppc_fp128 nofpclass(nan) %arg0) {
 }
 
 define float @ret_round_noneg(float nofpclass(ninf nsub nnorm) %arg0) {
-; CHECK-LABEL: define nofpclass(ninf sub) float @ret_round_noneg
+; CHECK-LABEL: define nofpclass(ninf sub nnorm) float @ret_round_noneg
 ; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf sub) float @llvm.round.f32(float nofpclass(ninf nsub nnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(ninf sub nnorm) float @llvm.round.f32(float nofpclass(ninf nsub nnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 ; LIGHT-LABEL: define float @ret_round_noneg
@@ -441,9 +441,9 @@ define float @ret_round_noneg_nozero_nonan(float nofpclass(ninf nsub nnorm zero 
 }
 
 define float @ret_round_nopos(float nofpclass(pinf psub pnorm) %arg0) {
-; CHECK-LABEL: define nofpclass(pinf sub) float @ret_round_nopos
+; CHECK-LABEL: define nofpclass(pinf sub pnorm) float @ret_round_nopos
 ; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[ARG0:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf sub) float @llvm.round.f32(float nofpclass(pinf psub pnorm) [[ARG0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(pinf sub pnorm) float @llvm.round.f32(float nofpclass(pinf psub pnorm) [[ARG0]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[CALL]]
 ;
 ; LIGHT-LABEL: define float @ret_round_nopos

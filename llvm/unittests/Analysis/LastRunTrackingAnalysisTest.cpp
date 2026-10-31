@@ -28,7 +28,7 @@ protected:
   ModulePassManager MPM;
   ModuleAnalysisManager MAM;
 
-  LastRunTrackingAnalysisTest() : M("LastRunTrackingAnalysisTest", C) {
+  LastRunTrackingAnalysisTest() : M("LastRunTrackingAnalysisTest", C), PB(C) {
     PB.registerModuleAnalyses(MAM);
     PB.registerCGSCCAnalyses(CGAM);
     PB.registerFunctionAnalyses(FAM);

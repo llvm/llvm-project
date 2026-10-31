@@ -28,7 +28,7 @@ define dso_local void @func(ptr nocapture %a, ptr %b, i32 %N) local_unnamed_addr
 ; TUNIT-NEXT:    [[N_ADDR:%.*]] = alloca i32, align 4
 ; TUNIT-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 ; TUNIT-NEXT:    store ptr [[B]], ptr [[B_ADDR]], align 8
-; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree nonnull readnone align 4 captures(none) dereferenceable(4) undef, ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[B_ADDR]])
+; TUNIT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr noundef nonnull align 8 dereferenceable(24) @[[GLOB2]], i32 noundef 3, ptr noundef nonnull @.omp_outlined., ptr noalias nofree nonnull readnone align 4 captures(none) undef, ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[A_ADDR]], ptr noalias nofree noundef nonnull readonly align 8 captures(none) dereferenceable(8) [[B_ADDR]])
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind uwtable

@@ -25,5 +25,12 @@ TEST(LlvmLibcSigfillset, BlocksAll) {
   EXPECT_THAT(LIBC_NAMESPACE::sigfillset(&set), Succeeds());
   EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &set, nullptr),
               Succeeds());
-  EXPECT_EXITS([] { LIBC_NAMESPACE::raise(SIGUSR1); }, 0);
+  EXPECT_EXITS(
+      [] {
+        LIBC_NAMESPACE::raise(SIGUSR1);
+#ifdef SIGRTMAX
+        LIBC_NAMESPACE::raise(SIGRTMAX);
+#endif
+      },
+      0);
 }

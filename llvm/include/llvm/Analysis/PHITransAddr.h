@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -23,18 +24,18 @@ class DominatorTree;
 class DataLayout;
 class TargetLibraryInfo;
 
-/// Storage of either a normal Value address, or a select condition together
+/// Storage of either a normal Value address, or a select instruction together
 /// with a pair of addresses for the "true" and "false" variant of a
 /// select-dependent address.  If the addresses are not present (both null), V
-/// is a normal address; otherwise V is a select condition and the pair holds
+/// is a normal address; otherwise V is a select instruction and the pair holds
 /// the "true" and "false" addresses.
 class SelectAddr {
 public:
   using SelectAddrs = std::pair<Value *, Value *>;
 
   SelectAddr(Value *Addr) : V(Addr), Addrs(nullptr, nullptr) {}
-  SelectAddr(Value *Cond, SelectAddrs Addrs) : V(Cond), Addrs(Addrs) {
-    assert(Cond && "Condition must be present");
+  SelectAddr(SelectInst *Sel, SelectAddrs Addrs) : V(Sel), Addrs(Addrs) {
+    assert(Sel && "Select must be present");
     assert(hasSelectAddrs() && "Addrs must be present");
   }
 
@@ -45,9 +46,9 @@ public:
     return V;
   }
 
-  std::pair<Value *, SelectAddrs> getSelectCondAndAddrs() const {
+  std::pair<SelectInst *, SelectAddrs> getSelectAndAddrs() const {
     assert(hasSelectAddrs() && "this is not a select address");
-    return {V, Addrs};
+    return {cast<SelectInst>(V), Addrs};
   }
 
 private:
@@ -91,10 +92,10 @@ public:
   Value *getAddr() const { return Addr; }
 
   /// If the address expression depends on a select instruction (possibly
-  /// through casts or GEPs), return that select's condition.  Otherwise return
+  /// through casts or GEPs), return that select instruction.  Otherwise return
   /// nullptr.  This is used to drive translation of both sides of a
   /// select-dependent address (see the \p Cond overload of translateValue).
-  LLVM_ABI Value *getSelectCondition() const;
+  LLVM_ABI SelectInst *getSelect() const;
 
   /// needsPHITranslationFromBlock - Return true if moving from the specified
   /// BasicBlock to its predecessors requires PHI translation.

@@ -1,12 +1,12 @@
 --- |
- ; RUN: llc %s -mtriple=x86_64 -run-pass=livedebugvalues -o - -force-instr-ref-livedebugvalues=1 -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
+ ; RUN: llc %s -mtriple=x86_64 -run-pass=live-debug-values -o - -force-instr-ref-livedebugvalues=1 -emulate-old-livedebugvalues=0 | FileCheck %s -implicit-check-not=DBG_VALUE
 
   ;; When using instruction referencing LiveDebugValues, when a register gets
   ;; clobbered, we should transfer variable locations to backup locations, if
   ;; one is available.
   ;; I've written this test in terms of DBG_VALUEs rather than DBG_INSTR_REFs
   ;; as this is purely a LiveDebugValues feature, and should work without the
-  ;; need to use any other instructoin referencing work.
+  ;; need to use any other instruction referencing work.
 
   declare i32 @use() local_unnamed_addr;
 

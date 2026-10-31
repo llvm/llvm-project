@@ -14,6 +14,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/OpenACC/Support/RegisterOpenACCExtensions.h"
 #include "flang/Optimizer/Support/InitFIR.h"
+#include "flang/Optimizer/Transforms/FIRToMemRefTypeConverter.h"
 
 using namespace mlir;
 
@@ -119,6 +120,49 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
   auto elTy = dyn_cast<IntegerType>(memrefTy.getElementType());
   ASSERT_TRUE(elTy);
   EXPECT_EQ(elTy.getWidth(), kindMap->getLogicalBitsize(logicalKind));
+}
+
+TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
+    NestedPointerTypesAreNotConvertible) {
+  Type f32 = Float32Type::get(&context);
+  Type dyn1 = fir::SequenceType::get({ShapedType::kDynamic}, f32);
+  Type dyn2 =
+      fir::SequenceType::get({ShapedType::kDynamic, ShapedType::kDynamic}, f32);
+  Type stat = fir::SequenceType::get({16}, f32);
+
+  fir::FIRToMemRefTypeConverter converter(module);
+  converter.setConvertComplexTypes(true);
+  auto conv = [&](Type t) { return converter.convertibleMemrefType(t); };
+
+  // One pointer/box to the array or scalar is convertible.
+  EXPECT_TRUE(conv(fir::HeapType::get(dyn1)));
+  EXPECT_TRUE(conv(fir::PointerType::get(dyn1)));
+  EXPECT_TRUE(conv(fir::ReferenceType::get(dyn1)));
+  EXPECT_TRUE(conv(fir::HeapType::get(dyn2)));
+  EXPECT_TRUE(conv(fir::HeapType::get(stat)));
+  EXPECT_TRUE(conv(fir::HeapType::get(f32)));
+  EXPECT_TRUE(conv(fir::BoxType::get(fir::HeapType::get(dyn1))));
+  EXPECT_TRUE(conv(fir::BoxType::get(fir::PointerType::get(dyn1))));
+  EXPECT_TRUE(conv(fir::BoxType::get(dyn1)));
+
+  // A remaining pointer after one peel holds an address, not the array.
+  // `!fir.ptr`/`!fir.heap` cannot wrap another pointer type.
+  EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(dyn1))));
+  EXPECT_FALSE(conv(fir::ReferenceType::get(fir::PointerType::get(dyn1))));
+  EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(dyn2))));
+  EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(stat))));
+  EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(f32))));
+  EXPECT_FALSE(conv(
+      fir::ReferenceType::get(fir::BoxType::get(fir::HeapType::get(dyn1)))));
+  EXPECT_FALSE(conv(
+      fir::BoxType::get(fir::ReferenceType::get(fir::HeapType::get(dyn1)))));
+
+  auto asMemRef = [&](Type t) {
+    return cast<acc::PointerLikeType>(t).getAsMemRefType(module);
+  };
+  EXPECT_FALSE(asMemRef(fir::ReferenceType::get(fir::HeapType::get(dyn1))));
+  EXPECT_FALSE(asMemRef(fir::ReferenceType::get(fir::PointerType::get(dyn1))));
+  EXPECT_FALSE(asMemRef(fir::ReferenceType::get(fir::HeapType::get(f32))));
 }
 
 } // namespace

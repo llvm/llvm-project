@@ -55,12 +55,12 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  Live-in ir<%n> = original trip-count
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  ir-bb<entry>:
-; FINAL-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = ptrtoaddr ir<%c> to i64
-; FINAL-NEXT:    EMIT-SCALAR vp<[[VP3:%[0-9]+]]> = ptrtoaddr ir<%b> to i64
+; FINAL-NEXT:    IR   %c2 = ptrtoaddr ptr %c to i64
+; FINAL-NEXT:    IR   %b1 = ptrtoaddr ptr %b to i64
 ; FINAL-NEXT:  Successor(s): vector.clamped.vf.check
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.clamped.vf.check:
-; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP4:%[0-9]+]]> = call llvm.loop.dependence.war.mask(vp<[[VP3]]>, vp<[[VP2]]>, ir<1>)
+; FINAL-NEXT:    WIDEN-INTRINSIC vp<[[VP4:%[0-9]+]]> = call llvm.loop.dependence.war.mask(ir<%b1>, ir<%c2>, ir<1>)
 ; FINAL-NEXT:    EMIT vp<%num.active.lanes> = num-active-lanes vp<[[VP4]]>
 ; FINAL-NEXT:    EMIT vp<%vf.is.scalar> = icmp ule vp<%num.active.lanes>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = sub ir<-1>, ir<%n>
@@ -70,11 +70,11 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; FINAL-NEXT:  Successor(s): ir-bb<scalar.ph>, vector.ph
 ; FINAL-EMPTY:
 ; FINAL-NEXT:  vector.ph:
-; FINAL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = sub vp<%num.active.lanes>, ir<1>
 ; FINAL-NEXT:    EMIT vp<%n.rnd.up> = add ir<%n>, vp<[[VP8]]>
 ; FINAL-NEXT:    EMIT vp<%n.mod.vf> = urem vp<%n.rnd.up>, vp<%num.active.lanes>
 ; FINAL-NEXT:    EMIT vp<%n.vec> = sub vp<%n.rnd.up>, vp<%n.mod.vf>
+; FINAL-NEXT:    EMIT vp<%trip.count.minus.1> = sub ir<%n>, ir<1>
 ; FINAL-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = broadcast vp<%trip.count.minus.1>
 ; FINAL-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = step-vector i64
 ; FINAL-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = broadcast vp<%num.active.lanes>

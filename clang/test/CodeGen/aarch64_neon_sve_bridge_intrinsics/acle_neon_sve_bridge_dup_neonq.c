@@ -208,3 +208,19 @@ svfloat64_t test_svdup_neonq_f64(float64x2_t n) {
 svbfloat16_t test_svdup_neonq_bf16(bfloat16x8_t n) {
   return SVE_ACLE_FUNC(svdup_neonq, _bf16, , )(n);
 }
+
+// CHECK-LABEL: @test_svdup_neonq_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> [[N:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP0]], i64 0)
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+//
+// CPP-CHECK-LABEL: @_Z20test_svdup_neonq_mf814__Mfloat8x16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> [[TMP0]], i64 0)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP1]]
+//
+svmfloat8_t test_svdup_neonq_mf8(mfloat8x16_t n) {
+  return SVE_ACLE_FUNC(svdup_neonq, _mf8, , )(n);
+}

@@ -44,7 +44,7 @@ void testFP16Vec(int c) {
   hv0 = c ? hv0 : fv1; // expected-error{{cannot convert between vector}}
   sv0 = hv0 == fv1; // expected-error{{cannot convert between vector}}
   sv0 = hv0 < fv1; // expected-error{{cannot convert between vector}}
-  sv0 = hv0 || fv1; // expected-error{{cannot convert between vector}} expected-error{{invalid operands to binary expression}}
+  sv0 = hv0 || fv1; // expected-error{{cannot convert between vector}}
   iv0 = hv0 == hv1; // expected-error{{assigning to}}
 
   // FIXME: clang currently disallows using these operators on vectors, which is

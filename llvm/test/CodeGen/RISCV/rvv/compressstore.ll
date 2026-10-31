@@ -2,6 +2,94 @@
 ; RUN: llc -verify-machineinstrs -mtriple=riscv64 -mattr=+v,+d,+m,+zbb %s -o - | FileCheck %s --check-prefix=RV64
 ; RUN: llc -verify-machineinstrs -mtriple=riscv32 -mattr=+v,+d,+m,+zbb %s -o - | FileCheck %s --check-prefix=RV32
 
+define void @test_compresstore_nxv8i8(ptr %p, <vscale x 8 x i1> %mask, <vscale x 8 x i8> %data) {
+; RV64-LABEL: test_compresstore_nxv8i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
+; RV64-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; RV64-NEXT:    vse8.v v9, (a0)
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_compresstore_nxv8i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
+; RV32-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; RV32-NEXT:    vse8.v v9, (a0)
+; RV32-NEXT:    ret
+  call void @llvm.masked.compressstore(<vscale x 8 x i8> %data, ptr %p, <vscale x 8 x i1> %mask)
+  ret void
+}
+
+define void @test_compresstore_nxv4i16(ptr %p, <vscale x 4 x i1> %mask, <vscale x 4 x i16> %data) {
+; RV64-LABEL: test_compresstore_nxv4i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; RV64-NEXT:    vse16.v v9, (a0)
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_compresstore_nxv4i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
+; RV32-NEXT:    vse16.v v9, (a0)
+; RV32-NEXT:    ret
+  call void @llvm.masked.compressstore(<vscale x 4 x i16> %data, ptr %p, <vscale x 4 x i1> %mask)
+  ret void
+}
+
+define void @test_compresstore_nxv2i32(ptr %p, <vscale x 2 x i1> %mask, <vscale x 2 x i32> %data) {
+; RV64-LABEL: test_compresstore_nxv2i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
+; RV64-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV64-NEXT:    vse32.v v9, (a0)
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_compresstore_nxv2i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
+; RV32-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; RV32-NEXT:    vse32.v v9, (a0)
+; RV32-NEXT:    ret
+  call void @llvm.masked.compressstore(<vscale x 2 x i32> %data, ptr %p, <vscale x 2 x i1> %mask)
+  ret void
+}
+
+define void @test_compresstore_nxv1i64(ptr %p, <vscale x 1 x i1> %mask, <vscale x 1 x i64> %data) {
+; RV64-LABEL: test_compresstore_nxv1i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; RV64-NEXT:    vcpop.m a1, v0
+; RV64-NEXT:    vcompress.vm v9, v8, v0
+; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; RV64-NEXT:    vse64.v v9, (a0)
+; RV64-NEXT:    ret
+;
+; RV32-LABEL: test_compresstore_nxv1i64:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; RV32-NEXT:    vcpop.m a1, v0
+; RV32-NEXT:    vcompress.vm v9, v8, v0
+; RV32-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; RV32-NEXT:    vse64.v v9, (a0)
+; RV32-NEXT:    ret
+  call void @llvm.masked.compressstore(<vscale x 1 x i64> %data, ptr %p, <vscale x 1 x i1> %mask)
+  ret void
+}
+
 ; Compress + store for i8 type
 
 define void @test_compresstore_v1i8(ptr %p, <1 x i1> %mask, <1 x i8> %data) {

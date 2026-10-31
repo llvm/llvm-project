@@ -8,7 +8,7 @@
 
 // a test will allocate an impossible amount of memory on purpose
 // and it will trigger an expected failure
-// UNSUPPORTED: asan, msan, tsan
+// UNSUPPORTED: asan, msan, tsan, hwasan
 
 // test set_new_handler
 

@@ -101,9 +101,9 @@ define i64 @scalar_i64(i64 %x, i64 %y) nounwind {
 define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; ALL-LABEL: vector_i128_i8:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    paddb %xmm1, %xmm0
-; ALL-NEXT:    pcmpeqd %xmm1, %xmm1
-; ALL-NEXT:    psubb %xmm1, %xmm0
+; ALL-NEXT:    pcmpeqd %xmm2, %xmm2
+; ALL-NEXT:    pxor %xmm1, %xmm2
+; ALL-NEXT:    psubb %xmm2, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %t0 = add <16 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t1 = add <16 x i8> %y, %t0
@@ -113,9 +113,9 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; ALL-LABEL: vector_i128_i16:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    paddw %xmm1, %xmm0
-; ALL-NEXT:    pcmpeqd %xmm1, %xmm1
-; ALL-NEXT:    psubw %xmm1, %xmm0
+; ALL-NEXT:    pcmpeqd %xmm2, %xmm2
+; ALL-NEXT:    pxor %xmm1, %xmm2
+; ALL-NEXT:    psubw %xmm2, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %t0 = add <8 x i16> %x, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t1 = add <8 x i16> %y, %t0
@@ -125,9 +125,9 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; ALL-LABEL: vector_i128_i32:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    paddd %xmm1, %xmm0
-; ALL-NEXT:    pcmpeqd %xmm1, %xmm1
-; ALL-NEXT:    psubd %xmm1, %xmm0
+; ALL-NEXT:    pcmpeqd %xmm2, %xmm2
+; ALL-NEXT:    pxor %xmm1, %xmm2
+; ALL-NEXT:    psubd %xmm2, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %t0 = add <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %t1 = add <4 x i32> %y, %t0
@@ -137,9 +137,9 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; ALL-LABEL: vector_i128_i64:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    paddq %xmm1, %xmm0
-; ALL-NEXT:    pcmpeqd %xmm1, %xmm1
-; ALL-NEXT:    psubq %xmm1, %xmm0
+; ALL-NEXT:    pcmpeqd %xmm2, %xmm2
+; ALL-NEXT:    pxor %xmm1, %xmm2
+; ALL-NEXT:    psubq %xmm2, %xmm0
 ; ALL-NEXT:    ret{{[l|q]}}
   %t0 = add <2 x i64> %x, <i64 1, i64 1>
   %t1 = add <2 x i64> %y, %t0

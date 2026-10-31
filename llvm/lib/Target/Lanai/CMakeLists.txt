@@ -13,6 +13,9 @@ tablegen(LLVM LanaiGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM LanaiGenSDNodeInfo.inc -gen-sd-node-info)
 tablegen(LLVM LanaiGenSubtargetInfo.inc -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS LanaiOptions.td)
+tablegen(LLVM LanaiOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(LanaiCommonTableGen)
 
 add_llvm_target(LanaiCodeGen
@@ -38,13 +41,12 @@ add_llvm_target(LanaiCodeGen
   CodeGen
   CodeGenTypes
   Core
-  IRPrinter
   LanaiAsmParser
   LanaiDesc
   LanaiInfo
   MC
-  ObjCARC
-  Scalar
+  Option
+  Passes
   SelectionDAG
   Support
   Target

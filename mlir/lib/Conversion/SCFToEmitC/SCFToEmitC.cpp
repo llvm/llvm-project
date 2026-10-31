@@ -293,7 +293,7 @@ IfLowering::matchAndRewrite(IfOp ifOp, OpAdaptor adaptor,
 // Lower scf::index_switch to emitc::switch, implementing result values as
 // emitc::variable's updated within the case and default regions.
 struct IndexSwitchOpLowering : public OpConversionPattern<IndexSwitchOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(IndexSwitchOp indexSwitchOp, OpAdaptor adaptor,
@@ -345,7 +345,7 @@ LogicalResult IndexSwitchOpLowering::matchAndRewrite(
 // across iterations. The do-while structure ensures the condition is evaluated
 // after each iteration, matching SCF while semantics.
 struct WhileLowering : public OpConversionPattern<WhileOp> {
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(WhileOp whileOp, OpAdaptor adaptor,

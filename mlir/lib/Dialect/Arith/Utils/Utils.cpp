@@ -169,7 +169,6 @@ static Value convertScalarToIntDtype(ImplicitLocOpBuilder &b, Value operand,
 static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
                                     FloatType toType, bool isUnsigned) {
   // If operand is integer, cast directly to the float type.
-  // Note that it is unclear how to cast from BF16<->FP16.
   if (isa<IntegerType>(operand.getType())) {
     if (isUnsigned)
       return arith::UIToFPOp::create(b, toType, operand);
@@ -177,10 +176,13 @@ static Value convertScalarToFpDtype(ImplicitLocOpBuilder &b, Value operand,
   }
   if (auto fromFpTy = dyn_cast<FloatType>(operand.getType())) {
     if (toType.getWidth() > fromFpTy.getWidth())
-      return arith::ExtFOp::create(b, toType, operand);
+      return arith::ExtFOp::create(b, toType, operand,
+                                   arith::FastMathFlagsAttr{});
     if (toType.getWidth() < fromFpTy.getWidth())
       return arith::TruncFOp::create(b, toType, operand);
-    return operand;
+
+    return arith::ConvertFOp::create(b, toType, operand,
+                                     arith::ConvertFOp::Properties{}, {});
   }
 
   return {};
@@ -200,8 +202,10 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
         real = arith::TruncFOp::create(b, targetETy, real);
         imag = arith::TruncFOp::create(b, targetETy, imag);
       } else {
-        real = arith::ExtFOp::create(b, targetETy, real);
-        imag = arith::ExtFOp::create(b, targetETy, imag);
+        real = arith::ExtFOp::create(b, targetETy, real,
+                                     arith::FastMathFlagsAttr{});
+        imag = arith::ExtFOp::create(b, targetETy, imag,
+                                     arith::FastMathFlagsAttr{});
       }
       return complex::CreateOp::create(b, targetType, real, imag);
     }
@@ -212,7 +216,7 @@ static Value convertScalarToComplexDtype(ImplicitLocOpBuilder &b, Value operand,
     auto toBitwidth = toFpTy.getIntOrFloatBitWidth();
     Value from = operand;
     if (from.getType().getIntOrFloatBitWidth() < toBitwidth) {
-      from = arith::ExtFOp::create(b, toFpTy, from);
+      from = arith::ExtFOp::create(b, toFpTy, from, arith::FastMathFlagsAttr{});
     }
     if (from.getType().getIntOrFloatBitWidth() > toBitwidth) {
       from = arith::TruncFOp::create(b, toFpTy, from);

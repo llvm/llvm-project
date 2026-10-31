@@ -72,10 +72,10 @@ stack:
 body: |
   bb.0.entry:
     liveins: $edi
-    ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK: DBG_VALUE $noreg, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK: $eax = COPY %0, debug-location !13
-    ; CHECK: RET64 $eax, debug-location !13
+    ; CHECK: DBG_VALUE $noreg, 0, ![[VAR:[0-9]+]], !DIExpression(), debug-location ![[VAR_LOC:[0-9]+]]
+    ; CHECK: DBG_VALUE $noreg, 0, ![[VAR]], !DIExpression(), debug-location ![[VAR_LOC]]
+    ; CHECK: $eax = COPY %0, debug-location ![[RET_LOC:[0-9]+]]
+    ; CHECK: RET64 $eax, debug-location ![[RET_LOC]]
     %0 = COPY $edi
     DBG_VALUE _, 0, !12, !DIExpression(), debug-location !13
     ; Test whether debug-use is still recognized for compatibility with old
@@ -99,9 +99,9 @@ body: |
     liveins: $edi
 
     %0 = COPY $edi
-  ; CHECK:      DBG_VALUE $noreg, i32 0, !11, !DIExpression()
-  ; CHECK-NEXT: DBG_VALUE $noreg, i64 -22, !11, !DIExpression()
-  ; CHECK-NEXT: DBG_VALUE $noreg, i128 123492148938512984928424384934328985928, !11, !DIExpression()
+  ; CHECK:      DBG_VALUE $noreg, i32 0, ![[VAR]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, i64 -22, ![[VAR]], !DIExpression()
+  ; CHECK-NEXT: DBG_VALUE $noreg, i128 123492148938512984928424384934328985928, ![[VAR]], !DIExpression()
     DBG_VALUE _, i32 0, !12, !DIExpression(), debug-location !13
     DBG_VALUE _, i64 -22, !12, !DIExpression(), debug-location !13
     DBG_VALUE _, i128 123492148938512984928424384934328985928, !12, !DIExpression(), debug-location !13

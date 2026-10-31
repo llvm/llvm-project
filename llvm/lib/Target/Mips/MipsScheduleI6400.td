@@ -246,7 +246,7 @@ let SchedModel = MipsI6400Model in {
                    NLZC_B, NLZC_H, NLZC_W, NLZC_D, BNEG_B, BNEG_H, BNEG_W,
                    BNEG_D, BNEGI_B, BNEGI_H, BNEGI_W, BNEGI_D, BCLR_B, BCLR_H,
                    BCLR_W, BCLR_D, BCLRI_B, BCLRI_H, BCLRI_W, BCLRI_D, SHF_B,
-                   SHF_H, SHF_W)>;
+                   SHF_H, SHF_W, FABS_W, FABS_D)>;
 
   def I6400MSAShortLogic : SchedWriteRes<[I6400FPUShort]> {
     let ReleaseAtCycles = [2];
@@ -307,7 +307,7 @@ let SchedModel = MipsI6400Model in {
   }
   def : InstRW<[I6400MSAShortFloat], (instrs FMAX_W, FMAX_D, FMAX_A_W, FMAX_A_D,
                                          FMIN_W, FMIN_D, FMIN_A_W, FMIN_A_D,
-                                         FCLASS_W, FCLASS_D, FABS_D, FABS_W,
+                                         FCLASS_W, FCLASS_D,
 					 FABS_D32, FABS_D64)>;
   def I6400MSAFloatCompare : SchedWriteRes<[I6400FPUShort]> {
     let Latency = 2;

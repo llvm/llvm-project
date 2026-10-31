@@ -19,6 +19,37 @@ operations, types, and attributes.
 
 [TOC]
 
+## Registration and library dependencies
+
+`MLIROpenACCDialect` provides all OpenACC language and code-generation
+operations, types, and attributes.
+
+OpenACC interfaces for other dialects are provided by extension libraries:
+
+| Library | Registration API | Models |
+| --- | --- | --- |
+| `MLIROpenACCMemRefInterfaces` | `acc::registerMemRefInterfaces` | MemRef pointer and global interfaces |
+| `MLIROpenACCLLVMInterfaces` | `acc::registerLLVMInterfaces` | LLVM pointer and address-of interfaces |
+| `MLIROpenACCGPUInterfaces` | `acc::registerGPUInterfaces` | GPU launch offload-region interface |
+
+To use these models, link the corresponding libraries and register the
+extensions with a `DialectRegistry &`. Their headers are in
+`mlir/Dialect/OpenACC/Extensions`. `acc::registerAllExtensions`, declared in
+`Extensions/AllExtensions.h` and provided by `MLIROpenACCAllExtensions`,
+registers all three extensions.
+
+The MemRef and LLVM extensions load their target dialects and Arith when
+OpenACC is loaded to support IR generation. The MemRef extension attaches
+pointer models to builtin MemRef types. The GPU extension attaches the
+offload-region model to `gpu.launch` when both OpenACC and GPU are loaded,
+regardless of loading order. Extensions can also be registered by appending
+a registry to a context whose dialects are already loaded.
+
+`mlir::registerAllExtensions`, OpenACC passes, and Flang's OpenACC registration
+include these extensions. CIR registers its own pointer models.
+`MLIRCAPIOpenACC` provides a C API dialect handle that registers these
+extensions and loads GPU with OpenACC.
+
 ## Dialect Design Goals
 
 * Needs to have complete representation of the OpenACC language.

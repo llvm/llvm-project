@@ -26,7 +26,7 @@ void CIRDataLayout::reset(mlir::DataLayoutSpecInterface spec) {
     if (mlir::DataLayoutEntryInterface entry =
             spec.getSpecForIdentifier(addrSpKey))
       if (auto val = llvm::dyn_cast<mlir::IntegerAttr>(entry.getValue()))
-        programAddrSpace = val.getInt();
+        programAddrSpace = val.getUInt();
   }
 }
 
@@ -56,5 +56,5 @@ llvm::TypeSize CIRDataLayout::getTypeSizeInBits(mlir::Type ty) const {
   assert(!cir::MissingFeatures::addressSpace());
 
   // This is calling mlir::DataLayout::getTypeSizeInBits().
-  return llvm::TypeSize::getFixed(layout.getTypeSizeInBits(ty));
+  return layout.getTypeSizeInBits(ty);
 }

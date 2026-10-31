@@ -129,6 +129,90 @@ def setAnchorLayoutSlice():
 
 
 @run
+def setAnchorLayoutPacked():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.load_nd"),
+    )
+    with InsertionPoint(sequence.body):
+        i64_t = IntegerType.get_signless(64)
+        param_i64_t = transform.ParamType.get(i64_t)
+        c8 = transform.ParamConstantOp(param_i64_t, IntegerAttr.get(i64_t, 8))
+        c4 = transform.ParamConstantOp(param_i64_t, IntegerAttr.get(i64_t, 4))
+        sg_layout = transform.MergeHandlesOp([c8, c4])
+        xegpu.set_anchor_layout(
+            sequence.bodyTarget,
+            sg_layout=sg_layout.result,
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setAnchorLayoutPacked
+    # CHECK: transform.xegpu.set_anchor_layout %
+    # CHECK: sg_layout = *(%
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
+
+
+@run
+def setAnchorLayoutPackedAll():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.load_nd"),
+    )
+    with InsertionPoint(sequence.body):
+        i64_t = IntegerType.get_signless(64)
+        param_i64_t = transform.ParamType.get(i64_t)
+
+        def param(value):
+            return transform.ParamConstantOp(param_i64_t, IntegerAttr.get(i64_t, value))
+
+        sg_layout = transform.MergeHandlesOp([param(8), param(4)])
+        sg_data = transform.MergeHandlesOp([param(32), param(16)])
+        inst_data = transform.MergeHandlesOp([param(8), param(16)])
+        xegpu.set_anchor_layout(
+            sequence.bodyTarget,
+            sg_layout=sg_layout.result,
+            sg_data=sg_data.result,
+            inst_data=inst_data.result,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setAnchorLayoutPackedAll
+    # CHECK: transform.xegpu.set_anchor_layout %
+    # CHECK: sg_layout = *(%
+    # CHECK: sg_data = *(%
+    # CHECK: inst_data = *(%
+
+
+@run
+def setAnchorLayoutParams():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.Propagate,
+        [],
+        transform.OperationType.get("xegpu.load_nd"),
+    )
+    with InsertionPoint(sequence.body):
+        i64_t = IntegerType.get_signless(64)
+        param_i64_t = transform.ParamType.get(i64_t)
+        c8 = transform.ParamConstantOp(param_i64_t, IntegerAttr.get(i64_t, 8))
+        c4 = transform.ParamConstantOp(param_i64_t, IntegerAttr.get(i64_t, 4))
+        xegpu.set_anchor_layout(
+            sequence.bodyTarget,
+            sg_layout=[c8.param, c4.param],
+            sg_data=[32, 16],
+            inst_data=[8, 16],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: setAnchorLayoutParams
+    # CHECK: transform.xegpu.set_anchor_layout %
+    # CHECK: sg_layout = [%{{[0-9]+}}, %{{[0-9]+}}]
+    # CHECK: sg_data = [32, 16]
+    # CHECK: inst_data = [8, 16]
+
+
+@run
 def setGPULaunchThreadsOp():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.Propagate,

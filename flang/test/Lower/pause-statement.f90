@@ -20,7 +20,7 @@ subroutine pause_msg()
   pause "hello"
   ! CHECK-DAG: %[[five:.*]] = arith.constant 5 : index
   ! CHECK-DAG: %[[addr:.*]] = fir.address_of(@_QQ{{.*}}) : !fir.ref<!fir.char<1,5>>
-  ! CHECK-DAG: %[[str:.*]]:2 = hlfir.declare %[[addr]] typeparams %[[five]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQ{{.*}}"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+  ! CHECK-DAG: %[[str:.*]]:2 = hlfir.declare %[[addr]] typeparams %[[five]] uniq_name("_QQ{{.*}}") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
   ! CHECK-DAG: %[[buff:.*]] = fir.convert %[[str]]#0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[len:.*]] = fir.convert %[[five]] : (index) -> i64
   ! CHECK: fir.call @_FortranA{{.*}}PauseStatementText(%[[buff]], %[[len]])

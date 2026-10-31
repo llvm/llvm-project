@@ -39,6 +39,7 @@
 
 // Device, CPU
 // RUN: %clang_cc1 -fopenmp -fclangir -emit-cir \
+// RUN:   -triple x86_64-linux-gnu \
 // RUN:   -fopenmp-is-target-device %s -o - \
 // RUN:   | FileCheck %s --check-prefix=CPU-DEVICE
 
@@ -64,6 +65,6 @@
 // RUN:   | FileCheck %s --check-prefix=USM
 
 // USM: module {{.*}}  attributes {
-// USM-SAME: omp.requires = #omp<clause_requires unified_shared_memory>
+// USM-SAME: omp.requires = #omp.clause_requires<unified_shared_memory>
 
 void omp_function(void) {}

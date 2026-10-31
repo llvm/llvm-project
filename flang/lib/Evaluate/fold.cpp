@@ -9,6 +9,7 @@
 #include "flang/Evaluate/fold.h"
 #include "fold-implementation.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/initial-image.h"
 #include "flang/Evaluate/tools.h"
 
@@ -171,6 +172,9 @@ CoarrayRef FoldOperation(FoldingContext &context, CoarrayRef &&coarrayRef) {
   if (std::optional<Expr<SomeInteger>> stat{coarrayRef.stat()}) {
     folded.set_stat(Fold(context, std::move(*stat)));
   }
+  if (std::optional<Expr<SomeType>> notify{coarrayRef.notify()}) {
+    folded.set_notify(Fold(context, std::move(*notify)));
+  }
   if (std::optional<Expr<SomeType>> team{coarrayRef.team()}) {
     folded.set_team(Fold(context, std::move(*team)));
   }
@@ -301,7 +305,11 @@ std::optional<Expr<SomeType>> FoldTransfer(
 // Fold a Consequent expression in place.
 static void FoldConsequent(
     FoldingContext &context, ActualArgument::ConditionalArg::Consequent &cons) {
-  if (cons) {
+  if (cons && !IsNamedConstantDesignator(cons->value())) {
+    // A retained named-constant designator keeps its designator form for
+    // storage association; see the corresponding skip in
+    // FoldOperation(FunctionRef).  Intrinsic references get their values
+    // through the folded copy made at intrinsic resolution.
     cons->value() = Fold(context, std::move(cons->value()));
   }
 }

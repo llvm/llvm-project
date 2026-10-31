@@ -23,7 +23,7 @@ int testApplyNamedSequence(MlirContext ctx) {
   const char module[] =
       "module attributes {transform.with_named_sequence} {"
       "  transform.named_sequence @__transform_main(%root: !transform.any_op) {"
-      "    transform.print %root { name = \"from interpreter\" }: "
+      "    transform.print %root name = \"from interpreter\": "
       "!transform.any_op"
       "    transform.yield"
       "  }"

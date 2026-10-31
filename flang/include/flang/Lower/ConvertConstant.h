@@ -63,7 +63,7 @@ fir::ExtendedValue convertConstant(Fortran::lower::AbstractConverter &converter,
 fir::GlobalOp tryCreatingDenseGlobal(fir::FirOpBuilder &builder,
                                      mlir::Location loc, mlir::Type symTy,
                                      llvm::StringRef globalName,
-                                     mlir::StringAttr linkage, bool isConst,
+                                     fir::LinkageAttr linkage, bool isConst,
                                      const Fortran::lower::SomeExpr &initExpr,
                                      cuf::DataAttributeAttr dataAttr = {},
                                      bool setDefaultAlignment = true);

@@ -24,6 +24,8 @@ class MipsCallLowering : public CallLowering {
 public:
   MipsCallLowering(const MipsTargetLowering &TLI);
 
+  bool enableBigEndian() const override { return true; }
+
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
                    ArrayRef<Register> VRegs,
                    FunctionLoweringInfo &FLI) const override;

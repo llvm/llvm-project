@@ -31,8 +31,8 @@ public:
     ASSERT_FP_EQ(aNaN, func(aNaN));
     ASSERT_FP_EQ(inf, func(inf));
     ASSERT_FP_EQ(inf, func(neg_inf));
-    ASSERT_FP_EQ(neg_inf, func(0.0));
-    ASSERT_FP_EQ(neg_inf, func(-0.0));
+    ASSERT_FP_EQ(neg_inf, func(zero));
+    ASSERT_FP_EQ(neg_inf, func(neg_zero));
   }
 
   void testPowersOfTwo(LogbFunc func) {
@@ -78,7 +78,7 @@ public:
     constexpr StorageType STEP = STORAGE_MAX / COUNT;
     for (StorageType i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
       T x = FPBits(v).get_val();
-      if (FPBits(v).is_nan() || FPBits(v).is_inf() || x == 0.0l)
+      if (FPBits(v).is_nan() || FPBits(v).is_inf() || FPBits(v).is_zero())
         continue;
 
       int exponent;
@@ -88,9 +88,9 @@ public:
   }
 };
 
-#define LIST_LOGB_TESTS(T, func)                                               \
-  using LlvmLibcLogbTest = LogbTest<T>;                                        \
-  TEST_F(LlvmLibcLogbTest, SpecialNumbers) { testSpecialNumbers(&func); }      \
-  TEST_F(LlvmLibcLogbTest, PowersOfTwo) { testPowersOfTwo(&func); }            \
-  TEST_F(LlvmLibcLogbTest, SomeIntegers) { testSomeIntegers(&func); }          \
-  TEST_F(LlvmLibcLogbTest, InRange) { testRange(&func); }
+#define LIST_LOGB_TESTS(Name, T, func)                                         \
+  using LlvmLibc##Name##Test = LogbTest<T>;                                    \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, PowersOfTwo) { testPowersOfTwo(&func); }        \
+  TEST_F(LlvmLibc##Name##Test, SomeIntegers) { testSomeIntegers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, InRange) { testRange(&func); }

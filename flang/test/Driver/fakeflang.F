@@ -1,5 +1,8 @@
 ! This is how CMake probes the compiler for CMAKE_Fortran_COMPILER_ID etc.
 
+! fakeflang is not built for standalone builds.
+! UNSUPPORTED: flang-standalone-build
+
 ! RUN: rm -rf %t
 ! RUN: mkdir -p %t
 ! RUN: cp %s %t/CMakeFortranCompilerId.F

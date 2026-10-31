@@ -20,8 +20,8 @@
 ; CHECK:         .cv_fpo_pushreg %esi
 ; CHECK:         andl    $-16, %esp
 ; CHECK:         .cv_fpo_stackalign      16
-; CHECK:         subl    $32, %esp
-; CHECK:         .cv_fpo_stackalloc      32
+; CHECK:         subl    $16, %esp
+; CHECK:         .cv_fpo_stackalloc      16
 ; CHECK:         .cv_fpo_endprologue
 ; CHECK:         movl    %esp, %esi
 ; CHECK:         leal    8(%esi),

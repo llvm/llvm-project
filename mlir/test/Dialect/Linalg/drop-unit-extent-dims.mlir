@@ -1,8 +1,6 @@
 // RUN: mlir-opt %s -linalg-fold-unit-extent-dims -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -linalg-fold-unit-extent-dims="use-rank-reducing-slices" -cse -split-input-file | FileCheck %s --check-prefix=CHECK-SLICES
 
-// XFAIL: mlir-expensive-checks
-
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
   affine_map<(i, j, k, l, m) -> ()>,
@@ -1031,6 +1029,49 @@ func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
 //       CHECK-SLICES:   %[[EMPTY:.+]] = tensor.empty(%[[PADDED_DIM]]) : tensor<1x?xf32>
 //       CHECK-SLICES:   tensor.insert_slice %[[PADDED]] into %[[EMPTY]]
 //  CHECK-SLICES-SAME:     [0, 0] [1, %[[PADDED_DIM]]] [1, 1] : tensor<?xf32> into tensor<1x?xf32>
+
+// -----
+
+func.func @drop_unit_pad_dims_constant_inside_body(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32>
+{
+  %0 = tensor.pad %arg0 low[0, 2, 2, 0] high[0, 2, 2, 0] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index, %arg4: index):
+      %cst = arith.constant 0.0 : f32
+      tensor.yield %cst : f32
+  } : tensor<1x28x28x1xf32> to tensor<1x32x32x1xf32>
+  return %0 : tensor<1x32x32x1xf32>
+}
+
+// CHECK-LABEL: func @drop_unit_pad_dims_constant_inside_body
+//       CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3]{{\]}} : tensor<1x28x28x1xf32> into tensor<28x28xf32>
+//       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[2, 2] high[2, 2]
+//       CHECK:     tensor.yield %[[CST]]
+//       CHECK:   } : tensor<28x28xf32> to tensor<32x32xf32>
+//       CHECK:   tensor.expand_shape %[[PADDED]]
+//  CHECK-SAME:     {{\[}}[0, 1], [2, 3]{{\]}} output_shape [1, 32, 32, 1] : tensor<32x32xf32> into tensor<1x32x32x1xf32>
+
+// -----
+
+// The pattern must not modify the IR when there are no unit dims to drop.
+
+func.func @negative_drop_pad_without_unit_dims_constant_inside_body(%arg0: tensor<2xf32>) -> tensor<3xf32>
+{
+  %0 = tensor.pad %arg0 low[0] high[1] {
+    ^bb0(%arg1: index):
+      %cst = arith.constant 0.0 : f32
+      tensor.yield %cst : f32
+  } : tensor<2xf32> to tensor<3xf32>
+  return %0 : tensor<3xf32>
+}
+
+// CHECK-LABEL: func @negative_drop_pad_without_unit_dims_constant_inside_body
+//   CHECK-NOT:   tensor.collapse_shape
+//       CHECK:   %[[CST:.+]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   tensor.pad %{{.*}} low[0] high[1]
+//       CHECK:     tensor.yield %[[CST]]
+//   CHECK-NOT:   tensor.expand_shape
 
 // -----
 

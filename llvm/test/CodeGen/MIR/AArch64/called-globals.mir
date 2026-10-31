@@ -20,11 +20,11 @@ stack:
       stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 calledGlobals:
-  - bb:              0
+  - bb:              '%bb.0'
     offset:          7
     callee:          callee_func
     flags:           144
-  - bb:              0
+  - bb:              '%bb.0'
     offset:          8
     callee:          callee_func
     flags:           144
@@ -51,11 +51,11 @@ body:             |
 ...
 
 # CHECK-LABEL: calledGlobals:
-# CHECK-NEXT:  - bb:              0
+# CHECK-NEXT:  - bb:              '%bb.0'
 # CHECK-NEXT:    offset:          7
 # CHECK-NEXT:    callee:          callee_func
 # CHECK-NEXT:    flags:           144
-# CHECK-NEXT:  - bb:              0
+# CHECK-NEXT:  - bb:              '%bb.0'
 # CHECK-NEXT:    offset:          8
 # CHECK-NEXT:    callee:          callee_func
 # CHECK-NEXT:    flags:           144

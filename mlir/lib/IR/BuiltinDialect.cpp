@@ -103,6 +103,7 @@ private:
 } // namespace
 
 void BuiltinDialect::initialize() {
+  setVersion(BuiltinDialectVersion::getCurrentVersion());
   registerTypes();
   registerAttributes();
   registerLocationAttributes();
@@ -125,7 +126,7 @@ void ModuleOp::build(OpBuilder &builder, OperationState &state,
   state.addRegion()->emplaceBlock();
   if (name) {
     state.attributes.push_back(builder.getNamedAttr(
-        mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(*name)));
+        getSymNameAttrName(state.name), builder.getStringAttr(*name)));
   }
 }
 
@@ -135,11 +136,42 @@ ModuleOp ModuleOp::create(Location loc, std::optional<StringRef> name) {
   return ModuleOp::create(builder, loc, name);
 }
 
+LogicalResult ModuleOp::readProperties(DialectBytecodeReader &reader,
+                                       OperationState &state) {
+  auto &properties = state.getOrAddProperties<Properties>();
+  if (failed(reader.readOptionalAttribute(properties.sym_name)) ||
+      failed(reader.readOptionalAttribute(properties.sym_visibility)))
+    return failure();
+
+  FailureOr<const DialectVersion *> maybeVersion =
+      reader.getDialectVersion<BuiltinDialect>();
+  if (failed(maybeVersion) ||
+      static_cast<const BuiltinDialectVersion *>(*maybeVersion)->getVersion() <
+          1)
+    return success();
+  return reader.readOptionalAttribute(properties.dlti);
+}
+
+void ModuleOp::writeProperties(DialectBytecodeWriter &writer) {
+  Properties &properties = getProperties();
+  writer.writeOptionalAttribute(properties.sym_name);
+  writer.writeOptionalAttribute(properties.sym_visibility);
+
+  FailureOr<const DialectVersion *> maybeVersion =
+      writer.getDialectVersion<BuiltinDialect>();
+  if (succeeded(maybeVersion) &&
+      static_cast<const BuiltinDialectVersion *>(*maybeVersion)->getVersion() <
+          1)
+    return;
+  writer.writeOptionalAttribute(properties.dlti);
+}
+
 DataLayoutSpecInterface ModuleOp::getDataLayoutSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
-  for (NamedAttribute attr : getOperation()->getAttrs())
+  for (NamedAttribute attr :
+       getOperation()->getDiscardableAttrDictionary().getValue())
     if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(attr.getValue()))
       return spec;
   return {};
@@ -149,7 +181,8 @@ TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
   // Take the first and only (if present) attribute that implements the
   // interface. This needs a linear search, but is called only once per data
   // layout object construction that is used for repeated queries.
-  for (NamedAttribute attr : getOperation()->getAttrs())
+  for (NamedAttribute attr :
+       getOperation()->getDiscardableAttrDictionary().getValue())
     if (auto spec = llvm::dyn_cast<TargetSystemSpecInterface>(attr.getValue()))
       return spec;
   return {};
@@ -158,11 +191,12 @@ TargetSystemSpecInterface ModuleOp::getTargetSystemSpec() {
 LogicalResult ModuleOp::verify() {
   // Check that none of the attributes are non-dialect attributes, except for
   // the symbol related attributes.
-  for (auto attr : (*this)->getAttrs()) {
+  for (auto attr : (*this)->getDiscardableAttrDictionary().getValue()) {
     if (!attr.getName().strref().contains('.') &&
         !llvm::is_contained(
-            ArrayRef<StringRef>{mlir::SymbolTable::getSymbolAttrName(),
-                                mlir::SymbolTable::getVisibilityAttrName()},
+            ArrayRef<StringRef>{
+                getSymNameAttrName().getValue(),
+                mlir::SymbolOpInterface::getDefaultVisibilityAttrName()},
             attr.getName().strref()))
       return emitOpError() << "can only contain attributes with "
                               "dialect-prefixed names, found: '"
@@ -172,7 +206,8 @@ LogicalResult ModuleOp::verify() {
   // Check that there is at most one data layout spec attribute.
   StringRef layoutSpecAttrName;
   DataLayoutSpecInterface layoutSpec;
-  for (const NamedAttribute &na : (*this)->getAttrs()) {
+  for (const NamedAttribute &na :
+       (*this)->getDiscardableAttrDictionary().getValue()) {
     if (auto spec = llvm::dyn_cast<DataLayoutSpecInterface>(na.getValue())) {
       if (layoutSpec) {
         InFlightDiagnostic diag =

@@ -12,20 +12,26 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBSYCL_PROGRAM_MANAGER
-#define _LIBSYCL_PROGRAM_MANAGER
+#ifndef _LIBSYCL_SRC_DETAIL_PROGRAM_MANAGER_HPP
+#define _LIBSYCL_SRC_DETAIL_PROGRAM_MANAGER_HPP
 
 #include <sycl/__impl/detail/config.hpp>
 
 #include <detail/device_binary_structures.hpp>
 #include <detail/device_image_wrapper.hpp>
 #include <detail/device_kernel_info.hpp>
+#include <detail/suppress_extra_warnings.hpp>
 
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_BEGIN
 #include <llvm/Object/OffloadBinary.h>
+_LIBSYCL_SUPPRESS_EXTRA_WARNINGS_END
 
 #include <OffloadAPI.h>
 
+#include <cstddef>
+#include <memory>
 #include <mutex>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -54,6 +60,7 @@ _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 namespace detail {
 
+class ContextImpl;
 class DeviceImpl;
 
 /// A class to manage programs and kernels.
@@ -80,13 +87,20 @@ public:
   /// This method is thread-safe.
   /// \param KernelInfo a set of kernel specific data: name, corresponding
   /// device image, etc.
+  /// \param Context the context in which the underlying program must be
+  /// created.
   /// \param Device the device for which this kernel must be compiled.
   /// \return a liboffload kernel handle that is ready to be passed to kernel
   /// execution methods.
-  ol_symbol_handle_t getOrCreateKernel(DeviceKernelInfo &KernelInfo,
-                                       DeviceImpl &Device);
+  ol_symbol_handle_t
+  getOrCreateKernel(DeviceKernelInfo &KernelInfo,
+                    const std::shared_ptr<ContextImpl> &Context,
+                    DeviceImpl &Device);
 
+  /// This method is thread-safe.
   /// \return kernel info for the kernel with the specified name.
+  /// \throw sycl::exception with sycl::errc::runtime if no registered device
+  /// image provides a kernel with the specified name.
   DeviceKernelInfo &getDeviceKernelInfo(std::string_view KernelName);
 
   /// Release device image managers and corresponding resources.
@@ -101,6 +115,12 @@ protected:
   ~ProgramAndKernelManager() = default;
   ProgramAndKernelManager(ProgramAndKernelManager const &) = delete;
   ProgramAndKernelManager &operator=(ProgramAndKernelManager const &) = delete;
+
+  /// Adds the specified context to MContextsWithPrograms unless it is already
+  /// tracked, and drops the entries of contexts that have been destroyed.
+  /// MDataCollectionMutex must be held by the caller.
+  /// \param Context the context that is about to cache a program.
+  void trackContext(const std::shared_ptr<ContextImpl> &Context);
 
   // Filled by registerFatBin(...).
   // Map for storing device kernel information. Runtime lookup should be avoided
@@ -117,6 +137,16 @@ protected:
   std::unordered_map<BinaryStartKey, DeviceImageManagerVec>
       MDeviceImageManagers;
 
+  // Contexts that may hold programs created from the device images above. A
+  // context is the sole owner of its programs, and it must destroy them before
+  // the images they were created from are destroyed.
+  //
+  // Entries are weak and pruned lazily: a context can be destroyed at any point
+  // and ~ContextImpl must not call back into this class, because that would
+  // take MDataCollectionMutex while holding ContextImpl::MProgramCacheMutex and
+  // invert the lock order used everywhere else.
+  std::vector<std::weak_ptr<ContextImpl>> MContextsWithPrograms;
+
   // All work with device images and data related to it must be wrapped with a
   // lock of this mutex.
   std::mutex MDataCollectionMutex;
@@ -125,4 +155,4 @@ protected:
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 
-#endif // _LIBSYCL_PROGRAM_MANAGER
+#endif // _LIBSYCL_SRC_DETAIL_PROGRAM_MANAGER_HPP

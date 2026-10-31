@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 #include <queue>
 #include <set>
 #include <string>
@@ -141,12 +142,6 @@ struct FPFastMathDefaultInfo {
   FPFastMathDefaultInfo() = default;
   FPFastMathDefaultInfo(const Type *Ty, unsigned FastMathFlags)
       : Ty(Ty), FastMathFlags(FastMathFlags) {}
-  bool operator==(const FPFastMathDefaultInfo &Other) const {
-    return Ty == Other.Ty && FastMathFlags == Other.FastMathFlags &&
-           ContractionOff == Other.ContractionOff &&
-           SignedZeroInfNanPreserve == Other.SignedZeroInfNanPreserve &&
-           FPFastMathDefault == Other.FPFastMathDefault;
-  }
 };
 
 struct FPFastMathDefaultInfoVector
@@ -196,8 +191,6 @@ void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB);
 
 // Add an OpName instruction for the given target register.
 void buildOpName(Register Target, StringRef Name, MachineIRBuilder &MIRBuilder);
-void buildOpName(Register Target, StringRef Name, MachineInstr &I,
-                 const SPIRVInstrInfo &TII);
 
 // Add an OpDecorate instruction for the given Reg.
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
@@ -245,33 +238,33 @@ constexpr unsigned
 storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::Function:
-    return 0;
+    return SPIRVAS::Function;
   case SPIRV::StorageClass::CrossWorkgroup:
-    return 1;
+    return SPIRVAS::CrossWorkgroup;
   case SPIRV::StorageClass::UniformConstant:
-    return 2;
+    return SPIRVAS::UniformConstant;
   case SPIRV::StorageClass::Workgroup:
-    return 3;
+    return SPIRVAS::Workgroup;
   case SPIRV::StorageClass::Generic:
-    return 4;
+    return SPIRVAS::Generic;
   case SPIRV::StorageClass::DeviceOnlyINTEL:
-    return 5;
+    return SPIRVAS::DeviceOnlyINTEL;
   case SPIRV::StorageClass::HostOnlyINTEL:
-    return 6;
+    return SPIRVAS::HostOnlyINTEL;
   case SPIRV::StorageClass::Input:
-    return 7;
+    return SPIRVAS::Input;
   case SPIRV::StorageClass::Output:
-    return 8;
+    return SPIRVAS::Output;
   case SPIRV::StorageClass::CodeSectionINTEL:
-    return 9;
+    return SPIRVAS::CodeSectionINTEL;
   case SPIRV::StorageClass::Private:
-    return 10;
+    return SPIRVAS::Private;
   case SPIRV::StorageClass::StorageBuffer:
-    return 11;
+    return SPIRVAS::StorageBuffer;
   case SPIRV::StorageClass::Uniform:
-    return 12;
+    return SPIRVAS::Uniform;
   case SPIRV::StorageClass::PushConstant:
-    return 13;
+    return SPIRVAS::PushConstant;
   default:
     report_fatal_error("Unable to get address space id");
   }
@@ -514,21 +507,42 @@ inline bool isVector1(Type *Ty) {
   return FVTy && FVTy->getNumElements() == 1;
 }
 
+// We define this predicate out of line to avoid having to include all OpTypes.
+bool isVectorType(SPIRVTypeInst SPVTy);
+
+// Per spec: "Vector types must be parameterized only with 2, 3, or
+// 4 components, plus any additional sizes enabled by capabilities.", and
+// we always enable the Vector16 capability.
+inline bool requiresLongVectorEXT(unsigned NumComponents) {
+  return NumComponents != 2 && NumComponents != 3 && NumComponents != 4 &&
+         NumComponents != 8 && NumComponents != 16;
+}
+
+inline bool isLongVectorEXT(const Type *Ty) {
+  if (auto *FVTy = dyn_cast<FixedVectorType>(Ty))
+    return requiresLongVectorEXT(FVTy->getNumElements());
+  return false;
+}
+
 // Modify an LLVM type to conform with future transformations in IRTranslator.
 // At the moment use cases comprise only a <1 x Type> vector. To extend when/if
 // needed.
-inline Type *normalizeType(Type *Ty) {
+inline Type *normalizeType(Type *Ty, bool CanUseAnyVectorRank) {
+  if (CanUseAnyVectorRank)
+    return Ty;
+
   auto *FVTy = dyn_cast<FixedVectorType>(Ty);
   if (!FVTy || FVTy->getNumElements() != 1)
     return Ty;
   // If it's a <1 x Type> vector type, replace it by the element type, because
   // it's not a legal vector type in LLT and IRTranslator will represent it as
   // the scalar eventually.
-  return normalizeType(FVTy->getElementType());
+  return normalizeType(FVTy->getElementType(), CanUseAnyVectorRank);
 }
 
-inline PoisonValue *getNormalizedPoisonValue(Type *Ty) {
-  return PoisonValue::get(normalizeType(Ty));
+inline PoisonValue *getNormalizedPoisonValue(Type *Ty,
+                                             bool CanUseAnyVectorRank) {
+  return PoisonValue::get(normalizeType(Ty, CanUseAnyVectorRank));
 }
 
 inline MetadataAsValue *buildMD(Value *Arg) {

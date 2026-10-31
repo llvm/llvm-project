@@ -28,7 +28,7 @@ namespace {
 /// Pattern to bubble down casts into consumer operations.
 struct BubbleDownCastsPattern
     : public OpInterfaceRewritePattern<MemorySpaceCastConsumerOpInterface> {
-  using OpInterfaceRewritePattern::OpInterfaceRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(MemorySpaceCastConsumerOpInterface op,
                                 PatternRewriter &rewriter) const override {

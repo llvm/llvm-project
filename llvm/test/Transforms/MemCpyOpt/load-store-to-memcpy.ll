@@ -43,10 +43,10 @@ define void @test_memcpy_constant(ptr %d) {
 ; memcpy(%d, %a) should not be generated since store2 may-aliases load %a.
 define void @f(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[VAL:%.*]] = load [[T:%.*]], ptr [[A:%.*]], align 4, !alias.scope !0
-; CHECK-NEXT:    store [[T]] { i8 23, i32 23 }, ptr [[B:%.*]], align 4, !alias.scope !3
-; CHECK-NEXT:    store [[T]] { i8 44, i32 44 }, ptr [[C:%.*]], align 4, !alias.scope !6, !noalias !3
-; CHECK-NEXT:    store [[T]] [[VAL]], ptr [[D:%.*]], align 4, !alias.scope !9, !noalias !12
+; CHECK-NEXT:    [[VAL:%.*]] = load [[T:%.*]], ptr [[A:%.*]], align 4, !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    store [[T]] { i8 23, i32 23 }, ptr [[B:%.*]], align 4, !alias.scope [[META3:![0-9]+]]
+; CHECK-NEXT:    store [[T]] { i8 44, i32 44 }, ptr [[C:%.*]], align 4, !alias.scope [[META6:![0-9]+]], !noalias [[META3]]
+; CHECK-NEXT:    store [[T]] [[VAL]], ptr [[D:%.*]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %val = load %T, ptr %a, !alias.scope !{!10}
@@ -62,10 +62,10 @@ define void @f(ptr %a, ptr %b, ptr %c, ptr %d) {
   ret void
 }
 
-!0 = !{!0}
-!1 = !{!1}
-!2 = !{!2}
-!3 = !{!3}
+!0 = !{!0, i1 false}
+!1 = !{!1, i1 false}
+!2 = !{!2, i1 false}
+!3 = !{!3, i1 false}
 
 !10 = !{ !10, !0 }
 !11 = !{ !11, !1 }

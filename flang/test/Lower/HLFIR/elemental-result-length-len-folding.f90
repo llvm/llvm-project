@@ -11,9 +11,9 @@ elemental function add_suffix(str) result(res)
 end function
 
 ! CHECK-LABEL: func.func @_QPadd_suffix(
-! CHECK:         hlfir.declare {{.*}} "_QFadd_suffixEstr"
+! CHECK:         hlfir.declare {{.*}}uniq_name("_QFadd_suffixEstr")
 ! CHECK-NOT:     hlfir.concat
-! CHECK:         hlfir.declare {{.*}} "_QFadd_suffixEres"
+! CHECK:         hlfir.declare {{.*}}uniq_name("_QFadd_suffixEres")
 ! CHECK:         hlfir.concat
 ! CHECK:         hlfir.assign
 
@@ -30,7 +30,7 @@ subroutine test_call(s, r)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_call(
-! CHECK:         hlfir.declare {{.*}} "_QFtest_callEs"
+! CHECK:         hlfir.declare {{.*}}uniq_name("_QFtest_callEs")
 ! CHECK-NOT:     hlfir.concat
 ! CHECK:         hlfir.elemental {{.*}} {
 ! CHECK:           hlfir.designate
@@ -46,7 +46,7 @@ subroutine test_trim(s, n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtest_trim(
-! CHECK:         hlfir.declare {{.*}} "_QFtest_trimEs"
+! CHECK:         hlfir.declare {{.*}}uniq_name("_QFtest_trimEs")
 ! CHECK:         %[[TRIM:.*]] = hlfir.char_trim
 ! CHECK-NEXT:    %[[LEN:.*]] = hlfir.get_length %[[TRIM]]
 ! CHECK-NEXT:    %[[LEN_I32:.*]] = fir.convert %[[LEN]] : (index) -> i32

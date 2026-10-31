@@ -86,7 +86,7 @@ struct MoveAccumulatorForContractLoop
         rewriter, loc,
         DenseElementsAttr::get(vecTy, rewriter.getZeroAttr(elemTy)));
 
-    accValue.replaceAllUsesWith(zeroVec);
+    rewriter.replaceAllUsesWith(accValue, zeroVec);
 
     // Adds the initial acc value with contract results before storing to acc
     // matrix.
@@ -105,7 +105,9 @@ struct MoveAccumulatorForContractLoop
       llvm_unreachable("expected floating-point or integer element type");
     }
 
-    resultUserOp->replaceUsesOfWith(contractValue, addition);
+    rewriter.modifyOpInPlace(resultUserOp, [&]() {
+      resultUserOp->replaceUsesOfWith(contractValue, addition);
+    });
     return success();
   }
 };

@@ -110,7 +110,7 @@ body:             |
   bb.0.entry:
     DBG_VALUE 13, $noreg, !11, !DIExpression(), debug-location !13
     %0:gpr = MOVi 13, 14 /* CC::al */, $noreg, $noreg
-    STRi12 killed %0, %stack.0.c, 0, 14 /* CC::al */, $noreg, debug-location !14 :: (volatile store (s32) into %ir.c)
+    STRi12 %0, %stack.0.c, 0, 14 /* CC::al */, $noreg, debug-location !14 :: (volatile store (s32) into %ir.c)
     ADJCALLSTACKDOWN 0, 0, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp, debug-location !15
     BL @_Z4funcv, csr_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp, implicit-def $r0, debug-location !15
     ADJCALLSTACKUP 0, -1, 14 /* CC::al */, $noreg, implicit-def dead $sp, implicit $sp, debug-location !15

@@ -123,13 +123,14 @@ bool types::canTypeBeUserSpecified(ID Id) {
       TY_dSYM,
       TY_Dependencies,
       TY_CUDA_FATBIN,
-      TY_HIP_FATBIN};
+      TY_HIP_FATBIN,
+      TY_SYCL_FATBIN};
   return !llvm::is_contained(kStaticLangageTypes, Id);
 }
 
 bool types::appendSuffixForType(ID Id) {
   return Id == TY_PCH || Id == TY_dSYM || Id == TY_CUDA_FATBIN ||
-         Id == TY_HIP_FATBIN;
+         Id == TY_HIP_FATBIN || Id == TY_SYCL_FATBIN;
 }
 
 bool types::canLipoType(ID Id) {
@@ -170,6 +171,8 @@ bool types::isAcceptedByClang(ID Id) {
   case TY_PP_CXXStdModule:
   case TY_AST: case TY_ModuleFile: case TY_PCH:
   case TY_LLVM_IR: case TY_LLVM_BC:
+  case TY_CIR:
+  case TY_CIRBC:
   case TY_API_INFO:
     return true;
   }
@@ -366,6 +369,8 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("CPP", TY_CXX)
       .Case("c++", TY_CXX)
       .Case("C++", TY_CXX)
+      .Case("cir", TY_CIR)
+      .Case("cirbc", TY_CIRBC)
       .Case("cui", TY_PP_CUDA)
       .Case("cxx", TY_CXX)
       .Case("CXX", TY_CXX)

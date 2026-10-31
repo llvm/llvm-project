@@ -8,13 +8,13 @@
 
 #include <__assert>
 #include <__config>
+#include <__optional/optional.h>
 #include <__system_error/throw_system_error.h>
 #include <__verbose_abort>
 #include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <optional>
 #include <string.h>
 #include <string>
 #include <system_error>
@@ -258,7 +258,8 @@ const error_category& generic_category() noexcept {
     constexpr explicit AvoidDestroyingGenericCategory() : generic_error_category() {}
     ~AvoidDestroyingGenericCategory() {}
   };
-  constinit static AvoidDestroyingGenericCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingGenericCategory helper;
   return helper.generic_error_category;
 }
 
@@ -326,7 +327,8 @@ const error_category& system_category() noexcept {
     constexpr explicit AvoidDestroyingSystemCategory() : system_error_category() {}
     ~AvoidDestroyingSystemCategory() {}
   };
-  constinit static AvoidDestroyingSystemCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingSystemCategory helper;
   return helper.system_error_category;
 }
 

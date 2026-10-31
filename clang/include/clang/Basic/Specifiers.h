@@ -102,6 +102,9 @@ namespace clang {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                          \
     TST_##Name, // HLSL Intangible Types
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId)                              \
+    TST_##Name, // HLSL Packed Types
+#include "clang/Basic/HLSLPackedTypes.def"
     TST_error // erroneous type
   };
 

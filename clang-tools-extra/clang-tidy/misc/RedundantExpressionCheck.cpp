@@ -16,7 +16,6 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -568,8 +567,6 @@ AST_MATCHER(ConditionalOperator, conditionalOperatorIsInMacro) {
   return Node.getQuestionLoc().isMacroID() || Node.getColonLoc().isMacroID();
 }
 
-AST_MATCHER(Expr, isMacro) { return Node.getExprLoc().isMacroID(); }
-
 AST_MATCHER_P(Expr, expandedByMacro, ArrayRef<StringRef>, Names) {
   const SourceManager &SM = Finder->getASTContext().getSourceManager();
   const LangOptions &LO = Finder->getASTContext().getLangOpts();
@@ -705,7 +702,7 @@ matchRelationalIntegerConstantExpr(StringRef Id) {
       cxxOperatorCallExpr(
           hasAnyOverloadedOperatorName("==", "!=", "<", "<=", ">", ">="),
           // Filter noisy false positives.
-          unless(isMacro()), unless(isInTemplateInstantiation()),
+          unless(isMacroID()), unless(isInTemplateInstantiation()),
           anyOf(hasLHS(ignoringParenImpCasts(integerLiteral().bind(ConstId))),
                 hasRHS(ignoringParenImpCasts(integerLiteral().bind(ConstId)))))
           .bind(OverloadId);
@@ -1025,7 +1022,7 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
                                                 ">=", "&&", "||", "="),
                    parametersAreEquivalent(),
                    // Filter noisy false positives.
-                   unless(isMacro()), unless(isInTemplateInstantiation()),
+                   unless(isMacroID()), unless(isInTemplateInstantiation()),
                    unless(IsInUnevaluatedContext))
                    .bind("call")),
       this);
@@ -1036,7 +1033,7 @@ void RedundantExpressionCheck::registerMatchers(MatchFinder *Finder) {
           hasAnyOverloadedOperatorName("|", "&", "||", "&&", "^"),
           nestedParametersAreEquivalent(), argumentCountIs(2),
           // Filter noisy false positives.
-          unless(isMacro()), unless(isInTemplateInstantiation()),
+          unless(isMacroID()), unless(isInTemplateInstantiation()),
           unless(IsInUnevaluatedContext))
           .bind("nested-duplicates"),
       this);

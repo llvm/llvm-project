@@ -102,7 +102,6 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX8-NEXT:    v_add_u16_e32 v0, v2, v0
 ; GFX8-NEXT:    v_xor_b32_e32 v0, -1, v0
 ; GFX8-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX8-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -121,7 +120,6 @@ define amdgpu_kernel void @s_anyext_i16_i32(ptr addrspace(1) %out, ptr addrspace
 ; GFX9-NEXT:    v_add_u16_e32 v0, v2, v3
 ; GFX9-NEXT:    v_xor_b32_e32 v0, -1, v0
 ; GFX9-NEXT:    v_and_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 entry:
@@ -165,7 +163,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
 ; GFX8-NEXT:    v_and_b32_sdwa v0, v0, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
 ; GFX8-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; GFX8-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GFX8-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX8-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-NEXT:    buffer_store_byte v0, off, s[0:3], 0
@@ -181,7 +179,7 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX9-NEXT:    v_and_b32_e32 v0, 0x80018001, v0
 ; GFX9-NEXT:    v_bfi_b32 v0, v1, 0, v0
 ; GFX9-NEXT:    v_cmp_eq_f32_e32 vcc, 0, v0
-; GFX9-NEXT:    s_and_b64 s[0:1], vcc, exec
+; GFX9-NEXT:    s_cmp_lg_u64 vcc, 0
 ; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0

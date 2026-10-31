@@ -18,8 +18,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SourceMgr.h"
@@ -27,9 +25,6 @@
 #include "gtest/gtest.h"
 
 namespace llvm {
-
-LLVM_ABI extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
-
 namespace {
 
 class ProfileSummaryInfoTest : public testing::Test {
@@ -392,8 +387,6 @@ TEST_F(ProfileSummaryInfoTest, SampleProfNoFuncEntryCount) {
 }
 
 TEST_F(ProfileSummaryInfoTest, PartialSampleProfWorkingSetSize) {
-  ScalePartialSampleProfileWorkingSetSize.setValue(true);
-
   // With PartialProfileRatio unset (zero.)
   auto M1 = makeLLVMModule("SampleProfile", /*NumCounts*/ 3,
                            /*IsPartialProfile*/ 1,
@@ -431,6 +424,76 @@ TEST_F(ProfileSummaryInfoTest, PartialSampleProfWorkingSetSize) {
   EXPECT_TRUE(PSI3.hasPartialSampleProfile());
   EXPECT_TRUE(PSI3.hasHugeWorkingSetSize());
   EXPECT_TRUE(PSI3.hasLargeWorkingSetSize());
+}
+
+// The hot attribute is documented (LangRef, and Clang's AttributeReference for
+// __attribute__((hot))) to take precedence over profile information, so that
+// users can compensate for training input that does not cover all of the hot
+// functions. These tests pin that behavior down for every hotness query.
+
+TEST_F(ProfileSummaryInfoTest, TestHotAttributeInstrProf) {
+  auto M = makeLLVMModule("InstrProf");
+  // @g has an entry count of 1, which is cold under this summary.
+  Function *G = M->getFunction("g");
+  BlockFrequencyInfo BFI = buildBFI(*G);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_FALSE(PSI.isFunctionEntryHot(G));
+    EXPECT_TRUE(PSI.isFunctionEntryCold(G));
+    EXPECT_FALSE(PSI.isFunctionHotInCallGraph(G, BFI));
+    EXPECT_TRUE(PSI.isFunctionColdInCallGraph(G, BFI));
+  }
+
+  G->addFnAttr(Attribute::Hot);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_TRUE(PSI.isFunctionEntryHot(G));
+    EXPECT_FALSE(PSI.isFunctionEntryCold(G));
+    EXPECT_TRUE(PSI.isFunctionHotInCallGraph(G, BFI));
+    EXPECT_FALSE(PSI.isFunctionColdInCallGraph(G, BFI));
+  }
+}
+
+TEST_F(ProfileSummaryInfoTest, TestHotAttributeSampleProf) {
+  auto M = makeLLVMModule("SampleProfile");
+  Function *G = M->getFunction("g");
+  BlockFrequencyInfo BFI = buildBFI(*G);
+
+  G->addFnAttr(Attribute::Hot);
+
+  ProfileSummaryInfo PSI = buildPSI(M.get());
+  EXPECT_TRUE(PSI.isFunctionEntryHot(G));
+  EXPECT_FALSE(PSI.isFunctionEntryCold(G));
+  EXPECT_TRUE(PSI.isFunctionHotInCallGraph(G, BFI));
+  EXPECT_FALSE(PSI.isFunctionColdInCallGraph(G, BFI));
+}
+
+// The attribute is a manual alternative to PGO data, so it must also apply when
+// there is no profile summary at all.
+TEST_F(ProfileSummaryInfoTest, TestHotAttributeNoProfile) {
+  auto M = makeLLVMModule(/*ProfKind=*/nullptr);
+  Function *F = M->getFunction("f");
+  BlockFrequencyInfo BFI = buildBFI(*F);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_FALSE(PSI.hasProfileSummary());
+    EXPECT_FALSE(PSI.isFunctionEntryHot(F));
+    EXPECT_FALSE(PSI.isFunctionHotInCallGraph(F, BFI));
+  }
+
+  F->addFnAttr(Attribute::Hot);
+
+  {
+    ProfileSummaryInfo PSI = buildPSI(M.get());
+    EXPECT_FALSE(PSI.hasProfileSummary());
+    EXPECT_TRUE(PSI.isFunctionEntryHot(F));
+    EXPECT_FALSE(PSI.isFunctionEntryCold(F));
+    EXPECT_TRUE(PSI.isFunctionHotInCallGraph(F, BFI));
+    EXPECT_FALSE(PSI.isFunctionColdInCallGraph(F, BFI));
+  }
 }
 
 } // end anonymous namespace

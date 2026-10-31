@@ -8,7 +8,6 @@
 
 #include "hdr/fcntl_macros.h"
 #include "hdr/stdio_macros.h"
-#include "hdr/sys_stat_macros.h" // For S_IRWXU
 #include "hdr/types/struct_flock.h"
 #include "src/fcntl/fcntl.h"
 #include "src/fcntl/open.h"

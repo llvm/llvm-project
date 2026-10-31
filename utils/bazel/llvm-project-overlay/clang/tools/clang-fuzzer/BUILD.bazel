@@ -17,7 +17,8 @@ cc_binary(
 genrule(
     name = "fuzzer-dictionary",
     outs = ["fuzzer-dictionary.txt"],
-    cmd = "$(location :clang-fuzzer-dictionary) > $@",
+    cmd = "$(execpath :clang-fuzzer-dictionary) > $@",
+    cmd_bat = ">$@ $(execpath :clang-fuzzer-dictionary)",
     tools = [":clang-fuzzer-dictionary"],
 )
 

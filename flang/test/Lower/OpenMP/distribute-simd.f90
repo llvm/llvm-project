@@ -61,17 +61,19 @@ end subroutine distribute_simd_simdlen
 ! CHECK-LABEL: func.func @_QPdistribute_simd_private(
 subroutine distribute_simd_private()
   integer, allocatable :: tmp
-  ! CHECK: %[[INDEX:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFdistribute_simd_privateEindex_"}
+  ! CHECK: %[[INDEX:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFdistribute_simd_privateEindex_")
   ! CHECK:      omp.teams
   !$omp teams
   ! CHECK:      omp.distribute
   ! CHECK:      omp.simd
+  ! CHECK-SAME: linear(@{{.*}} %[[INDEX]]#0 -> %[[INDEX_ARG:[^ ]+]] :
   ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
   ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
   !$omp distribute simd private(tmp)
   do index_ = 1, 10
+  ! CHECK:      %[[INDEX_PRIV:.*]]:2 = hlfir.declare %[[INDEX_ARG]]
   ! CHECK:      %[[PRIV_BOX_DECL:.*]]:2 = hlfir.declare %[[PRIV_BOX]]
-  ! CHECK:      hlfir.assign %[[IVAR]] to %[[INDEX]]#0
+  ! CHECK:      hlfir.assign %[[IVAR]] to %[[INDEX_PRIV]]#0
   end do
   !$omp end distribute simd
   !$omp end teams

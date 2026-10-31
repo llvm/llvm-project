@@ -146,11 +146,11 @@ body:             |
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gpr = COPY [[t2SUBri1]]
   ; CHECK-NEXT:   [[MVE_VLDRHU16_post:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post1:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI]], 16, 1, [[MVE_VCTP16_]], [[PHI3]] :: (load (s128) from %ir.lsr.iv35, align 2)
   ; CHECK-NEXT:   [[MVE_VLDRHU16_post2:%[0-9]+]]:rgpr, [[MVE_VLDRHU16_post3:%[0-9]+]]:mqpr = MVE_VLDRHU16_post [[PHI1]], 16, 1, [[MVE_VCTP16_]], [[PHI3]] :: (load (s128) from %ir.lsr.iv12, align 2)
-  ; CHECK-NEXT:   [[MVE_VMLADAVas16_:%[0-9]+]]:tgpreven = MVE_VMLADAVas16 [[PHI2]], killed [[MVE_VLDRHU16_post3]], killed [[MVE_VLDRHU16_post1]], 1, [[MVE_VCTP16_]], [[PHI3]]
+  ; CHECK-NEXT:   [[MVE_VMLADAVas16_:%[0-9]+]]:tgpreven = MVE_VMLADAVas16 [[PHI2]], [[MVE_VLDRHU16_post3]], [[MVE_VLDRHU16_post1]], 1, [[MVE_VCTP16_]], [[PHI3]]
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gpr = COPY [[MVE_VMLADAVas16_]]
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post2]]
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gpr = COPY [[MVE_VLDRHU16_post]]
-  ; CHECK-NEXT:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI3]], %bb.3, implicit-def $cpsr
+  ; CHECK-NEXT:   [[t2LoopEndDec:%[0-9]+]]:gprlr = t2LoopEndDec [[PHI3]], %bb.3, implicit-def dead $cpsr
   ; CHECK-NEXT:   t2B %bb.4, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4.for.cond.cleanup:
@@ -202,7 +202,7 @@ body:             |
     %7:gpr = COPY %27
     %28:rgpr, %29:mqpr = MVE_VLDRHU16_post %2, 16, 1, %26, $noreg :: (load (s128) from %ir.lsr.iv35, align 2)
     %30:rgpr, %31:mqpr = MVE_VLDRHU16_post %3, 16, 1, %26, $noreg :: (load (s128) from %ir.lsr.iv12, align 2)
-    %32:tgpreven = MVE_VMLADAVas16 %4, killed %31, killed %29, 1, %26, $noreg
+    %32:tgpreven = MVE_VMLADAVas16 %4, %31, %29, 1, %26, $noreg
     %8:gpr = COPY %32
     %9:gpr = COPY %30
     %10:gpr = COPY %28

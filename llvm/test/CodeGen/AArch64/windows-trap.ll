@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=aarch64-win32 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64-unknown-uefi %s -o - | FileCheck %s
 
 declare void @callee() noreturn
 

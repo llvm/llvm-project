@@ -1,0 +1,44 @@
+// RUN: not cir-opt %s -cir-call-conv-lowering=target=test -split-input-file 2>&1 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // The test target classifies only the pointee's declared parameters, so any
+  // ellipsis argument is reported, needing a rewrite or not.
+  cir.func @call_variadic(%fp: !cir.ptr<!cir.func<(!s32i, ...) -> !s64i>>,
+                          %x: !s32i, %y: !s32i) -> !s64i {
+    // CHECK: :[[@LINE+1]]:10: error: 'cir.call' op variadic arguments not yet implemented in CallConvLowering
+    %0 = cir.call %fp(%x, %y)
+        : (!cir.ptr<!cir.func<(!s32i, ...) -> !s64i>>, !s32i, !s32i) -> !s64i
+    cir.return %0 : !s64i
+  }
+
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  cir.func private @variadic(!s32i, ...) -> !s64i
+
+  // A direct call is reported the same way.
+  cir.func @call_variadic_direct(%x: !s32i, %y: !s32i) -> !s64i {
+    // CHECK: :[[@LINE+1]]:10: error: 'cir.call' op variadic arguments not yet implemented in CallConvLowering
+    %0 = cir.call @variadic(%x, %y) : (!s32i, !s32i) -> !s64i
+    cir.return %0 : !s64i
+  }
+
+}

@@ -1,10 +1,9 @@
-add_custom_target(sys-ptrace-integration-tests)
-add_dependencies(libc-integration-tests sys-ptrace-integration-tests)
+add_libc_testsuite(libc-sys-ptrace-integration-tests PARENT libc-integration-tests)
 
 add_integration_test(
   ptrace_test
   SUITE
-    sys-ptrace-integration-tests
+    libc-sys-ptrace-integration-tests
   SRCS
     ptrace_test.cpp
   DEPENDS
@@ -16,5 +15,4 @@ add_integration_test(
     libc.src.signal.kill
     libc.src.sys.wait.waitpid
     libc.src.stdlib.exit
-    libc.src.errno.errno
 )

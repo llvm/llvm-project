@@ -15,16 +15,16 @@ define void @main(i16 %in) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lhr %r2, %r2
-; CHECK-NEXT:    larl %r1, g_151
-; CHECK-NEXT:    lghi %r3, 0
+; CHECK-NEXT:    larl %r3, g_151
+; CHECK-NEXT:    lghi %r1, 0
 ; CHECK-NEXT:    chi %r2, 0
 ; CHECK-NEXT:    lhi %r0, 1
-; CHECK-NEXT:    locghile %r3, 1
-; CHECK-NEXT:    o %r0, 0(%r1)
-; CHECK-NEXT:    larl %r1, g_222
-; CHECK-NEXT:    dsgfr %r2, %r0
+; CHECK-NEXT:    locghile %r1, 1
+; CHECK-NEXT:    o %r0, 0(%r3)
 ; CHECK-NEXT:    lghi %r3, 0
-; CHECK-NEXT:    stgrl %r2, g_39
+; CHECK-NEXT:    dsgfr %r0, %r0
+; CHECK-NEXT:    larl %r1, g_222
+; CHECK-NEXT:    stgrl %r0, g_39
 ; CHECK-NEXT:    stc %r3, 19(%r1)
 ; CHECK-NEXT:    br %r14
   %tmp = load i32, ptr @g_151, align 4

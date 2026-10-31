@@ -24,3 +24,6 @@ cv.elw 0, 0(x6)
 
 cv.elw x0
 # CHECK-ERROR: too few operands for instruction
+
+cv.elw x0, a_symbol
+# CHECK-ERROR: register must be a GPR excluding zero (x0)

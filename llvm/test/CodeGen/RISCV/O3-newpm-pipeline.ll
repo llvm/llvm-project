@@ -1,7 +1,11 @@
 ; RUN: llc -enable-new-pm -mtriple=riscv32 -O3 -print-pipeline-passes=tree < %s 2>&1 \
-; RUN:   | FileCheck %s
+; RUN:   | grep -v verify \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: llc -enable-new-pm -mtriple=riscv64 -O3 -print-pipeline-passes=tree < %s 2>&1 \
-; RUN:   | FileCheck %s
+; RUN:   | grep -v verify \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,RV64
+
+; REQUIRES: asserts
 
 ; CHECK: require<MachineModuleAnalysis>
 ; CHECK-NEXT: require<profile-summary>
@@ -19,7 +23,6 @@
 ; CHECK-NEXT:   riscv-gather-scatter-lowering
 ; CHECK-NEXT:   interleaved-access
 ; CHECK-NEXT:   riscv-codegenprepare
-; CHECK-NEXT:   verify
 ; CHECK-NEXT:   loop
 ; CHECK-NEXT:     canon-freeze
 ; CHECK-NEXT:     loop-reduce
@@ -33,45 +36,66 @@
 ; CHECK-NEXT:   ee-instrument<post-inline>
 ; CHECK-NEXT:   scalarize-masked-mem-intrin
 ; CHECK-NEXT:   expand-reductions
+; CHECK-NEXT:   select-optimize
 ; CHECK-NEXT:   typepromotion
 ; CHECK-NEXT:   codegenprepare
+; CHECK-NEXT:   sjlj-eh-prepare
 ; CHECK-NEXT:   dwarf-eh-prepare
+; CHECK-NEXT: riscv-promote-constant
+; CHECK-NEXT: global-merge
+; CHECK-NEXT: function
 ; CHECK-NEXT:   inline-asm-prepare
 ; CHECK-NEXT:   safe-stack
 ; CHECK-NEXT:   stack-protector
-; CHECK-NEXT:   verify
 ; CHECK-NEXT: riscv-asm-printer-begin
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
 ; CHECK-NEXT:     riscv-isel
 ; CHECK-NEXT:     finalize-isel
 ; CHECK-NEXT:     early-machinelicm
+; CHECK-NEXT:     riscv-vl-optimizer
+; CHECK-NEXT:     riscv-vector-peephole
+; CHECK-NEXT:     riscv-fold-mem-offset
 ; CHECK-NEXT:     early-tailduplication
 ; CHECK-NEXT:     opt-phis
 ; CHECK-NEXT:     stack-coloring
 ; CHECK-NEXT:     localstackalloc
 ; CHECK-NEXT:     dead-mi-elimination
+; CHECK-NEXT:     machine-combiner
 ; CHECK-NEXT:     early-machinelicm
 ; CHECK-NEXT:     machine-cse
 ; CHECK-NEXT:     machine-sink
 ; CHECK-NEXT:     peephole-opt
 ; CHECK-NEXT:     dead-mi-elimination
+; RV64-NEXT:      riscv-opt-w-instrs
+; CHECK-NEXT:     riscv-expand-pseudo-pre-ra
+; CHECK-NEXT:     riscv-merge-base-offset
+; CHECK-NEXT:     riscv-pre-alloc-zilsd-opt
+; CHECK-NEXT:     riscv-insert-read-write-csr
+; CHECK-NEXT:     riscv-insert-write-vxrm
+; CHECK-NEXT:     riscv-lpad-setup
+; CHECK-NEXT:     riscv-vmv0-elimination
 ; CHECK-NEXT:     detect-dead-lanes
 ; CHECK-NEXT:     init-undef
-; CHECK-NEXT:     process-imp-defs
+; CHECK-NEXT:     process-implicit-defs
 ; CHECK-NEXT:     unreachable-mbb-elimination
-; CHECK-NEXT:     require<live-vars>
+; CHECK-NEXT:     require<live-intervals>
 ; CHECK-NEXT:     require<machine-loops>
 ; CHECK-NEXT:     phi-node-elimination
 ; CHECK-NEXT:     two-address-instruction
 ; CHECK-NEXT:     register-coalescer
 ; CHECK-NEXT:     rename-independent-subregs
 ; CHECK-NEXT:     machine-scheduler
+; CHECK-NEXT:     greedy<rvv>
+; CHECK-NEXT:     virt-reg-rewriter<no-clear-vregs>
+; CHECK-NEXT:     riscv-insert-vsetvli
+; CHECK-NEXT:     riscv-dead-defs
 ; CHECK-NEXT:     greedy<all>
 ; CHECK-NEXT:     virt-reg-rewriter
 ; CHECK-NEXT:     stack-slot-coloring
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     machinelicm
+; CHECK-NEXT:     riscv-redundant-copy-elimination
 ; CHECK-NEXT:     remove-redundant-debug-values
 ; CHECK-NEXT:     fixup-statepoint-caller-saved
 ; CHECK-NEXT:     postra-machine-sink
@@ -82,15 +106,20 @@
 ; CHECK-NEXT:     tailduplication
 ; CHECK-NEXT:     machine-cp
 ; CHECK-NEXT:     post-ra-pseudos
+; CHECK-NEXT:     riscv-expand-pseudo-post-ra
 ; CHECK-NEXT:     kcfi
+; CHECK-NEXT:     riscv-load-store-opt
 ; CHECK-NEXT:     post-RA-sched
 ; CHECK-NEXT:     block-placement
 ; CHECK-NEXT:     fentry-insert
 ; CHECK-NEXT:     xray-instrumentation
 ; CHECK-NEXT:     patchable-function
 ; CHECK-NEXT:     machine-cp
+; CHECK-NEXT:     riscv-late-branch-opt
+; CHECK-NEXT:     riscv-indirect-branch-tracking
 ; CHECK-NEXT:     branch-relaxation
-; CHECK-NEXT:     FuncletLayoutPass
+; CHECK-NEXT:     riscv-make-compressible
+; CHECK-NEXT:     funclet-layout
 ; CHECK-NEXT:     remove-loads-into-fake-uses
 ; CHECK-NEXT:     StackMapLivenessPass
 ; CHECK-NEXT:     live-debug-values<emit-debug-entry-values>
@@ -98,13 +127,14 @@
 ; CHECK-NEXT: MachineOutlinerPass
 ; CHECK-NEXT: function
 ; CHECK-NEXT:   machine-function
+; CHECK-NEXT:     cfi-fixup
 ; CHECK-NEXT:     stack-frame-layout
+; CHECK-NEXT:     riscv-move-merge
+; CHECK-NEXT:     riscv-push-pop-opt
+; CHECK-NEXT:     riscv-expand-pseudo-pre-emit
+; RV32-NEXT:     riscv-qc-relax-marking
+; CHECK-NEXT:     riscv-expand-pseudo-atomics
 ; CHECK-NEXT:     unpack-mi-bundles
-; CHECK-NEXT:     verify
 ; CHECK-NEXT:     riscv-asm-printer
 ; CHECK-NEXT:   free-machine-function
 ; CHECK-NEXT: riscv-asm-printer-end
-
-define void @f() {
-  ret void
-}

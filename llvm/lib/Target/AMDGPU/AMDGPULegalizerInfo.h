@@ -103,7 +103,7 @@ public:
   bool legalizeFEXPF64(MachineInstr &MI, MachineIRBuilder &B) const;
 
   bool legalizeFExp(MachineInstr &MI, MachineIRBuilder &B) const;
-  bool legalizeFPow(MachineInstr &MI, MachineIRBuilder &B) const;
+  bool legalizeFPow(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeFFloor(MachineInstr &MI, MachineRegisterInfo &MRI,
                       MachineIRBuilder &B) const;
 
@@ -198,12 +198,6 @@ public:
   bool legalizeImplicitArgPtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                               MachineIRBuilder &B) const;
 
-  bool getLDSKernelId(Register DstReg, MachineRegisterInfo &MRI,
-                      MachineIRBuilder &B) const;
-
-  bool legalizeLDSKernelId(MachineInstr &MI, MachineRegisterInfo &MRI,
-                           MachineIRBuilder &B) const;
-
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
@@ -251,19 +245,20 @@ public:
 
   bool legalizeSBufferPrefetch(LegalizerHelper &Helper, MachineInstr &MI) const;
 
-  bool legalizeTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
-                    MachineIRBuilder &B) const;
-  bool legalizeTrapEndpgm(MachineInstr &MI, MachineRegisterInfo &MRI,
-                          MachineIRBuilder &B) const;
+  bool legalizeTrap(LegalizerHelper &Helper, MachineInstr &MI) const;
+  bool legalizeTrapEndpgm(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeTrapHsaQueuePtr(MachineInstr &MI, MachineRegisterInfo &MRI,
                                MachineIRBuilder &B) const;
-  bool legalizeTrapHsa(MachineInstr &MI, MachineRegisterInfo &MRI,
-                       MachineIRBuilder &B) const;
+  bool legalizeTrapHsa(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeDebugTrap(MachineInstr &MI, MachineRegisterInfo &MRI,
                          MachineIRBuilder &B) const;
 
   bool legalizeIntrinsic(LegalizerHelper &Helper,
                          MachineInstr &MI) const override;
+
+private:
+  Register getBaseSegmentAperture(unsigned AS, MachineRegisterInfo &MRI,
+                                  MachineIRBuilder &B) const;
 };
 } // End llvm namespace.
 #endif

@@ -10,7 +10,7 @@
 
 ; DYN_LOWERED:      debugValueSubstitutions:
 ; DYN_LOWERED-NEXT: - { srcinst: 1, srcop: 2, dstinst: 2, dstop: 0, subreg: 0 }
-; DYN_LOWERED:      SUB64rr $rsp, killed $rax, {{.*}} debug-instr-number 2,
+; DYN_LOWERED:      SUB64rr $rsp, $rax, {{.*}} debug-instr-number 2,
 
 source_filename = "test/DebugInfo/COFF/types-array-advanced.ll"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"

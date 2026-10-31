@@ -8,7 +8,7 @@
 //
 // Shared walker that lowers a composable predicate dag of the form
 //
-//   (all_of / any_of / not <leaf> ...)
+//   (all_of / any_of / none_of / not <leaf> ...)
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,13 +26,14 @@ class raw_ostream;
 /// Walk a composable predicate dag rooted at \p Val and emit the combined
 /// boolean expression to \p OS.
 ///
-/// The structural operators handled are the dags `(not X)` and `(all_of ...)` /
-/// `(any_of ...)`. Any non-dag operand (and the base leaf) is delegated to \p
-/// EmitLeaf, which emits the leaf test and returns true on error.
+/// The structural operators handled are the dags `(not X)`, `(all_of ...)`,
+/// `(any_of ...)` and `(none_of ...)`. Any non-dag operand (and the base leaf)
+/// is delegated to \p EmitLeaf, which emits the leaf test and returns true on
+/// error.
 ///
 /// If \p ParenIfBinOp is true, a surrounding pair of parentheses is emitted
-/// when \p Val lowers to a binary (`&&` / `||`) expression. A `(not X)` always
-/// parenthesizes its operand.
+/// when \p Val lowers to a binary (`&&` / `||`) expression. A `(not X)` or
+/// `(none_of ...)` always parenthesizes its operands.
 bool emitPredicateDag(const Record *Owner, const Init &Val, bool ParenIfBinOp,
                       raw_ostream &OS,
                       function_ref<bool(const Init &, raw_ostream &)> EmitLeaf);

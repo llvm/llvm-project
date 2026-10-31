@@ -1,0 +1,43 @@
+// RUN: cir-opt %s -verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --emit-bytecode | llvm-strings | FileCheck %s --check-prefix=NATIVE
+
+// Round-trip the constant-initializer attributes.
+//
+// Check the attributes are not string-encoded in the blob.
+// NATIVE-NOT: #cir.const_array<
+// NATIVE-NOT: #cir.const_record<
+// NATIVE-NOT: #cir.zero
+// NATIVE-NOT: #cir.undef
+// NATIVE-NOT: #cir.poison
+
+!s32i = !cir.int<s, 32>
+!s8i = !cir.int<s, 8>
+!rec = !cir.struct<"R" {data !s32i, data !s32i}>
+
+module {
+  cir.global external @z = #cir.zero : !cir.array<!s32i x 2>
+  cir.global external @u = #cir.undef : !s32i
+  cir.global external @p = #cir.poison : !s32i
+  cir.global external @ca = #cir.const_array<[#cir.int<1> : !s32i,
+                                              #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
+
+  // trailing_zeros is separate from the element list: 4-long array, one
+  // element stored. Dropping the count would produce a 1-element array.
+  cir.global external @caz = #cir.const_array<[#cir.int<7> : !s32i],
+                                              trailing_zeros> : !cir.array<!s32i x 4>
+  cir.global external @cr = #cir.const_record<{#cir.int<3> : !s32i,
+                                               #cir.int<4> : !s32i}> : !rec
+
+  // The string branch of elts: a StringAttr payload rather than an array of
+  // per-element attributes.
+  cir.global external @cs = #cir.const_array<"ab" : !cir.array<!s8i x 2>,
+                                             trailing_zeros> : !cir.array<!s8i x 4>
+}
+
+// CHECK-DAG: @z = #cir.zero : !cir.array<!s32i x 2>
+// CHECK-DAG: @u = #cir.undef : !s32i
+// CHECK-DAG: @p = #cir.poison : !s32i
+// CHECK-DAG: @ca = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
+// CHECK-DAG: @caz = #cir.const_array<[#cir.int<7> : !s32i], trailing_zeros> : !cir.array<!s32i x 4>
+// CHECK-DAG: @cr = #cir.const_record<{#cir.int<3> : !s32i, #cir.int<4> : !s32i}> : !rec_R
+// CHECK-DAG: @cs = #cir.const_array<"ab" : !cir.array<!s8i x 2>, trailing_zeros> : !cir.array<!s8i x 4>

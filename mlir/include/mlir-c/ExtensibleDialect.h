@@ -71,6 +71,16 @@ mlirDynamicOpTraitNoTerminatorCreate(void);
 /// terminator.
 MLIR_CAPI_EXPORTED MlirTypeID mlirDynamicOpTraitNoTerminatorGetTypeID(void);
 
+/// Get the dynamic op trait that indicates memory effects of an operation
+/// includes the effects of operations nested within its regions.
+MLIR_CAPI_EXPORTED MlirDynamicOpTrait
+mlirDynamicOpTraitRecursiveMemoryEffectsCreate(void);
+
+/// Get the type ID of the dynamic op trait that indicates memory effects of an
+/// operation includes the effects of operations nested within its regions.
+MLIR_CAPI_EXPORTED MlirTypeID
+mlirDynamicOpTraitRecursiveMemoryEffectsGetTypeID(void);
+
 /// Destroy the dynamic op trait.
 MLIR_CAPI_EXPORTED void
 mlirDynamicOpTraitDestroy(MlirDynamicOpTrait dynamicOpTrait);

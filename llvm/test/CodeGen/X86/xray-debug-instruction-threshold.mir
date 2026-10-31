@@ -1,0 +1,86 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -run-pass=xray-instrumentation -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -passes=xray-instrumentation -o - %s | FileCheck %s
+#
+# Debug instructions should not count toward the XRay instruction threshold.
+# All functions have three non-debug instructions. The two functions with a
+# threshold of four should not be instrumented, while the positive control at
+# threshold three should be instrumented.
+
+--- |
+  define i32 @without_debug(i32 %x) noinline uwtable "xray-instruction-threshold"="4" {
+  entry:
+    %result = add i32 %x, 1
+    ret i32 %result
+  }
+
+  define i32 @with_debug(i32 %x) noinline uwtable "xray-instruction-threshold"="4" !dbg !4 {
+  entry:
+    %result = add i32 %x, 1
+    ret i32 %result
+  }
+
+  define i32 @with_debug_at_threshold(i32 %x) noinline uwtable "xray-instruction-threshold"="3" !dbg !9 {
+  entry:
+    %result = add i32 %x, 1
+    ret i32 %result
+  }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3}
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "x.c", directory: "/")
+  !2 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "with_debug", scope: !1, file: !1, line: 1, type: !5, unit: !0, spFlags: DISPFlagDefinition)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{!2, !2}
+  !7 = !DILocalVariable(name: "x", arg: 1, scope: !4, file: !1, line: 1, type: !2)
+  !8 = !DILocation(line: 1, scope: !4)
+  !9 = distinct !DISubprogram(name: "with_debug_at_threshold", scope: !1, file: !1, line: 2, type: !5, unit: !0, spFlags: DISPFlagDefinition)
+  !10 = !DILocalVariable(name: "x", arg: 1, scope: !9, file: !1, line: 2, type: !2)
+  !11 = !DILocation(line: 2, scope: !9)
+...
+---
+# CHECK-LABEL: name: without_debug
+# CHECK: bb.0.entry:
+# CHECK-NOT: PATCHABLE_
+# CHECK: RET64
+name: without_debug
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $edi
+    renamable $edi = KILL $edi, implicit-def $rdi
+    renamable $eax = LEA64_32r killed renamable $rdi, 1, $noreg, 1, $noreg
+    RET64 $eax
+...
+---
+# CHECK-LABEL: name: with_debug
+# CHECK: bb.0.entry:
+# CHECK-NOT: PATCHABLE_
+# CHECK: RET64
+name: with_debug
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $edi
+    DBG_VALUE $edi, $noreg, !7, !DIExpression(), debug-location !8
+    renamable $edi = KILL $edi, implicit-def $rdi
+    renamable $eax = LEA64_32r killed renamable $rdi, 1, $noreg, 1, $noreg
+    RET64 $eax
+...
+---
+# CHECK-LABEL: name: with_debug_at_threshold
+# CHECK: bb.0.entry:
+# CHECK: PATCHABLE_FUNCTION_ENTER
+# CHECK: PATCHABLE_RET
+name: with_debug_at_threshold
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $edi
+    DBG_VALUE $edi, $noreg, !10, !DIExpression(), debug-location !11
+    renamable $edi = KILL $edi, implicit-def $rdi
+    renamable $eax = LEA64_32r killed renamable $rdi, 1, $noreg, 1, $noreg
+    RET64 $eax
+...

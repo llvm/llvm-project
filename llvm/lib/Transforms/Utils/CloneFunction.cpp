@@ -32,12 +32,12 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <cstdint>
-#include <map>
 #include <optional>
 using namespace llvm;
 
@@ -164,7 +164,7 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
         mapAtomInstance(DL.get(), VMap);
     }
 
-    if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
+    if (isa<CallInst>(I)) {
       hasCalls = true;
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_memprof);
       hasMemProfMetadata |= I.hasMetadata(LLVMContext::MD_callsite);
@@ -514,7 +514,11 @@ PruningFunctionCloner::cloneInstruction(BasicBlock::const_iterator II) {
   SmallVector<Type *> ArgTys = llvm::map_to_vector(Args, &Value::getType);
   Function *IFn = Intrinsic::getOrInsertDeclaration(NewFunc->getParent(), CIID,
                                                     OldInst.getType(), ArgTys);
-  return CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+  CallInst *NewCall =
+      CallInst::Create(IFn, Args, OldInst.getName() + ".strict");
+  if (isa<FPMathOperator>(NewCall))
+    NewCall->copyFastMathFlags(&OldInst);
+  return NewCall;
 }
 
 /// The specified block is found to be reachable, clone it and
@@ -610,7 +614,7 @@ void PruningFunctionCloner::CloneBlock(
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
-    if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
+    if (isa<CallInst>(II)) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_callsite);
@@ -691,7 +695,6 @@ void PruningFunctionCloner::CloneBlock(
     // If we didn't create a new terminator, clone DbgVariableRecords from the
     // old terminator onto the new terminator.
     Instruction *NewInst = NewBB->getTerminator();
-    assert(NewInst);
 
     CloneDbgRecordsToHere(NewInst, OldTI->getIterator());
   }
@@ -1157,6 +1160,8 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                               StringRef Ext, LLVMContext &Context) {
   MDBuilder MDB(Context);
 
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
+
   for (MDNode *ScopeList : NoAliasDeclScopes) {
     for (const MDOperand &MDOp : ScopeList->operands()) {
       if (MDNode *MD = dyn_cast<MDNode>(MDOp)) {
@@ -1169,8 +1174,22 @@ void llvm::cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
         else
           Name = std::string(Ext);
 
-        MDNode *NewScope = MDB.createAnonymousAliasScope(
-            const_cast<MDNode *>(SNANode.getDomain()), Name);
+        // A cloned scope has to go into a clone of its domain if that domain
+        // has disjoint scopes: the copies of a duplicated access are in the
+        // same memory region, so they must not become implicitly noalias with
+        // each other.
+        const MDNode *Domain = SNANode.getDomain();
+        MDNode *NewDomain = const_cast<MDNode *>(Domain);
+        if (AliasScopeDomainNode(Domain).hasDisjointScopes()) {
+          MDNode *&ClonedDomain = ClonedDomains[Domain];
+          if (!ClonedDomain)
+            ClonedDomain = MDB.createAnonymousAliasScopeDomain(
+                AliasScopeDomainNode(Domain).getDescription(),
+                /*DisjointScopes=*/true);
+          NewDomain = ClonedDomain;
+        }
+
+        MDNode *NewScope = MDB.createAnonymousAliasScope(NewDomain, Name);
         ClonedScopes.insert(std::make_pair(MD, NewScope));
       }
     }

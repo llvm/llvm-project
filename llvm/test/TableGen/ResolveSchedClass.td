@@ -78,6 +78,19 @@ def ProcessorA: ProcessorModel<"ProcessorA", SchedModel_A, []>;
 // CHECK-NEXT: 	     return {{.*}}; // SchedWriteResE
 // CHECK-NEXT:     return {{.*}}; // SchedWriteResB
 
+// CHECK: ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,
+// CHECK-NEXT:     unsigned CPUID) {
+// CHECK-NEXT:   switch (SchedClass) {
+// CHECK-NEXT:   case {{.*}}: // Inst_A
+// CHECK-NEXT:     if (CPUID == {{.*}}) { // SchedModel_A
+// CHECK-NEXT:       static const unsigned Targets[] = {{\{[0-9]+}} /* SchedWriteResA */, {{[0-9]+}} /* SchedWriteResB */, {{[0-9]+}} /* SchedWriteResC */, {{[0-9]+}} /* SchedWriteResD */, {{[0-9]+}} /* SchedWriteResE */};
+// CHECK-NEXT:       return Targets;
+// CHECK-NEXT:     }
+// CHECK-NEXT:     break;
+// CHECK-NEXT:   }
+// CHECK-NEXT:   return {};
+// CHECK-NEXT: }
+
 // CHECK: unsigned resolveVariantSchedClass(unsigned SchedClass,
 // CHECK-NEXT:    const MCInst *MI, const MCInstrInfo *MCII,
 // CHECK-NEXT:    unsigned CPUID) const final {

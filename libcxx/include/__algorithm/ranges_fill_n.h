@@ -29,8 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 struct __fill_n {
   template <class _Type, output_iterator<const _Type&> _Iter>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter
-  operator()(_Iter __first, iter_difference_t<_Iter> __n, const _Type& __value) const {
+  constexpr _Iter operator()(_Iter __first, iter_difference_t<_Iter> __n, const _Type& __value) const {
     return std::__fill_n(std::move(__first), __n, __value);
   }
 };

@@ -21,6 +21,8 @@ void AccessPath::dump(llvm::raw_ostream &OS) const {
       OS << "$" << PVD->getNameAsString();
     else if (PB->getImplicitThisParent())
       OS << "$this";
+    else if (const auto *FD = PB->getFieldDecl())
+      OS << "$this." << FD->getNameAsString();
   } else if (const auto *E = getAsNewAllocation())
     OS << "NewAllocation at " << E;
   else
@@ -38,30 +40,42 @@ void Loan::dump(llvm::raw_ostream &OS) const {
 const PlaceholderBase *
 LoanManager::getOrCreatePlaceholderBase(const ParmVarDecl *PVD) {
   llvm::FoldingSetNodeID ID;
-  ID.AddPointer(PVD);
-  void *InsertPos = nullptr;
-  if (PlaceholderBase *Existing =
-          PlaceholderBases.FindNodeOrInsertPos(ID, InsertPos))
+  PlaceholderBase::Profile(ID, PVD);
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
     return Existing;
 
   void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
   PlaceholderBase *NewPB = new (Mem) PlaceholderBase(PVD);
-  PlaceholderBases.InsertNode(NewPB, InsertPos);
+  PlaceholderBases.insert(NewPB, InsertToken);
   return NewPB;
 }
 
 const PlaceholderBase *
 LoanManager::getOrCreatePlaceholderBase(const CXXMethodDecl *MD) {
   llvm::FoldingSetNodeID ID;
-  ID.AddPointer(MD);
-  void *InsertPos = nullptr;
-  if (PlaceholderBase *Existing =
-          PlaceholderBases.FindNodeOrInsertPos(ID, InsertPos))
+  PlaceholderBase::Profile(ID, MD);
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
     return Existing;
 
   void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
   PlaceholderBase *NewPB = new (Mem) PlaceholderBase(MD);
-  PlaceholderBases.InsertNode(NewPB, InsertPos);
+  PlaceholderBases.insert(NewPB, InsertToken);
+  return NewPB;
+}
+
+const PlaceholderBase *
+LoanManager::getOrCreatePlaceholderBase(const FieldDecl *FD) {
+  llvm::FoldingSetNodeID ID;
+  PlaceholderBase::Profile(ID, FD);
+  llvm::FoldingSetInsertToken InsertToken;
+  if (PlaceholderBase *Existing = PlaceholderBases.lookup(ID, InsertToken))
+    return Existing;
+
+  void *Mem = LoanAllocator.Allocate<PlaceholderBase>();
+  PlaceholderBase *NewPB = new (Mem) PlaceholderBase(FD);
+  PlaceholderBases.insert(NewPB, InsertToken);
   return NewPB;
 }
 } // namespace clang::lifetimes::internal

@@ -1120,11 +1120,11 @@ define i1 @or_and3_wrong_operand(i1 %a, i1 %b, i32 %x, i32 %y, i1 %d) {
 define i8 @test_or_umax(i8 %x, i8 %y, i1 %cond) !prof !0 {
 ; CHECK-LABEL: @test_or_umax(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND:%.*]], i8 [[X]], i8 [[TMP1]], !prof [[PROF1]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND:%.*]], i8 [[X]], i8 [[TMP1]], !prof [[PROF3:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %cmp = icmp ugt i8 %x, %y
-  %or = select i1 %cond, i1 true, i1 %cmp
+  %or = select i1 %cond, i1 true, i1 %cmp, !prof !1
   %ret = select i1 %or, i8 %x, i8 %y, !prof !2
   ret i8 %ret
 }
@@ -1165,17 +1165,17 @@ define i8 @test_and_umin(i8 %x, i8 %y, i1 %cond) {
   ret i8 %ret
 }
 
-define i8 @test_or_umax_bitwise1(i8 %x, i8 %y, i8 %val) {
+define i8 @test_or_umax_bitwise1(i8 %x, i8 %y, i8 %val) !prof !0 {
 ; CHECK-LABEL: @test_or_umax_bitwise1(
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[VAL:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
-; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 [[X]], i8 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = select i1 [[COND]], i8 [[X]], i8 [[TMP1]], !prof [[PROF2]]
 ; CHECK-NEXT:    ret i8 [[RET]]
 ;
   %cond = icmp eq i8 %val, 0 ; thwart complexity-based ordering
   %cmp = icmp ugt i8 %x, %y
   %or = or i1 %cond, %cmp
-  %ret = select i1 %or, i8 %x, i8 %y
+  %ret = select i1 %or, i8 %x, i8 %y, !prof !1
   ret i8 %ret
 }
 
@@ -1475,4 +1475,5 @@ define i8 @test_logical_commuted_and_ne_a_b(i1 %other_cond, i8 %a, i8 %b)  {
 ; CHECK: [[META0:![0-9]+]] = !{!"function_entry_count", i64 1000}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 3, i32 2}
 ; CHECK: [[PROF2]] = !{!"unknown", !"instcombine"}
+; CHECK: [[PROF3]] = !{!"branch_weights", i32 2, i32 3}
 ;.

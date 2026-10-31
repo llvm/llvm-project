@@ -43,7 +43,7 @@ invoke.cont2:                                     ; preds = %catch
   br label %try.cont
 
 try.cont:                                         ; preds = %invoke.cont2, %entry
-  %value.0 = phi double [ 0x7FF8000000000000, %invoke.cont2 ], [ %call, %entry ]
+  %value.0 = phi double [ +qnan, %invoke.cont2 ], [ %call, %entry ]
   ret double %value.0
 
 lpad1:                                            ; preds = %catch

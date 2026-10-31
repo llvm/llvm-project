@@ -15,6 +15,9 @@
 
 #include <stdarg.h>
 
+#include "sanitizer_allocator_internal.h"
+#include "sanitizer_stacktrace.h"
+
 static const char *parse_number(const char *p, int *out) {
   *out = internal_atoll(p);
   while (*p >= '0' && *p <= '9')
@@ -538,11 +541,18 @@ static void printf_common(void *ctx, const char *format, va_list aq) {
     int size = printf_get_value_size(&dir);
     if (size == FSS_INVALID) {
       static int ReportedOnce;
-      if (!ReportedOnce++)
+      if (!ReportedOnce++) {
         Report(
             "%s: WARNING: unexpected format specifier in printf "
             "interceptor: %.*s (reported once per process)\n",
             SanitizerToolName, static_cast<int>(dir.end - dir.begin), dir.begin);
+        InternalMmapVector<BufferedStackTrace> stack_buffer(1);
+        BufferedStackTrace* stack = stack_buffer.data();
+        stack->Reset();
+        stack->Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr,
+                      common_flags()->fast_unwind_on_fatal);
+        stack->Print();
+      }
       break;
     }
     if (dir.convSpecifier == 'n') {

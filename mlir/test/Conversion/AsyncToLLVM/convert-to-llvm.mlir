@@ -4,11 +4,11 @@
 func.func @reference_counting(%arg0: !async.token) {
   // CHECK: %[[C2:.*]] = arith.constant 2 : i64
   // CHECK: call @mlirAsyncRuntimeAddRef(%arg0, %[[C2]])
-  async.runtime.add_ref %arg0 {count = 2 : i64} : !async.token
+  async.runtime.add_ref %arg0 count = 2 : !async.token
 
   // CHECK: %[[C1:.*]] = arith.constant 1 : i64
   // CHECK: call @mlirAsyncRuntimeDropRef(%arg0, %[[C1]])
-  async.runtime.drop_ref %arg0 {count = 1 : i64} : !async.token
+  async.runtime.drop_ref %arg0 count = 1 : !async.token
 
   return
 }

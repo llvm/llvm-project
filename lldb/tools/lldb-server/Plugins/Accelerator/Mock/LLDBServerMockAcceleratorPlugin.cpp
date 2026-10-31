@@ -208,8 +208,11 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
   m_mock_main_loop_thread = *loop_thread;
 
   AcceleratorConnectionInfo info;
-  info.connect_url = llvm::formatv("connect://localhost:{0}",
-                                   m_listen_socket->GetLocalPortNumber());
+  info.connect_url =
+      GetMockEnvSetting("LLDB_MOCK_ACCELERATOR_CONNECT_URL",
+                        llvm::formatv("connect://localhost:{0}",
+                                      m_listen_socket->GetLocalPortNumber())
+                            .str());
   // Default to the host; tests override via env vars to exercise
   // invalid-platform and incompatible-triple failures.
   info.platform_name =
@@ -219,4 +222,16 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
                         HostInfo::GetArchitecture().GetTriple().str());
   info.synchronous = true;
   return info;
+}
+
+std::optional<AcceleratorDynamicLoaderResponse>
+LLDBServerMockAcceleratorPlugin::GetDynamicLoaderLibraryInfos(
+    const AcceleratorDynamicLoaderArgs &args) {
+  AcceleratorDynamicLoaderResponse response;
+  AcceleratorDynamicLoaderLibraryInfo lib;
+  lib.pathname = "/path/to/lib.so";
+  lib.load = true;
+  lib.load_address = 0x7f000000;
+  response.library_infos.push_back(std::move(lib));
+  return response;
 }

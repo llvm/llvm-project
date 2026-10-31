@@ -83,6 +83,9 @@ static bool CanIgnoreCall(const CallInst *call) {
       break;
     case llvm::Intrinsic::dbg_declare:
     case llvm::Intrinsic::dbg_value:
+    case llvm::Intrinsic::ptrauth_auth:
+    case llvm::Intrinsic::ptrauth_blend:
+    case llvm::Intrinsic::ptrauth_strip:
       return true;
     }
   }
@@ -1452,6 +1455,55 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     } break;
     case Instruction::Call: {
       const CallInst *call_inst = cast<CallInst>(inst);
+
+      if (auto *fn = call_inst->getCalledFunction()) {
+        if (fn->isIntrinsic() &&
+            ((fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_auth &&
+              call_inst->arg_size() == 3) ||
+             (fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_strip &&
+              call_inst->arg_size() == 2)) &&
+            exe_ctx.GetProcessPtr()) {
+          llvm::Value *auth_ptr = call_inst->getArgOperand(0);
+          // Extract the argument's value.
+          lldb_private::Scalar auth_ptr_val;
+          if (!frame.EvaluateValue(auth_ptr_val, auth_ptr, module)) {
+            error = lldb_private::Status::FromErrorString(
+                "unable to evaluate argument 0");
+            return false;
+          }
+
+          if (lldb::ABISP abi_sp = exe_ctx.GetProcessPtr()->GetABI()) {
+            auto stripped_ptr = lldb_private::Scalar(
+                abi_sp->FixCodeAddress(auth_ptr_val.ULongLong()));
+            frame.AssignValue(call_inst, stripped_ptr, module);
+          }
+        }
+
+        if (fn->isIntrinsic() &&
+            fn->getIntrinsicID() == llvm::Intrinsic::ptrauth_blend) {
+          llvm::Value *addr = call_inst->getArgOperand(0);
+          llvm::Value *lobits = call_inst->getArgOperand(1);
+
+          // Extract the address.
+          lldb_private::Scalar addr_val;
+          if (!frame.EvaluateValue(addr_val, addr, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 0);
+            return false;
+          }
+
+          // Extract the low bits to blend in.
+          lldb_private::Scalar lobits_val;
+          if (!frame.EvaluateValue(lobits_val, lobits, module)) {
+            error = lldb_private::Status::FromErrorStringWithFormat(
+                "unable to evaluate argument %d", 1);
+            return false;
+          }
+
+          lldb_private::Scalar blend_val = addr_val | (lobits_val << 48);
+          frame.AssignValue(call_inst, blend_val, module);
+        }
+      }
 
       if (CanIgnoreCall(call_inst))
         break;

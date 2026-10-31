@@ -4,7 +4,7 @@
 ; Verify that LV can handle explicit vectorization outer loops with uniform branches
 ; but bails out on outer loops with divergent branches.
 
-; Root C/C++ source code for the test cases
+; Root C/C++ source code for the first two test cases.
 ; void foo(int *a, int *b, int N, int M)
 ; {
 ;   int i, j;
@@ -74,7 +74,7 @@ for.end19:
 ; Case 2 (COND => B[i * M] == 0): Outer loop with divergent conditional branch.
 
 ; CHECK-LABEL: divergent_branch
-; CHECK: Unsupported conditional branch.
+; CHECK: LV: Not vectorizing: Outer loop contains divergent conditional branch.
 ; CHECK: LV: Not vectorizing: Unsupported outer loop.
 
 define void @divergent_branch(ptr nocapture %a, ptr nocapture readonly %b, i32 %N, i32 %M) {
@@ -119,6 +119,62 @@ outer.inc:
   br i1 %exitcond46, label %for.end19, label %outer.body, !llvm.loop !6
 
 for.end19:
+  ret void
+}
+
+; Case 3: Three-level loop nest with a triangular innermost loop.
+;
+;   #pragma clang loop vectorize(enable) vectorize_width(8)
+;   for (size_t i = 0; i < M; ++i)
+;     for (size_t j = 0; j < N; ++j)
+;       for (size_t k = 0; k < j; ++k)
+;         a[i * N * N + j * N + k] = b[i * N * N + j * N + k];
+;
+; The innermost loop latch condition depends on the middle loop IV, but is
+; uniform with respect to the vectorized outer loop.
+
+; CHECK-LABEL: uniform_triangular_inner_loop
+; CHECK: LV: We can vectorize this outer loop!
+
+define void @uniform_triangular_inner_loop(ptr nocapture %a, ptr nocapture readonly %b, i64 %M, i64 %N) {
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %middle.header
+
+middle.header:
+  %j = phi i64 [ 0, %outer.header ], [ %j.next, %middle.latch ]
+  %cmp.k = icmp eq i64 %j, 0
+  br i1 %cmp.k, label %middle.latch, label %inner.body
+
+inner.body:
+  %k = phi i64 [ 0, %middle.header ], [ %k.next, %inner.body ]
+  %mul.n.n = mul nuw i64 %N, %N
+  %mul.i = mul nuw i64 %i, %mul.n.n
+  %mul.j = mul nuw i64 %j, %N
+  %add.j = add nuw i64 %mul.i, %mul.j
+  %idx = add nuw i64 %add.j, %k
+  %arrayidx.b = getelementptr inbounds i32, ptr %b, i64 %idx
+  %0 = load i32, ptr %arrayidx.b, align 4
+  %arrayidx.a = getelementptr inbounds i32, ptr %a, i64 %idx
+  store i32 %0, ptr %arrayidx.a, align 4
+  %k.next = add nuw i64 %k, 1
+  %exitcond.k = icmp eq i64 %k.next, %j
+  br i1 %exitcond.k, label %middle.latch, label %inner.body
+
+middle.latch:
+  %j.next = add nuw i64 %j, 1
+  %exitcond.j = icmp eq i64 %j.next, %N
+  br i1 %exitcond.j, label %outer.latch, label %middle.header
+
+outer.latch:
+  %i.next = add nuw i64 %i, 1
+  %exitcond.i = icmp eq i64 %i.next, %M
+  br i1 %exitcond.i, label %exit, label %outer.header, !llvm.loop !6
+
+exit:
   ret void
 }
 

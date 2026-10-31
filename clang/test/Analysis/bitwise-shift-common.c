@@ -90,6 +90,16 @@ int too_large_right_operand_symbolic(int left, int right) {
   // expected-note@-2 {{The result of right shift is undefined because the right operand is >= 32, not smaller than 32, the capacity of 'int'}}
 }
 
+unsigned huge_right_operand_symbolic(unsigned x, unsigned long long t) {
+  // expected-note@+2 {{Assuming 't' is >= 18000000000000000000}}
+  // expected-note@+1 {{Taking false branch}}
+  if (t < 18000000000000000000ULL)
+    return 0;
+  return x >> t; // no-crash: gh #218867
+  // expected-warning@-1 {{Right shift overflows the capacity of 'unsigned int'}}
+  // expected-note@-2 {{The result of right shift is undefined because the right operand is >= 18000000000000000000, not smaller than 32, the capacity of 'unsigned int'}}
+}
+
 void clang_analyzer_value(int);
 int too_large_right_operand_compound(unsigned short arg) {
   // Note: this would be valid code with an 'unsigned int' because

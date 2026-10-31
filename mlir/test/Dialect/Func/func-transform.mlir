@@ -174,7 +174,7 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %module = transform.get_parent_op %f#0 : (!transform.any_op) -> !transform.any_op
-    transform.func.replace_func_signature @func_with_reverse_order_no_result args_interchange = [0, 2, 1] results_interchange = [] at %module {adjust_func_calls} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.func.replace_func_signature @func_with_reverse_order_no_result args_interchange = [0, 2, 1] results_interchange = [] at %module adjust_func_calls : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -210,7 +210,7 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %module = transform.get_parent_op %f#0 : (!transform.any_op) -> !transform.any_op
-    transform.func.replace_func_signature @func_with_reverse_order args_interchange = [0, 2, 1] results_interchange = [1, 0] at %module {adjust_func_calls} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.func.replace_func_signature @func_with_reverse_order args_interchange = [0, 2, 1] results_interchange = [1, 0] at %module adjust_func_calls : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }
@@ -246,7 +246,7 @@ module attributes {transform.with_named_sequence} {
     %funcs = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
     %f:2 = transform.split_handle %funcs : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     %module = transform.get_parent_op %f#0 : (!transform.any_op) -> !transform.any_op
-    transform.func.replace_func_signature @func_with_reverse_order_with_attr args_interchange = [0, 2, 1] results_interchange = [1, 0] at %module {adjust_func_calls} : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.func.replace_func_signature @func_with_reverse_order_with_attr args_interchange = [0, 2, 1] results_interchange = [1, 0] at %module adjust_func_calls : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
 }

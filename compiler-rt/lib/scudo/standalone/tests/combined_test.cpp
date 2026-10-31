@@ -50,15 +50,36 @@ template <class AllocatorT>
 void checkMemoryTaggingMaybe(AllocatorT *Allocator, void *P, scudo::uptr Size,
                              scudo::uptr Alignment) {
   const scudo::uptr MinAlignment = 1UL << SCUDO_MIN_ALIGNMENT_LOG;
-  Size = scudo::roundUp(Size, MinAlignment);
+  const scudo::uptr PageSize = scudo::getPageSizeCached();
   if (Allocator->useMemoryTaggingTestOnly()) {
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[-1] = 'A', "");
   }
-  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)
-          ? Allocator->useMemoryTaggingTestOnly()
-          : Alignment == MinAlignment &&
-                AllocatorT::SecondaryT::getGuardPageSize() > 0) {
-    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[Size] = 'A', "");
+  bool ShouldDie = false;
+  scudo::uptr DeathOffset = Size;
+
+  if (isPrimaryAllocation<AllocatorT>(Size, Alignment)) {
+    if (Allocator->useMemoryTaggingTestOnly()) {
+      ShouldDie = true;
+      DeathOffset = scudo::roundUp(Size, MinAlignment);
+    }
+  } else {
+    // Secondary allocation
+    if (Alignment == MinAlignment &&
+        AllocatorT::SecondaryT::getGuardPageSize() > 0) {
+      ShouldDie = true;
+      if (Allocator->useMemoryTaggingTestOnly()) {
+        // If MTE is enabled, Secondary allocator forces PageSize alignment,
+        // so the guard page starts at the next PageSize boundary.
+        DeathOffset = scudo::roundUp(Size, PageSize);
+      } else {
+        // Otherwise, it starts at the next MinAlignment boundary.
+        DeathOffset = scudo::roundUp(Size, MinAlignment);
+      }
+    }
+  }
+
+  if (ShouldDie) {
+    SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[DeathOffset] = 'A', "");
   }
 }
 
@@ -286,12 +307,13 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, IsOwned) {
   auto *Allocator = this->Allocator.get();
   static scudo::u8 StaticBuffer[scudo::Chunk::getHeaderSize() + 1];
   EXPECT_FALSE(
-      Allocator->isOwned(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
+      Allocator->isOwnedTestOnly(&StaticBuffer[scudo::Chunk::getHeaderSize()]));
 
   scudo::u8 StackBuffer[scudo::Chunk::getHeaderSize() + 1];
   for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
     StackBuffer[I] = 0x42U;
-  EXPECT_FALSE(Allocator->isOwned(&StackBuffer[scudo::Chunk::getHeaderSize()]));
+  EXPECT_FALSE(
+      Allocator->isOwnedTestOnly(&StackBuffer[scudo::Chunk::getHeaderSize()]));
   for (scudo::uptr I = 0; I < sizeof(StackBuffer); I++)
     EXPECT_EQ(StackBuffer[I], 0x42U);
 }
@@ -312,7 +334,7 @@ void ScudoCombinedTest<Config>::BasicTest(scudo::uptr SizeLog) {
           static_cast<scudo::uptr>((1LL << SizeLog) + Delta);
       void *P = Allocator->allocate(Size, Origin, Align);
       EXPECT_NE(P, nullptr);
-      EXPECT_TRUE(Allocator->isOwned(P));
+      EXPECT_TRUE(Allocator->isOwnedTestOnly(P));
       EXPECT_TRUE(scudo::isAligned(reinterpret_cast<scudo::uptr>(P), Align));
       EXPECT_LE(Size, Allocator->getUsableSize(P));
       memset(P, 0xaa, Size);
@@ -618,7 +640,7 @@ SCUDO_TYPED_TEST(ScudoCombinedDeathTest, DisableMemoryTagging) {
     // Check that disabling memory tagging works correctly.
     void *P = Allocator->allocate(2048, Origin);
     SCUDO_EXPECT_DEATH(reinterpret_cast<char *>(P)[2048] = 'A', "");
-    scudo::ScopedDisableMemoryTagChecks NoTagChecks;
+    scudo::ScopedTestOnlyDisableMemoryTagChecks NoTagChecks;
     Allocator->disableMemoryTagging();
     reinterpret_cast<char *>(P)[2048] = 'A';
     Allocator->deallocate(P, Origin);
@@ -1229,6 +1251,10 @@ struct TestQuarantineDisabledConfig : TestQuarantineConfig {
 
 TEST(ScudoCombinedTest, QuarantineDisabled) {
   using AllocatorT = TestAllocator<TestQuarantineDisabledConfig>;
+  EXPECT_LT(sizeof(scudo::Allocator<TestQuarantineDisabledConfig>),
+            sizeof(scudo::Allocator<TestQuarantineConfig>));
+  EXPECT_LT(sizeof(scudo::TSD<scudo::Allocator<TestQuarantineDisabledConfig>>),
+            sizeof(scudo::TSD<scudo::Allocator<TestQuarantineConfig>>));
   auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
 
   const scudo::uptr Size = 1000U;

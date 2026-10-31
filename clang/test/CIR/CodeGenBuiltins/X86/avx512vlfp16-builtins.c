@@ -8,14 +8,14 @@
 #include <immintrin.h>
 
 _Float16 test_mm256_reduce_add_ph(__m256h __W) {
-  // CIR-LABEL: _mm256_reduce_add_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[R:.*]], %[[V:.*]] : (!cir.f16{{.*}}, !cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
-
   // CIR-LABEL: test_mm256_reduce_add_ph
   // CIR: cir.call @_mm256_reduce_add_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm256_reduce_add_ph(
+  // CIR: cir.vec.reduce.fadd(%[[R:.*]], %[[V:.*]]) : (!cir.f16, !cir.vector<16 x !cir.f16>) -> !cir.f16 <fastmath_flags = [reassoc]>
+
   // LLVM-LABEL: test_mm256_reduce_add_ph
-  // LLVM: call half @llvm.vector.reduce.fadd.v16f16(half -0.000000e+00, <16 x half> %{{.*}})
+  // LLVM: call reassoc half @llvm.vector.reduce.fadd.v16f16(half -0.000000e+00, <16 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm256_reduce_add_ph
   // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fadd.v16f16(half -0.000000e+00, <16 x half> %{{.*}})
@@ -23,14 +23,14 @@ _Float16 test_mm256_reduce_add_ph(__m256h __W) {
 }
 
 _Float16 test_mm256_reduce_mul_ph(__m256h __W) {
-  // CIR-LABEL: _mm256_reduce_mul_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmul" %[[R:.*]], %[[V:.*]] : (!cir.f16{{.*}}, !cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
-
   // CIR-LABEL: test_mm256_reduce_mul_ph
   // CIR: cir.call @_mm256_reduce_mul_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm256_reduce_mul_ph(
+  // CIR: cir.vec.reduce.fmul(%[[R:.*]], %[[V:.*]]) : (!cir.f16, !cir.vector<16 x !cir.f16>) -> !cir.f16 <fastmath_flags = [reassoc]>
+
   // LLVM-LABEL: test_mm256_reduce_mul_ph
-  // LLVM: call half @llvm.vector.reduce.fmul.v16f16(half 1.000000e+00, <16 x half> %{{.*}})
+  // LLVM: call reassoc half @llvm.vector.reduce.fmul.v16f16(half 1.000000e+00, <16 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm256_reduce_mul_ph
   // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fmul.v16f16(half 1.000000e+00, <16 x half> %{{.*}})
@@ -38,14 +38,14 @@ _Float16 test_mm256_reduce_mul_ph(__m256h __W) {
 }
 
 _Float16 test_mm256_reduce_max_ph(__m256h __W) {
-  // CIR-LABEL: _mm256_reduce_max_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax" %[[V:.*]] (!cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16 
-
   // CIR-LABEL: test_mm256_reduce_max_ph
   // CIR: cir.call @_mm256_reduce_max_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm256_reduce_max_ph(
+  // CIR: cir.vec.reduce.fmax(%[[V:.*]]) : (!cir.vector<16 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
+
   // LLVM-LABEL: test_mm256_reduce_max_ph
-  // LLVM: call half @llvm.vector.reduce.fmax.v16f16(<16 x half> %{{.*}})
+  // LLVM: call nnan half @llvm.vector.reduce.fmax.v16f16(<16 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm256_reduce_max_ph
   // OGCG: call nnan {{.*}}@llvm.vector.reduce.fmax.v16f16(<16 x half> %{{.*}})
@@ -53,14 +53,14 @@ _Float16 test_mm256_reduce_max_ph(__m256h __W) {
 }
 
 _Float16 test_mm256_reduce_min_ph(__m256h __W) {
-  // CIR-LABEL: _mm256_reduce_min_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin" %[[V:.*]] : (!cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
-
   // CIR-LABEL: test_mm256_reduce_min_ph
   // CIR: cir.call @_mm256_reduce_min_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<16 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm256_reduce_min_ph(
+  // CIR: cir.vec.reduce.fmin(%[[V:.*]]) : (!cir.vector<16 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
+
   // LLVM-LABEL: test_mm256_reduce_min_ph
-  // LLVM: call half @llvm.vector.reduce.fmin.v16f16(<16 x half> %{{.*}})
+  // LLVM: call nnan half @llvm.vector.reduce.fmin.v16f16(<16 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm256_reduce_min_ph
   // OGCG: call nnan {{.*}}@llvm.vector.reduce.fmin.v16f16(<16 x half> %{{.*}})
@@ -68,14 +68,14 @@ _Float16 test_mm256_reduce_min_ph(__m256h __W) {
 }
 
 _Float16 test_mm_reduce_add_ph(__m128h __W) {
-  // CIR-LABEL: _mm_reduce_add_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fadd" %[[R:.*]], %[[V:.*]] : (!cir.f16{{.*}}, !cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
-
   // CIR-LABEL: test_mm_reduce_add_ph
   // CIR: cir.call @_mm_reduce_add_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm_reduce_add_ph(
+  // CIR: cir.vec.reduce.fadd(%[[R:.*]], %[[V:.*]]) : (!cir.f16, !cir.vector<8 x !cir.f16>) -> !cir.f16 <fastmath_flags = [reassoc]>
+
   // LLVM-LABEL: test_mm_reduce_add_ph
-  // LLVM: call half @llvm.vector.reduce.fadd.v8f16(half -0.000000e+00, <8 x half> %{{.*}})
+  // LLVM: call reassoc half @llvm.vector.reduce.fadd.v8f16(half -0.000000e+00, <8 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm_reduce_add_ph
   // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fadd.v8f16(half -0.000000e+00, <8 x half> %{{.*}})
@@ -83,14 +83,14 @@ _Float16 test_mm_reduce_add_ph(__m128h __W) {
 }
 
 _Float16 test_mm_reduce_mul_ph(__m128h __W) {
-  // CIR-LABEL: _mm_reduce_mul_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmul" %[[R:.*]], %[[V:.*]] : (!cir.f16{{.*}}, !cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
-
   // CIR-LABEL: test_mm_reduce_mul_ph
   // CIR: cir.call @_mm_reduce_mul_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm_reduce_mul_ph(
+  // CIR: cir.vec.reduce.fmul(%[[R:.*]], %[[V:.*]]) : (!cir.f16, !cir.vector<8 x !cir.f16>) -> !cir.f16 <fastmath_flags = [reassoc]>
+
   // LLVM-LABEL: test_mm_reduce_mul_ph
-  // LLVM: call half @llvm.vector.reduce.fmul.v8f16(half 1.000000e+00, <8 x half> %{{.*}})
+  // LLVM: call reassoc half @llvm.vector.reduce.fmul.v8f16(half 1.000000e+00, <8 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm_reduce_mul_ph
   // OGCG: call reassoc {{.*}}@llvm.vector.reduce.fmul.v8f16(half 1.000000e+00, <8 x half> %{{.*}})
@@ -98,14 +98,14 @@ _Float16 test_mm_reduce_mul_ph(__m128h __W) {
 }
 
 _Float16 test_mm_reduce_max_ph(__m128h __W) {
-  // CIR-LABEL: _mm_reduce_max_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmax" %[[V:.*]] (!cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16 
-
   // CIR-LABEL: test_mm_reduce_max_ph
   // CIR: cir.call @_mm_reduce_max_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm_reduce_max_ph(
+  // CIR: cir.vec.reduce.fmax(%[[V:.*]]) : (!cir.vector<8 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
+
   // LLVM-LABEL: test_mm_reduce_max_ph
-  // LLVM: call half @llvm.vector.reduce.fmax.v8f16(<8 x half> %{{.*}})
+  // LLVM: call nnan half @llvm.vector.reduce.fmax.v8f16(<8 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm_reduce_max_ph
   // OGCG: call nnan {{.*}}@llvm.vector.reduce.fmax.v8f16(<8 x half> %{{.*}})
@@ -113,17 +113,16 @@ _Float16 test_mm_reduce_max_ph(__m128h __W) {
 }
 
 _Float16 test_mm_reduce_min_ph(__m128h __W) {
-  // CIR-LABEL: _mm_reduce_min_ph
-  // CIR: cir.call_llvm_intrinsic "vector.reduce.fmin" %[[V:.*]] : (!cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
-
   // CIR-LABEL: test_mm_reduce_min_ph
   // CIR: cir.call @_mm_reduce_min_ph(%[[VEC:.*]]) {nobuiltin, nobuiltins = [{{.*}}]} : (!cir.vector<8 x !cir.f16>{{.*}}) -> !cir.f16
 
+  // CIR-LABEL: cir.func{{.*}} @_mm_reduce_min_ph(
+  // CIR: cir.vec.reduce.fmin(%[[V:.*]]) : (!cir.vector<8 x !cir.f16>) -> !cir.f16 <fastmath_flags = [nnan]>
+
   // LLVM-LABEL: test_mm_reduce_min_ph
-  // LLVM: call half @llvm.vector.reduce.fmin.v8f16(<8 x half> %{{.*}})
+  // LLVM: call nnan half @llvm.vector.reduce.fmin.v8f16(<8 x half> %{{.*}})
 
   // OGCG-LABEL: test_mm_reduce_min_ph
   // OGCG: call nnan {{.*}}@llvm.vector.reduce.fmin.v8f16(<8 x half> %{{.*}})
   return _mm_reduce_min_ph(__W);
 }
-

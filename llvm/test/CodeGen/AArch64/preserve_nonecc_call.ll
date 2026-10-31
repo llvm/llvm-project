@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-unknown < %s | FileCheck --check-prefixes=CHECK %s
 ; RUN: llc -mtriple=aarch64-apple-darwin < %s | FileCheck --check-prefixes=DARWIN %s
 ; RUN: llc -mtriple=aarch64-pc-windows < %s | FileCheck --check-prefixes=WIN %s
+; RUN: llc -mtriple=aarch64-unknown-uefi < %s | FileCheck --check-prefixes=WIN %s
 
 ; This test checks various function call behaviors between preserve_none and
 ; normal calling conventions.
@@ -520,4 +521,349 @@ define i64 @caller3() {
 ; WIN-NEXT:    .seh_endproc
   %ret = call preserve_nonecc i64 @callee_with_many_param(i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9, i64 10, i64 11, i64 12, i64 13, i64 14, i64 15, i64 16, i64 17, i64 18, i64 19, i64 20, i64 21, i64 22, i64 23, i64 24)
   ret i64 %ret
+}
+
+;; The same register list is used for i32 arguments. The 24th argument lands in
+;; w15 except on Windows, where X15 is reserved for stack allocation and the
+;; argument is passed on the stack instead.
+declare preserve_nonecc i32 @callee_with_many_param_i32_2(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19, i32 %a20, i32 %a21, i32 %a22, i32 %a23, i32 %a24)
+define preserve_nonecc i32 @callee_with_many_param_i32(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19, i32 %a20, i32 %a21, i32 %a22, i32 %a23, i32 %a24) {
+; CHECK-LABEL: callee_with_many_param_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    mov w8, w15
+; CHECK-NEXT:    mov w15, w20
+; CHECK-NEXT:    mov w20, w21
+; CHECK-NEXT:    mov w21, w22
+; CHECK-NEXT:    mov w22, w23
+; CHECK-NEXT:    mov w23, w24
+; CHECK-NEXT:    mov w24, w25
+; CHECK-NEXT:    mov w25, w26
+; CHECK-NEXT:    mov w26, w27
+; CHECK-NEXT:    mov w27, w28
+; CHECK-NEXT:    mov w28, w0
+; CHECK-NEXT:    mov w0, w1
+; CHECK-NEXT:    mov w1, w2
+; CHECK-NEXT:    mov w2, w3
+; CHECK-NEXT:    mov w3, w4
+; CHECK-NEXT:    mov w4, w5
+; CHECK-NEXT:    mov w5, w6
+; CHECK-NEXT:    mov w6, w7
+; CHECK-NEXT:    mov w7, w10
+; CHECK-NEXT:    mov w10, w11
+; CHECK-NEXT:    mov w11, w12
+; CHECK-NEXT:    mov w12, w13
+; CHECK-NEXT:    mov w13, w14
+; CHECK-NEXT:    mov w14, w9
+; CHECK-NEXT:    mov w9, w8
+; CHECK-NEXT:    bl callee_with_many_param_i32_2
+; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; DARWIN-LABEL: callee_with_many_param_i32:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    stp x29, x30, [sp, #-16]! ; 16-byte Folded Spill
+; DARWIN-NEXT:    .cfi_def_cfa_offset 16
+; DARWIN-NEXT:    .cfi_offset w30, -8
+; DARWIN-NEXT:    .cfi_offset w29, -16
+; DARWIN-NEXT:    mov w8, w15
+; DARWIN-NEXT:    mov w15, w20
+; DARWIN-NEXT:    mov w20, w21
+; DARWIN-NEXT:    mov w21, w22
+; DARWIN-NEXT:    mov w22, w23
+; DARWIN-NEXT:    mov w23, w24
+; DARWIN-NEXT:    mov w24, w25
+; DARWIN-NEXT:    mov w25, w26
+; DARWIN-NEXT:    mov w26, w27
+; DARWIN-NEXT:    mov w27, w28
+; DARWIN-NEXT:    mov w28, w0
+; DARWIN-NEXT:    mov w0, w1
+; DARWIN-NEXT:    mov w1, w2
+; DARWIN-NEXT:    mov w2, w3
+; DARWIN-NEXT:    mov w3, w4
+; DARWIN-NEXT:    mov w4, w5
+; DARWIN-NEXT:    mov w5, w6
+; DARWIN-NEXT:    mov w6, w7
+; DARWIN-NEXT:    mov w7, w10
+; DARWIN-NEXT:    mov w10, w11
+; DARWIN-NEXT:    mov w11, w12
+; DARWIN-NEXT:    mov w12, w13
+; DARWIN-NEXT:    mov w13, w14
+; DARWIN-NEXT:    mov w14, w9
+; DARWIN-NEXT:    mov w9, w8
+; DARWIN-NEXT:    bl _callee_with_many_param_i32_2
+; DARWIN-NEXT:    ldp x29, x30, [sp], #16 ; 16-byte Folded Reload
+; DARWIN-NEXT:    ret
+;
+; WIN-LABEL: callee_with_many_param_i32:
+; WIN:       .seh_proc callee_with_many_param_i32
+; WIN-NEXT:  // %bb.0:
+; WIN-NEXT:    sub sp, sp, #32
+; WIN-NEXT:    .seh_stackalloc 32
+; WIN-NEXT:    str x30, [sp, #16] // 8-byte Spill
+; WIN-NEXT:    .seh_save_reg x30, 16
+; WIN-NEXT:    .seh_endprologue
+; WIN-NEXT:    ldr w8, [sp, #32]
+; WIN-NEXT:    mov w15, w20
+; WIN-NEXT:    mov w20, w21
+; WIN-NEXT:    mov w21, w22
+; WIN-NEXT:    mov w22, w23
+; WIN-NEXT:    mov w23, w24
+; WIN-NEXT:    mov w24, w25
+; WIN-NEXT:    mov w25, w26
+; WIN-NEXT:    mov w26, w27
+; WIN-NEXT:    mov w27, w28
+; WIN-NEXT:    mov w28, w0
+; WIN-NEXT:    mov w0, w1
+; WIN-NEXT:    mov w1, w2
+; WIN-NEXT:    mov w2, w3
+; WIN-NEXT:    mov w3, w4
+; WIN-NEXT:    mov w4, w5
+; WIN-NEXT:    mov w5, w6
+; WIN-NEXT:    mov w6, w7
+; WIN-NEXT:    mov w7, w10
+; WIN-NEXT:    mov w10, w11
+; WIN-NEXT:    mov w11, w12
+; WIN-NEXT:    mov w12, w13
+; WIN-NEXT:    mov w13, w14
+; WIN-NEXT:    mov w14, w9
+; WIN-NEXT:    mov w9, w8
+; WIN-NEXT:    str w15, [sp]
+; WIN-NEXT:    bl callee_with_many_param_i32_2
+; WIN-NEXT:    .seh_startepilogue
+; WIN-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
+; WIN-NEXT:    .seh_save_reg x30, 16
+; WIN-NEXT:    add sp, sp, #32
+; WIN-NEXT:    .seh_stackalloc 32
+; WIN-NEXT:    .seh_endepilogue
+; WIN-NEXT:    ret
+; WIN-NEXT:    .seh_endfunclet
+; WIN-NEXT:    .seh_endproc
+  %ret = call preserve_nonecc i32 @callee_with_many_param_i32_2(i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11, i32 %a12, i32 %a13, i32 %a14, i32 %a15, i32 %a16, i32 %a17, i32 %a18, i32 %a19, i32 %a20, i32 %a21, i32 %a22, i32 %a23, i32 %a24, i32 %a1)
+  ret i32 %ret
+}
+
+define i32 @caller3_i32() {
+; CHECK-LABEL: caller3_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp d15, d14, [sp, #-160]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
+; CHECK-NEXT:    stp x28, x27, [sp, #80] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x26, x25, [sp, #96] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x24, x23, [sp, #112] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x22, x21, [sp, #128] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x20, x19, [sp, #144] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-NEXT:    .cfi_offset w19, -8
+; CHECK-NEXT:    .cfi_offset w20, -16
+; CHECK-NEXT:    .cfi_offset w21, -24
+; CHECK-NEXT:    .cfi_offset w22, -32
+; CHECK-NEXT:    .cfi_offset w23, -40
+; CHECK-NEXT:    .cfi_offset w24, -48
+; CHECK-NEXT:    .cfi_offset w25, -56
+; CHECK-NEXT:    .cfi_offset w26, -64
+; CHECK-NEXT:    .cfi_offset w27, -72
+; CHECK-NEXT:    .cfi_offset w28, -80
+; CHECK-NEXT:    .cfi_offset w30, -96
+; CHECK-NEXT:    .cfi_offset b8, -104
+; CHECK-NEXT:    .cfi_offset b9, -112
+; CHECK-NEXT:    .cfi_offset b10, -120
+; CHECK-NEXT:    .cfi_offset b11, -128
+; CHECK-NEXT:    .cfi_offset b12, -136
+; CHECK-NEXT:    .cfi_offset b13, -144
+; CHECK-NEXT:    .cfi_offset b14, -152
+; CHECK-NEXT:    .cfi_offset b15, -160
+; CHECK-NEXT:    mov w20, #1 // =0x1
+; CHECK-NEXT:    mov w21, #2 // =0x2
+; CHECK-NEXT:    mov w22, #3 // =0x3
+; CHECK-NEXT:    mov w23, #4 // =0x4
+; CHECK-NEXT:    mov w24, #5 // =0x5
+; CHECK-NEXT:    mov w25, #6 // =0x6
+; CHECK-NEXT:    mov w26, #7 // =0x7
+; CHECK-NEXT:    mov w27, #8 // =0x8
+; CHECK-NEXT:    mov w28, #9 // =0x9
+; CHECK-NEXT:    mov w0, #10 // =0xa
+; CHECK-NEXT:    mov w1, #11 // =0xb
+; CHECK-NEXT:    mov w2, #12 // =0xc
+; CHECK-NEXT:    mov w3, #13 // =0xd
+; CHECK-NEXT:    mov w4, #14 // =0xe
+; CHECK-NEXT:    mov w5, #15 // =0xf
+; CHECK-NEXT:    mov w6, #16 // =0x10
+; CHECK-NEXT:    mov w7, #17 // =0x11
+; CHECK-NEXT:    mov w10, #18 // =0x12
+; CHECK-NEXT:    mov w11, #19 // =0x13
+; CHECK-NEXT:    mov w12, #20 // =0x14
+; CHECK-NEXT:    mov w13, #21 // =0x15
+; CHECK-NEXT:    mov w14, #22 // =0x16
+; CHECK-NEXT:    mov w9, #23 // =0x17
+; CHECK-NEXT:    mov w15, #24 // =0x18
+; CHECK-NEXT:    bl callee_with_many_param_i32
+; CHECK-NEXT:    ldp x20, x19, [sp, #144] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
+; CHECK-NEXT:    ldp x22, x21, [sp, #128] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x24, x23, [sp, #112] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x26, x25, [sp, #96] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp x28, x27, [sp, #80] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #160 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; DARWIN-LABEL: caller3_i32:
+; DARWIN:       ; %bb.0:
+; DARWIN-NEXT:    stp d15, d14, [sp, #-160]! ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp d13, d12, [sp, #16] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp d11, d10, [sp, #32] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp d9, d8, [sp, #48] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x28, x27, [sp, #64] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x26, x25, [sp, #80] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x24, x23, [sp, #96] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x22, x21, [sp, #112] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x20, x19, [sp, #128] ; 16-byte Folded Spill
+; DARWIN-NEXT:    stp x29, x30, [sp, #144] ; 16-byte Folded Spill
+; DARWIN-NEXT:    .cfi_def_cfa_offset 160
+; DARWIN-NEXT:    .cfi_offset w30, -8
+; DARWIN-NEXT:    .cfi_offset w29, -16
+; DARWIN-NEXT:    .cfi_offset w19, -24
+; DARWIN-NEXT:    .cfi_offset w20, -32
+; DARWIN-NEXT:    .cfi_offset w21, -40
+; DARWIN-NEXT:    .cfi_offset w22, -48
+; DARWIN-NEXT:    .cfi_offset w23, -56
+; DARWIN-NEXT:    .cfi_offset w24, -64
+; DARWIN-NEXT:    .cfi_offset w25, -72
+; DARWIN-NEXT:    .cfi_offset w26, -80
+; DARWIN-NEXT:    .cfi_offset w27, -88
+; DARWIN-NEXT:    .cfi_offset w28, -96
+; DARWIN-NEXT:    .cfi_offset b8, -104
+; DARWIN-NEXT:    .cfi_offset b9, -112
+; DARWIN-NEXT:    .cfi_offset b10, -120
+; DARWIN-NEXT:    .cfi_offset b11, -128
+; DARWIN-NEXT:    .cfi_offset b12, -136
+; DARWIN-NEXT:    .cfi_offset b13, -144
+; DARWIN-NEXT:    .cfi_offset b14, -152
+; DARWIN-NEXT:    .cfi_offset b15, -160
+; DARWIN-NEXT:    mov w20, #1 ; =0x1
+; DARWIN-NEXT:    mov w21, #2 ; =0x2
+; DARWIN-NEXT:    mov w22, #3 ; =0x3
+; DARWIN-NEXT:    mov w23, #4 ; =0x4
+; DARWIN-NEXT:    mov w24, #5 ; =0x5
+; DARWIN-NEXT:    mov w25, #6 ; =0x6
+; DARWIN-NEXT:    mov w26, #7 ; =0x7
+; DARWIN-NEXT:    mov w27, #8 ; =0x8
+; DARWIN-NEXT:    mov w28, #9 ; =0x9
+; DARWIN-NEXT:    mov w0, #10 ; =0xa
+; DARWIN-NEXT:    mov w1, #11 ; =0xb
+; DARWIN-NEXT:    mov w2, #12 ; =0xc
+; DARWIN-NEXT:    mov w3, #13 ; =0xd
+; DARWIN-NEXT:    mov w4, #14 ; =0xe
+; DARWIN-NEXT:    mov w5, #15 ; =0xf
+; DARWIN-NEXT:    mov w6, #16 ; =0x10
+; DARWIN-NEXT:    mov w7, #17 ; =0x11
+; DARWIN-NEXT:    mov w10, #18 ; =0x12
+; DARWIN-NEXT:    mov w11, #19 ; =0x13
+; DARWIN-NEXT:    mov w12, #20 ; =0x14
+; DARWIN-NEXT:    mov w13, #21 ; =0x15
+; DARWIN-NEXT:    mov w14, #22 ; =0x16
+; DARWIN-NEXT:    mov w9, #23 ; =0x17
+; DARWIN-NEXT:    mov w15, #24 ; =0x18
+; DARWIN-NEXT:    bl _callee_with_many_param_i32
+; DARWIN-NEXT:    ldp x29, x30, [sp, #144] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x20, x19, [sp, #128] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x22, x21, [sp, #112] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x24, x23, [sp, #96] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x26, x25, [sp, #80] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp x28, x27, [sp, #64] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d9, d8, [sp, #48] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d11, d10, [sp, #32] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d13, d12, [sp, #16] ; 16-byte Folded Reload
+; DARWIN-NEXT:    ldp d15, d14, [sp], #160 ; 16-byte Folded Reload
+; DARWIN-NEXT:    ret
+;
+; WIN-LABEL: caller3_i32:
+; WIN:       .seh_proc caller3_i32
+; WIN-NEXT:  // %bb.0:
+; WIN-NEXT:    sub sp, sp, #176
+; WIN-NEXT:    .seh_stackalloc 176
+; WIN-NEXT:    stp x19, x20, [sp, #16] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_regp x19, 16
+; WIN-NEXT:    stp x21, x22, [sp, #32] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_regp x21, 32
+; WIN-NEXT:    stp x23, x24, [sp, #48] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_regp x23, 48
+; WIN-NEXT:    stp x25, x26, [sp, #64] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_regp x25, 64
+; WIN-NEXT:    stp x27, x28, [sp, #80] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_regp x27, 80
+; WIN-NEXT:    str x30, [sp, #96] // 8-byte Spill
+; WIN-NEXT:    .seh_save_reg x30, 96
+; WIN-NEXT:    stp d8, d9, [sp, #104] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_fregp d8, 104
+; WIN-NEXT:    stp d10, d11, [sp, #120] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_fregp d10, 120
+; WIN-NEXT:    stp d12, d13, [sp, #136] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_fregp d12, 136
+; WIN-NEXT:    stp d14, d15, [sp, #152] // 16-byte Folded Spill
+; WIN-NEXT:    .seh_save_fregp d14, 152
+; WIN-NEXT:    .seh_endprologue
+; WIN-NEXT:    mov w8, #24 // =0x18
+; WIN-NEXT:    mov w20, #1 // =0x1
+; WIN-NEXT:    mov w21, #2 // =0x2
+; WIN-NEXT:    mov w22, #3 // =0x3
+; WIN-NEXT:    mov w23, #4 // =0x4
+; WIN-NEXT:    mov w24, #5 // =0x5
+; WIN-NEXT:    mov w25, #6 // =0x6
+; WIN-NEXT:    mov w26, #7 // =0x7
+; WIN-NEXT:    mov w27, #8 // =0x8
+; WIN-NEXT:    mov w28, #9 // =0x9
+; WIN-NEXT:    mov w0, #10 // =0xa
+; WIN-NEXT:    mov w1, #11 // =0xb
+; WIN-NEXT:    mov w2, #12 // =0xc
+; WIN-NEXT:    mov w3, #13 // =0xd
+; WIN-NEXT:    mov w4, #14 // =0xe
+; WIN-NEXT:    mov w5, #15 // =0xf
+; WIN-NEXT:    mov w6, #16 // =0x10
+; WIN-NEXT:    mov w7, #17 // =0x11
+; WIN-NEXT:    mov w10, #18 // =0x12
+; WIN-NEXT:    mov w11, #19 // =0x13
+; WIN-NEXT:    mov w12, #20 // =0x14
+; WIN-NEXT:    mov w13, #21 // =0x15
+; WIN-NEXT:    mov w14, #22 // =0x16
+; WIN-NEXT:    mov w9, #23 // =0x17
+; WIN-NEXT:    str w8, [sp]
+; WIN-NEXT:    bl callee_with_many_param_i32
+; WIN-NEXT:    .seh_startepilogue
+; WIN-NEXT:    ldp d14, d15, [sp, #152] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_fregp d14, 152
+; WIN-NEXT:    ldp d12, d13, [sp, #136] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_fregp d12, 136
+; WIN-NEXT:    ldp d10, d11, [sp, #120] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_fregp d10, 120
+; WIN-NEXT:    ldp d8, d9, [sp, #104] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_fregp d8, 104
+; WIN-NEXT:    ldr x30, [sp, #96] // 8-byte Reload
+; WIN-NEXT:    .seh_save_reg x30, 96
+; WIN-NEXT:    ldp x27, x28, [sp, #80] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_regp x27, 80
+; WIN-NEXT:    ldp x25, x26, [sp, #64] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_regp x25, 64
+; WIN-NEXT:    ldp x23, x24, [sp, #48] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_regp x23, 48
+; WIN-NEXT:    ldp x21, x22, [sp, #32] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_regp x21, 32
+; WIN-NEXT:    ldp x19, x20, [sp, #16] // 16-byte Folded Reload
+; WIN-NEXT:    .seh_save_regp x19, 16
+; WIN-NEXT:    add sp, sp, #176
+; WIN-NEXT:    .seh_stackalloc 176
+; WIN-NEXT:    .seh_endepilogue
+; WIN-NEXT:    ret
+; WIN-NEXT:    .seh_endfunclet
+; WIN-NEXT:    .seh_endproc
+  %ret = call preserve_nonecc i32 @callee_with_many_param_i32(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24)
+  ret i32 %ret
 }

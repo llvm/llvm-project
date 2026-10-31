@@ -398,8 +398,6 @@ def UniformIntrinsics : GenericTable {
 
 def : AlwaysUniform<int_amdgcn_readfirstlane>;
 def : AlwaysUniform<int_amdgcn_readlane>;
-def : AlwaysUniform<int_amdgcn_icmp>;
-def : AlwaysUniform<int_amdgcn_fcmp>;
 def : AlwaysUniform<int_amdgcn_ballot>;
 def : AlwaysUniform<int_amdgcn_if_break>;
 def : AlwaysUniform<int_amdgcn_cluster_workgroup_id_x>;
@@ -430,4 +428,13 @@ def AMDGPUImageDMaskIntrinsicTable : GenericTable {
   let PrimaryKey = ["Intr"];
   let PrimaryKeyName = "getAMDGPUImageDMaskIntrinsic";
   let PrimaryKeyEarlyOut = 1;
+}
+
+def LDSDMAIntrinsicTable : GenericTable {
+  let FilterClass = "AMDGPULDSDMAIntrinsic";
+  let CppTypeName = "LDSDMAIntrinsic";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupLDSDMAIntrinsic";
 }

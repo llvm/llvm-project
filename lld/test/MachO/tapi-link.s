@@ -33,7 +33,7 @@
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libc++abi      ___gxx_personality_v0
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libNested3     _deeply_nested
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 libTlvWeak     _weak
-# CHECK-DAG: __DATA __thread_ptrs {{.*}} pointer 0 libTlvWeak _tlv
+# CHECK-DAG: __DATA_CONST __got {{.*}} pointer 0 libTlvWeak _tlv
 
 # CHECK: Weak bind table:
 # CHECK-DAG: __DATA __data {{.*}} pointer 0 _weak

@@ -74,11 +74,11 @@ NativeRegisterContextFreeBSD::CreateHostNativeRegisterContextFreeBSD(
 static RegisterInfoInterface *
 CreateRegisterInfoInterface(const ArchSpec &target_arch) {
   if (HostInfo::GetArchitecture().GetAddressByteSize() == 4) {
-    return new RegisterContextFreeBSD_powerpc32(target_arch);
+    return new RegisterInfoFreeBSD_powerpc32(target_arch);
   } else {
     assert((HostInfo::GetArchitecture().GetAddressByteSize() == 8) &&
            "Register setting path assumes this is a 64-bit host");
-    return new RegisterContextFreeBSD_powerpc64(target_arch);
+    return new RegisterInfoFreeBSD_powerpc64(target_arch);
   }
 }
 
@@ -87,9 +87,9 @@ NativeRegisterContextFreeBSD_powerpc::NativeRegisterContextFreeBSD_powerpc(
     : NativeRegisterContextRegisterInfo(
           native_thread, CreateRegisterInfoInterface(target_arch)) {}
 
-RegisterContextFreeBSD_powerpc &
+RegisterInfoFreeBSD_powerpc &
 NativeRegisterContextFreeBSD_powerpc::GetRegisterInfo() const {
-  return static_cast<RegisterContextFreeBSD_powerpc &>(
+  return static_cast<RegisterInfoFreeBSD_powerpc &>(
       *m_register_info_interface_up);
 }
 

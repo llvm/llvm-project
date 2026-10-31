@@ -100,12 +100,11 @@ define i32 @test_fptosi_i32(ptr %p) {
 
 define i64 @test_fptosi_i64(ptr %p) {
 ; CHECK-LABEL: test_fptosi_i64:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    bl __fixhfdi
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         vldr.16 s0, [r0]
+; CHECK-NEXT:    vcvt.s32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    asr r1, r0, #31
+; CHECK-NEXT:    bx lr
   %a = load half, ptr %p, align 2
   %r = fptosi half %a to i64
   ret i64 %r
@@ -124,12 +123,11 @@ define i32 @test_fptoui_i32(ptr %p) {
 
 define i64 @test_fptoui_i64(ptr %p) {
 ; CHECK-LABEL: test_fptoui_i64:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    ldrh r0, [r0]
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    bl __fixunshfdi
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         vldr.16 s0, [r0]
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    vcvt.u32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
   %a = load half, ptr %p, align 2
   %r = fptoui half %a to i64
   ret i64 %r
@@ -722,24 +720,20 @@ define i32 @fptoui_i32_f16(half %x) #0 {
 
 define i64 @fptosi_i64_f16(half %x) #0 {
 ; CHECK-LABEL: fptosi_i64_f16:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vmov.f16 r0, s0
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    bl __fixhfdi
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         vcvt.s32.f16 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    asr r1, r0, #31
+; CHECK-NEXT:    bx lr
   %val = call i64 @llvm.experimental.constrained.fptosi.i64.f16(half %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }
 
 define i64 @fptoui_i64_f16(half %x) #0 {
 ; CHECK-LABEL: fptoui_i64_f16:
-; CHECK:         .save {r11, lr}
-; CHECK-NEXT:    push {r11, lr}
-; CHECK-NEXT:    vmov.f16 r0, s0
-; CHECK-NEXT:    vmov s0, r0
-; CHECK-NEXT:    bl __fixunshfdi
-; CHECK-NEXT:    pop {r11, pc}
+; CHECK:         vcvt.s32.f16 s0, s0
+; CHECK-NEXT:    mov r1, #0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    bx lr
   %val = call i64 @llvm.experimental.constrained.fptoui.i64.f16(half %x, metadata !"fpexcept.strict") #0
   ret i64 %val
 }

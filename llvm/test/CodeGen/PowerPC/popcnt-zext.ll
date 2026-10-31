@@ -23,9 +23,7 @@ define i16 @zpop_i8_i16(i8 %x) {
 ; SLOW-NEXT:    add 3, 4, 3
 ; SLOW-NEXT:    srwi 4, 3, 4
 ; SLOW-NEXT:    add 3, 3, 4
-; SLOW-NEXT:    rlwinm 4, 3, 24, 28, 31
-; SLOW-NEXT:    clrlwi 3, 3, 28
-; SLOW-NEXT:    add 3, 3, 4
+; SLOW-NEXT:    andi. 3, 3, 3855
 ; SLOW-NEXT:    blr
   %z = zext i8 %x to i16
   %pop = tail call i16 @llvm.ctpop.i16(i16 %z)
@@ -81,12 +79,8 @@ define i32 @zpop_i8_i32(i8 %x) {
 ; SLOW-NEXT:    lis 5, 3855
 ; SLOW-NEXT:    srwi 4, 3, 4
 ; SLOW-NEXT:    add 3, 3, 4
-; SLOW-NEXT:    lis 4, 257
-; SLOW-NEXT:    ori 5, 5, 3855
-; SLOW-NEXT:    and 3, 3, 5
-; SLOW-NEXT:    ori 4, 4, 257
-; SLOW-NEXT:    mullw 3, 3, 4
-; SLOW-NEXT:    srwi 3, 3, 24
+; SLOW-NEXT:    ori 4, 5, 3855
+; SLOW-NEXT:    and 3, 3, 4
 ; SLOW-NEXT:    blr
   %z = zext i8 %x to i32
   %pop = tail call i32 @llvm.ctpop.i32(i32 %z)
@@ -139,15 +133,16 @@ define i32 @zpop_i16_i32(i16 %x) {
 ; SLOW-NEXT:    andi. 5, 5, 13107
 ; SLOW-NEXT:    or 4, 5, 4
 ; SLOW-NEXT:    add 3, 3, 4
-; SLOW-NEXT:    lis 5, 3855
 ; SLOW-NEXT:    srwi 4, 3, 4
 ; SLOW-NEXT:    add 3, 3, 4
-; SLOW-NEXT:    lis 4, 257
+; SLOW-NEXT:    lis 5, 3855
+; SLOW-NEXT:    rlwinm 4, 3, 24, 28, 31
 ; SLOW-NEXT:    ori 5, 5, 3855
+; SLOW-NEXT:    rlwimi 4, 3, 24, 20, 23
+; SLOW-NEXT:    rlwimi 4, 3, 24, 12, 15
 ; SLOW-NEXT:    and 3, 3, 5
-; SLOW-NEXT:    ori 4, 4, 257
-; SLOW-NEXT:    mullw 3, 3, 4
-; SLOW-NEXT:    srwi 3, 3, 24
+; SLOW-NEXT:    add 3, 3, 4
+; SLOW-NEXT:    clrlwi 3, 3, 27
 ; SLOW-NEXT:    blr
   %z = zext i16 %x to i32
   %pop = tail call i32 @llvm.ctpop.i32(i32 %z)

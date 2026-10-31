@@ -9,8 +9,8 @@ define zeroext i8 @andb(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d1
 ; CHECK-NEXT:    and.b %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = and i8 %a, %b
   ret i8 %1
@@ -22,8 +22,8 @@ define zeroext i16 @andw(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.w (10,%sp), %d0
 ; CHECK-NEXT:    move.w (6,%sp), %d1
 ; CHECK-NEXT:    and.w %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.w %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = and i16 %a, %b
   ret i16 %1
@@ -46,8 +46,8 @@ define zeroext i8 @orb(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d1
 ; CHECK-NEXT:    or.b %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = or i8 %a, %b
   ret i8 %1
@@ -59,8 +59,8 @@ define zeroext i16 @orw(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.w (10,%sp), %d0
 ; CHECK-NEXT:    move.w (6,%sp), %d1
 ; CHECK-NEXT:    or.w %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.w %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = or i16 %a, %b
   ret i16 %1
@@ -83,8 +83,8 @@ define zeroext i8 @eorb(i8 zeroext %a, i8 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.b (11,%sp), %d0
 ; CHECK-NEXT:    move.b (7,%sp), %d1
 ; CHECK-NEXT:    eor.b %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #255, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.b %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = xor i8 %a, %b
   ret i8 %1
@@ -96,8 +96,8 @@ define zeroext i16 @eorw(i16 zeroext %a, i16 zeroext %b) nounwind {
 ; CHECK-NEXT:    move.w (10,%sp), %d0
 ; CHECK-NEXT:    move.w (6,%sp), %d1
 ; CHECK-NEXT:    eor.w %d0, %d1
-; CHECK-NEXT:    move.l %d1, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    move.w %d1, %d0
 ; CHECK-NEXT:    rts
   %1 = xor i16 %a, %b
   ret i16 %1
@@ -278,12 +278,12 @@ define i64 @ashr64(i64 %a, i64 %b) nounwind {
 ; CHECK-NEXT:    movem.l %d2-%d3, (0,%sp) ; 12-byte Folded Spill
 ; CHECK-NEXT:    move.l (24,%sp), %d2
 ; CHECK-NEXT:    move.l (12,%sp), %d0
-; CHECK-NEXT:    move.l %d2, %d3
-; CHECK-NEXT:    add.l #-32, %d3
 ; CHECK-NEXT:    move.l %d2, %d1
 ; CHECK-NEXT:    add.l #-32, %d1
 ; CHECK-NEXT:    bmi .LBB19_1
 ; CHECK-NEXT:  ; %bb.2:
+; CHECK-NEXT:    move.l %d2, %d3
+; CHECK-NEXT:    add.l #-32, %d3
 ; CHECK-NEXT:    move.l %d0, %d1
 ; CHECK-NEXT:    asr.l %d3, %d1
 ; CHECK-NEXT:    bra .LBB19_3

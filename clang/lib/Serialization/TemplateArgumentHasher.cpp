@@ -113,6 +113,9 @@ void TemplateArgumentHasher::AddTemplateName(TemplateName Name) {
     AddTemplateName(QTN->getUnderlyingTemplate());
     break;
   }
+  case TemplateName::PackIndexingTemplate:
+    AddTemplateName(Name.getAsPackIndexingTemplate()->getPattern());
+    break;
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
   case TemplateName::DependentTemplate:

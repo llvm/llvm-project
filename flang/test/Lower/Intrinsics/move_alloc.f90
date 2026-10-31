@@ -4,9 +4,9 @@
 subroutine to_from_only
   integer, allocatable :: from(:), to(:)
   ! CHECK: %[[a1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: %[[from:.*]]:2 = hlfir.declare %[[a1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFto_from_onlyEfrom"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  ! CHECK: %[[from:.*]]:2 = hlfir.declare %[[a1]] uniq_name("_QFto_from_onlyEfrom") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   ! CHECK: %[[b1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK: %[[to:.*]]:2 = hlfir.declare %[[b1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFto_from_onlyEto"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  ! CHECK: %[[to:.*]]:2 = hlfir.declare %[[b1]] uniq_name("_QFto_from_onlyEto") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   allocate(from(20))
   ! CHECK: %[[errMsg:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[false:.*]] = arith.constant false
@@ -21,9 +21,9 @@ subroutine to_from_stat
   integer, allocatable :: from(:), to(:)
   integer :: stat
   ! CHECK-DAG: %[[a1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK-DAG: %[[from:.*]]:2 = hlfir.declare %[[a1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFto_from_statEfrom"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  ! CHECK-DAG: %[[from:.*]]:2 = hlfir.declare %[[a1]] uniq_name("_QFto_from_statEfrom") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   ! CHECK-DAG: %[[b1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK-DAG: %[[to:.*]]:2 = hlfir.declare %[[b1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFto_from_statEto"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  ! CHECK-DAG: %[[to:.*]]:2 = hlfir.declare %[[b1]] uniq_name("_QFto_from_statEto") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   allocate(from(20))
   ! CHECK: %[[errMsg:.*]] = fir.absent !fir.box<none>
   ! CHECK: %[[true:.*]] = arith.constant true
@@ -39,11 +39,11 @@ subroutine to_from_stat_errmsg
   integer :: stat
   character :: errMsg*64
   ! CHECK-DAG: %[[errMsg1:.*]] = fir.alloca !fir.char<1,64>
-  ! CHECK-DAG: %[[errMsg_decl:.*]]:2 = hlfir.declare %[[errMsg1]] typeparams {{.*}} {uniq_name = "_QFto_from_stat_errmsgEerrmsg"} : (!fir.ref<!fir.char<1,64>>, index) -> (!fir.ref<!fir.char<1,64>>, !fir.ref<!fir.char<1,64>>)
+  ! CHECK-DAG: %[[errMsg_decl:.*]]:2 = hlfir.declare %[[errMsg1]] typeparams {{.*}} uniq_name("_QFto_from_stat_errmsgEerrmsg") : (!fir.ref<!fir.char<1,64>>, index) -> (!fir.ref<!fir.char<1,64>>, !fir.ref<!fir.char<1,64>>)
   ! CHECK-DAG: %[[a1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK-DAG: %[[from:.*]]:2 = hlfir.declare %[[a1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFto_from_stat_errmsgEfrom"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  ! CHECK-DAG: %[[from:.*]]:2 = hlfir.declare %[[a1]] uniq_name("_QFto_from_stat_errmsgEfrom") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   ! CHECK-DAG: %[[b1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK-DAG: %[[to:.*]]:2 = hlfir.declare %[[b1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFto_from_stat_errmsgEto"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  ! CHECK-DAG: %[[to:.*]]:2 = hlfir.declare %[[b1]] uniq_name("_QFto_from_stat_errmsgEto") fortran_attrs<allocatable> : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
   allocate(from(20))
   ! CHECK: %[[errMsg2:.*]] = fir.embox %[[errMsg_decl]]#0 : (!fir.ref<!fir.char<1,64>>) -> !fir.box<!fir.char<1,64>>
   ! CHECK: %[[true:.*]] = arith.constant true

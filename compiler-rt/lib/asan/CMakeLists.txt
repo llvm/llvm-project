@@ -188,6 +188,19 @@ if(COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND COMPILER_RT_HAS_FEXCEPTIONS_FLAG)
   list(APPEND ASAN_CXX_CFLAGS -fexceptions)
   list(REMOVE_ITEM ASAN_DYNAMIC_CXX_CFLAGS -fno-exceptions)
   list(APPEND ASAN_DYNAMIC_CXX_CFLAGS -fexceptions)
+  # The throwing version of operator new throws standard exceptions such as
+  # std::bad_alloc. Under -fno-rtti, clang emits a private type_info for
+  # these exceptions that a `catch` statement in a user's program, referencing
+  # type_info provided by the C++ standard library linked into the program,
+  # can't match on Mach-O.
+  # See this example of the behavior:
+  #      https://stackoverflow.com/questions/21737201/problems-throwing-and-catching-exceptions-on-os-x-with-fno-rtti
+  # To avoid this, when available, enable RTTI for all potentially throwing TUs
+  # (ASAN_CXX_SOURCES).
+  remove_rtti_flags(ASAN_CXX_CFLAGS)
+  append_rtti_flag(ON ASAN_CXX_CFLAGS)
+  remove_rtti_flags(ASAN_DYNAMIC_CXX_CFLAGS)
+  append_rtti_flag(ON ASAN_DYNAMIC_CXX_CFLAGS)
   if(TARGET cxx-headers OR HAVE_LIBCXX)
     list(APPEND ASAN_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
     list(APPEND ASAN_DYNAMIC_CXX_CFLAGS ${COMPILER_RT_CXX_CFLAGS})
@@ -226,14 +239,37 @@ add_compiler_rt_object_libraries(RTAsan_dynamic
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
 
 # Separate object library for the dynamic build's C++ slice.
+#
+# Some Darwin platforms (DARWIN_<os>_CXX_EXCEPTIONS=OFF) can't support
+# exceptions and get the exception-free C++ slice.
+set(ASAN_DYNAMIC_CXX_OS)
+set(ASAN_DYNAMIC_CXX_NOEXCEPT_OS)
+foreach(os ${SANITIZER_COMMON_SUPPORTED_OS})
+  if(APPLE AND COMPILER_RT_ASAN_ENABLE_EXCEPTIONS AND
+     DEFINED DARWIN_${os}_CXX_EXCEPTIONS AND NOT DARWIN_${os}_CXX_EXCEPTIONS)
+    list(APPEND ASAN_DYNAMIC_CXX_NOEXCEPT_OS ${os})
+  else()
+    list(APPEND ASAN_DYNAMIC_CXX_OS ${os})
+  endif()
+endforeach()
+
 add_compiler_rt_object_libraries(RTAsan_dynamic_cxx
-  OS ${SANITIZER_COMMON_SUPPORTED_OS}
+  OS ${ASAN_DYNAMIC_CXX_OS}
   ARCHS ${ASAN_SUPPORTED_ARCH}
   SOURCES ${ASAN_CXX_SOURCES}
   ADDITIONAL_HEADERS ${ASAN_HEADERS}
   CFLAGS ${ASAN_DYNAMIC_CXX_CFLAGS}
   DEFS ${ASAN_DYNAMIC_DEFINITIONS}
   DEPS ${ASAN_CXX_DEPS})
+if(ASAN_DYNAMIC_CXX_NOEXCEPT_OS)
+  add_compiler_rt_object_libraries(RTAsan_dynamic_cxx
+    OS ${ASAN_DYNAMIC_CXX_NOEXCEPT_OS}
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    SOURCES ${ASAN_CXX_SOURCES}
+    ADDITIONAL_HEADERS ${ASAN_HEADERS}
+    CFLAGS ${ASAN_DYNAMIC_CFLAGS}
+    DEFS ${ASAN_DYNAMIC_DEFINITIONS})
+endif()
 
 if(NOT APPLE)
   add_compiler_rt_object_libraries(RTAsan
@@ -404,12 +440,12 @@ else()
 
     if (SANITIZER_USE_SYMBOLS AND NOT ${arch} STREQUAL "i386")
       add_sanitizer_rt_symbols(clang_rt.asan_cxx
-        ARCHS ${arch})
-      add_dependencies(asan clang_rt.asan_cxx-${arch}-symbols)
+        ARCHS ${arch}
+        PARENT_TARGET asan)
       add_sanitizer_rt_symbols(clang_rt.asan
         ARCHS ${arch}
+        PARENT_TARGET asan
         EXTRA asan.syms.extra)
-      add_dependencies(asan clang_rt.asan-${arch}-symbols)
     endif()
 
     if (WIN32)

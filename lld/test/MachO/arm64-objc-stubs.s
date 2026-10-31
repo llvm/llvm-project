@@ -1,16 +1,18 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
-# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -U _external_func
+# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -U _external_func -map %t.map
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out | FileCheck %s
+# RUN: FileCheck %s --check-prefix=MAP < %t.map
 # RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -dead_strip -U _external_func
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out | FileCheck %s
 # RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_fast -U _external_func
 # RUN: llvm-otool -vs __TEXT __objc_stubs %t.out | FileCheck %s
 # RUN: llvm-otool -l %t.out | FileCheck %s --check-prefix=FASTALIGN
-# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_small -U _external_func
+# RUN: %lld -arch arm64 -lSystem -o %t.out %t.o -objc_stubs_small -U _external_func -map %t.small.map
 # RUN: llvm-otool -vs __TEXT __objc_stubs  %t.out | FileCheck %s --check-prefix=SMALL
 # RUN: llvm-otool -l %t.out | FileCheck %s --check-prefix=SMALLALIGN
+# RUN: FileCheck %s --check-prefix=SMALLMAP < %t.small.map
 # RUN: llvm-objdump --section-headers %t.out | FileCheck %s --check-prefix=SECTIONS
 
 # CHECK: Contents of (__TEXT,__objc_stubs) section
@@ -36,6 +38,16 @@
 # CHECK-NEXT: brk     #0x1
 
 # CHECK-EMPTY:
+
+# MAP: 0x[[#%.8X,OBJC_STUBS:]] 0x00000040 __TEXT __objc_stubs
+# MAP: # Symbols:
+# MAP-DAG: 0x[[#OBJC_STUBS]] 0x00000020 [  0] _objc_msgSend$foo
+# MAP-DAG: 0x[[#OBJC_STUBS+0x20]] 0x00000020 [  0] _objc_msgSend$length
+
+# SMALLMAP: 0x[[#%.8X,OBJC_STUBS:]] 0x00000018 __TEXT __objc_stubs
+# SMALLMAP: # Symbols:
+# SMALLMAP-DAG: 0x[[#OBJC_STUBS]] 0x0000000C [  0] _objc_msgSend$foo
+# SMALLMAP-DAG: 0x[[#OBJC_STUBS+0xC]] 0x0000000C [  0] _objc_msgSend$length
 
 # FASTALIGN:       sectname __objc_stubs
 # FASTALIGN-NEXT:   segname __TEXT

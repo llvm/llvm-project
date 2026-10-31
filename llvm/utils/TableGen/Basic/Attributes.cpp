@@ -34,14 +34,9 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
   OS << "#ifdef GET_ATTR_NAMES\n";
   OS << "#undef GET_ATTR_NAMES\n";
 
-  OS << "#ifndef ATTRIBUTE_ALL\n";
-  OS << "#define ATTRIBUTE_ALL(FIRST, SECOND)\n";
-  OS << "#endif\n\n";
-
   auto Emit = [&](ArrayRef<StringRef> KindNames, StringRef MacroName) {
     OS << "#ifndef " << MacroName << "\n";
-    OS << "#define " << MacroName
-       << "(FIRST, SECOND) ATTRIBUTE_ALL(FIRST, SECOND)\n";
+    OS << "#define " << MacroName << "(FIRST, SECOND)\n";
     OS << "#endif\n\n";
     for (StringRef KindName : KindNames) {
       for (auto *A : Records.getAllDerivedDefinitions(KindName)) {
@@ -57,9 +52,7 @@ void Attributes::emitTargetIndependentNames(raw_ostream &OS) {
         "ConstantRangeListAttr"},
        "ATTRIBUTE_ENUM");
   Emit({"StrBoolAttr"}, "ATTRIBUTE_STRBOOL");
-  Emit({"ComplexStrAttr"}, "ATTRIBUTE_COMPLEXSTR");
 
-  OS << "#undef ATTRIBUTE_ALL\n";
   OS << "#endif\n\n";
 
   OS << "#ifdef GET_ATTR_ENUM\n";

@@ -62,6 +62,19 @@ std::string GetOpCppClassName(const Record *OpRecord) {
   return CppClassName.str();
 }
 
+// Returns the namespace-qualified C++ class name of an attribute. Unlike
+// operations, attributes carry the authoritative name in cppClassName, so the
+// def name is free to differ from it.
+std::string GetAttrCppClassRef(const Record *AttrRecord) {
+  StringRef Ns =
+      AttrRecord->getValueAsDef("dialect")->getValueAsString("cppNamespace");
+  Ns.consume_front("::");
+  std::string CppClassRef = Ns.str();
+  CppClassRef += "::";
+  CppClassRef += AttrRecord->getValueAsString("cppClassName");
+  return CppClassRef;
+}
+
 std::string GetOpABILoweringPatternName(llvm::StringRef OpName) {
   std::string Name = "CIR";
   Name += OpName;
@@ -134,11 +147,14 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
   CXXABILoweringPatterns.push_back(std::move(CodeBuffer));
 }
 
-void GenerateLLVMLoweringPattern(
-    llvm::StringRef OpName, llvm::StringRef PatternName, bool IsRecursive,
-    llvm::StringRef ExtraDecl, const Record *CustomCtorRec,
-    llvm::StringRef LLVMOp, llvm::StringRef ConstrainedLLVMIntrinsic,
-    bool ConstrainedHasRoundingMode, bool HasZeroResult) {
+void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
+                                 llvm::StringRef PatternName, bool IsRecursive,
+                                 llvm::StringRef ExtraDecl,
+                                 const Record *CustomCtorRec,
+                                 llvm::StringRef LLVMOp,
+                                 llvm::StringRef ConstrainedLLVMIntrinsic,
+                                 bool ConstrainedHasRoundingMode,
+                                 bool HasFastMathFlags, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -198,6 +214,10 @@ void GenerateLLVMLoweringPattern(
     Code << "    return lowerConstrainableFPOp<mlir::LLVM::" << LLVMOp
          << ">(\n";
     Code << "        op, adaptor.getOperands(), op.getFenvAttr(),\n";
+    Code << "        "
+         << (HasFastMathFlags ? "op.getFastmathFlagsAttr()"
+                              : "cir::FastMathFlagsAttr{}")
+         << ",\n";
     Code << "        *getTypeConverter(), rewriter, \""
          << ConstrainedLLVMIntrinsic << "\",\n";
     Code << "        /*hasRoundingMode=*/"
@@ -209,14 +229,22 @@ void GenerateLLVMLoweringPattern(
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
+    std::string Properties =
+        "cir::getDefaultProperties<mlir::LLVM::" + LLVMOp.str() +
+        ">(op.getContext())";
     if (HasZeroResult) {
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-           << ">(op, mlir::TypeRange{}, adaptor.getOperands());\n";
+           << ">(op, mlir::TypeRange{}, adaptor.getOperands(), " << Properties
+           << ");\n";
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
+      Code << "    if (!resTy)\n";
+      Code << "      return op.emitError() << \"ClangIR lowering NYI: cannot "
+              "convert \" << op.getType();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-           << ">(op, resTy, adaptor.getOperands());\n";
+           << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
+           << Properties << ");\n";
     }
     Code << "    return mlir::success();\n";
     Code << "  }\n";
@@ -259,6 +287,11 @@ void Generate(const Record *OpRecord) {
         OpRecord->getValueAsString("constrainedLLVMIntrinsic");
     bool ConstrainedHasRoundingMode =
         OpRecord->getValueAsBit("constrainedLLVMIntrinsicHasRoundingMode");
+    const DagInit *ArgsDag = OpRecord->getValueAsDag("arguments");
+    bool HasFastMathFlags =
+        llvm::any_of(ArgsDag->getArgNames(), [](const StringInit *Name) {
+          return Name && Name->getValue() == "fastmath_flags";
+        });
 
     if (!LLVMOp.empty() && CustomCtor)
       PrintFatalError(OpRecord->getLoc(),
@@ -276,7 +309,8 @@ void Generate(const Record *OpRecord) {
     bool IsZeroResult = ResultsDag->getNumArgs() == 0;
     GenerateLLVMLoweringPattern(OpName, PatternName, IsRecursive, ExtraDecl,
                                 CustomCtor, LLVMOp, ConstrainedLLVMIntrinsic,
-                                ConstrainedHasRoundingMode, IsZeroResult);
+                                ConstrainedHasRoundingMode, HasFastMathFlags,
+                                IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.
@@ -286,19 +320,13 @@ void Generate(const Record *OpRecord) {
 }
 
 void GenerateCIREnumAttrs(const Record *Record) {
-  std::string OpName = GetOpCppClassName(Record);
   // EnumAttr is in a separate hierarchy, so we have to set these separately, as
   // they never have an 'illegal' CXXABI type in them.
-  CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+  CXXABILoweringAttrAlwaysLegal.push_back(GetAttrCppClassRef(Record));
 }
 
 void GenerateAttrToValueVisitor(const Record *Rec) {
-  const Record *DialectRec = Rec->getValueAsDef("dialect");
-  llvm::StringRef Ns = DialectRec->getValueAsString("cppNamespace");
-  Ns.consume_front("::");
-  std::string CppClassRef = Ns.str();
-  CppClassRef += "::";
-  CppClassRef += Rec->getValueAsString("cppClassName");
+  std::string CppClassRef = GetAttrCppClassRef(Rec);
 
   std::string CodeBuffer;
   llvm::raw_string_ostream Code(CodeBuffer);
@@ -327,9 +355,8 @@ void GenerateAttrToValueVisitFunc() {
 }
 
 void GenerateCIRAttrs(const Record *Record) {
-  std::string OpName = GetOpCppClassName(Record);
   if (!Record->getValueAsBit("canHaveIllegalCXXABIType"))
-    CXXABILoweringAttrAlwaysLegal.push_back("cir::" + OpName);
+    CXXABILoweringAttrAlwaysLegal.push_back(GetAttrCppClassRef(Record));
   if (Record->getValueAsBit("hasAttrToValueLowering"))
     GenerateAttrToValueVisitor(Record);
 }

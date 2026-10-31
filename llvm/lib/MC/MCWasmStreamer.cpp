@@ -130,9 +130,18 @@ bool MCWasmStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCWasmStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                       Align ByteAlignment) {
-  getContext().reportError(getStartTokLoc(),
-                           "common symbols are not yet implemented for Wasm: " +
-                               S->getName());
+  auto *Symbol = static_cast<MCSymbolWasm *>(S);
+  getAssembler().registerSymbol(*Symbol);
+
+  Symbol->setExternal(true);
+
+  Symbol->setType(wasm::WASM_SYMBOL_TYPE_DATA);
+
+  if (Symbol->declareCommon(Size, ByteAlignment))
+    report_fatal_error(Twine("Symbol: ") + Symbol->getName() +
+                       " redeclared as different type");
+
+  Symbol->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
 void MCWasmStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {
@@ -148,7 +157,7 @@ void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWasmStreamer::emitIdent(StringRef IdentString) {
-  // TODO(sbc): Add the ident section once we support mergable strings
+  // TODO(sbc): Add the ident section once we support mergeable strings
   // sections in the object format
 }
 

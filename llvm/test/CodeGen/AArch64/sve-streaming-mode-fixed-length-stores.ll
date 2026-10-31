@@ -324,16 +324,12 @@ define void @store_v1i64(ptr %a) {
 define void @store_v1f64(ptr %a) {
 ; CHECK-LABEL: store_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, xzr
-; CHECK-NEXT:    str d0, [x0]
+; CHECK-NEXT:    str xzr, [x0]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: store_v1f64:
 ; NONEON-NOSVE:       // %bb.0:
-; NONEON-NOSVE-NEXT:    sub sp, sp, #16
-; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    str xzr, [x0]
-; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   store <1 x double> zeroinitializer, ptr %a
   ret void

@@ -446,6 +446,9 @@ class CodeGenSchedModels {
   // Per-operand SchedReadWrite types.
   std::vector<CodeGenSchedRW> SchedWrites;
   std::vector<CodeGenSchedRW> SchedReads;
+  // Index in SchedWrites or SchedReads of each SchedWrite or SchedRead def.
+  DenseMap<const Record *, unsigned> SchedWriteIdx;
+  DenseMap<const Record *, unsigned> SchedReadIdx;
 
   // List of unique SchedClasses.
   std::vector<CodeGenSchedClass> SchedClasses;
@@ -517,9 +520,11 @@ public:
     return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
   const CodeGenSchedRW &getSchedRW(const Record *Def) const {
-    bool IsRead = Def->isSubClassOf("SchedRead");
-    unsigned Idx = getSchedRWIdx(Def, IsRead);
-    return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
+    if (unsigned Idx = SchedReadIdx.lookup(Def))
+      return getSchedRead(Idx);
+    if (unsigned Idx = SchedWriteIdx.lookup(Def))
+      return getSchedWrite(Idx);
+    return Def->isSubClassOf("SchedRead") ? getSchedRead(0) : getSchedWrite(0);
   }
   CodeGenSchedRW &getSchedRW(const Record *Def) {
     return const_cast<CodeGenSchedRW &>(

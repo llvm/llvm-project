@@ -7,4 +7,3 @@
 // Look for a few options supported only after -mllvm and --offload-opt.
 //     CHECK: OPTIONS:
 // CHECK-DAG: --passes=<string>
-// CHECK-DAG: --load-pass-plugin=<string>

@@ -6,6 +6,7 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaDecomposeTransposeConv.cpp
   TosaDecomposeDepthwise.cpp
   TosaFolders.cpp
+  TosaGatherScatterHardening.cpp
   TosaInferShapes.cpp
   TosaLayerwiseConstantFoldPass.cpp
   TosaMakeBroadcastable.cpp
@@ -15,6 +16,7 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaProfileCompliance.cpp
   TosaValidation.cpp
   TosaNarrowTypes.cpp
+  TosaConvertIntegerTypesBitwidth.cpp
   TosaInputShape.cpp
 
   ADDITIONAL_HEADER_DIRS

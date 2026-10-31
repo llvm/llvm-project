@@ -118,3 +118,11 @@ func.func @coordinate_of_dynamic_array(%arg0: !fir.ref<!fir.array<1x!fir.char<4,
   %p = fir.coordinate_of %arg0, %arg1 : (!fir.ref<!fir.array<1x!fir.char<4,?>>>, index) -> !fir.ref<f32>
   return
 }
+
+// -----
+
+// Test `fir.global` conversion failure because the global type (tensor) has no
+// LLVM equivalent.
+
+// expected-error@+1{{failed to legalize operation 'fir.global'}}
+fir.global @tensor_global : tensor<10xi32>

@@ -15,7 +15,6 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDBSymDumper.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
-#include "llvm/DebugInfo/PDB/PDBSymbolTypeFunctionSig.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 
 #include <utility>
@@ -27,8 +26,6 @@ using namespace llvm::pdb;
 namespace {
 class FunctionArgEnumerator : public IPDBEnumChildren<PDBSymbolData> {
 public:
-  typedef ConcreteSymbolEnumerator<PDBSymbolData> ArgEnumeratorType;
-
   FunctionArgEnumerator(const IPDBSession &PDBSession,
                         const PDBSymbolFunc &PDBFunc)
       : Session(PDBSession), Func(PDBFunc) {

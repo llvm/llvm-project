@@ -15,6 +15,7 @@
 
 #include "mlir/Debug/CLOptionsSetup.h"
 #include "mlir/Support/ToolUtilities.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdlib>
@@ -126,6 +127,17 @@ public:
   }
   std::optional<int64_t> bytecodeVersionToEmit() const {
     return emitBytecodeVersion;
+  }
+
+  /// Set target dialect versions as strings of the form "dialect=version".
+  /// The dialect defines the syntax of its version string.
+  MlirOptMainConfig &
+  setEmitBytecodeDialectVersions(ArrayRef<std::string> versions) {
+    emitBytecodeDialectVersions.assign(versions.begin(), versions.end());
+    return *this;
+  }
+  ArrayRef<std::string> bytecodeDialectVersionsToEmit() const {
+    return emitBytecodeDialectVersions;
   }
 
   /// Set the bytecode producer to use.
@@ -319,6 +331,9 @@ protected:
 
   /// Emit bytecode at given version.
   std::optional<int64_t> emitBytecodeVersion = std::nullopt;
+
+  /// Target dialect versions for bytecode emission, as "dialect=version".
+  std::vector<std::string> emitBytecodeDialectVersions;
 
   /// Emit bytecode with given producer.
   std::string emitBytecodeProducerFlag = "";

@@ -173,11 +173,11 @@
 ---
 name:            fn1
 callSites:
-  - { bb: 0, offset: 7, fwdArgRegs: [] }
-  - { bb: 0, offset: 9, fwdArgRegs: 
+  - { bb: '%bb.0', offset: 7, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 9, fwdArgRegs:
       - { arg: 0, reg: '$edi' } }
-  - { bb: 0, offset: 11, fwdArgRegs: [] }
-  - { bb: 2, offset: 7, fwdArgRegs: [] }
+  - { bb: '%bb.0', offset: 11, fwdArgRegs: [] }
+  - { bb: '%bb.2', offset: 7, fwdArgRegs: [] }
 body:             |
   bb.0.entry:
     successors: %bb.2(0x30000000), %bb.1(0x50000000)

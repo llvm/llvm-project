@@ -609,6 +609,7 @@ TEST_F(ScudoWrappersCTest, MallOpt) {
     EXPECT_EQ(mallopt(M_CACHE_COUNT_MAX, 100), 1);
     EXPECT_EQ(mallopt(M_CACHE_SIZE_MAX, 1024 * 1024 * 2), 1);
     EXPECT_EQ(mallopt(M_TSDS_COUNT_MAX, 10), 1);
+    EXPECT_EQ(mallopt(M_CACHE_RESIDENT_BYTES_MAX, 1024 * 1024 * 14), 1);
   }
 }
 #endif

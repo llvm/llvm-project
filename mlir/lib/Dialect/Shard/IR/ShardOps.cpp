@@ -870,7 +870,9 @@ public:
     for (auto &use : value.getUses()) {
       if (use.getOwner() != op.getOperation()) {
         auto otherOp = dyn_cast<ShardOp>(use.getOwner());
-        if (!otherOp || !otherOp->isBeforeInBlock(op)) {
+        // Only fold duplicates in the same block; isBeforeInBlock requires it.
+        if (!otherOp || otherOp->getBlock() != op->getBlock() ||
+            !otherOp->isBeforeInBlock(op)) {
           return failure();
         }
         // Create a Sharding object for the current and the other ShardOp
@@ -1085,6 +1087,17 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
     ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
+  auto operandRank = operandType.getRank();
+  if (splitAxis < 0 || splitAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "split_axis " << splitAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
+  if (concatAxis < 0 || concatAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "concat_axis " << concatAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if ((axis != splitAxis && axis != concatAxis) || splitAxis == concatAxis) {
       if (failed(verifyDimensionCompatibility(
@@ -1127,9 +1140,16 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
 
 static LogicalResult verifyScatterOrSliceOperandAndResultShape(
     Value operand, Value result, int64_t tensorAxis,
-    ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
+    StringRef tensorAxisAttrName, ArrayRef<GridAxis> gridAxes,
+    ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
+  auto operandRank = operandType.getRank();
+  if (tensorAxis < 0 || tensorAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << tensorAxisAttrName << " " << tensorAxis
+           << " is out of bounds [0, " << operandRank << ").";
+  }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if (axis != tensorAxis) {
       if (failed(verifyDimensionCompatibility(
@@ -1241,8 +1261,8 @@ LogicalResult AllSliceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getSliceAxis().getSExtValue(), getGridAxes(),
-      grid.value().getShape());
+      getOperand(), getResult(), getSliceAxis().getSExtValue(), "slice_axis",
+      getGridAxes(), grid.value().getShape());
 }
 
 void AllSliceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1422,8 +1442,8 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getScatterDim().getSExtValue(), getGridAxes(),
-      grid.value().getShape());
+      getOperand(), getResult(), getScatterDim().getSExtValue(), "scatter_dim",
+      getGridAxes(), grid.value().getShape());
 }
 
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1452,9 +1472,9 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   auto scatterDim = getScatterDim().getSExtValue();
-  return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
-                                                   scatterDim, getGridAxes(),
-                                                   grid.value().getShape());
+  return verifyScatterOrSliceOperandAndResultShape(
+      getInput(), getResult(), scatterDim, "scatter_dim", getGridAxes(),
+      grid.value().getShape());
 }
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,

@@ -516,9 +516,9 @@ bool CommunicationKDP::SendRequestKernelVersion() {
   MakeRequestPacketHeader(command, request_packet, command_length);
   DataExtractor reply_packet;
   if (SendRequestAndGetReply(command, request_packet, reply_packet)) {
-    const char *kernel_version_cstr = reply_packet.PeekCStr(8);
-    if (kernel_version_cstr && kernel_version_cstr[0])
-      m_kernel_version.assign(kernel_version_cstr);
+    std::optional<llvm::StringRef> kernel_version = reply_packet.PeekCStr(8);
+    if (kernel_version && !kernel_version->empty())
+      m_kernel_version = kernel_version->str();
     return true;
   }
   return false;
@@ -827,8 +827,8 @@ void CommunicationKDP::DumpPacket(Stream &s, const DataExtractor &packet) {
         } break;
 
         case KDP_KERNELVERSION: {
-          const char *kernel_version = packet.PeekCStr(8);
-          s.Printf(" (version = \"%s\")", kernel_version);
+          llvm::StringRef kernel_version = packet.PeekCStr(8).value_or("");
+          s.Format(" (version = \"{0}\")", kernel_version);
         } break;
 
         case KDP_MAXBYTES: {

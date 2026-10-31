@@ -406,8 +406,45 @@ func.func @insert_dynamic_slice_unknown_pad(%arg0: tensor<1x?x3xf32>, %arg1: ten
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// A stride of 3 along the first dim cannot be expressed by the
+// vector.transfer_write that the insert is vectorized to.
+
+func.func @insert_slice_non_unit_stride(%src: tensor<2x4xf32>, %dest: tensor<8x4xf32>) -> tensor<8x4xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = tensor.insert_slice %src into %dest[0, 0] [2, 4] [3, 1] : tensor<2x4xf32> into tensor<8x4xf32>
+  return %res : tensor<8x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Same with a dynamic stride, which may not be 1.
+
+func.func @insert_slice_dynamic_stride(%src: tensor<2x4xf32>, %dest: tensor<8x4xf32>, %stride: index) -> tensor<8x4xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = tensor.insert_slice %src into %dest[0, 0] [2, 4] [%stride, 1] : tensor<2x4xf32> into tensor<8x4xf32>
+  return %res : tensor<8x4xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
     transform.yield
   }
 }

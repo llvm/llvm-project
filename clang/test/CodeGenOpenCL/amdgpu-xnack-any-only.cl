@@ -1,5 +1,5 @@
 // Test that xnack module flags are emitted for all targets, regardless of support.
-// Targets without FEATURE_XNACK_ON_OFF_MODES (like gfx12-5-generic, gfx1250, gfx1251)
+// Targets without xnack on/off mode support (like gfx12-5-generic, gfx1250, gfx1251)
 // will ignore the module flag during codegen, but it is still emitted by clang.
 // TODO: In the future, clang should not emit the flag for targets that don't support
 // xnack control.

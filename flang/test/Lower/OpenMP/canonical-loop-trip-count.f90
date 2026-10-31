@@ -92,7 +92,7 @@ end subroutine
 ! CHECK-NEXT: %[[INCR:.*]] = arith.select %[[IS_DOWNWARDS]], %[[NEG_STEP]], %[[STEP]] : i32
 ! CHECK-NEXT: %[[LOWER:.*]] = arith.select %[[IS_DOWNWARDS]], %[[UB]], %[[LB]] : i32
 ! CHECK-NEXT: %[[UPPER:.*]] = arith.select %[[IS_DOWNWARDS]], %[[LB]], %[[UB]] : i32
-! CHECK-NEXT: %[[SPAN:.*]] = arith.subi %[[UPPER]], %[[LOWER]] overflow<nuw> : i32
+! CHECK-NEXT: %[[SPAN:.*]] = arith.subi %[[UPPER]], %[[LOWER]] : i32
 ! CHECK-NEXT: %[[TC_MINUS_ONE:.*]] = arith.divui %[[SPAN]], %[[INCR]] : i32
 ! CHECK-NEXT: %[[TC_IF_LOOPING:.*]] = arith.addi %[[TC_MINUS_ONE]], %[[ONE]] overflow<nuw> : i32
 ! CHECK-NEXT: %[[IS_ZERO_TC:.*]] = arith.cmpi slt, %[[UPPER]], %[[LOWER]] : i32

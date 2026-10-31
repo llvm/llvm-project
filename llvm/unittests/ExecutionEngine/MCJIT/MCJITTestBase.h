@@ -32,11 +32,9 @@ namespace llvm {
 class TrivialModuleBuilder {
 protected:
   LLVMContext Context;
-  IRBuilder<> Builder;
   const Triple &BuilderTriple;
 
-  TrivialModuleBuilder(const Triple &TT)
-      : Builder(Context), BuilderTriple(TT) {}
+  TrivialModuleBuilder(const Triple &TT) : BuilderTriple(TT) {}
 
   Module *createEmptyModule(StringRef Name = StringRef()) {
     Module * M = new Module(Name, Context);
@@ -44,7 +42,8 @@ protected:
     return M;
   }
 
-  Function *startFunction(Module *M, FunctionType *FT, StringRef Name) {
+  Function *startFunction(IRBuilder<> &Builder, Module *M, FunctionType *FT,
+                          StringRef Name) {
     Function *Result =
         Function::Create(FT, GlobalValue::ExternalLinkage, Name, M);
 
@@ -54,14 +53,17 @@ protected:
     return Result;
   }
 
-  void endFunctionWithRet(Function *Func, Value *RetValue) {
+  void endFunctionWithRet(IRBuilder<> &Builder, Function *Func,
+                          Value *RetValue) {
     Builder.CreateRet(RetValue);
   }
 
   // Inserts a simple function that invokes Callee and takes the same arguments:
   //    int Caller(...) { return Callee(...); }
   Function *insertSimpleCallFunction(Module *M, Function *Callee) {
-    Function *Result = startFunction(M, Callee->getFunctionType(), "caller");
+    IRBuilder<> Builder(*M);
+    Function *Result =
+        startFunction(Builder, M, Callee->getFunctionType(), "caller");
 
     SmallVector<Value *, 1> CallArgs(llvm::make_pointer_range(Result->args()));
 
@@ -74,11 +76,13 @@ protected:
   //    int32_t main() { return X; }
   // where X is given by returnCode
   Function *insertMainFunction(Module *M, uint32_t returnCode) {
+    IRBuilder<> Builder(*M);
     Function *Result = startFunction(
-        M, FunctionType::get(Type::getInt32Ty(Context), {}, false), "main");
+        Builder, M, FunctionType::get(Type::getInt32Ty(Context), {}, false),
+        "main");
 
     Value *ReturnVal = ConstantInt::get(Context, APInt(32, returnCode));
-    endFunctionWithRet(Result, ReturnVal);
+    endFunctionWithRet(Builder, Result, ReturnVal);
 
     return Result;
   }
@@ -87,8 +91,9 @@ protected:
   //    int32_t add(int32_t a, int32_t b) { return a + b; }
   // in the current module and returns a pointer to it.
   Function *insertAddFunction(Module *M, StringRef Name = "add") {
+    IRBuilder<> Builder(*M);
     Function *Result = startFunction(
-        M,
+        Builder, M,
         FunctionType::get(
             Type::getInt32Ty(Context),
             {Type::getInt32Ty(Context), Type::getInt32Ty(Context)}, false),
@@ -99,7 +104,7 @@ protected:
     Value *Arg2 = &*++args;
     Value *AddResult = Builder.CreateAdd(Arg1, Arg2);
 
-    endFunctionWithRet(Result, AddResult);
+    endFunctionWithRet(Builder, Result, AddResult);
 
     return Result;
   }
@@ -149,8 +154,9 @@ protected:
   Function *insertAccumulateFunction(Module *M,
                                      Function *Helper = nullptr,
                                      StringRef Name = "accumulate") {
+    IRBuilder<> Builder(*M);
     Function *Result =
-        startFunction(M,
+        startFunction(Builder, M,
                       FunctionType::get(Type::getInt32Ty(Context),
                                         {Type::getInt32Ty(Context)}, false),
                       Name);

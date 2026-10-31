@@ -16,13 +16,13 @@ func.func @_QPeoshift1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift1En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift1En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.load %1#0 : !fir.ref<i32>
   %3 = fir.convert %2 : (i32) -> index
   %4 = arith.cmpi sgt, %3, %c0 : index
   %5 = arith.select %4, %3, %c0 : index
   %6 = fir.shape %5 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %arg1(%6) dummy_scope %0 {uniq_name = "_QFeoshift1Earray"} : (!fir.ref<!fir.array<?xf16>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf16>>, !fir.ref<!fir.array<?xf16>>)
+  %7:2 = hlfir.declare %arg1(%6) dummy_scope %0 uniq_name("_QFeoshift1Earray") : (!fir.ref<!fir.array<?xf16>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf16>>, !fir.ref<!fir.array<?xf16>>)
   %8 = hlfir.eoshift %7#0 %c2_i32 : (!fir.box<!fir.array<?xf16>>, i32) -> !hlfir.expr<?xf16>
   hlfir.assign %8 to %7#0 : !hlfir.expr<?xf16>, !fir.box<!fir.array<?xf16>>
   hlfir.destroy %8 : !hlfir.expr<?xf16>
@@ -31,52 +31,40 @@ func.func @_QPeoshift1(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-LABEL:   func.func @_QPeoshift1(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?xf16>> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_45:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0.000000e+00 : f16
-// CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift1En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift1En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
 // CHECK:           %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_4]] : index
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_8]], %[[VAL_4]] : index
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_11]]) dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift1Earray"} : (!fir.ref<!fir.array<?xf16>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf16>>, !fir.ref<!fir.array<?xf16>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_11]]) dummy_scope %[[VAL_5]] uniq_name("_QFeoshift1Earray") : (!fir.ref<!fir.array<?xf16>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf16>>, !fir.ref<!fir.array<?xf16>>)
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
-// CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_3]] : (i32) -> i64
 // CHECK:           %[[VAL_15:.*]] = hlfir.eval_in_mem shape %[[VAL_11]] : (!fir.shape<1>) -> !hlfir.expr<?xf16> {
 // CHECK:           ^bb0(%[[VAL_16:.*]]: !fir.ref<!fir.array<?xf16>>):
 // CHECK:             %[[VAL_17:.*]] = fir.embox %[[VAL_16]](%[[VAL_11]]) : (!fir.ref<!fir.array<?xf16>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf16>>
-// CHECK:             %[[VAL_18:.*]] = arith.cmpi slt, %[[VAL_14]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_19:.*]] = arith.subi %[[VAL_1]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_20:.*]] = arith.select %[[VAL_18]], %[[VAL_19]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_21:.*]] = arith.select %[[VAL_18]], %[[VAL_1]], %[[VAL_14]] : i64
-// CHECK:             %[[VAL_22:.*]] = arith.subi %[[VAL_1]], %[[VAL_13]] overflow<nsw> : i64
-// CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_22]], %[[VAL_14]] : i64
-// CHECK:             %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_1]], %[[VAL_23]] : i64
-// CHECK:             %[[VAL_26:.*]] = arith.subi %[[VAL_13]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_13]], %[[VAL_14]] : i64
-// CHECK:             %[[VAL_28:.*]] = arith.select %[[VAL_27]], %[[VAL_1]], %[[VAL_26]] : i64
-// CHECK:             %[[VAL_29:.*]] = arith.select %[[VAL_18]], %[[VAL_25]], %[[VAL_28]] : i64
+// CHECK:             %[[VAL_26:.*]] = arith.subi %[[VAL_13]], %[[VAL_45]] overflow<nsw> : i64
+// CHECK:             %[[VAL_27:.*]] = arith.cmpi slt, %[[VAL_13]], %[[VAL_45]] : i64
+// CHECK:             %[[VAL_29:.*]] = arith.select %[[VAL_27]], %[[VAL_1]], %[[VAL_26]] : i64
 // CHECK:             %[[VAL_30:.*]] = fir.convert %[[VAL_29]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_31:.*]] = %[[VAL_0]] to %[[VAL_30]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (index) -> i64
-// CHECK:               %[[VAL_33:.*]] = arith.addi %[[VAL_32]], %[[VAL_21]] overflow<nsw> : i64
+// CHECK:               %[[VAL_33:.*]] = arith.addi %[[VAL_32]], %[[VAL_45]] overflow<nsw> : i64
 // CHECK:               %[[VAL_34:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_33]])  : (!fir.box<!fir.array<?xf16>>, i64) -> !fir.ref<f16>
 // CHECK:               %[[VAL_35:.*]] = fir.load %[[VAL_34]] : !fir.ref<f16>
-// CHECK:               %[[VAL_36:.*]] = arith.addi %[[VAL_32]], %[[VAL_20]] overflow<nsw> : i64
-// CHECK:               %[[VAL_37:.*]] = hlfir.designate %[[VAL_17]] (%[[VAL_36]])  : (!fir.box<!fir.array<?xf16>>, i64) -> !fir.ref<f16>
+// CHECK:               %[[VAL_37:.*]] = hlfir.designate %[[VAL_17]] (%[[VAL_32]])  : (!fir.box<!fir.array<?xf16>>, i64) -> !fir.ref<f16>
 // CHECK:               hlfir.assign %[[VAL_35]] to %[[VAL_37]] : f16, !fir.ref<f16>
 // CHECK:             }
 // CHECK:             %[[VAL_38:.*]] = arith.subi %[[VAL_13]], %[[VAL_29]] overflow<nsw> : i64
-// CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_18]], %[[VAL_1]], %[[VAL_29]] : i64
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_38]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_41:.*]] = %[[VAL_0]] to %[[VAL_40]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_42:.*]] = fir.convert %[[VAL_41]] : (index) -> i64
-// CHECK:               %[[VAL_43:.*]] = arith.addi %[[VAL_42]], %[[VAL_39]] overflow<nsw> : i64
+// CHECK:               %[[VAL_43:.*]] = arith.addi %[[VAL_42]], %[[VAL_29]] overflow<nsw> : i64
 // CHECK:               %[[VAL_44:.*]] = hlfir.designate %[[VAL_17]] (%[[VAL_43]])  : (!fir.box<!fir.array<?xf16>>, i64) -> !fir.ref<f16>
 // CHECK:               hlfir.assign %[[VAL_2]] to %[[VAL_44]] : f16, !fir.ref<f16>
 // CHECK:             }
@@ -98,13 +86,13 @@ func.func @_QPeoshift2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift2En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift2En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.load %1#0 : !fir.ref<i32>
   %3 = fir.convert %2 : (i32) -> index
   %4 = arith.cmpi sgt, %3, %c0 : index
   %5 = arith.select %4, %3, %c0 : index
   %6 = fir.shape %5 : (index) -> !fir.shape<1>
-  %7:2 = hlfir.declare %arg1(%6) dummy_scope %0 {uniq_name = "_QFeoshift2Earray"} : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<2>>>, !fir.ref<!fir.array<?x!fir.logical<2>>>)
+  %7:2 = hlfir.declare %arg1(%6) dummy_scope %0 uniq_name("_QFeoshift2Earray") : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<2>>>, !fir.ref<!fir.array<?x!fir.logical<2>>>)
   %8 = fir.convert %true : (i1) -> !fir.logical<2>
   %9 = hlfir.eoshift %7#0 %c2_i32 boundary %8 dim %c1_i32 : (!fir.box<!fir.array<?x!fir.logical<2>>>, i32, !fir.logical<2>, i32) -> !hlfir.expr<?x!fir.logical<2>>
   hlfir.assign %9 to %7#0 : !hlfir.expr<?x!fir.logical<2>>, !fir.box<!fir.array<?x!fir.logical<2>>>
@@ -114,53 +102,41 @@ func.func @_QPeoshift2(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-LABEL:   func.func @_QPeoshift2(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?x!fir.logical<2>>> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_46:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_2:.*]] = arith.constant true
-// CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift2En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift2En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
 // CHECK:           %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_4]] : index
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_8]], %[[VAL_4]] : index
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_11]]) dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift2Earray"} : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<2>>>, !fir.ref<!fir.array<?x!fir.logical<2>>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_11]]) dummy_scope %[[VAL_5]] uniq_name("_QFeoshift2Earray") : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<2>>>, !fir.ref<!fir.array<?x!fir.logical<2>>>)
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_2]] : (i1) -> !fir.logical<2>
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
-// CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_3]] : (i32) -> i64
 // CHECK:           %[[VAL_16:.*]] = hlfir.eval_in_mem shape %[[VAL_11]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<2>> {
 // CHECK:           ^bb0(%[[VAL_17:.*]]: !fir.ref<!fir.array<?x!fir.logical<2>>>):
 // CHECK:             %[[VAL_18:.*]] = fir.embox %[[VAL_17]](%[[VAL_11]]) : (!fir.ref<!fir.array<?x!fir.logical<2>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.logical<2>>>
-// CHECK:             %[[VAL_19:.*]] = arith.cmpi slt, %[[VAL_15]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_20:.*]] = arith.subi %[[VAL_1]], %[[VAL_15]] overflow<nsw> : i64
-// CHECK:             %[[VAL_21:.*]] = arith.select %[[VAL_19]], %[[VAL_20]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_22:.*]] = arith.select %[[VAL_19]], %[[VAL_1]], %[[VAL_15]] : i64
-// CHECK:             %[[VAL_23:.*]] = arith.subi %[[VAL_1]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_14]], %[[VAL_15]] overflow<nsw> : i64
-// CHECK:             %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_23]], %[[VAL_15]] : i64
-// CHECK:             %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_1]], %[[VAL_24]] : i64
-// CHECK:             %[[VAL_27:.*]] = arith.subi %[[VAL_14]], %[[VAL_15]] overflow<nsw> : i64
-// CHECK:             %[[VAL_28:.*]] = arith.cmpi slt, %[[VAL_14]], %[[VAL_15]] : i64
-// CHECK:             %[[VAL_29:.*]] = arith.select %[[VAL_28]], %[[VAL_1]], %[[VAL_27]] : i64
-// CHECK:             %[[VAL_30:.*]] = arith.select %[[VAL_19]], %[[VAL_26]], %[[VAL_29]] : i64
+// CHECK:             %[[VAL_27:.*]] = arith.subi %[[VAL_14]], %[[VAL_46]] overflow<nsw> : i64
+// CHECK:             %[[VAL_28:.*]] = arith.cmpi slt, %[[VAL_14]], %[[VAL_46]] : i64
+// CHECK:             %[[VAL_30:.*]] = arith.select %[[VAL_28]], %[[VAL_1]], %[[VAL_27]] : i64
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_32:.*]] = %[[VAL_0]] to %[[VAL_31]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (index) -> i64
-// CHECK:               %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_22]] overflow<nsw> : i64
+// CHECK:               %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_46]] overflow<nsw> : i64
 // CHECK:               %[[VAL_35:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_34]])  : (!fir.box<!fir.array<?x!fir.logical<2>>>, i64) -> !fir.ref<!fir.logical<2>>
 // CHECK:               %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<!fir.logical<2>>
-// CHECK:               %[[VAL_37:.*]] = arith.addi %[[VAL_33]], %[[VAL_21]] overflow<nsw> : i64
-// CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_37]])  : (!fir.box<!fir.array<?x!fir.logical<2>>>, i64) -> !fir.ref<!fir.logical<2>>
+// CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_33]])  : (!fir.box<!fir.array<?x!fir.logical<2>>>, i64) -> !fir.ref<!fir.logical<2>>
 // CHECK:               hlfir.assign %[[VAL_36]] to %[[VAL_38]] : !fir.logical<2>, !fir.ref<!fir.logical<2>>
 // CHECK:             }
 // CHECK:             %[[VAL_39:.*]] = arith.subi %[[VAL_14]], %[[VAL_30]] overflow<nsw> : i64
-// CHECK:             %[[VAL_40:.*]] = arith.select %[[VAL_19]], %[[VAL_1]], %[[VAL_30]] : i64
 // CHECK:             %[[VAL_41:.*]] = fir.convert %[[VAL_39]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_42:.*]] = %[[VAL_0]] to %[[VAL_41]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (index) -> i64
-// CHECK:               %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_40]] overflow<nsw> : i64
+// CHECK:               %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_30]] overflow<nsw> : i64
 // CHECK:               %[[VAL_45:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_44]])  : (!fir.box<!fir.array<?x!fir.logical<2>>>, i64) -> !fir.ref<!fir.logical<2>>
 // CHECK:               hlfir.assign %[[VAL_13]] to %[[VAL_45]] : !fir.logical<2>, !fir.ref<!fir.logical<2>>
 // CHECK:             }
@@ -180,14 +156,14 @@ func.func @_QPeoshift3(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift3En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFeoshift3Eboundary"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift3En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFeoshift3Eboundary") : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
   %3 = fir.load %1#0 : !fir.ref<i32>
   %4 = fir.convert %3 : (i32) -> index
   %5 = arith.cmpi sgt, %4, %c0 : index
   %6 = arith.select %5, %4, %c0 : index
   %7 = fir.shape %6 : (index) -> !fir.shape<1>
-  %8:2 = hlfir.declare %arg1(%7) dummy_scope %0 {uniq_name = "_QFeoshift3Earray"} : (!fir.ref<!fir.array<?xcomplex<f16>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f16>>>, !fir.ref<!fir.array<?xcomplex<f16>>>)
+  %8:2 = hlfir.declare %arg1(%7) dummy_scope %0 uniq_name("_QFeoshift3Earray") : (!fir.ref<!fir.array<?xcomplex<f16>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f16>>>, !fir.ref<!fir.array<?xcomplex<f16>>>)
   %9 = hlfir.eoshift %8#0 %c2_i32 boundary %2#0 : (!fir.box<!fir.array<?xcomplex<f16>>>, i32, !fir.ref<complex<f16>>) -> !hlfir.expr<?xcomplex<f16>>
   hlfir.assign %9 to %8#0 : !hlfir.expr<?xcomplex<f16>>, !fir.box<!fir.array<?xcomplex<f16>>>
   hlfir.destroy %9 : !hlfir.expr<?xcomplex<f16>>
@@ -197,53 +173,41 @@ func.func @_QPeoshift3(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?xcomplex<f16>>> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<complex<f16>> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_46:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i64
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift3En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift3Eboundary"} : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift3En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift3Eboundary") : (!fir.ref<complex<f16>>, !fir.dscope) -> (!fir.ref<complex<f16>>, !fir.ref<complex<f16>>)
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
 // CHECK:           %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_8]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_11]]) dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift3Earray"} : (!fir.ref<!fir.array<?xcomplex<f16>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f16>>>, !fir.ref<!fir.array<?xcomplex<f16>>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_11]]) dummy_scope %[[VAL_4]] uniq_name("_QFeoshift3Earray") : (!fir.ref<!fir.array<?xcomplex<f16>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xcomplex<f16>>>, !fir.ref<!fir.array<?xcomplex<f16>>>)
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
-// CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
 // CHECK:           %[[VAL_15:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<complex<f16>>
 // CHECK:           %[[VAL_16:.*]] = hlfir.eval_in_mem shape %[[VAL_11]] : (!fir.shape<1>) -> !hlfir.expr<?xcomplex<f16>> {
 // CHECK:           ^bb0(%[[VAL_17:.*]]: !fir.ref<!fir.array<?xcomplex<f16>>>):
 // CHECK:             %[[VAL_18:.*]] = fir.embox %[[VAL_17]](%[[VAL_11]]) : (!fir.ref<!fir.array<?xcomplex<f16>>>, !fir.shape<1>) -> !fir.box<!fir.array<?xcomplex<f16>>>
-// CHECK:             %[[VAL_19:.*]] = arith.cmpi slt, %[[VAL_14]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_20:.*]] = arith.subi %[[VAL_1]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_21:.*]] = arith.select %[[VAL_19]], %[[VAL_20]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_22:.*]] = arith.select %[[VAL_19]], %[[VAL_1]], %[[VAL_14]] : i64
-// CHECK:             %[[VAL_23:.*]] = arith.subi %[[VAL_1]], %[[VAL_13]] overflow<nsw> : i64
-// CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_13]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_23]], %[[VAL_14]] : i64
-// CHECK:             %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_1]], %[[VAL_24]] : i64
-// CHECK:             %[[VAL_27:.*]] = arith.subi %[[VAL_13]], %[[VAL_14]] overflow<nsw> : i64
-// CHECK:             %[[VAL_28:.*]] = arith.cmpi slt, %[[VAL_13]], %[[VAL_14]] : i64
-// CHECK:             %[[VAL_29:.*]] = arith.select %[[VAL_28]], %[[VAL_1]], %[[VAL_27]] : i64
-// CHECK:             %[[VAL_30:.*]] = arith.select %[[VAL_19]], %[[VAL_26]], %[[VAL_29]] : i64
+// CHECK:             %[[VAL_27:.*]] = arith.subi %[[VAL_13]], %[[VAL_46]] overflow<nsw> : i64
+// CHECK:             %[[VAL_28:.*]] = arith.cmpi slt, %[[VAL_13]], %[[VAL_46]] : i64
+// CHECK:             %[[VAL_30:.*]] = arith.select %[[VAL_28]], %[[VAL_1]], %[[VAL_27]] : i64
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_32:.*]] = %[[VAL_0]] to %[[VAL_31]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (index) -> i64
-// CHECK:               %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_22]] overflow<nsw> : i64
+// CHECK:               %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_46]] overflow<nsw> : i64
 // CHECK:               %[[VAL_35:.*]] = hlfir.designate %[[VAL_12]]#0 (%[[VAL_34]])  : (!fir.box<!fir.array<?xcomplex<f16>>>, i64) -> !fir.ref<complex<f16>>
 // CHECK:               %[[VAL_36:.*]] = fir.load %[[VAL_35]] : !fir.ref<complex<f16>>
-// CHECK:               %[[VAL_37:.*]] = arith.addi %[[VAL_33]], %[[VAL_21]] overflow<nsw> : i64
-// CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_37]])  : (!fir.box<!fir.array<?xcomplex<f16>>>, i64) -> !fir.ref<complex<f16>>
+// CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_33]])  : (!fir.box<!fir.array<?xcomplex<f16>>>, i64) -> !fir.ref<complex<f16>>
 // CHECK:               hlfir.assign %[[VAL_36]] to %[[VAL_38]] : complex<f16>, !fir.ref<complex<f16>>
 // CHECK:             }
 // CHECK:             %[[VAL_39:.*]] = arith.subi %[[VAL_13]], %[[VAL_30]] overflow<nsw> : i64
-// CHECK:             %[[VAL_40:.*]] = arith.select %[[VAL_19]], %[[VAL_1]], %[[VAL_30]] : i64
 // CHECK:             %[[VAL_41:.*]] = fir.convert %[[VAL_39]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_42:.*]] = %[[VAL_0]] to %[[VAL_41]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_43:.*]] = fir.convert %[[VAL_42]] : (index) -> i64
-// CHECK:               %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_40]] overflow<nsw> : i64
+// CHECK:               %[[VAL_44:.*]] = arith.addi %[[VAL_43]], %[[VAL_30]] overflow<nsw> : i64
 // CHECK:               %[[VAL_45:.*]] = hlfir.designate %[[VAL_18]] (%[[VAL_44]])  : (!fir.box<!fir.array<?xcomplex<f16>>>, i64) -> !fir.ref<complex<f16>>
 // CHECK:               hlfir.assign %[[VAL_15]] to %[[VAL_45]] : complex<f16>, !fir.ref<complex<f16>>
 // CHECK:             }
@@ -264,14 +228,14 @@ func.func @_QPeoshift4(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift4En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift4Eboundary"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift4En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFeoshift4Eboundary") fortran_attrs<optional> : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
   %3 = fir.load %1#0 : !fir.ref<i32>
   %4 = fir.convert %3 : (i32) -> index
   %5 = arith.cmpi sgt, %4, %c0 : index
   %6 = arith.select %5, %4, %c0 : index
   %7 = fir.shape %6 : (index) -> !fir.shape<1>
-  %8:2 = hlfir.declare %arg1(%7) dummy_scope %0 {uniq_name = "_QFeoshift4Earray"} : (!fir.ref<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>)
+  %8:2 = hlfir.declare %arg1(%7) dummy_scope %0 uniq_name("_QFeoshift4Earray") : (!fir.ref<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>)
   %9 = fir.is_present %2#0 : (!fir.ref<!fir.logical<4>>) -> i1
   %10 = fir.embox %2#0 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
   %11 = fir.absent !fir.box<!fir.logical<4>>
@@ -285,26 +249,25 @@ func.func @_QPeoshift4(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?x!fir.logical<4>>> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<!fir.logical<4>> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_55:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_1:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_2:.*]] = arith.constant false
-// CHECK:           %[[VAL_3:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift4En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_5]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift4Eboundary"} : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift4En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift4Eboundary") fortran_attrs<optional> : (!fir.ref<!fir.logical<4>>, !fir.dscope) -> (!fir.ref<!fir.logical<4>>, !fir.ref<!fir.logical<4>>)
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (i32) -> index
 // CHECK:           %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:           %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_9]], %[[VAL_4]] : index
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_12]]) dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift4Earray"} : (!fir.ref<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>)
+// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_12]]) dummy_scope %[[VAL_5]] uniq_name("_QFeoshift4Earray") : (!fir.ref<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.logical<4>>>, !fir.ref<!fir.array<?x!fir.logical<4>>>)
 // CHECK:           %[[VAL_14:.*]] = fir.is_present %[[VAL_7]]#0 : (!fir.ref<!fir.logical<4>>) -> i1
 // CHECK:           %[[VAL_15:.*]] = fir.embox %[[VAL_7]]#0 : (!fir.ref<!fir.logical<4>>) -> !fir.box<!fir.logical<4>>
 // CHECK:           %[[VAL_16:.*]] = fir.absent !fir.box<!fir.logical<4>>
 // CHECK:           %[[VAL_17:.*]] = arith.select %[[VAL_14]], %[[VAL_15]], %[[VAL_16]] : !fir.box<!fir.logical<4>>
 // CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]] : (index) -> i64
-// CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_3]] : (i32) -> i64
 // CHECK:           %[[VAL_20:.*]] = fir.is_present %[[VAL_17]] : (!fir.box<!fir.logical<4>>) -> i1
 // CHECK:           %[[VAL_21:.*]] = fir.if %[[VAL_20]] -> (!fir.logical<4>) {
 // CHECK:             %[[VAL_22:.*]] = fir.box_addr %[[VAL_17]] : (!fir.box<!fir.logical<4>>) -> !fir.ref<!fir.logical<4>>
@@ -317,34 +280,23 @@ func.func @_QPeoshift4(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:           %[[VAL_25:.*]] = hlfir.eval_in_mem shape %[[VAL_12]] : (!fir.shape<1>) -> !hlfir.expr<?x!fir.logical<4>> {
 // CHECK:           ^bb0(%[[VAL_26:.*]]: !fir.ref<!fir.array<?x!fir.logical<4>>>):
 // CHECK:             %[[VAL_27:.*]] = fir.embox %[[VAL_26]](%[[VAL_12]]) : (!fir.ref<!fir.array<?x!fir.logical<4>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.logical<4>>>
-// CHECK:             %[[VAL_28:.*]] = arith.cmpi slt, %[[VAL_19]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_29:.*]] = arith.subi %[[VAL_1]], %[[VAL_19]] overflow<nsw> : i64
-// CHECK:             %[[VAL_30:.*]] = arith.select %[[VAL_28]], %[[VAL_29]], %[[VAL_1]] : i64
-// CHECK:             %[[VAL_31:.*]] = arith.select %[[VAL_28]], %[[VAL_1]], %[[VAL_19]] : i64
-// CHECK:             %[[VAL_32:.*]] = arith.subi %[[VAL_1]], %[[VAL_18]] overflow<nsw> : i64
-// CHECK:             %[[VAL_33:.*]] = arith.addi %[[VAL_18]], %[[VAL_19]] overflow<nsw> : i64
-// CHECK:             %[[VAL_34:.*]] = arith.cmpi sgt, %[[VAL_32]], %[[VAL_19]] : i64
-// CHECK:             %[[VAL_35:.*]] = arith.select %[[VAL_34]], %[[VAL_1]], %[[VAL_33]] : i64
-// CHECK:             %[[VAL_36:.*]] = arith.subi %[[VAL_18]], %[[VAL_19]] overflow<nsw> : i64
-// CHECK:             %[[VAL_37:.*]] = arith.cmpi slt, %[[VAL_18]], %[[VAL_19]] : i64
-// CHECK:             %[[VAL_38:.*]] = arith.select %[[VAL_37]], %[[VAL_1]], %[[VAL_36]] : i64
-// CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_28]], %[[VAL_35]], %[[VAL_38]] : i64
+// CHECK:             %[[VAL_36:.*]] = arith.subi %[[VAL_18]], %[[VAL_55]] overflow<nsw> : i64
+// CHECK:             %[[VAL_37:.*]] = arith.cmpi slt, %[[VAL_18]], %[[VAL_55]] : i64
+// CHECK:             %[[VAL_39:.*]] = arith.select %[[VAL_37]], %[[VAL_1]], %[[VAL_36]] : i64
 // CHECK:             %[[VAL_40:.*]] = fir.convert %[[VAL_39]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_41:.*]] = %[[VAL_0]] to %[[VAL_40]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_42:.*]] = fir.convert %[[VAL_41]] : (index) -> i64
-// CHECK:               %[[VAL_43:.*]] = arith.addi %[[VAL_42]], %[[VAL_31]] overflow<nsw> : i64
+// CHECK:               %[[VAL_43:.*]] = arith.addi %[[VAL_42]], %[[VAL_55]] overflow<nsw> : i64
 // CHECK:               %[[VAL_44:.*]] = hlfir.designate %[[VAL_13]]#0 (%[[VAL_43]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 // CHECK:               %[[VAL_45:.*]] = fir.load %[[VAL_44]] : !fir.ref<!fir.logical<4>>
-// CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_42]], %[[VAL_30]] overflow<nsw> : i64
-// CHECK:               %[[VAL_47:.*]] = hlfir.designate %[[VAL_27]] (%[[VAL_46]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
+// CHECK:               %[[VAL_47:.*]] = hlfir.designate %[[VAL_27]] (%[[VAL_42]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 // CHECK:               hlfir.assign %[[VAL_45]] to %[[VAL_47]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:             }
 // CHECK:             %[[VAL_48:.*]] = arith.subi %[[VAL_18]], %[[VAL_39]] overflow<nsw> : i64
-// CHECK:             %[[VAL_49:.*]] = arith.select %[[VAL_28]], %[[VAL_1]], %[[VAL_39]] : i64
 // CHECK:             %[[VAL_50:.*]] = fir.convert %[[VAL_48]] : (i64) -> index
 // CHECK:             fir.do_loop %[[VAL_51:.*]] = %[[VAL_0]] to %[[VAL_50]] step %[[VAL_0]] unordered {
 // CHECK:               %[[VAL_52:.*]] = fir.convert %[[VAL_51]] : (index) -> i64
-// CHECK:               %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_49]] overflow<nsw> : i64
+// CHECK:               %[[VAL_53:.*]] = arith.addi %[[VAL_52]], %[[VAL_39]] overflow<nsw> : i64
 // CHECK:               %[[VAL_54:.*]] = hlfir.designate %[[VAL_27]] (%[[VAL_53]])  : (!fir.box<!fir.array<?x!fir.logical<4>>>, i64) -> !fir.ref<!fir.logical<4>>
 // CHECK:               hlfir.assign %[[VAL_21]] to %[[VAL_54]] : !fir.logical<4>, !fir.ref<!fir.logical<4>>
 // CHECK:             }
@@ -365,8 +317,8 @@ func.func @_QPeoshift5(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift5En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFeoshift5Eboundary"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift5En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFeoshift5Eboundary") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   %3 = fir.load %1#0 : !fir.ref<i32>
   %4 = fir.convert %3 : (i32) -> index
   %5 = arith.cmpi sgt, %4, %c0 : index
@@ -376,7 +328,7 @@ func.func @_QPeoshift5(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %6, %10 : (index, index) -> !fir.shape<2>
-  %12:2 = hlfir.declare %arg1(%11) dummy_scope %0 {uniq_name = "_QFeoshift5Earray"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+  %12:2 = hlfir.declare %arg1(%11) dummy_scope %0 uniq_name("_QFeoshift5Earray") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
   %13 = hlfir.eoshift %12#0 %c2_i32 boundary %2#0 : (!fir.box<!fir.array<?x?xf32>>, i32, !fir.box<!fir.array<?xf32>>) -> !hlfir.expr<?x?xf32>
   hlfir.assign %13 to %12#0 : !hlfir.expr<?x?xf32>, !fir.box<!fir.array<?x?xf32>>
   hlfir.destroy %13 : !hlfir.expr<?x?xf32>
@@ -386,13 +338,13 @@ func.func @_QPeoshift5(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_52:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift5En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift5Eboundary"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift5En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift5Eboundary") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
 // CHECK:           %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_3]] : index
@@ -402,43 +354,31 @@ func.func @_QPeoshift5(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_12]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_10]], %[[VAL_14]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_15]]) dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift5Earray"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_15]]) dummy_scope %[[VAL_4]] uniq_name("_QFeoshift5Earray") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
-// CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
 // CHECK:           %[[VAL_19:.*]] = hlfir.eval_in_mem shape %[[VAL_15]] : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
 // CHECK:           ^bb0(%[[VAL_20:.*]]: !fir.ref<!fir.array<?x?xf32>>):
 // CHECK:             %[[VAL_21:.*]] = fir.embox %[[VAL_20]](%[[VAL_15]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:             fir.do_loop %[[VAL_22:.*]] = %[[VAL_1]] to %[[VAL_14]] step %[[VAL_1]] unordered {
 // CHECK:               %[[VAL_23:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_22]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 // CHECK:               %[[VAL_24:.*]] = fir.load %[[VAL_23]] : !fir.ref<f32>
-// CHECK:               %[[VAL_25:.*]] = arith.cmpi slt, %[[VAL_18]], %[[VAL_0]] : i64
-// CHECK:               %[[VAL_26:.*]] = arith.subi %[[VAL_0]], %[[VAL_18]] overflow<nsw> : i64
-// CHECK:               %[[VAL_27:.*]] = arith.select %[[VAL_25]], %[[VAL_26]], %[[VAL_0]] : i64
-// CHECK:               %[[VAL_28:.*]] = arith.select %[[VAL_25]], %[[VAL_0]], %[[VAL_18]] : i64
-// CHECK:               %[[VAL_29:.*]] = arith.subi %[[VAL_0]], %[[VAL_17]] overflow<nsw> : i64
-// CHECK:               %[[VAL_30:.*]] = arith.addi %[[VAL_17]], %[[VAL_18]] overflow<nsw> : i64
-// CHECK:               %[[VAL_31:.*]] = arith.cmpi sgt, %[[VAL_29]], %[[VAL_18]] : i64
-// CHECK:               %[[VAL_32:.*]] = arith.select %[[VAL_31]], %[[VAL_0]], %[[VAL_30]] : i64
-// CHECK:               %[[VAL_33:.*]] = arith.subi %[[VAL_17]], %[[VAL_18]] overflow<nsw> : i64
-// CHECK:               %[[VAL_34:.*]] = arith.cmpi slt, %[[VAL_17]], %[[VAL_18]] : i64
-// CHECK:               %[[VAL_35:.*]] = arith.select %[[VAL_34]], %[[VAL_0]], %[[VAL_33]] : i64
-// CHECK:               %[[VAL_36:.*]] = arith.select %[[VAL_25]], %[[VAL_32]], %[[VAL_35]] : i64
+// CHECK:               %[[VAL_33:.*]] = arith.subi %[[VAL_17]], %[[VAL_52]] overflow<nsw> : i64
+// CHECK:               %[[VAL_34:.*]] = arith.cmpi slt, %[[VAL_17]], %[[VAL_52]] : i64
+// CHECK:               %[[VAL_36:.*]] = arith.select %[[VAL_34]], %[[VAL_0]], %[[VAL_33]] : i64
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_36]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_38:.*]] = %[[VAL_1]] to %[[VAL_37]] step %[[VAL_1]] unordered {
 // CHECK:                 %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (index) -> i64
-// CHECK:                 %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_28]] overflow<nsw> : i64
+// CHECK:                 %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_52]] overflow<nsw> : i64
 // CHECK:                 %[[VAL_41:.*]] = hlfir.designate %[[VAL_16]]#0 (%[[VAL_40]], %[[VAL_22]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 %[[VAL_42:.*]] = fir.load %[[VAL_41]] : !fir.ref<f32>
-// CHECK:                 %[[VAL_43:.*]] = arith.addi %[[VAL_39]], %[[VAL_27]] overflow<nsw> : i64
-// CHECK:                 %[[VAL_44:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_43]], %[[VAL_22]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
+// CHECK:                 %[[VAL_44:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_39]], %[[VAL_22]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_42]] to %[[VAL_44]] : f32, !fir.ref<f32>
 // CHECK:               }
 // CHECK:               %[[VAL_45:.*]] = arith.subi %[[VAL_17]], %[[VAL_36]] overflow<nsw> : i64
-// CHECK:               %[[VAL_46:.*]] = arith.select %[[VAL_25]], %[[VAL_0]], %[[VAL_36]] : i64
 // CHECK:               %[[VAL_47:.*]] = fir.convert %[[VAL_45]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_48:.*]] = %[[VAL_1]] to %[[VAL_47]] step %[[VAL_1]] unordered {
 // CHECK:                 %[[VAL_49:.*]] = fir.convert %[[VAL_48]] : (index) -> i64
-// CHECK:                 %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_46]] overflow<nsw> : i64
+// CHECK:                 %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_36]] overflow<nsw> : i64
 // CHECK:                 %[[VAL_51:.*]] = hlfir.designate %[[VAL_21]] (%[[VAL_50]], %[[VAL_22]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_24]] to %[[VAL_51]] : f32, !fir.ref<f32>
 // CHECK:               }
@@ -460,7 +400,7 @@ func.func @_QPeoshift6(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift6En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift6En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.load %1#0 : !fir.ref<i32>
   %3 = fir.convert %2 : (i32) -> index
   %4 = arith.cmpi sgt, %3, %c0 : index
@@ -470,13 +410,13 @@ func.func @_QPeoshift6(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %8 = arith.cmpi sgt, %7, %c0 : index
   %9 = arith.select %8, %7, %c0 : index
   %10 = fir.shape %5, %9 : (index, index) -> !fir.shape<2>
-  %11:2 = hlfir.declare %arg1(%10) dummy_scope %0 {uniq_name = "_QFeoshift6Earray"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+  %11:2 = hlfir.declare %arg1(%10) dummy_scope %0 uniq_name("_QFeoshift6Earray") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
   %12 = fir.load %1#0 : !fir.ref<i32>
   %13 = fir.convert %12 : (i32) -> index
   %14 = arith.cmpi sgt, %13, %c0 : index
   %15 = arith.select %14, %13, %c0 : index
   %16 = fir.shape %15 : (index) -> !fir.shape<1>
-  %17:2 = hlfir.declare %arg2(%16) dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift6Eboundary"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+  %17:2 = hlfir.declare %arg2(%16) dummy_scope %0 uniq_name("_QFeoshift6Eboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
   %18 = fir.is_present %17#0 : (!fir.box<!fir.array<?xf32>>) -> i1
   %19 = fir.shape %15 : (index) -> !fir.shape<1>
   %20 = fir.embox %17#1(%19) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
@@ -491,15 +431,15 @@ func.func @_QPeoshift6(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_71:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant false
 // CHECK:           %[[VAL_3:.*]] = arith.constant true
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[VAL_5:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift6En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift6En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_6]] : index
@@ -509,20 +449,19 @@ func.func @_QPeoshift6(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:           %[[VAL_15:.*]] = arith.cmpi sgt, %[[VAL_14]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_14]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_12]], %[[VAL_16]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_17]]) dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift6Earray"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_17]]) dummy_scope %[[VAL_7]] uniq_name("_QFeoshift6Earray") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
 // CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (i32) -> index
 // CHECK:           %[[VAL_21:.*]] = arith.cmpi sgt, %[[VAL_20]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_22:.*]] = arith.select %[[VAL_21]], %[[VAL_20]], %[[VAL_6]] : index
 // CHECK:           %[[VAL_23:.*]] = fir.shape %[[VAL_22]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[ARG2]](%[[VAL_23]]) dummy_scope %[[VAL_7]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift6Eboundary"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
+// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[ARG2]](%[[VAL_23]]) dummy_scope %[[VAL_7]] uniq_name("_QFeoshift6Eboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
 // CHECK:           %[[VAL_25:.*]] = fir.is_present %[[VAL_24]]#0 : (!fir.box<!fir.array<?xf32>>) -> i1
 // CHECK:           %[[VAL_26:.*]] = fir.shape %[[VAL_22]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_27:.*]] = fir.embox %[[VAL_24]]#1(%[[VAL_26]]) : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_28:.*]] = fir.absent !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_29:.*]] = arith.select %[[VAL_25]], %[[VAL_27]], %[[VAL_28]] : !fir.box<!fir.array<?xf32>>
 // CHECK:           %[[VAL_30:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
-// CHECK:           %[[VAL_31:.*]] = fir.convert %[[VAL_5]] : (i32) -> i64
 // CHECK:           %[[VAL_32:.*]] = fir.is_present %[[VAL_29]] : (!fir.box<!fir.array<?xf32>>) -> i1
 // CHECK:           %[[VAL_33:.*]] = arith.select %[[VAL_32]], %[[VAL_2]], %[[VAL_3]] : i1
 // CHECK:           %[[VAL_34:.*]] = hlfir.eval_in_mem shape %[[VAL_17]] : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
@@ -539,34 +478,23 @@ func.func @_QPeoshift6(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:                 %[[VAL_43:.*]] = fir.load %[[VAL_42]] : !fir.ref<f32>
 // CHECK:                 fir.result %[[VAL_43]] : f32
 // CHECK:               }
-// CHECK:               %[[VAL_44:.*]] = arith.cmpi slt, %[[VAL_31]], %[[VAL_0]] : i64
-// CHECK:               %[[VAL_45:.*]] = arith.subi %[[VAL_0]], %[[VAL_31]] overflow<nsw> : i64
-// CHECK:               %[[VAL_46:.*]] = arith.select %[[VAL_44]], %[[VAL_45]], %[[VAL_0]] : i64
-// CHECK:               %[[VAL_47:.*]] = arith.select %[[VAL_44]], %[[VAL_0]], %[[VAL_31]] : i64
-// CHECK:               %[[VAL_48:.*]] = arith.subi %[[VAL_0]], %[[VAL_30]] overflow<nsw> : i64
-// CHECK:               %[[VAL_49:.*]] = arith.addi %[[VAL_30]], %[[VAL_31]] overflow<nsw> : i64
-// CHECK:               %[[VAL_50:.*]] = arith.cmpi sgt, %[[VAL_48]], %[[VAL_31]] : i64
-// CHECK:               %[[VAL_51:.*]] = arith.select %[[VAL_50]], %[[VAL_0]], %[[VAL_49]] : i64
-// CHECK:               %[[VAL_52:.*]] = arith.subi %[[VAL_30]], %[[VAL_31]] overflow<nsw> : i64
-// CHECK:               %[[VAL_53:.*]] = arith.cmpi slt, %[[VAL_30]], %[[VAL_31]] : i64
-// CHECK:               %[[VAL_54:.*]] = arith.select %[[VAL_53]], %[[VAL_0]], %[[VAL_52]] : i64
-// CHECK:               %[[VAL_55:.*]] = arith.select %[[VAL_44]], %[[VAL_51]], %[[VAL_54]] : i64
+// CHECK:               %[[VAL_52:.*]] = arith.subi %[[VAL_30]], %[[VAL_71]] overflow<nsw> : i64
+// CHECK:               %[[VAL_53:.*]] = arith.cmpi slt, %[[VAL_30]], %[[VAL_71]] : i64
+// CHECK:               %[[VAL_55:.*]] = arith.select %[[VAL_53]], %[[VAL_0]], %[[VAL_52]] : i64
 // CHECK:               %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_57:.*]] = %[[VAL_1]] to %[[VAL_56]] step %[[VAL_1]] unordered {
 // CHECK:                 %[[VAL_58:.*]] = fir.convert %[[VAL_57]] : (index) -> i64
-// CHECK:                 %[[VAL_59:.*]] = arith.addi %[[VAL_58]], %[[VAL_47]] overflow<nsw> : i64
+// CHECK:                 %[[VAL_59:.*]] = arith.addi %[[VAL_58]], %[[VAL_71]] overflow<nsw> : i64
 // CHECK:                 %[[VAL_60:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_59]], %[[VAL_37]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 %[[VAL_61:.*]] = fir.load %[[VAL_60]] : !fir.ref<f32>
-// CHECK:                 %[[VAL_62:.*]] = arith.addi %[[VAL_58]], %[[VAL_46]] overflow<nsw> : i64
-// CHECK:                 %[[VAL_63:.*]] = hlfir.designate %[[VAL_36]] (%[[VAL_62]], %[[VAL_37]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
+// CHECK:                 %[[VAL_63:.*]] = hlfir.designate %[[VAL_36]] (%[[VAL_58]], %[[VAL_37]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_61]] to %[[VAL_63]] : f32, !fir.ref<f32>
 // CHECK:               }
 // CHECK:               %[[VAL_64:.*]] = arith.subi %[[VAL_30]], %[[VAL_55]] overflow<nsw> : i64
-// CHECK:               %[[VAL_65:.*]] = arith.select %[[VAL_44]], %[[VAL_0]], %[[VAL_55]] : i64
 // CHECK:               %[[VAL_66:.*]] = fir.convert %[[VAL_64]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_67:.*]] = %[[VAL_1]] to %[[VAL_66]] step %[[VAL_1]] unordered {
 // CHECK:                 %[[VAL_68:.*]] = fir.convert %[[VAL_67]] : (index) -> i64
-// CHECK:                 %[[VAL_69:.*]] = arith.addi %[[VAL_68]], %[[VAL_65]] overflow<nsw> : i64
+// CHECK:                 %[[VAL_69:.*]] = arith.addi %[[VAL_68]], %[[VAL_55]] overflow<nsw> : i64
 // CHECK:                 %[[VAL_70:.*]] = hlfir.designate %[[VAL_36]] (%[[VAL_69]], %[[VAL_37]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_38]] to %[[VAL_70]] : f32, !fir.ref<f32>
 // CHECK:               }
@@ -593,7 +521,7 @@ func.func @_QPeoshift7(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift7En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift7En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2 = fir.load %1#0 : !fir.ref<i32>
   %3 = fir.convert %2 : (i32) -> index
   %4 = arith.cmpi sgt, %3, %c0 : index
@@ -603,8 +531,8 @@ func.func @_QPeoshift7(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
   %8 = arith.cmpi sgt, %7, %c0 : index
   %9 = arith.select %8, %7, %c0 : index
   %10 = fir.shape %5, %9 : (index, index) -> !fir.shape<2>
-  %11:2 = hlfir.declare %arg1(%10) dummy_scope %0 {uniq_name = "_QFeoshift7Earray"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-  %12:2 = hlfir.declare %1#0 {uniq_name = "_QFeoshift7Freal_boundaryEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %11:2 = hlfir.declare %arg1(%10) dummy_scope %0 uniq_name("_QFeoshift7Earray") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+  %12:2 = hlfir.declare %1#0 uniq_name("_QFeoshift7Freal_boundaryEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %13 = fir.load %12#0 : !fir.ref<i32>
   %14 = fir.convert %13 : (i32) -> index
   %15 = arith.cmpi sgt, %14, %c0 : index
@@ -624,12 +552,12 @@ func.func @_QPeoshift7(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK-LABEL:   func.func @_QPeoshift7(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_59:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 0 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift7En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift7En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i32) -> index
 // CHECK:           %[[VAL_8:.*]] = arith.cmpi sgt, %[[VAL_7]], %[[VAL_3]] : index
@@ -639,8 +567,8 @@ func.func @_QPeoshift7(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:           %[[VAL_12:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_13:.*]] = arith.select %[[VAL_12]], %[[VAL_11]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_9]], %[[VAL_13]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_14]]) dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift7Earray"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_5]]#0 {uniq_name = "_QFeoshift7Freal_boundaryEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[ARG1]](%[[VAL_14]]) dummy_scope %[[VAL_4]] uniq_name("_QFeoshift7Earray") : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.ref<!fir.array<?x?xf32>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_5]]#0 uniq_name("_QFeoshift7Freal_boundaryEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_16]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i32) -> index
 // CHECK:           %[[VAL_19:.*]] = arith.cmpi sgt, %[[VAL_18]], %[[VAL_3]] : index
@@ -652,40 +580,28 @@ func.func @_QPeoshift7(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir.
 // CHECK:             fir.save_result %[[VAL_24]] to %[[VAL_23]](%[[VAL_21]]) : !fir.array<?xf32>, !fir.ref<!fir.array<?xf32>>, !fir.shape<1>
 // CHECK:           }
 // CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_9]] : (index) -> i64
-// CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
 // CHECK:           %[[VAL_27:.*]] = hlfir.eval_in_mem shape %[[VAL_14]] : (!fir.shape<2>) -> !hlfir.expr<?x?xf32> {
 // CHECK:           ^bb0(%[[VAL_28:.*]]: !fir.ref<!fir.array<?x?xf32>>):
 // CHECK:             %[[VAL_29:.*]] = fir.embox %[[VAL_28]](%[[VAL_14]]) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
 // CHECK:             fir.do_loop %[[VAL_30:.*]] = %[[VAL_1]] to %[[VAL_13]] step %[[VAL_1]] unordered {
 // CHECK:               %[[VAL_31:.*]] = hlfir.apply %[[VAL_22]], %[[VAL_30]] : (!hlfir.expr<?xf32>, index) -> f32
-// CHECK:               %[[VAL_32:.*]] = arith.cmpi slt, %[[VAL_26]], %[[VAL_0]] : i64
-// CHECK:               %[[VAL_33:.*]] = arith.subi %[[VAL_0]], %[[VAL_26]] overflow<nsw> : i64
-// CHECK:               %[[VAL_34:.*]] = arith.select %[[VAL_32]], %[[VAL_33]], %[[VAL_0]] : i64
-// CHECK:               %[[VAL_35:.*]] = arith.select %[[VAL_32]], %[[VAL_0]], %[[VAL_26]] : i64
-// CHECK:               %[[VAL_36:.*]] = arith.subi %[[VAL_0]], %[[VAL_25]] overflow<nsw> : i64
-// CHECK:               %[[VAL_37:.*]] = arith.addi %[[VAL_25]], %[[VAL_26]] overflow<nsw> : i64
-// CHECK:               %[[VAL_38:.*]] = arith.cmpi sgt, %[[VAL_36]], %[[VAL_26]] : i64
-// CHECK:               %[[VAL_39:.*]] = arith.select %[[VAL_38]], %[[VAL_0]], %[[VAL_37]] : i64
-// CHECK:               %[[VAL_40:.*]] = arith.subi %[[VAL_25]], %[[VAL_26]] overflow<nsw> : i64
-// CHECK:               %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_25]], %[[VAL_26]] : i64
-// CHECK:               %[[VAL_42:.*]] = arith.select %[[VAL_41]], %[[VAL_0]], %[[VAL_40]] : i64
-// CHECK:               %[[VAL_43:.*]] = arith.select %[[VAL_32]], %[[VAL_39]], %[[VAL_42]] : i64
+// CHECK:               %[[VAL_40:.*]] = arith.subi %[[VAL_25]], %[[VAL_59]] overflow<nsw> : i64
+// CHECK:               %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_25]], %[[VAL_59]] : i64
+// CHECK:               %[[VAL_43:.*]] = arith.select %[[VAL_41]], %[[VAL_0]], %[[VAL_40]] : i64
 // CHECK:               %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_45:.*]] = %[[VAL_1]] to %[[VAL_44]] step %[[VAL_1]] unordered {
 // CHECK:                 %[[VAL_46:.*]] = fir.convert %[[VAL_45]] : (index) -> i64
-// CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_35]] overflow<nsw> : i64
+// CHECK:                 %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_59]] overflow<nsw> : i64
 // CHECK:                 %[[VAL_48:.*]] = hlfir.designate %[[VAL_15]]#0 (%[[VAL_47]], %[[VAL_30]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 %[[VAL_49:.*]] = fir.load %[[VAL_48]] : !fir.ref<f32>
-// CHECK:                 %[[VAL_50:.*]] = arith.addi %[[VAL_46]], %[[VAL_34]] overflow<nsw> : i64
-// CHECK:                 %[[VAL_51:.*]] = hlfir.designate %[[VAL_29]] (%[[VAL_50]], %[[VAL_30]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
+// CHECK:                 %[[VAL_51:.*]] = hlfir.designate %[[VAL_29]] (%[[VAL_46]], %[[VAL_30]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_49]] to %[[VAL_51]] : f32, !fir.ref<f32>
 // CHECK:               }
 // CHECK:               %[[VAL_52:.*]] = arith.subi %[[VAL_25]], %[[VAL_43]] overflow<nsw> : i64
-// CHECK:               %[[VAL_53:.*]] = arith.select %[[VAL_32]], %[[VAL_0]], %[[VAL_43]] : i64
 // CHECK:               %[[VAL_54:.*]] = fir.convert %[[VAL_52]] : (i64) -> index
 // CHECK:               fir.do_loop %[[VAL_55:.*]] = %[[VAL_1]] to %[[VAL_54]] step %[[VAL_1]] unordered {
 // CHECK:                 %[[VAL_56:.*]] = fir.convert %[[VAL_55]] : (index) -> i64
-// CHECK:                 %[[VAL_57:.*]] = arith.addi %[[VAL_56]], %[[VAL_53]] overflow<nsw> : i64
+// CHECK:                 %[[VAL_57:.*]] = arith.addi %[[VAL_56]], %[[VAL_43]] overflow<nsw> : i64
 // CHECK:                 %[[VAL_58:.*]] = hlfir.designate %[[VAL_29]] (%[[VAL_57]], %[[VAL_30]])  : (!fir.box<!fir.array<?x?xf32>>, i64, index) -> !fir.ref<f32>
 // CHECK:                 hlfir.assign %[[VAL_31]] to %[[VAL_58]] : f32, !fir.ref<f32>
 // CHECK:               }
@@ -708,21 +624,46 @@ func.func @_QPeoshift8(%arg0: !fir.box<!fir.array<?x?xui32>> {fir.bindc_name = "
   %c2_i32 = arith.constant 2 : i32
   %c1_i32 = arith.constant 1 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift8Earray"} : (!fir.box<!fir.array<?x?xui32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xui32>>, !fir.box<!fir.array<?x?xui32>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift8Earray") : (!fir.box<!fir.array<?x?xui32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xui32>>, !fir.box<!fir.array<?x?xui32>>)
   %2 = hlfir.eoshift %1#0 %c1_i32 dim %c2_i32 : (!fir.box<!fir.array<?x?xui32>>, i32, i32) -> !hlfir.expr<?x?xui32>
   hlfir.assign %2 to %1#0 : !hlfir.expr<?x?xui32>, !fir.box<!fir.array<?x?xui32>>
   hlfir.destroy %2 : !hlfir.expr<?x?xui32>
   return
 }
 // CHECK-LABEL:   func.func @_QPeoshift8(
-// CHECK-DAG:           hlfir.elemental %{{.*}} unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xui32> {
-// CHECK-DAG:               %[[VAL_24:.*]] = fir.load %{{.*}} : !fir.ref<ui32>
-// CHECK-DAG:               fir.result %[[VAL_24]] : ui32
-// CHECK-DAG:             } else {
-// CHECK-DAG:               fir.result %[[VAL_12:.*]] : ui32
-// CHECK-DAG:             }
-// CHECK-DAG:           %[[VAL_12]] = fir.convert %[[VAL_1:.*]] : (i32) -> ui32
-// CHECK-DAG:           %[[VAL_1]] = arith.constant 0 : i32
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?x?xui32>> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_25:.*]] = arith.constant 1 : i64
+// CHECK:           %[[VAL_26:.*]] = arith.constant 0 : i32
+// CHECK:           %[[VAL_27:.*]] = arith.constant 1 : index
+// CHECK:           %[[VAL_28:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_29:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[VAL_30:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_29]] uniq_name("_QFeoshift8Earray") : (!fir.box<!fir.array<?x?xui32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xui32>>, !fir.box<!fir.array<?x?xui32>>)
+// CHECK:           %[[VAL_31:.*]]:3 = fir.box_dims %[[VAL_30]]#0, %[[VAL_28]] : (!fir.box<!fir.array<?x?xui32>>, index) -> (index, index, index)
+// CHECK:           %[[VAL_32:.*]]:3 = fir.box_dims %[[VAL_30]]#0, %[[VAL_27]] : (!fir.box<!fir.array<?x?xui32>>, index) -> (index, index, index)
+// CHECK:           %[[VAL_33:.*]] = fir.shape %[[VAL_31]]#1, %[[VAL_32]]#1 : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_32]]#1 : (index) -> i64
+// CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_26]] : (i32) -> ui32
+// CHECK:           %[[VAL_36:.*]] = hlfir.elemental %[[VAL_33]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xui32> {
+// CHECK:           ^bb0(%[[VAL_37:.*]]: index, %[[VAL_38:.*]]: index):
+// CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (index) -> i64
+// CHECK:             %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_25]] overflow<nsw> : i64
+// CHECK:             %[[VAL_41:.*]] = arith.cmpi sge, %[[VAL_40]], %[[VAL_25]] : i64
+// CHECK:             %[[VAL_42:.*]] = arith.cmpi sle, %[[VAL_40]], %[[VAL_34]] : i64
+// CHECK:             %[[VAL_43:.*]] = arith.andi %[[VAL_41]], %[[VAL_42]] : i1
+// CHECK:             %[[VAL_44:.*]] = fir.if %[[VAL_43]] -> (ui32) {
+// CHECK:               %[[VAL_45:.*]] = fir.convert %[[VAL_40]] : (i64) -> index
+// CHECK:               %[[VAL_46:.*]] = hlfir.designate %[[VAL_30]]#0 (%[[VAL_37]], %[[VAL_45]])  : (!fir.box<!fir.array<?x?xui32>>, index, index) -> !fir.ref<ui32>
+// CHECK:               %[[VAL_47:.*]] = fir.load %[[VAL_46]] : !fir.ref<ui32>
+// CHECK:               fir.result %[[VAL_47]] : ui32
+// CHECK:             } else {
+// CHECK:               fir.result %[[VAL_35]] : ui32
+// CHECK:             }
+// CHECK:             hlfir.yield_element %[[VAL_44]] : ui32
+// CHECK:           }
+// CHECK:           hlfir.assign %[[VAL_36]] to %[[VAL_30]]#0 : !hlfir.expr<?x?xui32>, !fir.box<!fir.array<?x?xui32>>
+// CHECK:           hlfir.destroy %[[VAL_36]] : !hlfir.expr<?x?xui32>
+// CHECK:           return
+// CHECK:         }
 
 // ! Tests for CHARACTER type (lowered via hlfir.elemental).
 
@@ -738,7 +679,7 @@ func.func @_QPeoshift1c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift1cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift1cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -746,7 +687,7 @@ func.func @_QPeoshift1c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %6 = arith.cmpi sgt, %5, %c0 : index
   %7 = arith.select %6, %5, %c0 : index
   %8 = fir.shape %7 : (index) -> !fir.shape<1>
-  %9:2 = hlfir.declare %3(%8) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift1cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+  %9:2 = hlfir.declare %3(%8) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift1cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
   %10 = hlfir.eoshift %9#0 %c2_i32 : (!fir.box<!fir.array<?x!fir.char<1,10>>>, i32) -> !hlfir.expr<?x!fir.char<1,10>>
   hlfir.assign %10 to %9#0 : !hlfir.expr<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
   hlfir.destroy %10 : !hlfir.expr<?x!fir.char<1,10>>
@@ -755,12 +696,12 @@ func.func @_QPeoshift1c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-LABEL:   func.func @_QPeoshift1c(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_29:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift1cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift1cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -768,15 +709,14 @@ func.func @_QPeoshift1c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_9]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_12]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift1cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_12]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift1cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
 // CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_11]] : (index) -> i64
-// CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
-// CHECK:           %[[VAL_16:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_16:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_17:.*]] = fir.emboxchar %[[VAL_16]], %[[VAL_2]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_18:.*]] = hlfir.elemental %[[VAL_12]] typeparams %[[VAL_3]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,10>> {
 // CHECK:           ^bb0(%[[VAL_19:.*]]: index):
 // CHECK:             %[[VAL_20:.*]] = fir.convert %[[VAL_19]] : (index) -> i64
-// CHECK:             %[[VAL_21:.*]] = arith.addi %[[VAL_20]], %[[VAL_15]] overflow<nsw> : i64
+// CHECK:             %[[VAL_21:.*]] = arith.addi %[[VAL_20]], %[[VAL_29]] overflow<nsw> : i64
 // CHECK:             %[[VAL_22:.*]] = arith.cmpi sge, %[[VAL_21]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_23:.*]] = arith.cmpi sle, %[[VAL_21]], %[[VAL_14]] : i64
 // CHECK:             %[[VAL_24:.*]] = arith.andi %[[VAL_22]], %[[VAL_23]] : i1
@@ -807,7 +747,7 @@ func.func @_QPeoshift2c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift2cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift2cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -818,7 +758,7 @@ func.func @_QPeoshift2c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %3(%11) typeparams %6 dummy_scope %0 {uniq_name = "_QFeoshift2cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+  %12:2 = hlfir.declare %3(%11) typeparams %6 dummy_scope %0 uniq_name("_QFeoshift2cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
   %13 = hlfir.eoshift %12#0 %c2_i32 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i32) -> !hlfir.expr<?x!fir.char<1,?>>
   hlfir.assign %13 to %12#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
   hlfir.destroy %13 : !hlfir.expr<?x!fir.char<1,?>>
@@ -827,12 +767,12 @@ func.func @_QPeoshift2c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-LABEL:   func.func @_QPeoshift2c(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_31:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift2cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift2cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -843,15 +783,14 @@ func.func @_QPeoshift2c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_15]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift2cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_15]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift2cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
-// CHECK:           %[[VAL_19:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_19:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_20:.*]] = fir.emboxchar %[[VAL_19]], %[[VAL_2]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_15]] typeparams %[[VAL_10]] unordered : (!fir.shape<1>, i32) -> !hlfir.expr<?x!fir.char<1,?>> {
 // CHECK:           ^bb0(%[[VAL_22:.*]]: index):
 // CHECK:             %[[VAL_23:.*]] = fir.convert %[[VAL_22]] : (index) -> i64
-// CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_18]] overflow<nsw> : i64
+// CHECK:             %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[VAL_31]] overflow<nsw> : i64
 // CHECK:             %[[VAL_25:.*]] = arith.cmpi sge, %[[VAL_24]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_26:.*]] = arith.cmpi sle, %[[VAL_24]], %[[VAL_17]] : i64
 // CHECK:             %[[VAL_27:.*]] = arith.andi %[[VAL_25]], %[[VAL_26]] : i1
@@ -880,7 +819,7 @@ func.func @_QPeoshift3c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift3cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift3cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -888,7 +827,7 @@ func.func @_QPeoshift3c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %6 = arith.cmpi sgt, %5, %c0 : index
   %7 = arith.select %6, %5, %c0 : index
   %8 = fir.shape %7 : (index) -> !fir.shape<1>
-  %9:2 = hlfir.declare %3(%8) typeparams %2#1 dummy_scope %0 {uniq_name = "_QFeoshift3cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+  %9:2 = hlfir.declare %3(%8) typeparams %2#1 dummy_scope %0 uniq_name("_QFeoshift3cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
   %10 = hlfir.eoshift %9#0 %c2_i32 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i32) -> !hlfir.expr<?x!fir.char<1,?>>
   hlfir.assign %10 to %9#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
   hlfir.destroy %10 : !hlfir.expr<?x!fir.char<1,?>>
@@ -897,11 +836,11 @@ func.func @_QPeoshift3c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-LABEL:   func.func @_QPeoshift3c(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_27:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFeoshift3cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_3]] uniq_name("_QFeoshift3cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
@@ -909,15 +848,14 @@ func.func @_QPeoshift3c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_9:.*]] = arith.cmpi sgt, %[[VAL_8]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_10:.*]] = arith.select %[[VAL_9]], %[[VAL_8]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_11:.*]] = fir.shape %[[VAL_10]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_11]]) typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_3]] {uniq_name = "_QFeoshift3cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_12:.*]]:2 = hlfir.declare %[[VAL_6]](%[[VAL_11]]) typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_3]] uniq_name("_QFeoshift3cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_10]] : (index) -> i64
-// CHECK:           %[[VAL_14:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
-// CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_15:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_16:.*]] = fir.emboxchar %[[VAL_15]], %[[VAL_2]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_17:.*]] = hlfir.elemental %[[VAL_11]] typeparams %[[VAL_5]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>> {
 // CHECK:           ^bb0(%[[VAL_18:.*]]: index):
 // CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
-// CHECK:             %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_14]] overflow<nsw> : i64
+// CHECK:             %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_27]] overflow<nsw> : i64
 // CHECK:             %[[VAL_21:.*]] = arith.cmpi sge, %[[VAL_20]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_22:.*]] = arith.cmpi sle, %[[VAL_20]], %[[VAL_13]] : i64
 // CHECK:             %[[VAL_23:.*]] = arith.andi %[[VAL_21]], %[[VAL_22]] : i1
@@ -946,7 +884,7 @@ func.func @_QPeoshift4c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift4cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift4cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -954,9 +892,9 @@ func.func @_QPeoshift4c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %6 = arith.cmpi sgt, %5, %c0 : index
   %7 = arith.select %6, %5, %c0 : index
   %8 = fir.shape %7 : (index) -> !fir.shape<1>
-  %9:2 = hlfir.declare %3(%8) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift4cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+  %9:2 = hlfir.declare %3(%8) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift4cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
   %10 = fir.address_of(@_QQclX30313233343536373839) : !fir.ref<!fir.char<1,10>>
-  %11:2 = hlfir.declare %10 typeparams %c10 {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX30313233343536373839"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+  %11:2 = hlfir.declare %10 typeparams %c10 uniq_name("_QQclX30313233343536373839") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
   %12 = hlfir.eoshift %9#0 %c2_i32 boundary %11#0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>, i32, !fir.ref<!fir.char<1,10>>) -> !hlfir.expr<?x!fir.char<1,10>>
   hlfir.assign %12 to %9#0 : !hlfir.expr<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
   hlfir.destroy %12 : !hlfir.expr<?x!fir.char<1,10>>
@@ -965,12 +903,12 @@ func.func @_QPeoshift4c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-LABEL:   func.func @_QPeoshift4c(
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"}) {
+// CHECK:           %[[VAL_30:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift4cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift4cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -978,16 +916,15 @@ func.func @_QPeoshift4c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_10:.*]] = arith.cmpi sgt, %[[VAL_9]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_11:.*]] = arith.select %[[VAL_10]], %[[VAL_9]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_12]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift4cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+// CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_12]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift4cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
 // CHECK:           %[[VAL_14:.*]] = fir.address_of(@_QQclX30313233343536373839) : !fir.ref<!fir.char<1,10>>
-// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] typeparams %[[VAL_3]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX30313233343536373839"} : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_14]] typeparams %[[VAL_3]] uniq_name("_QQclX30313233343536373839") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,10>>, index) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 // CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_11]] : (index) -> i64
-// CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_18:.*]] = fir.emboxchar %[[VAL_15]]#0, %[[VAL_3]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_19:.*]] = hlfir.elemental %[[VAL_12]] typeparams %[[VAL_3]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,10>> {
 // CHECK:           ^bb0(%[[VAL_20:.*]]: index):
 // CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (index) -> i64
-// CHECK:             %[[VAL_22:.*]] = arith.addi %[[VAL_21]], %[[VAL_17]] overflow<nsw> : i64
+// CHECK:             %[[VAL_22:.*]] = arith.addi %[[VAL_21]], %[[VAL_30]] overflow<nsw> : i64
 // CHECK:             %[[VAL_23:.*]] = arith.cmpi sge, %[[VAL_22]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_24:.*]] = arith.cmpi sle, %[[VAL_22]], %[[VAL_16]] : i64
 // CHECK:             %[[VAL_25:.*]] = arith.andi %[[VAL_23]], %[[VAL_24]] : i1
@@ -1018,10 +955,10 @@ func.func @_QPeoshift5c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift5cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift5cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
-  %4:2 = hlfir.declare %3 typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift5cEboundary"} : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+  %4:2 = hlfir.declare %3 typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift5cEboundary") : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
   %5:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %6 = fir.convert %5#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
   %7 = fir.load %1#0 : !fir.ref<i32>
@@ -1029,7 +966,7 @@ func.func @_QPeoshift5c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %6(%11) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift5cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+  %12:2 = hlfir.declare %6(%11) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift5cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
   %13 = hlfir.eoshift %12#0 %c2_i32 boundary %4#0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>, i32, !fir.ref<!fir.char<1,10>>) -> !hlfir.expr<?x!fir.char<1,10>>
   hlfir.assign %13 to %12#0 : !hlfir.expr<?x!fir.char<1,10>>, !fir.box<!fir.array<?x!fir.char<1,10>>>
   hlfir.destroy %13 : !hlfir.expr<?x!fir.char<1,10>>
@@ -1039,15 +976,15 @@ func.func @_QPeoshift5c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_31:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift5cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift5cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift5cEboundary"} : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift5cEboundary") : (!fir.ref<!fir.char<1,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>)
 // CHECK:           %[[VAL_9:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1055,14 +992,13 @@ func.func @_QPeoshift5c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_15]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift5cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_15]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift5cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_19:.*]] = fir.emboxchar %[[VAL_8]]#0, %[[VAL_3]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_20:.*]] = hlfir.elemental %[[VAL_15]] typeparams %[[VAL_3]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,10>> {
 // CHECK:           ^bb0(%[[VAL_21:.*]]: index):
 // CHECK:             %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (index) -> i64
-// CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_22]], %[[VAL_18]] overflow<nsw> : i64
+// CHECK:             %[[VAL_23:.*]] = arith.addi %[[VAL_22]], %[[VAL_31]] overflow<nsw> : i64
 // CHECK:             %[[VAL_24:.*]] = arith.cmpi sge, %[[VAL_23]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_25:.*]] = arith.cmpi sle, %[[VAL_23]], %[[VAL_17]] : i64
 // CHECK:             %[[VAL_26:.*]] = arith.andi %[[VAL_24]], %[[VAL_25]] : i1
@@ -1093,7 +1029,7 @@ func.func @_QPeoshift6c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift6cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift6cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -1104,12 +1040,12 @@ func.func @_QPeoshift6c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %3(%11) typeparams %6 dummy_scope %0 {uniq_name = "_QFeoshift6cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+  %12:2 = hlfir.declare %3(%11) typeparams %6 dummy_scope %0 uniq_name("_QFeoshift6cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
   %13:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %14 = fir.load %1#0 : !fir.ref<i32>
   %15 = arith.cmpi sgt, %14, %c0_i32 : i32
   %16 = arith.select %15, %14, %c0_i32 : i32
-  %17:2 = hlfir.declare %13#0 typeparams %16 dummy_scope %0 {uniq_name = "_QFeoshift6cEboundary"} : (!fir.ref<!fir.char<1,?>>, i32, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %17:2 = hlfir.declare %13#0 typeparams %16 dummy_scope %0 uniq_name("_QFeoshift6cEboundary") : (!fir.ref<!fir.char<1,?>>, i32, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %18 = hlfir.eoshift %12#0 %c2_i32 boundary %17#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i32, !fir.boxchar<1>) -> !hlfir.expr<?x!fir.char<1,?>>
   hlfir.assign %18 to %12#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
   hlfir.destroy %18 : !hlfir.expr<?x!fir.char<1,?>>
@@ -1119,12 +1055,12 @@ func.func @_QPeoshift6c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_34:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift6cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift6cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1135,18 +1071,17 @@ func.func @_QPeoshift6c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_15]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift6cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_15]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift6cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_17:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_18:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_19:.*]] = arith.cmpi sgt, %[[VAL_18]], %[[VAL_3]] : i32
 // CHECK:           %[[VAL_20:.*]] = arith.select %[[VAL_19]], %[[VAL_18]], %[[VAL_3]] : i32
-// CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_17]]#0 typeparams %[[VAL_20]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift6cEboundary"} : (!fir.ref<!fir.char<1,?>>, i32, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_21:.*]]:2 = hlfir.declare %[[VAL_17]]#0 typeparams %[[VAL_20]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift6cEboundary") : (!fir.ref<!fir.char<1,?>>, i32, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_23:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_24:.*]] = hlfir.elemental %[[VAL_15]] typeparams %[[VAL_10]] unordered : (!fir.shape<1>, i32) -> !hlfir.expr<?x!fir.char<1,?>> {
 // CHECK:           ^bb0(%[[VAL_25:.*]]: index):
 // CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_25]] : (index) -> i64
-// CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_23]] overflow<nsw> : i64
+// CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_34]] overflow<nsw> : i64
 // CHECK:             %[[VAL_28:.*]] = arith.cmpi sge, %[[VAL_27]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_29:.*]] = arith.cmpi sle, %[[VAL_27]], %[[VAL_22]] : i64
 // CHECK:             %[[VAL_30:.*]] = arith.andi %[[VAL_28]], %[[VAL_29]] : i1
@@ -1175,9 +1110,9 @@ func.func @_QPeoshift7c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift7cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift7cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 {uniq_name = "_QFeoshift7cEboundary"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 uniq_name("_QFeoshift7cEboundary") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %4:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %5 = fir.convert %4#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %6 = fir.load %1#0 : !fir.ref<i32>
@@ -1185,7 +1120,7 @@ func.func @_QPeoshift7c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %8 = arith.cmpi sgt, %7, %c0 : index
   %9 = arith.select %8, %7, %c0 : index
   %10 = fir.shape %9 : (index) -> !fir.shape<1>
-  %11:2 = hlfir.declare %5(%10) typeparams %4#1 dummy_scope %0 {uniq_name = "_QFeoshift7cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+  %11:2 = hlfir.declare %5(%10) typeparams %4#1 dummy_scope %0 uniq_name("_QFeoshift7cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
   %12 = hlfir.eoshift %11#0 %c2_i32 boundary %3#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i32, !fir.boxchar<1>) -> !hlfir.expr<?x!fir.char<1,?>>
   hlfir.assign %12 to %11#0 : !hlfir.expr<?x!fir.char<1,?>>, !fir.box<!fir.array<?x!fir.char<1,?>>>
   hlfir.destroy %12 : !hlfir.expr<?x!fir.char<1,?>>
@@ -1195,13 +1130,13 @@ func.func @_QPeoshift7c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_27:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_3]] {uniq_name = "_QFeoshift7cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_3]] uniq_name("_QFeoshift7cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_5:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_3]] {uniq_name = "_QFeoshift7cEboundary"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_5]]#0 typeparams %[[VAL_5]]#1 dummy_scope %[[VAL_3]] uniq_name("_QFeoshift7cEboundary") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
 // CHECK:           %[[VAL_7:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
@@ -1209,13 +1144,12 @@ func.func @_QPeoshift7c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_11:.*]] = arith.cmpi sgt, %[[VAL_10]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_12:.*]] = arith.select %[[VAL_11]], %[[VAL_10]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_13]]) typeparams %[[VAL_7]]#1 dummy_scope %[[VAL_3]] {uniq_name = "_QFeoshift7cEarray"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_13]]) typeparams %[[VAL_7]]#1 dummy_scope %[[VAL_3]] uniq_name("_QFeoshift7cEarray") : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_15:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
-// CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_17:.*]] = hlfir.elemental %[[VAL_13]] typeparams %[[VAL_7]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<1,?>> {
 // CHECK:           ^bb0(%[[VAL_18:.*]]: index):
 // CHECK:             %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
-// CHECK:             %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_16]] overflow<nsw> : i64
+// CHECK:             %[[VAL_20:.*]] = arith.addi %[[VAL_19]], %[[VAL_27]] overflow<nsw> : i64
 // CHECK:             %[[VAL_21:.*]] = arith.cmpi sge, %[[VAL_20]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_22:.*]] = arith.cmpi sle, %[[VAL_20]], %[[VAL_15]] : i64
 // CHECK:             %[[VAL_23:.*]] = arith.andi %[[VAL_21]], %[[VAL_22]] : i1
@@ -1246,10 +1180,10 @@ func.func @_QPeoshift8c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift8cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift8cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg2 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2,10>>
-  %4:2 = hlfir.declare %3 typeparams %c10 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift8cEboundary"} : (!fir.ref<!fir.char<2,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2,10>>, !fir.ref<!fir.char<2,10>>)
+  %4:2 = hlfir.declare %3 typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift8cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.char<2,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2,10>>, !fir.ref<!fir.char<2,10>>)
   %5:2 = fir.unboxchar %arg1 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
   %6 = fir.convert %5#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.array<?x!fir.char<2,10>>>
   %7 = fir.load %1#0 : !fir.ref<i32>
@@ -1257,7 +1191,7 @@ func.func @_QPeoshift8c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %6(%11) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift8cEarray"} : (!fir.ref<!fir.array<?x!fir.char<2,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,10>>>, !fir.ref<!fir.array<?x!fir.char<2,10>>>)
+  %12:2 = hlfir.declare %6(%11) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift8cEarray") : (!fir.ref<!fir.array<?x!fir.char<2,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,10>>>, !fir.ref<!fir.array<?x!fir.char<2,10>>>)
   %13 = fir.is_present %4#0 : (!fir.ref<!fir.char<2,10>>) -> i1
   %14 = fir.embox %4#0 : (!fir.ref<!fir.char<2,10>>) -> !fir.box<!fir.char<2,10>>
   %15 = fir.absent !fir.box<!fir.char<2,10>>
@@ -1271,15 +1205,15 @@ func.func @_QPeoshift8c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<2> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<2> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_40:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift8cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift8cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.char<2,10>>
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift8cEboundary"} : (!fir.ref<!fir.char<2,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2,10>>, !fir.ref<!fir.char<2,10>>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_7]] typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift8cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.char<2,10>>, index, !fir.dscope) -> (!fir.ref<!fir.char<2,10>>, !fir.ref<!fir.char<2,10>>)
 // CHECK:           %[[VAL_9:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.array<?x!fir.char<2,10>>>
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1287,27 +1221,26 @@ func.func @_QPeoshift8c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_13:.*]] = arith.cmpi sgt, %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_14:.*]] = arith.select %[[VAL_13]], %[[VAL_12]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_14]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_15]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift8cEarray"} : (!fir.ref<!fir.array<?x!fir.char<2,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,10>>>, !fir.ref<!fir.array<?x!fir.char<2,10>>>)
+// CHECK:           %[[VAL_16:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_15]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift8cEarray") : (!fir.ref<!fir.array<?x!fir.char<2,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,10>>>, !fir.ref<!fir.array<?x!fir.char<2,10>>>)
 // CHECK:           %[[VAL_17:.*]] = fir.is_present %[[VAL_8]]#0 : (!fir.ref<!fir.char<2,10>>) -> i1
 // CHECK:           %[[VAL_18:.*]] = fir.embox %[[VAL_8]]#0 : (!fir.ref<!fir.char<2,10>>) -> !fir.box<!fir.char<2,10>>
 // CHECK:           %[[VAL_19:.*]] = fir.absent !fir.box<!fir.char<2,10>>
 // CHECK:           %[[VAL_20:.*]] = arith.select %[[VAL_17]], %[[VAL_18]], %[[VAL_19]] : !fir.box<!fir.char<2,10>>
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_23:.*]] = fir.is_present %[[VAL_20]] : (!fir.box<!fir.char<2,10>>) -> i1
 // CHECK:           %[[VAL_24:.*]] = fir.if %[[VAL_23]] -> (!fir.boxchar<2>) {
 // CHECK:             %[[VAL_25:.*]] = fir.box_addr %[[VAL_20]] : (!fir.box<!fir.char<2,10>>) -> !fir.ref<!fir.char<2,10>>
 // CHECK:             %[[VAL_26:.*]] = fir.emboxchar %[[VAL_25]], %[[VAL_3]] : (!fir.ref<!fir.char<2,10>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_26]] : !fir.boxchar<2>
 // CHECK:           } else {
-// CHECK:             %[[VAL_27:.*]] = fir.alloca !fir.char<2,0> {bindc_name = ".chrtmp"}
+// CHECK:             %[[VAL_27:.*]] = fir.alloca !fir.char<2,0> <{bindc_name = ".chrtmp"}>
 // CHECK:             %[[VAL_28:.*]] = fir.emboxchar %[[VAL_27]], %[[VAL_2]] : (!fir.ref<!fir.char<2,0>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_28]] : !fir.boxchar<2>
 // CHECK:           }
 // CHECK:           %[[VAL_29:.*]] = hlfir.elemental %[[VAL_15]] typeparams %[[VAL_3]] unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<2,10>> {
 // CHECK:           ^bb0(%[[VAL_30:.*]]: index):
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_30]] : (index) -> i64
-// CHECK:             %[[VAL_32:.*]] = arith.addi %[[VAL_31]], %[[VAL_22]] overflow<nsw> : i64
+// CHECK:             %[[VAL_32:.*]] = arith.addi %[[VAL_31]], %[[VAL_40]] overflow<nsw> : i64
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi sge, %[[VAL_32]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi sle, %[[VAL_32]], %[[VAL_21]] : i64
 // CHECK:             %[[VAL_35:.*]] = arith.andi %[[VAL_33]], %[[VAL_34]] : i1
@@ -1339,7 +1272,7 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift9cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift9cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.array<?x!fir.char<2,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -1350,12 +1283,12 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %9 = arith.cmpi sgt, %8, %c0 : index
   %10 = arith.select %9, %8, %c0 : index
   %11 = fir.shape %10 : (index) -> !fir.shape<1>
-  %12:2 = hlfir.declare %3(%11) typeparams %6 dummy_scope %0 {uniq_name = "_QFeoshift9cEarray"} : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
+  %12:2 = hlfir.declare %3(%11) typeparams %6 dummy_scope %0 uniq_name("_QFeoshift9cEarray") : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
   %13:2 = fir.unboxchar %arg2 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
   %14 = fir.load %1#0 : !fir.ref<i32>
   %15 = arith.cmpi sgt, %14, %c0_i32 : i32
   %16 = arith.select %15, %14, %c0_i32 : i32
-  %17:2 = hlfir.declare %13#0 typeparams %16 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift9cEboundary"} : (!fir.ref<!fir.char<2,?>>, i32, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+  %17:2 = hlfir.declare %13#0 typeparams %16 dummy_scope %0 uniq_name("_QFeoshift9cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.char<2,?>>, i32, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
   %18 = fir.is_present %17#0 : (!fir.boxchar<2>) -> i1
   %19 = fir.embox %17#1 typeparams %16 : (!fir.ref<!fir.char<2,?>>, i32) -> !fir.box<!fir.char<2,?>>
   %20 = fir.absent !fir.box<!fir.char<2,?>>
@@ -1369,13 +1302,13 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<2> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<2> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_47:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_5:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift9cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift9cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_7:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.array<?x!fir.char<2,?>>>
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
@@ -1386,18 +1319,17 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:           %[[VAL_14:.*]] = arith.cmpi sgt, %[[VAL_13]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_15:.*]] = arith.select %[[VAL_14]], %[[VAL_13]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_16:.*]] = fir.shape %[[VAL_15]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_16]]) typeparams %[[VAL_11]] dummy_scope %[[VAL_5]] {uniq_name = "_QFeoshift9cEarray"} : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
+// CHECK:           %[[VAL_17:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_16]]) typeparams %[[VAL_11]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift9cEarray") : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
 // CHECK:           %[[VAL_18:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_19:.*]] = fir.load %[[VAL_6]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_20:.*]] = arith.cmpi sgt, %[[VAL_19]], %[[VAL_4]] : i32
 // CHECK:           %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_19]], %[[VAL_4]] : i32
-// CHECK:           %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_18]]#0 typeparams %[[VAL_21]] dummy_scope %[[VAL_5]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift9cEboundary"} : (!fir.ref<!fir.char<2,?>>, i32, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+// CHECK:           %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_18]]#0 typeparams %[[VAL_21]] dummy_scope %[[VAL_5]] uniq_name("_QFeoshift9cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.char<2,?>>, i32, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
 // CHECK:           %[[VAL_23:.*]] = fir.is_present %[[VAL_22]]#0 : (!fir.boxchar<2>) -> i1
 // CHECK:           %[[VAL_24:.*]] = fir.embox %[[VAL_22]]#1 typeparams %[[VAL_21]] : (!fir.ref<!fir.char<2,?>>, i32) -> !fir.box<!fir.char<2,?>>
 // CHECK:           %[[VAL_25:.*]] = fir.absent !fir.box<!fir.char<2,?>>
 // CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_23]], %[[VAL_24]], %[[VAL_25]] : !fir.box<!fir.char<2,?>>
 // CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_15]] : (index) -> i64
-// CHECK:           %[[VAL_28:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
 // CHECK:           %[[VAL_29:.*]] = fir.is_present %[[VAL_26]] : (!fir.box<!fir.char<2,?>>) -> i1
 // CHECK:           %[[VAL_30:.*]] = fir.if %[[VAL_29]] -> (!fir.boxchar<2>) {
 // CHECK:             %[[VAL_31:.*]] = fir.box_addr %[[VAL_26]] : (!fir.box<!fir.char<2,?>>) -> !fir.ref<!fir.char<2,?>>
@@ -1406,14 +1338,14 @@ func.func @_QPeoshift9c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 // CHECK:             %[[VAL_34:.*]] = fir.emboxchar %[[VAL_31]], %[[VAL_33]] : (!fir.ref<!fir.char<2,?>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_34]] : !fir.boxchar<2>
 // CHECK:           } else {
-// CHECK:             %[[VAL_35:.*]] = fir.alloca !fir.char<2,0> {bindc_name = ".chrtmp"}
+// CHECK:             %[[VAL_35:.*]] = fir.alloca !fir.char<2,0> <{bindc_name = ".chrtmp"}>
 // CHECK:             %[[VAL_36:.*]] = fir.emboxchar %[[VAL_35]], %[[VAL_3]] : (!fir.ref<!fir.char<2,0>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_36]] : !fir.boxchar<2>
 // CHECK:           }
 // CHECK:           %[[VAL_37:.*]] = hlfir.elemental %[[VAL_16]] typeparams %[[VAL_11]] unordered : (!fir.shape<1>, i32) -> !hlfir.expr<?x!fir.char<2,?>> {
 // CHECK:           ^bb0(%[[VAL_38:.*]]: index):
 // CHECK:             %[[VAL_39:.*]] = fir.convert %[[VAL_38]] : (index) -> i64
-// CHECK:             %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_28]] overflow<nsw> : i64
+// CHECK:             %[[VAL_40:.*]] = arith.addi %[[VAL_39]], %[[VAL_47]] overflow<nsw> : i64
 // CHECK:             %[[VAL_41:.*]] = arith.cmpi sge, %[[VAL_40]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_42:.*]] = arith.cmpi sle, %[[VAL_40]], %[[VAL_27]] : i64
 // CHECK:             %[[VAL_43:.*]] = arith.andi %[[VAL_41]], %[[VAL_42]] : i1
@@ -1443,9 +1375,9 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift10cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift10cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg2 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
-  %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift10cEboundary"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+  %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %0 uniq_name("_QFeoshift10cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
   %4:2 = fir.unboxchar %arg1 : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
   %5 = fir.convert %4#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.array<?x!fir.char<2,?>>>
   %6 = fir.load %1#0 : !fir.ref<i32>
@@ -1453,7 +1385,7 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %8 = arith.cmpi sgt, %7, %c0 : index
   %9 = arith.select %8, %7, %c0 : index
   %10 = fir.shape %9 : (index) -> !fir.shape<1>
-  %11:2 = hlfir.declare %5(%10) typeparams %4#1 dummy_scope %0 {uniq_name = "_QFeoshift10cEarray"} : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
+  %11:2 = hlfir.declare %5(%10) typeparams %4#1 dummy_scope %0 uniq_name("_QFeoshift10cEarray") : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
   %12 = fir.is_present %3#0 : (!fir.boxchar<2>) -> i1
   %13 = fir.embox %3#1 typeparams %2#1 : (!fir.ref<!fir.char<2,?>>, index) -> !fir.box<!fir.char<2,?>>
   %14 = fir.absent !fir.box<!fir.char<2,?>>
@@ -1467,14 +1399,14 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<2> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<2> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_40:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 2 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift10cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift10cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 dummy_scope %[[VAL_4]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift10cEboundary"} : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_6]]#0 typeparams %[[VAL_6]]#1 dummy_scope %[[VAL_4]] uniq_name("_QFeoshift10cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.char<2,?>>, index, !fir.dscope) -> (!fir.boxchar<2>, !fir.ref<!fir.char<2,?>>)
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<2>) -> (!fir.ref<!fir.char<2,?>>, index)
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<2,?>>) -> !fir.ref<!fir.array<?x!fir.char<2,?>>>
 // CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1482,13 +1414,12 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_12:.*]] = arith.cmpi sgt, %[[VAL_11]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_13:.*]] = arith.select %[[VAL_12]], %[[VAL_11]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_14]]) typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift10cEarray"} : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
+// CHECK:           %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_14]]) typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_4]] uniq_name("_QFeoshift10cEarray") : (!fir.ref<!fir.array<?x!fir.char<2,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<2,?>>>, !fir.ref<!fir.array<?x!fir.char<2,?>>>)
 // CHECK:           %[[VAL_16:.*]] = fir.is_present %[[VAL_7]]#0 : (!fir.boxchar<2>) -> i1
 // CHECK:           %[[VAL_17:.*]] = fir.embox %[[VAL_7]]#1 typeparams %[[VAL_6]]#1 : (!fir.ref<!fir.char<2,?>>, index) -> !fir.box<!fir.char<2,?>>
 // CHECK:           %[[VAL_18:.*]] = fir.absent !fir.box<!fir.char<2,?>>
 // CHECK:           %[[VAL_19:.*]] = arith.select %[[VAL_16]], %[[VAL_17]], %[[VAL_18]] : !fir.box<!fir.char<2,?>>
 // CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
-// CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
 // CHECK:           %[[VAL_22:.*]] = fir.is_present %[[VAL_19]] : (!fir.box<!fir.char<2,?>>) -> i1
 // CHECK:           %[[VAL_23:.*]] = fir.if %[[VAL_22]] -> (!fir.boxchar<2>) {
 // CHECK:             %[[VAL_24:.*]] = fir.box_addr %[[VAL_19]] : (!fir.box<!fir.char<2,?>>) -> !fir.ref<!fir.char<2,?>>
@@ -1497,14 +1428,14 @@ func.func @_QPeoshift10c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:             %[[VAL_27:.*]] = fir.emboxchar %[[VAL_24]], %[[VAL_26]] : (!fir.ref<!fir.char<2,?>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_27]] : !fir.boxchar<2>
 // CHECK:           } else {
-// CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<2,0> {bindc_name = ".chrtmp"}
+// CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<2,0> <{bindc_name = ".chrtmp"}>
 // CHECK:             %[[VAL_29:.*]] = fir.emboxchar %[[VAL_28]], %[[VAL_3]] : (!fir.ref<!fir.char<2,0>>, index) -> !fir.boxchar<2>
 // CHECK:             fir.result %[[VAL_29]] : !fir.boxchar<2>
 // CHECK:           }
 // CHECK:           %[[VAL_30:.*]] = hlfir.elemental %[[VAL_14]] typeparams %[[VAL_8]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<?x!fir.char<2,?>> {
 // CHECK:           ^bb0(%[[VAL_31:.*]]: index):
 // CHECK:             %[[VAL_32:.*]] = fir.convert %[[VAL_31]] : (index) -> i64
-// CHECK:             %[[VAL_33:.*]] = arith.addi %[[VAL_32]], %[[VAL_21]] overflow<nsw> : i64
+// CHECK:             %[[VAL_33:.*]] = arith.addi %[[VAL_32]], %[[VAL_40]] overflow<nsw> : i64
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi sge, %[[VAL_33]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_35:.*]] = arith.cmpi sle, %[[VAL_33]], %[[VAL_20]] : i64
 // CHECK:             %[[VAL_36:.*]] = arith.andi %[[VAL_34]], %[[VAL_35]] : i1
@@ -1534,8 +1465,8 @@ func.func @_QPeoshift11c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift11cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift11cEboundary"} : (!fir.box<!fir.array<?x!fir.char<4,10>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,10>>>, !fir.box<!fir.array<?x!fir.char<4,10>>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift11cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift11cEboundary") : (!fir.box<!fir.array<?x!fir.char<4,10>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,10>>>, !fir.box<!fir.array<?x!fir.char<4,10>>>)
   %3:2 = fir.unboxchar %arg1 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
   %4 = fir.convert %3#0 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<4,10>>>
   %5 = fir.load %1#0 : !fir.ref<i32>
@@ -1547,7 +1478,7 @@ func.func @_QPeoshift11c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %11 = arith.cmpi sgt, %10, %c0 : index
   %12 = arith.select %11, %10, %c0 : index
   %13 = fir.shape %8, %12 : (index, index) -> !fir.shape<2>
-  %14:2 = hlfir.declare %4(%13) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift11cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<4,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, !fir.ref<!fir.array<?x?x!fir.char<4,10>>>)
+  %14:2 = hlfir.declare %4(%13) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift11cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<4,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, !fir.ref<!fir.array<?x?x!fir.char<4,10>>>)
   %15 = hlfir.eoshift %14#0 %c2_i32 boundary %2#0 : (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, i32, !fir.box<!fir.array<?x!fir.char<4,10>>>) -> !hlfir.expr<?x?x!fir.char<4,10>>
   hlfir.assign %15 to %14#0 : !hlfir.expr<?x?x!fir.char<4,10>>, !fir.box<!fir.array<?x?x!fir.char<4,10>>>
   hlfir.destroy %15 : !hlfir.expr<?x?x!fir.char<4,10>>
@@ -1557,13 +1488,13 @@ func.func @_QPeoshift11c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<4> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<4,10>>> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_35:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift11cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift11cEboundary"} : (!fir.box<!fir.array<?x!fir.char<4,10>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,10>>>, !fir.box<!fir.array<?x!fir.char<4,10>>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift11cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift11cEboundary") : (!fir.box<!fir.array<?x!fir.char<4,10>>>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,10>>>, !fir.box<!fir.array<?x!fir.char<4,10>>>)
 // CHECK:           %[[VAL_7:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<4,10>>>
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1575,21 +1506,20 @@ func.func @_QPeoshift11c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_15:.*]] = arith.cmpi sgt, %[[VAL_14]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_14]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_12]], %[[VAL_16]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_17]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift11cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<4,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, !fir.ref<!fir.array<?x?x!fir.char<4,10>>>)
+// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_17]]) typeparams %[[VAL_3]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift11cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<4,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, !fir.ref<!fir.array<?x?x!fir.char<4,10>>>)
 // CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
-// CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_17]] typeparams %[[VAL_3]] unordered : (!fir.shape<2>, index) -> !hlfir.expr<?x?x!fir.char<4,10>> {
-// CHECK:           ^bb0(%[[VAL_22:.*]]: index, %[[VAL_23:.*]]: index):
-// CHECK:             %[[VAL_24:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_23]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<4,10>>>, index, index) -> !fir.ref<!fir.char<4,10>>
+// CHECK:           ^bb0(%[[VAL_22:.*]]: index, %[[VAL_36:.*]]: index):
+// CHECK:             %[[VAL_24:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_36]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<4,10>>>, index, index) -> !fir.ref<!fir.char<4,10>>
 // CHECK:             %[[VAL_25:.*]] = fir.emboxchar %[[VAL_24]], %[[VAL_3]] : (!fir.ref<!fir.char<4,10>>, index) -> !fir.boxchar<4>
 // CHECK:             %[[VAL_26:.*]] = fir.convert %[[VAL_22]] : (index) -> i64
-// CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_20]] overflow<nsw> : i64
+// CHECK:             %[[VAL_27:.*]] = arith.addi %[[VAL_26]], %[[VAL_35]] overflow<nsw> : i64
 // CHECK:             %[[VAL_28:.*]] = arith.cmpi sge, %[[VAL_27]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_29:.*]] = arith.cmpi sle, %[[VAL_27]], %[[VAL_19]] : i64
 // CHECK:             %[[VAL_30:.*]] = arith.andi %[[VAL_28]], %[[VAL_29]] : i1
 // CHECK:             %[[VAL_31:.*]] = fir.if %[[VAL_30]] -> (!fir.boxchar<4>) {
 // CHECK:               %[[VAL_32:.*]] = fir.convert %[[VAL_27]] : (i64) -> index
-// CHECK:               %[[VAL_33:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_32]], %[[VAL_23]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, index, index, index) -> !fir.ref<!fir.char<4,10>>
+// CHECK:               %[[VAL_33:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_32]], %[[VAL_36]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x?x!fir.char<4,10>>>, index, index, index) -> !fir.ref<!fir.char<4,10>>
 // CHECK:               %[[VAL_34:.*]] = fir.emboxchar %[[VAL_33]], %[[VAL_3]] : (!fir.ref<!fir.char<4,10>>, index) -> !fir.boxchar<4>
 // CHECK:               fir.result %[[VAL_34]] : !fir.boxchar<4>
 // CHECK:             } else {
@@ -1614,7 +1544,7 @@ func.func @_QPeoshift12c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift12cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift12cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<4,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -1629,11 +1559,11 @@ func.func @_QPeoshift12c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %13 = arith.cmpi sgt, %12, %c0 : index
   %14 = arith.select %13, %12, %c0 : index
   %15 = fir.shape %10, %14 : (index, index) -> !fir.shape<2>
-  %16:2 = hlfir.declare %3(%15) typeparams %6 dummy_scope %0 {uniq_name = "_QFeoshift12cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
+  %16:2 = hlfir.declare %3(%15) typeparams %6 dummy_scope %0 uniq_name("_QFeoshift12cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
   %17 = fir.load %1#0 : !fir.ref<i32>
   %18 = arith.cmpi sgt, %17, %c0_i32 : i32
   %19 = arith.select %18, %17, %c0_i32 : i32
-  %20:2 = hlfir.declare %arg2 typeparams %19 dummy_scope %0 {uniq_name = "_QFeoshift12cEboundary"} : (!fir.box<!fir.array<?x!fir.char<4,?>>>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
+  %20:2 = hlfir.declare %arg2 typeparams %19 dummy_scope %0 uniq_name("_QFeoshift12cEboundary") : (!fir.box<!fir.array<?x!fir.char<4,?>>>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
   %21 = hlfir.eoshift %16#0 %c2_i32 boundary %20#0 : (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, i32, !fir.box<!fir.array<?x!fir.char<4,?>>>) -> !hlfir.expr<?x?x!fir.char<4,?>>
   hlfir.assign %21 to %16#0 : !hlfir.expr<?x?x!fir.char<4,?>>, !fir.box<!fir.array<?x?x!fir.char<4,?>>>
   hlfir.destroy %21 : !hlfir.expr<?x?x!fir.char<4,?>>
@@ -1643,12 +1573,12 @@ func.func @_QPeoshift12c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<4> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<4,?>>> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_39:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
-// CHECK:           %[[VAL_1:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_2:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift12cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift12cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_6:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 // CHECK:           %[[VAL_7:.*]] = fir.convert %[[VAL_6]]#0 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<4,?>>>
 // CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1663,24 +1593,23 @@ func.func @_QPeoshift12c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_17:.*]] = arith.cmpi sgt, %[[VAL_16]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_2]] : index
 // CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_14]], %[[VAL_18]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_19]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift12cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
+// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_7]](%[[VAL_19]]) typeparams %[[VAL_10]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift12cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
 // CHECK:           %[[VAL_21:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
 // CHECK:           %[[VAL_22:.*]] = arith.cmpi sgt, %[[VAL_21]], %[[VAL_3]] : i32
 // CHECK:           %[[VAL_23:.*]] = arith.select %[[VAL_22]], %[[VAL_21]], %[[VAL_3]] : i32
-// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[ARG2]] typeparams %[[VAL_23]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift12cEboundary"} : (!fir.box<!fir.array<?x!fir.char<4,?>>>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
+// CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[ARG2]] typeparams %[[VAL_23]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift12cEboundary") : (!fir.box<!fir.array<?x!fir.char<4,?>>>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
 // CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_26:.*]] = fir.convert %[[VAL_1]] : (i32) -> i64
 // CHECK:           %[[VAL_27:.*]] = hlfir.elemental %[[VAL_19]] typeparams %[[VAL_10]] unordered : (!fir.shape<2>, i32) -> !hlfir.expr<?x?x!fir.char<4,?>> {
-// CHECK:           ^bb0(%[[VAL_28:.*]]: index, %[[VAL_29:.*]]: index):
-// CHECK:             %[[VAL_30:.*]] = hlfir.designate %[[VAL_24]]#0 (%[[VAL_29]])  typeparams %[[VAL_23]] : (!fir.box<!fir.array<?x!fir.char<4,?>>>, index, i32) -> !fir.boxchar<4>
+// CHECK:           ^bb0(%[[VAL_28:.*]]: index, %[[VAL_40:.*]]: index):
+// CHECK:             %[[VAL_30:.*]] = hlfir.designate %[[VAL_24]]#0 (%[[VAL_40]])  typeparams %[[VAL_23]] : (!fir.box<!fir.array<?x!fir.char<4,?>>>, index, i32) -> !fir.boxchar<4>
 // CHECK:             %[[VAL_31:.*]] = fir.convert %[[VAL_28]] : (index) -> i64
-// CHECK:             %[[VAL_32:.*]] = arith.addi %[[VAL_31]], %[[VAL_26]] overflow<nsw> : i64
+// CHECK:             %[[VAL_32:.*]] = arith.addi %[[VAL_31]], %[[VAL_39]] overflow<nsw> : i64
 // CHECK:             %[[VAL_33:.*]] = arith.cmpi sge, %[[VAL_32]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_34:.*]] = arith.cmpi sle, %[[VAL_32]], %[[VAL_25]] : i64
 // CHECK:             %[[VAL_35:.*]] = arith.andi %[[VAL_33]], %[[VAL_34]] : i1
 // CHECK:             %[[VAL_36:.*]] = fir.if %[[VAL_35]] -> (!fir.boxchar<4>) {
 // CHECK:               %[[VAL_37:.*]] = fir.convert %[[VAL_32]] : (i64) -> index
-// CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_37]], %[[VAL_29]])  typeparams %[[VAL_10]] : (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, index, index, i32) -> !fir.boxchar<4>
+// CHECK:               %[[VAL_38:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_37]], %[[VAL_40]])  typeparams %[[VAL_10]] : (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, index, index, i32) -> !fir.boxchar<4>
 // CHECK:               fir.result %[[VAL_38]] : !fir.boxchar<4>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_30]] : !fir.boxchar<4>
@@ -1703,8 +1632,8 @@ func.func @_QPeoshift13c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift13cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {uniq_name = "_QFeoshift13cEboundary"} : (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift13cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFeoshift13cEboundary") : (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
   %3:2 = fir.unboxchar %arg1 : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
   %4 = fir.convert %3#0 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<4,?>>>
   %5 = fir.load %1#0 : !fir.ref<i32>
@@ -1716,7 +1645,7 @@ func.func @_QPeoshift13c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %11 = arith.cmpi sgt, %10, %c0 : index
   %12 = arith.select %11, %10, %c0 : index
   %13 = fir.shape %8, %12 : (index, index) -> !fir.shape<2>
-  %14:2 = hlfir.declare %4(%13) typeparams %3#1 dummy_scope %0 {uniq_name = "_QFeoshift13cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
+  %14:2 = hlfir.declare %4(%13) typeparams %3#1 dummy_scope %0 uniq_name("_QFeoshift13cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
   %15 = hlfir.eoshift %14#0 %c2_i32 boundary %2#0 : (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, i32, !fir.box<!fir.array<?x!fir.char<4,?>>>) -> !hlfir.expr<?x?x!fir.char<4,?>>
   hlfir.assign %15 to %14#0 : !hlfir.expr<?x?x!fir.char<4,?>>, !fir.box<!fir.array<?x?x!fir.char<4,?>>>
   hlfir.destroy %15 : !hlfir.expr<?x?x!fir.char<4,?>>
@@ -1726,13 +1655,13 @@ func.func @_QPeoshift13c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<4> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.box<!fir.array<?x!fir.char<4,?>>> {fir.bindc_name = "boundary"}) {
+// CHECK:           %[[VAL_35:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 4 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_4:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift13cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift13cEboundary"} : (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
+// CHECK:           %[[VAL_5:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift13cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_6:.*]]:2 = hlfir.declare %[[ARG2]] dummy_scope %[[VAL_4]] uniq_name("_QFeoshift13cEboundary") : (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<4,?>>>, !fir.box<!fir.array<?x!fir.char<4,?>>>)
 // CHECK:           %[[VAL_7:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<4>) -> (!fir.ref<!fir.char<4,?>>, index)
 // CHECK:           %[[VAL_8:.*]] = fir.convert %[[VAL_7]]#0 : (!fir.ref<!fir.char<4,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<4,?>>>
 // CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<i32>
@@ -1744,22 +1673,21 @@ func.func @_QPeoshift13c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_15:.*]] = arith.cmpi sgt, %[[VAL_14]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_16:.*]] = arith.select %[[VAL_15]], %[[VAL_14]], %[[VAL_3]] : index
 // CHECK:           %[[VAL_17:.*]] = fir.shape %[[VAL_12]], %[[VAL_16]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_17]]) typeparams %[[VAL_7]]#1 dummy_scope %[[VAL_4]] {uniq_name = "_QFeoshift13cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
+// CHECK:           %[[VAL_18:.*]]:2 = hlfir.declare %[[VAL_8]](%[[VAL_17]]) typeparams %[[VAL_7]]#1 dummy_scope %[[VAL_4]] uniq_name("_QFeoshift13cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<4,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, !fir.ref<!fir.array<?x?x!fir.char<4,?>>>)
 // CHECK:           %[[VAL_19:.*]] = fir.convert %[[VAL_12]] : (index) -> i64
-// CHECK:           %[[VAL_20:.*]] = fir.convert %[[VAL_2]] : (i32) -> i64
 // CHECK:           %[[VAL_21:.*]] = hlfir.elemental %[[VAL_17]] typeparams %[[VAL_7]]#1 unordered : (!fir.shape<2>, index) -> !hlfir.expr<?x?x!fir.char<4,?>> {
-// CHECK:           ^bb0(%[[VAL_22:.*]]: index, %[[VAL_23:.*]]: index):
+// CHECK:           ^bb0(%[[VAL_22:.*]]: index, %[[VAL_36:.*]]: index):
 // CHECK:             %[[VAL_24:.*]] = fir.box_elesize %[[VAL_6]]#1 : (!fir.box<!fir.array<?x!fir.char<4,?>>>) -> index
 // CHECK:             %[[VAL_25:.*]] = arith.divsi %[[VAL_24]], %[[VAL_1]] : index
-// CHECK:             %[[VAL_26:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_23]])  typeparams %[[VAL_25]] : (!fir.box<!fir.array<?x!fir.char<4,?>>>, index, index) -> !fir.boxchar<4>
+// CHECK:             %[[VAL_26:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_36]])  typeparams %[[VAL_25]] : (!fir.box<!fir.array<?x!fir.char<4,?>>>, index, index) -> !fir.boxchar<4>
 // CHECK:             %[[VAL_27:.*]] = fir.convert %[[VAL_22]] : (index) -> i64
-// CHECK:             %[[VAL_28:.*]] = arith.addi %[[VAL_27]], %[[VAL_20]] overflow<nsw> : i64
+// CHECK:             %[[VAL_28:.*]] = arith.addi %[[VAL_27]], %[[VAL_35]] overflow<nsw> : i64
 // CHECK:             %[[VAL_29:.*]] = arith.cmpi sge, %[[VAL_28]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_30:.*]] = arith.cmpi sle, %[[VAL_28]], %[[VAL_19]] : i64
 // CHECK:             %[[VAL_31:.*]] = arith.andi %[[VAL_29]], %[[VAL_30]] : i1
 // CHECK:             %[[VAL_32:.*]] = fir.if %[[VAL_31]] -> (!fir.boxchar<4>) {
 // CHECK:               %[[VAL_33:.*]] = fir.convert %[[VAL_28]] : (i64) -> index
-// CHECK:               %[[VAL_34:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_33]], %[[VAL_23]])  typeparams %[[VAL_7]]#1 : (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, index, index, index) -> !fir.boxchar<4>
+// CHECK:               %[[VAL_34:.*]] = hlfir.designate %[[VAL_18]]#0 (%[[VAL_33]], %[[VAL_36]])  typeparams %[[VAL_7]]#1 : (!fir.box<!fir.array<?x?x!fir.char<4,?>>>, index, index, index) -> !fir.boxchar<4>
 // CHECK:               fir.result %[[VAL_34]] : !fir.boxchar<4>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_26]] : !fir.boxchar<4>
@@ -1784,7 +1712,7 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift14cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift14cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,10>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -1796,7 +1724,7 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %10 = arith.cmpi sgt, %9, %c0 : index
   %11 = arith.select %10, %9, %c0 : index
   %12 = fir.shape %7, %11 : (index, index) -> !fir.shape<2>
-  %13:2 = hlfir.declare %3(%12) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift14cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>)
+  %13:2 = hlfir.declare %3(%12) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift14cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>)
   %14:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %15 = fir.convert %14#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
   %16 = fir.load %1#0 : !fir.ref<i32>
@@ -1804,7 +1732,7 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %18 = arith.cmpi sgt, %17, %c0 : index
   %19 = arith.select %18, %17, %c0 : index
   %20 = fir.shape %19 : (index) -> !fir.shape<1>
-  %21:2 = hlfir.declare %15(%20) typeparams %c10 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift14cEboundary"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+  %21:2 = hlfir.declare %15(%20) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift14cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
   %22 = fir.is_present %21#0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> i1
   %23 = fir.shape %19 : (index) -> !fir.shape<1>
   %24 = fir.embox %21#1(%23) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
@@ -1819,15 +1747,15 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_58:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant false
 // CHECK:           %[[VAL_3:.*]] = arith.constant true
-// CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 10 : index
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift14cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift14cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_9:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
@@ -1839,7 +1767,7 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_17:.*]] = arith.cmpi sgt, %[[VAL_16]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_18:.*]] = arith.select %[[VAL_17]], %[[VAL_16]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_19:.*]] = fir.shape %[[VAL_14]], %[[VAL_18]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_19]]) typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift14cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>)
+// CHECK:           %[[VAL_20:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_19]]) typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift14cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>)
 // CHECK:           %[[VAL_21:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_22:.*]] = fir.convert %[[VAL_21]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_23:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
@@ -1847,38 +1775,37 @@ func.func @_QPeoshift14c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_25:.*]] = arith.cmpi sgt, %[[VAL_24]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_26:.*]] = arith.select %[[VAL_25]], %[[VAL_24]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_27:.*]] = fir.shape %[[VAL_26]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_27]]) typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift14cEboundary"} : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
+// CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_22]](%[[VAL_27]]) typeparams %[[VAL_6]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift14cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x!fir.char<1,10>>>)
 // CHECK:           %[[VAL_29:.*]] = fir.is_present %[[VAL_28]]#0 : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> i1
 // CHECK:           %[[VAL_30:.*]] = fir.shape %[[VAL_26]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_31:.*]] = fir.embox %[[VAL_28]]#1(%[[VAL_30]]) : (!fir.ref<!fir.array<?x!fir.char<1,10>>>, !fir.shape<1>) -> !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_32:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_33:.*]] = arith.select %[[VAL_29]], %[[VAL_31]], %[[VAL_32]] : !fir.box<!fir.array<?x!fir.char<1,10>>>
 // CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
-// CHECK:           %[[VAL_35:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
-// CHECK:           %[[VAL_36:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_36:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_37:.*]] = fir.emboxchar %[[VAL_36]], %[[VAL_5]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_38:.*]] = fir.is_present %[[VAL_33]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>) -> i1
 // CHECK:           %[[VAL_39:.*]] = arith.select %[[VAL_38]], %[[VAL_2]], %[[VAL_3]] : i1
 // CHECK:           %[[VAL_40:.*]] = hlfir.elemental %[[VAL_19]] typeparams %[[VAL_6]] unordered : (!fir.shape<2>, index) -> !hlfir.expr<?x?x!fir.char<1,10>> {
-// CHECK:           ^bb0(%[[VAL_41:.*]]: index, %[[VAL_42:.*]]: index):
+// CHECK:           ^bb0(%[[VAL_41:.*]]: index, %[[VAL_59:.*]]: index):
 // CHECK:             %[[VAL_43:.*]] = fir.if %[[VAL_39]] -> (!fir.boxchar<1>) {
 // CHECK:               fir.result %[[VAL_37]] : !fir.boxchar<1>
 // CHECK:             } else {
 // CHECK:               %[[VAL_44:.*]]:3 = fir.box_dims %[[VAL_33]], %[[VAL_5]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_45:.*]] = arith.subi %[[VAL_44]]#0, %[[VAL_1]] overflow<nsw> : index
-// CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_42]], %[[VAL_45]] overflow<nsw> : index
+// CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_59]], %[[VAL_45]] overflow<nsw> : index
 // CHECK:               %[[VAL_47:.*]] = hlfir.designate %[[VAL_33]] (%[[VAL_46]])  typeparams %[[VAL_6]] : (!fir.box<!fir.array<?x!fir.char<1,10>>>, index, index) -> !fir.ref<!fir.char<1,10>>
 // CHECK:               %[[VAL_48:.*]] = fir.emboxchar %[[VAL_47]], %[[VAL_6]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 // CHECK:               fir.result %[[VAL_48]] : !fir.boxchar<1>
 // CHECK:             }
 // CHECK:             %[[VAL_49:.*]] = fir.convert %[[VAL_41]] : (index) -> i64
-// CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_35]] overflow<nsw> : i64
+// CHECK:             %[[VAL_50:.*]] = arith.addi %[[VAL_49]], %[[VAL_58]] overflow<nsw> : i64
 // CHECK:             %[[VAL_51:.*]] = arith.cmpi sge, %[[VAL_50]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_52:.*]] = arith.cmpi sle, %[[VAL_50]], %[[VAL_34]] : i64
 // CHECK:             %[[VAL_53:.*]] = arith.andi %[[VAL_51]], %[[VAL_52]] : i1
 // CHECK:             %[[VAL_54:.*]] = fir.if %[[VAL_53]] -> (!fir.boxchar<1>) {
 // CHECK:               %[[VAL_55:.*]] = fir.convert %[[VAL_50]] : (i64) -> index
-// CHECK:               %[[VAL_56:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_55]], %[[VAL_42]])  typeparams %[[VAL_6]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, index, index) -> !fir.ref<!fir.char<1,10>>
+// CHECK:               %[[VAL_56:.*]] = hlfir.designate %[[VAL_20]]#0 (%[[VAL_55]], %[[VAL_59]])  typeparams %[[VAL_6]] : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, index, index) -> !fir.ref<!fir.char<1,10>>
 // CHECK:               %[[VAL_57:.*]] = fir.emboxchar %[[VAL_56]], %[[VAL_6]] : (!fir.ref<!fir.char<1,10>>, index) -> !fir.boxchar<1>
 // CHECK:               fir.result %[[VAL_57]] : !fir.boxchar<1>
 // CHECK:             } else {
@@ -1904,7 +1831,7 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift15cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift15cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -1919,7 +1846,7 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %13 = arith.cmpi sgt, %12, %c0 : index
   %14 = arith.select %13, %12, %c0 : index
   %15 = fir.shape %10, %14 : (index, index) -> !fir.shape<2>
-  %16:2 = hlfir.declare %3(%15) typeparams %6 dummy_scope %0 {uniq_name = "_QFeoshift15cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
+  %16:2 = hlfir.declare %3(%15) typeparams %6 dummy_scope %0 uniq_name("_QFeoshift15cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
   %17:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %18 = fir.convert %17#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %19 = fir.load %1#0 : !fir.ref<i32>
@@ -1930,7 +1857,7 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %24 = arith.cmpi sgt, %23, %c0 : index
   %25 = arith.select %24, %23, %c0 : index
   %26 = fir.shape %25 : (index) -> !fir.shape<1>
-  %27:2 = hlfir.declare %18(%26) typeparams %21 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift15cEboundary"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+  %27:2 = hlfir.declare %18(%26) typeparams %21 dummy_scope %0 uniq_name("_QFeoshift15cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
   %28 = fir.is_present %27#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
   %29 = fir.shape %25 : (index) -> !fir.shape<1>
   %30 = fir.embox %27#1(%29) typeparams %21 : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -1945,15 +1872,15 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_63:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant false
 // CHECK:           %[[VAL_3:.*]] = arith.constant true
-// CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = arith.constant 0 : i32
 // CHECK:           %[[VAL_7:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift15cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift15cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_9:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_11:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
@@ -1968,7 +1895,7 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_20:.*]] = arith.cmpi sgt, %[[VAL_19]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_19]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_22:.*]] = fir.shape %[[VAL_17]], %[[VAL_21]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_22]]) typeparams %[[VAL_13]] dummy_scope %[[VAL_7]] {uniq_name = "_QFeoshift15cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_23:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_22]]) typeparams %[[VAL_13]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift15cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_24:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_25:.*]] = fir.convert %[[VAL_24]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_8]]#0 : !fir.ref<i32>
@@ -1979,38 +1906,37 @@ func.func @_QPeoshift15c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_31:.*]] = arith.cmpi sgt, %[[VAL_30]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_32:.*]] = arith.select %[[VAL_31]], %[[VAL_30]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_33:.*]] = fir.shape %[[VAL_32]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_25]](%[[VAL_33]]) typeparams %[[VAL_28]] dummy_scope %[[VAL_7]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift15cEboundary"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_25]](%[[VAL_33]]) typeparams %[[VAL_28]] dummy_scope %[[VAL_7]] uniq_name("_QFeoshift15cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_35:.*]] = fir.is_present %[[VAL_34]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 // CHECK:           %[[VAL_36:.*]] = fir.shape %[[VAL_32]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_37:.*]] = fir.embox %[[VAL_34]]#1(%[[VAL_36]]) typeparams %[[VAL_28]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, i32) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_38:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_39:.*]] = arith.select %[[VAL_35]], %[[VAL_37]], %[[VAL_38]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_40:.*]] = fir.convert %[[VAL_17]] : (index) -> i64
-// CHECK:           %[[VAL_41:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
-// CHECK:           %[[VAL_42:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_42:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_43:.*]] = fir.emboxchar %[[VAL_42]], %[[VAL_5]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_44:.*]] = fir.is_present %[[VAL_39]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 // CHECK:           %[[VAL_45:.*]] = arith.select %[[VAL_44]], %[[VAL_2]], %[[VAL_3]] : i1
 // CHECK:           %[[VAL_46:.*]] = hlfir.elemental %[[VAL_22]] typeparams %[[VAL_13]] unordered : (!fir.shape<2>, i32) -> !hlfir.expr<?x?x!fir.char<1,?>> {
-// CHECK:           ^bb0(%[[VAL_47:.*]]: index, %[[VAL_48:.*]]: index):
+// CHECK:           ^bb0(%[[VAL_47:.*]]: index, %[[VAL_64:.*]]: index):
 // CHECK:             %[[VAL_49:.*]] = fir.if %[[VAL_45]] -> (!fir.boxchar<1>) {
 // CHECK:               fir.result %[[VAL_43]] : !fir.boxchar<1>
 // CHECK:             } else {
 // CHECK:               %[[VAL_50:.*]] = fir.box_elesize %[[VAL_39]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 // CHECK:               %[[VAL_51:.*]]:3 = fir.box_dims %[[VAL_39]], %[[VAL_5]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_52:.*]] = arith.subi %[[VAL_51]]#0, %[[VAL_1]] overflow<nsw> : index
-// CHECK:               %[[VAL_53:.*]] = arith.addi %[[VAL_48]], %[[VAL_52]] overflow<nsw> : index
+// CHECK:               %[[VAL_53:.*]] = arith.addi %[[VAL_64]], %[[VAL_52]] overflow<nsw> : index
 // CHECK:               %[[VAL_54:.*]] = hlfir.designate %[[VAL_39]] (%[[VAL_53]])  typeparams %[[VAL_50]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 // CHECK:               fir.result %[[VAL_54]] : !fir.boxchar<1>
 // CHECK:             }
 // CHECK:             %[[VAL_55:.*]] = fir.convert %[[VAL_47]] : (index) -> i64
-// CHECK:             %[[VAL_56:.*]] = arith.addi %[[VAL_55]], %[[VAL_41]] overflow<nsw> : i64
+// CHECK:             %[[VAL_56:.*]] = arith.addi %[[VAL_55]], %[[VAL_63]] overflow<nsw> : i64
 // CHECK:             %[[VAL_57:.*]] = arith.cmpi sge, %[[VAL_56]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_58:.*]] = arith.cmpi sle, %[[VAL_56]], %[[VAL_40]] : i64
 // CHECK:             %[[VAL_59:.*]] = arith.andi %[[VAL_57]], %[[VAL_58]] : i1
 // CHECK:             %[[VAL_60:.*]] = fir.if %[[VAL_59]] -> (!fir.boxchar<1>) {
 // CHECK:               %[[VAL_61:.*]] = fir.convert %[[VAL_56]] : (i64) -> index
-// CHECK:               %[[VAL_62:.*]] = hlfir.designate %[[VAL_23]]#0 (%[[VAL_61]], %[[VAL_48]])  typeparams %[[VAL_13]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index, index, i32) -> !fir.boxchar<1>
+// CHECK:               %[[VAL_62:.*]] = hlfir.designate %[[VAL_23]]#0 (%[[VAL_61]], %[[VAL_64]])  typeparams %[[VAL_13]] : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index, index, i32) -> !fir.boxchar<1>
 // CHECK:               fir.result %[[VAL_62]] : !fir.boxchar<1>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_49]] : !fir.boxchar<1>
@@ -2034,7 +1960,7 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift16cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift16cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -2046,7 +1972,7 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %10 = arith.cmpi sgt, %9, %c0 : index
   %11 = arith.select %10, %9, %c0 : index
   %12 = fir.shape %7, %11 : (index, index) -> !fir.shape<2>
-  %13:2 = hlfir.declare %3(%12) typeparams %2#1 dummy_scope %0 {uniq_name = "_QFeoshift16cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
+  %13:2 = hlfir.declare %3(%12) typeparams %2#1 dummy_scope %0 uniq_name("_QFeoshift16cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
   %14:2 = fir.unboxchar %arg2 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %15 = fir.convert %14#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
   %16 = fir.load %1#0 : !fir.ref<i32>
@@ -2054,7 +1980,7 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %18 = arith.cmpi sgt, %17, %c0 : index
   %19 = arith.select %18, %17, %c0 : index
   %20 = fir.shape %19 : (index) -> !fir.shape<1>
-  %21:2 = hlfir.declare %15(%20) typeparams %14#1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift16cEboundary"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+  %21:2 = hlfir.declare %15(%20) typeparams %14#1 dummy_scope %0 uniq_name("_QFeoshift16cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
   %22 = fir.is_present %21#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
   %23 = fir.shape %19 : (index) -> !fir.shape<1>
   %24 = fir.embox %21#1(%23) typeparams %14#1 : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
@@ -2069,14 +1995,14 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 // CHECK-SAME:      %[[ARG1:.*]]: !fir.boxchar<1> {fir.bindc_name = "array"},
 // CHECK-SAME:      %[[ARG2:.*]]: !fir.boxchar<1> {fir.bindc_name = "boundary", fir.optional}) {
+// CHECK:           %[[VAL_56:.*]] = arith.constant 2 : i64
 // CHECK:           %[[VAL_0:.*]] = arith.constant 1 : i64
 // CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
 // CHECK:           %[[VAL_2:.*]] = arith.constant false
 // CHECK:           %[[VAL_3:.*]] = arith.constant true
-// CHECK:           %[[VAL_4:.*]] = arith.constant 2 : i32
 // CHECK:           %[[VAL_5:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_6:.*]] = fir.dummy_scope : !fir.dscope
-// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_6]] {uniq_name = "_QFeoshift16cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+// CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %[[VAL_6]] uniq_name("_QFeoshift16cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
 // CHECK:           %[[VAL_8:.*]]:2 = fir.unboxchar %[[ARG1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_8]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_10:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
@@ -2088,7 +2014,7 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_16:.*]] = arith.cmpi sgt, %[[VAL_15]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_17:.*]] = arith.select %[[VAL_16]], %[[VAL_15]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_18:.*]] = fir.shape %[[VAL_13]], %[[VAL_17]] : (index, index) -> !fir.shape<2>
-// CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_18]]) typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_6]] {uniq_name = "_QFeoshift16cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_9]](%[[VAL_18]]) typeparams %[[VAL_8]]#1 dummy_scope %[[VAL_6]] uniq_name("_QFeoshift16cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,?>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_20:.*]]:2 = fir.unboxchar %[[ARG2]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 // CHECK:           %[[VAL_21:.*]] = fir.convert %[[VAL_20]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_22:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<i32>
@@ -2096,38 +2022,37 @@ func.func @_QPeoshift16c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
 // CHECK:           %[[VAL_24:.*]] = arith.cmpi sgt, %[[VAL_23]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_23]], %[[VAL_5]] : index
 // CHECK:           %[[VAL_26:.*]] = fir.shape %[[VAL_25]] : (index) -> !fir.shape<1>
-// CHECK:           %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_21]](%[[VAL_26]]) typeparams %[[VAL_20]]#1 dummy_scope %[[VAL_6]] {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift16cEboundary"} : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
+// CHECK:           %[[VAL_27:.*]]:2 = hlfir.declare %[[VAL_21]](%[[VAL_26]]) typeparams %[[VAL_20]]#1 dummy_scope %[[VAL_6]] uniq_name("_QFeoshift16cEboundary") fortran_attrs<optional> : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.char<1,?>>>, !fir.ref<!fir.array<?x!fir.char<1,?>>>)
 // CHECK:           %[[VAL_28:.*]] = fir.is_present %[[VAL_27]]#0 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 // CHECK:           %[[VAL_29:.*]] = fir.shape %[[VAL_25]] : (index) -> !fir.shape<1>
 // CHECK:           %[[VAL_30:.*]] = fir.embox %[[VAL_27]]#1(%[[VAL_29]]) typeparams %[[VAL_20]]#1 : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_31:.*]] = fir.absent !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_32:.*]] = arith.select %[[VAL_28]], %[[VAL_30]], %[[VAL_31]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
 // CHECK:           %[[VAL_33:.*]] = fir.convert %[[VAL_13]] : (index) -> i64
-// CHECK:           %[[VAL_34:.*]] = fir.convert %[[VAL_4]] : (i32) -> i64
-// CHECK:           %[[VAL_35:.*]] = fir.alloca !fir.char<1,0> {bindc_name = ".chrtmp"}
+// CHECK:           %[[VAL_35:.*]] = fir.alloca !fir.char<1,0> <{bindc_name = ".chrtmp"}>
 // CHECK:           %[[VAL_36:.*]] = fir.emboxchar %[[VAL_35]], %[[VAL_5]] : (!fir.ref<!fir.char<1,0>>, index) -> !fir.boxchar<1>
 // CHECK:           %[[VAL_37:.*]] = fir.is_present %[[VAL_32]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> i1
 // CHECK:           %[[VAL_38:.*]] = arith.select %[[VAL_37]], %[[VAL_2]], %[[VAL_3]] : i1
 // CHECK:           %[[VAL_39:.*]] = hlfir.elemental %[[VAL_18]] typeparams %[[VAL_8]]#1 unordered : (!fir.shape<2>, index) -> !hlfir.expr<?x?x!fir.char<1,?>> {
-// CHECK:           ^bb0(%[[VAL_40:.*]]: index, %[[VAL_41:.*]]: index):
+// CHECK:           ^bb0(%[[VAL_40:.*]]: index, %[[VAL_57:.*]]: index):
 // CHECK:             %[[VAL_42:.*]] = fir.if %[[VAL_38]] -> (!fir.boxchar<1>) {
 // CHECK:               fir.result %[[VAL_36]] : !fir.boxchar<1>
 // CHECK:             } else {
 // CHECK:               %[[VAL_43:.*]] = fir.box_elesize %[[VAL_32]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 // CHECK:               %[[VAL_44:.*]]:3 = fir.box_dims %[[VAL_32]], %[[VAL_5]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
 // CHECK:               %[[VAL_45:.*]] = arith.subi %[[VAL_44]]#0, %[[VAL_1]] overflow<nsw> : index
-// CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_41]], %[[VAL_45]] overflow<nsw> : index
+// CHECK:               %[[VAL_46:.*]] = arith.addi %[[VAL_57]], %[[VAL_45]] overflow<nsw> : index
 // CHECK:               %[[VAL_47:.*]] = hlfir.designate %[[VAL_32]] (%[[VAL_46]])  typeparams %[[VAL_43]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 // CHECK:               fir.result %[[VAL_47]] : !fir.boxchar<1>
 // CHECK:             }
 // CHECK:             %[[VAL_48:.*]] = fir.convert %[[VAL_40]] : (index) -> i64
-// CHECK:             %[[VAL_49:.*]] = arith.addi %[[VAL_48]], %[[VAL_34]] overflow<nsw> : i64
+// CHECK:             %[[VAL_49:.*]] = arith.addi %[[VAL_48]], %[[VAL_56]] overflow<nsw> : i64
 // CHECK:             %[[VAL_50:.*]] = arith.cmpi sge, %[[VAL_49]], %[[VAL_0]] : i64
 // CHECK:             %[[VAL_51:.*]] = arith.cmpi sle, %[[VAL_49]], %[[VAL_33]] : i64
 // CHECK:             %[[VAL_52:.*]] = arith.andi %[[VAL_50]], %[[VAL_51]] : i1
 // CHECK:             %[[VAL_53:.*]] = fir.if %[[VAL_52]] -> (!fir.boxchar<1>) {
 // CHECK:               %[[VAL_54:.*]] = fir.convert %[[VAL_49]] : (i64) -> index
-// CHECK:               %[[VAL_55:.*]] = hlfir.designate %[[VAL_19]]#0 (%[[VAL_54]], %[[VAL_41]])  typeparams %[[VAL_8]]#1 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index, index, index) -> !fir.boxchar<1>
+// CHECK:               %[[VAL_55:.*]] = hlfir.designate %[[VAL_19]]#0 (%[[VAL_54]], %[[VAL_57]])  typeparams %[[VAL_8]]#1 : (!fir.box<!fir.array<?x?x!fir.char<1,?>>>, index, index, index) -> !fir.boxchar<1>
 // CHECK:               fir.result %[[VAL_55]] : !fir.boxchar<1>
 // CHECK:             } else {
 // CHECK:               fir.result %[[VAL_42]] : !fir.boxchar<1>
@@ -2159,7 +2084,7 @@ func.func @_QPeoshift17c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %c0 = arith.constant 0 : index
   %c10 = arith.constant 10 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift17cEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift17cEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   %2:2 = fir.unboxchar %arg1 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %3 = fir.convert %2#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x?x!fir.char<1,10>>>
   %4 = fir.load %1#0 : !fir.ref<i32>
@@ -2171,7 +2096,7 @@ func.func @_QPeoshift17c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
   %10 = arith.cmpi sgt, %9, %c0 : index
   %11 = arith.select %10, %9, %c0 : index
   %12 = fir.shape %7, %11 : (index, index) -> !fir.shape<2>
-  %13:2 = hlfir.declare %3(%12) typeparams %c10 dummy_scope %0 {uniq_name = "_QFeoshift17cEarray"} : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>)
+  %13:2 = hlfir.declare %3(%12) typeparams %c10 dummy_scope %0 uniq_name("_QFeoshift17cEarray") : (!fir.ref<!fir.array<?x?x!fir.char<1,10>>>, !fir.shape<2>, index, !fir.dscope) -> (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, !fir.ref<!fir.array<?x?x!fir.char<1,10>>>)
   %14 = hlfir.elemental %12 typeparams %c20 unordered : (!fir.shape<2>, index) -> !hlfir.expr<?x?x!fir.char<1,?>> {
   ^bb0(%arg2: index, %arg3: index):
     %23 = hlfir.designate %13#0 (%arg2, %arg3)  typeparams %c10 : (!fir.box<!fir.array<?x?x!fir.char<1,10>>>, index, index, index) -> !fir.ref<!fir.char<1,10>>
@@ -2179,7 +2104,7 @@ func.func @_QPeoshift17c(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fi
     %25 = hlfir.concat %23, %24 len %c20 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>, index) -> !hlfir.expr<!fir.char<1,20>>
     hlfir.yield_element %25 : !hlfir.expr<!fir.char<1,20>>
   }
-  %15:2 = hlfir.declare %1#0 {uniq_name = "_QFeoshift17cFcharc_boundaryEn"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %15:2 = hlfir.declare %1#0 uniq_name("_QFeoshift17cFcharc_boundaryEn") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
   %16 = fir.load %15#0 : !fir.ref<i32>
   %17 = fir.convert %16 : (i32) -> index
   %18 = arith.cmpi sgt, %17, %c0 : index
@@ -2216,14 +2141,14 @@ func.func @_QPeoshift1d(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
   %c2_i32 = arith.constant 2 : i32
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1:2 = hlfir.declare %arg0 dummy_scope %0 {uniq_name = "_QFeoshift1dEn"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  %2:2 = hlfir.declare %arg2 dummy_scope %0 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFeoshift1dEboundary"} : (!fir.ref<!fir.type<_QMeoshift_typesTt>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMeoshift_typesTt>>, !fir.ref<!fir.type<_QMeoshift_typesTt>>)
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QFeoshift1dEn") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  %2:2 = hlfir.declare %arg2 dummy_scope %0 uniq_name("_QFeoshift1dEboundary") fortran_attrs<optional> : (!fir.ref<!fir.type<_QMeoshift_typesTt>>, !fir.dscope) -> (!fir.ref<!fir.type<_QMeoshift_typesTt>>, !fir.ref<!fir.type<_QMeoshift_typesTt>>)
   %3 = fir.load %1#0 : !fir.ref<i32>
   %4 = fir.convert %3 : (i32) -> index
   %5 = arith.cmpi sgt, %4, %c0 : index
   %6 = arith.select %5, %4, %c0 : index
   %7 = fir.shape %6 : (index) -> !fir.shape<1>
-  %8:2 = hlfir.declare %arg1(%7) dummy_scope %0 {uniq_name = "_QFeoshift1dEarray"} : (!fir.ref<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>, !fir.ref<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>)
+  %8:2 = hlfir.declare %arg1(%7) dummy_scope %0 uniq_name("_QFeoshift1dEarray") : (!fir.ref<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>, !fir.ref<!fir.array<?x!fir.type<_QMeoshift_typesTt>>>)
   %9 = fir.is_present %2#0 : (!fir.ref<!fir.type<_QMeoshift_typesTt>>) -> i1
   %10 = fir.embox %2#0 : (!fir.ref<!fir.type<_QMeoshift_typesTt>>) -> !fir.box<!fir.type<_QMeoshift_typesTt>>
   %11 = fir.absent !fir.box<!fir.type<_QMeoshift_typesTt>>
@@ -2235,3 +2160,37 @@ func.func @_QPeoshift1d(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 }
 // CHECK-LABEL:   func.func @_QPeoshift1d(
 // CHECK: hlfir.eoshift
+
+// ! Test CLASS(*) (unlimited polymorphic) array.
+// ! Since unlimited polymorphic arrays can dynamically hold derived types
+// ! and have runtime-determined types, EOSHIFT simplification must be skipped
+// ! (bail-out).
+// CHECK-LABEL:   func.func @_QQmain_eoshift_unlimited_poly(
+// CHECK:           hlfir.eoshift
+func.func @_QQmain_eoshift_unlimited_poly(
+    %arg0: !fir.class<!fir.ptr<!fir.array<?x?x?xnone>>> {fir.bindc_name = "b1"},
+    %arg1: !fir.class<!fir.ptr<none>> {fir.bindc_name = "boundval"}) {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QQmainEb1") fortran_attrs<pointer> : (!fir.class<!fir.ptr<!fir.array<?x?x?xnone>>>, !fir.dscope) -> (!fir.class<!fir.array<?x?x?xnone>>, !fir.class<!fir.array<?x?x?xnone>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QQmainEboundval") fortran_attrs<pointer> : (!fir.class<!fir.ptr<none>>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+  %4 = hlfir.eoshift %1#0 %c1_i32 boundary %2#0 dim %c1_i32 : (!fir.class<!fir.array<?x?x?xnone>>, i32, !fir.class<none>, i32) -> !hlfir.expr<?x?x?xnone?>
+  hlfir.destroy %4 : !hlfir.expr<?x?x?xnone?>
+  return
+}
+
+// ! Test CLASS(T) (bounded polymorphic) array.
+// ! Bounded polymorphic arrays also bail out.
+// CHECK-LABEL:   func.func @_QQmain_eoshift_bounded_poly(
+// CHECK:           hlfir.eoshift
+func.func @_QQmain_eoshift_bounded_poly(
+    %arg0: !fir.class<!fir.ptr<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>> {fir.bindc_name = "b1"},
+    %arg1: !fir.class<!fir.ptr<!fir.type<_QMmTbase{i:i32}>>> {fir.bindc_name = "boundval"}) {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 uniq_name("_QQmainEb1_bounded") fortran_attrs<pointer> : (!fir.class<!fir.ptr<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>>, !fir.dscope) -> (!fir.class<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>, !fir.class<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 uniq_name("_QQmainEboundval_bounded") fortran_attrs<pointer> : (!fir.class<!fir.ptr<!fir.type<_QMmTbase{i:i32}>>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmTbase{i:i32}>>, !fir.class<!fir.type<_QMmTbase{i:i32}>>)
+  %4 = hlfir.eoshift %1#0 %c1_i32 boundary %2#0 dim %c1_i32 : (!fir.class<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>, i32, !fir.class<!fir.type<_QMmTbase{i:i32}>>, i32) -> !hlfir.expr<?x?x?x!fir.type<_QMmTbase{i:i32}>?>
+  hlfir.destroy %4 : !hlfir.expr<?x?x?x!fir.type<_QMmTbase{i:i32}>?>
+  return
+}

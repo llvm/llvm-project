@@ -1131,7 +1131,7 @@ decomposeWinogradOutputTransformHelper(RewriterBase &rewriter,
 class DecomposeWinogradFilterTransform final
     : public OpRewritePattern<linalg::WinogradFilterTransformOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(linalg::WinogradFilterTransformOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1143,7 +1143,7 @@ public:
 class DecomposeWinogradInputTransform final
     : public OpRewritePattern<linalg::WinogradInputTransformOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(linalg::WinogradInputTransformOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1155,7 +1155,7 @@ public:
 class DecomposeWinogradOutputTransform final
     : public OpRewritePattern<linalg::WinogradOutputTransformOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(linalg::WinogradOutputTransformOp op,
                                 PatternRewriter &rewriter) const override {
@@ -1167,7 +1167,7 @@ public:
 class WinogradConv2DNhwcFhwc final
     : public OpRewritePattern<linalg::Conv2DNhwcFhwcOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   WinogradConv2DNhwcFhwc(mlir::MLIRContext *context, WinogradConv2DFmr fmr)
       : OpRewritePattern(context), fmr(fmr) {}
 

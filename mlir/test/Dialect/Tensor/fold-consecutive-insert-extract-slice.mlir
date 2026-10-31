@@ -1,3 +1,6 @@
+// https://github.com/llvm/llvm-project/issues/124541
+// XFAIL: target-x86
+
 // RUN: mlir-opt -split-input-file -test-tensor-transform-patterns=test-fold-consecutive-insert-extract-slice -canonicalize -mlir-print-local-scope %s | FileCheck %s
 
 func.func @extract_slice_same_rank(

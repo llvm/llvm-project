@@ -126,7 +126,7 @@ public:
   IRInserter(ScopAnnotator &A) : Annotator(&A) {}
 
   void InsertHelper(llvm::Instruction *I, const llvm::Twine &Name,
-                    llvm::BasicBlock::iterator InsertPt) const override {
+                    llvm::BasicBlock::iterator InsertPt) const {
     llvm::IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
     if (Annotator)
       Annotator->annotate(I);

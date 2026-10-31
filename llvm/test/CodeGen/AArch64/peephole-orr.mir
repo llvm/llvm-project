@@ -90,3 +90,44 @@ body: |
   bb.2:
     $w0 = COPY %5
     RET_ReallyLR implicit $w0
+...
+---
+name: orr_physreg_dst
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: orr_physreg_dst
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY $w1
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $w0 = ORRWrs $wzr, [[ADDWrr]], 0
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:gpr32 = COPY $w0
+    %1:gpr32 = COPY $w1
+    %2:gpr32 = ADDWrr %0, %1
+    $w0 = ORRWrs $wzr, %2, 0
+    RET_ReallyLR implicit $w0
+...
+---
+name: orr_physreg_src
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: orr_physreg_src
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $w2 = ADDWrr $w0, $w1
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, $w2, 0
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
+    ; CHECK-NEXT: $x0 = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    $w2 = ADDWrr $w0, $w1
+    %3:gpr32 = ORRWrs $wzr, $w2, 0
+    %4:gpr64 = SUBREG_TO_REG %3, %subreg.sub_32
+    $x0 = COPY %4
+    RET_ReallyLR implicit $x0
+...

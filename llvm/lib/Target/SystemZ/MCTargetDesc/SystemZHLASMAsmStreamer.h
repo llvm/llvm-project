@@ -72,6 +72,8 @@ public:
   void AddComment(const Twine &T, bool EOL = true) override;
 
   void emitBytes(StringRef Data) override;
+  void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                SMLoc Loc = SMLoc()) override;
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
                        unsigned ValueSize, unsigned MaxBytesToEmit);
@@ -101,7 +103,7 @@ public:
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
 
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                        Align ByteAlignment) override {}
+                        Align ByteAlignment) override;
 
   void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
                     uint64_t Size = 0, Align ByteAlignment = Align(1),

@@ -117,8 +117,7 @@ define void @test7(i32 %n.u) nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    move.l (4,%sp), %d0
 ; CHECK-NEXT:    add.l #-1, %d0
-; CHECK-NEXT:    move.l %d0, %d1
-; CHECK-NEXT:    sub.l #12, %d1
+; CHECK-NEXT:    cmpi.l #12, %d0
 ; CHECK-NEXT:    bhi .LBB6_12
 ; CHECK-NEXT:  ; %bb.1: ; %entry
 ; CHECK-NEXT:    lsl.l #2, %d0

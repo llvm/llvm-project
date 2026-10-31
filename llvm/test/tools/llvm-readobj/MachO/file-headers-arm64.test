@@ -13,6 +13,11 @@
 # RUN: llvm-readobj -h %t.arm64e \
 # RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64e --check-prefix=ARM64 -DSUBTYPE="CPU_SUBTYPE_ARM64E (0x2)"
 
+## Check subtype Arm64E.X1:
+# RUN: yaml2obj %s -o %t.arm64e.x1 -DSUBTYPE=0xC
+# RUN: llvm-readobj -h %t.arm64e.x1 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.arm64e.x1 --check-prefix=ARM64 -DSUBTYPE="CPU_SUBTYPE_ARM64E_X1 (0xC)"
+
 #      ARM64:File: [[FILE]]
 # ARM64-NEXT:Format: Mach-O arm64
 # ARM64-NEXT:Arch: aarch64
@@ -21,6 +26,7 @@
 # ARM64-NEXT:  Magic: Magic64 (0xFEEDFACF)
 # ARM64-NEXT:  CpuType: Arm64 (0x100000C)
 # ARM64-NEXT:  CpuSubType: [[SUBTYPE]]
+# ARM64-NEXT:  CpuCapabilities: 0x0
 # ARM64-NEXT:  FileType: Relocatable (0x1)
 # ARM64-NEXT:  NumOfLoadCommands: 0
 # ARM64-NEXT:  SizeOfLoadCommands: 0

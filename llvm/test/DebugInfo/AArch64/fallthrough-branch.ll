@@ -1,4 +1,4 @@
-; RUN: llc -O0 -stop-before=livedebugvalues < %s | FileCheck %s
+; RUN: llc -O0 -stop-before=live-debug-values < %s | FileCheck %s
 
 ; ModuleID = '/tmp/t.o'
 source_filename = "/tmp/t.o"

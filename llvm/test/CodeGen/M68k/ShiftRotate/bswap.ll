@@ -9,7 +9,9 @@ define zeroext i16 @bswap16(i16 zeroext %a) nounwind {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    move.w (6,%sp), %d0
 ; CHECK-NEXT:    rol.w #8, %d0
-; CHECK-NEXT:    and.l #65535, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    swap %d0
 ; CHECK-NEXT:    rts
   %1 = tail call i16 @llvm.bswap.i16(i16 %a)
   ret i16 %1

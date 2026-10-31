@@ -35,13 +35,12 @@ int test_too_many_args(bool p0, int t0, int f0, int g0) {
   return __builtin_hlsl_select(p0, t0, f0, g0); // expected-error{{too many arguments to function call, expected 3, have 4}}
 }
 
-// not a bool or a vector of bool. should be 2 errors.
 int test_select_builtin_first_arg_wrong_type1(int p0, int t0, int f0) {
-  return __builtin_hlsl_select(p0, t0, f0); // expected-error{{invalid operand of type 'int' where 'bool' or a vector of such type is required}}
+  return __builtin_hlsl_select(p0, t0, f0); // expected-error{{invalid operand of type 'int' where 'bool' or a vector or matrix of such type is required}}
 }
 
 int test_select_builtin_first_arg_wrong_type2(int1 p0, int t0, int f0) {
-  return __builtin_hlsl_select(p0, t0, f0); // expected-error{{invalid operand of type 'int1' (aka 'vector<int, 1>') where 'bool' or a vector of such type is required}}
+  return __builtin_hlsl_select(p0, t0, f0); // expected-error{{invalid operand of type 'int1' (aka 'vector<int, 1>') where 'bool' or a vector or matrix of such type is required}}
 }
 
 // if a bool last 2 args are of same type

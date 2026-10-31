@@ -1,12 +1,9 @@
 # Lifetime Safety Analysis
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 
-Clang Lifetime Safety Analysis is a C++ language extension which warns about
+Clang Lifetime Safety Analysis is a C and C++ language extension which warns about
 potential dangling pointer defects in code. The analysis aims to detect
 when a pointer, reference or view type (such as `std::string_view`) refers to an object
 that is no longer alive, a condition that leads to use-after-free bugs and
@@ -25,8 +22,8 @@ This is compile-time analysis; there is no run-time overhead.
 It tracks pointer validity through intra-procedural data-flow analysis. While it does
 not require lifetime annotations to get started, in their absence, the analysis
 treats function calls optimistically, assuming no lifetime effects, thereby potentially missing dangling pointer issues. As more functions are annotated
-with attributes like [clang::lifetimebound](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound), [gsl::Owner](https://clang.llvm.org/docs/AttributeReference.html#gsl-owner), and
-[gsl::Pointer](https://clang.llvm.org/docs/AttributeReference.html#gsl-pointer), the analysis can see through these lifetime contracts and enforce
+with attributes like [clang::lifetimebound](AttributeReference.md#lifetimebound), [gsl::Owner](AttributeReference.md#owner), and
+[gsl::Pointer](AttributeReference.md#pointer), the analysis can see through these lifetime contracts and enforce
 lifetime safety at call sites with higher accuracy. This approach supports
 gradual adoption in existing codebases.
 
@@ -60,6 +57,24 @@ The analysis flags the assignment `v = s` as defective because `s` is
 destroyed while `v` is still alive and points to `s`, and adds a note
 to where `v` is used after `s` has been destroyed.
 
+```c
+#include <stdio.h>
+void simple_dangle() {
+  int *ptr = NULL;
+  {
+    int i = 5;
+    ptr = &i;   // warning: local variable 'i' does not live long enough
+  }             // note: local variable 'i' is destroyed here
+  *ptr = 6;     // note: later used here
+}
+```
+
+This example demonstrates a simples use-after-scope bug in C. The `ptr` pointer
+is set to `NULL` in the outer scope. In the inner scope ptr points to `i`, but
+its lifetime ends at the end of the inner block which causes `ptr` to dangle
+when it is set to 6.
+
+
 ### Running The Analysis
 
 To run the analysis, compile with the `-Wlifetime-safety-permissive` flag, e.g.
@@ -69,7 +84,9 @@ clang -c -Wlifetime-safety-permissive example.cpp
 ```
 
 This flag enables a core set of lifetime safety checks. For more fine-grained
-control over warnings, see {ref}`warning_flags`.
+control over warnings, see {ref}`warning_flags`. The analysis runs for both
+C and C++ by default. Use `-fno-lifetime-safety-c` to disable the analysis
+for C code.
 
 ## Lifetime Annotations
 
@@ -125,8 +142,8 @@ void test() {
 Without these annotations, the analysis may not be able to determine whether a
 type is owning or borrowing, which can affect analysis precision. For more
 details on these attributes, see the Clang attribute reference for
-[gsl::Owner](https://clang.llvm.org/docs/AttributeReference.html#gsl-owner) and
-[gsl::Pointer](https://clang.llvm.org/docs/AttributeReference.html#gsl-pointer).
+[gsl::Owner](AttributeReference.md#owner) and
+[gsl::Pointer](AttributeReference.md#pointer).
 
 :::{note}
 Types with mixed ownership semantics (owning some data while holding views to
@@ -194,7 +211,7 @@ void test() {
 }
 ```
 
-For more details, see [lifetimebound](https://clang.llvm.org/docs/AttributeReference.html#lifetimebound).
+For more details, see [lifetimebound](AttributeReference.md#lifetimebound).
 
 ### NoEscape
 
@@ -206,25 +223,9 @@ parameter to escape its scope, for example, by returning it or assigning it to
 a field or global variable. This is useful for parameters passed to callbacks
 or visitors that are only used during the call and not stored.
 
-For more details, see [noescape](https://clang.llvm.org/docs/AttributeReference.html#noescape).
+For more details, see [noescape](AttributeReference.md#noescape).
 
 ## Checks Performed
-
-```{raw} html
-<style>
-/* Align text to left and add red/green colors */
-table.colored-code-table td, table.colored-code-table th { text-align: left !important; }
-table.colored-code-table td:first-child, table.colored-code-table th:first-child { background-color: #ffeaea !important; }
-table.colored-code-table td:nth-child(2), table.colored-code-table th:nth-child(2) { background-color: #eafaea !important; }
-table.colored-code-table td .highlight, table.colored-code-table td pre { background-color: transparent !important; border: none !important; }
-
-div.bad-code { background-color: #ffeaea !important; padding: 5px; border-left: 4px solid #ff6b6b; text-align: left !important; }
-div.bad-code .highlight, div.bad-code pre { background-color: transparent !important; border: none !important; }
-
-div.good-code { background-color: #eafaea !important; padding: 5px; border-left: 4px solid #51cf66; text-align: left !important; }
-div.good-code .highlight, div.good-code pre { background-color: transparent !important; border: none !important; }
-</style>
-```
 
 ### Use after scope
 
@@ -386,6 +387,8 @@ iterators, pointers and references to its elements.
 
 :::{note}
 Invalidation checking is highly experimental and may produce false positives.
+It is not enabled by `-Wlifetime-safety`; use
+`-Wlifetime-safety-experimental-invalidation` or `-Wlifetime-safety-experimental`.
 :::
 
 ````{list-table}
@@ -499,12 +502,11 @@ enables only the high-confidence subset of these checks.
     - `-Wlifetime-safety-return-stack-addr`: Warns when a function returns a pointer or reference to one of its local stack variables.
     - `-Wlifetime-safety-dangling-field`: Warns when a class field is assigned a pointer to a temporary or stack variable whose lifetime is shorter than the class instance.
 
-  - `-Wlifetime-safety-strict`: Enables stricter and experimental checks. These may produce false positives in code that uses move semantics heavily, as the analysis might conservatively assume a use-after-free even if ownership was transferred.
+  - `-Wlifetime-safety-strict`: Enables stricter checks. These may produce false positives in code that uses move semantics heavily, as the analysis might conservatively assume a use-after-free even if ownership was transferred.
 
     - `-Wlifetime-safety-use-after-scope-moved`: Same as `-Wlifetime-safety-use-after-scope` but for cases where the variable may have been moved from before its destruction.
     - `-Wlifetime-safety-return-stack-addr-moved`: Same as `-Wlifetime-safety-return-stack-addr` but for cases where the variable may have been moved from.
     - `-Wlifetime-safety-dangling-field-moved`: Same as `-Wlifetime-safety-dangling-field` but for cases where the variable may have been moved from.
-    - `-Wlifetime-safety-invalidation`: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation or explicit destruction (e.g., `std::unique_ptr::reset`, `std::destroy_at`) (Experimental).
 
 - `-Wlifetime-safety-suggestions`: Enables suggestions to add `[[clang::lifetimebound]]` to function parameters and `this` parameters.
 
@@ -517,6 +519,11 @@ enables only the high-confidence subset of these checks.
 
   - `-Wlifetime-safety-noescape`: Warns when a parameter marked with `[[clang::noescape]]` escapes the function.
   - `-Wlifetime-safety-lifetimebound-violation`: Warns when the analysis cannot verify that the return value can be lifetime bound to a parameter marked with `[[clang::lifetimebound]]`.
+
+- `-Wlifetime-safety-experimental`: Enables experimental checks. These may have known false positives and their behavior may change. They are not enabled by `-Wlifetime-safety-all`.
+
+  - `-Wlifetime-safety-experimental-invalidation`: Warns when a pointer, reference, iterator or view is used after an operation that may invalidate it, such as container mutation or explicit destruction (e.g., `std::unique_ptr::reset`, `std::destroy_at`).
+  - `-Wlifetime-safety-experimental-field-origin-escape`: Warns when a member function returns a value derived from a pointer, reference, or view field rather than from `*this` (e.g., `Span::data()`). Owned pointer fields (e.g., `Vector::data()`) are also reported; mark such methods `[[clang::lifetimebound]]` to silence the warning.
 
 ## Limitations
 

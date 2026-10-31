@@ -23,7 +23,6 @@ def ControlFlow_Dialect : Dialect {
   let name = "cf";
   let cppNamespace = "::mlir::cf";
   let dependentDialects = ["arith::ArithDialect"];
-  let useStrictPropertiesInAssemblyFormat = 1;
   let description = [{
     This dialect contains low-level, i.e. non-region based, control flow
     constructs. These constructs generally represent control flow directly
@@ -264,7 +263,7 @@ def SwitchOp : CF_Op<"switch",
   }];
 
   let arguments = (ins
-    AnyInteger:$flag,
+    AnySignlessInteger:$flag,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,

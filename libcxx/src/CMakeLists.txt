@@ -6,9 +6,15 @@ set(LIBCXX_SOURCES
   call_once.cpp
   charconv.cpp
   chrono.cpp
+  debugging.cpp
   error_category.cpp
   exception.cpp
   expected.cpp
+  debugging/aix.ipp
+  debugging/bsd_like.ipp
+  debugging/default.ipp
+  debugging/linux.ipp
+  debugging/windows.ipp
   filesystem/filesystem_clock.cpp
   filesystem/filesystem_error.cpp
   filesystem/path_parser.h
@@ -307,6 +313,12 @@ set(LIBCXX_EXPERIMENTAL_SOURCES
 if (LIBCXX_PSTL_BACKEND STREQUAL "libdispatch")
   list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
     pstl/libdispatch.cpp
+    )
+endif()
+
+if (LIBCXX_PSTL_BACKEND STREQUAL "statpart")
+  list(APPEND LIBCXX_EXPERIMENTAL_SOURCES
+    pstl/statpart.cpp
     )
 endif()
 

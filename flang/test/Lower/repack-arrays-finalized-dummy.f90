@@ -17,7 +17,7 @@ module m
   end interface
 contains
 ! CHECK-LABEL:   func.func @_QMmPtest(
-! CHECK-SAME:                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.class<!fir.array<?x!fir.type<_QMmTt>>> {fir.bindc_name = "x"}) {
+! CHECK-SAME:                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.class<!fir.array<?x!fir.type<_QMmTt>>> {fir.bindc_name = "x", fir.fortran_attrs = #fir.var_attrs<intent_out>}) {
   subroutine test(x)
     class(t), intent(out) :: x(:)
 ! CHECK:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_0]] heap whole : (!fir.class<!fir.array<?x!fir.type<_QMmTt>>>) -> !fir.class<!fir.array<?x!fir.type<_QMmTt>>>

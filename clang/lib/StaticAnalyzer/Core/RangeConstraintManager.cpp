@@ -323,17 +323,17 @@ RangeSet RangeSet::Factory::getRangeSet(Range From) {
 
 RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
   llvm::FoldingSetNodeID ID;
-  void *InsertPos;
+  llvm::FoldingSetInsertToken InsertToken;
 
   From.Profile(ID);
-  ContainerType *Result = Cache.FindNodeOrInsertPos(ID, InsertPos);
+  ContainerType *Result = Cache.lookup(ID, InsertToken);
 
   if (!Result) {
     // It is cheaper to fully construct the resulting range on stack
     // and move it to the freshly allocated buffer if we don't have
     // a set like this already.
     Result = construct(std::move(From));
-    Cache.InsertNode(Result, InsertPos);
+    Cache.insert(Result, InsertToken);
   }
 
   return Result;
@@ -2062,7 +2062,7 @@ private:
 /// Derived class can control which types we handle by defining methods of the
 /// following form:
 ///
-///   bool handle${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
+///   bool assign${SYMBOL}To${CONSTRAINT}(const SYMBOL *Sym,
 ///                                       CONSTRAINT Constraint);
 ///
 /// where SYMBOL is the type of the symbol (e.g. SymSymExpr, SymbolCast, etc.)
@@ -2304,7 +2304,6 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   for (std::pair<EquivalenceClass, ClassSet> DisequalityEntry :
        DisequalityInfo) {
     EquivalenceClass Class = DisequalityEntry.first;
-    ClassSet DisequalClasses = DisequalityEntry.second;
     State = EquivalenceClass::simplify(Builder, RangeFactory, State, Class);
     if (!State)
       return false;
@@ -2985,7 +2984,6 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   SymbolSet::Factory &SetFactory = State->get_context<SymbolSet>();
 
   ConstraintRangeTy Constraints = State->get<ConstraintRange>();
-  ConstraintRangeTy NewConstraints = Constraints;
   ConstraintRangeTy::Factory &ConstraintFactory =
       State->get_context<ConstraintRange>();
 

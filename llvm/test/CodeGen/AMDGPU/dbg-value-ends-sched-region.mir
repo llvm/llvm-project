@@ -90,7 +90,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead [[COPY7:%[0-9]+]]:sreg_64 = COPY $exec
   ; CHECK-NEXT:   dead [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[COPY1]], 0, 0, implicit $exec :: (load (s128), addrspace 1)
-  ; CHECK-NEXT:   DBG_VALUE [[GLOBAL_LOAD_DWORDX4_]], $noreg, <0x{{[0-9a-f]+}}>, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !DILocation(line: 0, scope: <0x{{[0-9a-f]+}}>)
+  ; CHECK-NEXT:   DBG_VALUE [[GLOBAL_LOAD_DWORDX4_]], $noreg, !5, !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef), debug-location !DILocation(line: 0, scope: !6)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.3(0x40000000), %bb.1(0x40000000)

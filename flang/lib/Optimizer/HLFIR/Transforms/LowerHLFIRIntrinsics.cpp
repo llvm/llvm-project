@@ -512,38 +512,6 @@ class ArrayShiftOpConversion : public HlfirIntrinsicConversion<T> {
   }
 };
 
-class PackOpConversion : public HlfirIntrinsicConversion<hlfir::PackOp> {
-  using HlfirIntrinsicConversion<hlfir::PackOp>::HlfirIntrinsicConversion;
-
-  llvm::LogicalResult
-  matchAndRewrite(hlfir::PackOp pack,
-                  mlir::PatternRewriter &rewriter) const override {
-    fir::FirOpBuilder builder{rewriter, pack.getOperation()};
-    const mlir::Location &loc = pack->getLoc();
-
-    llvm::SmallVector<IntrinsicArgument, 3> inArgs;
-    mlir::Value array = pack.getArray();
-    inArgs.push_back({array, array.getType()});
-    mlir::Value mask = pack.getMask();
-    inArgs.push_back({mask, mask.getType()});
-    mlir::Type noneType = builder.getNoneType();
-    mlir::Value vector = pack.getVector();
-    inArgs.push_back({vector, vector ? vector.getType() : noneType});
-
-    auto *argLowering = fir::getIntrinsicArgumentLowering("pack");
-    llvm::SmallVector<fir::ExtendedValue, 3> args =
-        lowerArguments(pack, inArgs, rewriter, argLowering);
-
-    mlir::Type scalarResultType = hlfir::getFortranElementType(pack.getType());
-
-    auto [resultExv, mustBeFreed] =
-        fir::genIntrinsicCall(builder, loc, "pack", scalarResultType, args);
-
-    processReturnValue(pack, resultExv, mustBeFreed, builder, rewriter);
-    return mlir::success();
-  }
-};
-
 class ReshapeOpConversion : public HlfirIntrinsicConversion<hlfir::ReshapeOp> {
   using HlfirIntrinsicConversion<hlfir::ReshapeOp>::HlfirIntrinsicConversion;
 
@@ -687,15 +655,14 @@ public:
     mlir::ModuleOp module = this->getOperation();
     mlir::MLIRContext *context = &getContext();
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<MatmulOpConversion, MatmulTransposeOpConversion,
-                    AllOpConversion, AnyOpConversion, SumOpConversion,
-                    ProductOpConversion, TransposeOpConversion,
-                    CountOpConversion, DotProductOpConversion,
-                    MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
-                    MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
-                    ArrayShiftOpConversion<hlfir::EOShiftOp>, PackOpConversion,
-                    ReshapeOpConversion, CmpCharOpConversion,
-                    CharTrimOpConversion, IndexOpConversion>(context);
+    patterns.insert<
+        MatmulOpConversion, MatmulTransposeOpConversion, AllOpConversion,
+        AnyOpConversion, SumOpConversion, ProductOpConversion,
+        TransposeOpConversion, CountOpConversion, DotProductOpConversion,
+        MaxvalOpConversion, MinvalOpConversion, MinlocOpConversion,
+        MaxlocOpConversion, ArrayShiftOpConversion<hlfir::CShiftOp>,
+        ArrayShiftOpConversion<hlfir::EOShiftOp>, ReshapeOpConversion,
+        CmpCharOpConversion, CharTrimOpConversion, IndexOpConversion>(context);
 
     // While conceptually this pass is performing dialect conversion, we use
     // pattern rewrites here instead of dialect conversion because this pass

@@ -206,15 +206,6 @@ const MCExpr *SIProgramInfo::getComputePGMRSrc2(const GCNSubtarget &ST,
   return MCBinaryExpr::createOr(ScratchEnable, RegExpr, Ctx);
 }
 
-const MCExpr *SIProgramInfo::getPGMRSrc2(CallingConv::ID CC,
-                                         const GCNSubtarget &ST,
-                                         MCContext &Ctx) const {
-  if (AMDGPU::isCompute(CC))
-    return getComputePGMRSrc2(ST, Ctx);
-
-  return MCConstantExpr::create(0, Ctx);
-}
-
 uint64_t SIProgramInfo::getFunctionCodeSize(const MachineFunction &MF) {
   if (CodeSizeInBytes.has_value())
     return *CodeSizeInBytes;

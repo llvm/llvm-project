@@ -1,0 +1,74 @@
+## Check that a DWARFv5 unit that pools no address gets an empty .debug_addr
+## table for its DW_AT_addr_base to point at.
+
+# RUN: yaml2obj %s -o %t.o
+
+# RUN: llvm-dwarfutil %t.o %t1
+# RUN: llvm-dwarfdump --verify %t1 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump --debug-info --debug-addr %t1 | FileCheck %s
+
+# RUN: llvm-dwarfutil --linker parallel %t.o %t2
+# RUN: llvm-dwarfdump --verify %t2 | FileCheck %s --check-prefix=VERIFY
+# RUN: llvm-dwarfdump --debug-info --debug-addr %t2 | FileCheck %s
+
+# VERIFY: No errors.
+
+# CHECK:      DW_TAG_compile_unit
+# CHECK:        DW_AT_addr_base (0x00000008)
+# CHECK:      .debug_addr contents:
+# CHECK-NEXT: Address table header: length = 0x00000004, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+# CHECK-NOT:  Addrs:
+
+## Only DW_FORM_addr addresses and no DW_AT_ranges, so nothing is pooled.
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1130
+    Size:            0x10
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addr
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+  debug_info:
+    - Version:  5
+      UnitType: DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - CStr: CU1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x1130
+            - Value: 0x10
+        - AbbrCode: 0
+...

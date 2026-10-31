@@ -15,6 +15,9 @@ void matrix_var_dimensions(int Rows, unsigned Columns, char C) {
   using matrix7_t = int __attribute__((matrix_type(char, 0)));    // expected-error{{expected '(' for function-style cast or type construction}}
   using matrix8_t = int __attribute__((matrix_type(1048576, 1))); // expected-error{{matrix row size too large}}
   using matrix8_t = int __attribute__((matrix_type(1048576, 1048576))); // expected-error{{matrix row and column size too large}}
+  using matrix9_t = int __attribute__((matrix_type()));           // expected-error{{'matrix_type' attribute requires exactly 2 arguments}}
+  using matrix10_t = int __attribute__((matrix_type(1)));         // expected-error{{'matrix_type' attribute requires exactly 2 arguments}}
+  using matrix11_t = int __attribute__((matrix_type(1, 2, 3)));   // expected-error{{'matrix_type' attribute requires exactly 2 arguments}}
 }
 
 struct S1 {};
@@ -38,4 +41,10 @@ void matrix_unsupported_bit_int() {
   using m5 = _BitInt(8) __attribute__((matrix_type(4, 4)));
   using m6 = _BitInt(64) __attribute__((matrix_type(4, 4)));
   using m7 = _BitInt(256) __attribute__((matrix_type(4, 4)));
+}
+
+void matrix_logical_op() {
+  matrix_int_t a;
+  matrix_int_t b;
+  matrix_int_t c = a && b;  // expected-error{{matix logical operations are only supported for HLSL}}
 }

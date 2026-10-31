@@ -112,7 +112,7 @@ void llvm::PrintError(ArrayRef<SMLoc> ErrorLoc, const Twine &Msg) {
 }
 
 void llvm::PrintError(const char *Loc, const Twine &Msg) {
-  SrcMgr.PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Error, Msg);
+  PrintMessage(SMLoc::getFromPointer(Loc), SourceMgr::DK_Error, Msg);
 }
 
 // This method takes a Record and uses the source location

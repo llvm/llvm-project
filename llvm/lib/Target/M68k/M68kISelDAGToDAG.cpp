@@ -863,7 +863,6 @@ bool M68kDAGToDAGISel::SelectARID(SDNode *Parent, SDValue N, SDValue &Disp,
 static bool isAddressBase(const SDValue &N) {
   switch (N.getOpcode()) {
   case ISD::ADD:
-  case ISD::ADDC:
     return llvm::any_of(N.getNode()->ops(),
                         [](const SDUse &U) { return isAddressBase(U.get()); });
   case M68kISD::Wrapper:

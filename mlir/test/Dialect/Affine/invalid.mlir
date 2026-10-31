@@ -297,6 +297,30 @@ func.func @affine_parallel(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 // -----
 
+func.func @affine_parallel_maxs_unsigned() {
+  %0 = memref.alloc() : memref<100x100xui32>
+  //  expected-error@+1 {{result type cannot match reduction attribute}}
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("maxs") -> (ui32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xui32>
+    affine.yield %2 : ui32
+  }
+  return
+}
+
+// -----
+
+func.func @affine_parallel_minu_signed() {
+  %0 = memref.alloc() : memref<100x100xsi32>
+  //  expected-error@+1 {{result type cannot match reduction attribute}}
+  %1 = affine.parallel (%i, %j) = (0, 0) to (100, 100) step (10, 10) reduce ("minu") -> (si32) {
+    %2 = affine.load %0[%i, %j] : memref<100x100xsi32>
+    affine.yield %2 : si32
+  }
+  return
+}
+
+// -----
+
 func.func @no_upper_bound_affine_parallel() {
   // expected-error@+1 {{expected lower bound map to have at least one result}}
   affine.parallel (%arg2) = (max()) to (1) {

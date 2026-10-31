@@ -587,6 +587,22 @@ func.func @indirect_call_folding() {
   return
 }
 
+func.func @attributed_indirect_target(%arg: i32) -> i32 {
+  return %arg : i32
+}
+
+// CHECK-LABEL: func @attributed_indirect_call_folding
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @attributed_indirect_call_folding(%arg: i32) -> i32 {
+  // CHECK: %[[RESULT:.*]] = call @attributed_indirect_target(%[[ARG]])
+  // CHECK-SAME: <arg_attrs = [{test.arg}], res_attrs = [{test.res}]>
+  // CHECK-SAME: {test.discardable} : (i32) -> i32
+  %fn = constant @attributed_indirect_target : (i32) -> i32
+  %result = call_indirect %fn(%arg) arg_attrs = [{test.arg}],
+      res_attrs = [{test.res}] {test.discardable} : (i32) -> i32
+  return %result : i32
+}
+
 //
 // IMPORTANT NOTE: the operations in this test are exactly those produced by
 // lowering affine.apply affine_map<(i) -> (i mod 42)> to standard operations.  Please only

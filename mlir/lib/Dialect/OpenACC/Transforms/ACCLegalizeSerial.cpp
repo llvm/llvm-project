@@ -17,6 +17,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -105,6 +106,11 @@ class ACCLegalizeSerial
     : public mlir::acc::impl::ACCLegalizeSerialBase<ACCLegalizeSerial> {
 public:
   using ACCLegalizeSerialBase<ACCLegalizeSerial>::ACCLegalizeSerialBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCLegalizeSerialBase<ACCLegalizeSerial>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     MLIRContext *context = funcOp.getContext();
@@ -113,5 +119,4 @@ public:
     (void)applyPatternsGreedily(funcOp, std::move(patterns));
   }
 };
-
 } // namespace

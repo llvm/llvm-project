@@ -1,17 +1,17 @@
-add_custom_target(libc_sys_sendfile_unittests)
+add_libc_testsuite(libc-sys-sendfile-tests)
 
 add_subdirectory(testdata)
 
 add_libc_test(
   sendfile_test
   SUITE
-    libc_sys_sendfile_unittests
+    libc-sys-sendfile-tests
   SRCS
     sendfile_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.sendfile.sendfile
     libc.src.unistd.close

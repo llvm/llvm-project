@@ -1,5 +1,5 @@
 ;; Test callsite context graph generation for call graph with with MIBs
-;; that have pruned contexts that partially match multiple inlined
+;; that have trimmed contexts that partially match multiple inlined
 ;; callsite contexts, requiring duplication of context ids and nodes
 ;; while matching callsite nodes onto the graph. Also tests graph and IR
 ;; cloning.
@@ -44,7 +44,7 @@
 ;;
 ;; The code below was created by forcing inlining of C into both B and E.
 ;; Since both allocation contexts via C are cold, the matched memprof
-;; metadata has the context pruned above C's callsite. This requires
+;; metadata has the context trimmed above C's callsite. This requires
 ;; matching the stack node for C to callsites where it was inlined (i.e.
 ;; the callsites in B and E that have callsite metadata that includes C's).
 ;; It also requires duplication of that node in the graph as well as the
@@ -268,15 +268,15 @@ attributes #6 = { builtin }
 ; DUMP: 	ContextIds: 1 3 4
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[D2]] to Caller: [[E:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
 ; DUMP: 		Edge from Callee [[D2]] to Caller: [[C2:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 3
 ; DUMP: 		Edge from Callee [[D2]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 4
+; DUMP: 		Edge from Callee [[D2]] to Caller: [[E:0x[a-z0-9]+]] AllocTypes: Cold ContextIds: 1
 ; DUMP:         Clone of [[D]]
 
 ; REMARKS: created clone _Z1Dv.memprof.1
-; REMARKS: call in clone _Z1Ev assigned to call function clone _Z1Dv.memprof.1
 ; REMARKS: call in clone _Z1Cv assigned to call function clone _Z1Dv.memprof.1
 ; REMARKS: call in clone _Z1Bv assigned to call function clone _Z1Dv.memprof.1
+; REMARKS: call in clone _Z1Ev assigned to call function clone _Z1Dv.memprof.1
 ; REMARKS: call in clone _Z1Dv.memprof.1 marked with memprof allocation attribute cold
 ; REMARKS: call in clone _Z1Fv assigned to call function clone _Z1Dv
 ; REMARKS: call in clone _Z1Dv marked with memprof allocation attribute notcold

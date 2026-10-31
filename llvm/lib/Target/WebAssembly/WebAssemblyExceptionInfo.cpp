@@ -1,4 +1,4 @@
-//===--- WebAssemblyExceptionInfo.cpp - Exception Infomation --------------===//
+//===--- WebAssemblyExceptionInfo.cpp - Exception Information -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,9 +20,8 @@
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCAsmInfo.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -43,9 +42,9 @@ static void computeWEI(WebAssemblyExceptionInfo &WEI, MachineFunction &MF,
   LLVM_DEBUG(dbgs() << "********** Exception Info Calculation **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
-  if (MF.getTarget().getMCAsmInfo().getExceptionHandlingType() !=
-          ExceptionHandling::Wasm ||
-      !MF.getFunction().hasPersonalityFn())
+  if (!MF.getFunction().hasPersonalityFn() ||
+      MF.getFunction().getParent()->getExceptionModel() !=
+          ExceptionHandling::Wasm)
     return;
   MachineDominatorTree &MDT = GetMDT();
   MachineDominanceFrontier &MDF = GetMDF();
@@ -98,8 +97,8 @@ void WebAssemblyExceptionInfo::recalculate(
   }
 
   // Add BBs to exceptions' block set. This is a preparation to take out
-  // remaining incorect BBs from exceptions, because we need to iterate over BBs
-  // for each exception.
+  // remaining incorrect BBs from exceptions, because we need to iterate over
+  // BBs for each exception.
   for (auto *DomNode : post_order(&MDT)) {
     MachineBasicBlock *MBB = DomNode->getBlock();
     WebAssemblyException *WE = getExceptionFor(MBB);

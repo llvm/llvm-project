@@ -9,16 +9,13 @@ from pathlib import Path
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.types import (
-    AttachArgs,
-    ProcessEvent,
-    ProgressStartEvent,
-)
+from lldbsuite.test.tools.lldb_dap.types import *
 
-
-# Often fails on Arm Linux, but not specifically because it's Arm, something in
-# process scheduling can cause a massive (minutes) delay during this test.
-@skipIf(oslist=["linux"], archs=["arm$"])
+# Often fails on Arm/AArch64 Linux, but not specifically because of the
+# architecture, something in process scheduling can cause a massive (minutes)
+# delay during this test.
+# https://github.com/llvm/llvm-project/issues/137660
+@skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
 @requireNotWasm("no attach support")
 class TestDAP_attach(DAPTestCaseBase):
     SHARED_BUILD_TESTCASE = False
@@ -70,7 +67,7 @@ class TestDAP_attach(DAPTestCaseBase):
         self.assertEqual(process_event.body.systemProcessId, proc.pid)
         self.verify_pid(proc)
 
-    @expectedFailureWindowsAndNoLLDBServer
+    @skipIfWindowsAndNoLLDBServer # The in process plugin cannot support this feature.
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
@@ -117,6 +114,47 @@ class TestDAP_attach(DAPTestCaseBase):
         self.assertEqual(process_event.body.systemProcessId, proc.pid)
         self.verify_pid(proc)
 
+    def waitFor_attach_request(self, session):
+        """Sends a waitFor attach and returns it once it is waiting."""
+        program = self.build_for_attach()
+        init_response = session.initialize_sequence(session.initialize_args)
+        pending = session.send_request(AttachArgs(program=program, waitFor=True))
+        session.wait_for_event(
+            ProgressStartEvent,
+            until=lambda e: "Waiting to attach" in e.body.title,
+            after=init_response,
+            timeout_msg="Waiting for attach progress event.",
+        )
+        return pending
+
+    @expectedFailureWindows
+    @skipIfWindowsAndLLDBServer
+    def test_waitFor_cancel(self):
+        """
+        Tests that a cancel request ends an attach that is still waiting for
+        the process to launch.
+        """
+        session = self.create_session(disconnect_automatically=False)
+        pending = self.waitFor_attach_request(session)
+
+        session.send_request(CancelArgs(requestId=pending.seq)).result()
+
+        session.disconnect()
+        pending.error("expects attach response.")
+
+    @expectedFailureWindows
+    @skipIfWindowsAndLLDBServer
+    def test_waitFor_disconnect(self):
+        """
+        Tests that a disconnect request alone ends an attach that is still
+        waiting for the process to launch.
+        """
+        session = self.create_session(disconnect_automatically=False)
+        pending = self.waitFor_attach_request(session)
+
+        session.disconnect()
+        pending.error("expects attach response.")
+
     def test_attach_with_missing_session_debugger(self):
         """
         Test that attaching with only one of debuggerId/targetId specified
@@ -148,7 +186,7 @@ class TestDAP_attach(DAPTestCaseBase):
         pending = session.initialize_and_launch(
             AttachArgs(session=AttachArgs.Session(targetId=9999, debuggerId=9999))
         )
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
 
         resp = pending.error()
         message = self.expect_not_none(resp.body and resp.body.error)
@@ -159,3 +197,7 @@ class TestDAP_attach(DAPTestCaseBase):
             "Unable to find existing debugger" in error_msg
             or f"Expected debugger/target not found error, got: {error_msg}"
         )
+
+        # Verify we never received an initialized event.
+        with self.assertRaises(TimeoutError):
+            session.wait_for_earliest_event(InitializedEvent, timeout=0)

@@ -4,6 +4,7 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   ACCComputeLowering.cpp
   ACCRoutineLowering.cpp
   ACCRoutineToGPUFunc.cpp
+  ACCDeclareCtorDtorConversion.cpp
   ACCDeclareGPUModuleInsertion.cpp
   ACCEmitRemarksLoop.cpp
   ACCEmitRemarksPrivate.cpp
@@ -34,17 +35,19 @@ add_mlir_dialect_library(MLIROpenACCTransforms
   MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRArithUtils
   MLIRComplexDialect
   MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCUtils
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRGPUUtils
   MLIRIR
+  MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRNVVMDialect
   MLIRPass

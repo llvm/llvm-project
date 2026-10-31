@@ -170,7 +170,8 @@ public:
   DarwinSDKInfo(
       std::string FilePath, llvm::Triple::OSType OS,
       llvm::Triple::EnvironmentType Environment, VersionTuple Version,
-      StringRef DisplayName, VersionTuple MaximumDeploymentTarget,
+      StringRef DisplayName, VersionTuple DefaultDeploymentTarget,
+      VersionTuple MaximumDeploymentTarget,
       PlatformInfoStorageType PlatformInfos,
       llvm::DenseMap<OSEnvPair::StorageType,
                      std::optional<RelatedTargetVersionMapping>>
@@ -179,6 +180,7 @@ public:
                              std::optional<RelatedTargetVersionMapping>>())
       : FilePath(std::move(FilePath)), OS(OS), Environment(Environment),
         Version(Version), DisplayName(DisplayName),
+        DefaultDeploymentTarget(DefaultDeploymentTarget),
         MaximumDeploymentTarget(MaximumDeploymentTarget),
         PlatformInfos(std::move(PlatformInfos)),
         VersionMappings(std::move(VersionMappings)) {
@@ -202,6 +204,10 @@ public:
   llvm::Triple::EnvironmentType getEnvironment() const { return Environment; }
 
   const llvm::VersionTuple &getVersion() const { return Version; }
+
+  const llvm::VersionTuple &getDefaultDeploymentTarget() const {
+    return DefaultDeploymentTarget;
+  }
 
   const StringRef getDisplayName() const { return DisplayName; }
 
@@ -241,6 +247,7 @@ private:
   llvm::Triple::EnvironmentType Environment;
   VersionTuple Version;
   std::string DisplayName;
+  VersionTuple DefaultDeploymentTarget;
   VersionTuple MaximumDeploymentTarget;
   PlatformInfoStorageType PlatformInfos;
   // Need to wrap the value in an optional here as the value has to be default

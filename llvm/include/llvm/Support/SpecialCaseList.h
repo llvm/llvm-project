@@ -14,6 +14,7 @@
 
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 #include <string>
 #include <utility>
@@ -22,10 +23,6 @@
 namespace llvm {
 class MemoryBuffer;
 class StringRef;
-
-namespace vfs {
-class FileSystem;
-}
 
 /// This is a utility class used to parse user-provided text files with
 /// "special case lists" for code sanitizers. Such files are used to

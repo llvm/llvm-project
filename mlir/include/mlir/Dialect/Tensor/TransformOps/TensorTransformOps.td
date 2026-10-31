@@ -51,7 +51,7 @@ def ApplyFoldTensorEmptyPatternsOp : Op<Transform_Dialect,
   }];
 
   let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "oilist(`fold_single_use_only` `=` $fold_single_use_only) attr-dict";
 }
 
 def ApplyFoldTensorSubsetOpsPatternsOp : Op<Transform_Dialect,
@@ -161,7 +161,7 @@ def MakeLoopIndependentOp
   let arguments = (ins TransformHandleTypeInterface:$target, I64Attr:$num_loops);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat =
-      "$target attr-dict `:` functional-type($target, $transformed)";
+      "$target `num_loops` `=` $num_loops attr-dict `:` functional-type($target, $transformed)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

@@ -39,6 +39,7 @@
 // SPARC-SAME: {{^}}, gr712rc
 // SPARC-SAME: {{^}}, leon4
 // SPARC-SAME: {{^}}, gr740
+// SPARC-SAME: {{^}}, leon5
 // SPARC-SAME: {{$}}
 
 // RUN: not %clang_cc1 -triple sparcv9--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix SPARCV9

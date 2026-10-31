@@ -74,10 +74,10 @@ static LogicalResult bufferizeDestinationStyleOpInterface(
   // new op. Since the new op does not have any tensor results, it does not
   // return anything.
   assert(op->getNumRegions() == 1 && "expected that op has 1 region");
-  OperationState opState(op->getLoc(), op->getName(), newOperands, TypeRange{},
-                         op->getAttrs());
-  opState.addRegion();
-  Operation *newOp = Operation::create(opState);
+  Operation *newOp = Operation::create(
+      op->getLoc(), op->getName(), TypeRange{}, newOperands,
+      op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+      /*successors=*/{}, /*numRegions=*/1);
   newOp->getRegion(0).getBlocks().splice(newOp->getRegion(0).begin(),
                                          op->getRegion(0).getBlocks());
 
@@ -123,10 +123,12 @@ struct LinalgOpInterface
     if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
       return false;
 
-    // All index maps of tensors must be identity maps.
+    // All indexing maps of participating tensors must be the same
+    // permutation.
     SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
     assert(linalgOp->getNumOperands() == indexingMaps.size() &&
            "unexpected number of indexing maps");
+    AffineMap commonIndexingMap;
     for (auto [operand, map] :
          llvm::zip(linalgOp->getOpOperands(), indexingMaps)) {
       // Non-tensors do not participate in bufferization, so they can be
@@ -136,10 +138,11 @@ struct LinalgOpInterface
       // Only consider operands in `opOperands`.
       if (!llvm::is_contained(opOperands, &operand))
         continue;
-      // TODO: This could be generalized to other indexing maps. (All indexing
-      // must be the same.)
-      if (!map.isIdentity())
+      if (!map.isPermutation())
         return false;
+      if (commonIndexingMap && commonIndexingMap != map)
+        return false;
+      commonIndexingMap = map;
     }
 
     return true;
@@ -226,7 +229,8 @@ struct PackOpInterface
     llvm::append_range(operands, packOp.getInnerTiles());
 
     linalg::PackOp::create(rewriter, packOp.getLoc(), TypeRange{}, operands,
-                           op->getAttrs());
+                           packOp.getProperties(),
+                           packOp->getDiscardableAttrDictionary().getValue());
     replaceOpWithBufferizedValues(rewriter, op, *destBuffer);
     return success();
   }
@@ -263,8 +267,10 @@ struct UnPackOpInterface
     operands.push_back(*destBuffer);
     llvm::append_range(operands, unPackOp.getInnerTiles());
 
-    linalg::UnPackOp::create(rewriter, unPackOp.getLoc(), TypeRange{}, operands,
-                             op->getAttrs());
+    linalg::UnPackOp::create(
+        rewriter, unPackOp.getLoc(), TypeRange{}, operands,
+        unPackOp.getProperties(),
+        unPackOp->getDiscardableAttrDictionary().getValue());
     replaceOpWithBufferizedValues(rewriter, op, *destBuffer);
     return success();
   }

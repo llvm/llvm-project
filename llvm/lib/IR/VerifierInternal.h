@@ -219,12 +219,21 @@ void verifyAMDGPUModuleFlag(VerifierSupport &VS, const MDString *ID,
 
 void verifyAMDGPUFunctionMetadata(VerifierSupport &VS, const Function &F);
 
+void verifyAMDGPUGlobalVariable(VerifierSupport &VS, const GlobalVariable &GV);
+
 void verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI);
 
 void verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                CallBase &Call);
 
 bool isAMDGPUCallBrIntrinsic(Intrinsic::ID ID);
+
+//==============================================================================
+
+// NVVM-specific verification functions
+
+void verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
+                             CallBase &Call);
 
 //==============================================================================
 

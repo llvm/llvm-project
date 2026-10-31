@@ -10,4 +10,4 @@
 
 #include "src/math/modff128.h"
 
-LIST_MODF_TESTS(float128, LIBC_NAMESPACE::modff128)
+LIST_MODF_TESTS(Modff128, float128, LIBC_NAMESPACE::modff128)

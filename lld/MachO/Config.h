@@ -20,6 +20,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/TextAPI/Architecture.h"
 #include "llvm/TextAPI/Platform.h"
@@ -147,6 +148,7 @@ struct Configuration {
   bool dedupSymbolStrings = true;
   bool deadStripDuplicates = false;
   bool omitDebugInfo = false;
+  bool stripSwiftForceLoad = false;
   bool warnDylibInstallName = false;
   bool ignoreOptimizationHints = false;
   bool forceExactCpuSubtypeMatch = false;
@@ -223,6 +225,7 @@ struct Configuration {
   llvm::StringRef csProfilePath;
   bool pgoWarnMismatch;
   bool warnThinArchiveMissingMembers;
+  bool warnMissingSubsectionsViaSymbols = false;
   bool disableVerify;
   bool separateCstringLiteralSections;
   bool tailMergeStrings;
@@ -252,6 +255,7 @@ struct Configuration {
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::cl::LibraryOptionsContext libraryOptions;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
 
   bool zeroModTime = true;

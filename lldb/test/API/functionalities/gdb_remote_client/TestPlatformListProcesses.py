@@ -7,7 +7,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformListProcesses(GDBRemoteTestBase):
     @skipIfRemote
-    @skipIfWindows
     def test_get_all_processes(self):
         """Test listing processes"""
 

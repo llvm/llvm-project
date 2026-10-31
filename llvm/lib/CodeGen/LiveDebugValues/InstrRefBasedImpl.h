@@ -299,8 +299,12 @@ public:
 /// the value, and Boolean of whether or not it's indirect.
 class DbgValueProperties {
 public:
-  DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic)
-      : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic) {}
+  DbgValueProperties(const DIExpression *DIExpr, bool Indirect, bool IsVariadic,
+                     std::optional<unsigned> NumLocOps = std::nullopt)
+      : DIExpr(DIExpr), Indirect(Indirect), IsVariadic(IsVariadic),
+        NumLocOps(NumLocOps
+                      ? *NumLocOps
+                      : (IsVariadic ? DIExpr->getNumLocationOperands() : 1)) {}
 
   /// Extract properties from an existing DBG_VALUE instruction.
   DbgValueProperties(const MachineInstr &MI) {
@@ -310,29 +314,36 @@ public:
     IsVariadic = MI.isDebugValueList();
     DIExpr = MI.getDebugExpression();
     Indirect = MI.isDebugOffsetImm();
+    NumLocOps = MI.getNumDebugOperands();
   }
 
   bool isJoinable(const DbgValueProperties &Other) const {
+    // Joining pairs location operands by index, so the operand counts must
+    // agree. Equal expressions do not imply equal counts, because the same
+    // DIExpression can appear on MachineInstrs with different numbers of
+    // debug operands.
+    if (NumLocOps != Other.NumLocOps)
+      return false;
     return DIExpression::isEqualExpression(DIExpr, Indirect, Other.DIExpr,
                                            Other.Indirect);
   }
 
   bool operator==(const DbgValueProperties &Other) const {
-    return std::tie(DIExpr, Indirect, IsVariadic) ==
-           std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic);
+    return std::tie(DIExpr, Indirect, IsVariadic, NumLocOps) ==
+           std::tie(Other.DIExpr, Other.Indirect, Other.IsVariadic,
+                    Other.NumLocOps);
   }
 
   bool operator!=(const DbgValueProperties &Other) const {
     return !(*this == Other);
   }
 
-  unsigned getLocationOpCount() const {
-    return IsVariadic ? DIExpr->getNumLocationOperands() : 1;
-  }
+  unsigned getLocationOpCount() const { return NumLocOps; }
 
   const DIExpression *DIExpr;
   bool Indirect;
   bool IsVariadic;
+  unsigned NumLocOps;
 };
 
 /// TODO: Might pack better if we changed this to a Struct of Arrays, since

@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mcpu=z196 -mtriple=s390x-linux-gnu -O0 \
 ; RUN:   -stop-before=regallocfast 2>&1 | FileCheck %s
 ; RUN: llc < %s -mcpu=z196 -mtriple=s390x-linux-gnu -O3 \
-; RUN:   -stop-before=livevars 2>&1 | FileCheck %s
+; RUN:   -stop-before=phi-node-elimination 2>&1 | FileCheck %s
 ;
 ; Test that copies to/from access registers are handled before regalloc with
 ; GR32 regs.

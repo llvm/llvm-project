@@ -41,6 +41,7 @@ add_flang_library(HLFIRTransforms
   ${dialect_libs}
 
   MLIR_LIBS
+  MLIRAnalysisBase
   MLIRIR
   ${dialect_libs}
 )

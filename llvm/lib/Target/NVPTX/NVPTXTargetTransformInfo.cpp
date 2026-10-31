@@ -8,7 +8,10 @@
 
 #include "NVPTXTargetTransformInfo.h"
 #include "NVVMProperties.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -18,12 +21,14 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <optional>
+#include <utility>
 using namespace llvm;
 
 #define DEBUG_TYPE "NVPTXtti"
@@ -156,24 +161,19 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
       return {Intrinsic::floor, FTZ_MustBeOff};
     case Intrinsic::nvvm_floor_ftz_f:
       return {Intrinsic::floor, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fma_rn_d:
-      return {Intrinsic::fma, FTZ_Any};
-    case Intrinsic::nvvm_fma_rn_f:
-      return {Intrinsic::fma, FTZ_MustBeOff};
-    case Intrinsic::nvvm_fma_rn_ftz_f:
-      return {Intrinsic::fma, FTZ_MustBeOn};
-    case Intrinsic::nvvm_fma_rn_f16:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_f16:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fma_rn_f16x2:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_ftz_f16x2:
-      return {Intrinsic::fma, FTZ_MustBeOn, true};
-    case Intrinsic::nvvm_fma_rn_bf16:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
-    case Intrinsic::nvvm_fma_rn_bf16x2:
-      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma:
+    case Intrinsic::nvvm_fma_ftz: {
+      // llvm.fma rounds to nearest-even, so only the rn variants map to it.
+      if (nvvm::GetRoundingModeFromImmArg(II->getArgOperand(3)) !=
+          APFloat::rmNearestTiesToEven)
+        return {};
+      const bool IsFTZ = II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz;
+      Type *EltTy = II->getType()->getScalarType();
+      if (EltTy->isDoubleTy())
+        return {Intrinsic::fma, FTZ_Any};
+      const bool IsHalfTy = EltTy->isHalfTy() || EltTy->isBFloatTy();
+      return {Intrinsic::fma, IsFTZ ? FTZ_MustBeOn : FTZ_MustBeOff, IsHalfTy};
+    }
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maximumnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:
@@ -317,6 +317,10 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   // Simplify to target-generic intrinsic.
   if (Action.IID) {
     SmallVector<Value *, 4> Args(II->args());
+    // llvm.fma does not take the trailing rounding-mode operand.
+    if (II->getIntrinsicID() == Intrinsic::nvvm_fma ||
+        II->getIntrinsicID() == Intrinsic::nvvm_fma_ftz)
+      Args.pop_back();
     // All the target-generic intrinsics currently of interest to us have one
     // type argument, equal to that of the nvvm intrinsic's argument.
     Type *Tys[] = {II->getArgOperand(0)->getType()};
@@ -365,26 +369,33 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
   llvm_unreachable("All SpecialCase enumerators should be handled in switch.");
 }
 
-// Returns true/false when we know the answer, nullopt otherwise.
-static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
+// Returns whether a pointer in AS is in the given specific address space, or
+// nullopt when this cannot be determined at compile time.
+static std::optional<bool> isInAddressSpace(unsigned AS, unsigned SpecificAS) {
   if (AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
       AS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
     return std::nullopt; // Got to check at run-time.
+  if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER &&
+      SpecificAS == NVPTXAS::ADDRESS_SPACE_SHARED)
+    return std::nullopt;
+  return AS == SpecificAS ||
+         (AS == NVPTXAS::ADDRESS_SPACE_SHARED &&
+          SpecificAS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER);
+}
+
+// Returns true/false when we know the answer, nullopt otherwise.
+static std::optional<bool> evaluateIsSpace(Intrinsic::ID IID, unsigned AS) {
   switch (IID) {
   case Intrinsic::nvvm_isspacep_global:
-    return AS == NVPTXAS::ADDRESS_SPACE_GLOBAL;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_GLOBAL);
   case Intrinsic::nvvm_isspacep_local:
-    return AS == NVPTXAS::ADDRESS_SPACE_LOCAL;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_LOCAL);
   case Intrinsic::nvvm_isspacep_shared:
-    // If shared cluster this can't be evaluated at compile time.
-    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER)
-      return std::nullopt;
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_SHARED);
   case Intrinsic::nvvm_isspacep_shared_cluster:
-    return AS == NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER ||
-           AS == NVPTXAS::ADDRESS_SPACE_SHARED;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER);
   case Intrinsic::nvvm_isspacep_const:
-    return AS == NVPTXAS::ADDRESS_SPACE_CONST;
+    return isInAddressSpace(AS, NVPTXAS::ADDRESS_SPACE_CONST);
   default:
     llvm_unreachable("Unexpected intrinsic");
   }
@@ -423,13 +434,49 @@ handleSpaceCheckIntrinsics(InstCombiner &IC, IntrinsicInst &II) {
   }
 }
 
+static Instruction *foldAbsIntoRedux(InstCombiner &IC, IntrinsicInst &II) {
+  Intrinsic::ID AbsIID;
+  switch (II.getIntrinsicID()) {
+  case Intrinsic::nvvm_redux_sync_fmin:
+  case Intrinsic::nvvm_redux_sync_fmin_abs:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmin_abs;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmax:
+  case Intrinsic::nvvm_redux_sync_fmax_abs:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmax_abs;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmin_NaN:
+  case Intrinsic::nvvm_redux_sync_fmin_abs_NaN:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmin_abs_NaN;
+    break;
+  case Intrinsic::nvvm_redux_sync_fmax_NaN:
+  case Intrinsic::nvvm_redux_sync_fmax_abs_NaN:
+    AbsIID = Intrinsic::nvvm_redux_sync_fmax_abs_NaN;
+    break;
+  default:
+    return nullptr;
+  }
+
+  auto *Abs = dyn_cast<IntrinsicInst>(II.getArgOperand(0));
+  if (!Abs || Abs->getIntrinsicID() != Intrinsic::fabs)
+    return nullptr;
+
+  II.setCalledFunction(
+      Intrinsic::getOrInsertDeclaration(II.getModule(), AbsIID));
+  // These attributes described the absolute value, not its source.
+  II.removeParamAttr(0, Attribute::NoFPClass);
+  II.removeParamAttr(0, Attribute::Returned);
+  return IC.replaceOperand(II, 0, Abs->getArgOperand(0));
+}
+
 std::optional<Instruction *>
 NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (std::optional<Instruction *> I = handleSpaceCheckIntrinsics(IC, II))
     return *I;
   if (Instruction *I = convertNvvmIntrinsicToLlvm(IC, &II))
     return I;
-
+  if (Instruction *I = foldAbsIntoRedux(IC, II))
+    return I;
   return std::nullopt;
 }
 
@@ -465,7 +512,7 @@ NVPTXTTIImpl::getInstructionCost(const User *U,
 InstructionCost NVPTXTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CxtI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -509,15 +556,87 @@ void NVPTXTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
+namespace {
+enum class InvalidAddressSpaceAction { LeaveUnchanged, Trap };
+
+// Describes how to specialize GenericID's PointerOperand from generic memory to
+// one of AddressSpaces, using SpecificID (which may be the same intrinsic).
+// Trap only when InvalidAction permits it and the pointer is provably outside
+// every listed address space; otherwise leave the intrinsic unchanged.
+struct IntrinsicAddressSpaceInfo {
+  Intrinsic::ID GenericID;
+  Intrinsic::ID SpecificID;
+  SmallVector<unsigned, 2> AddressSpaces;
+  InvalidAddressSpaceAction InvalidAction;
+  unsigned PointerOperand;
+
+  IntrinsicAddressSpaceInfo(
+      Intrinsic::ID GenericID, Intrinsic::ID SpecificID,
+      ArrayRef<unsigned> AddressSpaces = {NVPTXAS::ADDRESS_SPACE_SHARED},
+      InvalidAddressSpaceAction InvalidAction = InvalidAddressSpaceAction::Trap,
+      unsigned PointerOperand = 0)
+      : GenericID(GenericID), SpecificID(SpecificID),
+        AddressSpaces(AddressSpaces), InvalidAction(InvalidAction),
+        PointerOperand(PointerOperand) {}
+
+  IntrinsicAddressSpaceInfo(
+      Intrinsic::ID IID,
+      ArrayRef<unsigned> AddressSpaces = {NVPTXAS::ADDRESS_SPACE_SHARED},
+      InvalidAddressSpaceAction InvalidAction = InvalidAddressSpaceAction::Trap,
+      unsigned PointerOperand = 0)
+      : IntrinsicAddressSpaceInfo(IID, IID, AddressSpaces, InvalidAction,
+                                  PointerOperand) {}
+};
+} // namespace
+
+static const IntrinsicAddressSpaceInfo *
+getIntrinsicAddressSpaceInfo(Intrinsic::ID IID) {
+  static const auto Infos = [] {
+    const IntrinsicAddressSpaceInfo Entries[] = {
+        {Intrinsic::nvvm_mbarrier_init},
+        {Intrinsic::nvvm_mbarrier_inval, Intrinsic::nvvm_mbarrier_inval_shared},
+        {Intrinsic::nvvm_mbarrier_check_layout},
+        {Intrinsic::nvvm_mbarrier_arrive,
+         Intrinsic::nvvm_mbarrier_arrive_shared},
+        {Intrinsic::nvvm_mbarrier_arrive_noComplete,
+         Intrinsic::nvvm_mbarrier_arrive_noComplete_shared},
+        {Intrinsic::nvvm_mbarrier_arrive_drop,
+         Intrinsic::nvvm_mbarrier_arrive_drop_shared},
+        {Intrinsic::nvvm_mbarrier_arrive_drop_noComplete,
+         Intrinsic::nvvm_mbarrier_arrive_drop_noComplete_shared},
+        {Intrinsic::nvvm_mbarrier_test_wait,
+         Intrinsic::nvvm_mbarrier_test_wait_shared},
+        {Intrinsic::nvvm_cp_async_mbarrier_arrive,
+         Intrinsic::nvvm_cp_async_mbarrier_arrive_shared},
+        {Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc,
+         Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared},
+        // Other address spaces cannot be specialized but do not imply undefined
+        // behavior for prefetch.tensormap.
+        {Intrinsic::nvvm_prefetch_tensormap,
+         {NVPTXAS::ADDRESS_SPACE_CONST, NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM},
+         InvalidAddressSpaceAction::LeaveUnchanged},
+    };
+    return SmallDenseMap<Intrinsic::ID, IntrinsicAddressSpaceInfo, 16>(
+        llvm::from_range, llvm::map_range(Entries, [](const auto &Info) {
+          return std::pair{Info.GenericID, Info};
+        }));
+  }();
+  auto It = Infos.find(IID);
+  return It == Infos.end() ? nullptr : &It->second;
+}
+
 bool NVPTXTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                               Intrinsic::ID IID) const {
+  if (const auto *Info = getIntrinsicAddressSpaceInfo(IID)) {
+    OpIndexes.push_back(Info->PointerOperand);
+    return true;
+  }
   switch (IID) {
   case Intrinsic::nvvm_isspacep_const:
   case Intrinsic::nvvm_isspacep_global:
   case Intrinsic::nvvm_isspacep_local:
   case Intrinsic::nvvm_isspacep_shared:
-  case Intrinsic::nvvm_isspacep_shared_cluster:
-  case Intrinsic::nvvm_prefetch_tensormap: {
+  case Intrinsic::nvvm_isspacep_shared_cluster: {
     OpIndexes.push_back(0);
     return true;
   }
@@ -529,6 +648,38 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                       Value *OldV,
                                                       Value *NewV) const {
   const Intrinsic::ID IID = II->getIntrinsicID();
+  if (const auto *Info = getIntrinsicAddressSpaceInfo(IID)) {
+    if (II->getArgOperand(Info->PointerOperand) != OldV)
+      return nullptr;
+
+    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
+    if (!llvm::is_contained(Info->AddressSpaces, NewAS)) {
+      // A missing rewrite is not necessarily invalid. Trap only when the
+      // address is provably outside every allowed space and the entry permits
+      // it.
+      if (Info->InvalidAction == InvalidAddressSpaceAction::LeaveUnchanged ||
+          !llvm::all_of(Info->AddressSpaces, [NewAS](unsigned AS) {
+            return isInAddressSpace(NewAS, AS) == false;
+          }))
+        return nullptr;
+      // InferAddressSpaces preserves the CFG. Emit a trap here and leave
+      // truncating the block at the noreturn call to SimplifyCFG.
+      Value *Trap = IRBuilder<>(II).CreateIntrinsic(Intrinsic::trap, {});
+      return II->getType()->isVoidTy() ? Trap : PoisonValue::get(II->getType());
+    }
+
+    SmallVector<Type *, 8> ArgTypes(II->getFunctionType()->params());
+    ArgTypes[Info->PointerOperand] = NewV->getType();
+    FunctionType *FT = FunctionType::get(II->getType(), ArgTypes, false);
+    SmallVector<Type *, 4> OverloadTypes;
+    if (!Intrinsic::isSignatureValid(Info->SpecificID, FT, OverloadTypes))
+      return nullptr;
+    Function *Decl = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Info->SpecificID, OverloadTypes);
+    II->setArgOperand(Info->PointerOperand, NewV);
+    II->setCalledFunction(Decl);
+    return II;
+  }
   switch (IID) {
   case Intrinsic::nvvm_isspacep_const:
   case Intrinsic::nvvm_isspacep_global:
@@ -538,15 +689,6 @@ Value *NVPTXTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
     if (const auto R = evaluateIsSpace(IID, NewAS))
       return ConstantInt::get(II->getType(), *R);
-    return nullptr;
-  }
-  case Intrinsic::nvvm_prefetch_tensormap: {
-    IRBuilder<> Builder(II);
-    const unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-    if (NewAS == NVPTXAS::ADDRESS_SPACE_CONST ||
-        NewAS == NVPTXAS::ADDRESS_SPACE_ENTRY_PARAM)
-      return Builder.CreateUnaryIntrinsic(Intrinsic::nvvm_prefetch_tensormap,
-                                          NewV);
     return nullptr;
   }
   }
@@ -634,6 +776,18 @@ void NVPTXTTIImpl::collectKernelLaunchBounds(
     LB.push_back({"maxntidy", MaxNTID[1]});
   if (MaxNTID.size() > 2)
     LB.push_back({"maxntidz", MaxNTID[2]});
+}
+
+// Global addresses can only be materialized if they are in generic global or
+// constant space.
+bool NVPTXTTIImpl::shouldBuildLookupTablesForConstant(Constant *C) const {
+  if (const auto *GV = dyn_cast<GlobalValue>(C)) {
+    const unsigned AS = GV->getAddressSpace();
+    return AS == NVPTXAS::ADDRESS_SPACE_GENERIC ||
+           AS == NVPTXAS::ADDRESS_SPACE_GLOBAL ||
+           AS == NVPTXAS::ADDRESS_SPACE_CONST;
+  }
+  return true;
 }
 
 ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {

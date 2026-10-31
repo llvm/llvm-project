@@ -19,23 +19,23 @@
     %7 = fir.coordinate_of %0, %c0_1 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
     fir.store %c2_i64 to %7 : !fir.ref<i64>
     %8 = fir.embox %0 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
-    mif.alloc_coarray %3 lcobounds %6 ucobounds %8 {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
-    %9:2 = hlfir.declare %3 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    mif.alloc_coarray %3 lcobounds %6 ucobounds %8 uniq_name("_QFEa") : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
+    %9:2 = hlfir.declare %3 uniq_name("_QFEa") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %10 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFEi"}
-    %11:2 = hlfir.declare %10 {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %11:2 = hlfir.declare %10 uniq_name("_QFEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %c2 = arith.constant 2 : index
     %12 = fir.alloca !fir.array<2xi32> {bindc_name = "j", uniq_name = "_QFEj"}
     %13 = fir.shape %c2 : (index) -> !fir.shape<1>
-    %14:2 = hlfir.declare %12(%13) {uniq_name = "_QFEj"} : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
+    %14:2 = hlfir.declare %12(%13) uniq_name("_QFEj") : (!fir.ref<!fir.array<2xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<2xi32>>, !fir.ref<!fir.array<2xi32>>)
     %15 = fir.address_of(@_QFEteam) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>
-    %16:2 = hlfir.declare %15 {uniq_name = "_QFEteam"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>)
+    %16:2 = hlfir.declare %15 uniq_name("_QFEteam") : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>)
     %17 = mif.this_image : () -> i32
     hlfir.assign %17 to %11#0 : i32, !fir.ref<i32>
     %18 = mif.this_image team %16#0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_team_type{_QM__fortran_builtinsT__builtin_team_type.info:!fir.box<!fir.ptr<!fir.type<_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type{_QM__fortran_builtinsT__builtin_dummy_team_descriptor_type.__placeholder:i64}>>>}>>) -> i32
     hlfir.assign %18 to %11#0 : i32, !fir.ref<i32>
     %19 = fir.embox %9#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:2>
     %20 = mif.this_image coarray %19 : (!fir.box<i32, corank:2>) -> !fir.box<!fir.array<?xi32>>
-    %21:2 = hlfir.declare %20 {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
+    %21:2 = hlfir.declare %20 uniq_name(".tmp.intrinsic_result") : (!fir.box<!fir.array<?xi32>>) -> (!fir.box<!fir.array<?xi32>>, !fir.box<!fir.array<?xi32>>)
     %false = arith.constant false
     %22 = hlfir.as_expr %21#0 move %false : (!fir.box<!fir.array<?xi32>>, i1) -> !hlfir.expr<?xi32>
     hlfir.assign %22 to %14#0 : !hlfir.expr<?xi32>, !fir.ref<!fir.array<2xi32>>
@@ -68,8 +68,8 @@
     %lb = fir.embox %lc : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
     %ub = fir.embox %uc : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
     %a_ref = fir.address_of(@_QFEa2) : !fir.ref<i32>
-    mif.alloc_coarray %a_ref lcobounds %lb ucobounds %ub {uniq_name = "_QFEa2"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
-    %a_decl:2 = hlfir.declare %a_ref {uniq_name = "_QFEa2"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    mif.alloc_coarray %a_ref lcobounds %lb ucobounds %ub uniq_name("_QFEa2") : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
+    %a_decl:2 = hlfir.declare %a_ref uniq_name("_QFEa2") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %cobox = fir.embox %a_decl#0 : (!fir.ref<i32>) -> !fir.box<i32, corank:2>
     %res = mif.this_image coarray %cobox : (!fir.box<i32, corank:2>) -> !fir.box<!fir.array<?xi32>>
     return

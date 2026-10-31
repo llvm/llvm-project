@@ -21,7 +21,7 @@ if.end:                                           ; preds = %entry
 ;; Check the load-and-cmp sequence is fold into a test instruction.
 ; MIR-label: bb.1.if.end
 ; MIR: %[[#REG:]]:gr64 = IMPLICIT_DEF
-; MIR: TEST8mi killed %[[#REG]], 1, $noreg, 0, $noreg, 16
+; MIR: TEST8mi %[[#REG]], 1, $noreg, 0, $noreg, 16
 ; MIR: JCC_1
   br i1 %3, label %return, label %if.end6
 

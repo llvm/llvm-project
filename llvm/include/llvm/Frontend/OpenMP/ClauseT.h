@@ -1125,6 +1125,12 @@ struct ReductionT {
   std::tuple<OPT(ReductionModifier), ReductionIdentifiers, List> t;
 };
 
+// TR15:285
+template <typename T, typename I, typename E> //
+struct ReductionKindT {
+  using IncompleteTrait = std::true_type;
+};
+
 // V5.2: [15.8.1] `memory-order` clauses
 template <typename T, typename I, typename E> //
 struct RelaxedT {
@@ -1204,6 +1210,12 @@ struct SharedT {
   using List = ObjectListT<I, E>;
   using WrapperTrait = std::true_type;
   List v;
+};
+
+// TR15:408-409
+template <typename T, typename I, typename E> //
+struct ShiftT {
+  using IncompleteTrait = std::true_type;
 };
 
 // V5.2: [15.10.3] `parallelization-level` clauses
@@ -1414,8 +1426,9 @@ using IncompleteClausesT =
                  GraphResetT<T, I, E>, InductionT<T, I, E>, InductorT<T, I, E>,
                  InitCompleteT<T, I, E>, InteropT<T, I, E>, LocalT<T, I, E>,
                  MatchT<T, I, E>, MemscopeT<T, I, E>, OtherwiseT<T, I, E>,
-                 ReplayableT<T, I, E>, SafesyncT<T, I, E>,
-                 TransparentT<T, I, E>, WhenT<T, I, E>>;
+                 ReductionKindT<T, I, E>, ReplayableT<T, I, E>,
+                 SafesyncT<T, I, E>, ShiftT<T, I, E>, TransparentT<T, I, E>,
+                 WhenT<T, I, E>>;
 
 template <typename T, typename I, typename E>
 using TupleClausesT =

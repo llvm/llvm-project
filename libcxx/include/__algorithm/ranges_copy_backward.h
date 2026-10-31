@@ -38,15 +38,14 @@ using copy_backward_result = in_out_result<_Ip, _Op>;
 struct __copy_backward {
   template <bidirectional_iterator _InIter1, sentinel_for<_InIter1> _Sent1, bidirectional_iterator _InIter2>
     requires indirectly_copyable<_InIter1, _InIter2>
-  _LIBCPP_HIDE_FROM_ABI constexpr copy_backward_result<_InIter1, _InIter2>
+  constexpr copy_backward_result<_InIter1, _InIter2>
   operator()(_InIter1 __first, _Sent1 __last, _InIter2 __result) const {
     return std::__copy_backward<_RangeAlgPolicy>(std::move(__first), std::move(__last), std::move(__result));
   }
 
   template <bidirectional_range _Range, bidirectional_iterator _Iter>
     requires indirectly_copyable<iterator_t<_Range>, _Iter>
-  _LIBCPP_HIDE_FROM_ABI constexpr copy_backward_result<borrowed_iterator_t<_Range>, _Iter>
-  operator()(_Range&& __r, _Iter __result) const {
+  constexpr copy_backward_result<borrowed_iterator_t<_Range>, _Iter> operator()(_Range&& __r, _Iter __result) const {
     return std::__copy_backward<_RangeAlgPolicy>(ranges::begin(__r), ranges::end(__r), std::move(__result));
   }
 };

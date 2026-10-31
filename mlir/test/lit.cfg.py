@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -189,6 +190,7 @@ tools = [
     "mlir-capi-pass-test",
     "mlir-capi-pdl-test",
     "mlir-capi-quant-test",
+    "mlir-capi-remarks-test",
     "mlir-capi-rewrite-test",
     "mlir-capi-sparse-tensor-test",
     "mlir-capi-transform-test",
@@ -316,6 +318,23 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
 else:
     tools.extend(["mlir-opt"])
 
+
+def enable_llc(llc_executable):
+    config.available_features.add("has_llc_binary")
+    tools.extend(
+        [
+            ToolSubst(
+                "%llc-verify",
+                f"{llc_executable} -verify-machineinstrs -o {os.devnull}",
+            ),
+        ]
+    )
+
+
+llc_executable = lit.util.which("llc", config.llvm_tools_dir)
+if llc_executable:
+    enable_llc(llc_executable)
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 
@@ -338,6 +357,8 @@ if config.enable_bindings_python:
         ],
         append_path=True,
     )
+
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.enable_assertions:
     config.available_features.add("asserts")
@@ -379,6 +400,9 @@ if config.run_nvptx_tests:
 
 if config.run_rocm_tests:
     config.available_features.add("host-supports-amdgpu")
+
+if config.run_xevm_tests:
+    config.available_features.add("host-supports-spirv")
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")

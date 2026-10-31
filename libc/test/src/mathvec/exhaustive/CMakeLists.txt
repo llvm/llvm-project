@@ -1,4 +1,4 @@
-add_libc_exhaustive_testsuite(libc-mathvec-exhaustivetests)
+add_libc_testsuite(libc-mathvec-exhaustive-tests BUILD_ONLY PARENT libc-mathvec-tests)
 
 add_header_library(
   exhaustive_test
@@ -11,9 +11,8 @@ add_header_library(
 
 add_fp_unittest(
   acosf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     acosf_test.cpp
   DEPENDS
@@ -27,9 +26,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   acoshf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     acoshf_test.cpp
   DEPENDS
@@ -43,9 +41,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   acospif_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     acospif_test.cpp
   DEPENDS
@@ -59,9 +56,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     asinf_test.cpp
   DEPENDS
@@ -75,9 +71,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinhf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     asinhf_test.cpp
   DEPENDS
@@ -91,9 +86,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   asinpif_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     asinpif_test.cpp
   DEPENDS
@@ -107,9 +101,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     atanf_test.cpp
   DEPENDS
@@ -123,9 +116,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   atanhf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     atanhf_test.cpp
   DEPENDS
@@ -139,9 +131,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   cbrtf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     cbrtf_test.cpp
   DEPENDS
@@ -155,9 +146,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   cosf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     cosf_test.cpp
   DEPENDS
@@ -171,9 +161,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   coshf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     coshf_test.cpp
   DEPENDS
@@ -187,9 +176,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   cospif_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     cospif_test.cpp
   DEPENDS
@@ -203,9 +191,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   erff_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     erff_test.cpp
   DEPENDS
@@ -219,15 +206,14 @@ add_fp_unittest(
 
 add_fp_unittest(
   exp2f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     exp2f_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.exp2f
     libc.src.mathvec.exp2f
+    libc.src.__support.math.exp2f_double_eval
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
@@ -235,9 +221,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   exp2m1f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     exp2m1f_test.cpp
   DEPENDS
@@ -251,15 +236,14 @@ add_fp_unittest(
 
 add_fp_unittest(
   exp10f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     exp10f_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.exp10f
     libc.src.mathvec.exp10f
+    libc.src.__support.math.exp10f_double_eval
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
@@ -267,9 +251,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   exp10m1f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     exp10m1f_test.cpp
   DEPENDS
@@ -283,15 +266,14 @@ add_fp_unittest(
 
 add_fp_unittest(
   expf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     expf_test.cpp
   DEPENDS
     .exhaustive_test
-    libc.src.math.expf
     libc.src.mathvec.expf
+    libc.src.__support.math.expf_double_eval
     libc.src.__support.CPP.simd
   LINK_LIBRARIES
     -lpthread
@@ -299,9 +281,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   expm1f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     expm1f_test.cpp
   DEPENDS
@@ -315,9 +296,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   log10f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     log10f_test.cpp
   DEPENDS
@@ -331,9 +311,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   log1pf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     log1pf_test.cpp
   DEPENDS
@@ -347,9 +326,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   log2f_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     log2f_test.cpp
   DEPENDS
@@ -363,9 +341,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   logf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     logf_test.cpp
   DEPENDS
@@ -379,9 +356,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   rsqrtf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     rsqrtf_test.cpp
   DEPENDS
@@ -395,9 +371,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   sinf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     sinf_test.cpp
   DEPENDS
@@ -411,9 +386,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   sinhf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     sinhf_test.cpp
   DEPENDS
@@ -427,9 +401,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   sinpif_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     sinpif_test.cpp
   DEPENDS
@@ -443,9 +416,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   sqrtf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     sqrtf_test.cpp
   DEPENDS
@@ -459,9 +431,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   tanf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     tanf_test.cpp
   DEPENDS
@@ -475,9 +446,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   tanhf_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     tanhf_test.cpp
   DEPENDS
@@ -491,9 +461,8 @@ add_fp_unittest(
 
 add_fp_unittest(
   tanpif_test
-  NO_RUN_POSTBUILD
   SUITE
-    libc-mathvec-exhaustivetests
+    libc-mathvec-exhaustive-tests
   SRCS
     tanpif_test.cpp
   DEPENDS

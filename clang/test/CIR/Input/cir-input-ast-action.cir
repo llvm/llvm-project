@@ -1,0 +1,17 @@
+// Actions that need an AST reject ClangIR input.
+
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only -x cir %s 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -fsyntax-only %s 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+// RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -ast-dump -x cir %s 2>&1 \
+// RUN:   | FileCheck %s --implicit-check-not=error:
+
+// CHECK: fatal error: cannot apply AST actions to ClangIR file '{{.*}}cir-input-ast-action.cir'
+
+!s32i = !cir.int<s, 32>
+module {
+  cir.func @f(%arg0: !s32i) -> !s32i {
+    cir.return %arg0 : !s32i
+  }
+}

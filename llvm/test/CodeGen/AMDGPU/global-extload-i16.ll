@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; XUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; FIXME: cypress is broken because the bigger testcases spill and it's not implemented
 
@@ -48,7 +48,9 @@ define amdgpu_kernel void @sextload_global_v1i16_to_v1i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v2i16_to_v2i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v2i16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <2 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <2 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <2 x i16> %load to <2 x i32>
   store <2 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -57,7 +59,9 @@ define amdgpu_kernel void @zextload_global_v2i16_to_v2i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}sextload_global_v2i16_to_v2i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v2i16_to_v2i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <2 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <2 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <2 x i16> %load to <2 x i32>
   store <2 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -66,7 +70,9 @@ define amdgpu_kernel void @sextload_global_v2i16_to_v2i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v4i16_to_v4i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <4 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <4 x i16> %load to <4 x i32>
   store <4 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -75,7 +81,9 @@ define amdgpu_kernel void @zextload_global_v4i16_to_v4i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}sextload_global_v4i16_to_v4i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v4i16_to_v4i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <4 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <4 x i16> %load to <4 x i32>
   store <4 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -84,7 +92,9 @@ define amdgpu_kernel void @sextload_global_v4i16_to_v4i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v8i16_to_v8i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v8i16_to_v8i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <8 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <8 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <8 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <8 x i16> %load to <8 x i32>
   store <8 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -93,7 +103,9 @@ define amdgpu_kernel void @zextload_global_v8i16_to_v8i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}sextload_global_v8i16_to_v8i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v8i16_to_v8i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <8 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <8 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <8 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <8 x i16> %load to <8 x i32>
   store <8 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -102,7 +114,9 @@ define amdgpu_kernel void @sextload_global_v8i16_to_v8i32(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v16i16_to_v16i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v16i16_to_v16i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <16 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <16 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <16 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -111,7 +125,9 @@ define amdgpu_kernel void @zextload_global_v16i16_to_v16i32(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}sextload_global_v16i16_to_v16i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v16i16_to_v16i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <16 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <16 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <16 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <16 x i16> %load to <16 x i32>
   store <16 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -120,7 +136,9 @@ define amdgpu_kernel void @sextload_global_v16i16_to_v16i32(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}zextload_global_v32i16_to_v32i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v32i16_to_v32i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <32 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <32 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <32 x i16> %load to <32 x i32>
   store <32 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -129,7 +147,9 @@ define amdgpu_kernel void @zextload_global_v32i16_to_v32i32(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}sextload_global_v32i16_to_v32i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v32i16_to_v32i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <32 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <32 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <32 x i16> %load to <32 x i32>
   store <32 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -138,7 +158,9 @@ define amdgpu_kernel void @sextload_global_v32i16_to_v32i32(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}zextload_global_v64i16_to_v64i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v64i16_to_v64i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <64 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <64 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <64 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -147,7 +169,9 @@ define amdgpu_kernel void @zextload_global_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}sextload_global_v64i16_to_v64i32:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v64i16_to_v64i32(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <64 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <64 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <64 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <64 x i16> %load to <64 x i32>
   store <64 x i32> %ext, ptr addrspace(1) %out
   ret void
@@ -196,7 +220,9 @@ define amdgpu_kernel void @sextload_global_v1i16_to_v1i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v2i16_to_v2i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v2i16_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <2 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <2 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <2 x i16> %load to <2 x i64>
   store <2 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -205,7 +231,9 @@ define amdgpu_kernel void @zextload_global_v2i16_to_v2i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}sextload_global_v2i16_to_v2i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v2i16_to_v2i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <2 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <2 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <2 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <2 x i16> %load to <2 x i64>
   store <2 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -214,7 +242,9 @@ define amdgpu_kernel void @sextload_global_v2i16_to_v2i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v4i16_to_v4i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v4i16_to_v4i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <4 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <4 x i16> %load to <4 x i64>
   store <4 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -223,7 +253,9 @@ define amdgpu_kernel void @zextload_global_v4i16_to_v4i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}sextload_global_v4i16_to_v4i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v4i16_to_v4i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <4 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <4 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <4 x i16> %load to <4 x i64>
   store <4 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -232,7 +264,9 @@ define amdgpu_kernel void @sextload_global_v4i16_to_v4i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v8i16_to_v8i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v8i16_to_v8i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <8 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <8 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <8 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -241,7 +275,9 @@ define amdgpu_kernel void @zextload_global_v8i16_to_v8i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}sextload_global_v8i16_to_v8i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v8i16_to_v8i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <8 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <8 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <8 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <8 x i16> %load to <8 x i64>
   store <8 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -250,7 +286,9 @@ define amdgpu_kernel void @sextload_global_v8i16_to_v8i64(ptr addrspace(1) %out,
 ; FUNC-LABEL: {{^}}zextload_global_v16i16_to_v16i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v16i16_to_v16i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <16 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <16 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <16 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <16 x i16> %load to <16 x i64>
   store <16 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -259,7 +297,9 @@ define amdgpu_kernel void @zextload_global_v16i16_to_v16i64(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}sextload_global_v16i16_to_v16i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v16i16_to_v16i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <16 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <16 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <16 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <16 x i16> %load to <16 x i64>
   store <16 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -268,7 +308,9 @@ define amdgpu_kernel void @sextload_global_v16i16_to_v16i64(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}zextload_global_v32i16_to_v32i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v32i16_to_v32i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <32 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <32 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -277,7 +319,9 @@ define amdgpu_kernel void @zextload_global_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}sextload_global_v32i16_to_v32i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v32i16_to_v32i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <32 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <32 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <32 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <32 x i16> %load to <32 x i64>
   store <32 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -286,7 +330,9 @@ define amdgpu_kernel void @sextload_global_v32i16_to_v32i64(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}zextload_global_v64i16_to_v64i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @zextload_global_v64i16_to_v64i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <64 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <64 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <64 x i16>, ptr addrspace(1) %in.tid
   %ext = zext <64 x i16> %load to <64 x i64>
   store <64 x i64> %ext, ptr addrspace(1) %out
   ret void
@@ -295,7 +341,9 @@ define amdgpu_kernel void @zextload_global_v64i16_to_v64i64(ptr addrspace(1) %ou
 ; FUNC-LABEL: {{^}}sextload_global_v64i16_to_v64i64:
 ; SI: s_endpgm
 define amdgpu_kernel void @sextload_global_v64i16_to_v64i64(ptr addrspace(1) %out, ptr addrspace(1) nocapture %in) nounwind {
-  %load = load <64 x i16>, ptr addrspace(1) %in
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %in.tid = getelementptr inbounds <64 x i16>, ptr addrspace(1) %in, i32 %tid
+  %load = load <64 x i16>, ptr addrspace(1) %in.tid
   %ext = sext <64 x i16> %load to <64 x i64>
   store <64 x i64> %ext, ptr addrspace(1) %out
   ret void

@@ -23,6 +23,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -94,10 +95,8 @@ void CheckerManager::runCheckersOnASTBody(const Decl *D, AnalysisManager& mgr,
 //===----------------------------------------------------------------------===//
 
 template <typename CHECK_CTX>
-static void expandGraphWithCheckers(CHECK_CTX checkCtx,
-                                    ExplodedNodeSet &Dst,
+static void expandGraphWithCheckers(CHECK_CTX checkCtx, ExplodedNodeSet &Dst,
                                     const ExplodedNodeSet &Src) {
-  const NodeBuilderContext &BldrCtx = checkCtx.Eng.getBuilderContext();
   if (Src.empty())
     return;
 
@@ -120,9 +119,9 @@ static void expandGraphWithCheckers(CHECK_CTX checkCtx,
       CurrSet->clear();
     }
 
-    NodeBuilder B(*PrevSet, *CurrSet, BldrCtx);
+    CurrSet->insert(*PrevSet);
     for (const auto &NI : *PrevSet)
-      checkCtx.runChecker(*I, B, NI);
+      checkCtx.runChecker(*I, NI, *CurrSet);
 
     // If all the produced transitions are sinks, stop.
     if (CurrSet->empty())
@@ -159,15 +158,15 @@ std::string checkerScopeName(StringRef Name, const CheckerBackend *Checker) {
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
-    void runChecker(CheckerManager::CheckStmtFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+    void runChecker(CheckerManager::CheckStmtFunc checkFn, ExplodedNode *Pred,
+                    ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Stmt", checkFn.Checker));
       // FIXME: Remove respondsToCallback from CheckerContext;
       ProgramPoint::Kind K =  IsPreVisit ? ProgramPoint::PreStmtKind :
                                            ProgramPoint::PostStmtKind;
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
           S, K, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Dst, L, WasInlined);
       checkFn(S, C);
     }
   };
@@ -211,7 +210,7 @@ namespace {
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckObjCMessageFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("ObjCMsg", checkFn.Checker));
       bool IsPreVisit;
@@ -227,7 +226,7 @@ namespace {
       }
 
       const ProgramPoint &L = Msg.getProgramPoint(IsPreVisit,checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Dst, L, WasInlined);
 
       checkFn(*Msg.cloneWithState<ObjCMethodCall>(Pred->getState()), C);
     }
@@ -283,11 +282,11 @@ namespace {
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
-    void runChecker(CheckerManager::CheckCallFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+    void runChecker(CheckerManager::CheckCallFunc checkFn, ExplodedNode *Pred,
+                    ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Call", checkFn.Checker));
       const ProgramPoint &L = Call.getProgramPoint(IsPreVisit,checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Dst, L, WasInlined);
 
       checkFn(*Call.cloneWithState(Pred->getState()), C);
     }
@@ -329,10 +328,10 @@ struct CheckLifetimeEndContext {
   CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
   void runChecker(CheckerManager::CheckLifetimeEndFunc checkFn,
-                  NodeBuilder &Bldr, ExplodedNode *Pred) {
+                  ExplodedNode *Pred, ExplodedNodeSet &Dst) {
     assert(Pred->getLocation().getAs<LifetimeEnd>().has_value());
     const ProgramPoint L = Pred->getLocation().withTag(checkFn.Checker);
-    CheckerContext C(Bldr, Eng, Pred, L);
+    CheckerContext C(Eng, Pred, Dst, L);
     checkFn(Decl, C);
   }
 };
@@ -372,13 +371,13 @@ namespace {
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckLocationFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Loc", checkFn.Checker));
       ProgramPoint::Kind K =  IsLoad ? ProgramPoint::PreLoadKind :
                                        ProgramPoint::PreStoreKind;
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
           NodeEx, K, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Dst, L);
       checkFn(Loc, IsLoad, BoundEx, C);
     }
   };
@@ -423,11 +422,11 @@ namespace {
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
-    void runChecker(CheckerManager::CheckBindFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+    void runChecker(CheckerManager::CheckBindFunc checkFn, ExplodedNode *Pred,
+                    ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(checkerScopeName("Bind", checkFn.Checker));
       const ProgramPoint &L = PP.withTag(checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Dst, L);
 
       checkFn(Loc, Val, S, AtDeclInit, C);
     }
@@ -472,11 +471,11 @@ struct CheckBlockEntranceContext {
   auto checkers_begin() const { return Checkers.begin(); }
   auto checkers_end() const { return Checkers.end(); }
 
-  void runChecker(CheckBlockEntranceFunc CheckFn, NodeBuilder &Bldr,
-                  ExplodedNode *Pred) {
+  void runChecker(CheckBlockEntranceFunc CheckFn, ExplodedNode *Pred,
+                  ExplodedNodeSet &Dst) {
     llvm::TimeTraceScope TimeScope(
         checkerScopeName("BlockEntrance", CheckFn.Checker));
-    CheckerContext C(Bldr, Eng, Pred, Entrance.withTag(CheckFn.Checker));
+    CheckerContext C(Eng, Pred, Dst, Entrance.withTag(CheckFn.Checker));
     CheckFn(Entrance, C);
   }
 };
@@ -516,10 +515,10 @@ struct CheckBeginFunctionContext {
   CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
   void runChecker(CheckerManager::CheckBeginFunctionFunc checkFn,
-                  NodeBuilder &Bldr, ExplodedNode *Pred) {
+                  ExplodedNode *Pred, ExplodedNodeSet &Dst) {
     llvm::TimeTraceScope TimeScope(checkerScopeName("Begin", checkFn.Checker));
     const ProgramPoint &L = PP.withTag(checkFn.Checker);
-    CheckerContext C(Bldr, Eng, Pred, L);
+    CheckerContext C(Eng, Pred, Dst, L);
 
     checkFn(C);
   }
@@ -538,24 +537,46 @@ void CheckerManager::runCheckersForBeginFunction(ExplodedNodeSet &Dst,
   expandGraphWithCheckers(C, Dst, Src);
 }
 
-/// Run checkers for end of path.
-// Note, We do not chain the checker output (like in expandGraphWithCheckers)
-// for this callback since end of path nodes are expected to be final.
+namespace {
+
+struct CheckEndFunctionContext {
+  using CheckersTy = std::vector<CheckerManager::CheckEndFunctionFunc>;
+
+  const CheckersTy &Checkers;
+  const ReturnStmt *RS;
+  ExprEngine &Eng;
+
+  CheckEndFunctionContext(const CheckersTy &Checkers, const ReturnStmt *RS,
+                          ExprEngine &Eng)
+      : Checkers(Checkers), RS(RS), Eng(Eng) {}
+
+  CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
+  CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
+
+  void runChecker(CheckerManager::CheckEndFunctionFunc checkFn,
+                  ExplodedNode *Pred, ExplodedNodeSet &Dst) {
+    llvm::TimeTraceScope TimeScope(checkerScopeName("End", checkFn.Checker));
+    const ProgramPoint &L =
+        FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
+    CheckerContext C(Eng, Pred, Dst, L);
+
+    checkFn(RS, C);
+  }
+};
+
+} // namespace
+
+/// Run checkers for end of a function (either the entrypoint or another
+/// function that was inlined).
 void CheckerManager::runCheckersForEndFunction(ExplodedNodeSet &Dst,
                                                ExplodedNode *Pred,
                                                ExprEngine &Eng,
                                                const ReturnStmt *RS) {
-  // We define the builder outside of the loop because if at least one checker
-  // creates a successor for Pred, we do not need to generate an
-  // autotransition for it.
-  NodeBuilder Bldr(Pred, Dst, Eng.getBuilderContext());
-  for (const auto &checkFn : EndFunctionCheckers) {
-    const ProgramPoint &L =
-        FunctionExitPoint(RS, Pred->getStackFrame(), checkFn.Checker);
-    CheckerContext C(Bldr, Eng, Pred, L);
-    llvm::TimeTraceScope TimeScope(checkerScopeName("End", checkFn.Checker));
-    checkFn(RS, C);
-  }
+  ExplodedNodeSet Src;
+  Src.insert(Pred);
+  CheckEndFunctionContext C(EndFunctionCheckers, RS, Eng);
+  llvm::TimeTraceScope TimeScope("CheckerManager::runCheckersForEndFunction");
+  expandGraphWithCheckers(C, Dst, Src);
 }
 
 namespace {
@@ -575,12 +596,12 @@ namespace {
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckBranchConditionFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("BranchCond", checkFn.Checker));
       ProgramPoint L =
           PostCondition(Condition, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+      CheckerContext C(Eng, Pred, Dst, L);
       checkFn(Condition, C);
     }
   };
@@ -619,12 +640,12 @@ namespace {
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckNewAllocatorFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("Allocator", checkFn.Checker));
       ProgramPoint L = PostAllocatorCall(
           Call.getOriginExpr(), Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L, WasInlined);
+      CheckerContext C(Eng, Pred, Dst, L, WasInlined);
       checkFn(cast<CXXAllocatorCall>(*Call.cloneWithState(Pred->getState())),
               C);
     }
@@ -660,23 +681,23 @@ namespace {
     SymbolReaper &SR;
     const Stmt *S;
     ExprEngine &Eng;
-    ProgramPoint::Kind ProgarmPointKind;
+    ProgramPoint::Kind ProgramPointKind;
 
     CheckDeadSymbolsContext(const CheckersTy &checkers, SymbolReaper &sr,
                             const Stmt *s, ExprEngine &eng,
                             ProgramPoint::Kind K)
-        : Checkers(checkers), SR(sr), S(s), Eng(eng), ProgarmPointKind(K) {}
+        : Checkers(checkers), SR(sr), S(s), Eng(eng), ProgramPointKind(K) {}
 
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
 
     void runChecker(CheckerManager::CheckDeadSymbolsFunc checkFn,
-                    NodeBuilder &Bldr, ExplodedNode *Pred) {
+                    ExplodedNode *Pred, ExplodedNodeSet &Dst) {
       llvm::TimeTraceScope TimeScope(
           checkerScopeName("DeadSymbols", checkFn.Checker));
       const ProgramPoint &L = ProgramPoint::getProgramPoint(
-          S, ProgarmPointKind, Pred->getStackFrame(), checkFn.Checker);
-      CheckerContext C(Bldr, Eng, Pred, L);
+          S, ProgramPointKind, Pred->getStackFrame(), checkFn.Checker);
+      CheckerContext C(Eng, Pred, Dst, L);
 
       // Note, do not pass the statement to the checkers without letting them
       // differentiate if we ran remove dead bindings before or after the
@@ -761,8 +782,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
   for (auto *const Pred : Src) {
     std::optional<StringRef> evaluatorChecker;
 
-    ExplodedNodeSet checkDst;
-    NodeBuilder B(Pred, checkDst, Eng.getBuilderContext());
+    ExplodedNodeSet checkDst{Pred};
 
     ProgramStateRef State = Pred->getState();
     CallEventRef<> UpdatedCall = Call.cloneWithState(State);
@@ -774,13 +794,9 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
       ProgramPoint L = ProgramPoint::getProgramPoint(
           UpdatedCall->getOriginExpr(), ProgramPoint::PostStmtKind,
           Pred->getStackFrame(), EvalCallChecker.Checker);
-      bool evaluated = false;
-      { // CheckerContext generates transitions (populates checkDest) on
-        // destruction, so introduce the scope to make sure it gets properly
-        // populated.
-        CheckerContext C(B, Eng, Pred, L);
-        evaluated = EvalCallChecker(*UpdatedCall, C);
-      }
+
+      CheckerContext C(Eng, Pred, checkDst, L);
+      bool evaluated = EvalCallChecker(*UpdatedCall, C);
 #ifndef NDEBUG
       if (evaluated && evaluatorChecker) {
         const auto toString = [](const CallEvent &Call) -> std::string {
@@ -841,51 +857,38 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
   Indent(NLOut, InnerSpace, IsDot) << "\"";  // then begin the next message.
 
   ++Space;
-  bool HasMessage = false;
 
-  // Store the last CheckerTag.
-  const void *LastCT = nullptr;
+  std::vector<std::pair<std::string, std::string>> CheckerMsgs;
   for (const auto &CT : CheckerTags) {
-    // See whether the current checker has a message.
     CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
-
-    if (TempBuf.empty())
-      continue;
-
-    if (!HasMessage) {
-      Out << '[' << NL;
-      HasMessage = true;
-    }
-
-    LastCT = &CT;
+    const std::string Msg = TempBuf.str().trim().str();
     TempBuf.clear();
+
+    if (!Msg.empty())
+      CheckerMsgs.push_back({CT.second->getDebugTag().str(), Msg});
   }
+  llvm::sort(CheckerMsgs);
 
-  for (const auto &CT : CheckerTags) {
-    // See whether the current checker has a message.
-    CT.second->printState(TempOut, State, /*NL=*/NewLine.c_str(), /*Sep=*/"");
+  if (!CheckerMsgs.empty())
+    Out << '[' << NL;
 
-    if (TempBuf.empty())
-      continue;
-
-    Indent(Out, Space, IsDot) << "{ \"checker\": \"" << CT.second->getDebugTag()
-                              << "\", \"messages\": [" << NL;
-    Indent(Out, InnerSpace, IsDot)
-        << '\"' << TempBuf.str().trim() << '\"' << NL;
-    Indent(Out, Space, IsDot) << "]}";
-
-    if (&CT != LastCT)
-      Out << ',';
-    Out << NL;
-
-    TempBuf.clear();
-  }
+  llvm::interleave(
+      CheckerMsgs,
+      [&](const std::pair<std::string, std::string> &CM) {
+        Indent(Out, Space, IsDot)
+            << "{ \"checker\": \"" << CM.first << "\", \"messages\": [" << NL;
+        Indent(Out, InnerSpace, IsDot) << '\"' << CM.second << '\"' << NL;
+        Indent(Out, Space, IsDot) << "]}";
+      },
+      [&] { Out << ',' << NL; });
 
   // It is the last element of the 'program_state' so do not add a comma.
-  if (HasMessage)
+  if (!CheckerMsgs.empty()) {
+    Out << NL;
     Indent(Out, --Space, IsDot) << "]";
-  else
+  } else {
     Out << "null";
+  }
 
   Out << NL;
 }

@@ -1,0 +1,106 @@
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x2
+  ncmds:           7
+  sizeofcmds:      392
+  flags:           0x5
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __PAGEZERO
+    vmaddr:          0
+    vmsize:          4294967296
+    fileoff:         0
+    filesize:        0
+    maxprot:         0
+    initprot:        0
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          4294967296
+    vmsize:          16384
+    fileoff:         0
+    filesize:        16384
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x1000002E8
+        size:            16
+        offset:          0x2E8
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         000080D2C0035FD600008052C0035FD6
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          4294983680
+    vmsize:          16384
+    fileoff:         16384
+    filesize:        88
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          16384
+    nsyms:           3
+    stroff:          16432
+    strsize:         40
+  - cmd:             LC_UUID
+    cmdsize:         24
+    uuid:            33E94484-A695-3E4B-9C53-C826762C99F2
+  - cmd:             LC_BUILD_VERSION
+    cmdsize:         24
+    platform:        1
+    minos:           917504
+    sdk:             917504
+    ntools:          0
+  - cmd:             LC_MAIN
+    cmdsize:         24
+    entryoff:        752
+    stacksize:       0
+LinkEditData:
+  NameList:
+    - n_strx:          2
+      n_type:          0x3
+      n_sect:          1
+      n_desc:          16
+      n_value:         4294967296
+    - n_strx:          22
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968048
+    - n_strx:          28
+      n_type:          0xF
+      n_sect:          1
+      n_desc:          0
+      n_value:         4294968040
+  StringTable:
+    - ' '
+    - __mh_execute_header
+    - _main
+    - _mmap
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
+...

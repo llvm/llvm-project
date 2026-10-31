@@ -64,10 +64,10 @@ define i32 @test(ptr %pix1, i32 %i_pix1, ptr %pix2, i32 %i_pix2) {
 ; CHECK-NEXT:    [[TMP48:%.*]] = and <4 x i32> [[TMP47]], splat (i32 65537)
 ; CHECK-NEXT:    [[TMP49:%.*]] = mul nuw <4 x i32> [[TMP48]], splat (i32 65535)
 ; CHECK-NEXT:    [[TMP50:%.*]] = add <4 x i32> [[TMP49]], [[TMP46]]
-; CHECK-NEXT:    [[TMP117:%.*]] = xor <4 x i32> [[TMP50]], [[TMP49]]
-; CHECK-NEXT:    [[TMP118:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP117]])
-; CHECK-NEXT:    [[CONV78:%.*]] = and i32 [[TMP118]], 65535
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[TMP118]], 16
+; CHECK-NEXT:    [[TMP51:%.*]] = xor <4 x i32> [[TMP50]], [[TMP49]]
+; CHECK-NEXT:    [[TMP52:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP51]])
+; CHECK-NEXT:    [[CONV78:%.*]] = and i32 [[TMP52]], 65535
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[TMP52]], 16
 ; CHECK-NEXT:    [[ADD80:%.*]] = add nuw nsw i32 [[SHR]], [[CONV78]]
 ; CHECK-NEXT:    [[TMP53:%.*]] = add nsw <4 x i32> [[TMP37]], [[TMP36]]
 ; CHECK-NEXT:    [[TMP54:%.*]] = sub nsw <4 x i32> [[TMP37]], [[TMP36]]

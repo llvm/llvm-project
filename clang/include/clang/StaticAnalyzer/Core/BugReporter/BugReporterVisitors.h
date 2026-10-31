@@ -16,7 +16,7 @@
 
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/LLVM.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -40,6 +40,7 @@ namespace ento {
 
 class PathSensitiveBugReport;
 class BugReporterContext;
+class CallEvent;
 class ExplodedNode;
 class MemRegion;
 class PathDiagnosticPiece;
@@ -513,10 +514,10 @@ public:
   bool printValue(const Expr *CondVarExpr, raw_ostream &Out,
                   const ExplodedNode *N, bool TookTrue, bool IsAssuming);
 
-  bool patternMatch(const Expr *Ex, const Expr *ParentEx, raw_ostream &Out,
-                    BugReporterContext &BRC, PathSensitiveBugReport &R,
-                    const ExplodedNode *N, std::optional<bool> &prunable,
-                    bool IsSameFieldName);
+  bool patternMatch(const Expr *Ex, const Expr *ParentEx, const Expr *OtherEx,
+                    raw_ostream &Out, BugReporterContext &BRC,
+                    PathSensitiveBugReport &R, const ExplodedNode *N,
+                    std::optional<bool> &prunable, bool IsSameFieldName);
 
   static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
 };

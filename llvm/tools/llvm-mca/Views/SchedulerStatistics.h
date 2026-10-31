@@ -46,6 +46,7 @@ namespace mca {
 
 class SchedulerStatistics final : public View {
   const llvm::MCSchedModel &SM;
+  float ReservationStationScaleFactor;
   unsigned LQResourceID;
   unsigned SQResourceID;
 
@@ -72,7 +73,8 @@ class SchedulerStatistics final : public View {
   void printSchedulerUsage(llvm::raw_ostream &OS) const;
 
 public:
-  SchedulerStatistics(const llvm::MCSubtargetInfo &STI);
+  SchedulerStatistics(const llvm::MCSubtargetInfo &STI,
+                      float ReservationStationScaleFactor);
   void onEvent(const HWInstructionEvent &Event) override;
   void onCycleBegin() override { NumCycles++; }
   void onCycleEnd() override { updateHistograms(); }

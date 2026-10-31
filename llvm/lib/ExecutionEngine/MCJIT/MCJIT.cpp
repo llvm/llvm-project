@@ -65,8 +65,10 @@ MCJIT::createJIT(std::unique_ptr<Module> M, std::string *ErrorStr,
 MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
              std::shared_ptr<MCJITMemoryManager> MemMgr,
              std::shared_ptr<LegacyJITSymbolResolver> Resolver)
-    : ExecutionEngine(TM->createDataLayout(), std::move(M)), TM(std::move(TM)),
-      Ctx(nullptr), MemMgr(std::move(MemMgr)),
+    : ExecutionEngine(DataLayout(TM->getTargetTriple().computeDataLayout(
+                          TM->Options.MCOptions.getABIName())),
+                      std::move(M)),
+      TM(std::move(TM)), Ctx(nullptr), MemMgr(std::move(MemMgr)),
       Resolver(*this, std::move(Resolver)), Dyld(*this->MemMgr, this->Resolver),
       ObjCache(nullptr) {
   // FIXME: We are managing our modules, so we do not want the base class
@@ -84,6 +86,8 @@ MCJIT::MCJIT(std::unique_ptr<Module> M, std::unique_ptr<TargetMachine> TM,
 
   if (First->getDataLayout().isDefault())
     First->setDataLayout(getDataLayout());
+  if (First->getTargetTriple().empty())
+    First->setTargetTriple(this->TM->getTargetTriple());
 
   OwnedModules.addModule(std::move(First));
   RegisterJITEventListener(JITEventListener::createGDBRegistrationListener());
@@ -106,6 +110,8 @@ void MCJIT::addModule(std::unique_ptr<Module> M) {
 
   if (M->getDataLayout().isDefault())
     M->setDataLayout(getDataLayout());
+  if (M->getTargetTriple().empty())
+    M->setTargetTriple(TM->getTargetTriple());
 
   OwnedModules.addModule(std::move(M));
 }

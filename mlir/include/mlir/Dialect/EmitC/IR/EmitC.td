@@ -332,7 +332,7 @@ def EmitC_CallOpaqueOp : EmitC_Op<"call_opaque", [CExpressionInterface]> {
     %0 = emitc.call_opaque "foo" () : () -> i32
 
     // Generic form of the same operation.
-    %0 = "emitc.call_opaque"() {callee = "foo"} : () -> i32
+    %0 = "emitc.call_opaque"() <{callee = "foo"}> : () -> i32
     ```
   }];
   let arguments = (ins
@@ -435,7 +435,8 @@ def EmitC_CastOp : EmitC_Op<"cast",
   );
 
   let results = (outs EmitCType:$dest);
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($dest)";
+  let assemblyFormat =
+      "$source (`pure` $pure^)? attr-dict `:` type($source) `to` type($dest)";
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
@@ -502,10 +503,10 @@ def EmitC_ConstantOp
 
     ```mlir
     // Integer constant
-    %0 = "emitc.constant"(){value = 42 : i32} : () -> i32
+    %0 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
 
     // Constant emitted as `char = CHAR_MIN;`
-    %1 = "emitc.constant"() {value = #emitc.opaque<"CHAR_MIN">}
+    %1 = "emitc.constant"() <{value = #emitc.opaque<"CHAR_MIN">}>
       : () -> !emitc.opaque<"char">
     ```
   }];
@@ -794,12 +795,12 @@ def EmitC_CallOp : EmitC_Op<"call",
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
-      return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+      return getCalleeAttr();
     }
 
     /// Set the callee for this operation.
     void setCalleeFromCallable(CallInterfaceCallable callee) {
-      (*this)->setAttr("callee", cast<SymbolRefAttr>(callee));
+      setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
     }
 
     bool hasSideEffects() {
@@ -808,7 +809,10 @@ def EmitC_CallOp : EmitC_Op<"call",
   }];
 
   let assemblyFormat = [{
-    $callee `(` $operands `)` attr-dict `:` functional-type($operands, results)
+    $callee `(` $operands `)`
+    oilist<`,`>(`arg_attrs` `=` $arg_attrs
+               | `res_attrs` `=` $res_attrs) attr-dict `:`
+    functional-type($operands, results)
   }];
 }
 
@@ -856,7 +860,8 @@ def EmitC_DeclareFuncOp : EmitC_Op<"declare_func", [
 
 def EmitC_FuncOp : EmitC_Op<"func", [
   AutomaticAllocationScope,
-  FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface
+  SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove,
+  OpAsmOpInterface
 ]> {
   let summary = "An operation with a name containing a single `SSACFG` region";
   let description = [{
@@ -898,6 +903,7 @@ def EmitC_FuncOp : EmitC_Op<"func", [
     ```
   }];
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttrOf<FunctionType>:$function_type,
                        OptionalAttr<StrArrayAttr>:$specifiers,
                        OptionalAttr<DictArrayAttr>:$arg_attrs,
@@ -976,13 +982,13 @@ def EmitC_IncludeOp
     emitc.include <"myheader.h">
 
     // Generic form of the same operation.
-    "emitc.include" (){include = "myheader.h", is_standard_include} : () -> ()
+    "emitc.include" () <{include = "myheader.h", is_standard_include}> : () -> ()
 
     // Custom form defining the inclusion of `"myheader"`.
     emitc.include "myheader.h"
 
     // Generic form of the same operation.
-    "emitc.include" (){include = "myheader.h"} : () -> ()
+    "emitc.include" () <{include = "myheader.h"}> : () -> ()
     ```
   }];
   let arguments = (ins
@@ -1199,11 +1205,11 @@ def EmitC_MemberOp : EmitC_Op<"member", [CExpressionInterface]> {
     Example:
 
     ```mlir
-    %0 = "emitc.member" (%arg0) {member = "a"}
+    %0 = "emitc.member" (%arg0) <{member = "a"}>
         : (!emitc.opaque<"mystruct">) -> i32
-    %0 = "emitc.member" (%arg0) {member = "a"}
+    %0 = "emitc.member" (%arg0) <{member = "a"}>
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.lvalue<i32>
-    %1 = "emitc.member" (%arg0) {member = "b"}
+    %1 = "emitc.member" (%arg0) <{member = "b"}>
         : (!emitc.lvalue<!emitc.opaque<"mystruct">>) -> !emitc.array<2xi32>
     ```
   }];
@@ -1235,10 +1241,10 @@ def EmitC_MemberOfPtrOp : EmitC_Op<"member_of_ptr", [CExpressionInterface]> {
     Example:
 
     ```mlir
-    %0 = "emitc.member_of_ptr" (%arg0) {member = "a"}
+    %0 = "emitc.member_of_ptr" (%arg0) <{member = "a"}>
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.lvalue<i32>
-    %1 = "emitc.member_of_ptr" (%arg0) {member = "b"}
+    %1 = "emitc.member_of_ptr" (%arg0) <{member = "b"}>
         : (!emitc.lvalue<!emitc.ptr<!emitc.opaque<"mystruct">>>)
         -> !emitc.array<2xi32>
     ```
@@ -1272,8 +1278,8 @@ def EmitC_ConditionalOp : EmitC_Op<"conditional",
     ```mlir
     %0 = emitc.cmp gt, %arg0, %arg1 : (i32, i32) -> i1
 
-    %c0 = "emitc.constant"() {value = 10 : i32} : () -> i32
-    %c1 = "emitc.constant"() {value = 11 : i32} : () -> i32
+    %c0 = "emitc.constant"() <{value = 10 : i32}> : () -> i32
+    %c1 = "emitc.constant"() <{value = 11 : i32}> : () -> i32
 
     %1 = emitc.conditional %0, %c0, %c1 : i32
     ```
@@ -1399,10 +1405,10 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
+    %0 = "emitc.variable"() <{value = 42 : i32}> : () -> !emitc.lvalue<i32>
 
     // Variable emitted as `int32_t* = NULL;`
-    %1 = "emitc.variable"() {value = #emitc.opaque<"NULL">}
+    %1 = "emitc.variable"() <{value = #emitc.opaque<"NULL">}>
       : () -> !emitc.lvalue<!emitc.ptr<!emitc.opaque<"int32_t">>>
     ```
 
@@ -1410,8 +1416,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     As an example, it is valid to create pointers to `variable` operations
     by using `address_of` operations and pass these to a `call` operation.
     ```mlir
-    %0 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
-    %1 = "emitc.variable"() {value = 0 : i32} : () -> !emitc.lvalue<i32>
+    %0 = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
+    %1 = "emitc.variable"() <{value = 0 : i32}> : () -> !emitc.lvalue<i32>
     %2 = emitc.address_of %0 : !emitc.lvalue<i32>
     %3 = emitc.address_of %1 : !emitc.lvalue<i32>
     emitc.call_opaque "write"(%2, %3)
@@ -1426,7 +1432,8 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
   let hasVerifier = 1;
 }
 
-def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
+def EmitC_GlobalOp
+    : EmitC_Op<"global", [SymbolName, SymbolVisibility, Symbol]> {
   let summary = "A global variable";
   let description = [{
     The `emitc.global` operation declares or defines a named global variable.
@@ -1461,6 +1468,7 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
   }];
 
   let arguments = (ins SymbolNameAttr:$sym_name,
+                       OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$type,
                        OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value,
                        UnitAttr:$extern_specifier,
@@ -1471,6 +1479,7 @@ def EmitC_GlobalOp : EmitC_Op<"global", [Symbol]> {
        (`extern` $extern_specifier^)?
        (`static` $static_specifier^)?
        (`const` $const_specifier^)?
+       ($sym_visibility^)?
        $sym_name
        `:` custom<EmitCGlobalOpTypeAndInitialValue>($type, $initial_value)
        attr-dict
@@ -1588,7 +1597,7 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
 
     ```mlir
     // Integer variable
-    %0 = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
+    %0 = "emitc.variable"() <{value = 42 : i32}> : () -> !emitc.lvalue<i32>
     %1 = emitc.call_opaque "foo"() : () -> (i32)
 
     // Assign emitted as `... = ...;`
@@ -1857,7 +1866,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
       emitc.yield
     }
     default {
-      %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+      %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
       emitc.call_opaque "func2" (%3) : (f32) -> ()
     }
     ```
@@ -1917,6 +1926,7 @@ def EmitC_SwitchOp : EmitC_Op<"switch", [RecursiveMemoryEffects,
 def EmitC_ClassOp
     : EmitC_Op<"class", [AutomaticAllocationScope, IsolatedFromAbove,
                          OpAsmOpInterface, SymbolTable,
+                         SymbolName, SymbolVisibility,
                          Symbol]#GraphRegionNoTerminator.traits> {
   let summary =
       "Represents a C++ class definition, encapsulating fields and methods.";
@@ -1952,7 +1962,9 @@ def EmitC_ClassOp
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, UnitAttr:$final_specifier,
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                   OptionalAttr<StrAttr>:$sym_visibility,
+                   UnitAttr:$final_specifier,
                    DefaultValuedAttr<EmitC_ClassTypeAttr,
                                      "ClassType::class_">:$class_type);
 
@@ -1964,10 +1976,11 @@ def EmitC_ClassOp
   }];
 
   let assemblyFormat =
-      [{ ($class_type^)? (`final` $final_specifier^)? $sym_name attr-dict-with-keyword $body }];
+      [{ ($class_type^)? (`final` $final_specifier^)? ($sym_visibility^)? $sym_name attr-dict-with-keyword $body }];
 }
 
-def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
+def EmitC_FieldOp
+    : EmitC_Op<"field", [SymbolName, SymbolVisibility, Symbol]> {
   let summary = "A field within a class";
   let description = [{
     The `emitc.field` operation declares a named field within an `emitc.class`
@@ -1988,11 +2001,12 @@ def EmitC_FieldOp : EmitC_Op<"field", [Symbol]> {
     ```
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$type,
+  let arguments = (ins SymbolNameAttr:$sym_name,
+      OptionalAttr<StrAttr>:$sym_visibility, TypeAttr:$type,
       OptionalAttr<EmitC_OpaqueOrTypedAttr>:$initial_value);
 
   let assemblyFormat = [{
-       $sym_name
+       ($sym_visibility^)? $sym_name
        `:` custom<EmitCFieldOpTypeAndInitialValue>($type, $initial_value)
        attr-dict
   }];

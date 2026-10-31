@@ -58,13 +58,10 @@
 ; CHECK-NEXT:       Shadow Stack GC Lowering
 ; CHECK-NEXT:       Remove unreachable blocks from the CFG
 ; CHECK-NEXT:       Cycle Info Analysis
-; CHECK-NEXT:       Post-Dominator Tree Construction
-; CHECK-NEXT:       Branch Probability Analysis
-; CHECK-NEXT:       Block Frequency Analysis
-; CHECK-NEXT:       Constant Hoisting
-; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Lazy Branch Probability Analysis
 ; CHECK-NEXT:       Lazy Block Frequency Analysis
+; CHECK-NEXT:       Constant Hoisting
+; CHECK-NEXT:       Replace intrinsics with calls to vector library
 ; CHECK-NEXT:       Optimization Remark Emitter
 ; CHECK-NEXT:       Partially inline calls to library functions
 ; CHECK-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
@@ -87,6 +84,7 @@
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Block Frequency Analysis
 ; CHECK-NEXT:       CodeGen Prepare
+; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:     RISC-V Promote Constants
@@ -110,8 +108,7 @@
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Natural Loop Construction
-; CHECK-NEXT:       Machine Cycle Info Analysis
-; CHECK-NEXT:       Machine Block Frequency Analysis
+; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       MachineDominator Tree Construction
@@ -130,8 +127,6 @@
 ; CHECK-NEXT:       Machine Trace Metrics
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine InstCombiner
-; CHECK-NEXT:       Machine Cycle Info Analysis
-; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       Early Machine Loop Invariant Code Motion
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       Machine Cycle Info Analysis
@@ -142,7 +137,7 @@
 ; CHECK-NEXT:       Peephole Optimizations
 ; CHECK-NEXT:       Remove dead machine instructions
 ; RV64-NEXT:        RISC-V Optimize W Instructions
-; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Pre-RA
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       RISC-V pre-allocation Zilsd load/store optimization
@@ -154,11 +149,10 @@
 ; CHECK-NEXT:       Init Undef Pass
 ; CHECK-NEXT:       Process Implicit Definitions
 ; CHECK-NEXT:       Remove unreachable machine basic blocks
-; CHECK-NEXT:       Live Variable Analysis
-; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Slot index numbering
 ; CHECK-NEXT:       Live Interval Analysis
+; CHECK-NEXT:       Eliminate PHI nodes for register allocation
+; CHECK-NEXT:       Two-Address instruction pass
 ; CHECK-NEXT:       Register Coalescer
 ; CHECK-NEXT:       Rename Disconnected Subregister Components
 ; CHECK-NEXT:       Machine Instruction Scheduler
@@ -190,7 +184,6 @@
 ; CHECK-NEXT:       Machine Block Frequency Analysis
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       MachinePostDominator Tree Construction
-; CHECK-NEXT:       Machine Natural Loop Construction
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter
 ; CHECK-NEXT:       Shrink Wrapping analysis
@@ -201,7 +194,7 @@
 ; CHECK-NEXT:       Tail Duplication
 ; CHECK-NEXT:       Machine Copy Propagation Pass
 ; CHECK-NEXT:       Post-RA pseudo instruction expansion pass
-; CHECK-NEXT:       RISC-V post-regalloc pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Post-RA
 ; CHECK-NEXT:       Insert KCFI indirect call checks
 ; CHECK-NEXT:       RISC-V Load / Store Optimizer
 ; CHECK-NEXT:       MachineDominator Tree Construction
@@ -233,9 +226,9 @@
 ; CHECK-NEXT:       Stack Frame Layout Analysis
 ; CHECK-NEXT:       RISC-V Zcmp move merging pass
 ; CHECK-NEXT:       RISC-V Zcmp Push/Pop optimization pass
-; CHECK-NEXT:       RISC-V pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Pre-Emit
 ; RV32-NEXT:        RISC-V QC Relaxation Marking
-; CHECK-NEXT:       RISC-V atomic pseudo instruction expansion pass
+; CHECK-NEXT:       RISC-V Pseudo Instruction Expansion - Atomics
 ; CHECK-NEXT:       Unpack machine instruction bundles
 ; CHECK-NEXT:       Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:       Machine Optimization Remark Emitter

@@ -19,7 +19,6 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/Target/TargetOptions.h"
 
 using namespace llvm;
 
@@ -31,9 +30,8 @@ MSP430FrameLowering::MSP430FrameLowering(const MSP430Subtarget &STI)
 bool MSP430FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo().hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken());
+  return (MF.disableFramePointerElim() ||
+          MF.getFrameInfo().hasVarSizedObjects() || MFI.isFrameAddressTaken());
 }
 
 bool MSP430FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {

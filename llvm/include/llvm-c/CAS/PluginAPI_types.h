@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 #define LLCAS_VERSION_MAJOR 0
-#define LLCAS_VERSION_MINOR 2
+#define LLCAS_VERSION_MINOR 3
 
 typedef struct llcas_cas_options_s *llcas_cas_options_t;
 typedef struct llcas_cas_s *llcas_cas_t;
@@ -83,6 +83,32 @@ typedef enum {
    */
   LLCAS_LOOKUP_RESULT_ERROR = 2,
 } llcas_lookup_result_t;
+
+/**
+ * Return values for \c llcas_cas_validate_if_needed and
+ * \c llcas_cas_recover_ondisk_data.
+ */
+typedef enum {
+  /**
+   * The data is valid.
+   */
+  LLCAS_VALIDATION_RESULT_VALID = 0,
+
+  /**
+   * The data was invalid, but was recovered.
+   */
+  LLCAS_VALIDATION_RESULT_RECOVERED = 1,
+
+  /**
+   * Validation or recovery was skipped, as it was not needed.
+   */
+  LLCAS_VALIDATION_RESULT_SKIPPED = 2,
+
+  /**
+   * An error occurred.
+   */
+  LLCAS_VALIDATION_RESULT_ERROR = 3,
+} llcas_validation_result_t;
 
 /**
  * Callback for \c llcas_cas_load_object_async.

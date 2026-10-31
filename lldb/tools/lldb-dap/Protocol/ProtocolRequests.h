@@ -520,7 +520,7 @@ struct SourceArguments {
   /// The reference to the source. This is the same as `source.sourceReference`.
   /// This is provided for backward compatibility since old clients do not
   /// understand the `source` attribute.
-  int64_t sourceReference = LLDB_DAP_INVALID_SRC_REF;
+  src_ref_t sourceReference = LLDB_DAP_INVALID_SRC_REF;
 };
 bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
 
@@ -1071,6 +1071,19 @@ struct ExceptionInfoResponseBody {
 
   /// Detailed information about the exception.
   std::optional<ExceptionDetails> details;
+
+  /// lldb-dap Extensions
+  /// @{
+
+  /// The thread's stop reason extended info, as reported by
+  /// `SBThread::GetStopReasonExtendedInfoAsJSON`.
+  std::optional<llvm::json::Value> lldbExtStopReasonExtendedInfo;
+
+  /// The process's extended crash information, as reported by
+  /// `SBProcess::GetExtendedCrashInformation`.
+  std::optional<llvm::json::Value> lldbExtExtendedCrashInformation;
+
+  /// @}
 };
 llvm::json::Value toJSON(const ExceptionInfoResponseBody &);
 
@@ -1241,6 +1254,9 @@ llvm::json::Value toJSON(const LocationsResponseBody &);
 struct CompileUnitsArguments {
   /// The ID of the module.
   String moduleId;
+
+  /// IDs of compile units to return, or empty for all.
+  std::vector<uint32_t> compileUnitIds;
 };
 bool fromJSON(const llvm::json::Value &, CompileUnitsArguments &,
               llvm::json::Path);

@@ -9,9 +9,9 @@
 #ifndef FLANG_RT_RUNTIME_IO_API_COMMON_H_
 #define FLANG_RT_RUNTIME_IO_API_COMMON_H_
 
-#include "unit.h"
 #include "flang-rt/runtime/io-stmt.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Common/api-attrs.h"
 #include "flang/Common/optional.h"
 #include "flang/Runtime/io-api.h"
@@ -52,7 +52,7 @@ template <Direction DIR, template <Direction> class STATE, typename... A>
 RT_API_ATTRS Cookie BeginExternalListIO(
     int unitNumber, const char *sourceFile, int sourceLine, A &&...xs) {
   Terminator terminator{sourceFile, sourceLine};
-#if defined(RT_CUDA_THIN_IO)
+#if defined(RT_THIN_IO)
   if constexpr (DIR == Direction::Output) {
     Cookie errorCookie{nullptr};
     ExternalFileUnit *unit{GetOrCreateUnit(

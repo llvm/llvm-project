@@ -10,4 +10,4 @@
 
 #include "src/math/fmin.h"
 
-LIST_FMIN_TESTS(double, LIBC_NAMESPACE::fmin)
+LIST_FMIN_TESTS(Fmin, double, LIBC_NAMESPACE::fmin)

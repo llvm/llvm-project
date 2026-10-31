@@ -15,11 +15,10 @@
 #define MLIR_DIALECT_LLVMIR_LLVMDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeSupport.h"
@@ -30,7 +29,6 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
-#include "mlir/Support/ThreadLocalCache.h"
 #include "llvm/ADT/PointerEmbeddedInt.h"
 
 namespace llvm {
@@ -41,17 +39,6 @@ template <bool mt_only>
 class SmartMutex;
 } // namespace sys
 } // namespace llvm
-
-namespace mlir {
-namespace LLVM {
-class LLVMDialect;
-
-namespace detail {
-struct LLVMTypeStorage;
-struct LLVMDialectImpl;
-} // namespace detail
-} // namespace LLVM
-} // namespace mlir
 
 namespace mlir {
 namespace LLVM {
@@ -95,8 +82,6 @@ struct AssumeSeparateStorageTag {};
 #include "mlir/Dialect/LLVMIR/LLVMOps.h.inc"
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMIntrinsicOps.h.inc"
-
-#include "mlir/Dialect/LLVMIR/LLVMOpsDialect.h.inc"
 
 namespace mlir {
 namespace LLVM {
@@ -220,6 +205,13 @@ bool satisfiesLLVMModule(Operation *op);
 
 /// Lookup parent Module satisfying LLVM conditions on the Module Operation.
 Operation *parentLLVMModule(Operation *op);
+
+/// Determines the element type of `type` the way the `llvm.mlir.constant`
+/// verifier does, i.e. by looking through LLVM array types and then through a
+/// `VectorType` or `TensorType`. Everything else is treated as a scalar. Use
+/// this when building a constant so that the attribute and the result type are
+/// compared consistently with the verifier.
+Type getConstantElementType(Type type);
 
 /// Convert an array of integer attributes to a vector of integers that can be
 /// used as indices in LLVM operations.

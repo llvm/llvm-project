@@ -70,6 +70,11 @@ int3 test_sign_float3(float3 p0) { return sign(p0); }
 // CHECK: ret <4 x i32> %hlsl.sign
 int4 test_sign_float4(float4 p0) { return sign(p0); }
 
+// CHECK: define [[FNATTRS]] <5 x i32> @
+// CHECK: %hlsl.sign = call <5 x i32> @llvm.[[TARGET]].sign.v5f32(
+// CHECK: ret <5 x i32> %hlsl.sign
+vector<int, 5> test_sign_float5(vector<float, 5> p0) { return sign(p0); }
+
 
 // CHECK: define [[FNATTRS]] i32 @
 // CHECK: %hlsl.sign = call i32 @llvm.[[TARGET]].sign.f64(

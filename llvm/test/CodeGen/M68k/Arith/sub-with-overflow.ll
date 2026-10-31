@@ -19,7 +19,7 @@ define i1 @func1(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr printf
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB0_1: ; %normal
@@ -56,7 +56,7 @@ define i1 @func2(i32 %v1, i32 %v2) nounwind {
 ; CHECK-NEXT:    lea (no,%pc), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr printf
-; CHECK-NEXT:    moveq #0, %d0
+; CHECK-NEXT:    clr.b %d0
 ; CHECK-NEXT:    adda.l #12, %sp
 ; CHECK-NEXT:    rts
 ; CHECK-NEXT:  .LBB1_1: ; %normal
@@ -93,4 +93,31 @@ entry:
   %t = call {i32, i1} @llvm.ssub.with.overflow.i32(i32 %x, i32 1)
   %obit = extractvalue {i32, i1} %t, 1
   ret i1 %obit
+}
+
+define {i64, i1} @usubo_i64(i64 %v1, i64 %v2) nounwind {
+; CHECK-LABEL: usubo_i64:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    suba.l #4, %sp
+; CHECK-NEXT:    movem.l %d2, (0,%sp) ; 8-byte Folded Spill
+; CHECK-NEXT:    move.l (8,%sp), %a0
+; CHECK-NEXT:    move.l (12,%sp), %d0
+; CHECK-NEXT:    move.l (20,%sp), %d1
+; CHECK-NEXT:    move.l (16,%sp), %d2
+; CHECK-NEXT:    sub.l (24,%sp), %d2
+; CHECK-NEXT:    subx.l %d1, %d0
+; CHECK-NEXT:    scs %d1
+; CHECK-NEXT:    move.l %d2, (4,%a0)
+; CHECK-NEXT:    move.l %d0, (%a0)
+; CHECK-NEXT:    and.b #1, %d1
+; CHECK-NEXT:    move.b %d1, (8,%a0)
+; CHECK-NEXT:    move.l %a0, %d0
+; CHECK-NEXT:    movem.l (0,%sp), %d2 ; 8-byte Folded Reload
+; CHECK-NEXT:    adda.l #4, %sp
+; CHECK-NEXT:    move.l (%sp), %a1
+; CHECK-NEXT:    adda.l #4, %sp
+; CHECK-NEXT:    move.l %a1, (%sp)
+; CHECK-NEXT:    rts
+  %t = call {i64, i1} @llvm.usub.with.overflow.i64(i64 %v1, i64 %v2)
+  ret {i64, i1} %t
 }

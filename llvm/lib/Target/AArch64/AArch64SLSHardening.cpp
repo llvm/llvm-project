@@ -320,7 +320,7 @@ parseThunkName(StringRef ThunkName) {
 
   // Parse register operands.
   Register Xn = ParseRegName(XnStr);
-  Register Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : AArch64::NoRegister;
+  Register Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : Register();
 
   return std::make_tuple(std::ref(Kind), Xn, Xm);
 }
@@ -368,7 +368,7 @@ void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
       .addImm(0);
   MachineInstrBuilder Builder =
       BuildMI(Entry, DebugLoc(), TII->get(Kind.BROpcode)).addReg(AArch64::X16);
-  if (Xm != AArch64::NoRegister) {
+  if (Xm.isValid()) {
     Entry->addLiveIn(Xm);
     Builder.addReg(Xm);
   }
@@ -428,8 +428,7 @@ void SLSHardeningInserter::convertBLRToBL(
   assert(BLR.getNumExplicitOperands() == NumRegOperands &&
          "Expected one or two register inputs");
   Register Xn = BLR.getOperand(0).getReg();
-  Register Xm =
-      Kind.HasXmOperand ? BLR.getOperand(1).getReg() : AArch64::NoRegister;
+  Register Xm = Kind.HasXmOperand ? BLR.getOperand(1).getReg() : Register();
 
   DebugLoc DL = BLR.getDebugLoc();
 

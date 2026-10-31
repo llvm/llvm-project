@@ -5,9 +5,9 @@ add_clang_library(CIRTestAnalysis
   MLIRCIRAnalysis
   MLIRCIR
   MLIRIR
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRPass
-  MLIRTestAnalysis
+  MLIRTestAliasAnalysis
 )
 
 target_include_directories(CIRTestAnalysis

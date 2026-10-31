@@ -15,9 +15,9 @@ subroutine s
   real (kind = LONGreal) :: gs(13)
   x(1) = 4.0
   g(1) = 5.0
-  ! CHECK: %[[g_decl:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEg"}
-  ! CHECK: %[[gs_decl:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEgs"}
-  ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFsEx"}
+  ! CHECK: %[[g_decl:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEg")
+  ! CHECK: %[[gs_decl:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEgs")
+  ! CHECK: %[[x_decl:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFsEx")
   ! CHECK: %[[g_slice:.*]] = hlfir.designate %[[g_decl]]#0 (%c0{{.*}}:%c12{{.*}}:%c1{{.*}})
   ! CHECK: %[[x_slice:.*]] = hlfir.designate %[[x_decl]]#0 (%c11{{.*}}:%c-1{{.*}}:%c-1{{.*}})
   ! CHECK: %[[res:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<13xf64> {
@@ -38,7 +38,7 @@ end subroutine s
 ! CHECK-LABEL: func @_QPs2
 subroutine s2
   real :: x(10)
-  ! CHECK: %[[x:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFs2Ex"}
+  ! CHECK: %[[x:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFs2Ex")
   x = 0.0
   ! CHECK: fir.call @_FortranAioBeginExternalListOutput
   print *, x
@@ -56,7 +56,7 @@ program main
   A(2) = 2
   A(3) = 3
   print *, A
-  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFEa"}
+  ! CHECK: %[[A:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFEa")
   ! CHECK: %[[slice:.*]] = hlfir.designate %[[A]]#0 (%c1{{.*}}:%c3{{.*}}:%c1{{.*}})
   ! CHECK: %[[box:.*]] = fir.embox %[[slice]]
   ! CHECK: fir.convert %[[box]] : (!fir.box<!fir.array<3xi32>>) -> !fir.box<none>

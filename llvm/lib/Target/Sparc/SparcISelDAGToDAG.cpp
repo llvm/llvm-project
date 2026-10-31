@@ -37,7 +37,8 @@ class SparcDAGToDAGISel : public SelectionDAGISel {
 public:
   SparcDAGToDAGISel() = delete;
 
-  explicit SparcDAGToDAGISel(SparcTargetMachine &tm) : SelectionDAGISel(tm) {}
+  explicit SparcDAGToDAGISel(SparcTargetMachine &tm, CodeGenOptLevel OptLevel)
+      : SelectionDAGISel(tm, OptLevel) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     Subtarget = &MF.getSubtarget<SparcSubtarget>();
@@ -68,8 +69,10 @@ private:
 class SparcDAGToDAGISelLegacy : public SelectionDAGISelLegacy {
 public:
   static char ID;
-  explicit SparcDAGToDAGISelLegacy(SparcTargetMachine &tm)
-      : SelectionDAGISelLegacy(ID, std::make_unique<SparcDAGToDAGISel>(tm)) {}
+  explicit SparcDAGToDAGISelLegacy(SparcTargetMachine &tm,
+                                   CodeGenOptLevel OptLevel)
+      : SelectionDAGISelLegacy(
+            ID, std::make_unique<SparcDAGToDAGISel>(tm, OptLevel)) {}
 };
 }  // end anonymous namespace
 
@@ -155,11 +158,8 @@ bool SparcDAGToDAGISel::SelectADDRrr(SDValue Addr, SDValue &R1, SDValue &R2) {
 
 bool SparcDAGToDAGISel::SelectForceADDRrr(SDValue Addr, SDValue &Base,
                                           SDValue &Disp) {
-  // If it's already in R+R form then hand it over to regular ADDRrr handling.
-  if (Addr.getNumOperands() == 2 &&
-      !isa<ConstantSDNode>(Addr.getOperand(0).getNode()) &&
-      !isa<ConstantSDNode>(Addr.getOperand(1).getNode()))
-    return SelectADDRrr(Addr, Base, Disp);
+  if (SelectADDRrr(Addr, Base, Disp))
+    return true;
 
   // Otherwise we'll use the full address in base and set the offset part to
   // zero.
@@ -416,6 +416,7 @@ bool SparcDAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// createSparcISelDag - This pass converts a legalized DAG into a
 /// SPARC-specific DAG, ready for instruction scheduling.
 ///
-FunctionPass *llvm::createSparcISelDag(SparcTargetMachine &TM) {
-  return new SparcDAGToDAGISelLegacy(TM);
+FunctionPass *llvm::createSparcISelDag(SparcTargetMachine &TM,
+                                       CodeGenOptLevel OptLevel) {
+  return new SparcDAGToDAGISelLegacy(TM, OptLevel);
 }

@@ -26,10 +26,16 @@ program main
     if (n==1) goto lab(1,666)
     !ERROR: Label '2' was not found
     if (n==1) goto lab(1,2)
+    ! Label 3 is a FORMAT statement in this scope.  It can be assigned and
+    ! used as a format, but naming it in the label list of an assigned GOTO
+    ! is an error: a FORMAT statement is not a branch target.  The diagnostic
+    ! is reported on the FORMAT statement itself, below.
+    if (n==1) goto lab(1,3)
     assign 3 to lab
     write(*,fmt=lab) ! ok
     write(*,fmt=implicitlab3) ! ok
 1   continue
+    !ERROR: Label '3' is not a branch target
 3   format('yes')
   end subroutine test
 end program

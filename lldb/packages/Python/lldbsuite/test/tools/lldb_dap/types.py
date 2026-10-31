@@ -780,6 +780,13 @@ class Thread:
 
 
 @dataclass(frozen=True)
+class CompileUnit:
+    id: int
+    compileUnitPath: str
+    language: Optional[str] = None
+
+
+@dataclass(frozen=True)
 class StackFrame:
     id: int
     name: str
@@ -791,6 +798,10 @@ class StackFrame:
     canRestart: Optional[bool] = None
     instructionPointerReference: Optional[str] = None
     moduleId: Optional[Union[int, str]] = None
+    compileUnitId: Optional[int] = None
+    languageSpecificData: Optional[Dict[str, Any]] = field(
+        metadata={"alias": "$__lldb_languageSpecificData"}, default=None
+    )
     presentationHint: Optional[StackFramePresentationHint] = None
 
 
@@ -1046,15 +1057,6 @@ ReverseResponse = Union[RunInTerminalResponse, EmptyBodyResponse, ErrorResponse]
 
 
 @dataclass(frozen=True)
-class StartDebuggingRequestArgs:
-    configuration: Dict[str, Any] = field(default_factory=dict)
-    request: StartDebuggingRequestType = StartDebuggingRequestType.LAUNCH
-
-    command_ = "startDebugging"
-    response_class_ = EmptyBodyResponse
-
-
-@dataclass(frozen=True)
 class InitializeResponse(Response):
     body: Capabilities
 
@@ -1080,7 +1082,7 @@ class InitializeArgs:
     supportsStartDebuggingRequest: Optional[bool] = None
     supportsANSIStyling: Optional[bool] = None
     sourceInitFile: bool = field(
-        metadata={"alias": "$__lldbSourceInitFile"}, default=False
+        metadata={"alias": "$__lldb_sourceInitFile"}, default=False
     )
 
     command_ = "initialize"
@@ -1118,9 +1120,9 @@ class LaunchArgs:
     env: Optional[Union[Dict[str, str], List[str]]] = None
     detachOnError: Optional[bool] = None
     disableASLR: bool = False
-    disableSTDIO: bool = False
+    disableSTDIO: Optional[bool] = None
     shellExpandArguments: bool = False
-    console: Console = Console.INTERNAL
+    console: Optional[Console] = None
     stdio: Optional[List[Optional[str]]] = None
 
     # Configurations.
@@ -1128,7 +1130,7 @@ class LaunchArgs:
     enableAutoVariableSummaries: bool = False
     enableSyntheticChildDebugging: bool = False
     displayExtendedBacktrace: bool = False
-    stopOnEntry: bool = False
+    stopOnEntry: Optional[bool] = None
     timeout: Optional[float] = None
     commandEscapePrefix: Optional[str] = None
     customFrameFormat: Optional[str] = None
@@ -1191,6 +1193,31 @@ class AttachArgs:
 
     command_ = "attach"
     response_class_ = EmptyBodyResponse
+
+
+@dataclass(frozen=True)
+class StartDebuggingRequestArgs:
+    configuration: Union[LaunchArgs, AttachArgs]
+    request: StartDebuggingRequestType
+
+    command_ = "startDebugging"
+    response_class_ = EmptyBodyResponse
+
+    def __post_init__(self):
+        if self.request == StartDebuggingRequestType.LAUNCH:
+            assert isinstance(
+                self.configuration, LaunchArgs
+            ), "request should match the configuration"
+
+        elif self.request == StartDebuggingRequestType.ATTACH:
+            assert isinstance(
+                self.configuration, AttachArgs
+            ), "request should match the configuration"
+
+
+@dataclass(frozen=True)
+class StartDebuggingRequest(Request):
+    arguments: StartDebuggingRequestArgs
 
 
 @dataclass(frozen=True)
@@ -1350,11 +1377,6 @@ class SetInstructionBreakpointsArgs:
 
 
 @dataclass(frozen=True)
-class CompileUnit:
-    compileUnitPath: str
-
-
-@dataclass(frozen=True)
 class CompileUnitsResponse(Response):
     @dataclass(frozen=True)
     class Body:
@@ -1367,6 +1389,7 @@ class CompileUnitsResponse(Response):
 @args_protocol
 class CompileUnitsArgs:
     moduleId: str
+    compileUnitIds: Optional[List[int]] = None
 
     command_ = "compileUnits"
     response_class_ = CompileUnitsResponse
@@ -1728,6 +1751,12 @@ class ExceptionInfoResponse(Response):
         breakMode: ExceptionBreakMode
         description: Optional[str] = None
         details: Optional[ExceptionDetails] = None
+        lldb_stop_reason_extended_info: Optional[Dict[str, Any]] = field(
+            metadata={"alias": "$__lldb_stopReasonExtendedInfo"}, default=None
+        )
+        lldb_extended_crash_information: Optional[Dict[str, Any]] = field(
+            metadata={"alias": "$__lldb_extendedCrashInformation"}, default=None
+        )
 
     body: Body
 

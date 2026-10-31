@@ -1,5 +1,5 @@
 # Returns the host triple.
-# Invokes config.guess
+# Invokes config.guess, except for platforms it cannot identify.
 
 function( get_host_triple var )
   if( MSVC OR CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
@@ -40,6 +40,44 @@ function( get_host_triple var )
       set( value "powerpc64-ibm-aix" )
     else()
       set( value "powerpc-ibm-aix" )
+    endif()
+  elseif( CMAKE_HOST_SYSTEM_NAME MATCHES "HarmonyOS|OpenHarmony|OHOS" )
+    # config.guess cannot identify HarmonyOS: uname -s reports "HarmonyOS",
+    # which config.guess does not recognize, and its probing is rejected by
+    # the system sandbox. Build the triple from CMake's host detection using
+    # the form clang targets on OHOS (e.g. aarch64-unknown-linux-ohos). CMake
+    # itself may report the host processor as "unknown" because uname -p does,
+    # so fall back to asking uname -m directly.
+    set( TT_MACHINE "${CMAKE_HOST_SYSTEM_PROCESSOR}" )
+    if( NOT TT_MACHINE OR TT_MACHINE STREQUAL "unknown" )
+      find_program( TT_UNAME uname PATHS /bin /usr/bin /usr/local/bin
+        NO_CMAKE_FIND_ROOT_PATH )
+      set( TT_RV 1 )
+      if( TT_UNAME )
+        execute_process( COMMAND ${TT_UNAME} -m
+          RESULT_VARIABLE TT_RV
+          OUTPUT_VARIABLE TT_MACHINE
+          OUTPUT_STRIP_TRAILING_WHITESPACE
+          ERROR_QUIET )
+      endif()
+      if( NOT TT_RV EQUAL 0 )
+        set( TT_MACHINE "" )
+      endif()
+    endif()
+    if( TT_MACHINE MATCHES "aarch64|arm64" )
+      set( value "aarch64-unknown-linux-ohos" )
+    elseif( TT_MACHINE MATCHES "^arm" )
+      set( value "arm-unknown-linux-ohos" )
+    elseif( TT_MACHINE MATCHES "^x86_64" )
+      set( value "x86_64-unknown-linux-ohos" )
+    elseif( TT_MACHINE MATCHES "^riscv64" )
+      set( value "riscv64-unknown-linux-ohos" )
+    elseif( TT_MACHINE MATCHES "^loongarch64" )
+      set( value "loongarch64-unknown-linux-ohos" )
+    else()
+      message( FATAL_ERROR
+        "Failed to determine host triple for ${CMAKE_HOST_SYSTEM_NAME}: "
+        "host processor \"${TT_MACHINE}\" is not supported" )
     endif()
   else()
     if(CMAKE_HOST_SYSTEM_NAME STREQUAL Windows AND NOT MSYS)

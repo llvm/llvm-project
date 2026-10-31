@@ -57,40 +57,36 @@ bool isAssignmentOperatorLifetimeBound(const CXXMethodDecl *CMD) {
          CMD->getParamDecl(0)->hasAttr<clang::LifetimeBoundAttr>();
 }
 
-/// Check if a function has a lifetimebound attribute on its function type
+/// Check if a function has an attribute on its function type
 /// (which represents the implicit 'this' parameter for methods).
 /// Returns the attribute if found, nullptr otherwise.
-static const LifetimeBoundAttr *
-getLifetimeBoundAttrFromFunctionType(const TypeSourceInfo &TSI) {
-  // Walk through the type layers looking for a lifetimebound attribute.
-  TypeLoc TL = TSI.getTypeLoc();
+template <typename AttrType>
+static const AttrType *getAttrFromFunctionType(const FunctionDecl *FD) {
+  const TypeSourceInfo *TSI = FD->getTypeSourceInfo();
+  if (!TSI)
+    return nullptr;
+  TypeLoc TL = TSI->getTypeLoc();
   while (true) {
     auto ATL = TL.getAsAdjusted<AttributedTypeLoc>();
     if (!ATL)
       break;
-    if (auto *LBAttr = ATL.getAttrAs<LifetimeBoundAttr>())
-      return LBAttr;
+    if (auto *Attr = ATL.getAttrAs<AttrType>())
+      return Attr;
     TL = ATL.getModifiedLoc();
   }
   return nullptr;
 }
 
-const LifetimeBoundAttr *
-getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
-  if (const TypeSourceInfo *TSI = FD->getTypeSourceInfo())
-    if (const auto *Attr = getLifetimeBoundAttrFromFunctionType(*TSI))
-      return Attr;
-  return nullptr;
-}
-
-const LifetimeBoundAttr *
-getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+template <typename AttrType>
+static const AttrType *getImplicitObjectParamAttr(const FunctionDecl *FD) {
+  // getDeclWithMergedLifetimeBoundAttrs just returns the most recent decl,
+  // so it is perfectly safe to reuse for capture_by as well.
   FD = getDeclWithMergedLifetimeBoundAttrs(FD);
   // Attribute merging doesn't work well with attributes on function types (like
   // 'this' param). We need to check all redeclarations.
-  auto CheckRedecls = [](const FunctionDecl *F) -> const LifetimeBoundAttr * {
+  auto CheckRedecls = [](const FunctionDecl *F) -> const AttrType * {
     for (const FunctionDecl *Redecl : F->redecls())
-      if (const auto *Attr = getDirectImplicitObjectLifetimeBoundAttr(Redecl))
+      if (const auto *Attr = getAttrFromFunctionType<AttrType>(Redecl))
         return Attr;
     return nullptr;
   };
@@ -102,38 +98,37 @@ getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
   return nullptr;
 }
 
+const LifetimeBoundAttr *
+getDirectImplicitObjectLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getAttrFromFunctionType<LifetimeBoundAttr>(FD);
+}
+
+const LifetimeBoundAttr *
+getImplicitObjectParamLifetimeBoundAttr(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeBoundAttr>(FD);
+}
+
 bool implicitObjectParamIsLifetimeBound(const FunctionDecl *FD) {
   if (getImplicitObjectParamLifetimeBoundAttr(FD))
     return true;
   return isNormalAssignmentOperator(FD);
 }
 
-FunctionCallInfo getFunctionCallInfo(const Expr *Call) {
-  FunctionCallInfo Info;
+const LifetimeCaptureByAttr *
+getCaptureByAttrFromFunctionType(const FunctionDecl *FD) {
+  return getImplicitObjectParamAttr<LifetimeCaptureByAttr>(FD);
+}
+
+FunctionCallInfo::FunctionCallInfo(const Expr *Call) {
   if (!Call)
-    return Info;
+    return;
 
-  Call = Call->IgnoreParenImpCasts();
-  std::optional<AnyCall> AC = AnyCall::forExpr(Call);
+  std::optional<AnyCall> AC = AnyCall::forExpr(Call->IgnoreParenImpCasts());
   if (!AC)
-    return Info;
+    return;
 
-  Info.FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
-  if (!Info.FD)
-    return Info;
-
-  if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(Call))
-    Info.Args.push_back(MCE->getImplicitObjectArgument());
-
-  Info.Args.append(AC->arg_begin(), AC->arg_end());
-
-  if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(Call))
-    // For `static operator()`, the first argument is the object argument,
-    // remove it from the argument list to avoid off-by-one errors.
-    if (OCE->getOperator() == OO_Call && Info.FD->isStatic())
-      Info.Args.erase(Info.Args.begin());
-
-  return Info;
+  Args = AC->arguments();
+  FD = dyn_cast_or_null<FunctionDecl>(AC->getDecl());
 }
 
 std::optional<LifetimeBoundParamInfo>
@@ -178,15 +173,14 @@ getTrackingInfoForCallArg(const Expr *Call, const Expr *Source) {
   if (!Call || !Source)
     return std::nullopt;
 
-  FunctionCallInfo CallInfo = getFunctionCallInfo(Call);
-  if (!CallInfo.FD)
+  auto [FD, Args] = FunctionCallInfo(Call);
+  if (!FD)
     return std::nullopt;
 
-  for (unsigned I = 0; I < CallInfo.Args.size(); ++I)
-    if (CallInfo.Args[I]->IgnoreParenImpCasts() ==
-        Source->IgnoreParenImpCasts())
+  for (unsigned I = 0; I < Args.size(); ++I)
+    if (Args[I]->IgnoreParenImpCasts() == Source->IgnoreParenImpCasts())
       if (std::optional<LifetimeBoundParamInfo> ParamInfo =
-              getTrackedArgInfo(CallInfo.FD, CallInfo.Args, I))
+              getTrackedArgInfo(FD, Args, I))
         return ParamInfo;
 
   return std::nullopt;
@@ -399,6 +393,11 @@ bool isGslPointerType(QualType QT) { return isRecordWithAttr<PointerAttr>(QT); }
 bool isGslOwnerType(QualType QT) { return isRecordWithAttr<OwnerAttr>(QT); }
 bool isGslOwnerType(const CXXRecordDecl *RD) {
   return isRecordWithAttr<OwnerAttr>(RD);
+}
+
+bool isOwnerPtrCtor(const CXXConstructorDecl *Ctor, const ParmVarDecl *PVD) {
+  return Ctor && PVD->getType()->isPointerType() &&
+         isGslOwnerType(Ctor->getParent());
 }
 
 static StringRef getName(const CXXRecordDecl &RD) {

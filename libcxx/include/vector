@@ -230,12 +230,12 @@ public:
     const_reference back() const;
 
     void push_back(const value_type& x);
-    template <class... Args> reference emplace_back(Args&&... args);  // C++14; reference in C++17
+    template <class... Args> reference emplace_back(Args&&... args);  // C++11; returns void/reference until/since C++17
     template<container-compatible-range<T> R>
       constexpr void append_range(R&& rg); // C++23
     void pop_back();
 
-    template <class... Args> iterator emplace(const_iterator position, Args&&... args);  // C++14
+    template <class... Args> iterator emplace(const_iterator position, Args&&... args);  // C++11
     iterator insert(const_iterator position, const value_type& x);
     iterator insert(const_iterator position, size_type n, const value_type& x);
     template <class InputIterator>
@@ -346,6 +346,10 @@ template<class T, class charT> requires is-vector-bool-reference<T> // Since C++
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
+#  endif
+
+#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER == 23
+#    include <string>
 #  endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

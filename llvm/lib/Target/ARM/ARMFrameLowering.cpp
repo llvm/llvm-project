@@ -149,7 +149,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetOptions.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -342,7 +341,7 @@ bool ARMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
     return true;
 
   // ABI-required frame pointer.
-  if (MF.getTarget().Options.DisableFramePointerElim(MF))
+  if (MF.disableFramePointerElim())
     return true;
 
   // Frame pointer required for use within this function.
@@ -353,7 +352,7 @@ bool ARMFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 /// isFPReserved - Return true if the frame pointer register should be
 /// considered a reserved register on the scope of the specified function.
 bool ARMFrameLowering::isFPReserved(const MachineFunction &MF) const {
-  return hasFP(MF) || MF.getTarget().Options.FramePointerIsReserved(MF);
+  return hasFP(MF) || MF.framePointerIsReserved();
 }
 
 /// hasReservedCallFrame - Under normal circumstances, when a frame pointer is
@@ -417,12 +416,6 @@ static int getArgumentStackToRestore(MachineFunction &MF,
   }
 
   return ArgumentPopSize;
-}
-
-static bool needsWinCFI(const MachineFunction &MF) {
-  const Function &F = MF.getFunction();
-  return MF.getTarget().getMCAsmInfo().usesWindowsCFI() &&
-         F.needsUnwindTableEntry();
 }
 
 // Given a load or a store instruction, generate an appropriate unwinding SEH
@@ -902,7 +895,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned NumBytes = MFI.getStackSize();
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int FPCXTSaveSize = 0;
-  bool NeedsWinCFI = needsWinCFI(MF);
+  bool NeedsWinCFI = MF.needsWinCFI();
   ARMSubtarget::PushPopSplitVariation PushPopSplit =
       STI.getPushPopSplitVariation(MF);
 
@@ -2756,7 +2749,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // is spilled in the order specified by getCalleeSavedRegs() to make it easier
   // to combine multiple loads / stores.
   bool CanEliminateFrame = !(requiresAAPCSFrameRecord(MF) && hasFP(MF)) &&
-                           !MF.getTarget().Options.DisableFramePointerElim(MF);
+                           !MF.disableFramePointerElim();
   bool CS1Spilled = false;
   bool LRSpilled = false;
   unsigned NumGPRSpills = 0;
@@ -3032,8 +3025,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
-      if ((requiresAAPCSFrameRecord(MF) ||
-           MF.getTarget().Options.DisableFramePointerElim(MF)) &&
+      if ((requiresAAPCSFrameRecord(MF) || MF.disableFramePointerElim()) &&
           !LRSpilled) {
         SavedRegs.set(ARM::LR);
         LRSpilled = true;
@@ -3376,7 +3368,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
       CSI.insert(CSI.begin(), CalleeSavedInfo(ARM::R12));
       break;
     case ARMSubtarget::NoSplit:
-      assert(!MF.getTarget().Options.DisableFramePointerElim(MF) &&
+      assert(!MF.disableFramePointerElim() &&
              "ABI-required frame pointers need a CSR split when signing return "
              "address.");
       CSI.insert(find_if(CSI,
@@ -3623,7 +3615,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the relevant DWARF information about the change in stack pointer as
   // well as where to find both r4 and r5 (the callee-save registers)
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (!MF.usesWindowsUnwindInfo()) {
     CFIInstBuilder CFIBuilder(PrevStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(8);
     CFIBuilder.buildOffset(ScratchReg1, -4);
@@ -3835,7 +3827,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
 
   // Emit the DWARF info about the change in stack as well as where to find the
   // previous link register
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (!MF.usesWindowsUnwindInfo()) {
     CFIInstBuilder CFIBuilder(AllocMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(12);
     CFIBuilder.buildOffset(ARM::LR, -12);
@@ -3895,7 +3887,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI())
+  if (!MF.usesWindowsUnwindInfo())
     CFIInstBuilder(AllocMBB, MachineInstr::NoFlags).buildDefCFAOffset(0);
 
   // Return from this function.
@@ -3918,7 +3910,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   // Update the CFA offset now that we've popped
-  if (!MF.getTarget().getMCAsmInfo().usesWindowsCFI()) {
+  if (!MF.usesWindowsUnwindInfo()) {
     CFIInstBuilder CFIBuilder(PostStackMBB, MachineInstr::NoFlags);
     CFIBuilder.buildDefCFAOffset(0);
 

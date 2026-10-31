@@ -1,7 +1,5 @@
 # Clang-Include-Fixer
 
-```{contents}
-```
 
 One of the major nuisances of C++ compared to other languages is the manual
 management of `#include` directives in any file.

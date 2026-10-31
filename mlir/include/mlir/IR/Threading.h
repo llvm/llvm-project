@@ -23,18 +23,25 @@
 #include <atomic>
 
 namespace mlir {
-
 /// Invoke the given function on the elements between [begin, end)
-/// asynchronously. If the given function returns a failure when processing any
-/// of the elements, execution is stopped and a failure is returned from this
-/// function. This means that in the case of failure, not all elements of the
-/// range will be processed. Diagnostics emitted during processing are ordered
-/// relative to the element's position within [begin, end). If the provided
-/// context does not have multi-threading enabled, this function always
-/// processes elements sequentially.
+/// asynchronously, passing each element and its worker index. If the given
+/// function returns a failure when processing any of the elements, execution is
+/// stopped and a failure is returned from this function. This means that in the
+/// case of failure, not all elements of the range will be processed.
+/// Diagnostics emitted during processing are ordered relative to the element's
+/// position within [begin, end). If the provided context does not have
+/// multi-threading enabled, this function always processes elements
+/// sequentially.
+///
+/// Worker indices are in [0, min(range size, maximum concurrency)), or zero
+/// when processing sequentially. Each index is used by only one task for the
+/// entire call, including while that task waits for nested parallel work. This
+/// allows callers to keep per-worker state without synchronization or
+/// thread-local storage. Indices are local to this invocation, not to a thread.
 template <typename IteratorT, typename FuncT>
-LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
-                                      IteratorT end, FuncT &&func) {
+LogicalResult failableParallelForEachWithWorkerId(MLIRContext *context,
+                                                  IteratorT begin,
+                                                  IteratorT end, FuncT &&func) {
   unsigned numElements = static_cast<unsigned>(std::distance(begin, end));
   if (numElements == 0)
     return success();
@@ -43,7 +50,7 @@ LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
   // process the elements directly on this thread.
   if (!context->isMultithreadingEnabled() || numElements <= 1) {
     for (; begin != end; ++begin)
-      if (failed(func(*begin)))
+      if (failed(func(*begin, 0)))
         return failure();
     return success();
   }
@@ -53,13 +60,13 @@ LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
   ParallelDiagnosticHandler handler(context);
   std::atomic<unsigned> curIndex(0);
   std::atomic<bool> processingFailed(false);
-  auto processFn = [&] {
+  auto processFn = [&](unsigned workerId) {
     while (!processingFailed) {
       unsigned index = curIndex++;
       if (index >= numElements)
         break;
       handler.setOrderIDForThread(index);
-      if (failed(func(*std::next(begin, index))))
+      if (failed(func(*std::next(begin, index), workerId)))
         processingFailed = true;
       handler.eraseOrderIDForThread();
     }
@@ -70,12 +77,23 @@ LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
   llvm::ThreadPoolTaskGroup tasksGroup(threadPool);
   size_t numActions = std::min(numElements, threadPool.getMaxConcurrency());
   for (unsigned i = 0; i < numActions; ++i)
-    tasksGroup.async(processFn);
+    tasksGroup.async([&, i] { processFn(i); });
   // If the current thread is a worker thread from the pool, then waiting for
   // the task group allows the current thread to also participate in processing
   // tasks from the group, which avoid any deadlock/starvation.
   tasksGroup.wait();
   return failure(processingFailed);
+}
+
+/// Invoke the given function on each element, with ordered diagnostics and
+/// early termination on failure. See failableParallelForEachWithWorkerId.
+template <typename IteratorT, typename FuncT>
+LogicalResult failableParallelForEach(MLIRContext *context, IteratorT begin,
+                                      IteratorT end, FuncT &&func) {
+  return failableParallelForEachWithWorkerId(
+      context, begin, end, [&](auto &&value, unsigned) {
+        return func(std::forward<decltype(value)>(value));
+      });
 }
 
 /// Invoke the given function on the elements in the provided range
@@ -141,7 +159,6 @@ template <typename FuncT>
 void parallelFor(MLIRContext *context, size_t begin, size_t end, FuncT &&func) {
   parallelForEach(context, llvm::seq(begin, end), std::forward<FuncT>(func));
 }
-
 } // namespace mlir
 
 #endif // MLIR_IR_THREADING_H

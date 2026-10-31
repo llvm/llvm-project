@@ -69,4 +69,4 @@ exit:
 !2 = !{!"llvm.loop.vectorize.enable"}
 !3 = !{!4}
 !4 = distinct !{!4, !5}
-!5 = distinct !{!5}
+!5 = distinct !{!5, i1 false}

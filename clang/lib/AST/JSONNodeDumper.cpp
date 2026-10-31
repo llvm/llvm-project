@@ -241,7 +241,8 @@ void JSONNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
 void JSONNodeDumper::Visit(const ConceptReference *CR) {
   JOS.attribute("kind", "ConceptReference");
-  JOS.attribute("id", createPointerRepresentation(CR->getNamedConcept()));
+  JOS.attribute("id", createPointerRepresentation(
+                          CR->getNamedConcept().getAsTemplateDecl()));
   if (const auto *Args = CR->getTemplateArgsAsWritten()) {
     JOS.attributeArray("templateArgsAsWritten", [Args, this] {
       for (const TemplateArgumentLoc &TAL : Args->arguments())
@@ -1749,7 +1750,7 @@ void JSONNodeDumper::VisitLabelStmt(const LabelStmt *LS) {
 }
 
 void JSONNodeDumper::VisitLoopControlStmt(const LoopControlStmt *LS) {
-  if (LS->hasLabelTarget())
+  if (LS->isNamed())
     JOS.attribute("targetLabelDeclId",
                   createPointerRepresentation(LS->getLabelDecl()));
 }

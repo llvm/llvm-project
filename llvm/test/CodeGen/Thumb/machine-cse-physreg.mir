@@ -32,5 +32,5 @@ body:             |
   bb.8:
     liveins: $cpsr
     %3 = COPY $cpsr
-    tSTRi killed %3, %0, 0, 14, $noreg
+    tSTRi %3, %0, 0, 14, $noreg
 ...

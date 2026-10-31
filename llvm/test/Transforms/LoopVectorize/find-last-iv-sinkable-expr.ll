@@ -163,7 +163,7 @@ define i64 @findlast_mul_loop_varying_operand(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i64> [[VEC_IND]], [[WIDE_LOAD1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP5]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP6]], <4 x i64> [[TMP4]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -396,7 +396,7 @@ define i32 @findlast_wider_iv_only_scalar_users(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl <4 x i32> [[VEC_IND]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i32> [[TMP3]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], splat (i32 4)
@@ -484,7 +484,7 @@ define i32 @findlast_wider_iv_with_vector_users(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[VEC_IND2]], splat (i32 100)
 ; CHECK-NEXT:    [[TMP8:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
-; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP4]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP9]], <4 x i1> [[TMP8]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP11]] = select i1 [[TMP9]], <4 x i32> [[TMP7]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -569,7 +569,7 @@ define i64 @findlast_sdiv_iv_as_divisor(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = sdiv <4 x i64> splat (i64 100), [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP7]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <4 x i64> [[TMP6]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -641,7 +641,7 @@ define i8 @findlast_narrow_i8_reduction(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i8> [[VEC_IND]], splat (i8 10)
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP4]])
-; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP2]], <4 x i1> [[TMP0]]
+; CHECK-NEXT:    [[TMP6]] = select i1 [[TMP5]], <4 x i1> [[TMP4]], <4 x i1> [[TMP0]]
 ; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP5]], <4 x i8> [[TMP3]], <4 x i8> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
@@ -949,7 +949,7 @@ define i64 @findlast_udiv_may_trap_due_to_sentinel(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = udiv <4 x i64> splat (i64 100), [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP7]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <4 x i64> [[TMP6]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -1022,7 +1022,7 @@ define i64 @findlast_srem_iv_as_divisor(ptr %a, i64 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = srem <4 x i64> splat (i64 100), [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = freeze <4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP7]])
-; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP9]] = select i1 [[TMP8]], <4 x i1> [[TMP7]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP10]] = select i1 [[TMP8]], <4 x i64> [[TMP6]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
@@ -1149,7 +1149,7 @@ define i32 @findlast_iv_step_nonzero_unknown_sign(ptr %a, i32 %x) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], splat (i32 42)
 ; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
-; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP4]], <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP7]] = select i1 [[TMP6]], <4 x i1> [[TMP5]], <4 x i1> [[TMP2]]
 ; CHECK-NEXT:    [[TMP8]] = select i1 [[TMP6]], <4 x i32> [[VEC_IND]], <4 x i32> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]

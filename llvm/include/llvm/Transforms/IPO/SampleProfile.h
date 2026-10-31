@@ -19,6 +19,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <string>
 
 namespace llvm {
@@ -31,10 +32,6 @@ LLVM_ABI extern cl::opt<int> ProfileInlineGrowthLimit;
 LLVM_ABI extern cl::opt<int> ProfileInlineLimitMin;
 LLVM_ABI extern cl::opt<int> ProfileInlineLimitMax;
 LLVM_ABI extern cl::opt<bool> SortProfiledSCC;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 /// The sample profiler data loader pass.
 class SampleProfileLoaderPass

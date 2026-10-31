@@ -23,7 +23,11 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
 
   for (auto &BB : BF) {
     for (auto II = BB.begin(); II != BB.end();) {
-      if (MIB->isCall(*II) && !MIB->isIndirectCall(*II)) {
+      // RISC-V has no conditional tail call. One here usually comes from
+      // __builtin_unreachable(), so skip it. Branch relaxation can handle an
+      // out-of-range target later if needed.
+      if (MIB->isCall(*II) && !MIB->isIndirectCall(*II) &&
+          !MIB->isConditionalBranch(*II)) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 
@@ -35,6 +39,8 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         else
           MIB->createCall(*II, Target, Ctx);
 
+        // Discard annotations added by the builder before moving the originals.
+        MIB->stripAnnotations(*II);
         MIB->moveAnnotations(std::move(OldCall), *II);
         ++II;
         continue;
@@ -53,12 +59,16 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
         auto L = BC.scopeLock();
 
         MIB->createNoop(*II);
+        // Mark the replacement NOP for removal by the later RemoveNops pass.
+        MIB->addAnnotation(*II, "NOP", static_cast<uint32_t>(1));
 
         if (MIB->isTailCall(*NextII))
           MIB->createTailCall(*NextII, Target, Ctx);
         else
           MIB->createCall(*NextII, Target, Ctx);
 
+        // Discard annotations added by the builder before moving the originals.
+        MIB->stripAnnotations(*NextII);
         MIB->moveAnnotations(std::move(OldCall), *NextII);
 
         II = std::next(NextII);

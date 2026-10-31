@@ -30,6 +30,7 @@ namespace llvm {
 
 template <typename T> class ArrayRef;
 class LiveIntervals;
+class SlotIndexes;
 class VirtRegMap;
 
 class LiveDebugVariables {
@@ -46,6 +47,13 @@ public:
   /// register is live.
   LLVM_ABI void splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                               LiveIntervals &LIS);
+
+  /// canonicalizeIndexes - Replace every SlotIndex held by this analysis that
+  /// refers to an erased instruction. Described locations do not change, as a
+  /// stale index already resolves to the same position at the point of use, but
+  /// intervals resolving to one position now emit a single DBG_VALUE rather
+  /// than identical consecutive ones.
+  LLVM_ABI void canonicalizeIndexes(const SlotIndexes &SI);
 
   /// emitDebugValues - Emit new DBG_VALUE instructions reflecting the changes
   /// that happened during register allocation.

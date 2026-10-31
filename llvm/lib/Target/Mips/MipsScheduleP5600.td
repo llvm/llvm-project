@@ -298,6 +298,7 @@ def : InstRW<[P5600WriteMSAShortInt], (instregex "^INSERT_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(SLD|SLDI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSET|BSETI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BCLR|BCLRI)_[BHWD]$")>;
+def : InstRW<[P5600WriteMSAShortInt], (instregex "^FABS_(W|D)$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BNEG|BNEGI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSEL_V|BSELI_B)$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^BMN*Z.*$")>;
@@ -386,7 +387,6 @@ def : InstRW<[P5600WriteFPUS], (instregex "^FCULE_(W|D)$")>;
 def : InstRW<[P5600WriteFPUS], (instregex "^FCULT_(W|D)$")>;
 def : InstRW<[P5600WriteFPUS], (instregex "^FCUNE_(W|D)$")>;
 def : InstRW<[P5600WriteFPUS], (instregex "^FCUN_(W|D)$")>;
-def : InstRW<[P5600WriteFPUS], (instregex "^FABS_(W|D)$")>;
 def : InstRW<[P5600WriteFPUS], (instregex "^FFINT_(U|S)_(W|D)$")>;
 def : InstRW<[P5600WriteFPUS], (instregex "^FFQL_(W|D)$")>;
 def : InstRW<[P5600WriteFPUS], (instregex "^FFQR_(W|D)$")>;
@@ -563,7 +563,7 @@ def P5600WriteLoadFPU : WriteSequence<[P5600WriteLoadToOtherUnits,
 // ctc1, mtc1, mthc1
 def : InstRW<[P5600WriteMoveGPRToFPU], (instrs CTC1, MTC1, MTC1_D64, MTHC1_D32,
                                         MTHC1_D64, BuildPairF64,
-                                        BuildPairF64_64)>;
+                                        BuildPairF64_64, BuildPairF64_FPR)>;
 
 // copy.[su]_[bhwd]
 def : InstRW<[P5600WriteMoveFPUToGPR], (instregex "^COPY_U_[BHW]$")>;

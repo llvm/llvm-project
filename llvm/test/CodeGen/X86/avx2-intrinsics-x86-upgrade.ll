@@ -638,6 +638,28 @@ define <16 x i16> @test_x86_avx2_paddus_w(<16 x i16> %a0, <16 x i16> %a1) {
 declare <16 x i16> @llvm.x86.avx2.paddus.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 
+define <16 x i16> @test_x86_avx2_pmulh_w(<16 x i16> %a0, <16 x i16> %a1) {
+; CHECK-LABEL: test_x86_avx2_pmulh_w:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmulhw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
+declare <16 x i16> @llvm.x86.avx2.pmulh.w(<16 x i16>, <16 x i16>) nounwind readnone
+
+
+define <16 x i16> @test_x86_avx2_pmulhu_w(<16 x i16> %a0, <16 x i16> %a1) {
+; CHECK-LABEL: test_x86_avx2_pmulhu_w:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpmulhuw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %res = call <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16> %a0, <16 x i16> %a1) ; <<16 x i16>> [#uses=1]
+  ret <16 x i16> %res
+}
+declare <16 x i16> @llvm.x86.avx2.pmulhu.w(<16 x i16>, <16 x i16>) nounwind readnone
+
+
 define <32 x i8> @test_x86_avx2_psubs_b(<32 x i8> %a0, <32 x i8> %a1) {
 ; CHECK-LABEL: test_x86_avx2_psubs_b:
 ; CHECK:       ## %bb.0:

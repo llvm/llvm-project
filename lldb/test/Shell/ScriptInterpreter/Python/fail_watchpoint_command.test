@@ -1,0 +1,23 @@
+# XFAIL: system-netbsd
+# RUN: split-file %s %t
+# RUN: %clang_host -x c %t/main.c -g -o %t.out
+# RUN: env LLDB_USE_LLDB_SERVER=1 %lldb -b -s %t/commands.in --script-language python %t.out 2>&1 \
+# RUN:   | FileCheck %s
+
+# CHECK: error: SyntaxError({{.*}})
+
+#--- main.c
+int main() {
+  int val = 0;
+  // Break here
+  val++;
+  return 0;
+}
+
+#--- commands.in
+breakpoint set -p "Break here"
+run
+watchpoint set variable val
+watchpoint command add -s python
+def (
+DONE

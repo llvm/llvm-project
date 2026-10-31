@@ -67,7 +67,7 @@ val run_static_ctors : llexecutionengine -> unit
 val run_static_dtors : llexecutionengine -> unit
 
 (** [data_layout ee] is the data layout of the execution engine [ee]. *)
-val data_layout : llexecutionengine -> Llvm_target.DataLayout.t
+val data_layout : llexecutionengine -> Llvm.DataLayout.t
 
 (** [add_global_mapping gv ptr ee] tells the execution engine [ee] that
     the global [gv] is at the specified location [ptr], which must outlive

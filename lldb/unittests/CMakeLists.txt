@@ -33,6 +33,7 @@ function(add_lldb_unittest test_name)
   if ("lldbSBUtilityHelpers" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
     message(FATAL_ERROR "The ${test_name} are not allowed to link lldbSBUtilityHelpers.")
   endif()
+  lldb_check_liblldb_last(${test_name} "${ARG_LINK_LIBS}")
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
 
@@ -47,6 +48,10 @@ function(add_lldb_unittest test_name)
     COMMAND "${CMAKE_COMMAND}" -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/Inputs)
 
   target_link_libraries(${test_name} PRIVATE ${ARG_LINK_LIBS})
+
+  if (ARG_SBAPITEST)
+    lldb_prevent_liblldb_symbol_interposition(${test_name})
+  endif()
 
   if (MSVC)
     if (LLDB_UNITTEST_STRIP_DEBUG_INFO)
@@ -101,6 +106,7 @@ add_subdirectory(Symbol)
 add_subdirectory(SymbolFile)
 add_subdirectory(Target)
 add_subdirectory(Thread)
+add_subdirectory(TypeSystem)
 add_subdirectory(UnwindAssembly)
 add_subdirectory(Utility)
 add_subdirectory(ValueObject)

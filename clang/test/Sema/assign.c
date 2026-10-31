@@ -93,3 +93,10 @@ struct N1 {
 void testN(struct N1 *l) {
   *l = 0; // expected-error {{assigning to 'struct N1' from incompatible type 'int'}}
 }
+
+void gh50193(void) {
+  // Would previously cause an assertion due to typo correction; demonstrates
+  // that we no longer assert in ClassifyImpl.
+  *a = (a_struct); // expected-error {{use of undeclared identifier 'a'}} \
+                      expected-error {{use of undeclared identifier 'a_struct'; did you mean 'struct'?}}
+}

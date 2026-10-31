@@ -172,7 +172,7 @@ struct StringTable {
 
 struct RelocationInfo {
   // The referenced symbol entry. Set if !Scattered && Extern.
-  std::optional<const SymbolEntry *> Symbol;
+  std::optional<SymbolEntry *> Symbol;
   // The referenced section. Set if !Scattered && !Extern.
   std::optional<const Section *> Sec;
   // True if Info is a scattered_relocation_info.

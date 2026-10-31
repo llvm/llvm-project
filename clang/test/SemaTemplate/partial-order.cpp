@@ -73,3 +73,20 @@ Trait<Y> t;
 // expected-note@#gh51866-one{{partial specialization matches}}
 // expected-note@#gh51866-two{{partial specialization matches}}
 }
+
+namespace GH27357 {
+struct S {
+  using type = int;
+};
+
+// T and Ts are used in a non-deduced context and have no value,
+// so deduction fails in // both directions ([temp.deduct.partial]p12).
+template <class T> int add(typename T::type); // #gh27357-1
+template <class T, class... Ts>
+int add(typename T::type, typename Ts::type...); // #gh27357-2
+
+int x = add<S>(0);
+// expected-error@-1 {{call to 'add' is ambiguous}}
+// expected-note@#gh27357-1 {{candidate function [with T = GH27357::S]}}
+// expected-note@#gh27357-2 {{candidate function [with T = GH27357::S, Ts = <>]}}
+} // namespace GH27357

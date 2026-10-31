@@ -1,0 +1,183 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// Checks that CallConvLowering under target=amdgpu classifies a function by
+// its calling convention. Default functions get extension, Ignore and
+// aggregate rewrites applied to definitions and call sites. Kernels go to the
+// kernel classifier.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
+
+!rec_E0 = !cir.struct<"E0" {}>
+!rec_Pair32 = !cir.struct<"Pair32" {data !s32i, data !s32i}>
+!rec_Triple = !cir.struct<"Triple" {data !s32i, data !s32i, data !s32i}>
+!rec_Outer = !cir.struct<"Outer" {data !s32i, data !rec_Triple}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i1, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Signed sub-register integer is sign-extended.
+  cir.func @take_s8(%arg0: !s8i) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_s8(%arg0: !s8i {llvm.signext})
+
+  // Call site picks up the same extension attribute on the operand.
+  cir.func @call_s8(%arg0: !s8i) {
+    cir.call @take_s8(%arg0) : (!s8i) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.call @take_s8(%arg0) : (!s8i {llvm.signext}) -> ()
+
+  // A zero-field record classifies as Ignore: the empty argument is dropped
+  // and the real argument shifts down to the first slot.
+  cir.func @take_empty(%arg0: !rec_E0, %arg1: !s32i) -> !s32i {
+    cir.return %arg1 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @take_empty(%arg0: !s32i) -> !s32i
+  // CHECK-NEXT: cir.return %arg0 : !s32i
+
+  // A 33-64 bit aggregate is packed into a pair of i32 registers, coerced on
+  // the wire to a [2 x i32] array.
+  cir.func @takes_pair32(%arg0: !rec_Pair32) {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
+    cir.store %arg0, %0 : !rec_Pair32, !cir.ptr<!rec_Pair32>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_pair32(%[[ARR:.*]]: !cir.array<!u32i x 2>) {
+  // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: cir.store %[[ARR]], %[[TMP]] : !cir.array<!u32i x 2>, !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: %[[TMP_REC:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!cir.array<!u32i x 2>> -> !cir.ptr<!rec_Pair32>
+  // CHECK-NEXT: %[[P:.*]] = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
+  // CHECK-NEXT: cir.copy %[[TMP_REC]] align(4) to %[[P]] align(4) : !cir.ptr<!rec_Pair32>
+
+  // A 33-64 bit aggregate return is coerced to [2 x i32] as well.
+  cir.func @ret_pair32(%arg0: !cir.ptr<!rec_Pair32>) -> !rec_Pair32 {
+    %0 = cir.load %arg0 : !cir.ptr<!rec_Pair32>, !rec_Pair32
+    cir.return %0 : !rec_Pair32
+  }
+
+  // CHECK: cir.func{{.*}} @ret_pair32(%[[SRC:.*]]: !cir.ptr<!rec_Pair32>) -> !cir.array<!u32i x 2> {
+  // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_Pair32>
+  // CHECK-NEXT: cir.copy %[[SRC]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_Pair32>
+  // CHECK-NEXT: %[[TMP_ARR:.*]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!rec_Pair32> -> !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: %[[RET:.*]] = cir.load align(4) %[[TMP_ARR]] : !cir.ptr<!cir.array<!u32i x 2>>, !cir.array<!u32i x 2>
+  // CHECK-NEXT: cir.return %[[RET]] : !cir.array<!u32i x 2>
+
+  // The call site coerces both the operand and the result.
+  cir.func @call_pair32() {
+    %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
+    %1 = cir.load %0 : !cir.ptr<!rec_Pair32>, !rec_Pair32
+    cir.call @takes_pair32(%1) : (!rec_Pair32) -> ()
+    %2 = cir.call @ret_pair32(%0) : (!cir.ptr<!rec_Pair32>) -> !rec_Pair32
+    cir.store %2, %0 : !rec_Pair32, !cir.ptr<!rec_Pair32>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_pair32() {
+  // CHECK-NEXT: %[[RES_TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: %[[P:.*]] = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair32>
+  // CHECK-NEXT: %[[P_ARR:.*]] = cir.cast bitcast %[[P]] : !cir.ptr<!rec_Pair32> -> !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: %[[ARG:.*]] = cir.load align(4) %[[P_ARR]] : !cir.ptr<!cir.array<!u32i x 2>>, !cir.array<!u32i x 2>
+  // CHECK-NEXT: cir.call @takes_pair32(%[[ARG]]) : (!cir.array<!u32i x 2>) -> ()
+  // CHECK-NEXT: %[[RES:.*]] = cir.call @ret_pair32(%[[P]]) : (!cir.ptr<!rec_Pair32>) -> !cir.array<!u32i x 2>
+  // CHECK-NEXT: cir.store %[[RES]], %[[RES_TMP]] : !cir.array<!u32i x 2>, !cir.ptr<!cir.array<!u32i x 2>>
+  // CHECK-NEXT: %[[RES_REC:.*]] = cir.cast bitcast %[[RES_TMP]] : !cir.ptr<!cir.array<!u32i x 2>> -> !cir.ptr<!rec_Pair32>
+  // CHECK-NEXT: cir.copy %[[RES_REC]] align(4) to %[[P]] align(4) : !cir.ptr<!rec_Pair32>
+
+  // A larger aggregate that still fits the register budget is passed directly,
+  // one argument per field, as classic codegen does.
+  cir.func @takes_triple(%arg0: !rec_Triple) -> !s32i {
+    %0 = cir.alloca "t" align(4) : !cir.ptr<!rec_Triple>
+    cir.store %arg0, %0 : !rec_Triple, !cir.ptr<!rec_Triple>
+    %1 = cir.get_member %0[1] {name = "b"} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+    %2 = cir.load %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @takes_triple(%[[ARG0:[^:]*]]: !s32i, %[[ARG1:[^:]*]]: !s32i, %[[ARG2:[^:]*]]: !s32i) -> !s32i {
+  // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: %[[SLOT0:.*]] = cir.get_member %[[TMP]][0] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.store %[[ARG0]], %[[SLOT0]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[SLOT1:.*]] = cir.get_member %[[TMP]][1] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.store %[[ARG1]], %[[SLOT1]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[SLOT2:.*]] = cir.get_member %[[TMP]][2] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.store %[[ARG2]], %[[SLOT2]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[T:.*]] = cir.alloca "t" align(4) : !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: cir.copy %[[TMP]] align(4) to %[[T]] align(4) : !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: %[[B_PTR:.*]] = cir.get_member %[[T]][1] {name = "b"} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[B:.*]] = cir.load %[[B_PTR]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: cir.return %[[B]] : !s32i
+
+  // A direct aggregate return is not split.
+  cir.func @ret_triple(%arg0: !cir.ptr<!rec_Triple>) -> !rec_Triple {
+    %0 = cir.load %arg0 : !cir.ptr<!rec_Triple>, !rec_Triple
+    cir.return %0 : !rec_Triple
+  }
+
+  // CHECK: cir.func{{.*}} @ret_triple(%[[SRC:.*]]: !cir.ptr<!rec_Triple>) -> !rec_Triple {
+  // CHECK-NEXT: %[[V:.*]] = cir.load %[[SRC]] : !cir.ptr<!rec_Triple>, !rec_Triple
+  // CHECK-NEXT: cir.return %[[V]] : !rec_Triple
+
+  // The call site passes each field of the operand as its own argument.
+  cir.func @call_triple() -> !s32i {
+    %0 = cir.alloca "t" align(4) : !cir.ptr<!rec_Triple>
+    %1 = cir.load %0 : !cir.ptr<!rec_Triple>, !rec_Triple
+    %2 = cir.call @takes_triple(%1) : (!rec_Triple) -> !s32i
+    %3 = cir.call @ret_triple(%0) : (!cir.ptr<!rec_Triple>) -> !rec_Triple
+    cir.store %3, %0 : !rec_Triple, !cir.ptr<!rec_Triple>
+    cir.return %2 : !s32i
+  }
+
+  // CHECK: cir.func{{.*}} @call_triple() -> !s32i {
+  // CHECK-NEXT: %[[T:.*]] = cir.alloca "t" align(4) : !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: %[[SLOT0:.*]] = cir.get_member %[[T]][0] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[ARG0:.*]] = cir.load %[[SLOT0]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[SLOT1:.*]] = cir.get_member %[[T]][1] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[ARG1:.*]] = cir.load %[[SLOT1]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[SLOT2:.*]] = cir.get_member %[[T]][2] {name = ""} : !cir.ptr<!rec_Triple> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[ARG2:.*]] = cir.load %[[SLOT2]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: %[[R:.*]] = cir.call @takes_triple(%[[ARG0]], %[[ARG1]], %[[ARG2]]) : (!s32i, !s32i, !s32i) -> !s32i
+  // CHECK-NEXT: %[[RET:.*]] = cir.call @ret_triple(%[[T]]) : (!cir.ptr<!rec_Triple>) -> !rec_Triple
+  // CHECK-NEXT: cir.store %[[RET]], %[[T]] : !rec_Triple, !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: cir.return %[[R]] : !s32i
+
+  // Only the top level is split, so a nested struct stays one argument.
+  cir.func @takes_outer(%arg0: !rec_Outer) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @takes_outer(%[[I:[^:]*]]: !s32i, %[[INNER:[^:]*]]: !rec_Triple) {
+  // CHECK-NEXT: %[[TMP:.*]] = cir.alloca "coerce" align(4) : !cir.ptr<!rec_Outer>
+  // CHECK-NEXT: %[[SLOT0:.*]] = cir.get_member %[[TMP]][0] {name = ""} : !cir.ptr<!rec_Outer> -> !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.store %[[I]], %[[SLOT0]] : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[SLOT1:.*]] = cir.get_member %[[TMP]][1] {name = ""} : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: cir.store %[[INNER]], %[[SLOT1]] : !rec_Triple, !cir.ptr<!rec_Triple>
+  // CHECK-NEXT: cir.return
+
+  // A kernel scalar argument stays Direct: the AMDGPU_KERNEL convention is
+  // routed to the kernel classifier and the signature is unchanged.
+  cir.func @kernel_scalar(%arg0: !s32i) cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_scalar(%arg0: !s32i){{.*}}cc(amdgpu_kernel)
+
+  // Without HIP in the module's lang options, a kernel pointer stays generic.
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i>) cc(amdgpu_kernel) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @kernel_ptr(%arg0: !cir.ptr<!s32i>){{.*}}cc(amdgpu_kernel)
+}

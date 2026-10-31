@@ -23,6 +23,7 @@
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::ast_matchers;
 using namespace clang::analyze_printf;

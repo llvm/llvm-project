@@ -18,6 +18,7 @@
 
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/StorageUniquer.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -408,9 +409,23 @@ public:
   /// Each item is processed by invoking the child analysis at the program
   /// point.
   using WorkItem = std::pair<ProgramPoint *, DataFlowAnalysis *>;
-  /// Push a work item onto the worklist.
-  void enqueue(WorkItem item) { worklist.push(std::move(item)); }
+  /// Push a work item onto the worklist, if it is not already there.
+  void enqueue(WorkItem item) {
+    if (pending.insert(item).second)
+      worklist.push(item);
+  }
 
+private:
+  /// Pop a work item off the worklist, which must be nonempty.
+  WorkItem dequeue() {
+    assert(!worklist.empty());
+    auto item = worklist.front();
+    worklist.pop();
+    pending.erase(item);
+    return item;
+  }
+
+public:
   /// Get the state associated with the given lattice anchor. If it does not
   /// exist, create an uninitialized state.
   template <typename StateT, typename AnchorT>
@@ -450,6 +465,9 @@ private:
   /// queue to be processed greedily, speeding up computations that otherwise
   /// quickly degenerate to quadratic due to propagation of state updates.
   std::queue<WorkItem> worklist;
+  /// Keep track of pending work items, to prevent redundant processing of items
+  /// that were enqueued multiple times.
+  DenseSet<WorkItem> pending;
 
   /// Type-erased instances of the children analyses.
   SmallVector<std::unique_ptr<DataFlowAnalysis>> childAnalyses;

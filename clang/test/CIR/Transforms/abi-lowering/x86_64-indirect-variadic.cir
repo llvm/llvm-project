@@ -1,0 +1,212 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 -cir-to-llvm -o - \
+// RUN:   | cir-translate -mlir-to-llvmir --allow-unregistered-dialect \
+// RUN:   | FileCheck %s --check-prefix=LLVM
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+!rec_Two = !cir.struct<"Two" {data !s64i, data !s64i}>
+!rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i}>
+!rec_E0 = !cir.struct<"E0" {}>
+!rec_NoRegs = !cir.struct<"NoRegs" {data !s32i, data !s32i}>
+
+#none = #cir.memory_effects<other = none, arg_mem = none,
+                            inaccessible_mem = none, errno_mem = none,
+                            target_mem0 = none, target_mem1 = none>
+
+module attributes {
+  cir.triple = "x86_64-unknown-linux-gnu",
+  cir.record_layouts = {NoRegs = #cir.record_layout<
+    arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+    record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A one-eightbyte record at the ellipsis coerces to a single integer
+  // register and stays out of the callee pointer's function type.
+  cir.func @indirect_record(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                            %arg1: !cir.ptr<!s8i>, %arg2: !rec_Pair) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Pair) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_record(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !u64i)
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !u64i) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_record(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i64 %{{[^,)]+}})
+
+  // A memory-class record at the ellipsis goes byval, as it does for a direct
+  // variadic call.
+  cir.func @indirect_big(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                         %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_big(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_big(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}})
+
+  // A void return needs no rewrite, but the byval slot for the ellipsis
+  // argument still rewrites the call.
+  cir.func @indirect_big_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>,
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+    cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>, !rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_big_void(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   cir.call %arg0(%arg1, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...)>>, !cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
+
+  // LLVM-LABEL: define void @indirect_big_void(
+  // LLVM:   call void (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}})
+
+  // An integer narrower than int is extended at the ellipsis of an indirect
+  // call just as it is for a direct one.
+  cir.func @indirect_narrow(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                            %arg1: !cir.ptr<!s8i>, %arg2: !s8i) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s8i) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_narrow(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s8i {llvm.signext})
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s8i {llvm.signext}) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_narrow(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i8 signext %{{[^,)]+}})
+
+  // An empty record at the ellipsis is dropped, and the argument behind it
+  // still stays out of the callee pointer's function type.
+  cir.func @indirect_empty(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                           %arg1: !cir.ptr<!s8i>, %arg2: !rec_E0, %arg3: !s32i) {
+    %0 = cir.call %arg0(%arg1, %arg2, %arg3)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_E0, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_empty(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i) {
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_empty(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i32 %{{[^,)]+}})
+
+  // A two-eightbyte record at the ellipsis of an indirect call flattens to
+  // a register per eightbyte, the same as it does for a direct call.
+  cir.func @indirect_two_register(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                                  %arg1: !cir.ptr<!s8i>, %arg2: !rec_Two) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Two) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_two_register(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s64i, %arg3: !s64i)
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s64i, !s64i) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_two_register(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i64 %{{[^,)]+}}, i64 %{{[^,)]+}})
+
+  // The retyped callee pointer takes the sret slot and the declared
+  // parameters' wire form, the coerced Pair with the empty record dropped.
+  // The byval record and the Pair passed through the ellipsis stay out of it.
+  cir.func @indirect_sret_mixed(%arg0: !cir.ptr<!cir.func<(!rec_Pair, !rec_E0, ...) -> !rec_Big>>,
+                                %arg1: !rec_Pair, %arg2: !rec_E0, %arg3: !rec_Big,
+                                %arg4: !rec_Pair, %arg5: !cir.ptr<!rec_Big>) {
+    %0 = cir.call %arg0(%arg1, %arg2, %arg3, %arg4)
+        : (!cir.ptr<!cir.func<(!rec_Pair, !rec_E0, ...) -> !rec_Big>>, !rec_Pair, !rec_E0, !rec_Big, !rec_Pair) -> !rec_Big
+    cir.store %0, %arg5 : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_sret_mixed(%arg0: !cir.ptr<!cir.func<(!rec_Pair, !rec_E0, ...) -> !rec_Big>>, %arg1: !u64i, %arg2: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}, %arg3: !u64i, %arg4: !cir.ptr<!rec_Big>)
+  // CHECK:   %[[CAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_Pair, !rec_E0, ...) -> !rec_Big>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !u64i, ...)>>
+  // CHECK:   cir.call %[[CAST]](%arg4, %{{.+}}, %{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>, !u64i, ...)>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !u64i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}, !u64i) -> ()
+
+  // LLVM-LABEL: define void @indirect_sret_mixed(
+  // LLVM:   call void (ptr, i64, ...) %{{[^,)]+}}(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{[^,)]+}}, i64 %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}}, i64 %{{[^,)]+}})
+
+  // A call through a pointee with no declared parameters passes every argument
+  // through the ellipsis, so the callee pointer keeps its type.
+  cir.func @indirect_no_declared(%arg0: !cir.ptr<!cir.func<(...) -> !s32i>>,
+                                 %arg1: !rec_Pair, %arg2: !rec_Big) {
+    %0 = cir.call %arg0(%arg1, %arg2)
+        : (!cir.ptr<!cir.func<(...) -> !s32i>>, !rec_Pair, !rec_Big) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_no_declared(%arg0: !cir.ptr<!cir.func<(...) -> !s32i>>, %arg1: !u64i, %arg2: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK-NOT: cir.cast bitcast %arg0
+  // CHECK:   %{{.+}} = cir.call %arg0(%{{.+}}, %{{.+}}) : (!cir.ptr<!cir.func<(...) -> !s32i>>, !u64i, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_no_declared(
+  // LLVM:   call i32 (...) %{{[^,)]+}}(i64 %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}})
+
+  // A record that cannot go in registers is passed as the address of the
+  // caller's storage.  The declared one retypes the callee pointer, and the one
+  // passed through the ellipsis stays out of its function type, as does the
+  // byval record.
+  cir.func @indirect_noregs(%arg0: !cir.ptr<!cir.func<(!rec_NoRegs, ...)>>, %arg1: !rec_Big) {
+    %0 = cir.alloca "x" align(4) : !cir.ptr<!rec_NoRegs>
+    %1 = cir.alloca "y" align(4) : !cir.ptr<!rec_NoRegs>
+    %2 = cir.load %0 : !cir.ptr<!rec_NoRegs>, !rec_NoRegs
+    %3 = cir.load %1 : !cir.ptr<!rec_NoRegs>, !rec_NoRegs
+    cir.call %arg0(%2, %3, %arg1)
+        : (!cir.ptr<!cir.func<(!rec_NoRegs, ...)>>, !rec_NoRegs, !rec_NoRegs, !rec_Big) -> ()
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_noregs(%arg0: !cir.ptr<!cir.func<(!rec_NoRegs, ...)>>, %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK:   %[[X:.+]] = cir.alloca "x" align(4) : !cir.ptr<!rec_NoRegs>
+  // CHECK:   %[[Y:.+]] = cir.alloca "y" align(4) : !cir.ptr<!rec_NoRegs>
+  // CHECK:   %[[CAST:.+]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<(!rec_NoRegs, ...)>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_NoRegs>, ...)>>
+  // CHECK:   cir.call %[[CAST]](%[[X]], %[[Y]], %{{.+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_NoRegs>, ...)>>, !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nofreeobj, llvm.noundef}, !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nofreeobj, llvm.noundef}, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
+
+  // LLVM-LABEL: define void @indirect_noregs(
+  // LLVM:   call void (ptr, ...) %{{[^,)]+}}(ptr nofreeobj noundef align 4 dereferenceable(8) %{{[^,)]+}}, ptr nofreeobj noundef align 4 dereferenceable(8) %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}})
+
+  // A byval slot at the ellipsis is memory the callee reaches, so the call's
+  // recorded effects widen to cover it.  A scalar there hands over no memory,
+  // and the effects stay as written.
+  cir.func @indirect_big_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+    %0 = cir.call %arg0(%arg1, %arg2) {memory_effects = #none}
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
+    cir.return
+  }
+
+  cir.func @indirect_scalar_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
+                                 %arg1: !cir.ptr<!s8i>, %arg2: !s32i) {
+    %0 = cir.call %arg0(%arg1, %arg2) {memory_effects = #none}
+        : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func {{.*}}@indirect_big_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %{{.+}}) {memory_effects = #cir.memory_effects<other = none, arg_mem = readwrite, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+  // CHECK-LABEL: cir.func {{.*}}@indirect_scalar_none(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
+  // CHECK:   %{{.+}} = cir.call %arg0(%arg1, %arg2) {memory_effects = #cir.memory_effects<other = none, arg_mem = none, inaccessible_mem = none, errno_mem = none, target_mem0 = none, target_mem1 = none>} : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !s32i) -> !s32i
+
+  // LLVM-LABEL: define void @indirect_big_none(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, ptr noundef byval(%struct.Big) align 8 %{{[^,)]+}}) #[[WIDE:[0-9]+]]
+  // LLVM-LABEL: define void @indirect_scalar_none(
+  // LLVM:   call i32 (ptr, ...) %{{[^,)]+}}(ptr %{{[^,)]+}}, i32 %{{[^,)]+}}) #[[NONE:[0-9]+]]
+  // LLVM: attributes #[[WIDE]] = { memory(argmem: readwrite) }
+  // LLVM: attributes #[[NONE]] = { memory(none) }
+}

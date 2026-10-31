@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=expected,pre26 %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify=expected,pre26-pedantic -pedantic %s
-// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=expected,compat -Wpre-c++26-compat %s
+// RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify=expected,compat -Wpre-c++26-compat-pedantic %s
 // RUN: %clang_cc1 -std=c++2c -fsyntax-only -verify %s
 
 struct S {

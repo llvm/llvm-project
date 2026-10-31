@@ -26,7 +26,7 @@ define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-NEXT:    [[ALIAS_PHI_SPILL_ADDR:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 32
 ; CHECK-NEXT:    store ptr [[ALIAS_PHI]], ptr [[ALIAS_PHI_SPILL_ADDR]], align 8
 ; CHECK-NEXT:    [[INDEX_ADDR1:%.*]] = getelementptr inbounds i8, ptr [[HDL]], i64 40
-; CHECK-NEXT:    store i1 false, ptr [[INDEX_ADDR1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[INDEX_ADDR1]], align 1
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:

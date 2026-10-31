@@ -6,6 +6,7 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:local.bzl", "new_local_repository")
+load(":linux_uapi.bzl", "linux_uapi_setup")
 load(":vulkan_sdk.bzl", "vulkan_sdk_setup")
 
 _PYYAML_CONTENT = """\
@@ -32,6 +33,7 @@ def _llvm_repos_extension_impl(module_ctx):
         )
 
     vulkan_sdk_setup(name = "vulkan_sdk")
+    linux_uapi_setup(name = "linux_uapi")
 
     http_archive(
         name = "pyyaml",
@@ -40,6 +42,8 @@ def _llvm_repos_extension_impl(module_ctx):
         strip_prefix = "pyyaml-5.1/lib3",
         build_file_content = _PYYAML_CONTENT,
     )
+
+    return module_ctx.extension_metadata(reproducible = True)
 
 llvm_repos_extension = module_extension(
     implementation = _llvm_repos_extension_impl,

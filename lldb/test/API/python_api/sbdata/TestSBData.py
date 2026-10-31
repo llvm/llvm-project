@@ -47,6 +47,8 @@ class SBDataAPICase(TestBase):
         addr = data.GetAddress(error, 0)
         self.assertEqual(addr, 0x1122334455667788)
 
+    # Flaky on Windows on Arm buildbot https://github.com/llvm/llvm-project/issues/234117.
+    @skipIf(oslist=["windows"], archs=["aarch64"])
     def test_with_run_command(self):
         """Test the SBData APIs."""
         self.build()

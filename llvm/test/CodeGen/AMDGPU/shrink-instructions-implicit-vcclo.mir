@@ -15,7 +15,7 @@ body:             |
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: $vgpr0 = COPY $vgpr0
     ; GCN-NEXT: $vgpr1 = COPY $vgpr0
-    ; GCN-NEXT: V_CMP_LT_I32_e32 0, $vgpr0, implicit-def $vcc_lo, implicit $exec, implicit-def $vcc
+    ; GCN-NEXT: V_CMP_LT_I32_e32 0, $vgpr0, implicit-def $vcc_lo, implicit $exec, implicit-def $vcc_lo
     ; GCN-NEXT: $vgpr2 = V_CNDMASK_B32_e32 0, $vgpr1, implicit $vcc_lo, implicit $exec
     ; GCN-NEXT: S_NOP 0
     $vgpr0 = COPY $vgpr0

@@ -11,7 +11,7 @@ define void @st2b_imm_mmo(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1,
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:zpr = COPY $z1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr2 = REG_SEQUENCE [[COPY3]], %subreg.zsub0, [[COPY2]], %subreg.zsub1
-  ; CHECK-NEXT:   ST2B_IMM killed [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 1 :: (store unknown-size into %ir.base, align 32)
+  ; CHECK-NEXT:   ST2B_IMM [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 1 :: (store unknown-size into %ir.base, align 32)
   ; CHECK-NEXT:   RET_ReallyLR
                           <vscale x 16 x i1> %pred, ptr %addr) {
   %base = getelementptr <vscale x 16 x i8>, ptr %addr, i64 2, i64 0
@@ -34,8 +34,8 @@ define void @st2b_reg_mmo(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1,
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr2 = REG_SEQUENCE [[COPY4]], %subreg.zsub0, [[COPY3]], %subreg.zsub1
   ; CHECK-NEXT:   [[RDVLI_XI:%[0-9]+]]:gpr64 = RDVLI_XI 1, implicit $vg
-  ; CHECK-NEXT:   [[MADDXrrr:%[0-9]+]]:gpr64common = MADDXrrr [[COPY]], killed [[RDVLI_XI]], $xzr
-  ; CHECK-NEXT:   ST2B killed [[REG_SEQUENCE]], [[COPY2]], [[COPY1]], killed [[MADDXrrr]] :: (store unknown-size into %ir.base, align 32)
+  ; CHECK-NEXT:   [[MADDXrrr:%[0-9]+]]:gpr64common = MADDXrrr [[COPY]], [[RDVLI_XI]], $xzr
+  ; CHECK-NEXT:   ST2B [[REG_SEQUENCE]], [[COPY2]], [[COPY1]], [[MADDXrrr]] :: (store unknown-size into %ir.base, align 32)
   ; CHECK-NEXT:   RET_ReallyLR
                           <vscale x 16 x i1> %pred, ptr %addr,
                           i64 %offset) {
@@ -87,7 +87,7 @@ define void @st2b_ptrue_mmo(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1, ptr 
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr2 = REG_SEQUENCE [[COPY2]], %subreg.zsub0, [[COPY1]], %subreg.zsub1
   ; CHECK-NEXT:   [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
-  ; CHECK-NEXT:   ST2B_IMM killed [[REG_SEQUENCE]], killed [[PTRUE_B]], [[COPY]], 0 :: (store (<vscale x 1 x s256>) into %ir.addr)
+  ; CHECK-NEXT:   ST2B_IMM [[REG_SEQUENCE]], [[PTRUE_B]], [[COPY]], 0 :: (store (<vscale x 1 x s256>) into %ir.addr)
   ; CHECK-NEXT:   RET_ReallyLR
   call void @llvm.aarch64.sve.st2.nxv16i8(
       <vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1,
@@ -105,7 +105,7 @@ define void @st2q_mmo(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1,
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:zpr = COPY $z1
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr2 = REG_SEQUENCE [[COPY3]], %subreg.zsub0, [[COPY2]], %subreg.zsub1
-  ; CHECK-NEXT:   ST2Q_IMM killed [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 0 :: (store unknown-size into %ir.addr, align 32)
+  ; CHECK-NEXT:   ST2Q_IMM [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 0 :: (store unknown-size into %ir.addr, align 32)
   ; CHECK-NEXT:   RET_ReallyLR
                       <vscale x 16 x i1> %pred, ptr %addr) {
   call void @llvm.aarch64.sve.st2q.nxv16i8(<vscale x 16 x i8> %v0,
@@ -126,7 +126,7 @@ define void @st3q_mmo(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1,
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:zpr = COPY $z1
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr3 = REG_SEQUENCE [[COPY4]], %subreg.zsub0, [[COPY3]], %subreg.zsub1, [[COPY2]], %subreg.zsub2
-  ; CHECK-NEXT:   ST3Q_IMM killed [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 0 :: (store unknown-size into %ir.addr, align 64)
+  ; CHECK-NEXT:   ST3Q_IMM [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 0 :: (store unknown-size into %ir.addr, align 64)
   ; CHECK-NEXT:   RET_ReallyLR
                       <vscale x 16 x i8> %v2,
                       <vscale x 16 x i1> %pred, ptr %addr) {
@@ -150,7 +150,7 @@ define void @st4q_mmo(<vscale x 16 x i8> %v0, <vscale x 16 x i8> %v1,
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:zpr = COPY $z1
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:zpr = COPY $z0
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr4 = REG_SEQUENCE [[COPY5]], %subreg.zsub0, [[COPY4]], %subreg.zsub1, [[COPY3]], %subreg.zsub2, [[COPY2]], %subreg.zsub3
-  ; CHECK-NEXT:   ST4Q_IMM killed [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 0 :: (store unknown-size into %ir.addr, align 64)
+  ; CHECK-NEXT:   ST4Q_IMM [[REG_SEQUENCE]], [[COPY1]], [[COPY]], 0 :: (store unknown-size into %ir.addr, align 64)
   ; CHECK-NEXT:   RET_ReallyLR
                       <vscale x 16 x i8> %v2, <vscale x 16 x i8> %v3,
                       <vscale x 16 x i1> %pred, ptr %addr) {
@@ -174,19 +174,19 @@ define <vscale x 6 x half> @interleave3_nxv6f16_mmo(<vscale x 2 x half> %v0,
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:zpr = COPY [[COPY]]
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:zpr = COPY [[COPY1]]
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:zpr = COPY [[COPY2]]
-  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr3 = REG_SEQUENCE killed [[COPY5]], %subreg.zsub0, killed [[COPY4]], %subreg.zsub1, killed [[COPY3]], %subreg.zsub2
+  ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:zpr3 = REG_SEQUENCE [[COPY5]], %subreg.zsub0, [[COPY4]], %subreg.zsub1, [[COPY3]], %subreg.zsub2
   ; CHECK-NEXT:   [[PTRUE_D:%[0-9]+]]:ppr_3b = PTRUE_D 31, implicit $vg
-  ; CHECK-NEXT:   ST3D_IMM killed [[REG_SEQUENCE]], killed [[PTRUE_D]], %stack.0, 0 :: (store (<vscale x 1 x s384>) into %stack.0, align 16)
+  ; CHECK-NEXT:   ST3D_IMM [[REG_SEQUENCE]], [[PTRUE_D]], %stack.0, 0 :: (store (<vscale x 1 x s384>) into %stack.0, align 16)
   ; CHECK-NEXT:   [[LDR_ZXI:%[0-9]+]]:zpr = LDR_ZXI %stack.0, 2 :: (load (<vscale x 1 x s128>))
-  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:zpr = COPY killed [[LDR_ZXI]]
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:zpr = COPY [[LDR_ZXI]]
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:zpr = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[UZP1_ZZZ_S:%[0-9]+]]:zpr = UZP1_ZZZ_S killed [[COPY6]], killed [[DEF]]
+  ; CHECK-NEXT:   [[UZP1_ZZZ_S:%[0-9]+]]:zpr = UZP1_ZZZ_S [[COPY6]], [[DEF]]
   ; CHECK-NEXT:   [[LDR_ZXI1:%[0-9]+]]:zpr = LDR_ZXI %stack.0, 1 :: (load (<vscale x 1 x s128>))
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:zpr = COPY killed [[LDR_ZXI1]]
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:zpr = COPY [[LDR_ZXI1]]
   ; CHECK-NEXT:   [[LDR_ZXI2:%[0-9]+]]:zpr = LDR_ZXI %stack.0, 0 :: (load (<vscale x 1 x s128>) from %stack.0)
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:zpr = COPY killed [[LDR_ZXI2]]
-  ; CHECK-NEXT:   [[UZP1_ZZZ_S1:%[0-9]+]]:zpr = UZP1_ZZZ_S killed [[COPY8]], killed [[COPY7]]
-  ; CHECK-NEXT:   [[UZP1_ZZZ_H:%[0-9]+]]:zpr = UZP1_ZZZ_H killed [[UZP1_ZZZ_S1]], killed [[UZP1_ZZZ_S]]
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:zpr = COPY [[LDR_ZXI2]]
+  ; CHECK-NEXT:   [[UZP1_ZZZ_S1:%[0-9]+]]:zpr = UZP1_ZZZ_S [[COPY8]], [[COPY7]]
+  ; CHECK-NEXT:   [[UZP1_ZZZ_H:%[0-9]+]]:zpr = UZP1_ZZZ_H [[UZP1_ZZZ_S1]], [[UZP1_ZZZ_S]]
   ; CHECK-NEXT:   $z0 = COPY [[UZP1_ZZZ_H]]
   ; CHECK-NEXT:   RET_ReallyLR implicit $z0
                          <vscale x 2 x half> %v1,

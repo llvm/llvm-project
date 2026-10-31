@@ -28,6 +28,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
@@ -189,68 +190,43 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   llvm::SmallString<64> Name;
   GlobalDecl D(FD);
 
-  // TODO: This list should be expanded or refactored after all GCC-compatible
-  // std libcall builtins are implemented.
-  static const SmallDenseMap<unsigned, StringRef, 64> F128Builtins{
-      {Builtin::BI__builtin___fprintf_chk, "__fprintf_chkieee128"},
-      {Builtin::BI__builtin___printf_chk, "__printf_chkieee128"},
-      {Builtin::BI__builtin___snprintf_chk, "__snprintf_chkieee128"},
-      {Builtin::BI__builtin___sprintf_chk, "__sprintf_chkieee128"},
-      {Builtin::BI__builtin___vfprintf_chk, "__vfprintf_chkieee128"},
-      {Builtin::BI__builtin___vprintf_chk, "__vprintf_chkieee128"},
-      {Builtin::BI__builtin___vsnprintf_chk, "__vsnprintf_chkieee128"},
-      {Builtin::BI__builtin___vsprintf_chk, "__vsprintf_chkieee128"},
-      {Builtin::BI__builtin_fprintf, "__fprintfieee128"},
-      {Builtin::BI__builtin_printf, "__printfieee128"},
-      {Builtin::BI__builtin_snprintf, "__snprintfieee128"},
-      {Builtin::BI__builtin_sprintf, "__sprintfieee128"},
-      {Builtin::BI__builtin_vfprintf, "__vfprintfieee128"},
-      {Builtin::BI__builtin_vprintf, "__vprintfieee128"},
-      {Builtin::BI__builtin_vsnprintf, "__vsnprintfieee128"},
-      {Builtin::BI__builtin_vsprintf, "__vsprintfieee128"},
-      {Builtin::BI__builtin_fscanf, "__fscanfieee128"},
-      {Builtin::BI__builtin_scanf, "__scanfieee128"},
-      {Builtin::BI__builtin_sscanf, "__sscanfieee128"},
-      {Builtin::BI__builtin_vfscanf, "__vfscanfieee128"},
-      {Builtin::BI__builtin_vscanf, "__vscanfieee128"},
-      {Builtin::BI__builtin_vsscanf, "__vsscanfieee128"},
-      {Builtin::BI__builtin_nexttowardf128, "__nexttowardieee128"},
-  };
-
-  // The AIX library functions frexpl, ldexpl, and modfl are for 128-bit
-  // IBM 'long double' (i.e. __ibm128). Map to the 'double' versions
-  // if it is 64-bit 'long double' mode.
-  static const SmallDenseMap<unsigned, StringRef, 4> AIXLongDouble64Builtins{
-      {Builtin::BI__builtin_frexpl, "frexp"},
-      {Builtin::BI__builtin_ldexpl, "ldexp"},
-      {Builtin::BI__builtin_modfl, "modf"},
-  };
-
   // If the builtin has been declared explicitly with an assembler label,
   // use the mangled name. This differs from the plain label on platforms
   // that prefix labels.
   if (FD->hasAttr<AsmLabelAttr>())
     Name = getMangledName(D);
-  else {
-    // TODO: This mutation should also be applied to other targets other than
-    // PPC, after backend supports IEEE 128-bit style libcalls.
-    if (getTriple().isPPC64() &&
-        &getTarget().getLongDoubleFormat() == &llvm::APFloat::IEEEquad() &&
-        F128Builtins.contains(BuiltinID))
-      Name = F128Builtins.lookup(BuiltinID);
-    else if (getTriple().isOSAIX() &&
-             &getTarget().getLongDoubleFormat() ==
-                 &llvm::APFloat::IEEEdouble() &&
-             AIXLongDouble64Builtins.contains(BuiltinID))
-      Name = AIXLongDouble64Builtins.lookup(BuiltinID);
-    else
-      Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
-  }
+  else if (StringRef TargetName = CodeGenUtils::getTargetBuiltinLibFunctionName(
+               BuiltinID, getTarget());
+           !TargetName.empty())
+    Name = TargetName;
+  else
+    Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
 
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
 
   return GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable=*/false);
+}
+
+void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
+                                llvm::Function *F) {
+  llvm::FunctionType *FTy = F->getFunctionType();
+  unsigned NumParams = FTy->getNumParams();
+  if (Args.size() >= NumParams)
+    return;
+
+  auto [FirstDefault, Defaults] =
+      Intrinsic::getAllDefaultArgValues(F->getIntrinsicID());
+  assert(Args.size() >= FirstDefault &&
+         "builtin passes fewer arguments than the intrinsic requires");
+
+  for (unsigned I = Args.size(); I != NumParams; ++I) {
+    llvm::Type *ParamTy = FTy->getParamType(I);
+    unsigned DefaultIdx = I - FirstDefault;
+    assert(ParamTy->isIntegerTy() &&
+           "intrinsic default arguments must be integer-typed");
+    Args.push_back(llvm::ConstantInt::get(ParamTy, Defaults[DefaultIdx]));
+  }
 }
 
 /// Emit the conversions required to turn the given value into an
@@ -995,6 +971,10 @@ llvm::Value *CodeGenFunction::emitCountedBySize(const Expr *E,
   // GCC does for consistency's sake.
 
   const Expr *Idx = nullptr;
+  // FIXME: `ArrayElementTy` is misleadingly named. `findStructFieldAccess()`
+  // sets it to the type of the array-subscript base, i.e. the (possibly cast)
+  // *pointer* being indexed (not an element type) or a null QualType when there
+  // is no subscript.
   QualType ArrayElementTy;
   E = findStructFieldAccess(E, &Idx, &ArrayElementTy);
   if (!E)
@@ -1058,7 +1038,7 @@ GetCountFieldAndIndex(CodeGenFunction &CGF, const MemberExpr *ME,
     return std::make_pair<Value *>(nullptr, nullptr);
   Count = CGF.Builder.CreateIntCast(Count, ResType, IsSigned, "count");
 
-  //  index = ptr->index;
+  //  index = idx;
   Value *Index = nullptr;
   if (Idx) {
     bool IdxSigned = Idx->getType()->isSignedIntegerType();
@@ -1074,6 +1054,7 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
     QualType CastedArrayElementTy, unsigned Type, llvm::IntegerType *ResType) {
   assert(E->getCastKind() == CK_LValueToRValue &&
          "must be an LValue to RValue cast");
+  assert(EmittedE && "emitted must not be null");
 
   const MemberExpr *ME =
       dyn_cast<MemberExpr>(E->getSubExpr()->IgnoreParenNoopCasts(getContext()));
@@ -1097,16 +1078,24 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //      struct p;
   //      struct s {
   //          /* ... */
-  //          struct p **array __attribute__((counted_by(count)));
+  //          struct p **array __attribute__((ATTR(count)));
   //          int count;
   //      };
   //
   // 1) 'ptr->array':
   //
-  //    count = ptr->count;
+  //    #if ATTR is counted_by_or_null || ATTR is sized_by_or_null
+  //      count = ptr->array ? ptr->count : 0;
+  //    #else
+  //      count = ptr->count;
+  //    #endif
   //
-  //    array_element_size = sizeof (*ptr->array);
-  //    array_size = count * array_element_size;
+  //    #if ATTR is counted_by || ATTR is counted_by_or_null
+  //      array_element_size = sizeof (*ptr->array);
+  //      array_size = count * array_element_size;
+  //    #else
+  //      array_size = count;
+  //    #endif
   //
   //    result = array_size;
   //
@@ -1115,11 +1104,19 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //
   // 2) '&((cast) ptr->array)[idx]':
   //
-  //    count = ptr->count;
+  //    #if ATTR is counted_by_or_null || ATTR is sized_by_or_null
+  //      count = ptr->array ? ptr->count : 0;
+  //    #else
+  //      count = ptr->count;
+  //    #endif
   //    index = idx;
   //
-  //    array_element_size = sizeof (*ptr->array);
-  //    array_size = count * array_element_size;
+  //    #if ATTR is counted_by || ATTR is counted_by_or_null
+  //      array_element_size = sizeof (*ptr->array);
+  //      array_size = count * array_element_size;
+  //    #else
+  //      array_size = count;
+  //    #endif
   //
   //    casted_array_element_size = sizeof (*((cast) ptr->array));
   //
@@ -1131,63 +1128,97 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   //        cmp  = (cmp && index > 0)
   //    return cmp ? result : 0;
 
-  auto GetElementBaseSize = [&](QualType ElementTy) {
-    CharUnits ElementSize =
-        getContext().getTypeSizeInChars(ElementTy->getPointeeType());
+  auto GetPointeeSize = [&](QualType PtrTy) -> CharUnits {
+    assert(!PtrTy.isNull());
+    QualType PointeeTy = PtrTy->getPointeeType();
+    assert(!PointeeTy.isNull() &&
+           (PointeeTy->isVoidType() || !PointeeTy->isIncompleteType()) &&
+           "pointee type must have a computable size");
 
-    if (ElementSize.isZero()) {
-      // This might be a __sized_by (or __counted_by) on a
-      // 'void *', which counts bytes, not elements.
-      [[maybe_unused]] auto *CAT = ElementTy->getAs<CountAttributedType>();
-      assert(CAT && "must have an CountAttributedType");
-
-      ElementSize = CharUnits::One();
+    CharUnits PointeeSize = getContext().getTypeSizeInChars(PointeeTy);
+    if (PointeeSize.isZero()) {
+      // Support GNU extension of treating `void` having size 1.
+      PointeeSize = CharUnits::One();
     }
 
-    return std::optional<CharUnits>(ElementSize);
+    return PointeeSize;
   };
 
-  // Get the sizes of the original array element and the casted array element,
-  // if different.
-  std::optional<CharUnits> ArrayElementBaseSize =
-      GetElementBaseSize(ArrayBaseFD->getType());
-  if (!ArrayElementBaseSize)
-    return nullptr;
-
-  std::optional<CharUnits> CastedArrayElementBaseSize = ArrayElementBaseSize;
-  if (!CastedArrayElementTy.isNull() && CastedArrayElementTy->isPointerType()) {
-    CastedArrayElementBaseSize = GetElementBaseSize(CastedArrayElementTy);
-    if (!CastedArrayElementBaseSize)
-      return nullptr;
-  }
-
   bool IsSigned = CountFD->getType()->isSignedIntegerType();
+  const auto *CountAttributedTy =
+      ArrayBaseFD->getType()->getAs<CountAttributedType>();
+  assert(CountAttributedTy && "the field's type is not a CountAttributedType");
 
   //  count = ptr->count;
-  //  index = ptr->index;
+  //  index = idx;
   Value *Count, *Index;
   std::tie(Count, Index) = GetCountFieldAndIndex(
       *this, ME, ArrayBaseFD, CountFD, Idx, ResType, IsSigned);
   if (!Count)
     return nullptr;
 
-  //  array_element_size = sizeof (*ptr->array)
-  auto *ArrayElementSize = llvm::ConstantInt::get(
-      ResType, ArrayElementBaseSize->getQuantity(), IsSigned);
+  //  For the _or_null variants, a null pointer describes no accessible memory:
+  //    count = ptr->array ? count : 0;
+  if (CountAttributedTy->isOrNull()) {
+    Value *Ptr = nullptr;
+    if (!Idx) {
+      //  1) 'ptr->array'
+      // Reuse the already-emitted pointer value rather than re-loading `ME`.
+      // Re-loading would produce a second, observable access for a volatile
+      // pointer field
+      Ptr = EmittedE;
+    } else {
+      // 2) '&((cast) ptr->array)[idx]'
+      // FIXME: `EmittedE` is the element address, not `ptr->array`, so we fall
+      // back to re-emitting `ME` and the pointer field is loaded twice. This is
+      // normally harmless except when the pointer is `volatile`. Avoiding that
+      // would require restructuring how the base pointer is emitted (it is
+      // handled elsewhere in the callstack), so it is left as-is for now.
+      Ptr = EmitScalarExpr(ME);
+    }
+    Value *IsNull = Builder.CreateIsNull(Ptr);
+    Count = Builder.CreateSelect(IsNull, ConstantInt::get(ResType, 0, IsSigned),
+                                 Count, "count.or.null");
+  }
 
-  //  casted_array_element_size = sizeof (*((cast) ptr->array));
-  auto *CastedArrayElementSize = llvm::ConstantInt::get(
-      ResType, CastedArrayElementBaseSize->getQuantity(), IsSigned);
+  //    #if ATTR is counted_by || ATTR is counted_by_or_null
+  //      array_element_size = sizeof (*ptr->array);
+  //      array_size = count * array_element_size;
+  //    #else
+  //      array_size = count;
+  //    #endif
+  Value *ArraySize;
+  if (!CountAttributedTy->isCountInBytes()) {
+    // `__counted_by`/`__counted_by_or_null` require a complete pointee at use
+    // sites (enforced by Sema) so the element size is computable.
+    CharUnits ArrayElementBaseSize = GetPointeeSize(ArrayBaseFD->getType());
 
-  //  array_size = count * array_element_size;
-  Value *ArraySize = Builder.CreateMul(Count, ArrayElementSize, "array_size",
-                                       !IsSigned, IsSigned);
+    //  array_element_size = sizeof (*ptr->array)
+    auto *ArrayElementSize = llvm::ConstantInt::get(
+        ResType, ArrayElementBaseSize.getQuantity(), IsSigned);
+
+    //  array_size = count * array_element_size;
+    ArraySize = Builder.CreateMul(Count, ArrayElementSize, "array_size",
+                                  !IsSigned, IsSigned);
+  } else {
+    //  array_size = count;
+    ArraySize = Count;
+  }
 
   // Option (1) 'ptr->array'
   //  result = array_size
   Value *Result = ArraySize;
 
   if (Idx) { // Option (2) '&((cast) ptr->array)[idx]'
+    // FIXME: CastedArrayElementTy is confusingly named. It's actually the base
+    // expression of the ArraySubscriptExpr, not the element (pointee) type.
+    CharUnits CastedArrayElementSizeInChars =
+        GetPointeeSize(CastedArrayElementTy);
+
+    //  casted_array_element_size = sizeof (*((cast) ptr->array));
+    auto *CastedArrayElementSize = llvm::ConstantInt::get(
+        ResType, CastedArrayElementSizeInChars.getQuantity(), IsSigned);
+
     //  index_size = index * casted_array_element_size;
     Value *IndexSize = Builder.CreateMul(Index, CastedArrayElementSize,
                                          "index_size", !IsSigned, IsSigned);
@@ -1725,9 +1756,11 @@ enum class MSVCSetJmpKind {
 };
 }
 
-/// MSVC handles setjmp a bit differently on different platforms. On every
-/// architecture except 32-bit x86, the frame address is passed. On x86, extra
-/// parameters can be passed as variadic arguments, but we always pass none.
+/// MSVC handles setjmp a bit differently on different platforms. On 32-bit x86
+/// extra parameters can be passed as variadic arguments, but we always pass
+/// none. Everywhere else a frame value is passed: the stack pointer as it was
+/// on entry to the function for AArch64 and 32-bit Arm, and the frame address
+/// for the rest.
 static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
                                const CallExpr *E) {
   llvm::Value *Arg1 = nullptr;
@@ -1742,7 +1775,8 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   } else {
     Name = SJKind == MSVCSetJmpKind::_setjmp ? "_setjmp" : "_setjmpex";
     Arg1Ty = CGF.Int8PtrTy;
-    if (CGF.getTarget().getTriple().getArch() == llvm::Triple::aarch64) {
+    const llvm::Triple &T = CGF.getTarget().getTriple();
+    if (T.getArch() == llvm::Triple::aarch64 || T.isARM() || T.isThumb()) {
       Arg1 = CGF.Builder.CreateCall(
           CGF.CGM.getIntrinsic(Intrinsic::sponentry, CGF.AllocaInt8PtrTy));
     } else
@@ -3965,6 +3999,92 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     break;
   }
 
+  // stdc_load8_*: load N bytes from a const unsigned char* and assemble
+  // into an integer using little-endian or big-endian byte order.
+  case Builtin::BIstdc_load8_leu8:
+  case Builtin::BIstdc_load8_les8:
+  case Builtin::BIstdc_load8_beu8:
+  case Builtin::BIstdc_load8_bes8:
+  case Builtin::BIstdc_load8_aligned_leu8:
+  case Builtin::BIstdc_load8_aligned_les8:
+  case Builtin::BIstdc_load8_aligned_beu8:
+  case Builtin::BIstdc_load8_aligned_bes8:
+  case Builtin::BIstdc_load8_leu16:
+  case Builtin::BIstdc_load8_les16:
+  case Builtin::BIstdc_load8_beu16:
+  case Builtin::BIstdc_load8_bes16:
+  case Builtin::BIstdc_load8_aligned_leu16:
+  case Builtin::BIstdc_load8_aligned_les16:
+  case Builtin::BIstdc_load8_aligned_beu16:
+  case Builtin::BIstdc_load8_aligned_bes16:
+  case Builtin::BIstdc_load8_leu32:
+  case Builtin::BIstdc_load8_les32:
+  case Builtin::BIstdc_load8_beu32:
+  case Builtin::BIstdc_load8_bes32:
+  case Builtin::BIstdc_load8_aligned_leu32:
+  case Builtin::BIstdc_load8_aligned_les32:
+  case Builtin::BIstdc_load8_aligned_beu32:
+  case Builtin::BIstdc_load8_aligned_bes32:
+  case Builtin::BIstdc_load8_leu64:
+  case Builtin::BIstdc_load8_les64:
+  case Builtin::BIstdc_load8_beu64:
+  case Builtin::BIstdc_load8_bes64:
+  case Builtin::BIstdc_load8_aligned_leu64:
+  case Builtin::BIstdc_load8_aligned_les64:
+  case Builtin::BIstdc_load8_aligned_beu64:
+  case Builtin::BIstdc_load8_aligned_bes64: {
+    bool IsBE = BuiltinID == Builtin::BIstdc_load8_beu8 ||
+                BuiltinID == Builtin::BIstdc_load8_bes8 ||
+                BuiltinID == Builtin::BIstdc_load8_beu16 ||
+                BuiltinID == Builtin::BIstdc_load8_bes16 ||
+                BuiltinID == Builtin::BIstdc_load8_beu32 ||
+                BuiltinID == Builtin::BIstdc_load8_bes32 ||
+                BuiltinID == Builtin::BIstdc_load8_beu64 ||
+                BuiltinID == Builtin::BIstdc_load8_bes64 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu8 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes8 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu16 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes16 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu32 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes32 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_beu64 ||
+                BuiltinID == Builtin::BIstdc_load8_aligned_bes64;
+    bool IsAligned = BuiltinID == Builtin::BIstdc_load8_aligned_leu8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes8 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes16 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes32 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_leu64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_les64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_beu64 ||
+                     BuiltinID == Builtin::BIstdc_load8_aligned_bes64;
+
+    llvm::Type *IntTy = ConvertType(E->getType());
+    unsigned BitWidth = IntTy->getIntegerBitWidth();
+    assert(
+        (BitWidth == 8 || BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        "unexpected bit width for stdc_load8_*");
+    Address Addr = EmitPointerWithAlignment(E->getArg(0));
+    if (IsAligned) {
+      CharUnits TypeAlign = getContext().getTypeAlignInChars(E->getType());
+      Addr = Addr.withAlignment(std::max(Addr.getAlignment(), TypeAlign));
+    }
+    Addr = Addr.withElementType(IntTy);
+    Value *Val = Builder.CreateLoad(Addr);
+    if ((BitWidth == 16 || BitWidth == 32 || BitWidth == 64) &&
+        IsBE != getTarget().isBigEndian())
+      Val = Builder.CreateCall(CGM.getIntrinsic(Intrinsic::bswap, IntTy), Val);
+
+    return RValue::get(Val);
+  }
+
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
 
@@ -4041,12 +4161,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_prefetch: {
     Value *Locality, *RW, *Address = EmitScalarExpr(E->getArg(0));
     unsigned ICEArguments = (1 << 1) | (1 << 2);
-    // FIXME: Technically these constants should of type 'int', yes?
     RW = (E->getNumArgs() > 1) ? EmitScalarOrConstFoldImmArg(ICEArguments, 1, E)
                                : llvm::ConstantInt::get(Int32Ty, 0);
+    RW = Builder.CreateZExtOrTrunc(RW, Int32Ty);
     Locality = (E->getNumArgs() > 2)
                    ? EmitScalarOrConstFoldImmArg(ICEArguments, 2, E)
                    : llvm::ConstantInt::get(Int32Ty, 3);
+    Locality = Builder.CreateZExtOrTrunc(Locality, Int32Ty);
     Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
     Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
     Builder.CreateCall(F, {Address, RW, Locality, Data});
@@ -4070,11 +4191,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_verbose_trap: {
-    llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+    llvm::DebugLoc CallLocation = Builder.getCurrentDebugLocation();
+    llvm::DILocation *TrapLocation = CallLocation;
     if (getDebugInfo()) {
       TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
           TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()),
           *E->getArg(1)->tryEvaluateString(getContext()));
+      // Keep the trap on the builtin's source line. A line-zero location would
+      // leave the trap attributed to the preceding line in the line table.
+      TrapLocation = llvm::DILocation::get(
+          getLLVMContext(), CallLocation.getLine(), CallLocation.getCol(),
+          TrapLocation->getScope(), TrapLocation->getInlinedAt());
     }
     ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
     // Currently no attempt is made to prevent traps from being merged.
@@ -4265,6 +4392,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
     if (auto *VecTy = QT->getAs<VectorType>())
       QT = VecTy->getElementType();
+    else if (auto *MatTy = QT->getAs<ConstantMatrixType>())
+      QT = MatTy->getElementType();
     if (QT->isIntegerType())
       Result = Builder.CreateBinaryIntrinsic(
           Intrinsic::abs, EmitScalarExpr(E->getArg(0)), Builder.getFalse(),
@@ -4328,11 +4457,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
-          Op1, nullptr, "elt.max");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smax
+                                               : Intrinsic::umax,
+          Op0, Op1, nullptr, "elt.max");
     } else
       Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
@@ -4343,11 +4471,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
-          Op1, nullptr, "elt.min");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smin
+                                               : Intrinsic::umin,
+          Op0, Op1, nullptr, "elt.min");
     } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);
@@ -5061,6 +5188,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_return_address: {
     Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
                                                    getContext().UnsignedIntTy);
+    Depth = Builder.CreateZExtOrTrunc(Depth, Int32Ty);
     Function *F =
         CGM.getIntrinsic(Intrinsic::returnaddress, {CGM.ProgramPtrTy});
     return RValue::get(Builder.CreateCall(F, Depth));
@@ -5073,6 +5201,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_frame_address: {
     Value *Depth = ConstantEmitter(*this).emitAbstract(E->getArg(0),
                                                    getContext().UnsignedIntTy);
+    Depth = Builder.CreateZExtOrTrunc(Depth, Int32Ty);
     Function *F = CGM.getIntrinsic(Intrinsic::frameaddress, AllocaInt8PtrTy);
     return RValue::get(Builder.CreateCall(F, Depth));
   }
@@ -6852,6 +6981,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       Args.push_back(ArgValue);
     }
+
+    appendDefaultIntrinsicArgs(Args, F);
 
     Value *V = Builder.CreateCall(F, Args);
     QualType BuiltinRetType = E->getType();

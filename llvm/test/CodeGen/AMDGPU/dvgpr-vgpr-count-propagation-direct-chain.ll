@@ -11,7 +11,7 @@
 ; func.2 and func.4 have DVGPRs disabled
 
 ; DVGPR:  .set .Lgfx_func_a.num_vgpr, 40
-; DVGPR:  .set .Lamdgpu_cs_main.num_vgpr, max(42, .Lgfx_func_a.num_vgpr)
+; DVGPR:  .set .Lamdgpu_cs_main.num_vgpr, 11
 ; DVGPR:  .set .Lfunc.0.num_vgpr, max(11, .Lgfx_func_a.num_vgpr)
 ; DVGPR:  .set .Lfunc.1.num_vgpr, 82
 ; DVGPR:  .set .Lfunc.2.num_vgpr, max(11, amdgpu.max_num_vgpr)
@@ -22,7 +22,7 @@
 ; DVGPR:  .set amdgpu.max_num_vgpr, 82
 
 ; NODVGPR:  .set .Lgfx_func_a.num_vgpr, 40
-; NODVGPR:  .set .Lamdgpu_cs_main.num_vgpr, max(42, amdgpu.max_num_vgpr)
+; NODVGPR:  .set .Lamdgpu_cs_main.num_vgpr, max(11, amdgpu.max_num_vgpr)
 ; NODVGPR:  .set .Lfunc.0.num_vgpr, max(11, amdgpu.max_num_vgpr)
 ; NODVGPR:  .set .Lfunc.1.num_vgpr, max(82, amdgpu.max_num_vgpr)
 ; NODVGPR:  .set .Lfunc.2.num_vgpr, max(11, amdgpu.max_num_vgpr)
@@ -33,7 +33,7 @@
 ; NODVGPR:  .set amdgpu.max_num_vgpr, 82
 
 ; DVGPR:  - .hardware_stages:
-; DVGPR:        .vgpr_count: 0x2a
+; DVGPR:        .vgpr_count: 0xb
 ; DVGPR:    .shader_functions:
 ; DVGPR:      func.0:
 ; DVGPR:        .vgpr_count: 0x28
@@ -71,7 +71,6 @@ define amdgpu_gfx void @gfx_func_a() #0 {
 
 define amdgpu_cs void @amdgpu_cs_main(<3 x i32> inreg %sgprs, <3 x i32> %vgprs) #0 {
   %fptr = load ptr, ptr inttoptr(i64 0 to ptr)
-  call amdgpu_gfx void @gfx_func_a()
   call void(ptr, i32, <3 x i32>, <3 x i32>, i32, ...) @llvm.amdgcn.cs.chain.v3i32(ptr inreg %fptr, i32 inreg 0, <3 x i32> inreg %sgprs, <3 x i32> zeroinitializer, i32 1, i32 0, i32 -1, ptr @func.1)
   unreachable
 }

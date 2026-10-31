@@ -44,7 +44,7 @@ protected:
                                     std::nullopt));
     Ctx = std::make_unique<LLVMContext>();
     Mod = std::make_unique<Module>("M", *Ctx);
-    Mod->setDataLayout(TM->createDataLayout());
+    Mod->setDataLayout(TT.computeDataLayout());
     auto *F = Function::Create(FunctionType::get(Type::getVoidTy(*Ctx), false),
                                GlobalValue::ExternalLinkage, "f", *Mod);
     MMI = std::make_unique<MachineModuleInfo>(TM.get());
@@ -91,7 +91,7 @@ TEST_F(SPIRVGlobalRegistryTest, PrepareFunctionsClearsStalePointers) {
 
   LLVMContext Ctx2;
   Module Mod2("M2", Ctx2);
-  Mod2.setDataLayout(TM->createDataLayout());
+  Mod2.setDataLayout(TM->getTargetTriple().computeDataLayout());
   Function::Create(FunctionType::get(Type::getVoidTy(Ctx2), false),
                    GlobalValue::ExternalLinkage, "g", Mod2);
 

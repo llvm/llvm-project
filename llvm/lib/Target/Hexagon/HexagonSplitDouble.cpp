@@ -474,10 +474,9 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
 
   // Examine the latch branch. Expect it to be a conditional branch to
   // the header (either "br-cond header" or "br-cond exit; br header").
-  MachineBasicBlock *TB = nullptr, *FB = nullptr;
-  MachineBasicBlock *TmpLB = const_cast<MachineBasicBlock*>(LB);
-  SmallVector<MachineOperand,2> Cond;
-  bool BadLB = TII->analyzeBranch(*TmpLB, TB, FB, Cond, false);
+  const MachineBasicBlock *TB = nullptr, *FB = nullptr;
+  SmallVector<MachineOperand, 2> Cond;
+  bool BadLB = TII->analyzeBranch(*LB, TB, FB, Cond);
   // Only analyzable conditional branches. HII::analyzeBranch will put
   // the branch opcode as the first element of Cond, and the predicate
   // operand as the second.

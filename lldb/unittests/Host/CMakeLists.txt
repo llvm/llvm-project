@@ -1,6 +1,7 @@
 set (FILES
   ConnectionFileDescriptorTest.cpp
   FileActionTest.cpp
+  FileCacheTest.cpp
   FileSystemTest.cpp
   FileTest.cpp
   HostInfoTest.cpp
@@ -38,6 +39,7 @@ endif()
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   list(APPEND FILES
+    windows/PathUtilsTest.cpp
     windows/StripConPTYSequencesTest.cpp
   )
 endif()

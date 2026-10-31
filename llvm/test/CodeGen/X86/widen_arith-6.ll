@@ -9,7 +9,7 @@ define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-NEXT:    pushl %ebp
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-16, %esp
-; CHECK-NEXT:    subl $48, %esp
+; CHECK-NEXT:    subl $32, %esp
 ; CHECK-NEXT:    movl $1077936128, {{[0-9]+}}(%esp) # imm = 0x40400000
 ; CHECK-NEXT:    movl $1073741824, {{[0-9]+}}(%esp) # imm = 0x40000000
 ; CHECK-NEXT:    movl $1065353216, {{[0-9]+}}(%esp) # imm = 0x3F800000

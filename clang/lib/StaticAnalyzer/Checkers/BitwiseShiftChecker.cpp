@@ -177,7 +177,7 @@ BugReportPtr BitwiseShiftValidator::checkOvershift() {
     SValBuilder &SVB = Ctx.getSValBuilder();
     if (const llvm::APSInt *MinRight = SVB.getMinValue(FoldedState, Right);
         MinRight && *MinRight >= LHSBitWidth) {
-      LowerBoundStr = formatv(" >= {0},", MinRight->getExtValue());
+      LowerBoundStr = formatv(" >= {0},", *MinRight);
     }
   }
 
@@ -331,7 +331,7 @@ const NoteTag *BitwiseShiftValidator::createNoteTag() const {
 std::unique_ptr<PathSensitiveBugReport>
 BitwiseShiftValidator::createBugReport(StringRef ShortMsg, StringRef Msg) const {
   ProgramStateRef State = Ctx.getState();
-  if (ExplodedNode *ErrNode = Ctx.generateErrorNode(State)) {
+  if (ExplodedNode *ErrNode = Ctx.addSink(State)) {
     auto BR =
         std::make_unique<PathSensitiveBugReport>(BT, ShortMsg, Msg, ErrNode);
     bugreporter::trackExpressionValue(ErrNode, Op->getLHS(), *BR);

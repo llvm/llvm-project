@@ -23,6 +23,6 @@ declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 ; Check that the noalias for "dst" was removed by checking that the metadata is gone
 ; CHECK-NOT: "dst"
-!0 = !{!0}
+!0 = !{!0, i1 false}
 !1 = distinct !{!1, !0, !"dst"}
 !2 = distinct !{!1}

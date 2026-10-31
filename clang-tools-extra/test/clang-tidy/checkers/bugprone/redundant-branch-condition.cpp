@@ -1127,6 +1127,52 @@ int positive_expr_with_cleanups() {
   return 0;
 }
 
+// Loops
+
+void positive_loop_not_mutated() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+  }
+}
+
+void positive_loop_mutated_after_loop() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+    tryToExtinguish(onFire);
+  }
+}
+
+void positive_loop_around_both_ifs() {
+  bool onFire = isBurning();
+  while (someOtherCondition()) {
+    if (onFire) {
+      if (onFire) {
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant condition 'onFire' [bugprone-redundant-branch-condition]
+        // CHECK-FIXES: {{^\ *$}}
+        scream();
+      }
+      // CHECK-FIXES: {{^\ *$}}
+    }
+    tryToExtinguish(onFire);
+  }
+}
+
 //===--- Special Negatives ------------------------------------------------===//
 
 // Aliasing
@@ -1351,6 +1397,109 @@ void negative_comma_after_condition() {
   }
 }
 
+// Loops
+
+void negative_for_mutated_later_in_body(int n) {
+  bool onFire = isBurning();
+  if (onFire) {
+    for (int i = 0; i < n; ++i) {
+      switch (i) {
+      case 4:
+      case 5:
+        if (onFire) {
+          // NO-MESSAGE: fire may have been extinguished in a previous iteration
+          onFire = false;
+          scream();
+        }
+        break;
+      }
+    }
+  }
+}
+
+void negative_while_mutated_later_in_body() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (onFire) {
+        // NO-MESSAGE: fire may have been extinguished in a previous iteration
+        scream();
+      }
+      tryToExtinguish(onFire);
+    }
+  }
+}
+
+void negative_do_mutated_later_in_body() {
+  bool onFire = isBurning();
+  if (onFire) {
+    do {
+      if (onFire) {
+        // NO-MESSAGE: fire may have been extinguished in a previous iteration
+        scream();
+      }
+      onFire = isBurning();
+    } while (someOtherCondition());
+  }
+}
+
+void negative_range_for_mutated_later_in_body() {
+  bool onFire = isBurning();
+  int floors[3] = {1, 2, 3};
+  if (onFire) {
+    for (int floor : floors) {
+      if (onFire) {
+        // NO-MESSAGE: fire may have been extinguished in a previous iteration
+        scream();
+      }
+      onFire = floor > 1;
+    }
+  }
+}
+
+void negative_loop_condition_mutates() {
+  bool onFire = isBurning();
+  if (onFire) {
+    do {
+      if (onFire) {
+        // NO-MESSAGE: fire may have been extinguished by the loop condition
+        scream();
+      }
+    } while (tryToExtinguish(onFire));
+  }
+}
+
+void negative_loop_mutated_after_lambda_variable() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      auto check = [onFire] {
+        if (onFire) {
+          // NO-MESSAGE: fire may have been extinguished in a previous iteration
+          scream();
+        }
+      };
+      check();
+      tryToExtinguish(onFire);
+    }
+  }
+}
+
+void negative_mutated_in_outer_loop() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      for (int i = 0; i < 3; ++i) {
+        if (onFire) {
+          // NO-MESSAGE: fire may have been extinguished in a previous iteration
+          scream();
+        }
+      }
+      tryToExtinguish(onFire);
+    }
+  }
+}
+
 //===--- Unhandled Cases --------------------------------------------------===//
 
 void negated_in_else() {
@@ -1394,6 +1543,21 @@ void volatile_concrete_address() {
   if (*(volatile int *)0x1234) {
     if (*(volatile int *)0x1234) {
       doSomething();
+    }
+  }
+}
+
+void loop_mutated_then_break() {
+  bool onFire = isBurning();
+  if (onFire) {
+    while (someOtherCondition()) {
+      if (onFire) {
+        // Redundant, but not diagnosed: the loop exits before onFire is checked
+        // again. Telling this apart from a later mutation needs the CFG.
+        onFire = false;
+        scream();
+        break;
+      }
     }
   }
 }

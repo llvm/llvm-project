@@ -17,6 +17,7 @@ entry:
 
 declare i32 @baz(i32)
 
-!0 = !{!"int", !1}
+!0 = !{!3, !3, i64 0}
 !1 = !{!"omnipotent char", !2}
 !2 = !{!"Simple C/C++ TBAA"}
+!3 = !{!"int", !1}

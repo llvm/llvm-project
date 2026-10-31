@@ -22,9 +22,8 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[J_016:%.*]] = phi i32 [ [[J_1_LCSSA:%.*]], [[FOR_INC11]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC12:%.*]], [[FOR_INC11]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVAR]], 2
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[VAR3:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4
-; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[VAR3]], i64 [[TMP2]]
+; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[VAR3:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[CMP212:%.*]] = icmp ult i32 [[J_016]], [[ITR]]
 ; CHECK-NEXT:    br i1 [[CMP212]], label [[FOR_BODY3_LVER_CHECK:%.*]], label [[FOR_INC11]]
 ; CHECK:       for.body3.lver.check:
@@ -40,7 +39,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP4]], [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[SCEVGEP1]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[SCEVGEP]], [[SCEVGEP4]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[ARRAYIDX7]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY3_PH_LVER_ORIG:%.*]], label [[FOR_BODY3_PH:%.*]]
 ; CHECK:       for.body3.ph.lver.orig:
@@ -68,10 +67,10 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[ADD8]] = add nsw i32 [[ADD86]], [[ADD]]
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[J_113]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[INC]], [[ITR]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT5:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP2]], label [[FOR_BODY3]], label [[FOR_INC11_LOOPEXIT_LOOPEXIT4:%.*]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       for.inc11.loopexit.loopexit:
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT:%.*]]
-; CHECK:       for.inc11.loopexit.loopexit5:
+; CHECK:       for.inc11.loopexit.loopexit4:
 ; CHECK-NEXT:    [[ADD8_LCSSA:%.*]] = phi i32 [ [[ADD8]], [[FOR_BODY3]] ]
 ; CHECK-NEXT:    store i32 [[ADD8_LCSSA]], ptr [[ARRAYIDX7]], align 4, !alias.scope [[META2]]
 ; CHECK-NEXT:    br label [[FOR_INC11_LOOPEXIT]]

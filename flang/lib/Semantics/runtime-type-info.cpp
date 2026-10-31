@@ -474,8 +474,8 @@ const Symbol *RuntimeTableBuilder::DescribeType(
       sizeInBytes /= alignment;
       sizeInBytes *= alignment;
     }
-    AddValue(
-        dtValues, derivedTypeSchema_, "sizeinbytes"s, IntToExpr(sizeInBytes));
+    AddValue(dtValues, derivedTypeSchema_, sizeInBytesCompName,
+        IntToExpr(sizeInBytes));
   }
   if (const Symbol *
       uninstDescObject{isPDTInstantiation

@@ -25,23 +25,10 @@ class ObjectDescriptionAPITestCase(TestBase):
         d = {"EXE": "b.out"}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        exe = self.getBuildArtifact("b.out")
+        target, _, thread, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), self.line, exe_name="b.out"
+        )
 
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        breakpoint = target.BreakpointCreateByLocation(self.source, self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-        # Make sure we hit our breakpoint:
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
-
-        thread = thread_list[0]
         frame0 = thread.GetFrameAtIndex(0)
 
         # Note my_global_str's object description prints fine here.

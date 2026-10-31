@@ -11,6 +11,7 @@ from lldbsuite.test import lldbutil
 
 
 class ThreadStepOutLine0TestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
         target, process, thread, _ = lldbutil.run_to_source_breakpoint(

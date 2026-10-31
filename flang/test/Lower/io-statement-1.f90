@@ -69,7 +69,7 @@ end
 
 ! CHECK-LABEL: internalnamelistio
 subroutine internalNamelistIO()
-  ! CHECK: %[[internal_var:.*]] = fir.alloca !fir.char<1,12> {bindc_name = "internal"
+  ! CHECK: %[[internal_var:.*]] = fir.alloca !fir.char<1,12> <{bindc_name = "internal"
   ! CHECK: %[[internal_decl:.*]]:2 = hlfir.declare %[[internal_var]]
   character(12) :: internal
   integer :: x = 123

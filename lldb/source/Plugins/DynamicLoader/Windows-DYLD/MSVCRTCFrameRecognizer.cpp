@@ -23,7 +23,7 @@ namespace lldb_private {
 
 void RegisterMSVCRTCFrameRecognizer(Target &target) {
   target.GetFrameRecognizerManager().AddRecognizer(
-      std::make_shared<MSVCRTCFrameRecognizer>(), ConstString(""),
+      std::make_shared<MSVCRTCFrameRecognizer>(), "",
       {ConstString("failwithmessage")}, Mangled::ePreferDemangled,
       /*first_instruction_only=*/false);
 }
