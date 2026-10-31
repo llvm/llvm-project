@@ -326,7 +326,8 @@ AnyValue AnyValue::getVectorSplat(const AnyValue &Scalar, size_t NumElements) {
 }
 
 ByteValue::ByteValue(const APInt &V, bool IsLittleEndian)
-    : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian) {
+    : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian),
+      IsAllBitsPoison(false) {
   Val.resize(divideCeil(BitWidth, 8));
   MutableBytesView View(Val, IsLittleEndian);
   for (uint32_t I = 0; I < BitWidth; I += 8)
@@ -342,7 +343,7 @@ ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
 ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
   return ByteValue(BitWidth,
                    std::vector<Byte>(divideCeil(BitWidth, 8), Byte::poison()),
-                   IsLittleEndian, /*ImplicitClearHighBits=*/true);
+                   IsLittleEndian, ByteValue::PaddingBitsMode::Canonical);
 }
 
 void ByteValue::print(Context &Ctx, raw_ostream &OS) const {

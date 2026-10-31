@@ -419,10 +419,12 @@ public:
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
   /// If \p ContainsUndefinedBits is provided, it will be set to true when there
-  /// are poison or undef bits in the value (i.e., padding bits are ignored).
+  /// are poison or undef bits in the value or in the padding bits that poison
+  /// value bits.
   AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
                      bool *ContainsUndefinedBits = nullptr);
-  /// Convert a value to byte sequence. Padding bits are set to zero.
+  /// Convert a value to byte sequence. If every bit of the value is poison,
+  /// the padding bits are poison as well; otherwise, they are zero.
   void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
   /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
   /// value of type \p Ty. The bit range must be within \p Src.
