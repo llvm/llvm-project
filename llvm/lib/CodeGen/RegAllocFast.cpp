@@ -20,6 +20,10 @@
 /// Where the target enables it, TwoAddressInstructionPass is left out of the
 /// pipeline: this pass lowers tied operands and expands REG_SEQUENCE and
 /// INSERT_SUBREG itself.
+///
+/// An inline asm register operand that may be folded to memory (from an "rm"
+/// constraint) is folded to a stack slot before its block is allocated, if
+/// the asm's register operands wouldn't fit in registers otherwise.
 //
 //===----------------------------------------------------------------------===//
 
@@ -28,6 +32,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
@@ -64,6 +70,8 @@ using namespace llvm;
 STATISTIC(NumStores, "Number of stores added");
 STATISTIC(NumLoads, "Number of loads added");
 STATISTIC(NumCoalesced, "Number of copies coalesced");
+STATISTIC(NumInlineAsmFolds,
+          "Number of inline asm registers folded to stack slots");
 
 static RegisterRegAlloc fastRegAlloc("fast", "fast register allocator",
                                      createFastRegisterAllocator);
@@ -426,6 +434,17 @@ private:
 
   bool mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const;
 
+  /// Stores that foldInlineAsmReg() inserted, which can look like the spills
+  /// of an INLINEASM_BR's outputs (see mayBeSpillFromInlineAsmBr()).
+  SmallPtrSet<const MachineInstr *, 4> InlineAsmFoldStores;
+
+  void foldInlineAsmOperands(MachineBasicBlock &MBB);
+  bool tiedUseNeedsOwnReg(const MachineInstr &MI, unsigned UseIdx) const;
+  void selectInlineAsmRegsToFold(const MachineInstr &MI,
+                                 SmallVectorImpl<Register> &ToFold) const;
+  Register getFoldedInputCopySource(const MachineInstr &MI, Register Reg) const;
+  void foldInlineAsmReg(MachineInstr *&MI, Register Reg);
+
   void dumpState() const;
 };
 
@@ -551,7 +570,8 @@ static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
 bool RegAllocFastImpl::mayBeSpillFromInlineAsmBr(const MachineInstr &MI) const {
   int FI;
   auto *MBB = MI.getParent();
-  if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
+  if (MBB->isInlineAsmBrIndirectTarget() &&
+      !InlineAsmFoldStores.contains(&MI) && TII->isStoreToStackSlot(MI, FI) &&
       MFI->isSpillSlotObjectIndex(FI))
     for (const auto &Op : MI.operands())
       if (Op.isReg() && Op.getReg().isValid() && MBB->isLiveIn(Op.getReg()))
@@ -1250,6 +1270,18 @@ bool RegAllocFastImpl::defineVirtReg(MachineInstr &MI, unsigned OpNum,
 
 /// Place MO's value in its tied def's register, by taking the register over or
 /// copying into it. Return false if useVirtReg() should finish MO.
+/// Return true if the value that the use \p MO of \p MI reads can't live in
+/// the register of the def \p DefMO that MO is tied to, whichever register
+/// that is: MO reads a subregister, or DefMO is early-clobber and overwrites
+/// its register before another operand of MI reads the value.
+static bool tiedUseMustCopy(const MachineInstr &MI, const MachineOperand &MO,
+                            const MachineOperand &DefMO) {
+  return MO.getSubReg() || (DefMO.isEarlyClobber() &&
+                            any_of(MI.all_uses(), [&](const MachineOperand &O) {
+                              return &O != &MO && O.getReg() == MO.getReg();
+                            }));
+}
+
 bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
                                     LiveReg &LR) {
   const MachineOperand &DefMO = getTiedOperand(MI, MO);
@@ -1260,12 +1292,9 @@ bool RegAllocFastImpl::lowerTiedUse(MachineInstr &MI, MachineOperand &MO,
     // No register holds the value below MI, so it can live in DefReg, unless
     // MO reads a subregister, DefReg cannot hold the value, or an early-clobber
     // def would overwrite DefReg before another operand reads the value.
-    bool MustCopy = SubReg || !MRI->isAllocatable(DefReg) ||
-                    !MRI->getRegClass(LR.VirtReg)->contains(DefReg) ||
-                    (DefMO.isEarlyClobber() &&
-                     any_of(MI.all_uses(), [&](const MachineOperand &O) {
-                       return &O != &MO && O.getReg() == LR.VirtReg;
-                     }));
+    bool MustCopy = tiedUseMustCopy(MI, MO, DefMO) ||
+                    !MRI->isAllocatable(DefReg) ||
+                    !MRI->getRegClass(LR.VirtReg)->contains(DefReg);
     if (!MustCopy) {
       // The def is not live above MI, so the value can occupy DefReg there.
       freePhysReg(DefReg);
@@ -1979,6 +2008,530 @@ void RegAllocFastImpl::handleBundle(MachineInstr &MI) {
   }
 }
 
+/// Return true if lowerTiedUse() will give the input \p UseIdx of \p MI, tied
+/// to a virtual def, a register of its own to copy into the def's register.
+/// It does when the value already has a register below MI, i.e. it's read
+/// further down the block (a read in another block reloads it from its stack
+/// slot), and when the value can't simply move into the def's register. Kill
+/// flags are optional here, so a missing one doesn't mean the value lives on.
+///
+/// MI's other reads of the value don't give it a register first: tied uses
+/// are allocated before untied ones, and a value that moved into one tied
+/// def's register is copied from there into another's.
+bool RegAllocFastImpl::tiedUseNeedsOwnReg(const MachineInstr &MI,
+                                          unsigned UseIdx) const {
+  const MachineOperand &MO = MI.getOperand(UseIdx);
+  const MachineOperand &DefMO = MI.getOperand(MI.findTiedOperandIdx(UseIdx));
+  Register Reg = MO.getReg();
+  if (tiedUseMustCopy(MI, MO, DefMO) ||
+      !MRI->getRegClass(Reg)->hasSubClassEq(MRI->getRegClass(DefMO.getReg())))
+    return true;
+
+  if (MO.isKill())
+    return false;
+
+  // Only scan the rest of the block if the value is read elsewhere in it,
+  // which is rare for the input of a tied operand.
+  const MachineBasicBlock *MBB = MI.getParent();
+  if (none_of(MRI->use_nodbg_instructions(Reg), [&](const MachineInstr &UseMI) {
+        return &UseMI != &MI && UseMI.getParent() == MBB;
+      }))
+    return false;
+
+  return any_of(
+      make_range(std::next(MachineBasicBlock::const_iterator(MI)), MBB->end()),
+      [&](const MachineInstr &Other) {
+        return !Other.isDebugInstr() && Other.readsVirtualRegister(Reg);
+      });
+}
+
+namespace {
+/// A virtual register of an inline asm's register operands, as
+/// selectInlineAsmRegsToFold() models it.
+struct AsmOperandReg {
+  Register Reg;
+  const TargetRegisterClass *RC;
+  // Needs a register while the defs are assigned.
+  bool InDefs = false;
+  // Needs a register while the uses are read.
+  bool InUses = false;
+  // The virtual defs, by index, this register is the tied input of. Folding
+  // such a def folds the tied use too.
+  SmallVector<unsigned, 1> TiedDefs = {};
+  // As a tied input, keeps a register of its own instead of moving into a
+  // tied def's register (see tiedUseNeedsOwnReg()).
+  bool TiedNeedsOwnReg = false;
+  // Read by an operand that isn't tied to its def.
+  bool HasUntiedUse = false;
+  // Every untied operand of the register can be folded.
+  bool Foldable = true;
+  bool Folded = false;
+};
+} // namespace
+
+/// Return the index of virtual register \p Reg in \p Regs, adding it if it
+/// isn't there.
+static unsigned findOrAddAsmOperandReg(SmallVectorImpl<AsmOperandReg> &Regs,
+                                       Register Reg,
+                                       const MachineRegisterInfo &MRI) {
+  for (auto [Idx, R] : enumerate(Regs))
+    if (R.Reg == Reg)
+      return Idx;
+
+  Regs.push_back(AsmOperandReg{Reg, MRI.getRegClass(Reg)});
+  return Regs.size() - 1;
+}
+
+/// Return how many registers of \p Order don't overlap any of \p Taken.
+static unsigned countFreeRegs(ArrayRef<MCPhysReg> Order,
+                              ArrayRef<MCRegister> Taken,
+                              const TargetRegisterInfo &TRI) {
+  return count_if(Order, [&](MCPhysReg PhysReg) {
+    return none_of(Taken,
+                   [&](MCRegister T) { return TRI.regsOverlap(PhysReg, T); });
+  });
+}
+
+/// Return how many registers of \p Order \p PhysReg overlaps.
+static unsigned countOverlappedRegs(MCPhysReg PhysReg,
+                                    ArrayRef<MCPhysReg> Order,
+                                    const TargetRegisterInfo &TRI) {
+  return count_if(
+      Order, [&](MCPhysReg Other) { return TRI.regsOverlap(PhysReg, Other); });
+}
+
+/// Return how many registers of \p RC, whose allocation order is \p Order, a
+/// register of \p OtherRC can take: one if either class contains the other,
+/// and otherwise as many as any register of OtherRC overlaps.
+static unsigned getOverlapWeight(const TargetRegisterClass &RC,
+                                 ArrayRef<MCPhysReg> Order,
+                                 const TargetRegisterClass &OtherRC,
+                                 const RegisterClassInfo &RCI,
+                                 const TargetRegisterInfo &TRI) {
+  if (RC.hasSubClassEq(&OtherRC) || OtherRC.hasSubClassEq(&RC))
+    return 1;
+
+  unsigned Max = 0;
+  for (MCPhysReg PhysReg : RCI.getOrder(&OtherRC))
+    Max = std::max(Max, countOverlappedRegs(PhysReg, Order, TRI));
+
+  return Max;
+}
+
+/// Return the fewest registers of \p Order that a register of \p OtherRC can
+/// take, e.g. none for i686's GR16 against GR8, since DI has no byte register.
+static unsigned getMinOverlapWeight(ArrayRef<MCPhysReg> Order,
+                                    const TargetRegisterClass &OtherRC,
+                                    const RegisterClassInfo &RCI,
+                                    const TargetRegisterInfo &TRI) {
+  ArrayRef<MCPhysReg> OtherOrder = RCI.getOrder(&OtherRC);
+  if (OtherOrder.empty())
+    return 0;
+
+  unsigned Min = std::numeric_limits<unsigned>::max();
+  for (MCPhysReg PhysReg : OtherOrder)
+    Min = std::min(Min, countOverlappedRegs(PhysReg, Order, TRI));
+
+  return Min;
+}
+
+/// Count the registers that \p Regs need, given which are folded, while the
+/// asm's defs, and while its uses, are assigned. A register of Regs[I] takes
+/// \p Weight[I] registers.
+static std::pair<unsigned, unsigned>
+countNeededRegs(ArrayRef<AsmOperandReg> Regs, ArrayRef<unsigned> Weight) {
+  unsigned DefsNeeded = 0;
+  unsigned UsesNeeded = 0;
+  for (auto [R, W] : zip(Regs, Weight)) {
+    DefsNeeded += (!R.Folded && R.InDefs) * W;
+    bool NeedsReg = !R.Folded && R.InUses;
+    if (!R.TiedDefs.empty()) {
+      // While a tied def is in a register, the input is read from there,
+      // possibly copied from a register of its own.
+      bool InDefReg =
+          any_of(R.TiedDefs, [&](unsigned D) { return !Regs[D].Folded; });
+      NeedsReg =
+          R.TiedNeedsOwnReg ? NeedsReg || InDefReg : NeedsReg && !InDefReg;
+    }
+
+    UsesNeeded += NeedsReg * W;
+  }
+
+  return {DefsNeeded, UsesNeeded};
+}
+
+/// Fold registers of \p Regs, adding them to \p ToFold, until the rest fit in
+/// the registers of every class that \p DefTaken and \p UseTaken leave while
+/// the asm's defs and uses are assigned. A register counts against another
+/// class as the most registers of it that it can take or, with \p Fewest, the
+/// fewest. Return false if folding can't make them fit.
+static bool foldUntilFit(MutableArrayRef<AsmOperandReg> Regs,
+                         ArrayRef<MCRegister> DefTaken,
+                         ArrayRef<MCRegister> UseTaken, bool Fewest,
+                         const RegisterClassInfo &RCI,
+                         const TargetRegisterInfo &TRI,
+                         SmallVectorImpl<Register> &ToFold) {
+  // Fold within one register class at a time, in operand order. Registers
+  // folded for one class no longer count against the next. Check the class of
+  // every register, not just of the foldable ones: folding a register can
+  // also relieve a narrower class (e.g. the GR64_ABCD of a "Q" operand).
+  SmallVector<const TargetRegisterClass *, 4> Done;
+  for (const AsmOperandReg &Candidate : Regs) {
+    const TargetRegisterClass *RC = Candidate.RC;
+    if (is_contained(Done, RC))
+      continue;
+
+    Done.push_back(RC);
+
+    ArrayRef<MCPhysReg> Order = RCI.getOrder(RC);
+    unsigned DefsFree = countFreeRegs(Order, DefTaken, TRI);
+    unsigned UsesFree = countFreeRegs(Order, UseTaken, TRI);
+
+    // How many registers of RC one register of each AsmOperandReg takes.
+    SmallVector<unsigned, 8> Weight;
+    for (const AsmOperandReg &R : Regs)
+      Weight.push_back(Fewest ? getMinOverlapWeight(Order, *R.RC, RCI, TRI)
+                              : getOverlapWeight(*RC, Order, *R.RC, RCI, TRI));
+
+    while (true) {
+      auto [DefsNeeded, UsesNeeded] = countNeededRegs(Regs, Weight);
+      bool DefsShort = DefsNeeded > DefsFree;
+      bool UsesShort = UsesNeeded > UsesFree;
+      if (!DefsShort && !UsesShort)
+        break;
+
+      // Fold the first register that relieves the most phases that are short.
+      // Folding a tied def can give its input a register back, so count again
+      // rather than just dropping the register's own needs.
+      AsmOperandReg *Best = nullptr;
+      unsigned BestRelief = 0;
+      for (auto [R, W] : zip(Regs, Weight)) {
+        if (R.Folded || !R.Foldable || !W)
+          continue;
+
+        R.Folded = true;
+        auto [DefsAfter, UsesAfter] = countNeededRegs(Regs, Weight);
+        R.Folded = false;
+        unsigned Relief = (DefsShort && DefsAfter < DefsNeeded) +
+                          (UsesShort && UsesAfter < UsesNeeded);
+        // Folding only one of a tied def and an input that shares its register
+        // relieves nothing; folding both does. So, failing any relief, fold
+        // the first register that lowers the total without making a short
+        // phase worse.
+        bool Worse = (DefsShort && DefsAfter > DefsNeeded) ||
+                     (UsesShort && UsesAfter > UsesNeeded);
+        bool Lowers = DefsAfter + UsesAfter < DefsNeeded + UsesNeeded;
+        if (Relief > BestRelief || (!Best && !Worse && Lowers)) {
+          Best = &R;
+          BestRelief = Relief;
+        }
+      }
+
+      if (!Best)
+        return false;
+
+      Best->Folded = true;
+      ToFold.push_back(Best->Reg);
+    }
+  }
+
+  return true;
+}
+
+/// Choose which foldable ("rm") registers of the inline asm \p MI to fold to
+/// stack slots so that the rest of its register operands fit, and add them to
+/// \p ToFold.
+///
+/// The greedy allocator folds such an operand when it runs out of registers.
+/// This allocator can't: it assigns the operands of an instruction one at a
+/// time, and folding replaces the instruction. So estimate up front, from the
+/// asm's own operands, whether they fit. Values that only live across the asm
+/// don't count, since this allocator spills them when it needs their
+/// registers. The estimate follows allocateInstruction(): first all defs get
+/// distinct registers, avoiding physreg defs; then all uses, along with the
+/// defs still occupied while the uses are read (early-clobber and tied defs),
+/// get distinct registers, avoiding physreg uses and early-clobber physreg
+/// defs. Folding a register removes it from both.
+///
+/// The input of a tied def usually moves into the def's register, and the
+/// asm's untied reads of it follow, so it needs no register of its own while
+/// that def isn't folded. Otherwise (see tiedUseNeedsOwnReg()) it keeps one
+/// register, both to copy from and for its untied reads, until it and its
+/// tied defs are all folded.
+///
+/// A register counts against another register class as many times as one of
+/// its registers overlaps registers of that class, e.g. once for GR64 against
+/// GR32. That, and keeping physreg uses out of the defs' registers, errs
+/// toward folding more than necessary rather than running out of registers.
+/// If folding can't make them fit by that estimate, only what they need if
+/// each register takes the fewest registers it can is folded, and if that
+/// can't make them fit either, nothing.
+void RegAllocFastImpl::selectInlineAsmRegsToFold(
+    const MachineInstr &MI, SmallVectorImpl<Register> &ToFold) const {
+  // Most inline asm has no foldable operand, so skip the analysis below.
+  if (none_of(seq<unsigned>(InlineAsm::MIOp_FirstOperand, MI.getNumOperands()),
+              [&](unsigned I) { return MI.mayFoldInlineAsmRegOp(I); }))
+    return;
+
+  // The virtual registers of MI's register operands.
+  SmallVector<AsmOperandReg, 8> Regs;
+
+  // Physical registers taken while the defs, and while the uses, are assigned.
+  SmallVector<MCRegister, 8> DefTaken;
+  SmallVector<MCRegister, 8> UseTaken;
+  // The physical defs, the only registers the defs can't actually take.
+  SmallVector<MCRegister, 8> PhysDefs;
+
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI.getNumOperands();
+       I != E; ++I) {
+    const MachineOperand &MO = MI.getOperand(I);
+    if (!MO.isReg() || !MO.getReg() || (MO.isUse() && MO.isUndef()))
+      continue;
+
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical()) {
+      DefTaken.push_back(Reg);
+      if (MO.isDef())
+        PhysDefs.push_back(Reg);
+
+      if (MO.isUse() || isLiveThroughDef(MI, MO))
+        UseTaken.push_back(Reg);
+
+      continue;
+    }
+
+    if (!shouldAllocateRegister(Reg))
+      continue;
+
+    // A tied use is read through its def's register. Unless that is its own
+    // register (once tied operands have been rewritten), it can also need a
+    // register of its own to copy from (see tiedUseNeedsOwnReg()), and always
+    // does when the def is a fixed register, which might not be allocatable.
+    if (MO.isUse() && MO.isTied()) {
+      Register DefReg = MI.getOperand(MI.findTiedOperandIdx(I)).getReg();
+      if (Reg == DefReg)
+        continue;
+
+      if (DefReg.isVirtual()) {
+        // Folding the def stores the whole tied input into the def's slot, so
+        // an input read through a subregister rules that out.
+        unsigned Def = findOrAddAsmOperandReg(Regs, DefReg, *MRI);
+        if (MO.getSubReg())
+          Regs[Def].Foldable = false;
+
+        AsmOperandReg &R = Regs[findOrAddAsmOperandReg(Regs, Reg, *MRI)];
+        R.TiedDefs.push_back(Def);
+        R.TiedNeedsOwnReg |= tiedUseNeedsOwnReg(MI, I);
+      } else {
+        AsmOperandReg &R = Regs[findOrAddAsmOperandReg(Regs, Reg, *MRI)];
+        R.InUses = true;
+        R.Foldable = false;
+      }
+
+      continue;
+    }
+
+    // The slot holds the whole register, so a subregister operand isn't
+    // folded.
+    AsmOperandReg &R = Regs[findOrAddAsmOperandReg(Regs, Reg, *MRI)];
+    R.Foldable &= MI.mayFoldInlineAsmRegOp(I) && !MO.getSubReg();
+    if (MO.isUse()) {
+      R.InUses = true;
+      R.HasUntiedUse = true;
+    } else {
+      R.InDefs = true;
+      R.InUses |= isLiveThroughDef(MI, MO);
+    }
+  }
+
+  // The asm's own read of a register it also writes can't share the def's
+  // stack slot unless that's how the two are tied, so only fold a register
+  // the asm either reads or writes.
+  // Folding a register only folds its untied operands, so a register the asm
+  // only reads through tied uses frees nothing.
+  // A tied input the asm also writes isn't modeled; give it a register, and
+  // don't fold it: its slot would need both its old value, for the def it's
+  // tied to, and the tied input of its own def.
+  // The folder also folds the register's undef uses, skipped above, so they
+  // must be foldable, too.
+  for (AsmOperandReg &R : Regs) {
+    R.Foldable &= !(R.InDefs && R.HasUntiedUse) && (R.InDefs || R.HasUntiedUse);
+    R.Foldable &= !(R.InDefs && !R.TiedDefs.empty());
+    R.Foldable &= MI.mayFoldInlineAsmReg(R.Reg);
+    R.TiedNeedsOwnReg |= R.InDefs;
+  }
+
+  if (foldUntilFit(Regs, DefTaken, UseTaken, /*Fewest=*/false, *RegClassInfo,
+                   *TRI, ToFold))
+    return;
+
+  // The estimate errs high, so the operands may fit anyway, and folding more
+  // than they need can then keep them from fitting: this allocator assigns
+  // them in order, without looking ahead. So start over, and fold only what
+  // they need if each takes the fewest registers it can and the defs can take
+  // the physreg uses' registers. If even that can't make them fit, fold
+  // nothing, and leave allocation to report the error as it would without
+  // folding.
+  for (AsmOperandReg &R : Regs)
+    R.Folded = false;
+
+  ToFold.clear();
+  if (!foldUntilFit(Regs, PhysDefs, UseTaken, /*Fewest=*/true, *RegClassInfo,
+                    *TRI, ToFold))
+    ToFold.clear();
+}
+
+/// Return the virtual register that \p Reg copies, if \p Reg is an input of
+/// the inline asm \p MI that MI alone reads, and that is copied from another
+/// virtual register earlier in MI's block; or an invalid register otherwise.
+///
+/// Instruction selection copies each input into a register of its operand's
+/// class right before the asm, after the inputs in fixed registers. Storing
+/// that copy for a fold needs a register there, which the fixed inputs may
+/// have taken, while the copied register can be stored where it's defined.
+Register RegAllocFastImpl::getFoldedInputCopySource(const MachineInstr &MI,
+                                                    Register Reg) const {
+  const MachineInstr *Copy = MRI->getUniqueVRegDef(Reg);
+  if (!Copy || !Copy->isFullCopy() || Copy->getParent() != MI.getParent() ||
+      any_of(MRI->use_instructions(Reg),
+             [&](const MachineInstr &UseMI) { return &UseMI != &MI; }))
+    return Register();
+
+  Register Src = Copy->getOperand(1).getReg();
+  if (!Src.isVirtual() || !shouldAllocateRegister(Src) ||
+      TRI->getSpillSize(*MRI->getRegClass(Src)) !=
+          TRI->getSpillSize(*MRI->getRegClass(Reg)) ||
+      MI.readsVirtualRegister(Src) || MI.modifiesRegister(Src, TRI))
+    return Register();
+
+  // The copy must come before MI, with Src still holding the copied value at
+  // MI.
+  for (MachineBasicBlock::const_iterator I(MI), B = MI.getParent()->begin();
+       I != B;) {
+    --I;
+    if (&*I == Copy)
+      return Src;
+
+    if (I->modifiesRegister(Src, TRI))
+      return Register();
+  }
+
+  return Register();
+}
+
+/// Fold the operands of \p Reg in the inline asm \p MI to Reg's stack slot,
+/// storing the value the asm reads there before it, and reloading Reg from it
+/// afterward if the asm writes Reg. \p MI is replaced by the new instruction.
+void RegAllocFastImpl::foldInlineAsmReg(MachineInstr *&MI, Register Reg) {
+  // Fold every operand of Reg. A tied use goes along with its def, and reads
+  // the def's slot, which therefore needs the tied input's value, whichever
+  // register that is.
+  SmallVector<unsigned, 2> Ops;
+  Register ReadReg;
+  bool Writes = false;
+  for (unsigned I = InlineAsm::MIOp_FirstOperand, E = MI->getNumOperands();
+       I != E; ++I) {
+    const MachineOperand &MO = MI->getOperand(I);
+    if (!MO.isReg() || MO.getReg() != Reg)
+      continue;
+
+    if (MO.isUse()) {
+      if (!MO.isTied())
+        Ops.push_back(I);
+
+      if (MO.readsReg())
+        ReadReg = Reg;
+
+      continue;
+    }
+
+    Ops.push_back(I);
+    Writes |= !MO.isDead();
+    if (MO.isTied()) {
+      const MachineOperand &Use = MI->getOperand(MI->findTiedOperandIdx(I));
+      if (Use.readsReg())
+        ReadReg = Use.getReg();
+    }
+  }
+
+  // Use Reg's own spill slot: a block that reloads Reg, such as an
+  // INLINEASM_BR's indirect target, which the reload after the asm doesn't
+  // reach, then finds the value the asm wrote.
+  MachineBasicBlock &MBB = *MI->getParent();
+  const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+  int FI = getStackSpaceFor(Reg);
+  MachineInstr *CopyMI = nullptr;
+  MachineInstr *NewMI = TII->foldMemoryOperand(*MI, Ops, FI, CopyMI);
+  assert(NewMI && !CopyMI && "inline asm register should fold");
+
+  // The values that MI defines before its first folded operand keep their
+  // operand numbers.
+  MBB.getParent()->substituteDebugValuesForInst(*MI, *NewMI, *min_element(Ops));
+
+  // NewMI is inserted before MI. Store the value it reads into the slot, which
+  // this allocator also spills Reg to, so it already holds Reg's value if Reg
+  // lives into the block. Otherwise, store Reg right after its last def,
+  // before the asm's other inputs (e.g. ones in fixed registers) take up
+  // registers. A tied input that isn't Reg is stored right before NewMI, after
+  // any spill of Reg's old value. The allocator works out the kill flags.
+  if (ReadReg) {
+    MachineBasicBlock::iterator StorePos = NewMI->getIterator();
+    if (ReadReg == Reg) {
+      while (StorePos != MBB.begin() &&
+             !std::prev(StorePos)->modifiesRegister(Reg, TRI))
+        --StorePos;
+    }
+
+    if (ReadReg != Reg || StorePos != MBB.begin()) {
+      MachineInstrSpan MIS(StorePos, &MBB);
+      TII->storeRegToStackSlot(MBB, StorePos, ReadReg, /*isKill=*/false, FI, RC,
+                               ReadReg);
+      for (MachineInstr &Store : make_range(MIS.begin(), StorePos))
+        InlineAsmFoldStores.insert(&Store);
+
+      ++NumStores;
+    }
+  }
+
+  if (Writes) {
+    TII->loadRegFromStackSlot(MBB, std::next(NewMI->getIterator()), Reg, FI, RC,
+                              Reg);
+    ++NumLoads;
+  }
+
+  ++NumInlineAsmFolds;
+
+  MI->eraseFromParent();
+  MI = NewMI;
+}
+
+/// Fold the operands of each inline asm in \p MBB that won't fit in registers
+/// (see selectInlineAsmRegsToFold()).
+void RegAllocFastImpl::foldInlineAsmOperands(MachineBasicBlock &MBB) {
+  for (MachineInstr &MI : make_early_inc_range(MBB)) {
+    if (!MI.isInlineAsm())
+      continue;
+
+    SmallVector<Register, 4> ToFold;
+    selectInlineAsmRegsToFold(MI, ToFold);
+    MachineInstr *AsmMI = &MI;
+    for (Register Reg : ToFold) {
+      // Fold the register that an input copies, instead of the copy (see
+      // getFoldedInputCopySource()).
+      if (Register Src = getFoldedInputCopySource(*AsmMI, Reg)) {
+        MRI->getUniqueVRegDef(Reg)->eraseFromParent();
+        for (MachineOperand &MO : AsmMI->operands())
+          if (MO.isReg() && MO.getReg() == Reg)
+            MO.setReg(Src);
+
+        Reg = Src;
+      }
+
+      foldInlineAsmReg(AsmMI, Reg);
+    }
+  }
+}
+
 void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
   this->MBB = &MBB;
   LLVM_DEBUG(dbgs() << "\nAllocating " << MBB);
@@ -1991,6 +2544,11 @@ void RegAllocFastImpl::allocateBasicBlock(MachineBasicBlock &MBB) {
     setPhysRegState(LiveReg.PhysReg, regPreAssigned);
 
   Coalesced.clear();
+
+  // Folding replaces an inline asm, which allocateInstruction() can't do
+  // partway through, so fold the operands that won't fit in registers first.
+  if (MBB.getParent()->hasInlineAsm())
+    foldInlineAsmOperands(MBB);
 
   // Lowering a tied operand inserts a copy ahead of MI. Its registers are
   // already assigned, so visiting it would evict what still lives in the
@@ -2155,6 +2713,7 @@ bool RegAllocFastImpl::runOnMachineFunction(MachineFunction &MF,
 
   StackSlotForVirtReg.clear();
   LiveDbgValueMap.clear();
+  InlineAsmFoldStores.clear();
   return true;
 }
 
