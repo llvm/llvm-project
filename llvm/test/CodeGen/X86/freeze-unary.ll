@@ -70,6 +70,47 @@ define <2 x i64> @freeze_zext_vec(<2 x i16> %a0) nounwind {
   ret <2 x i64> %z
 }
 
+; PR231371 - Don't duplicate the volatile load when the frozen sextload has multiple uses.
+; The variable extractelement index introduces the freeze.
+define i32 @freeze_sext_load_multiuse(ptr %p, ptr %q) nounwind {
+; X86-LABEL: freeze_sext_load_multiuse:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    movl %esp, %ebp
+; X86-NEXT:    andl $-16, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    movsbl (%ecx), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    sarl $31, %edx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl %edx, 4(%eax)
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [1,2,3,4]
+; X86-NEXT:    movaps %xmm0, (%esp)
+; X86-NEXT:    andl $3, %ecx
+; X86-NEXT:    movl (%esp,%ecx,4), %eax
+; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_sext_load_multiuse:
+; X64:       # %bb.0:
+; X64-NEXT:    movsbq (%rdi), %rax
+; X64-NEXT:    movq %rax, (%rsi)
+; X64-NEXT:    movaps {{.*#+}} xmm0 = [1,2,3,4]
+; X64-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    andl $3, %eax
+; X64-NEXT:    movl -24(%rsp,%rax,4), %eax
+; X64-NEXT:    retq
+  %l = load volatile i8, ptr %p, align 1
+  %s = sext i8 %l to i64
+  store i64 %s, ptr %q, align 8
+  %i = sext i8 %l to i16
+  %e = extractelement <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i16 %i
+  ret i32 %e
+}
+
 define i32 @freeze_abs(i32 %a0) nounwind {
 ; X86-LABEL: freeze_abs:
 ; X86:       # %bb.0:
