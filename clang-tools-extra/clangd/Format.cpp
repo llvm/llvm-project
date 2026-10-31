@@ -12,6 +12,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/Support/Unicode.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -59,6 +60,33 @@ void closeBrackets(std::string &Code, const format::FormatStyle &Style) {
   // Attempt to end any open comments first.
   Code.append("\n// */\n");
   Code.append(Brackets.rbegin(), Brackets.rend());
+}
+
+/// Returns the offset of the "/*" opening the block comment that contains
+/// \p Cursor, if any.
+std::optional<unsigned> blockCommentStart(llvm::StringRef Code, unsigned Cursor,
+                                          const format::FormatStyle &Style) {
+  // Lex only the code before the cursor, so an enclosing block comment is
+  // unterminated. In keep-whitespace mode the raw lexer returns it as a
+  // trailing tok::unknown, rather than silently dropping it.
+  std::string CodeBeforeCursor = Code.take_front(Cursor).str();
+  SourceManagerForFile FileSM("mock_file.cpp", CodeBeforeCursor);
+  auto &SM = FileSM.get();
+  FileID FID = SM.getMainFileID();
+  LangOptions LangOpts = format::getFormattingLangOpts(Style);
+  Lexer Lex(FID, SM.getBufferOrFake(FID), SM, LangOpts);
+  Lex.SetKeepWhitespaceMode(true);
+  Token Tok;
+  bool AtEnd;
+  do {
+    AtEnd = Lex.LexFromRawLexer(Tok);
+    if (Tok.is(tok::unknown)) {
+      unsigned Offset = SM.getFileOffset(Tok.getLocation());
+      if (Code.substr(Offset).starts_with("/*"))
+        return Offset;
+    }
+  } while (!AtEnd);
+  return std::nullopt;
 }
 
 static StringRef commentMarker(llvm::StringRef Line) {
@@ -114,6 +142,8 @@ struct IncrementalChanges {
   // e.g. after inserting a newline, a line-comment at the cursor is used to
   // ensure that the newline is preserved.
   std::string CursorPlaceholder;
+  // If false, only Changes are applied and clang-format is not run.
+  bool Reformat = true;
 };
 
 // The two functions below, columnWidth() and columnWidthWithTabs(), were
@@ -145,12 +175,13 @@ inline unsigned columnWidthWithTabs(StringRef Text, unsigned TabWidth) {
 }
 
 // After a newline:
+//  - we continue the "*" prefix of a block comment, without reformatting
 //  - we continue any line-comment that was split
 //  - we format the old line in addition to the cursor
 //  - we represent the cursor with a line comment to preserve the newline
 IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
                                                      unsigned Cursor,
-                                                     unsigned TabWidth) {
+                                                     const format::FormatStyle &Style) {
   IncrementalChanges Result;
   // Before newline, code looked like:
   //    leading^trailing
@@ -174,6 +205,31 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
     cantFail(Result.Changes.add(
         replacement(Code, StringRef(Trailing.begin(), TrailWS), "")));
 
+  // Inside a block comment, continue a "*" prefix if there is one. Don't
+  // reformat: the leading line is comment text, so clang-format could only
+  // re-indent the comment.
+  if (std::optional<unsigned> Start = blockCommentStart(Code, Cursor, Style)) {
+    Result.Reformat = false;
+    unsigned LeadingOffset = Leading.data() - Code.data();
+    StringRef LeadingTrim = Leading.ltrim();
+    std::optional<unsigned> StarColumn;
+    if (*Start >= LeadingOffset) {
+      // The comment opens on the leading line: only "/**" starts continuation.
+      if (Code.substr(*Start).starts_with("/**"))
+        StarColumn =
+            columnWidthWithTabs(Leading.take_front(*Start - LeadingOffset),
+                                Style.TabWidth) +
+            1;
+    } else if (LeadingTrim.starts_with("*")) {
+      StarColumn = columnWidthWithTabs(Leading.drop_back(LeadingTrim.size()),
+                                       Style.TabWidth);
+    }
+    if (StarColumn)
+      cantFail(Result.Changes.add(replacement(
+          Code, Indentation, std::string(*StarColumn, ' ') + "* ")));
+    return Result;
+  }
+
   // If we split a comment, replace indentation with a comment marker.
   // If the editor made the new line a comment, also respect that.
   StringRef CommentMarker = commentMarker(Leading);
@@ -185,7 +241,7 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
     StringRef PreComment =
         Leading.take_front(CommentMarker.data() - Leading.data());
     std::string IndentAndComment =
-        (std::string(columnWidthWithTabs(PreComment, TabWidth), ' ') +
+        (std::string(columnWidthWithTabs(PreComment, Style.TabWidth), ' ') +
          CommentMarker + " ")
             .str();
     cantFail(
@@ -221,10 +277,10 @@ IncrementalChanges getIncrementalChangesAfterNewline(llvm::StringRef Code,
 
 IncrementalChanges getIncrementalChanges(llvm::StringRef Code, unsigned Cursor,
                                          llvm::StringRef InsertedText,
-                                         unsigned TabWidth) {
+                                         const format::FormatStyle &Style) {
   IncrementalChanges Result;
   if (InsertedText == "\n")
-    return getIncrementalChangesAfterNewline(Code, Cursor, TabWidth);
+    return getIncrementalChangesAfterNewline(Code, Cursor, Style);
 
   Result.CursorPlaceholder = " /**/";
   return Result;
@@ -276,8 +332,11 @@ split(const tooling::Replacements &Replacements, unsigned OldCursor,
 std::vector<tooling::Replacement>
 formatIncremental(llvm::StringRef OriginalCode, unsigned OriginalCursor,
                   llvm::StringRef InsertedText, format::FormatStyle Style) {
-  IncrementalChanges Incremental = getIncrementalChanges(
-      OriginalCode, OriginalCursor, InsertedText, Style.TabWidth);
+  IncrementalChanges Incremental =
+      getIncrementalChanges(OriginalCode, OriginalCursor, InsertedText, Style);
+  if (!Incremental.Reformat)
+    return split(Incremental.Changes, OriginalCursor,
+                 Incremental.Changes.getShiftedCodePosition(OriginalCursor));
   // Never *remove* lines in response to pressing enter! This annoys users.
   if (InsertedText == "\n") {
     Style.MaxEmptyLinesToKeep = 1000;
