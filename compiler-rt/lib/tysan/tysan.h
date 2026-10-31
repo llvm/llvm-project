@@ -33,7 +33,14 @@ extern bool tysan_init_is_running;
 
 void InitializeInterceptors();
 
-enum { TYSAN_MEMBER_TD = 1, TYSAN_STRUCT_TD = 2 };
+enum class TysanTDKind : char {
+  // TD that represents an access of a member in a struct
+  MEMBER = 1,
+  // TD that represents a struct containing values
+  STRUCT = 2,
+  // Special TD that tells the runtime to ignore this type
+  CONSERVATIVE_ALIAS = 3
+};
 
 struct tysan_member_type_descriptor {
   struct tysan_type_descriptor *Base;
@@ -50,7 +57,7 @@ struct tysan_struct_type_descriptor {
 };
 
 struct tysan_type_descriptor {
-  uptr Tag;
+  TysanTDKind Kind;
   union {
     tysan_member_type_descriptor Member;
     tysan_struct_type_descriptor Struct;
