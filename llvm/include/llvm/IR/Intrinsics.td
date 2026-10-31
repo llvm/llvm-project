@@ -101,6 +101,18 @@ class NoCapture<ArgIndex idx> : IntrinsicProperty {
   int ArgNo = idx.Value;
 }
 
+// CapturesAddress - The address of the specified pointer argument may be
+// captured.
+class CapturesAddress<ArgIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
+// AllocatedPointer - The specified argument is the pointer that will be
+// manipulated by the allocator.
+class AllocatedPointer<ArgIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
 // NoAlias - The return value or the specified argument pointer is not aliasing
 // other "noalias" pointer arguments of the intrinsic wrt. the intrinsic scope.
 class NoAlias<AttrIndex idx> : IntrinsicProperty {
@@ -274,6 +286,23 @@ def IntrNoCreateUndefOrPoison : IntrinsicProperty;
 
 // This property indicates that the intrinsic is trivially scalarizable.
 def IntrTriviallyScalarizable : IntrinsicProperty;
+
+// IntrAllocKind - The intrinsic is an allocator function with the given
+// allockind property string.
+class IntrAllocKind<string kind> : IntrinsicProperty {
+  string Kind = kind;
+}
+
+// IntrAllocSize - The specified argument is the size in bytes of the allocation
+// returned by the intrinsic.
+class IntrAllocSize<ArgIndex idx> : IntrinsicProperty {
+  int ArgNo = idx.Value;
+}
+
+// IntrAllocFamily - The alloc-family the intrinsic belongs to.
+class IntrAllocFamily<string name> : IntrinsicProperty {
+  string Name = name;
+}
 
 //===----------------------------------------------------------------------===//
 // IIT constants and utils
@@ -1917,6 +1946,29 @@ def int_launder_invariant_group : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
                                     [LLVMMatchType<0>],
                                     [IntrInaccessibleMemOnly,
                                      IntrSpeculatable]>;
+
+//===--------------------- Allocator Provenance Intrinsics ----------------===//
+//
+def int_provenance_alloc
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>, llvm_i64_ty],
+                            [IntrInaccessibleMemOrArgMemOnly,
+                             NoAlias<RetIndex>,
+                             IntrAllocKind<"alloc">,
+                             IntrAllocSize<ArgIndex<1>>,
+                             IntrAllocFamily<"provenance-alloc">]>;
+
+def int_provenance_dealloc
+    : Intrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>],
+                // The effects of dealloc also extend to the parent allocation,
+                // whose access permissions it restores. The parent is not memory
+                // accessible through the argument (as the latter carries the
+                // child provenance), and thus it is encompassed in other memory.
+                // For this reason, the intrinsic is not marked as
+                // IntrInaccessibleMemOrArgMemOnly.
+                [IntrNoSync, IntrNoCallback, IntrWillReturn,
+                 CapturesAddress<ArgIndex<0>>, AllocatedPointer<ArgIndex<0>>,
+                 IntrAllocKind<"free">,
+                 IntrAllocFamily<"provenance-alloc">]>;
 
 //===------------------------ Stackmap Intrinsics -------------------------===//
 //

@@ -525,6 +525,12 @@ static bool compareFnAttributes(const CodeGenIntrinsic *L,
   if (LME != RME)
     return LME > RME;
 
+  // Allocator attributes.
+  auto AllocL = std::tie(L->AllocKind, L->AllocSize, L->AllocFamily);
+  auto AllocR = std::tie(R->AllocKind, R->AllocSize, R->AllocFamily);
+  if (AllocL != AllocR)
+    return AllocL < AllocR;
+
   return false;
 }
 
@@ -536,6 +542,8 @@ static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
          Int.isNoFree || Int.isWillReturn || Int.isCold || Int.isNoDuplicate ||
          Int.isNoMerge || Int.isConvergent || Int.isSpeculatable ||
          Int.isStrictFP || Int.isNoCreateUndefOrPoison ||
+         !Int.AllocKind.empty() || Int.AllocSize.has_value() ||
+         !Int.AllocFamily.empty() ||
          getEffectiveME(Int) != MemoryEffects::unknown();
 }
 
@@ -559,6 +567,7 @@ struct AttributeComparator {
 static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
   switch (Kind) {
   case CodeGenIntrinsic::NoCapture:
+  case CodeGenIntrinsic::CapturesAddress:
     llvm_unreachable("Handled separately");
   case CodeGenIntrinsic::NoAlias:
     return "NoAlias";
@@ -584,6 +593,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Range";
   case CodeGenIntrinsic::NoFreeObj:
     return "NoFreeObj";
+  case CodeGenIntrinsic::AllocatedPointer:
+    return "AllocatedPointer";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }
@@ -621,6 +632,11 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
         if (Attr.Kind == CodeGenIntrinsic::NoCapture) {
           OS << "      Attribute::getWithCaptureInfo(C, "
                 "CaptureInfo::none()),\n";
+          continue;
+        }
+        if (Attr.Kind == CodeGenIntrinsic::CapturesAddress) {
+          OS << "      Attribute::getWithCaptureInfo(C, "
+                "CaptureInfo(CaptureComponents::Address)),\n";
           continue;
         }
         StringRef AttrName = getArgAttrEnumName(Attr.Kind);
@@ -699,6 +715,16 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
       addAttribute("StrictFP");
     if (Int.isNoCreateUndefOrPoison)
       addAttribute("NoCreateUndefOrPoison");
+    if (!Int.AllocKind.empty())
+      OS << formatv("      Attribute::getWithAllocKind(C, AllocFnKind::{}),\n",
+                    CodeGenIntrinsic::getAllocKindEnumName(Int.AllocKind));
+    if (Int.AllocSize)
+      OS << formatv(
+          "      Attribute::getWithAllocSizeArgs(C, {}, std::nullopt),\n",
+          *Int.AllocSize);
+    if (!Int.AllocFamily.empty())
+      OS << formatv("      Attribute::get(C, \"alloc-family\", \"{}\"),\n",
+                    Int.AllocFamily);
 
     const MemoryEffects ME = getEffectiveME(Int);
     if (ME != MemoryEffects::unknown()) {

@@ -172,6 +172,12 @@ Makes programs 10x faster by doing Special New Thing.
 * Added the `bitinsert` and `bitextract` instructions for bit-range
   manipulation on byte type values.
 
+* Introduced `llvm.provenance.alloc` and `llvm.provenance.dealloc` intrinsics
+  to model allocator semantics, as well as new `address_unpredictable`,
+  `alloc_disjoint` and `poisons_memory` `allockind` options. `allockind("free")`
+  no longer implies that the freed memory is discarded, you may want to use
+  `allockind("free,poisons_memory")` for that instead.
+
 ### Changes to LLVM infrastructure
 
 * Removed `TargetOptions::FloatABIType`. The soft float ABI should be

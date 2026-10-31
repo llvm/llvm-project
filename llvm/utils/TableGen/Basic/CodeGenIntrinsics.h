@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ModRef.h"
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -121,6 +122,15 @@ struct CodeGenIntrinsic {
   // True if the intrinsic is marked as IntrTriviallyScalarizable.
   bool isTriviallyScalarizable = false;
 
+  /// Set if the intrinsic carries an allockind attribute.
+  StringRef AllocKind;
+
+  /// Set if the intrinsic carries an allocsize attribute.
+  std::optional<unsigned> AllocSize;
+
+  /// Set if the intrinsic carries an alloc-family attribute.
+  StringRef AllocFamily;
+
   enum ArgAttrKind {
     NoCapture,
     NoAlias,
@@ -135,6 +145,8 @@ struct CodeGenIntrinsic {
     Dereferenceable,
     Range,
     NoFreeObj,
+    CapturesAddress,
+    AllocatedPointer,
   };
 
   struct ArgAttribute {
@@ -209,6 +221,8 @@ struct CodeGenIntrinsic {
   bool isParamImmArg(unsigned ParamIdx) const;
 
   llvm::IRMemLocation getValueAsIRMemLocation(const Record *R) const;
+
+  static StringRef getAllocKindEnumName(StringRef Kind);
 
   CodeGenIntrinsic(const Record *R, const CodeGenIntrinsicContext &Ctx);
 };
