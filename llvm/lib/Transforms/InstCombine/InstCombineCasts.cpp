@@ -37,6 +37,26 @@ using namespace PatternMatch;
 
 using EvaluatedMap = SmallDenseMap<Value *, Value *, 8>;
 
+/// nsw add, sub, or mul with an operand that is trunc nsw back to Ty.
+static BinaryOperator *getNSWBinOpOfTruncNSW(Value *V, Type *Ty) {
+  BinaryOperator *BO = dyn_cast<BinaryOperator>(V);
+  if (!BO)
+    return nullptr;
+
+  Instruction::BinaryOps Opc = BO->getOpcode();
+  if (Opc != Instruction::Add && Opc != Instruction::Sub &&
+      Opc != Instruction::Mul)
+    return nullptr;
+  if (!BO->hasNoSignedWrap())
+    return nullptr;
+
+  Value *Wide = nullptr;
+  if (match(BO->getOperand(0), m_NSWTrunc(m_SpecificType(Ty, Wide))) ||
+      match(BO->getOperand(1), m_NSWTrunc(m_SpecificType(Ty, Wide))))
+    return BO;
+  return nullptr;
+}
+
 static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
                                           InstCombinerImpl &IC,
                                           EvaluatedMap &Processed) {
@@ -65,12 +85,42 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
   case Instruction::Shl:
   case Instruction::UDiv:
   case Instruction::URem: {
-    Value *LHS = EvaluateInDifferentTypeImpl(I->getOperand(0), Ty, isSigned, IC,
-                                             Processed);
-    Value *RHS = EvaluateInDifferentTypeImpl(I->getOperand(1), Ty, isSigned, IC,
-                                             Processed);
+    // Keep nsw when rebuilding sext(binop nsw (trunc nsw X)). Without it,
+    // visitSExt emits shl/ashr and drops the flag SCEV needs.
+    bool NSWWide = isSigned && getNSWBinOpOfTruncNSW(I, Ty);
+
+    Value *WideOps[2];
+    for (unsigned OpIdx = 0; OpIdx != 2; ++OpIdx) {
+      Value *Op = I->getOperand(OpIdx);
+      Value *TruncSrc = nullptr;
+      if (NSWWide && match(Op, m_NSWTrunc(m_Value(TruncSrc))) &&
+          TruncSrc->getType() == Ty) {
+        WideOps[OpIdx] = TruncSrc;
+        continue;
+      }
+      if (NSWWide) {
+        if (Constant *C = dyn_cast<Constant>(Op))
+          if (Constant *Folded = ConstantFoldIntegerCast(
+                  C, Ty, /*IsSigned=*/true, IC.getDataLayout())) {
+            WideOps[OpIdx] = Folded;
+            continue;
+          }
+        // Sign-extend an operand that is not itself a trunc nsw of Ty.
+        CastInst *Ext = CastInst::Create(Instruction::SExt, Op, Ty,
+                                         Op->getName() + ".sext");
+        WideOps[OpIdx] = IC.InsertNewInstWith(Ext, I->getIterator());
+        continue;
+      }
+      WideOps[OpIdx] =
+          EvaluateInDifferentTypeImpl(Op, Ty, isSigned, IC, Processed);
+    }
+
+    Value *LHS = WideOps[0];
+    Value *RHS = WideOps[1];
     Res = BinaryOperator::Create((Instruction::BinaryOps)Opc, LHS, RHS);
-    if (Opc == Instruction::LShr || Opc == Instruction::AShr)
+    if (NSWWide)
+      Res->setHasNoSignedWrap(true);
+    else if (Opc == Instruction::LShr || Opc == Instruction::AShr)
       Res->setIsExact(I->isExact());
     break;
   }
@@ -1923,12 +1973,28 @@ bool TypeEvaluationHelper::canEvaluateSExtdPred(Value *V, Type *Ty) {
   case Instruction::And:
   case Instruction::Or:
   case Instruction::Xor:
-  case Instruction::Add:
-  case Instruction::Sub:
-  case Instruction::Mul:
     // These operators can all arbitrarily be extended if their inputs can.
     return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
            canEvaluateSExtdImpl(I->getOperand(1), Ty);
+  case Instruction::Add:
+  case Instruction::Sub:
+  case Instruction::Mul: {
+    // The binop and each trunc nsw must be single-use. Sign-extend the other
+    // operand in place; do not walk it.
+    if (getNSWBinOpOfTruncNSW(I, Ty)) {
+      if (!I->hasOneUse())
+        return false;
+      for (unsigned Idx = 0; Idx != 2; ++Idx) {
+        Value *Op = I->getOperand(Idx);
+        Value *Wide = nullptr;
+        if (match(Op, m_NSWTrunc(m_SpecificType(Ty, Wide))) && !Op->hasOneUse())
+          return false;
+      }
+      return true;
+    }
+    return canEvaluateSExtdImpl(I->getOperand(0), Ty) &&
+           canEvaluateSExtdImpl(I->getOperand(1), Ty);
+  }
 
     // case Instruction::Shl:   TODO
     // case Instruction::LShr:  TODO
@@ -2022,7 +2088,14 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
   if (match(Src, m_Trunc(m_Value(TruncSrc))))
     if (TruncSrc->getType()->getScalarSizeInBits() > DestBitSize)
       ShouldExtendExpression = false;
-  if (ShouldExtendExpression && shouldChangeType(SrcTy, DestTy) &&
+  // Vectors are not integer types, so shouldChangeType rejects them. Allow the
+  // same scalar legality check for this fold.
+  bool LegalType = shouldChangeType(SrcTy, DestTy);
+  if (!LegalType && SrcTy->isVectorTy() &&
+      shouldChangeType(SrcTy->getScalarType(), DestTy->getScalarType()) &&
+      getNSWBinOpOfTruncNSW(Src, DestTy))
+    LegalType = true;
+  if (ShouldExtendExpression && LegalType &&
       TypeEvaluationHelper::canEvaluateSExtd(Src, DestTy,
                                              CLOpts.max_type_eval_depth)) {
     // Okay, we can transform this!  Insert the new expression now.
@@ -2033,8 +2106,9 @@ Instruction *InstCombinerImpl::visitSExt(SExtInst &Sext) {
     Value *Res = EvaluateInDifferentType(Src, DestTy, true);
     assert(Res->getType() == DestTy);
 
-    // If the high bits are already filled with sign bit, just replace this
-    // cast with the result.
+    // The rebuilt nsw binop is already the sign-extended value.
+    if (getNSWBinOpOfTruncNSW(Src, DestTy))
+      return replaceInstUsesWith(Sext, Res);
     if (ComputeNumSignBits(Res, &Sext) > DestBitSize - SrcBitSize)
       return replaceInstUsesWith(Sext, Res);
 
