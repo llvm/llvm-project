@@ -875,7 +875,6 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   unsigned NumArgsAfterPromote = F->getFunctionType()->getNumParams();
   for (Argument *PtrArg : PointerArgs) {
     // Remove sret to reduce register pressure by avoiding a register copy.
-    // This does not imply noalias: other arguments may alias the return buffer.
     if (PtrArg->hasStructRetAttr()) {
       unsigned ArgNo = PtrArg->getArgNo();
       F->removeParamAttr(ArgNo, Attribute::StructRet);
