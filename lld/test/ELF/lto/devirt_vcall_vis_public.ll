@@ -1,6 +1,11 @@
 ; REQUIRES: x86
 ;; Test that --lto-whole-program-visibility enables devirtualization.
 
+;; Bitcode produced before GUID assignment was added has no GUIDs on
+;; definitions. Ensure regular LTO assigns them before WPD uses them.
+; RUN: llvm-as -o %t.legacy.o %s
+; RUN: ld.lld %t.legacy.o -o %t.legacy --lto-whole-program-visibility
+
 ;; Index based WPD
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt --passes=assign-guid --thinlto-bc -o %t2.o %s

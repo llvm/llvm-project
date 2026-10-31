@@ -14,6 +14,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Test that @b and @c end up pointing to the same variable.
 
-; CHECK: @b = global ptr @a{{$}}
-; CHECK: @a = weak global i32 42
-; CHECK: @c = global ptr @a{{$}}
+; CHECK: @b = global ptr @a, !guid !{{[0-9]+}}{{$}}
+; CHECK: @a = weak global i32 42, !guid !{{[0-9]+}}
+; CHECK: @c = global ptr @a, !guid !{{[0-9]+}}{{$}}

@@ -59,6 +59,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
@@ -974,6 +975,28 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 
   if (Error Err = M.materializeMetadata())
     return std::move(Err);
+
+  // Bitcode produced before GUID assignment was added may not have GUIDs for
+  // definitions. Materialize such modules before assigning GUID metadata since
+  // metadata cannot be attached to unmaterialized definitions. This is also
+  // needed for mixed-version links where only some input modules contain
+  // GUIDs.
+  const bool HasMissingGUIDs =
+      llvm::any_of(M.globals(),
+                   [](const GlobalVariable &GV) {
+                     return !GV.isDeclaration() && !GV.getGUIDIfAssigned();
+                   }) ||
+      llvm::any_of(M.functions(), [](const Function &F) {
+        return !F.isDeclaration() && !F.getGUIDIfAssigned();
+      });
+  if (HasMissingGUIDs) {
+    if (Error Err = M.materializeAll())
+      return std::move(Err);
+    // This helper is intended for use outside a pass pipeline; see
+    // llvm/tools/opt/optdriver.cpp and
+    // llvm/tools/llvm-reduce/ReducerWorkItem.cpp.
+    AssignGUIDPass::runOnModule(M);
+  }
 
   if (LTOMode == LTOK_UnifiedRegular) {
     // cfi.functions metadata is intended to be used with ThinLTO and may

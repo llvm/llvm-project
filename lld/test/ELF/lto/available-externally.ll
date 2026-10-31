@@ -19,5 +19,5 @@ define available_externally void @zed() {
   ret void
 }
 
-; CHECK: define available_externally void @bar() {
-; CHECK: define void @zed() {
+; CHECK: define available_externally void @bar() !guid !{{[0-9]+}} {
+; CHECK: define void @zed() !guid !{{[0-9]+}} {

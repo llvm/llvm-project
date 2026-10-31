@@ -10,7 +10,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-BC0: define dso_local void @foo
-; CHECK-BC0: declare dso_local void @bar
+; CHECK-BC0: declare !guid !{{[0-9]+}} dso_local void @bar
 ; CHECK0-NOT: bar
 ; CHECK0: T foo
 ; CHECK0-NOT: bar
@@ -19,7 +19,7 @@ define void @foo() mustprogress {
   ret void
 }
 
-; CHECK-BC1: declare dso_local void @foo
+; CHECK-BC1: declare !guid !{{[0-9]+}} dso_local void @foo
 ; CHECK-BC1: define dso_local void @bar
 ; CHECK1-NOT: foo
 ; CHECK1: T bar

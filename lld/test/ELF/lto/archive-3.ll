@@ -10,7 +10,7 @@
 ; RUN: ld.lld %t.a %t1.o %t2.o  -o %t3 -save-temps
 ; RUN: llvm-dis %t3.0.2.internalize.bc -o - | FileCheck %s
 
-; CHECK: define internal void @foo() {
+; CHECK: define internal void @foo() !guid !{{[0-9]+}} {
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

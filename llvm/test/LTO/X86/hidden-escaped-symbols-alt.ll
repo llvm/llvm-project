@@ -31,11 +31,10 @@ define i8 @main() {
 }
 
 
-; CHECK: @"\01_hide_me" = hidden local_unnamed_addr global i8 8, align 1
+; CHECK: @"\01_hide_me" = hidden local_unnamed_addr global i8 8, align 1, !guid !{{[0-9]+}}
 ; CHECK: @hide_me = external dso_local local_unnamed_addr global i8
 
-; CHECK: define dso_local i8 @main() local_unnamed_addr #0 {
+; CHECK: define dso_local i8 @main() local_unnamed_addr #0 !guid !{{[0-9]+}} {
 ; CHECK:   %1 = load i8, ptr @hide_me, align 1
 ; CHECK:   ret i8 %1
 ; CHECK: }
-

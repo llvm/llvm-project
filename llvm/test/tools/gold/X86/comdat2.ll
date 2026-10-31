@@ -10,9 +10,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 $foo = comdat any
 @foo = global i8 0, comdat
 
-; CHECK: @foo = global i8 0, comdat
+; CHECK: @foo = global i8 0, comdat, !guid !{{[0-9]+}}
 
-; CHECK: define void @zed() {
+; CHECK: define void @zed() !guid !{{[0-9]+}} {
 ; CHECK:   call void @bar()
 ; CHECK:   ret void
 ; CHECK: }

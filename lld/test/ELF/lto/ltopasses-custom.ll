@@ -15,12 +15,12 @@ define void @barrier() {
 }
 
 ; IPSCCP won't remove the fence.
-; CHECK: define void @barrier() {
+; CHECK: define void @barrier() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: fence seq_cst
 ; CHECK-NEXT: ret void
 
 ; LowerAtomic will remove the fence.
-; ATOMIC: define void @barrier() {
+; ATOMIC: define void @barrier() !guid !{{[0-9]+}} {
 ; ATOMIC-NEXT: ret void
 
 ; Check that invalid passes are rejected gracefully.
