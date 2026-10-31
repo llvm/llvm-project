@@ -402,6 +402,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-ftrivial-auto-var-init=` entry in the User's Manual for the details,
   including where C deliberately departs from C 6.2.4p6.
 
+- `-ftrivial-auto-var-init-max-size` now initializes struct fields smaller
+  than the specified size, even if the struct as a whole is larger than
+  the specified size.
+
 - `--config` files now support trailing `#` comments after an option, in
   addition to whole-line comments. Mid-line comment-denoting `#`s must be
   separated from surrounding arguments by whitespace. Quoted arguments can no

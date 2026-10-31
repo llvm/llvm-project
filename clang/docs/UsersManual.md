@@ -3004,9 +3004,13 @@ damage by making the value deterministic. Use `-Wuninitialized`, or a tool like
 
 Individual variables can opt out with `__attribute__((uninitialized))`, and
 whole functions with `__attribute__((no_trivial_auto_var_init))`.
-`-ftrivial-auto-var-init-max-size=` skips variables above a given size, and
-`-ftrivial-auto-var-init-stop-after=` stops after a given number of variables;
-both exist to bound code size while triaging.
+`-ftrivial-auto-var-init-stop-after=` stops initialization after a given number
+of variables; `-ftrivial-auto-var-init-max-size=` only initializes variables
+smaller than the given size. Arrays are skipped or initialized based on their
+total size, while struct fields smaller than the given size are intialized
+even if the struct as a whole is larger than the given size.
+Both `-ftrivial-auto-var-init-stop-after=` and
+`-ftrivial-auto-var-init-max-size=` exist to bound code size while triaging.
 
 The initialization is normally emitted where the variable is declared. A `goto`
 or a `switch` can jump over a declaration, in which case that point is never
