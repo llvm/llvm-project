@@ -24855,11 +24855,11 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
 // store(concat_vector(truncate, truncate))
 // --> store(truncate)
 //     store(truncate)
+// truncstore(concat_vector(truncate(x), truncate(y)))
+// --> truncstore(x)
+//     truncstore(y)
 SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
-  if (!LegalTypes)
-    return SDValue();
-
-  if (!ST->isSimple() || ST->isTruncatingStore() || ST->isIndexed())
+  if (!ST->isSimple() || ST->isIndexed())
     return SDValue();
 
   SDValue Chain = ST->getChain();
@@ -24874,23 +24874,38 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   if (T1.getOpcode() != ISD::TRUNCATE || T2.getOpcode() != ISD::TRUNCATE)
     return SDValue();
 
-  EVT LoMemVT = T1.getValueType();
-  EVT HiMemVT = T2.getValueType();
-  if (!LoMemVT.isFixedLengthVector())
+  // Only split if the truncates already have a legal result type. Otherwise
+  // legalization may rewrite the concat of truncates more efficiently than two
+  // split truncating stores.
+  if (!TLI.isTypeLegal(T1.getValueType()))
+    return SDValue();
+
+  // Both concat operands have the same type, so both halves use the same
+  // memory type.
+  EVT HalfMemVT = T1.getValueType();
+  if (!HalfMemVT.isFixedLengthVector())
+    return SDValue();
+
+  // For a truncating store, the memory element type remains unchanged.
+  if (ST->isTruncatingStore())
+    HalfMemVT = HalfMemVT.changeVectorElementType(
+        *DAG.getContext(), ST->getMemoryVT().getScalarType());
+
+  // The halves should be byte addressable.
+  if (!HalfMemVT.isByteSized())
     return SDValue();
 
   if (!T1.hasOneUse() || !T2.hasOneUse())
     return SDValue();
 
-  unsigned LoBytes = LoMemVT.getStoreSize();
-  unsigned HiBytes = HiMemVT.getStoreSize();
+  unsigned HalfBytes = HalfMemVT.getStoreSize();
   Align LoAlign = ST->getAlign();
-  Align HiAlign = commonAlignment(LoAlign, LoBytes);
+  Align HiAlign = commonAlignment(LoAlign, HalfBytes);
 
-  if (!TLI.canCombineTruncStore(T1.getOperand(0).getValueType(), LoMemVT,
+  if (!TLI.canCombineTruncStore(T1.getOperand(0).getValueType(), HalfMemVT,
                                 LoAlign, ST->getAddressSpace(),
                                 LegalOperations) ||
-      !TLI.canCombineTruncStore(T2.getOperand(0).getValueType(), HiMemVT,
+      !TLI.canCombineTruncStore(T2.getOperand(0).getValueType(), HalfMemVT,
                                 HiAlign, ST->getAddressSpace(),
                                 LegalOperations))
     return SDValue();
@@ -24898,18 +24913,18 @@ SDValue DAGCombiner::combineStoreConcatTruncVector(StoreSDNode *ST) {
   SDLoc DL(ST);
   SDValue LoPtr = ST->getBasePtr();
   SDValue HiPtr =
-      DAG.getObjectPtrOffset(DL, LoPtr, TypeSize::getFixed(LoBytes));
+      DAG.getObjectPtrOffset(DL, LoPtr, TypeSize::getFixed(HalfBytes));
 
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *LoMMO =
-      MF.getMachineMemOperand(ST->getMemOperand(), 0, LoBytes);
+      MF.getMachineMemOperand(ST->getMemOperand(), 0, HalfBytes);
   MachineMemOperand *HiMMO =
-      MF.getMachineMemOperand(ST->getMemOperand(), LoBytes, HiBytes);
+      MF.getMachineMemOperand(ST->getMemOperand(), HalfBytes, HalfBytes);
 
   SDValue LoSt =
-      DAG.getTruncStore(Chain, DL, T1.getOperand(0), LoPtr, LoMemVT, LoMMO);
+      DAG.getTruncStore(Chain, DL, T1.getOperand(0), LoPtr, HalfMemVT, LoMMO);
   SDValue HiSt =
-      DAG.getTruncStore(Chain, DL, T2.getOperand(0), HiPtr, HiMemVT, HiMMO);
+      DAG.getTruncStore(Chain, DL, T2.getOperand(0), HiPtr, HalfMemVT, HiMMO);
 
   return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, LoSt, HiSt);
 }

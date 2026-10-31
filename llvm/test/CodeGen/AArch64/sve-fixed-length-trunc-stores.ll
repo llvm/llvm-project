@@ -38,12 +38,9 @@ define void @store_trunc_v8i64i8(ptr %ap, ptr %dest) #0 {
 ; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
-; VBITS_GE_256-NEXT:    ptrue p0.s, vl4
-; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
-; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
-; VBITS_GE_256-NEXT:    splice z1.s, p0, z1.s, z0.s
-; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
-; VBITS_GE_256-NEXT:    st1b { z1.s }, p0, [x1]
+; VBITS_GE_256-NEXT:    mov w8, #4 // =0x4
+; VBITS_GE_256-NEXT:    st1b { z0.d }, p0, [x1, x8]
+; VBITS_GE_256-NEXT:    st1b { z1.d }, p0, [x1]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: store_trunc_v8i64i8:
@@ -225,6 +222,48 @@ define void @store_trunc_v4i64i32_min_vscale_two(ptr %src, ptr %dest) vscale_ran
   %ld = load <4 x i64>, ptr %src, align 4
   %trunc = trunc <4 x i64> %ld to <4 x i32>
   store <4 x i32> %trunc, ptr %dest, align 8
+  ret void
+}
+
+; The store here has to get split before trunc is legalized to uzp1.
+define void @store_trunc_concat_v8i32i8(ptr %ap, ptr %bp, ptr %dest) vscale_range(2,0) #0 {
+; CHECK-LABEL: store_trunc_concat_v8i32i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov w8, #4 // =0x4
+; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x1]
+; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0]
+; CHECK-NEXT:    st1b { z0.d }, p0, [x2, x8]
+; CHECK-NEXT:    st1b { z1.d }, p0, [x2]
+; CHECK-NEXT:    ret
+  %a = load <4 x i64>, ptr %ap
+  %b = load <4 x i64>, ptr %bp
+  %ta = trunc <4 x i64> %a to <4 x i32>
+  %tb = trunc <4 x i64> %b to <4 x i32>
+  %cat = shufflevector <4 x i32> %ta, <4 x i32> %tb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %val = trunc <8 x i32> %cat to <8 x i8>
+  store <8 x i8> %val, ptr %dest
+  ret void
+}
+
+define void @store_concat_trunc_v8i8_illegal(ptr %ap, ptr %bp, ptr %dest) vscale_range(2,2) #0 {
+; CHECK-LABEL: store_concat_trunc_v8i8_illegal:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ldr z1, [x1]
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z1.s, z1.s, z1.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z1.h, z1.h, z1.h
+; CHECK-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
+; CHECK-NEXT:    str d0, [x2]
+; CHECK-NEXT:    ret
+  %a = load <4 x i64>, ptr %ap
+  %b = load <4 x i64>, ptr %bp
+  %ta = trunc <4 x i64> %a to <4 x i8>
+  %tb = trunc <4 x i64> %b to <4 x i8>
+  %c = shufflevector <4 x i8> %ta, <4 x i8> %tb, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i8> %c, ptr %dest
   ret void
 }
 
