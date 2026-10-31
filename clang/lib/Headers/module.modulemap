@@ -373,9 +373,3 @@ module ptrauth [system] {
   header "ptrauth.h"
   export *
 }
-
-module _Builtin_meta [system] {
-  requires reflection
-  header "meta"
-  export *
-}

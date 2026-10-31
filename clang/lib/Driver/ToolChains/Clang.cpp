@@ -1153,6 +1153,14 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   // Add C++ include arguments, if needed.
   if (types::isCXX(Inputs[0].getType())) {
+    // Do nothing if either -nostdinc or -nobuiltininc is passed.
+    if (!Args.hasArg(options::OPT_nostdinc, options::OPT_nobuiltininc)) {
+      SmallString<128> ResourceDirInclude(D.ResourceDir);
+      llvm::sys::path::append(ResourceDirInclude, "include", "cxx");
+      CmdArgs.push_back("-internal-isystem");
+      CmdArgs.push_back(Args.MakeArgString(ResourceDirInclude));
+    }
+
     bool HasStdlibxxIsystem = Args.hasArg(options::OPT_stdlibxx_isystem);
     forAllAssociatedToolChains(
         C, JA, getToolChain(),

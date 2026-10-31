@@ -11,7 +11,6 @@ set(core_files
   inttypes.h
   iso646.h
   limits.h
-  meta
   module.modulemap
   stdalign.h
   stdarg.h
@@ -357,6 +356,11 @@ set(files
   ${utility_files}
   )
 
+set(cxx_files
+  cxx/meta
+  cxx/module.modulemap
+)
+
 set(cuda_wrapper_files
   cuda_wrappers/algorithm
   cuda_wrappers/cmath
@@ -478,7 +482,7 @@ endfunction(clang_generate_header)
 
 
 # Copy header files from the source directory to the build directory
-foreach( f ${files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
+foreach( f ${files} ${cxx_files} ${cuda_wrapper_files} ${cuda_wrapper_bits_files}
            ${cuda_wrapper_utility_files} ${ppc_wrapper_files} ${openmp_wrapper_files}
            ${zos_wrapper_files} ${hlsl_files} ${llvm_libc_wrapper_files}
            ${llvm_offload_wrapper_files} ${gpu_hip_wrapper_files})
@@ -594,7 +598,7 @@ add_dependencies("clang-resource-headers"
                  "utility-resource-headers")
 
 # Core/common headers
-add_header_target("core-resource-headers" ${core_files})
+add_header_target("core-resource-headers" "${core_files};${cxx_files}")
 add_header_target("arm-common-resource-headers" "${arm_common_files};${arm_common_generated_files}")
 
 # Architecture/platform specific targets
@@ -635,6 +639,11 @@ set_property(GLOBAL APPEND PROPERTY CLANG_EXPORTS clang-resource-headers)
 install(
   FILES ${files} ${generated_files}
   DESTINATION ${header_install_dir}
+  COMPONENT clang-resource-headers)
+
+install(
+  FILES ${cxx_files}
+  DESTINATION ${header_install_dir}/cxx
   COMPONENT clang-resource-headers)
 
 install(
@@ -707,6 +716,12 @@ install(
   DESTINATION ${header_install_dir}
   EXCLUDE_FROM_ALL
   COMPONENT aarch64-resource-headers)
+
+install(
+  FILES ${cxx_files}
+  DESTINATION ${header_install_dir}/cxx
+  EXCLUDE_FROM_ALL
+  COMPONENT core-resource-headers)
 
 install(
   FILES ${cuda_wrapper_files}
