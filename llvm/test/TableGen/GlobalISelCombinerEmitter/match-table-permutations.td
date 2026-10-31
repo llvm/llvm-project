@@ -16,10 +16,13 @@ def MatchFooPerms: GICombinePatFrag<
       (pattern (G_TRUNC $foo, $z):$dbg1, "return bar(${foo}, ${cst})")
     ]>;
 
+// G_SUB is used because it is not commutable. A commutable opcode such as
+// G_AND would also be emitted with its operands swapped, which multiplies the
+// 8 PatFrag permutations tested here by 4 and exceeds MaxPermutations.
 def Test0 : GICombineRule<
   (defs root:$dst),
-  (match (G_AND $dst, $cst0, $tmp),
-         (G_AND $tmp, $cst1, $cst2),
+  (match (G_SUB $dst, $cst0, $tmp),
+         (G_SUB $tmp, $cst1, $cst2),
          (MatchFooPerms $cst0, (i32 10)):$a,
          (MatchFooPerms $cst1, (i32 20)):$b,
          (MatchFooPerms $cst2, (i32 30)):$c
@@ -119,7 +122,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner17: {
 // CHECK-NEXT:     // Pattern Alternatives: [a[1], b[0], c[1]]
-// CHECK-NEXT:     return bar(State.MIs[3]->getOperand(2), 30)
+// CHECK-NEXT:     return bar(State.MIs[2]->getOperand(2), 30)
 // CHECK-NEXT:     llvm_unreachable("GICombiner17 should have returned");
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner18: {
@@ -129,7 +132,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner19: {
 // CHECK-NEXT:     // Pattern Alternatives: [a[1], b[1], c[0]]
-// CHECK-NEXT:     return bar(State.MIs[3]->getOperand(1), 20)
+// CHECK-NEXT:     return bar(State.MIs[2]->getOperand(1), 20)
 // CHECK-NEXT:     llvm_unreachable("GICombiner19 should have returned");
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner20: {
@@ -144,12 +147,12 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner22: {
 // CHECK-NEXT:     // Pattern Alternatives: [a[1], b[1], c[1]]
-// CHECK-NEXT:     return bar(State.MIs[3]->getOperand(1), 20)
+// CHECK-NEXT:     return bar(State.MIs[2]->getOperand(1), 20)
 // CHECK-NEXT:     llvm_unreachable("GICombiner22 should have returned");
 // CHECK-NEXT:   }
 // CHECK-NEXT:   case GICXXPred_MI_Predicate_GICombiner23: {
 // CHECK-NEXT:     // Pattern Alternatives: [a[1], b[1], c[1]]
-// CHECK-NEXT:     return bar(State.MIs[3]->getOperand(2), 30)
+// CHECK-NEXT:     return bar(State.MIs[2]->getOperand(2), 30)
 // CHECK-NEXT:     llvm_unreachable("GICombiner23 should have returned");
 // CHECK-NEXT:   }
 // CHECK-NEXT:   }
@@ -160,7 +163,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
 // CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(562),
-// CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(66), // Rule ID 7 //
 // CHECK-NEXT:         GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
 // CHECK-NEXT:         // MIs[0] dst
@@ -172,7 +175,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[2] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_TRUNC),
@@ -201,7 +204,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[2] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_TRUNC),
@@ -233,7 +236,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[2] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_ZEXT),
@@ -265,7 +268,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/2, /*MI*/0, /*OpIdx*/2, // MIs[2]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/2, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[2] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/2, /*OpIdx*/1, // MIs[3]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_ZEXT),
@@ -303,7 +306,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[3] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, GIMT_Encode2(TargetOpcode::G_TRUNC),
@@ -335,7 +338,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[3] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, GIMT_Encode2(TargetOpcode::G_TRUNC),
@@ -370,7 +373,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[3] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, GIMT_Encode2(TargetOpcode::G_ZEXT),
@@ -405,7 +408,7 @@ def MyCombiner: GICombiner<"GenMyCombiner", [
 // CHECK-NEXT:         // No operand predicates
 // CHECK-NEXT:         // MIs[0] tmp
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/3, /*MI*/0, /*OpIdx*/2, // MIs[3]
-// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_AND),
+// CHECK-NEXT:         GIM_CheckOpcode, /*MI*/3, GIMT_Encode2(TargetOpcode::G_SUB),
 // CHECK-NEXT:         // MIs[3] cst1
 // CHECK-NEXT:         GIM_RecordInsnIgnoreCopies, /*DefineMI*/4, /*MI*/3, /*OpIdx*/1, // MIs[4]
 // CHECK-NEXT:         GIM_CheckOpcode, /*MI*/4, GIMT_Encode2(TargetOpcode::G_ZEXT),

@@ -16,30 +16,51 @@ def Test0 : GICombineRule<
 
 // CHECK:      const uint8_t *GenMyCombiner::getMatchTable() const {
 // CHECK-NEXT:   constexpr static uint8_t MatchTable0[] = {
-// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(74), // Rule ID 0 //
-// CHECK-NEXT:       GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
+// CHECK-NEXT:     GIM_Try, /*On fail goto*//*Label 0*/ GIMT_Encode4(146),
 // CHECK-NEXT:       GIM_CheckOpcode, /*MI*/0, GIMT_Encode2(TargetOpcode::G_MUL),
-// CHECK-NEXT:       // MIs[0] dst
 // CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/0, /*TempTypeIdx*/255,
-// CHECK-NEXT:       // MIs[0] src
-// CHECK-NEXT:       GIM_RecordRegType, /*MI*/0, /*Op*/1, /*TempTypeIdx*/254,
-// CHECK-NEXT:       // MIs[0] Operand 2
-// CHECK-NEXT:       GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 255,
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/254,
-// CHECK-NEXT:       GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
-// CHECK-NEXT:       GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
-// CHECK-NEXT:       // Combiner Rule #0: Test0
-// CHECK-NEXT:       GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
-// CHECK-NEXT:       GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
-// CHECK-NEXT:       GIR_AddCImm, /*InsnID*/0, /*Type*/254, /*Imm*/GIMT_Encode8(42),
-// CHECK-NEXT:       GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
-// CHECK-NEXT:       GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // dst
-// CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,
-// CHECK-NEXT:       GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
-// CHECK-NEXT:       GIR_EraseRootFromParent_Done,
-// CHECK-NEXT:     // Label 0: @74
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 1*/ GIMT_Encode4(79), // Rule ID 0 //
+// CHECK-NEXT:         GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
+// CHECK-NEXT:         // MIs[0] src
+// CHECK-NEXT:         GIM_RecordRegType, /*MI*/0, /*Op*/1, /*TempTypeIdx*/254,
+// CHECK-NEXT:         // MIs[0] Operand 2
+// CHECK-NEXT:         GIM_CheckConstantInt8, /*MI*/0, /*Op*/2, 255,
+// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/254,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
+// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
+// CHECK-NEXT:         // Combiner Rule #0: Test0
+// CHECK-NEXT:         GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
+// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
+// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/0, /*Type*/254, /*Imm*/GIMT_Encode8(42),
+// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
+// CHECK-NEXT:         GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,
+// CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
+// CHECK-NEXT:         GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:       // Label 1: @79
+// CHECK-NEXT:       GIM_Try, /*On fail goto*//*Label 2*/ GIMT_Encode4(145), // Rule ID 1 //
+// CHECK-NEXT:         GIM_CheckSimplePredicate, GIMT_Encode2(GICXXPred_Simple_IsRule0Enabled),
+// CHECK-NEXT:         // MIs[0] src
+// CHECK-NEXT:         GIM_RecordRegType, /*MI*/0, /*Op*/2, /*TempTypeIdx*/254,
+// CHECK-NEXT:         // MIs[0] Operand 1
+// CHECK-NEXT:         GIM_CheckConstantInt8, /*MI*/0, /*Op*/1, 255,
+// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/1, /*TypeID*/254,
+// CHECK-NEXT:         GIR_BuildConstant, /*TempRegID*/1, /*Val*/GIMT_Encode8(0),
+// CHECK-NEXT:         GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/255,
+// CHECK-NEXT:         // Combiner Rule #0: Test0 @ [__Test0_match_0[commuted]]
+// CHECK-NEXT:         GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(TargetOpcode::G_CONSTANT),
+// CHECK-NEXT:         GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define)),
+// CHECK-NEXT:         GIR_AddCImm, /*InsnID*/0, /*Type*/254, /*Imm*/GIMT_Encode8(42),
+// CHECK-NEXT:         GIR_BuildMI, /*InsnID*/1, /*Opcode*/GIMT_Encode2(TargetOpcode::G_SUB),
+// CHECK-NEXT:         GIR_Copy, /*NewInsnID*/1, /*OldInsnID*/0, /*OpIdx*/0, // dst
+// CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/1,
+// CHECK-NEXT:         GIR_AddSimpleTempRegister, /*InsnID*/1, /*TempRegID*/0,
+// CHECK-NEXT:         GIR_EraseRootFromParent_Done,
+// CHECK-NEXT:       // Label 2: @145
+// CHECK-NEXT:       GIM_Reject,
+// CHECK-NEXT:     // Label 0: @146
 // CHECK-NEXT:     GIM_Reject,
-// CHECK-NEXT:     }; // Size: 75 bytes
+// CHECK-NEXT:     }; // Size: 147 bytes
 // CHECK-NEXT:   return MatchTable0;
 // CHECK-NEXT: }
 
