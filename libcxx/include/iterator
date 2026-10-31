@@ -758,6 +758,10 @@ template <class T, size_t N> constexpr T* data(T (&array)[N]) noexcept;         
 #    include <__ranges/size.h>
 #  endif
 
+#  if _LIBCPP_STD_VER >= 26
+#    include <__ranges/reserve_hint.h>
+#  endif
+
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #    pragma GCC system_header
 #  endif
