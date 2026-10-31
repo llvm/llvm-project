@@ -11,7 +11,6 @@
 
 #include <__algorithm/in_in_out_result.h>
 #include <__algorithm/iterator_operations.h>
-#include <__algorithm/make_projected.h>
 #include <__algorithm/set_intersection.h>
 #include <__config>
 #include <__functional/identity.h>
@@ -65,7 +64,9 @@ struct __set_intersection {
         std::move(__first2),
         std::move(__last2),
         std::move(__result),
-        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+        __comp,
+        __proj1,
+        __proj2);
     return {std::move(__ret.__in1_), std::move(__ret.__in2_), std::move(__ret.__out_)};
   }
 
@@ -89,7 +90,9 @@ struct __set_intersection {
         ranges::begin(__range2),
         ranges::end(__range2),
         std::move(__result),
-        ranges::__make_projected_comp(__comp, __proj1, __proj2));
+        __comp,
+        __proj1,
+        __proj2);
     return {std::move(__ret.__in1_), std::move(__ret.__in2_), std::move(__ret.__out_)};
   }
 };
