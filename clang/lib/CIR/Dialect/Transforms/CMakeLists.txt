@@ -21,6 +21,7 @@ add_clang_library(MLIRCIRTransforms
 
   DEPENDS
   MLIRCIRPassIncGen
+  mlir-headers
 
   LINK_COMPONENTS
   ABI

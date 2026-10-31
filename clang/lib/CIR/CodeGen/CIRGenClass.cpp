@@ -790,7 +790,8 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
     // destruction of every temporary created in a default argument expression
     // is sequenced before the construction of the next array element, if any.
     {
-      RunCleanupsScope scope(*this);
+      FullExprCleanupScope scope(*this, e);
+      scope.deferLifetimeExtendedCleanups();
       emitCXXConstructorCall(ctor, Ctor_Complete,
                              /*ForVirtualBase=*/false,
                              /*Delegating=*/false, currAVS, e);

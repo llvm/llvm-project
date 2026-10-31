@@ -495,8 +495,7 @@ static bool tryToSplitCallSite(const ScalarOptions &Opts, CallBase &CB,
 static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
                                 TargetTransformInfo &TTI, DominatorTree &DT) {
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
   for (BasicBlock &BB : llvm::make_early_inc_range(F)) {

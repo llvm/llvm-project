@@ -1,9 +1,14 @@
-//===-- Classes to capture properites of UEFI applications ------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Classes to capture properties of UEFI applications.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_CONFIG_UEFI_APP_H

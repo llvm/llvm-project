@@ -500,8 +500,7 @@ bool SjLjEHPrepareImpl::setupEntryBlockAndCallSites(Function &F) {
 }
 
 bool SjLjEHPrepareImpl::runOnFunction(Function &F) {
-  if (ExceptionModel != ExceptionHandling::SjLj &&
-      ExceptionModel != ExceptionHandling::Default)
+  if (ExceptionModel != ExceptionHandling::SjLj)
     return false;
 
   Module &M = *F.getParent();

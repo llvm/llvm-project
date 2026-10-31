@@ -46,21 +46,12 @@ STDBIT_STUB_FUNCTION(stdc_first_trailing_one, 0x1)
 STDBIT_STUB_FUNCTION(stdc_count_zeros, 0x2)
 STDBIT_STUB_FUNCTION(stdc_count_ones, 0x3)
 
-bool stdc_has_single_bit_uc(unsigned char __attribute__((unused)) x) {
-  return false;
-}
-bool stdc_has_single_bit_us(unsigned short __attribute__((unused)) x) {
-  return false;
-}
-bool stdc_has_single_bit_ui(unsigned __attribute__((unused)) x) {
-  return false;
-}
-bool stdc_has_single_bit_ul(unsigned long __attribute__((unused)) x) {
-  return false;
-}
-bool stdc_has_single_bit_ull(unsigned long long __attribute__((unused)) x) {
-  return false;
-}
+// Distinct accepted values let tests distinguish the bool-returning overloads.
+bool stdc_has_single_bit_uc(unsigned char x) { return x == 0xAU; }
+bool stdc_has_single_bit_us(unsigned short x) { return x == 0xBU; }
+bool stdc_has_single_bit_ui(unsigned x) { return x == 0xCU; }
+bool stdc_has_single_bit_ul(unsigned long x) { return x == 0xDU; }
+bool stdc_has_single_bit_ull(unsigned long long x) { return x == 0xEU; }
 
 STDBIT_STUB_FUNCTION(stdc_bit_width, 0x4)
 

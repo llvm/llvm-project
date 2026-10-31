@@ -456,7 +456,6 @@ std::string DeclarationNameInfo::getAsString() const {
 }
 
 raw_ostream &clang::operator<<(raw_ostream &OS, DeclarationNameInfo DNInfo) {
-  LangOptions LO;
   DNInfo.printName(OS, PrintingPolicy(LangOptions()));
   return OS;
 }
@@ -482,7 +481,6 @@ void DeclarationNameInfo::printName(raw_ostream &OS, PrintingPolicy Policy) cons
         OS << '~';
       else if (Name.getNameKind() == DeclarationName::CXXConversionFunctionName)
         OS << "operator ";
-      LangOptions LO;
       Policy.adjustForCPlusPlus();
       Policy.SuppressScope = true;
       OS << TInfo->getType().getAsString(Policy);

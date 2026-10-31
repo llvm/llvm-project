@@ -28,18 +28,17 @@ HTRBlockMetadata::GetMostFrequentlyCalledFunction() const {
   size_t max_ncalls = 0;
   std::optional<llvm::StringRef> max_name;
   for (const auto &it : m_func_calls) {
-    ConstString name = it.first;
+    llvm::StringRef name = it.first();
     size_t ncalls = it.second;
     if (ncalls > max_ncalls) {
       max_ncalls = ncalls;
-      max_name = name.GetStringRef();
+      max_name = name;
     }
   }
   return max_name;
 }
 
-llvm::DenseMap<ConstString, size_t> const &
-HTRBlockMetadata::GetFunctionCalls() const {
+llvm::StringMap<size_t> const &HTRBlockMetadata::GetFunctionCalls() const {
   return m_func_calls;
 }
 
@@ -81,7 +80,7 @@ llvm::ArrayRef<lldb::addr_t> HTRInstructionLayer::GetInstructionTrace() const {
 }
 
 void HTRInstructionLayer::AddCallInstructionMetadata(
-    lldb::addr_t load_addr, std::optional<ConstString> func_name) {
+    lldb::addr_t load_addr, std::optional<std::string> func_name) {
   m_call_isns.emplace(load_addr, func_name);
 }
 
@@ -105,11 +104,11 @@ size_t HTRBlockLayer::GetNumUnits() const { return m_block_id_trace.size(); }
 
 HTRBlockMetadata HTRInstructionLayer::GetMetadataByIndex(size_t index) const {
   lldb::addr_t instruction_load_address = m_instruction_trace[index];
-  llvm::DenseMap<ConstString, size_t> func_calls;
+  llvm::StringMap<size_t> func_calls;
 
   auto func_name_it = m_call_isns.find(instruction_load_address);
   if (func_name_it != m_call_isns.end()) {
-    if (std::optional<ConstString> func_name = func_name_it->second) {
+    if (std::optional<std::string> func_name = func_name_it->second) {
       func_calls[*func_name] = 1;
     }
   }
@@ -138,13 +137,13 @@ TraceHTR::TraceHTR(Thread &thread, TraceCursor &cursor)
   /*
   Target &target = thread.GetProcess()->GetTarget();
   auto function_name_from_load_address =
-      [&](lldb::addr_t load_address) -> std::optional<ConstString> {
+      [&](lldb::addr_t load_address) -> std::optional<std::string> {
     lldb_private::Address pc_addr;
     SymbolContext sc;
     if (target.ResolveLoadAddress(load_address, pc_addr) &&
         pc_addr.CalculateSymbolContext(&sc))
       return sc.GetFunctionName()
-                 ? std::optional<ConstString>(sc.GetFunctionName())
+                 ? std::optional<std::string>(sc.GetFunctionName())
                  : std::nullopt;
     else
       return std::nullopt;
@@ -191,7 +190,7 @@ void HTRBlockMetadata::MergeMetadata(
     HTRBlockMetadata const &metadata_to_merge) {
   merged_metadata.m_num_instructions += metadata_to_merge.m_num_instructions;
   for (const auto &it : metadata_to_merge.m_func_calls) {
-    ConstString name = it.first;
+    llvm::StringRef name = it.first();
     size_t num_calls = it.second;
     merged_metadata.m_func_calls[name] += num_calls;
   }
@@ -480,7 +479,7 @@ llvm::json::Value lldb_private::toJSON(const HTRBlock &block) {
 llvm::json::Value lldb_private::toJSON(const HTRBlockMetadata &metadata) {
   std::vector<llvm::json::Value> function_calls;
   for (const auto &it : metadata.GetFunctionCalls()) {
-    ConstString name = it.first;
+    llvm::StringRef name = it.first();
     size_t n_calls = it.second;
     function_calls.emplace_back(llvm::formatv("({0}: {1})", name, n_calls));
   }

@@ -75,6 +75,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/Dwarf.def"
     textual header "llvm/BinaryFormat/DXContainerConstants.def"
     textual header "llvm/BinaryFormat/DynamicTags.def"
+    textual header "llvm/BinaryFormat/ELF.def"
     textual header "llvm/BinaryFormat/MachO.def"
     textual header "llvm/BinaryFormat/MinidumpConstants.def"
     textual header "llvm/BinaryFormat/SFrameConstants.def"

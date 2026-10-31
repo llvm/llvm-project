@@ -14,10 +14,11 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_EXP2_DOUBLE_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP2_DOUBLE_EVAL_H
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
+#include "src/__support/FPUtil/fp_bitwise.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -34,7 +35,7 @@ namespace math {
 namespace double_eval {
 
 LIBC_ALWAYS_INLINE double exp2(double x) {
-  using FPBits = typename fputil::FPBits<double>;
+  using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
   uint64_t x_u = xbits.uintval();
@@ -63,17 +64,23 @@ LIBC_ALWAYS_INLINE double exp2(double x) {
   // Range reduction:
   // Let x = k * 2^-N + dx
   // in which:
-  //   k = round(x * 2^N)
-  //   hi = k >> N
+  //   k   = round(x * 2^N)
+  //   hi  = k >> N
   //   idx = k & (2^N - 1)
   // then:
   //   2^x = 2^hi * 2^(idx / 2^N) * 2^dx.
+  //
+  // Using ROUND_BIAS, ROUND_SHIFT, and ROUND_MASK (see exp_utils.h), we compute
+  // k_biased = fma(x, EXP_SCALE, ROUND_BIAS) and extract in parallel:
+  //   kd  = (k_biased & ROUND_MASK) - ROUND_SHIFT
+  //   hi  = (int32_t)(k_bits >> 19) >> (13 + N)
+  //   idx = (k_bits >> 32) & (2^N - 1).
+  double k_biased = fputil::multiply_add(x, EXP_SCALE, ROUND_BIAS);
+  double kd = fputil::fp_and(k_biased, ROUND_MASK) - ROUND_SHIFT;
+  uint64_t k_bits = cpp::bit_cast<uint64_t>(k_biased);
 
-  double kd = fputil::nearest_integer(x * EXP_SCALE);
-  int k = static_cast<int>(kd);
-
-  int hi = k >> EXP_N_BITS;
-  unsigned idx = static_cast<unsigned>(k & EXP_MASK);
+  int hi = static_cast<int32_t>(k_bits >> 19) >> (13 + EXP_N_BITS);
+  unsigned idx = static_cast<unsigned>(k_bits >> 32) & EXP_MASK;
 
   double dx = fputil::multiply_add(kd, -EXP_SCALE_INV, x); // exact
 
@@ -96,14 +103,14 @@ LIBC_ALWAYS_INLINE double exp2(double x) {
   //   r_hi = m_hi + m_hi * u_hi
   //   r_lo = m * (u_lo + u^2 * P(u)) + m_lo * (1 + u_hi)
   //
-  // Since r_hi is in [0.997, 2.0), for r_hi to be exact in double precision,
+  // Since r_hi is in [1 - 2^-8, 2), for r_hi to be exact in double precision,
   // we need:
   //   lsb(m_hi * u_hi) >= 2^-52.
   // We choose:
-  //   lsb(m_hi) >= 2^-22  =>  |m_lo| <= 2^-23
+  //   lsb(m_hi) >= 2^-22  =>  |m_lo| < 2^-22
   //   lsb(u_hi) >= 2^-30
   // so that lsb(m_hi * u_hi) >= 2^-52, and the rounding errors from
-  // m_lo * (1 + u_hi) are bounded by 2^(-23 - 52) = 2^-75.
+  // m_lo * (1 + u_hi) are bounded by 2^(-22 - 52) = 2^-74.
   //
   // To get lsb(u_hi) >= 2^-30 from u = dx * log(2), since |dx| <= 2^-8 and
   // log(2) < 1, we split dx at 2^-18 and log(2) at 2^-12:

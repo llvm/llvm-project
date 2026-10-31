@@ -91,3 +91,9 @@
 
 # CHECK: [[@LINE-2]]:9: error: instruction requires: ls64 lsc64b
 # CHECK-NEXT:   lda64b x0, [x13]
+
+	.arch armv9-a+fpv2
+	.arch armv9-a+nofpv2
+	fcmtl s31, s0
+# CHECK: error: instruction requires: fpv2
+# CHECK-NEXT:   fcmtl s31, s0

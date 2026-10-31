@@ -46,8 +46,8 @@ def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMe
 def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
-// A generic target uses the largest allocation granularity of its covered GPUs.
-// Its feature must be present on at least one covered GPU.
+// A generic target takes its allocation granularity and LDS size from the same
+// covered GPU. Its feature must be present on at least one covered GPU.
 class SubtargetFeatureLDSAllocGranularity <int Granularity> : AMDGPUGenericAnyFeature <
   "lds-alloc-granularity-"#Granularity,
   "LDSAllocationGranularity",

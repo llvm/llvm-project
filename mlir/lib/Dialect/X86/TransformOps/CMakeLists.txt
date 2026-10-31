@@ -5,9 +5,13 @@ add_mlir_dialect_library(MLIRX86TransformOps
   MLIRX86TransformOpsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
+  MLIRArithDialect
   MLIRIR
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMathDialect
+  MLIRMemRefDialect
   MLIRVectorDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect

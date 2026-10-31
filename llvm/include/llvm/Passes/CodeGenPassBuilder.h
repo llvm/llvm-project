@@ -210,6 +210,10 @@ protected:
   /// immediately before register allocation.
   virtual void addPreRegAlloc(PassManagerWrapper &PMW) {}
 
+  /// Return true if the MachinePipeliner should run before addPreRegAlloc by
+  /// default. -enable-pipeliner overrides this.
+  virtual bool isMachinePipelinerEnabled() const { return false; }
+
   /// addPreRewrite - Add passes to the optimized register allocation pipeline
   /// after register allocation is complete, but before virtual registers are
   /// rewritten to physical registers.

@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80 -mattr=+ptx90 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80 -mattr=+ptx90 | %ptxas-verify -arch=sm_80 %}
+; RUN: %if ptxas-sm_80 && ptxas-isa-9.0 %{ llc < %s -mtriple=nvptx64-nvidia-cuda -mcpu=sm_80 -mattr=+ptx90 | %ptxas-verify -arch=sm_80 %}
 
 ; The directives require both sm_80 and PTX ISA 9.0, and are omitted when
 ; either is missing.

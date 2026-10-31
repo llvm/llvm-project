@@ -17,7 +17,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, pthread_barrier_init,
-                   (pthread_barrier_t * b,
+                   (pthread_barrier_t *__restrict b,
                     const pthread_barrierattr_t *__restrict attr,
                     unsigned count)) {
   return Barrier::init(reinterpret_cast<Barrier *>(b), attr, count);

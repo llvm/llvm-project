@@ -29,7 +29,7 @@
 # CHECK-HIGH: Disassembly of section .text:
 # CHECK-HIGH: 1000100c: 02 04 00 08  	j	0x1008 <.text+0x8>
 # CHECK-HIGH: Disassembly of section text_ref:
-# CHECK-HIGH: 10003000: 00 10 01 3c  	lui	$1, 0x1000 <.text>
+# CHECK-HIGH: 10003000: 00 10 01 3c  	lui	$1, 0x1000{{$}}
 # CHECK-HIGH: 10003004: 00 20 20 ac  	sw	$zero, 0x2000($1)
 
 .section "data_imgrel","ax"

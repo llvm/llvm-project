@@ -21,7 +21,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 
@@ -193,6 +192,9 @@ public:
                                        CmpInst::Predicate Pred);
 };
 
+/// Checks if \p I is a call to llvm.fma or llvm.fmuladd.
+bool isFMAOrFMulAdd(const Instruction *I);
+
 /// Main data required for vectorization of instructions.
 class InstructionsState {
   /// MainOp and AltOp are primarily determined by getSameOpcode. Currently,
@@ -222,7 +224,7 @@ class InstructionsState {
   /// Whether the instruction state represents copyable instructions.
   bool HasCopyables = false;
   /// Index of the operand modeling the copyable values: the addend for
-  /// fmuladd (retried with a multiplicand), the first operand otherwise.
+  /// fma/fmuladd (retried with a multiplicand), the first operand otherwise.
   unsigned CopyableOpIdx = 0;
   /// Whether copyable single-use fmuls/fadds are modeled as
   /// fmuladd(a, b, -0.0)/fmuladd(1.0, a, b), absorbing the binop instead of
@@ -298,9 +300,7 @@ public:
   InstructionsState(Instruction *MainOp, Instruction *AltOp,
                     bool HasCopyables = false)
       : MainOp(MainOp), AltOp(AltOp), HasCopyables(HasCopyables),
-        CopyableOpIdx(MainOp && RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)
-                          ? 2
-                          : 0) {}
+        CopyableOpIdx(MainOp && isFMAOrFMulAdd(MainOp) ? 2 : 0) {}
   static InstructionsState invalid() { return {nullptr, nullptr}; }
 
   /// Checks if the value is a copyable element.

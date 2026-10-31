@@ -34,6 +34,7 @@ static_library("Driver") {
   }
   sources = [
     "Action.cpp",
+    "ClangCLArgs.cpp",
     "Compilation.cpp",
     "CreateASTUnitFromArgs.cpp",
     "CreateInvocationFromArgs.cpp",

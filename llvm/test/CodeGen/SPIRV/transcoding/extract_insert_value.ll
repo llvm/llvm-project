@@ -52,9 +52,7 @@ entry:
 ; CHECK-SPIRV:        %[[#elem:]] = OpCompositeExtract %[[#float_ty]] %[[#extracted_struct]] 0
 ; CHECK-SPIRV:        %[[#add:]] = OpFAdd %[[#float_ty]] %[[#elem]] %[[#]]
 ; CHECK-SPIRV:        %[[#inserted_struct:]] = OpCompositeInsert %[[#struct1_in_ty]] %[[#add]] %[[#extracted_struct]] 0
-; CHECK-SPIRV:        %[[#bitcast1:]] = OpBitcast %[[#]] %[[#store1_ptr]]
-; CHECK-SPIRV:        %[[#store1_dst:]] = OpBitcast %[[#struct1_in_ptr_ty]] %[[#bitcast1]]
-; CHECK-SPIRV:        OpStore %[[#store1_dst]] %[[#inserted_struct]] Aligned 4
+; CHECK-SPIRV:        OpStore %[[#store1_ptr]] %[[#inserted_struct]] Aligned 4
 ; CHECK-SPIRV-LABEL:  OpFunctionEnd
 
 define spir_func void @struct_test(ptr addrspace(1) %object) {

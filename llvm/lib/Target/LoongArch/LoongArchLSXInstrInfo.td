@@ -2905,9 +2905,13 @@ def : Pat<(lsxsplatf32 FPR32:$fj),
 def : Pat<(lsxsplatf64 FPR64:$fj),
           (VREPLVEI_D (SUBREG_TO_REG FPR64:$fj, sub_64), 0)>;
 
+// VSTELM
 defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;
 defm : VstelmPat<truncstorei16, v8i16, VSTELM_H, simm8_lsl1, uimm3>;
 defm : VstelmPat<truncstorei32, v4i32, VSTELM_W, simm8_lsl2, uimm2>;
+let Predicates = [IsLA32] in {
+  defm : VstelmPat<store, v4i32, VSTELM_W, simm8_lsl2, uimm2>;
+} // Predicates = [IsLA32]
 defm : VstelmPat<store, v2i64, VSTELM_D, simm8_lsl3, uimm1>;
 defm : VstelmPat<store, v4f32, VSTELM_W, simm8_lsl2, uimm2, f32>;
 defm : VstelmPat<store, v2f64, VSTELM_D, simm8_lsl3, uimm1, f64>;
@@ -3004,6 +3008,8 @@ def : Pat<(v4f32 (loongarch_vffint_s_l (v2i64 LSX128:$vj), (v2i64 LSX128:$vk))),
 // VFTINTRZ_{W_S/L_D}
 def : Pat<(v4i32 (fp_to_sint v4f32:$vj)), (VFTINTRZ_W_S v4f32:$vj)>;
 def : Pat<(v2i64 (fp_to_sint v2f64:$vj)), (VFTINTRZ_L_D v2f64:$vj)>;
+def : Pat<(v4i32 (fp_to_sint_sat v4f32:$vj, i32)), (VFTINTRZ_W_S v4f32:$vj)>;
+def : Pat<(v2i64 (fp_to_sint_sat v2f64:$vj, i64)), (VFTINTRZ_L_D v2f64:$vj)>;
 
 // VFTINTRZ_{W_SU/L_DU}
 def : Pat<(v4i32 (fp_to_uint v4f32:$vj)), (VFTINTRZ_WU_S v4f32:$vj)>;
@@ -3074,6 +3080,27 @@ def : Pat<(loongarch_brcc (GRLenVT (loongarch_vallzero (vt LSX128:$vj))), 0,
                           SETNE, bb:$imm21),
           (BCNEZ (VSETEQZ_V LSX128:$vj), bb:$imm21)>;
 }
+
+// Vector conditional branches. Ditto.
+multiclass PatVecCondBrCC<SDPatternOperator OpNode, LAInst VSet, ValueType VT,
+                          RegisterClass RC> {
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETNE, bb:$imm21),
+            (BCNEZ (VSet RC:$vj), bb:$imm21)>;
+  def : Pat<(loongarch_brcc (GRLenVT (OpNode (VT RC:$vj))), 0,
+                            SETEQ, bb:$imm21),
+            (BCEQZ (VSet RC:$vj), bb:$imm21)>;
+}
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_B, v16i8, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_H, v8i16, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_W, v4i32, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_zero, VSETANYEQZ_D, v2i64, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_B, v16i8, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_H, v8i16, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_W, v4i32, LSX128>;
+defm : PatVecCondBrCC<loongarch_vall_nonzero, VSETALLNEZ_D, v2i64, LSX128>;
+defm : PatVecCondBrCC<loongarch_vany_zero, VSETEQZ_V, v16i8, LSX128>;
+defm : PatVecCondBrCC<loongarch_vany_nonzero, VSETNEZ_V, v16i8, LSX128>;
 
 } // Predicates = [HasExtLSX]
 

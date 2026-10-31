@@ -1,4 +1,4 @@
-// UNSUPPORTED: system-linux, system-windows
+// REQUIRES: system-darwin
 
 // RUN: %clangxx_host %s -c -g -o %t
 // RUN: %lldb %t \

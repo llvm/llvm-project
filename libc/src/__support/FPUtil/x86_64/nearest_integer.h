@@ -12,12 +12,14 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/compiler.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 #if !defined(LIBC_TARGET_ARCH_IS_X86_64)
 #error "Invalid include"
 #endif
 
-#if !defined(__SSE4_2__)
+#if !defined(LIBC_TARGET_CPU_HAS_SSE4_2)
 #error "SSE4.2 instruction set is not supported"
 #endif
 
@@ -38,11 +40,11 @@ namespace fputil {
 // without the extra lane-zeroing instructions required by `_mm_round_ps` /
 // `_mm_round_pd`.
 LIBC_INLINE float nearest_integer(float x) {
-#ifdef __AVX__
+#if defined(__AVX__) || defined(LIBC_COMPILER_IS_MSVC)
   __m128 xmm = _mm_set_ss(x); // NOLINT
   __m128 ymm =
       _mm_round_ss(xmm, xmm, _MM_ROUND_NEAREST | _MM_FROUND_NO_EXC); // NOLINT
-  return ymm[0];
+  return _mm_cvtss_f32(ymm);
 #else
   LIBC_INLINE_ASM("roundss %1, %0, %0" : "+x"(x) : "i"(_MM_ROUND_NEAREST |
                                                        _MM_FROUND_NO_EXC));
@@ -51,11 +53,11 @@ LIBC_INLINE float nearest_integer(float x) {
 }
 
 LIBC_INLINE double nearest_integer(double x) {
-#ifdef __AVX__
+#if defined(__AVX__) || defined(LIBC_COMPILER_IS_MSVC)
   __m128d xmm = _mm_set_sd(x); // NOLINT
   __m128d ymm =
       _mm_round_sd(xmm, xmm, _MM_ROUND_NEAREST | _MM_FROUND_NO_EXC); // NOLINT
-  return ymm[0];
+  return _mm_cvtsd_f64(ymm);
 #else
   LIBC_INLINE_ASM("roundsd %1, %0, %0" : "+x"(x) : "i"(_MM_ROUND_NEAREST |
                                                        _MM_FROUND_NO_EXC));

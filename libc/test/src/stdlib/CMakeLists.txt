@@ -1,4 +1,4 @@
-add_custom_target(libc-stdlib-tests)
+add_libc_testsuite(libc-stdlib-tests)
 
 add_libc_test(
   atof_test
@@ -7,7 +7,6 @@ add_libc_test(
   SRCS
     atof_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.stdlib.atof
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -17,7 +16,6 @@ add_header_library(
   HDRS
     AtoiTest.h
   DEPENDS
-    libc.src.errno.errno
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
 )
@@ -62,7 +60,6 @@ add_fp_unittest(
   SRCS
     strtod_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.stdlib.strtod
     libc.src.__support.FPUtil.fenv_impl
     libc.test.UnitTest.ErrnoCheckingTest
@@ -75,7 +72,6 @@ add_fp_unittest(
   SRCS
     strtof_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.stdlib.strtof
     libc.src.__support.FPUtil.fenv_impl
     libc.test.UnitTest.ErrnoCheckingTest
@@ -86,9 +82,9 @@ add_header_library(
   HDRS
     StrtolTest.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -101,7 +97,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
     .strtol_test_support
 )
 
@@ -114,7 +109,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.str_to_integer
-    libc.src.errno.errno
     .strtol_test_support
 )
 
@@ -136,7 +130,6 @@ add_libc_test(
   SRCS
     strtold_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.__support.uint128
     libc.src.stdlib.strtold
     libc.test.UnitTest.ErrnoCheckingTest

@@ -573,8 +573,7 @@ ScriptedProcess::GetLoadedDynamicLibrariesInfos(
       return error_with_message("Couldn't set the load address for module.");
 
     FileSpec objfile(path);
-    module_sp->SetFileSpecAndObjectName(objfile,
-                                        ConstString(objfile.GetFilename()));
+    module_sp->SetFileSpecAndObjectName(objfile, objfile.GetFilename().str());
 
     if (is_placeholder_module) {
       target.GetImages().AppendIfNeeded(module_sp, true /*notify=*/);

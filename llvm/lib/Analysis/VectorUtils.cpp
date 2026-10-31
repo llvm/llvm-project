@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/VectorUtils.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -26,18 +28,11 @@
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/CommandLine.h"
 
 #define DEBUG_TYPE "vectorutils"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
-
-/// Maximum factor for an interleaved memory access.
-static cl::opt<unsigned> MaxInterleaveGroupFactor(
-    "max-interleave-group-factor", cl::Hidden,
-    cl::desc("Maximum factor for an interleaved access group (default = 8)"),
-    cl::init(8));
 
 /// Return true if all of the intrinsic's arguments and return type are scalars
 /// for the scalar form of the intrinsic, and vectors for the vector form of the
@@ -1331,9 +1326,17 @@ APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
   return DemandedElts;
 }
 
-bool InterleavedAccessInfo::isStrided(int Stride) {
+InterleavedAccessInfo::InterleavedAccessInfo(PredicatedScalarEvolution &PSE,
+                                             Loop *L, DominatorTree *DT,
+                                             LoopInfo *LI,
+                                             const LoopAccessInfo *LAI,
+                                             bool OptForSize)
+    : Opts(getAnalysisOptions(*L)), PSE(PSE), TheLoop(L), DT(DT), LI(LI),
+      LAI(LAI), OptForSize(OptForSize) {}
+
+bool InterleavedAccessInfo::isStrided(int Stride) const {
   unsigned Factor = std::abs(Stride);
-  return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
+  return Factor >= 2 && Factor <= Opts.max_interleave_group_factor;
 }
 
 void InterleavedAccessInfo::collectConstStrideAccesses(

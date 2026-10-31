@@ -202,6 +202,11 @@ public:
   /// Number of MLIR inputs/outputs of the created FuncOp.
   std::size_t getNumFIRArguments() const { return inputs.size(); }
   std::size_t getNumFIRResults() const { return outputs.size(); }
+  /// Return the MLIR attributes of the MLIR input at \p index.
+  llvm::ArrayRef<mlir::NamedAttribute>
+  getFIRArgumentAttributes(std::size_t index) const {
+    return inputs[index].attributes;
+  }
   /// Return the MLIR output types.
   llvm::SmallVector<mlir::Type> getResultType() const;
 

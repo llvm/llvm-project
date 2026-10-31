@@ -31,7 +31,7 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:zpr = COPY $z0
     ; CHECK-NEXT: [[EOR_ZZZ:%[0-9]+]]:zpr = EOR_ZZZ [[COPY3]], [[COPY2]]
     ; CHECK-NEXT: [[EOR_ZZZ1:%[0-9]+]]:zpr = EOR_ZZZ [[COPY1]], [[COPY]]
-    ; CHECK-NEXT: [[EOR_ZZZ2:%[0-9]+]]:zpr = EOR_ZZZ killed [[EOR_ZZZ]], killed [[EOR_ZZZ1]]
+    ; CHECK-NEXT: [[EOR_ZZZ2:%[0-9]+]]:zpr = EOR_ZZZ [[EOR_ZZZ]], [[EOR_ZZZ1]]
     ; CHECK-NEXT: $z0 = COPY [[EOR_ZZZ2]]
     ; CHECK-NEXT: RET_ReallyLR implicit $z0
     %3:zpr = COPY $z3
@@ -69,7 +69,7 @@ body:             |
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:zpr = COPY $z0
     ; CHECK-NEXT: [[AND_ZZZ:%[0-9]+]]:zpr = AND_ZZZ [[COPY3]], [[COPY2]]
     ; CHECK-NEXT: [[EOR_ZZZ:%[0-9]+]]:zpr = EOR_ZZZ [[COPY1]], [[COPY]]
-    ; CHECK-NEXT: [[EOR_ZZZ1:%[0-9]+]]:zpr = EOR_ZZZ killed [[AND_ZZZ]], killed [[EOR_ZZZ]]
+    ; CHECK-NEXT: [[EOR_ZZZ1:%[0-9]+]]:zpr = EOR_ZZZ [[AND_ZZZ]], [[EOR_ZZZ]]
     ; CHECK-NEXT: $z0 = COPY [[EOR_ZZZ1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $z0
     %3:zpr = COPY $z3

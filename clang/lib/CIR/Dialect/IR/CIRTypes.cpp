@@ -29,6 +29,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/MathExtras.h"
 
+#include "CIROpDefinitions.h"
+
 //===----------------------------------------------------------------------===//
 // CIR Helpers
 //===----------------------------------------------------------------------===//
@@ -59,13 +61,6 @@ cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
     // Float8 formats).  Return null and let the caller report it.
     return {};
   }
-}
-
-static bool isPureCIRType(mlir::Type ty) {
-  if (!ty)
-    return true;
-  return ty.getContext()->getOrLoadDialect<cir::CIRDialect>()->isPureCIRType(
-      ty);
 }
 
 //===----------------------------------------------------------------------===//
@@ -168,6 +163,21 @@ verifyRecordMemberKinds(function_ref<mlir::InFlightDiagnostic()> emitError,
   if (memberKinds.size() != numMembers)
     return emitError() << "expected " << numMembers << " member kinds, got "
                        << memberKinds.size();
+  return mlir::success();
+}
+
+/// Members must be CIR types other than void, which has no layout.
+static mlir::LogicalResult
+verifyRecordMemberTypes(function_ref<mlir::InFlightDiagnostic()> emitError,
+                        llvm::ArrayRef<mlir::Type> members) {
+  for (auto [idx, memberTy] : llvm::enumerate(members)) {
+    if (!cir::isCIRType(memberTy))
+      return emitError() << "record member at index " << idx
+                         << " must be a CIR type, got " << memberTy;
+    if (mlir::isa<cir::VoidType>(memberTy))
+      return emitError() << "record member at index " << idx
+                         << " cannot be void";
+  }
   return mlir::success();
 }
 
@@ -349,6 +359,8 @@ mlir::LogicalResult StructType::verify(
     bool packed, llvm::ArrayRef<RecordMemberKind> member_kinds, bool is_class) {
   if (name && name.getValue().empty())
     return emitError() << "identified records cannot have an empty name";
+  if (failed(verifyRecordMemberTypes(emitError, members)))
+    return mlir::failure();
   return verifyRecordMemberKinds(emitError, members.size(), member_kinds);
 }
 
@@ -391,6 +403,12 @@ void StructType::removeABIConversionNamePrefix() {
 void StructType::complete(ArrayRef<Type> members, bool packed,
                           ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
+  // mutate() bypasses the verifier, so check what get() would have checked.
+  assert(
+      succeeded(verifyInvariants(
+          mlir::detail::getDefaultDiagnosticEmitFn(getContext()), members,
+          getName(), /*incomplete=*/false, packed, memberKinds, isClass())) &&
+      "invalid struct completion");
   if (mutate(members, packed, memberKinds).failed())
     llvm_unreachable("failed to complete struct");
 }
@@ -524,6 +542,19 @@ UnionType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
   // padding slot.
   if (llvm::is_contained(member_kinds, RecordMemberKind::Pad))
     return emitError() << "a union member cannot be marked pad";
+  if (failed(verifyRecordMemberTypes(emitError, members)))
+    return mlir::failure();
+  // CIRGen pads a union's tail with a char or an array of chars.
+  if (padding) {
+    mlir::Type charTy = padding;
+    if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(padding))
+      charTy = arrTy.getElementType();
+    auto intTy = mlir::dyn_cast<cir::IntType>(charTy);
+    if (!intTy || intTy.getWidth() != 8 || intTy.isSigned() || intTy.isBitInt())
+      return emitError()
+             << "union padding must be !u8i or an array of !u8i, got "
+             << padding;
+  }
   // Every variant starts at offset zero, so a bit-field variant is an access
   // unit of its own.  There is no run for a zero-width bit-field to end, so a
   // variant always has storage.
@@ -571,6 +602,11 @@ void UnionType::complete(ArrayRef<Type> members, bool packed,
                          mlir::Type padding,
                          ArrayRef<RecordMemberKind> memberKinds) {
   assert(!cir::MissingFeatures::astRecordDeclAttr());
+  // mutate() bypasses the verifier, so check what get() would have checked.
+  assert(succeeded(verifyInvariants(
+             mlir::detail::getDefaultDiagnosticEmitFn(getContext()), members,
+             getName(), /*incomplete=*/false, packed, padding, memberKinds)) &&
+         "invalid union completion");
   if (mutate(members, packed, padding, memberKinds).failed())
     llvm_unreachable("failed to complete union");
 }
@@ -1311,13 +1347,10 @@ FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
            << "!cir.func cannot have an explicit 'void' return type";
 
   // The calling convention lowering pass expects all types in a function
-  // signature to be CIR types.
-  for (mlir::Type type : argTypes) {
-    if (!isPureCIRType(type))
-      return emitError()
-             << "expected all types in the function signature to be CIR types";
-  }
-  if (!isPureCIRType(returnType))
+  // signature to be CIR types. CIR types only nest CIR types, so checking the
+  // signature's own types covers everything reachable from them.
+  if (!llvm::all_of(argTypes, cir::isCIRType) ||
+      (returnType && !cir::isCIRType(returnType)))
     return emitError()
            << "expected all types in the function signature to be CIR types";
 
@@ -1454,6 +1487,11 @@ BitFieldType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     return mlir::success();
   }
 
+  if (!cir::isCIRType(storageType))
+    return emitError() << "bit-field access unit storage must be a CIR type, "
+                          "got "
+                       << storageType;
+
   if (mlir::isa<cir::BitFieldType>(storageType))
     return emitError() << "bit-field access unit storage cannot itself be a "
                           "bit-field type";
@@ -1501,32 +1539,34 @@ llvm::TypeSize cir::VectorType::getTypeSizeInBits(
     ::mlir::DataLayoutEntryListRef params) const {
   // Clang packs a fixed-length bool vector one bit per element and rounds the
   // vector's size up to a power of two of at least a byte.
-  if (mlir::isa<cir::BoolType>(getElementType()) && !getIsScalable()) {
+  if (mlir::isa<cir::BoolType>(getElementType()) && getSize().isFixed()) {
     assert(!cir::MissingFeatures::hlsl());
     return llvm::TypeSize::getFixed(llvm::PowerOf2Ceil(getBoolStorageWidth()));
   }
-  return llvm::TypeSize::getFixed(
-      getSize() * dataLayout.getTypeSizeInBits(getElementType()));
+
+  llvm::TypeSize elementSize = dataLayout.getTypeSizeInBits(getElementType());
+  return llvm::TypeSize::get(
+      getSize().getKnownMinValue() * elementSize.getFixedValue(), isScalable());
 }
 
 uint64_t cir::VectorType::getBoolStorageWidth() const {
   assert(mlir::isa<cir::BoolType>(getElementType()) &&
          "only a bool vector is stored as an integer");
-  return std::max<uint64_t>(getSize(), 8);
+  return std::max<uint64_t>(getFixedSize(), 8);
 }
 
 uint64_t
 cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                                  ::mlir::DataLayoutEntryListRef params) const {
   // This hook answers in bytes, not bits.
-  return llvm::PowerOf2Ceil(
-      llvm::divideCeil(dataLayout.getTypeSizeInBits(*this), 8u));
+  return llvm::PowerOf2Ceil(llvm::divideCeil(
+      dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
 }
 
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-    mlir::Type elementType, uint64_t size, bool scalable) {
-  if (size == 0)
+    mlir::Type elementType, llvm::ElementCount size) {
+  if (size.isZero())
     return emitError() << "the number of vector elements must be non-zero";
   return success();
 }
@@ -1537,7 +1577,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   mlir::Builder odsBuilder(odsParser.getContext());
   mlir::FailureOr<::mlir::Type> elementType;
   mlir::FailureOr<uint64_t> size;
-  bool isScalabe = false;
+  bool isScalable = false;
 
   // Parse literal '<'
   if (odsParser.parseLess())
@@ -1545,7 +1585,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 
   // Parse literal '[', if present, and set the scalability flag accordingly
   if (odsParser.parseOptionalLSquare().succeeded())
-    isScalabe = true;
+    isScalable = true;
 
   // Parse variable 'size'
   size = mlir::FieldParser<uint64_t>::parse(odsParser);
@@ -1558,7 +1598,7 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
 
   // Parse literal ']', which is expected when dealing with scalable
   // dim sizes
-  if (isScalabe && odsParser.parseRSquare().failed()) {
+  if (isScalable && odsParser.parseRSquare().failed()) {
     odsParser.emitError(odsParser.getCurrentLocation(),
                         "missing closing `]` for scalable dim size");
     return {};
@@ -1580,19 +1620,19 @@ mlir::Type cir::VectorType::parse(::mlir::AsmParser &odsParser) {
   // Parse literal '>'
   if (odsParser.parseGreater())
     return {};
-  return odsParser.getChecked<VectorType>(odsLoc, odsParser.getContext(),
-                                          mlir::Type((*elementType)),
-                                          uint64_t((*size)), isScalabe);
+  return odsParser.getChecked<VectorType>(
+      odsLoc, odsParser.getContext(), mlir::Type((*elementType)),
+      llvm::ElementCount::get(*size, isScalable));
 }
 
 void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   mlir::Builder odsBuilder(getContext());
   odsPrinter << "<";
-  if (this->getIsScalable())
+  if (isScalable())
     odsPrinter << "[";
 
-  odsPrinter.printStrippedAttrOrType(getSize());
-  if (this->getIsScalable())
+  odsPrinter.printStrippedAttrOrType(getSize().getKnownMinValue());
+  if (isScalable())
     odsPrinter << "]";
   odsPrinter << ' ' << "x";
   odsPrinter << ' ';
@@ -1749,8 +1789,8 @@ void printMemorySpace(mlir::AsmPrinter &p,
 }
 
 mlir::OptionalParseResult
-parseGlobalMemorySpace(mlir::AsmParser &p,
-                       mlir::ptr::MemorySpaceAttrInterface &attr) {
+cir::parseGlobalMemorySpace(mlir::AsmParser &p,
+                            mlir::ptr::MemorySpaceAttrInterface &attr) {
 
   mlir::SMLoc loc = p.getCurrentLocation();
   if (parseMemorySpace(p, attr).failed())
@@ -1758,8 +1798,8 @@ parseGlobalMemorySpace(mlir::AsmParser &p,
   return mlir::success();
 }
 
-void printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
-                            mlir::ptr::MemorySpaceAttrInterface attr) {
+void cir::printGlobalMemorySpace(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                 mlir::ptr::MemorySpaceAttrInterface attr) {
   printMemorySpace(printer, attr);
 }
 

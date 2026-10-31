@@ -149,7 +149,7 @@ body:             |
     MOV8mi %0, 1, $noreg, 0, $noreg, 0, debug-location !27 :: (store (s8) into %ir.0)
     %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg, debug-location !28 :: (load (s128) from %ir.p1)
     DBG_VALUE %2, $noreg, !24, !DIExpression(), debug-location !25
-    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2, debug-location !29 :: (store (s128) into %ir.p2)
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, %2, debug-location !29 :: (store (s128) into %ir.p2)
     RET 0, debug-location !30
 
 ...
@@ -201,7 +201,7 @@ body:             |
     %0:gr64 = COPY $rdi
     MOV8mi %0, 1, $noreg, 0, $noreg, 0 :: (store (s8) into %ir.0)
     %2:vr128 = MOVAPSrm %0, 1, $noreg, 0, $noreg :: (load (s128) from %ir.p1)
-    MOVAPSmr %1, 1, $noreg, 0, $noreg, killed %2 :: (store (s128) into %ir.p2)
+    MOVAPSmr %1, 1, $noreg, 0, $noreg, %2 :: (store (s128) into %ir.p2)
     RET 0
 
     ; DEBUG: name: debug

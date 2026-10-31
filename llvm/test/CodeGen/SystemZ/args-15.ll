@@ -8,6 +8,6 @@ define i32 @callee_MissingRetAttr() {
   ret i32 -1
 }
 
-; CHECK: ERROR: Missing extension attribute of returned value from function:
-; CHECK: i32 @callee_MissingRetAttr()
+; CHECK: ERROR: (C ABI violation) missing extension attribute on return value.
+; CHECK: Returning from function: i32 @callee_MissingRetAttr()
 ; CHECK: UNREACHABLE executed

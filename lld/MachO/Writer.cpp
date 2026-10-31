@@ -697,7 +697,7 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     // relative to the start of the referent section, and therefore have no
     // need of rebase opcodes.
     if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.addend);
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend());
   }
 }
 

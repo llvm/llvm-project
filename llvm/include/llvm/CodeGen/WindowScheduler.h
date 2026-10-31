@@ -42,6 +42,7 @@
 #ifndef LLVM_CODEGEN_WINDOWSCHEDULER_H
 #define LLVM_CODEGEN_WINDOWSCHEDULER_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
@@ -54,6 +55,13 @@ enum WindowSchedulingFlag {
   WS_Off,  /// Turn off window algorithm.
   WS_On,   /// Use window algorithm after SMS algorithm fails.
   WS_Force /// Use window algorithm instead of SMS algorithm.
+};
+
+/// TriCloneInfo describes an MI clone in TripleMBB: the original MI it was
+/// cloned from and the index of the copy (0, 1, or 2) it belongs to.
+struct TriCloneInfo {
+  MachineInstr *Ori = nullptr;
+  unsigned Copy = 0;
 };
 
 /// The main class in the implementation of the target independent window
@@ -80,11 +88,20 @@ protected:
   SmallVector<MachineInstr *> OriMIs;
   /// TriMIs keeps the MIs of TripleMBB, which is used to restore TripleMBB.
   SmallVector<MachineInstr *> TriMIs;
-  /// TriToOri keeps the mappings between the MI clones in TripleMBB and their
-  /// original MI.
-  DenseMap<MachineInstr *, MachineInstr *> TriToOri;
+  /// TriToOri keeps the mappings between the MI clones in TripleMBB and the
+  /// information about their original MI and copy index.
+  DenseMap<MachineInstr *, TriCloneInfo> TriToOri;
   /// OriToCycle keeps the mappings between the original MI and its issue cycle.
   DenseMap<MachineInstr *, int> OriToCycle;
+  /// LoopCarriedMemDeps keeps ordered pairs (Pred, Succ) of original memory MIs
+  /// such that the iteration-N access Pred must be ordered before the
+  /// iteration-(N+1) access Succ.
+  DenseSet<std::pair<MachineInstr *, MachineInstr *>> LoopCarriedMemDeps;
+  /// MemDepEdgeFailed is set when enforcing a loop-carried memory dependence as
+  /// an artificial DAG edge would have created a cycle, so the edge could not
+  /// be added. In that case the current window must be abandoned, as its
+  /// schedule would not honor the dependence.
+  bool MemDepEdgeFailed = false;
   /// SchedResult keeps the result of each list scheduling, and the format of
   /// the tuple is <MI pointer, Cycle, Stage, Order ID>.
   SmallVector<std::tuple<MachineInstr *, int, int, int>, 256> SchedResult;
@@ -118,6 +135,11 @@ protected:
   virtual bool initialize();
   /// Add some related processing before running window scheduling.
   virtual void preProcess();
+  /// Detect loop-carried memory dependences in the original MBB that must be
+  /// preserved across loop iterations. This must run on the live MBB before
+  /// backupMBB(), as it analyzes the induction recurrence of memory accesses.
+  /// The hazardous pairs of original MIs are recorded in LoopCarriedMemDeps.
+  void collectLoopCarriedMemDeps();
   /// Add some related processing after running window scheduling.
   virtual void postProcess();
   /// Back up the MIs in the original MBB and remove them from MBB.

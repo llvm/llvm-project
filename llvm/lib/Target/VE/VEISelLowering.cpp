@@ -855,12 +855,12 @@ bool VETargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool VETargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                    bool ForCodeSize) const {
-  return VT == MVT::f32 || VT == MVT::f64;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+VETargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                 bool ForCodeSize) const {
+  return VT == MVT::f32 || VT == MVT::f64 ? FPImmAction::Legal
+                                          : FPImmAction::ConstantPool;
 }
 
 /// Determine if the target supports unaligned memory accesses.

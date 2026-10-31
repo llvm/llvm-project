@@ -16,7 +16,7 @@ def Sleef_powdx_u10rvvm2 : RuntimeLibcallImpl<POW_NXV2F64>;
 def Lib : LibcallLibrary<"lib", (add _ZGVsMxv_acos, _ZGVnN2vv_pow, _ZGVsMxvv_pow,
                                      Sleef_powdx_u10rvvm2)>;
 
-def TheSystemLibrary : SystemRuntimeLibrary<AlwaysAvailable, (add Lib)>;
+def TheSystemLibrary : SystemRuntimeLibrary<AlwaysAvailable, ["lib"]>;
 
 // CHECK:      enum Libcall : unsigned short {
 // CHECK-NEXT:   ACOS_MASKED_NXV2F64 = 0,
@@ -41,12 +41,11 @@ def TheSystemLibrary : SystemRuntimeLibrary<AlwaysAvailable, (add Lib)>;
 // CHECK-NEXT: };
 
 // CHECK:      const uint16_t RTLIB::RuntimeLibcallsInfo::SignatureOffset[] = {
-// CHECK-NEXT:   3, // ACOS_MASKED_NXV2F64
-// CHECK-NEXT:   3, // ACOS_NXV2F64
-// CHECK-NEXT:   3, // ACOS_V2F64
-// CHECK-NEXT:   4, // POW_MASKED_NXV2F64
-// CHECK-NEXT:   0, // POW_NXV2F64
-// CHECK-NEXT:   9, // POW_V2F64
+// CHECK-NEXT:   3, // RTLIB::Unsupported
+// CHECK-NEXT:   0, // RTLIB::impl_Sleef_powdx_u10rvvm2
+// CHECK-NEXT:   9, // RTLIB::impl__ZGVnN2vv_pow
+// CHECK-NEXT:   3, // RTLIB::impl__ZGVsMxv_acos
+// CHECK-NEXT:   4, // RTLIB::impl__ZGVsMxvv_pow
 // CHECK-NEXT: };
 
 // CHECK:      #ifdef GET_RUNTIME_LIBCALL_MASKED_VECTOR_LIBCALL_MAPPING

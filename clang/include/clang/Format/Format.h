@@ -2838,6 +2838,21 @@ struct FormatStyle {
   /// \version 19
   BreakTemplateDeclarationsStyle BreakTemplateDeclarations;
 
+  /// Keep the break keyword and the following case label on the same line.
+  ///
+  /// \code
+  ///    false:                       true:
+  ///    switch (n) {      vs.        switch (n) {
+  ///      case 1:                      case 1:
+  ///        foo();                       foo();
+  ///        break;                     break; case 2:
+  ///      case 2:                        bar();
+  ///        bar();                   }
+  ///    }
+  /// \endcode
+  /// \version 24
+  bool CompactCaseLabels;
+
   /// If `true`, consecutive namespace declarations will be on the same
   /// line. If `false`, each namespace is declared on a new line.
   /// \code
@@ -6246,6 +6261,7 @@ struct FormatStyle {
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
            ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
+           CompactCaseLabels == R.CompactCaseLabels &&
            CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&
@@ -6408,10 +6424,6 @@ struct FormatStyle {
   private:
     std::shared_ptr<MapType> Styles;
   };
-
-  static FormatStyleSet BuildStyleSetFromConfiguration(
-      const FormatStyle &MainStyle,
-      const std::vector<FormatStyle> &ConfigurationStyles);
 
 private:
   FormatStyleSet StyleSet;
@@ -6582,17 +6594,6 @@ tooling::Replacements fixNamespaceEndComments(const FormatStyle &Style,
                                               StringRef Code,
                                               ArrayRef<tooling::Range> Ranges,
                                               StringRef FileName = "<stdin>");
-
-/// Inserts or removes empty lines separating definition blocks including
-/// classes, structs, functions, namespaces, and enums in the given \p Ranges in
-/// \p Code.
-///
-/// Returns the `Replacements` that inserts or removes empty lines separating
-/// definition blocks in all \p Ranges in \p Code.
-tooling::Replacements separateDefinitionBlocks(const FormatStyle &Style,
-                                               StringRef Code,
-                                               ArrayRef<tooling::Range> Ranges,
-                                               StringRef FileName = "<stdin>");
 
 /// Sort consecutive using declarations in the given \p Ranges in
 /// \p Code.

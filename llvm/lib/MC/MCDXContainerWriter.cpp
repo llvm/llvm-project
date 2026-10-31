@@ -16,6 +16,10 @@
 
 using namespace llvm;
 
+static bool isSignaturePart(StringRef Name) {
+  return Name == "ISG1" || Name == "OSG1" || Name == "PSG1";
+}
+
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
 
 MCDXContainerBaseWriter::~MCDXContainerBaseWriter() = default;
@@ -50,9 +54,11 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
            "Section size too large for DXContainer");
 
     PartOffsets.push_back(PartOffset);
+    // Signature writers supply their validator-dependent padding. Parts must
+    // remain contiguous even when a legacy signature is not dword-aligned.
+    if (!HasPrivate && !isSignaturePart(Part.Name))
+      SectionSize = alignTo(SectionSize, Align(4));
     PartOffset += sizeof(dxbc::PartHeader) + SectionSize;
-    if (!HasPrivate)
-      PartOffset = alignTo(PartOffset, Align(4ul));
     // The DXIL part also writes a program header, so we need to include its
     // size when computing the offset for a part after the DXIL part.
     if (dxbc::isProgramPart(Part.Name))
@@ -92,9 +98,10 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
 
     if (dxbc::isProgramPart(Part.Name))
       PartSize += sizeof(dxbc::ProgramHeader);
-    // DXContainer part should be 4-byte aligned, unless it is PRIV part.
+    // Signature payloads include padding only for validator 1.7 and later.
     bool IsPrivate = Part.Name == "PRIV";
-    if (!IsPrivate)
+    bool IsSignature = isSignaturePart(Part.Name);
+    if (!IsPrivate && !IsSignature)
       PartSize = alignTo(PartSize, Align(4));
     W.write<uint32_t>(static_cast<uint32_t>(PartSize));
     if (dxbc::isProgramPart(Part.Name)) {
@@ -125,7 +132,7 @@ void MCDXContainerBaseWriter::write(raw_ostream &OS, const Triple &TT) {
                                    sizeof(dxbc::ProgramHeader)));
     }
     W.write<char>(Part.Data);
-    if (!IsPrivate) {
+    if (!IsPrivate && !IsSignature) {
       unsigned Size = W.OS.tell() - Start;
       W.OS.write_zeros(offsetToAlignment(Size, Align(4)));
     }

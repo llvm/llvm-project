@@ -72,7 +72,10 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip fs
   # skip gs
 
-#elif defined(__x86_64__) && !defined(__arm64ec__)
+// Native FreeBSD restores selectors and bases together through sigreturn in
+// libunwind.cpp; its sysarch base setters also replace the segment selectors.
+#elif defined(__x86_64__) && !defined(__arm64ec__) && \
+    (!defined(__FreeBSD__) || defined(_LIBUNWIND_IS_BAREMETAL))
 .att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
@@ -113,8 +116,11 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
   movq   88(%rdi), %r11
   movq   96(%rdi), %r12
   movq  104(%rdi), %r13
+# Skip reloading r14/r15 under LFI; reserved by LFI ABI.
+#if !defined(__LFI__)
   movq  112(%rdi), %r14
   movq  120(%rdi), %r15
+#endif
   # skip rflags
   # skip cs
   # skip fs

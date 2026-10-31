@@ -40,3 +40,36 @@ body: |
     $sgpr0 = COPY %13:sgpr(f32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 ...
+
+# The <4 x half> result of a D16 image sample lives in a single 64-bit register,
+# so extracting channel 1 reaches the selector as G_TRUNC(G_LSHR s64, 16).
+# V_FMA_MIX_F32 reads hi16 from a 32-bit source via op_sel, so isExtractHiElt
+# must reject the 64-bit shift rather than fold it into the operand, which would
+# leave a 64-bit register where a 32-bit one is required.
+---
+name: hi16_from_s64
+legalized: true
+regBankSelected: true
+machineFunctionInfo:
+  mode:
+    fp32-output-denormals: false
+    fp32-input-denormals: false
+body: |
+  bb.0:
+    ; GFX9-LABEL: name: hi16_from_s64
+    ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX9-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec
+    ; GFX9-NEXT: [[V_LSHRREV_B64_e64_:%[0-9]+]]:vreg_64 = V_LSHRREV_B64_e64 [[V_MOV_B32_e32_]], [[COPY]], implicit $exec
+    ; GFX9-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[V_LSHRREV_B64_e64_]].sub0
+    ; GFX9-NEXT: [[V_FMA_MIX_F32_:%[0-9]+]]:vgpr_32 = nofpexcept V_FMA_MIX_F32 8, [[COPY1]], 8, [[COPY1]], 8, [[COPY1]], 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = COPY [[V_FMA_MIX_F32_]]
+    ; GFX9-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i32) = G_CONSTANT i32 16
+    %2:vgpr(i64) = G_LSHR %0:vgpr, %1:vgpr(i32)
+    %3:vgpr(f16) = G_TRUNC %2:vgpr(i64)
+    %4:vgpr(f32) = G_FPEXT %3:vgpr(f16)
+    %5:vgpr(f32) = G_FMA %4:vgpr, %4:vgpr, %4:vgpr
+    $vgpr0 = COPY %5:vgpr(f32)
+    SI_RETURN_TO_EPILOG implicit $vgpr0
+...

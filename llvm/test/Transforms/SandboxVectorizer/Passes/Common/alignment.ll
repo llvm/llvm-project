@@ -19,7 +19,7 @@ define void @alignment_f16(ptr %ptr0) {
 ; LSV-LABEL: define void @alignment_f16(
 ; LSV-SAME: ptr [[PTR0:%.*]]) {
 ; LSV-NEXT:    [[VECIINITL:%.*]] = load <2 x half>, ptr [[PTR0]], align 1, !sandboxvec [[META0:![0-9]+]]
-; LSV-NEXT:    store <2 x half> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META0]]
+; LSV-NEXT:    store <2 x half> [[VECIINITL]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; LSV-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 2
@@ -45,7 +45,7 @@ define void @alignment_f32(ptr %ptr0) {
 ; LSV-LABEL: define void @alignment_f32(
 ; LSV-SAME: ptr [[PTR0:%.*]]) {
 ; LSV-NEXT:    [[VECIINITL:%.*]] = load <2 x float>, ptr [[PTR0]], align 1, !sandboxvec [[META1:![0-9]+]]
-; LSV-NEXT:    store <2 x float> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META1]]
+; LSV-NEXT:    store <2 x float> [[VECIINITL]], ptr [[PTR0]], align 4, !sandboxvec [[META1]]
 ; LSV-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 4
@@ -71,7 +71,7 @@ define void @alignment_f64(ptr %ptr0) {
 ; LSV-LABEL: define void @alignment_f64(
 ; LSV-SAME: ptr [[PTR0:%.*]]) {
 ; LSV-NEXT:    [[VECIINITL:%.*]] = load <2 x double>, ptr [[PTR0]], align 1, !sandboxvec [[META2:![0-9]+]]
-; LSV-NEXT:    store <2 x double> [[VECIINITL]], ptr [[PTR0]], align 1, !sandboxvec [[META2]]
+; LSV-NEXT:    store <2 x double> [[VECIINITL]], ptr [[PTR0]], align 4, !sandboxvec [[META2]]
 ; LSV-NEXT:    ret void
 ;
   %ptr1 = getelementptr inbounds i8, ptr %ptr0, i64 8

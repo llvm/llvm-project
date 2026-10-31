@@ -8,37 +8,21 @@
 
 #include "src/sys/epoll/epoll_create.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/epoll_create.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, epoll_create, ([[maybe_unused]] int size)) {
-#ifdef SYS_epoll_create
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_epoll_create, size);
-#elif defined(SYS_epoll_create1)
-  if (size == 0) {
-    libc_errno = EINVAL;
+LLVM_LIBC_FUNCTION(int, epoll_create, (int size)) {
+  auto result = linux_syscalls::epoll_create(size);
+  if (!result) {
+    libc_errno = result.error();
     return -1;
   }
 
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_epoll_create1, 0);
-#else
-#error                                                                         \
-    "epoll_create and epoll_create1 are unavailable. Unable to build epoll_create."
-#endif
-
-  // A negative return value indicates an error with the magnitude of the
-  // value being the error code.
-  if (ret < 0) {
-    libc_errno = -ret;
-    return -1;
-  }
-
-  return ret;
+  return result.value();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

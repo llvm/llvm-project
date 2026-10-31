@@ -43,6 +43,9 @@ define i32 @cse_reduction_start_vector_multiple_users(ptr %a, i64 %n) {
 ; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = compute-reduction-result (add) ir<%rdx1.next>
 ; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = compute-reduction-result (xor) ir<%rdx2.next>
 ; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<%n.vec>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = resume-for-epilogue vp<%n.vec>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = resume-for-epilogue vp<[[VP9]]>, ir<0>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = resume-for-epilogue vp<[[VP10]]>, ir<0>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, ir-bb<scalar.ph>
 ; CHECK-EMPTY:
@@ -53,13 +56,6 @@ define i32 @cse_reduction_start_vector_multiple_users(ptr %a, i64 %n) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<scalar.ph>:
-; CHECK-NEXT:    EMIT-SCALAR vp<%vec.epilog.resume.val> = phi [ vp<%n.vec>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, vector.main.loop.iter.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, vector.main.loop.iter.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx>.1 = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, vector.main.loop.iter.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP13:%[0-9]+]]> = resume-for-epilogue vp<%vec.epilog.resume.val>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP14:%[0-9]+]]> = resume-for-epilogue vp<%bc.merge.rdx>, ir<0>
-; CHECK-NEXT:    EMIT-SCALAR vp<[[VP15:%[0-9]+]]> = resume-for-epilogue vp<%bc.merge.rdx>.1, ir<0>
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ;
 entry:

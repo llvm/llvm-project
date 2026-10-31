@@ -32,9 +32,42 @@ using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 using namespace llvm::SCEVPatternMatch;
 
+bool vputils::propagatesFirstLaneUse(const VPUser *U, const VPValue *Op) {
+  if (isa<VPBlendRecipe>(U))
+    return true;
+  auto *VPI = dyn_cast<VPInstruction>(U);
+  if (!VPI)
+    return false;
+  unsigned Opcode = VPI->getOpcode();
+  switch (Opcode) {
+  case Instruction::ExtractValue:
+  case Instruction::FCmp:
+  case Instruction::ICmp:
+  case Instruction::Select:
+  case Instruction::Freeze:
+  case VPInstruction::Not:
+    // TODO: Cover additional opcodes.
+    return true;
+  case VPInstruction::PtrAdd:
+    return Op != VPI->getOperand(0);
+  default:
+    return Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode);
+  }
+}
+
 bool vputils::onlyFirstLaneUsed(const VPValue *Def) {
-  return all_of(Def->users(),
-                [Def](const VPUser *U) { return U->usesFirstLaneOnly(Def); });
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(Def);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    const VPValue *Cur = Worklist[I];
+    for (const VPUser *U : Cur->users()) {
+      if (propagatesFirstLaneUse(U, Cur))
+        Worklist.insert(cast<VPSingleDefRecipe>(U));
+      else if (!U->usesFirstLaneOnly(Cur))
+        return false;
+    }
+  }
+  return true;
 }
 
 bool vputils::onlyFirstPartUsed(const VPValue *Def) {
@@ -47,7 +80,8 @@ bool vputils::onlyScalarValuesUsed(const VPValue *Def) {
                 [Def](const VPUser *U) { return U->usesScalars(Def); });
 }
 
-VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
+VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
+                                                bool ExpandInIR) {
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     return Plan.getOrAddLiveIn(E->getValue());
   // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
@@ -57,7 +91,7 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr) {
   auto *U = dyn_cast<SCEVUnknown>(Expr);
   if (U && !isa<Instruction>(U->getValue()))
     return Plan.getOrAddLiveIn(U->getValue());
-  auto *Expanded = new VPExpandSCEVRecipe(Expr);
+  auto *Expanded = new VPExpandSCEVRecipe(Expr, ExpandInIR);
   VPBasicBlock *EntryVPBB = Plan.getEntry();
   auto Iter = EntryVPBB->getFirstNonPhi();
   while (Iter != EntryVPBB->end() && isa<VPIRInstruction>(*Iter))
@@ -400,13 +434,13 @@ unsigned vputils::getOpcode(const VPValue *V) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe, VPWidenPHIRecipe, VPWidenLoadRecipe,
             VPWidenLoadEVLRecipe>([](auto *I) { return I->getOpcode(); })
-      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe>(
-          [](auto *I) {
-            // For recipes that do not directly map to LLVM IR instructions,
-            // assign opcodes after the last VPInstruction opcode (which is also
-            // after the last IR Instruction opcode), based on the VPRecipeID.
-            return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
-          })
+      .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe, VPScalarIVStepsRecipe,
+            VPExpandSCEVRecipe>([](auto *I) {
+        // For recipes that do not directly map to LLVM IR instructions,
+        // assign opcodes after the last VPInstruction opcode (which is also
+        // after the last IR Instruction opcode), based on the VPRecipeID.
+        return VPInstruction::OpsEnd + 1 + I->getVPRecipeID();
+      })
       .Default([](auto *) { return 0; });
 }
 
@@ -663,9 +697,8 @@ VPScalarIVStepsRecipe *vputils::createScalarIVSteps(
 VPValue *
 vputils::scalarizeVPWidenPointerInduction(VPWidenPointerInductionRecipe *PtrIV,
                                           VPlan &Plan, VPBuilder &Builder) {
-  const InductionDescriptor &ID = PtrIV->getInductionDescriptor();
-  VPIRValue *StartV = Plan.getZero(ID.getStep()->getType());
-  VPValue *StepV = PtrIV->getOperand(1);
+  VPValue *StepV = PtrIV->getStepValue();
+  VPIRValue *StartV = Plan.getZero(StepV->getScalarType());
   VPScalarIVStepsRecipe *Steps = createScalarIVSteps(
       Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
       StartV->getScalarType(), StartV, StepV, PtrIV->getDebugLoc(), Builder);
@@ -730,9 +763,9 @@ VPIRFlags vputils::getFlagsForInduction(const InductionDescriptor &ID,
   if (match(Inc, m_Sub(m_Specific(PhiR), m_VPValue()))) {
     // The step of a sub induction is negated, so NUW cannot be preserved. NSW
     // can, if the step is not the signed minimum.
-    ConstantInt *Step = ID.getConstIntStepValue();
+    std::optional<APInt> Step = ID.getConstStepValue();
     bool NSW = cast<VPInstruction>(Inc)->getNoWrapFlagsOrNone().HasNSW &&
-               Step && !Step->isMinValue(/*IsSigned=*/true);
+               Step && !Step->isMinSignedValue();
     return VPIRFlags::WrapFlagsTy(/*NUW*/ false, NSW);
   }
 
@@ -816,16 +849,15 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
 VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
   VPValue *BackedgeVal = PhiR->getBackedgeValue();
   if (auto *Res =
-          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
+          findSingleUser<VPInstruction::ComputeReductionResult>(BackedgeVal))
     return Res;
 
   // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR =
-      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  auto *SelR = findSingleUser<VPSingleDefRecipe>(
+      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
   if (!SelR)
     return nullptr;
-  return findUserOf<VPInstruction::ComputeReductionResult>(
-      cast<VPSingleDefRecipe>(SelR));
+  return findSingleUser<VPInstruction::ComputeReductionResult>(SelR);
 }
 
 bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
@@ -926,9 +958,39 @@ VPValue *VPSCEVExpander::expandAsPtrAdd(const SCEVNAryExpr *S) {
   return Builder.createNoWrapPtrAdd(Base, Offset, GEPFlags, DL);
 }
 
+#ifndef NDEBUG
+/// Returns true if \p V dominates the insert point of \p Builder.
+static bool dominatesInsertPoint(const VPValue *V, const VPBuilder &Builder) {
+  const VPRecipeBase *R = V->getDefiningRecipe();
+  if (!R)
+    return true;
+  VPDominatorTree VPDT(Builder.getPlan());
+  if (VPRecipeBase *InsertPt = Builder.getRecipeAtInsertPoint())
+    return VPDT.properlyDominates(R, InsertPt);
+  return VPDT.dominates(R->getParent(), Builder.getInsertBlock());
+}
+#endif
+
 VPValue *VPSCEVExpander::expand(const SCEV *S) {
+  PointerIntPair<const SCEV *, 1, bool> Key(S, SafeUDivMode);
+  if (VPValue *V = InsertedExpressions.lookup(Key)) {
+    assert(dominatesInsertPoint(V, Builder) &&
+           "reused expansion must dominate the insert point");
+    return V;
+  }
+  VPValue *V = expandImpl(S);
+  InsertedExpressions[Key] = V;
+  return V;
+}
+
+VPValue *VPSCEVExpander::expandImpl(const SCEV *S) {
   if (VPValue *V = tryToReuseIRValue(S))
     return V;
+
+  if (HoistOutOf && !SafeUDivMode && SE.isLoopInvariant(S, HoistOutOf) &&
+      SE.isGuaranteedNotToCauseUB(S))
+    return vputils::getOrCreateVPValueForSCEVExpr(Builder.getPlan(), S,
+                                                  /*ExpandInIR=*/true);
 
   switch (S->getSCEVType()) {
   case scConstant:
@@ -1148,32 +1210,35 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
       return Builder.createAdd(BaseV, DiffV, DL);
     }
 
-    // Try to expand AR by re-using an existing canonical IV in the Plan's
-    // entry. A canonical IV must be affine and integer typed.
-    if (!AR->isAffine() || !AR->getType()->isIntegerTy())
-      return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
-    auto FoundCanIV =
-        find_if(Plan.getEntry()->phis(), [&](const VPRecipeBase &R) {
-          if (!SE.isSCEVable(cast<VPIRPhi>(R).getIRPhi().getType()))
-            return false;
-          const SCEV *Candidate = SE.getSCEV(&cast<VPIRPhi>(R).getIRPhi());
-          return match(Candidate,
-                       m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(),
-                                           m_SpecificLoop(AR->getLoop()))) &&
-                 Candidate->getType() == AR->getType();
-        });
-    if (FoundCanIV == Plan.getEntry()->phis().end())
+    // Mirror SCEVExpander::visitAddRecExpr, but only expand the canonical IV
+    // {0,+,1} and non-affine AddRecs to IR (which will be created outside the
+    // scope of VPlan). The AddRec is then scaled and offset using
+    // VPInstructions.
+    const Loop *L = AR->getLoop();
+    auto m_scev_CanonicalIV = // NOLINT
+        m_scev_AffineAddRec(m_scev_Zero(), m_scev_One(), m_SpecificLoop(L));
+    if (!AR->isAffine() || match(AR, m_scev_CanonicalIV))
       return vputils::getOrCreateVPValueForSCEVExpr(Plan, AR);
 
-    // {Start, +, Step} --> Start + IV * Step, since the AddRec is affine.
-    // Compute Offset = IV * Step.
+    const SCEV *Step = AR->getStepRecurrence(SE);
+    // {0,+,F} --> {0,+,1} * F
+    if (AR->getStart()->isZero()) {
+      const SCEV *CanIV =
+          SE.getAddRecExpr(SE.getZero(Ty), SE.getOne(Ty), L, SCEV::FlagNone);
+      return Builder.createOverflowingOp(
+          Instruction::Mul, {expand(CanIV), expand(Step)},
+          {SE.willNotOverflow(Instruction::Mul, /*Signed=*/false, CanIV, Step),
+           SE.willNotOverflow(Instruction::Mul, /*Signed=*/true, CanIV, Step)},
+          DL);
+    }
+
+    // {X,+,F} --> X + {0,+,F}
+    if (Ty->isPointerTy())
+      return expandAsPtrAdd(AR);
     VPValue *Start = expand(AR->getStart());
-    Value *CanonicalIV = &cast<VPIRPhi>(FoundCanIV)->getIRPhi();
-    VPValue *Offset = expand(
-        SE.getMulExpr(SE.getUnknown(CanonicalIV), AR->getStepRecurrence(SE)));
-
-    // Compute Start + Offset with nuw from the AddRec.
-    return Builder.createAdd(Start, Offset, DL, "",
+    VPValue *Rest = expand(SE.getAddRecExpr(SE.getZero(Ty), Step, L,
+                                            AR->getNoWrapFlags(SCEV::FlagNW)));
+    return Builder.createAdd(Start, Rest, DL, "",
                              {AR->hasNoUnsignedWrap(), false});
   }
   case scCouldNotCompute:

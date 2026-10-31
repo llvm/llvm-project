@@ -263,8 +263,6 @@ static bool areEquivalent(const llvm::fltSemantics &LHS,
 }
 
 class Z3Solver : public SMTSolver {
-  friend class Z3ConstraintManager;
-
   Z3Context Context;
 
   Z3_solver Solver = [this] {

@@ -195,6 +195,17 @@ std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);
 /// LazyUniqueRef, false if not.
 bool isGetterOfUniquePtr(const clang::CXXMethodDecl *Method);
 
+/// \returns true if \p M is an accessor of NeverDestroyed or
+/// LazyNeverDestroyed which stores a non-pointer type, false if not. A smart
+/// pointer type must be const.
+bool isAccessorOfNeverDestroyed(const clang::CXXMethodDecl *Method);
+
+/// \returns true if \p V is a variable with global storage whose object is
+/// never destroyed: either a NeverDestroyed or LazyNeverDestroyed which stores
+/// a non-pointer type or a non-pointer variable annotated with
+/// [[clang::no_destroy]]. A smart pointer type must be const.
+bool isImmortalVar(const clang::VarDecl *V);
+
 /// \returns true if \p F is a conversion between ref-countable or ref-counted
 /// pointer types.
 bool isPtrConversion(const FunctionDecl *F);

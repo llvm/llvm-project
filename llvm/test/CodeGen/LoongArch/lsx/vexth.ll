@@ -98,13 +98,12 @@ define void @vexth_q_d(ptr %a, ptr %r) nounwind {
 ; LA32-LABEL: vexth_q_d:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 3
-; LA32-NEXT:    srai.w $a3, $a2, 31
-; LA32-NEXT:    st.w $a2, $a1, 4
-; LA32-NEXT:    st.w $a0, $a1, 0
-; LA32-NEXT:    st.w $a3, $a1, 12
-; LA32-NEXT:    st.w $a3, $a1, 8
+; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 3
+; LA32-NEXT:    srai.w $a0, $a0, 31
+; LA32-NEXT:    vstelm.w $vr0, $a1, 4, 3
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 2
+; LA32-NEXT:    st.w $a0, $a1, 12
+; LA32-NEXT:    st.w $a0, $a1, 8
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vexth_q_d:
@@ -218,12 +217,10 @@ define void @vexth_qu_du(ptr %a, ptr %r) nounwind {
 ; LA32-LABEL: vexth_qu_du:
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:    vld $vr0, $a0, 0
-; LA32-NEXT:    vpickve2gr.w $a0, $vr0, 2
-; LA32-NEXT:    vpickve2gr.w $a2, $vr0, 3
 ; LA32-NEXT:    st.w $zero, $a1, 12
 ; LA32-NEXT:    st.w $zero, $a1, 8
-; LA32-NEXT:    st.w $a2, $a1, 4
-; LA32-NEXT:    st.w $a0, $a1, 0
+; LA32-NEXT:    vstelm.w $vr0, $a1, 4, 3
+; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: vexth_qu_du:

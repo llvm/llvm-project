@@ -13,6 +13,7 @@
 
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/ParentMapContext.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Checkers/BoundsChecking.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
@@ -545,7 +546,7 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
                                   std::optional<NonLoc> Extent,
                                   bool IsTaintBug /*=false*/) const {
 
-  ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
+  ExplodedNode *ErrorNode = C.addSink(ErrorState);
   if (!ErrorNode)
     return;
 

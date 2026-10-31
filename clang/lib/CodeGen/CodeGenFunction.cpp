@@ -1505,6 +1505,8 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
       Clone = llvm::Function::Create(Fn->getFunctionType(),
                                      llvm::GlobalValue::InternalLinkage,
                                      Fn->getAddressSpace(), FDInlineName, M);
+      Clone->setCallingConv(Fn->getCallingConv());
+      Clone->setAttributes(Fn->getAttributes());
       Clone->addFnAttr(llvm::Attribute::AlwaysInline);
     }
     Fn->setLinkage(llvm::GlobalValue::ExternalLinkage);
@@ -3044,7 +3046,6 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
   // entry:
   llvm::BasicBlock *CurBlock = createBasicBlock("entry", Resolver);
 
-  SmallVector<std::pair<llvm::Value *, llvm::BasicBlock *>, 3> PhiArgs;
   for (const FMVResolverOption &RO : Options) {
     Builder.SetInsertPoint(CurBlock);
     // The 'default' or 'generic' case.

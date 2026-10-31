@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -verify-machineinstrs < %s | FileCheck %s
 
 ; Range testing for the immediate in the reg+imm(mulvl) addressing
-; mode is done only for one instruction. The rest of the instrucions
+; mode is done only for one instruction. The rest of the instructions
 ; test only one immediate value in bound.
 
 define <vscale x 16 x i8> @ldnf1b(<vscale x 16 x i1> %pg, ptr %a) {

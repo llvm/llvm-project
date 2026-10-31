@@ -1367,11 +1367,25 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
     IntegerAttr constAttr;
     if (!matchPattern(ifCond, m_Constant(&constAttr)))
       return failure();
-    if (constAttr.getInt())
+    if (constAttr.getInt()) {
       rewriter.modifyOpInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
-    else
-      replaceOpWithRegion(rewriter, op, op.getRegion());
+      return success();
+    }
 
+    // With a constant false condition the construct has no effect, so it is
+    // replaced by its body. An empty region has no body, so the op is simply
+    // erased.
+    Region &region = op.getRegion();
+    if (region.empty()) {
+      if (op->getNumResults() != 0)
+        return rewriter.notifyMatchFailure(op, "empty region with results");
+      rewriter.eraseOp(op);
+      return success();
+    }
+    if (!region.hasOneBlock())
+      return rewriter.notifyMatchFailure(op, "expected single-block region");
+
+    replaceOpWithRegion(rewriter, op, region);
     return success();
   }
 };
@@ -4652,6 +4666,37 @@ RoutineOp::getBindNameValue(mlir::acc::DeviceType deviceType) {
   }
 
   return std::nullopt;
+}
+
+std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
+RoutineOp::getEffectiveBindName(mlir::acc::DeviceType targetDeviceType) {
+  assert(targetDeviceType != DeviceType::Star &&
+         "expected a valid target device type");
+
+  if (!getBindIdName() && !getBindStrName())
+    return std::nullopt;
+
+  // None queries the default bind.
+  if (targetDeviceType == DeviceType::None)
+    return getBindNameValue();
+
+  // Prefer an exact device-specific bind.
+  if (auto bindName = getBindNameValue(targetDeviceType))
+    return bindName;
+
+  // The device_type(*) clause applies only if no other device_type clause names
+  // the target device.
+  bool hasNamedDeviceType = hasGang(targetDeviceType) ||
+                            getGangDimValue(targetDeviceType).has_value() ||
+                            hasWorker(targetDeviceType) ||
+                            hasVector(targetDeviceType) ||
+                            hasSeq(targetDeviceType);
+  if (!hasNamedDeviceType) {
+    if (auto bindName = getBindNameValue(DeviceType::Star))
+      return bindName;
+  }
+
+  return getBindNameValue();
 }
 
 bool RoutineOp::hasGang() { return hasGang(mlir::acc::DeviceType::None); }

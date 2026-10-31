@@ -87,7 +87,7 @@ TEST(OpenACCExtensions, EitherLoadingOrder) {
                                 MemRefLayoutAttrInterface{}, space);
     auto pointer = dyn_cast<acc::PointerLikeType>(type);
     ASSERT_TRUE(pointer);
-    EXPECT_TRUE(pointer.isDeviceAccessible({}));
+    EXPECT_TRUE(pointer.isDeviceAccessible({}, nullptr));
     EXPECT_TRUE(
         isa<acc::PointerLikeType>(LLVM::LLVMPointerType::get(&context)));
 

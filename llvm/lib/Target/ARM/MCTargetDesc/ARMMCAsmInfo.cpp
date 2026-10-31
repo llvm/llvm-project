@@ -64,11 +64,6 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  // Exceptions handling
-  ExceptionsType = (TheTriple.isOSDarwin() && !TheTriple.isWatchABI())
-                       ? ExceptionHandling::SjLj
-                       : ExceptionHandling::DwarfCFI;
-
   initializeAtSpecifiers(atSpecifiers);
 }
 
@@ -91,16 +86,6 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
-
-  // Exceptions handling
-  switch (TheTriple.getOS()) {
-  case Triple::NetBSD:
-    ExceptionsType = ExceptionHandling::DwarfCFI;
-    break;
-  default:
-    ExceptionsType = ExceptionHandling::ARM;
-    break;
-  }
 
   initializeAtSpecifiers(atSpecifiers);
   // foo(plt) instead of foo@plt
@@ -125,7 +110,6 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
     : MCAsmInfoMicrosoft(Options) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
   InternalSymbolPrefix = "$M";
   CommentString = "@";
@@ -147,7 +131,6 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
   InternalSymbolPrefix = ".L";
 
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
   DwarfRegNumForCFI = false;
 

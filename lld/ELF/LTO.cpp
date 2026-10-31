@@ -90,8 +90,8 @@ static lto::Config createConfig(Ctx &ctx) {
                        << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+        c.Options.BBSections = BasicBlockSection::List;
       }
-      c.Options.BBSections = BasicBlockSection::List;
     }
   }
 

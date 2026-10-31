@@ -185,6 +185,12 @@ functions:
     return_type: int
     arguments:
       - type: timer_t
+  - name: timer_getoverrun
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: timer_t
   - name: timer_gettime
     standards:
       - posix

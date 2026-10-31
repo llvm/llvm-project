@@ -697,18 +697,19 @@ PdbAstBuilderClang::CreateModifierType(const ModifierRecord &modifier) {
   return unmodified_type;
 }
 
-clang::QualType PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
-                                                     const TagRecord &record) {
+clang::QualType
+PdbAstBuilderClang::CreateRecordType(PdbTypeSymId id,
+                                     const CVTagRecord &record) {
   clang::DeclContext *context = nullptr;
   std::string uname;
-  std::tie(context, uname) = CreateDeclInfoForType(record, id.index);
+  std::tie(context, uname) = CreateDeclInfoForType(record.asTag(), id.index);
   if (!context)
     return {};
 
-  clang::TagTypeKind ttk = TranslateUdtKind(record);
+  clang::TagTypeKind ttk = TranslateUdtKind(record.asTag());
   ClangASTMetadata metadata;
   metadata.SetUserID(toOpaqueUid(id));
-  metadata.SetIsDynamicCXXType(false);
+  metadata.SetIsDynamicCXXType(IsDynamicTagRecord(record));
 
   CompilerType ct = m_clang.CreateRecordType(
       context, OptionalClangModuleID(), uname, llvm::to_underlying(ttk),
@@ -897,11 +898,9 @@ clang::QualType PdbAstBuilderClang::CreateType(PdbTypeSymId type) {
 
   if (IsTagRecord(cvt)) {
     CVTagRecord tag = CVTagRecord::create(cvt);
-    if (tag.kind() == CVTagRecord::Union)
-      return CreateRecordType(type.index, tag.asUnion());
     if (tag.kind() == CVTagRecord::Enum)
       return CreateEnumType(type.index, tag.asEnum());
-    return CreateRecordType(type.index, tag.asClass());
+    return CreateRecordType(type.index, tag);
   }
 
   if (cvt.kind() == LF_ARRAY) {
@@ -1807,4 +1806,48 @@ PdbAstBuilderClang::FindNamespaceDecl(CompilerDeclContext parent_ctx,
       return FindNamespaceDecl(ToCompilerDeclContext(namespace_decl), name);
 
   return {};
+}
+
+bool PdbAstBuilderClang::IsDynamicTagRecord(const CVTagRecord &tag) {
+  // Unions or enums can't be dynamic.
+  if (tag.contextKind() != CompilerContextKind::ClassOrStruct)
+    return false;
+
+  // If a class has a vtable, it is dynamic.
+  if (!tag.asClass().getVTableShape().isNoneType())
+    return true;
+
+  // Otherwise, check if there are any (possibly indirect) virtual bases on the
+  // type.
+  SymbolFileNativePDB *pdb = static_cast<SymbolFileNativePDB *>(
+      m_clang.GetSymbolFile()->GetBackingSymbolFile());
+  PdbIndex &index = pdb->GetIndex();
+
+  std::optional<CVType> cvt = index.tpi().tryGetType(tag.asTag().FieldList);
+  if (!cvt)
+    return false;
+
+  FieldListRecord fl;
+  if (llvm::Error ec =
+          TypeDeserializer::deserializeAs<FieldListRecord>(*cvt, fl)) {
+    llvm::consumeError(std::move(ec));
+    return false;
+  }
+
+  struct Visitor : public TypeVisitorCallbacks {
+    llvm::Error visitKnownMember(CVMemberRecord &CVM,
+                                 VirtualBaseClassRecord &Record) override {
+      m_has_vbase = true;
+      return llvm::Error::success();
+    }
+
+    bool m_has_vbase = false;
+  };
+
+  Visitor visitor;
+  llvm::Error ec = llvm::codeview::visitMemberRecordStream(fl.Data, visitor);
+  if (ec)
+    llvm::consumeError(std::move(ec));
+
+  return visitor.m_has_vbase;
 }

@@ -83,7 +83,7 @@ set(ARM32 arm armhf armv4t armv5te armv6 armv6m armv7m armv7em armv7 armv7s armv
 set(AVR avr)
 set(HEXAGON hexagon)
 set(X86 i386)
-set(X86_64 x86_64)
+set(X86_64 x86_64 x86_64_lfi)
 set(LOONGARCH64 loongarch64)
 set(MIPS32 mips mipsel)
 set(MIPS64 mips64 mips64el)

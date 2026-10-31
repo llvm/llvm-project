@@ -281,8 +281,6 @@ class AttributeSetNode final
 
   AttributeSetNode(ArrayRef<Attribute> Attrs);
 
-  static AttributeSetNode *getSorted(LLVMContext &C,
-                                     ArrayRef<Attribute> SortedAttrs);
   std::optional<Attribute> findEnumAttribute(Attribute::AttrKind Kind) const;
 
 public:
@@ -295,6 +293,9 @@ public:
   static AttributeSetNode *get(LLVMContext &C, const AttrBuilder &B);
 
   static AttributeSetNode *get(LLVMContext &C, ArrayRef<Attribute> Attrs);
+
+  static AttributeSetNode *getSorted(LLVMContext &C,
+                                     ArrayRef<Attribute> SortedAttrs);
 
   /// Return the number of attributes this AttributeList contains.
   unsigned getNumAttributes() const { return NumAttrs; }

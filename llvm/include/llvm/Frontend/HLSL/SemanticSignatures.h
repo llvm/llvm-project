@@ -23,6 +23,7 @@
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Triple.h"
+#include <cassert>
 #include <cstdint>
 
 namespace llvm {
@@ -33,6 +34,9 @@ class MDNode;
 namespace hlsl {
 
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
+
+// For now just use the DXIL ABI enums directly. This may change in the future.
+using dxbc::PSV::InterpolationMode;
 
 // Definitions of the in-memory data layout structures
 
@@ -70,6 +74,22 @@ static_assert(InterpolationModifier::None < InterpolationModifier::Center &&
                       InterpolationModifier::Sample,
               "sampling-location bits must increase in precedence");
 
+// SPIR-V Decoration enumerants that bind an interface variable to a builtin or
+// a user location. The values match the SPIR-V specification.
+enum class SPIRVInterfaceDecoration : uint32_t {
+  BuiltIn = 11,
+  Location = 30,
+};
+
+// SPIR-V Decoration enumerants that control how a fragment shader input is
+// interpolated. The values match the SPIR-V specification.
+enum class SPIRVInterpolationMode : uint32_t {
+  NoPerspective = 13,
+  Flat = 14,
+  Centroid = 16,
+  Sample = 17,
+};
+
 // Select the highest-precedence sampling-location bit (sample > centroid >
 // center), ignoring other modifiers. Returns None if no location is explicit,
 // keeping it distinct from Center so diagnostics can detect location overrides.
@@ -90,6 +110,7 @@ LLVM_ABI dxbc::PSV::InterpolationMode normalizeInterpolationMode(
 enum class SemanticInterpretation {
   Invalid,
   NotAllocated,
+  NotPacked,
   Arbitrary,
   SV,
   SGV,
@@ -142,10 +163,15 @@ struct SemanticSignatureElement {
     return StartRow != UnallocatedRow && StartCol != UnallocatedCol;
   }
 
+  // Register column of the element's first component. Unallocated elements
+  // have no register, so their masks are relative to component 0.
+  uint8_t getStartColOrZero() const { return isAllocated() ? StartCol : 0; }
+
   uint8_t getDeclaredMask() const {
-    if (!isAllocated())
-      return 0;
-    return static_cast<uint8_t>(((1U << Cols) - 1U) << StartCol);
+    unsigned Column = getStartColOrZero();
+    assert(Cols >= 1 && Column + Cols <= 4 &&
+           "declared components must fit within one register row");
+    return static_cast<uint8_t>(((1U << Cols) - 1U) << Column);
   }
 
   uint8_t getAlwaysReadsMask() const { return UsageMask; }

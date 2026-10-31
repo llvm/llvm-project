@@ -182,9 +182,10 @@ static bool isStrictSubset(const VariantMatchInfo &VMI0,
         TraitProperty::user_condition_unknown})
     if (VMI0.RequiredTraits.test(unsigned(Property)))
       return false;
-  return llvm::all_of(VMI0.ISATraits, [&](StringRef Name) {
-    return llvm::is_contained(VMI1.ISATraits, Name);
-  });
+  return llvm::all_of(VMI0.ISATraits,
+                      [&](const VariantMatchInfo::ISATrait &Trait) {
+                        return llvm::is_contained(VMI1.ISATraits, Trait);
+                      });
 }
 
 static int
@@ -257,13 +258,10 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
 
     // We overwrite the isa trait as it is actually up to the OMPContext hook to
     // check the raw string(s).
-    if (Property == TraitProperty::device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
-      });
-    if (Property == TraitProperty::target_device_isa___ANY)
-      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](StringRef RawString) {
-        return Ctx.matchesISATrait(RawString);
+    if (Property == TraitProperty::device_isa___ANY ||
+        Property == TraitProperty::target_device_isa___ANY)
+      IsActiveTrait = llvm::all_of(VMI.ISATraits, [&](const auto &Trait) {
+        return Trait.Property != Property || Ctx.matchesISATrait(Trait.Name);
       });
 
     if (std::optional<bool> Result = HandleTrait(Property, IsActiveTrait))

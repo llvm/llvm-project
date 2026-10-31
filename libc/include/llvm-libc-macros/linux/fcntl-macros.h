@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
 #define LLVM_LIBC_MACROS_LINUX_FCNTL_MACROS_H
 
+#include "sys-stat-macros.h"
+
 // File creation and file status flags.
 #define O_APPEND 000002000
 #define O_ASYNC 000020000

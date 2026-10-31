@@ -62,6 +62,24 @@ protected:
       Search.AddSearchPath(DL, /*isAngled=*/true);
   }
 
+  void addFile(llvm::StringRef Path, llvm::StringRef Contents) {
+    VFS->addFile(Path, 0, llvm::MemoryBuffer::getMemBufferCopy(Contents));
+  }
+
+  void enableLazyModuleMaps() {
+    HSOpts.ImplicitModuleMaps = true;
+    HSOpts.LazyLoadModuleMaps = true;
+    Search.setTarget(*Target);
+  }
+
+  // Find modulemaps for module \p Name without loading the module.
+  std::string findModuleMap(StringRef Name,
+                            bool AllowExtraModuleMapSearch = false) {
+    OptionalFileEntryRef File =
+        Search.lookupModuleMapFileForModule(Name, AllowExtraModuleMapSearch);
+    return File ? llvm::sys::path::convert_to_slash(File->getName()) : "";
+  }
+
   void addHeaderMap(llvm::StringRef Filename,
                     std::unique_ptr<llvm::MemoryBuffer> Buf,
                     bool isAngled = false) {
@@ -388,6 +406,188 @@ TEST_F(HeaderSearchTest, HeaderFileInfoMerge) {
                               /*isCompilingModuleHeader=*/true);
   EXPECT_FALSE(Search.getExistingFileInfo(ModularFE)->External);
   EXPECT_FALSE(Search.getExistingFileInfo(TextualFE)->External);
+}
+
+// Verify a shadowed module resolves to the modulemap found first in search
+// path order.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleShadowed) {
+  enableLazyModuleMaps();
+
+  // 'A' is defined in both /a and /b, where /a is the first search path.
+  addSearchDir("/a");
+  addSearchDir("/b");
+  addFile("/a/module.modulemap", "module A { header \"a.h\" }");
+  addFile("/b/module.modulemap", "module A { header \"a.h\" }\n"
+                                 "module B { header \"b.h\" }");
+
+  EXPECT_EQ(findModuleMap("A"), "/a/module.modulemap");
+  EXPECT_EQ(findModuleMap("B"), "/b/module.modulemap");
+  EXPECT_EQ(findModuleMap("Missing"), "");
+
+  // Verify 'A' and 'B' were parsed but not loaded.
+  ModuleMap &MM = Search.getModuleMap();
+  EXPECT_TRUE(MM.isModuleKnown("A"));
+  EXPECT_TRUE(MM.isModuleKnown("B"));
+  EXPECT_EQ(MM.findModule("A"), nullptr);
+  EXPECT_EQ(MM.findModule("B"), nullptr);
+
+  // Both definitions of 'A' are now parsed, and the one in /a wins.
+  // In a complete compilation, this is a fatal error.
+  EXPECT_EQ(findModuleMap("A"), "/a/module.modulemap");
+}
+
+// Verify other modules defined in the looked-up module's modulemap are parsed
+// too.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleSameModuleMap) {
+  enableLazyModuleMaps();
+
+  // 'A' and 'B' are defined in the same modulemap.
+  addSearchDir("/a");
+  addFile("/a/module.modulemap", "module A {}\nmodule B {}");
+
+  EXPECT_EQ(findModuleMap("A"), "/a/module.modulemap");
+  EXPECT_TRUE(Search.getModuleMap().isModuleKnown("B"));
+  EXPECT_EQ(findModuleMap("B"), "/a/module.modulemap");
+}
+
+// Verify modulemaps in earlier search paths are parsed on the way to the
+// looked-up module.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleEarlierSearchPath) {
+  enableLazyModuleMaps();
+
+  // 'A' is defined in /a and 'B' is defined in /b.
+  addSearchDir("/a");
+  addSearchDir("/b");
+  addFile("/a/module.modulemap", "module A {}");
+  addFile("/b/module.modulemap", "module B {}");
+
+  EXPECT_EQ(findModuleMap("B"), "/b/module.modulemap");
+
+  // Verify 'A' was parsed but not loaded, without explicitly looking it up.
+  EXPECT_TRUE(Search.getModuleMap().isModuleKnown("A"));
+  EXPECT_EQ(Search.getModuleMap().findModule("A"), nullptr);
+  EXPECT_EQ(findModuleMap("A"), "/a/module.modulemap");
+}
+
+// Verify a module named the same as a subdirectory of a search path is
+// resolved.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleSubDir) {
+  enableLazyModuleMaps();
+
+  addSearchDir("/a");
+  addFile("/a/A/module.modulemap", "module A {}");
+
+  EXPECT_EQ(findModuleMap("A"), "/a/A/module.modulemap");
+}
+
+// Verify a module defined in an arbitrary subdirectory's modulemap is found
+// only when searching subdirectories is allowed.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleSubdirectorySearch) {
+  enableLazyModuleMaps();
+  HSOpts.AllowModuleMapSubdirectorySearch = true;
+
+  addSearchDir("/a");
+  addFile("/a/Sub/module.modulemap", "module A {}");
+
+  EXPECT_EQ(findModuleMap("A"), "");
+  EXPECT_EQ(findModuleMap("A", /*AllowExtraModuleMapSearch=*/true),
+            "/a/Sub/module.modulemap");
+  EXPECT_EQ(Search.getModuleMap().findModule("A"), nullptr);
+}
+
+// Verify a module declared with `extern module` resolves to the modulemap that
+// defines it.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleExtern) {
+  enableLazyModuleMaps();
+
+  addSearchDir("/a");
+  addFile("/a/module.modulemap", "extern module A \"sub/a.modulemap\"");
+  addFile("/a/sub/a.modulemap", "module A { header \"a.h\" }");
+
+  EXPECT_EQ(findModuleMap("A"), "/a/sub/a.modulemap");
+  EXPECT_EQ(Search.getModuleMap().findModule("A"), nullptr);
+}
+
+// Verify a framework's public & private modules are resolved in the same
+// lookup.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleFramework) {
+  enableLazyModuleMaps();
+
+  addFrameworkSearchDir("/Frameworks");
+  addFile("/Frameworks/A.framework/Modules/module.modulemap",
+          "framework module A { umbrella header \"A.h\" }");
+  addFile("/Frameworks/A.framework/Modules/module.private.modulemap",
+          "framework module A_Private { header \"A_Private.h\" }");
+  addFile("/Frameworks/A.framework/Headers/A.h", "");
+
+  EXPECT_EQ(findModuleMap("A"),
+            "/Frameworks/A.framework/Modules/module.modulemap");
+  // Verify 'A_Private' was parsed by lookup for 'A'.
+  EXPECT_TRUE(Search.getModuleMap().isModuleKnown("A_Private"));
+  EXPECT_EQ(findModuleMap("A_Private"),
+            "/Frameworks/A.framework/Modules/module.private.modulemap");
+
+  // Verify no modules were loaded by the lookups.
+  EXPECT_EQ(Search.getModuleMap().findModule("A"), nullptr);
+  EXPECT_EQ(Search.getModuleMap().findModule("A_Private"), nullptr);
+}
+
+// Verify an inferred framework module resolves to the modulemap that allows
+// inferring it.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleInferredFramework) {
+  enableLazyModuleMaps();
+
+  addFrameworkSearchDir("/Frameworks");
+  addFile("/Frameworks/module.modulemap", "framework module * {}");
+  addFile("/Frameworks/A.framework/Headers/A.h", "");
+
+  EXPECT_EQ(findModuleMap("A"), "/Frameworks/module.modulemap");
+
+  // Unlike other lookups, inferring a module also creates it.
+  Module *A = Search.getModuleMap().findModule("A");
+  ASSERT_NE(A, nullptr);
+  EXPECT_TRUE(A->IsFramework);
+  std::optional<Module::Header> Umbrella = A->getUmbrellaHeaderAsWritten();
+  ASSERT_TRUE(Umbrella);
+  EXPECT_EQ(llvm::sys::path::convert_to_slash(Umbrella->Entry.getName()),
+            "/Frameworks/A.framework/Headers/A.h");
+}
+
+// Verify loading a module after looking it up resolves the same modulemap.
+TEST_F(HeaderSearchTest, LookupModuleMapFileForModuleThenLoad) {
+  enableLazyModuleMaps();
+
+  addSearchDir("/a");
+  addFile("/a/module.modulemap", "module A {}");
+
+  EXPECT_EQ(findModuleMap("A"), "/a/module.modulemap");
+
+  Module *A = Search.lookupModule("A");
+  ASSERT_NE(A, nullptr);
+  OptionalFileEntryRef File =
+      Search.getModuleMap().getModuleMapFileForUniquing(A);
+  ASSERT_TRUE(File);
+  EXPECT_EQ(llvm::sys::path::convert_to_slash(File->getName()),
+            "/a/module.modulemap");
+  EXPECT_EQ(findModuleMap("A"), "/a/module.modulemap");
+}
+
+// Modeling -fmodule-map-file, verify a directly parsed modulemap takes
+// precedence over search paths.
+TEST_F(HeaderSearchTest, ParseModuleMapFileShadowsSearchPath) {
+  enableLazyModuleMaps();
+
+  addSearchDir("/a");
+  addFile("/a/module.modulemap", "module A {}");
+  addFile("/b/module.modulemap", "module A {}");
+
+  OptionalFileEntryRef File = FileMgr.getOptionalFileRef("/b/module.modulemap");
+  ASSERT_TRUE(File);
+  EXPECT_FALSE(Search.parseModuleMapFile(*File, /*IsSystem=*/false,
+                                         /*ImplicitlyDiscovered=*/false));
+
+  EXPECT_EQ(findModuleMap("A"), "/b/module.modulemap");
+  EXPECT_EQ(Search.getModuleMap().findModule("A"), nullptr);
 }
 
 } // namespace

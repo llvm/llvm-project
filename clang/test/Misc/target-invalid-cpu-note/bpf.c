@@ -10,6 +10,7 @@
 // CHECK-SAME: {{^}}, v2
 // CHECK-SAME: {{^}}, v3
 // CHECK-SAME: {{^}}, v4
+// CHECK-SAME: {{^}}, v5
 // CHECK-SAME: {{^}}, probe
 // CHECK-SAME: {{$}}
 

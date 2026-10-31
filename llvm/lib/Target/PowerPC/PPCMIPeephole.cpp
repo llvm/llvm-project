@@ -1014,8 +1014,17 @@ bool PPCMIPeephole::simplifyCode() {
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
         unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
-        // just do a sign-extending load.
-        if (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX) {
+        // just do a sign-extending load. The source may be a 32-bit gprc load
+        // consumed directly, or a 64-bit g8rc load consumed through its sub_32
+        // subregister.
+        bool SrcIsGPRCWordZextLoad =
+            SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX;
+        bool SrcIsG8RCWordZextLoad =
+            SrcOpcode == PPC::LWZ8 || SrcOpcode == PPC::LWZX8;
+        unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
+
+        if ((!NarrowSubReg && SrcIsGPRCWordZextLoad) ||
+            (NarrowSubReg == PPC::sub_32 && SrcIsG8RCWordZextLoad)) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
 
@@ -1041,7 +1050,8 @@ bool PPCMIPeephole::simplifyCode() {
           // Likewise if the source is X-Form the new opcode should also be
           // X-Form.
           unsigned Opc = PPC::LWA_32;
-          bool SourceIsXForm = SrcOpcode == PPC::LWZX;
+          bool SourceIsXForm =
+              SrcOpcode == PPC::LWZX || SrcOpcode == PPC::LWZX8;
           bool MIIs64Bit = MI.getOpcode() == PPC::EXTSW ||
             MI.getOpcode() == PPC::EXTSW_32_64;
 
@@ -1086,15 +1096,28 @@ bool PPCMIPeephole::simplifyCode() {
           TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0);
 
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
-          Register TmpReg =
-              MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::IMPLICIT_DEF),
-                  TmpReg);
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::INSERT_SUBREG),
-                  MI.getOperand(0).getReg())
-              .addReg(TmpReg)
-              .addReg(NarrowReg)
-              .addImm(PPC::sub_32);
+
+          unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
+          if (NarrowSubReg) {
+            // The input reads a subregister of a wider register which we can
+            // use directly by dropping the subreg.
+            assert(NarrowSubReg == PPC::sub_32 &&
+                   "EXTSW_32_64 input must read the sub_32 subregister");
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                    MI.getOperand(0).getReg())
+                .addReg(NarrowReg);
+          } else {
+            Register TmpReg =
+                MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::IMPLICIT_DEF),
+                    TmpReg);
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::INSERT_SUBREG),
+                    MI.getOperand(0).getReg())
+                .addReg(TmpReg)
+                .addReg(NarrowReg)
+                .addImm(PPC::sub_32);
+            addRegToUpdate(NarrowReg);
+          }
           ToErase = &MI;
           Simplified = true;
           NumEliminatedSExt++;

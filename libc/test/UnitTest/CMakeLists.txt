@@ -49,20 +49,17 @@ function(_create_unittest_framework_library fq_target_name)
     target_compile_definitions(${fq_target_name} PRIVATE TARGET_SUPPORTS_SIGNAL_CATCHING)
   endif()
 
+  _get_common_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
   if(LLVM_LIBC_FULL_BUILD)
     target_include_directories(
       ${fq_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR}
     )
-    _get_hermetic_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
-    target_compile_options(${fq_target_name} PRIVATE ${compile_options} -nostdinc++)
-  else()
-    _get_common_test_compile_options(compile_options "" "${TEST_LIB_FLAGS}")
-
-    if(TEST_LIB_COMPILE_OPTIONS)
-      list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
-    endif()
-    target_compile_options(${fq_target_name} PRIVATE ${compile_options})
+    list(APPEND compile_options -nostdinc++)
   endif()
+  if(TEST_LIB_COMPILE_OPTIONS)
+    list(APPEND compile_options ${TEST_LIB_COMPILE_OPTIONS})
+  endif()
+  target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
   if(fq_deps_list)
     add_dependencies(${fq_target_name} ${fq_deps_list})
@@ -105,6 +102,7 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
+    libc.src.__support.CPP.functional
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
@@ -127,6 +125,7 @@ add_unittest_framework_library(
 if(LIBC_TEST_SUBPROCESS_TESTS)
   set(libc_death_test_deps
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.functional
     libc.src.__support.CPP.scope
     libc.src.__support.libc_assert
   )
@@ -161,6 +160,7 @@ else()
       ExecuteFunction.h
     DEPENDS
       libc.hdr.stdint_proxy
+      libc.src.__support.CPP.functional
   )
 endif()
 
@@ -232,6 +232,7 @@ add_unittest_framework_library(
     FPExceptMatcher.h
   DEPENDS
     .LibcTest
+    libc.src.__support.CPP.functional
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.fenv_impl
     libc.hdr.types.fenv_t
@@ -294,8 +295,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.common
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.libc_errno
     libc.src.__support.StringUtil.error_to_string
-    libc.src.errno.errno
 )
 
 add_header_library(
@@ -304,8 +305,8 @@ add_header_library(
     ErrnoCheckingTest.h
   DEPENDS
     libc.src.__support.common
+    libc.src.__support.libc_errno
     libc.src.__support.macros.properties.architectures
-    libc.src.errno.errno
 )
 
 add_header_library(

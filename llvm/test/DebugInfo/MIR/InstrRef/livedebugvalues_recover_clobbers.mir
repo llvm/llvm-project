@@ -6,7 +6,7 @@
   ;; one is available.
   ;; I've written this test in terms of DBG_VALUEs rather than DBG_INSTR_REFs
   ;; as this is purely a LiveDebugValues feature, and should work without the
-  ;; need to use any other instructoin referencing work.
+  ;; need to use any other instruction referencing work.
 
   declare i32 @use() local_unnamed_addr;
 

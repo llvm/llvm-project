@@ -154,7 +154,7 @@ function(_get_compile_options_from_config output_var)
     endif()
   endif()
 
-  if(LIBC_CONF_ERRNO_MODE)
+  if(LIBC_CONF_ERRNO_MODE AND NOT "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_MODE_DEFAULT")
     libc_add_definition(config_options "LIBC_ERRNO_MODE=${LIBC_CONF_ERRNO_MODE}")
   endif()
 
@@ -210,6 +210,10 @@ function(_get_compile_options_from_config output_var)
     list(APPEND config_options "-DLIBC_COPT_SCANF_PROVIDE_ISOC99_ALIASES")
   endif()
 
+  if(LIBC_COPT_PROVIDE_GNU_ALIASES)
+    libc_add_definition(config_options "LIBC_COPT_PROVIDE_GNU_ALIASES")
+  endif()
+
   set(${output_var} ${config_options} PARENT_SCOPE)
 endfunction()
 _get_compile_options_from_config(LIBC_COMPILE_OPTIONS_FROM_CONFIG)
@@ -242,6 +246,13 @@ function(_get_common_compile_options_impl output_var)
       # Only add -ffreestanding flag in non-GPU full build mode.
       if(NOT LIBC_TARGET_OS_IS_GPU)
         list(APPEND compile_options "-ffreestanding")
+        # GCC's <xmmintrin.h> unconditionally includes <mm_malloc.h> even with
+        # -ffreestanding, which in turn includes <stdlib.h>. Suppress it by
+        # defining its header guard.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
+          (LIBC_TARGET_ARCHITECTURE_IS_X86_64 OR LIBC_TARGET_ARCHITECTURE_IS_X86))
+          list(APPEND compile_options "-D_MM_MALLOC_H_INCLUDED")
+        endif()
       endif()
       list(APPEND compile_options "-DLIBC_FULL_BUILD")
       # Manually disable standard include paths to prevent system headers from

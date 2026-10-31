@@ -1115,7 +1115,7 @@ X86SpeculativeLoadHardeningImpl::tracePredStateThroughIndirectBranches(
         !Subtarget->isPositionIndependent()) {
       // Check directly against a relocated immediate when we can.
       auto CheckI = BuildMI(MBB, InsertPt, DebugLoc(), TII->get(X86::CMP64ri32))
-                        .addReg(TargetReg, RegState::Kill)
+                        .addReg(TargetReg)
                         .addMBB(&MBB);
       ++NumInstsInserted;
       (void)CheckI;
@@ -1134,8 +1134,8 @@ X86SpeculativeLoadHardeningImpl::tracePredStateThroughIndirectBranches(
       (void)AddrI;
       LLVM_DEBUG(dbgs() << "  Inserting lea: "; AddrI->dump(); dbgs() << "\n");
       auto CheckI = BuildMI(MBB, InsertPt, DebugLoc(), TII->get(X86::CMP64rr))
-                        .addReg(TargetReg, RegState::Kill)
-                        .addReg(AddrReg, RegState::Kill);
+                        .addReg(TargetReg)
+                        .addReg(AddrReg);
       ++NumInstsInserted;
       (void)CheckI;
       LLVM_DEBUG(dbgs() << "  Inserting cmp: "; CheckI->dump(); dbgs() << "\n");
@@ -1494,13 +1494,13 @@ void X86SpeculativeLoadHardeningImpl::mergePredStateIntoSP(
   // to stay canonical on 64-bit. We should compute this somehow and support
   // 32-bit as part of that.
   auto ShiftI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::SHL64ri), TmpReg)
-                    .addReg(PredStateReg, RegState::Kill)
+                    .addReg(PredStateReg)
                     .addImm(47);
   ShiftI->addRegisterDead(X86::EFLAGS, TRI);
   ++NumInstsInserted;
   auto OrI = BuildMI(MBB, InsertPt, Loc, TII->get(X86::OR64rr), X86::RSP)
                  .addReg(X86::RSP)
-                 .addReg(TmpReg, RegState::Kill);
+                 .addReg(TmpReg);
   OrI->addRegisterDead(X86::EFLAGS, TRI);
   ++NumInstsInserted;
 }
@@ -1519,7 +1519,7 @@ Register X86SpeculativeLoadHardeningImpl::extractPredStateFromSP(
       .addReg(X86::RSP);
   auto ShiftI =
       BuildMI(MBB, InsertPt, Loc, TII->get(X86::SAR64ri), PredStateReg)
-          .addReg(TmpReg, RegState::Kill)
+          .addReg(TmpReg)
           .addImm(TRI->getRegSizeInBits(*PS->RC) - 1);
   ShiftI->addRegisterDead(X86::EFLAGS, TRI);
   ++NumInstsInserted;
@@ -2126,7 +2126,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughCall(
     // FIXME: Could we fold this with the load? It would require careful EFLAGS
     // management.
     BuildMI(MBB, InsertPt, Loc, TII->get(X86::CMP64ri32))
-        .addReg(ExpectedRetAddrReg, RegState::Kill)
+        .addReg(ExpectedRetAddrReg)
         .addSym(RetSymbol);
   } else {
     Register ActualRetAddrReg = MRI->createVirtualRegister(AddrRC);
@@ -2137,8 +2137,8 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughCall(
         .addSym(RetSymbol)
         .addReg(/*Segment*/ 0);
     BuildMI(MBB, InsertPt, Loc, TII->get(X86::CMP64rr))
-        .addReg(ExpectedRetAddrReg, RegState::Kill)
-        .addReg(ActualRetAddrReg, RegState::Kill);
+        .addReg(ExpectedRetAddrReg)
+        .addReg(ActualRetAddrReg);
   }
 
   // Now conditionally update the predicate state we just extracted if we ended
@@ -2148,7 +2148,7 @@ void X86SpeculativeLoadHardeningImpl::tracePredStateThroughCall(
 
   Register UpdatedStateReg = MRI->createVirtualRegister(PS->RC);
   auto CMovI = BuildMI(MBB, InsertPt, Loc, TII->get(CMovOp), UpdatedStateReg)
-                   .addReg(NewStateReg, RegState::Kill)
+                   .addReg(NewStateReg)
                    .addReg(PS->PoisonReg)
                    .addImm(X86::COND_NE);
   CMovI->findRegisterUseOperand(X86::EFLAGS, /*TRI=*/nullptr)->setIsKill(true);

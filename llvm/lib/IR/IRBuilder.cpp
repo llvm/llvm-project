@@ -58,6 +58,7 @@ GlobalVariable *IRBuilderBase::CreateGlobalString(StringRef Str,
 }
 
 Type *IRBuilderBase::getCurrentFunctionReturnType() const {
+  BasicBlock *BB = GetInsertBlock();
   assert(BB && BB->getParent() && "No current function!");
   return BB->getParent()->getReturnType();
 }

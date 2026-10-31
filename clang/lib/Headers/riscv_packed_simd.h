@@ -179,6 +179,24 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
     return __builtin_elementwise_fshr(__rs1, __rd, (ty)__shamt);               \
   }
 
+#define __packed_slideupx(name, ty, bits_ty, log2_elt_bits)                    \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __rs2) {     \
+    bits_ty __bits = __builtin_elementwise_fshl(                               \
+        __builtin_bit_cast(bits_ty, __rd), __builtin_bit_cast(bits_ty, __rs1), \
+        (bits_ty)__rs2 << (log2_elt_bits));                                    \
+    return __builtin_bit_cast(ty, __bits);                                     \
+  }
+
+#define __packed_slidedownx(name, ty, bits_ty, log2_elt_bits)                  \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rd, ty __rs1,    \
+                                                         unsigned __rs2) {     \
+    bits_ty __bits = __builtin_elementwise_fshr(                               \
+        __builtin_bit_cast(bits_ty, __rs1), __builtin_bit_cast(bits_ty, __rd), \
+        (bits_ty)__rs2 << (log2_elt_bits));                                    \
+    return __builtin_bit_cast(ty, __bits);                                     \
+  }
+
 #define __packed_widen_convert(name, rty, ty)                                  \
   static __inline__ rty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1) {          \
     return __builtin_convertvector(__rs1, rty);                                \
@@ -497,6 +515,10 @@ __packed_ternary_builtin_mixed(mhraccsu_i32, int32_t, int32_t, uint32_t, __built
 /* Scalar "Q-format" Multiplication */
 __packed_binary_builtin(mulq_i32, int32_t, __builtin_riscv_mulq_i32)
 __packed_binary_builtin(mulqr_i32, int32_t, __builtin_riscv_mulqr_i32)
+
+/* Scalar "Q-format" Multiply with Widening Accumulate */
+__packed_ternary_builtin_mixed(mqwacc_i64, int64_t, int32_t, int32_t, __builtin_riscv_mqwacc_i64)
+__packed_ternary_builtin_mixed(mqrwacc_i64, int64_t, int32_t, int32_t, __builtin_riscv_mqrwacc_i64)
 
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
@@ -1193,6 +1215,29 @@ __packed_binary_builtin_mixed(pm4add_i16x4, int64_t, int16x4_t, int16x4_t, __bui
 __packed_binary_builtin_mixed(pm4addu_u16x4, uint64_t, uint16x4_t, uint16x4_t, __builtin_riscv_pm4addu_u16x4)
 __packed_binary_builtin_mixed(pm4addsu_i16x4, int64_t, int16x4_t, uint16x4_t, __builtin_riscv_pm4addsu_i16x4)
 
+/* Packed Widening Multiply Accumulate */
+__packed_ternary_builtin_mixed(pwmacc_i32x2, int32x2_t, int16x2_t, int16x2_t, __builtin_riscv_pwmacc_i32x2)
+__packed_ternary_builtin_mixed(pwmaccu_u32x2, uint32x2_t, uint16x2_t, uint16x2_t, __builtin_riscv_pwmaccu_u32x2)
+__packed_ternary_builtin_mixed(pwmaccsu_i32x2, int32x2_t, int16x2_t, uint16x2_t, __builtin_riscv_pwmaccsu_i32x2)
+
+  /* Packed Multiplication with Horizontal Addition and Accumulate (64-bit) */
+static __inline__ int32x2_t __DEFAULT_FN_ATTRS
+__riscv_pm4adda_i8x8(int32x2_t __rd, int8x8_t __rs1, int8x8_t __rs2) {
+  return (int32x2_t)((uint32x2_t)__rd +
+                     (uint32x2_t)__riscv_pm4add_i8x8(__rs1, __rs2));
+}
+
+static __inline__ uint32x2_t __DEFAULT_FN_ATTRS
+__riscv_pm4addau_u8x8(uint32x2_t __rd, uint8x8_t __rs1, uint8x8_t __rs2) {
+  return __rd + __riscv_pm4addu_u8x8(__rs1, __rs2);
+}
+
+static __inline__ int32x2_t __DEFAULT_FN_ATTRS
+__riscv_pm4addasu_i8x8(int32x2_t __rd, int8x8_t __rs1, uint8x8_t __rs2) {
+  return (int32x2_t)((uint32x2_t)__rd +
+                     (uint32x2_t)__riscv_pm4addsu_i8x8(__rs1, __rs2));
+}
+
 /* Packed Multiplication with Widening Horizontal Addition */
 __packed_binary_builtin_mixed(pm2wadd_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_i64)
 __packed_binary_builtin_mixed(pm2wadd_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadd_x_i64)
@@ -1200,6 +1245,14 @@ __packed_binary_builtin_mixed(pm2waddu_u64, uint64_t, uint16x2_t, uint16x2_t, __
 __packed_binary_builtin_mixed(pm2wsub_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_i64)
 __packed_binary_builtin_mixed(pm2wsub_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsub_x_i64)
 __packed_binary_builtin_mixed(pm2waddsu_i64, int64_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2waddsu_i64)
+
+/* Packed Multiplication with Widening Horizontal Addition and Accumulate */
+__packed_ternary_builtin_mixed(pm2wadda_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadda_i64)
+__packed_ternary_builtin_mixed(pm2wadda_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wadda_x_i64)
+__packed_ternary_builtin_mixed(pm2waddau_u64, uint64_t, uint16x2_t, uint16x2_t, __builtin_riscv_pm2waddau_u64)
+__packed_ternary_builtin_mixed(pm2wsuba_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsuba_i64)
+__packed_ternary_builtin_mixed(pm2wsuba_x_i64, int64_t, int16x2_t, int16x2_t, __builtin_riscv_pm2wsuba_x_i64)
+__packed_ternary_builtin_mixed(pm2waddasu_i64, int64_t, int16x2_t, uint16x2_t, __builtin_riscv_pm2waddasu_i64)
 
 /* Packed Absolute Difference Sum (32-bit) */
 __packed_abdsum(pabdsumu_u8x4_u32, uint32_t, uint8x4_t, __builtin_riscv_pabdsumu_u8x4_u32)
@@ -1438,6 +1491,30 @@ __packed_slide1(pslide1down_u16x4, uint16x4_t, uint16_t, 1, 2, 3, 4)
 __packed_slide1(pslide1down_i32x2, int32x2_t, int32_t, 1, 2)
 __packed_slide1(pslide1down_u32x2, uint32x2_t, uint32_t, 1, 2)
 
+/* Packed Slide (32-bit) */
+__packed_slideupx(pslideupx_i8x4, int8x4_t, uint32_t, 3)
+__packed_slideupx(pslideupx_u8x4, uint8x4_t, uint32_t, 3)
+__packed_slideupx(pslideupx_i16x2, int16x2_t, uint32_t, 4)
+__packed_slideupx(pslideupx_u16x2, uint16x2_t, uint32_t, 4)
+__packed_slidedownx(pslidedownx_i8x4, int8x4_t, uint32_t, 3)
+__packed_slidedownx(pslidedownx_u8x4, uint8x4_t, uint32_t, 3)
+__packed_slidedownx(pslidedownx_i16x2, int16x2_t, uint32_t, 4)
+__packed_slidedownx(pslidedownx_u16x2, uint16x2_t, uint32_t, 4)
+
+/* Packed Slide (64-bit) */
+__packed_slideupx(pslideupx_i8x8, int8x8_t, uint64_t, 3)
+__packed_slideupx(pslideupx_u8x8, uint8x8_t, uint64_t, 3)
+__packed_slideupx(pslideupx_i16x4, int16x4_t, uint64_t, 4)
+__packed_slideupx(pslideupx_u16x4, uint16x4_t, uint64_t, 4)
+__packed_slideupx(pslideupx_i32x2, int32x2_t, uint64_t, 5)
+__packed_slideupx(pslideupx_u32x2, uint32x2_t, uint64_t, 5)
+__packed_slidedownx(pslidedownx_i8x8, int8x8_t, uint64_t, 3)
+__packed_slidedownx(pslidedownx_u8x8, uint8x8_t, uint64_t, 3)
+__packed_slidedownx(pslidedownx_i16x4, int16x4_t, uint64_t, 4)
+__packed_slidedownx(pslidedownx_u16x4, uint16x4_t, uint64_t, 4)
+__packed_slidedownx(pslidedownx_i32x2, int32x2_t, uint64_t, 5)
+__packed_slidedownx(pslidedownx_u32x2, uint32x2_t, uint64_t, 5)
+
 /* Packed Subvector Extract */
 __packed_subvector_extract8(pget_i8x8_i8x4, int8x4_t, int8x8_t)
 __packed_subvector_extract8(pget_u8x8_u8x4, uint8x4_t, uint8x8_t)
@@ -1639,6 +1716,8 @@ __packed_reinterpret(u32x2_i32x2, int32x2_t, uint32x2_t)
 #undef __packed_cls
 #undef __packed_slx
 #undef __packed_srx
+#undef __packed_slideupx
+#undef __packed_slidedownx
 #undef __packed_widen_convert
 #undef __packed_widen_binary_op
 #undef __packed_widen_binary_acc_op

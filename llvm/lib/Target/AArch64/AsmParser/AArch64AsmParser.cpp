@@ -203,6 +203,7 @@ private:
   bool parseDirectiveCFILLVMSetRAState();
   bool parseDirectiveCFIBKeyFrame();
   bool parseDirectiveCFIMTETaggedFrame();
+  bool parseDirectiveCFINonHintPAuthFrame();
 
   bool parseDirectiveVariantPCS(SMLoc L);
 
@@ -3769,6 +3770,9 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"cflt"}, {AArch64::FeatureCFLT}},
     {{"lsc64b"}, {AArch64::FeatureLSC64B}},
     {{"sve-lrcpc"}, {AArch64::FeatureSVE_LRCPC}},
+    {{"sve-perm256"}, {AArch64::FeatureSVE_PERM256}},
+    {{"sme-f16f8f16"}, {AArch64::FeatureSMEF16F8F16}},
+    {{"fpv2"}, {AArch64::FeatureFPv2}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
@@ -5998,58 +6002,65 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidFPImm:
     return Error(Loc,
                  "expected compatible register or floating-point constant");
-  case Match_InvalidMemoryIndexedSImm6:
-    return Error(Loc, "index must be an integer in range [-32, 31].");
-  case Match_InvalidMemoryIndexedSImm5:
-    return Error(Loc, "index must be an integer in range [-16, 15].");
-  case Match_InvalidMemoryIndexed1SImm4:
-    return Error(Loc, "index must be an integer in range [-8, 7].");
-  case Match_InvalidMemoryIndexed2SImm4:
-    return Error(Loc, "index must be a multiple of 2 in range [-16, 14].");
-  case Match_InvalidMemoryIndexed3SImm4:
-    return Error(Loc, "index must be a multiple of 3 in range [-24, 21].");
-  case Match_InvalidMemoryIndexed4SImm4:
-    return Error(Loc, "index must be a multiple of 4 in range [-32, 28].");
-  case Match_InvalidMemoryIndexed16SImm4:
-    return Error(Loc, "index must be a multiple of 16 in range [-128, 112].");
-  case Match_InvalidMemoryIndexed32SImm4:
-    return Error(Loc, "index must be a multiple of 32 in range [-256, 224].");
-  case Match_InvalidMemoryIndexed1SImm6:
-    return Error(Loc, "index must be an integer in range [-32, 31].");
-  case Match_InvalidMemoryIndexedSImm8:
-    return Error(Loc, "index must be an integer in range [-128, 127].");
-  case Match_InvalidMemoryIndexedSImm9:
-    return Error(Loc, "index must be an integer in range [-256, 255].");
-  case Match_InvalidMemoryIndexed16SImm9:
-    return Error(Loc, "index must be a multiple of 16 in range [-4096, 4080].");
-  case Match_InvalidMemoryIndexed8SImm10:
-    return Error(Loc, "index must be a multiple of 8 in range [-4096, 4088].");
-  case Match_InvalidMemoryIndexed4SImm7:
-    return Error(Loc, "index must be a multiple of 4 in range [-256, 252].");
-  case Match_InvalidMemoryIndexed8SImm7:
-    return Error(Loc, "index must be a multiple of 8 in range [-512, 504].");
-  case Match_InvalidMemoryIndexed16SImm7:
-    return Error(Loc, "index must be a multiple of 16 in range [-1024, 1008].");
-  case Match_InvalidMemoryIndexed8UImm5:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 248].");
-  case Match_InvalidMemoryIndexed8UImm3:
+  case Match_InvalidSImm6:
+    return Error(Loc, "immediate must be an integer in range [-32, 31].");
+  case Match_InvalidSImm5:
+    return Error(Loc, "immediate must be an integer in range [-16, 15].");
+  case Match_InvalidSImm4s1:
+    return Error(Loc, "immediate must be an integer in range [-8, 7].");
+  case Match_InvalidSImm4s2:
+    return Error(Loc, "immediate must be a multiple of 2 in range [-16, 14].");
+  case Match_InvalidSImm4s3:
+    return Error(Loc, "immediate must be a multiple of 3 in range [-24, 21].");
+  case Match_InvalidSImm4s4:
+    return Error(Loc, "immediate must be a multiple of 4 in range [-32, 28].");
+  case Match_InvalidSImm4s16:
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [-128, 112].");
+  case Match_InvalidSImm4s32:
+    return Error(Loc,
+                 "immediate must be a multiple of 32 in range [-256, 224].");
+  case Match_InvalidSImm6s1:
+    return Error(Loc, "immediate must be an integer in range [-32, 31].");
+  case Match_InvalidSImm8:
+    return Error(Loc, "immediate must be an integer in range [-128, 127].");
+  case Match_InvalidSImm9:
+    return Error(Loc, "immediate must be an integer in range [-256, 255].");
+  case Match_InvalidSImm9s16:
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [-4096, 4080].");
+  case Match_InvalidSImm10s8:
+    return Error(Loc,
+                 "immediate must be a multiple of 8 in range [-4096, 4088].");
+  case Match_InvalidSImm7s4:
+    return Error(Loc,
+                 "immediate must be a multiple of 4 in range [-256, 252].");
+  case Match_InvalidSImm7s8:
+    return Error(Loc,
+                 "immediate must be a multiple of 8 in range [-512, 504].");
+  case Match_InvalidSImm7s16:
+    return Error(Loc,
+                 "immediate must be a multiple of 16 in range [-1024, 1008].");
+  case Match_InvalidUImm5s8:
+    return Error(Loc, "immediate must be a multiple of 8 in range [0, 248].");
+  case Match_InvalidUImm3s8:
     return Error(Loc, "index must be a multiple of 8 in range [0, 56].");
-  case Match_InvalidMemoryIndexed4UImm5:
-    return Error(Loc, "index must be a multiple of 4 in range [0, 124].");
-  case Match_InvalidMemoryIndexed2UImm5:
-    return Error(Loc, "index must be a multiple of 2 in range [0, 62].");
-  case Match_InvalidMemoryIndexed8UImm6:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 504].");
-  case Match_InvalidMemoryIndexed16UImm6:
-    return Error(Loc, "index must be a multiple of 16 in range [0, 1008].");
-  case Match_InvalidMemoryIndexed32UImm8:
-    return Error(Loc, "index must be a multiple of 32 in range [0, 8160].");
-  case Match_InvalidMemoryIndexed4UImm6:
-    return Error(Loc, "index must be a multiple of 4 in range [0, 252].");
-  case Match_InvalidMemoryIndexed2UImm6:
-    return Error(Loc, "index must be a multiple of 2 in range [0, 126].");
-  case Match_InvalidMemoryIndexed1UImm6:
-    return Error(Loc, "index must be in range [0, 63].");
+  case Match_InvalidUImm5s4:
+    return Error(Loc, "immediate must be a multiple of 4 in range [0, 124].");
+  case Match_InvalidUImm5s2:
+    return Error(Loc, "immediate must be a multiple of 2 in range [0, 62].");
+  case Match_InvalidUImm6s8:
+    return Error(Loc, "immediate must be a multiple of 8 in range [0, 504].");
+  case Match_InvalidUImm6s16:
+    return Error(Loc, "immediate must be a multiple of 16 in range [0, 1008].");
+  case Match_InvalidUImm8s32:
+    return Error(Loc, "immediate must be a multiple of 32 in range [0, 8160].");
+  case Match_InvalidUImm6s4:
+    return Error(Loc, "immediate must be a multiple of 4 in range [0, 252].");
+  case Match_InvalidUImm6s2:
+    return Error(Loc, "immediate must be a multiple of 2 in range [0, 126].");
+  case Match_InvalidUImm6s1:
+    return Error(Loc, "immediate must be in range [0, 63].");
   case Match_InvalidMemoryWExtend8:
     return Error(Loc,
                  "expected 'uxtw' or 'sxtw' with optional shift of #0");
@@ -6080,16 +6091,16 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidMemoryXExtend128:
     return Error(Loc,
                  "expected 'lsl' or 'sxtx' with optional shift of #0 or #4");
-  case Match_InvalidMemoryIndexed1:
-    return Error(Loc, "index must be an integer in range [0, 4095].");
-  case Match_InvalidMemoryIndexed2:
-    return Error(Loc, "index must be a multiple of 2 in range [0, 8190].");
-  case Match_InvalidMemoryIndexed4:
-    return Error(Loc, "index must be a multiple of 4 in range [0, 16380].");
-  case Match_InvalidMemoryIndexed8:
-    return Error(Loc, "index must be a multiple of 8 in range [0, 32760].");
-  case Match_InvalidMemoryIndexed16:
-    return Error(Loc, "index must be a multiple of 16 in range [0, 65520].");
+  case Match_InvalidUImm12Offset1:
+    return Error(Loc, "offset must be an integer in range [0, 4095].");
+  case Match_InvalidUImm12Offset2:
+    return Error(Loc, "offset must be a multiple of 2 in range [0, 8190].");
+  case Match_InvalidUImm12Offset4:
+    return Error(Loc, "offset must be a multiple of 4 in range [0, 16380].");
+  case Match_InvalidUImm12Offset8:
+    return Error(Loc, "offset must be a multiple of 8 in range [0, 32760].");
+  case Match_InvalidUImm12Offset16:
+    return Error(Loc, "offset must be a multiple of 16 in range [0, 65520].");
   case Match_InvalidImm0_0:
     return Error(Loc, "immediate must be 0.");
   case Match_InvalidImm0_1:
@@ -6135,15 +6146,15 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
     return Error(Loc, "immediate must be an integer in range [-255, 256].");
   case Match_InvalidImmM257_254:
     return Error(Loc, "immediate must be an integer in range [-257, 254].");
-  case Match_InvalidMemoryIndexedRange2UImm0:
+  case Match_InvalidVecSelRange0s2:
     return Error(Loc, "vector select offset must be the immediate range 0:1.");
-  case Match_InvalidMemoryIndexedRange2UImm1:
+  case Match_InvalidVecSelRange1s2:
     return Error(Loc, "vector select offset must be an immediate range of the "
                       "form <immf>:<imml>, where the first "
                       "immediate is a multiple of 2 in the range [0, 2], and "
                       "the second immediate is immf + 1.");
-  case Match_InvalidMemoryIndexedRange2UImm2:
-  case Match_InvalidMemoryIndexedRange2UImm3:
+  case Match_InvalidVecSelRange2s2:
+  case Match_InvalidVecSelRange3s2:
     return Error(
         Loc,
         "vector select offset must be an immediate range of the form "
@@ -6151,10 +6162,10 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
         "where the first immediate is a multiple of 2 in the range [0, 6] or "
         "[0, 14] "
         "depending on the instruction, and the second immediate is immf + 1.");
-  case Match_InvalidMemoryIndexedRange4UImm0:
+  case Match_InvalidVecSelRange0s4:
     return Error(Loc, "vector select offset must be the immediate range 0:3.");
-  case Match_InvalidMemoryIndexedRange4UImm1:
-  case Match_InvalidMemoryIndexedRange4UImm2:
+  case Match_InvalidVecSelRange1s4:
+  case Match_InvalidVecSelRange2s4:
     return Error(
         Loc,
         "vector select offset must be an immediate range of the form "
@@ -6330,6 +6341,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR_K0:
     return Error(Loc, "invalid restricted vector register, expected register "
                       "in z20..z23 or z28..z31");
+  case Match_InvalidZPR_K8:
+    return Error(Loc, "invalid restricted vector register, expected register "
+                      "in z20.b..z23.b or z28.b..z31.b");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -6846,11 +6860,11 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return showMatchError(ErrorLoc, MatchResult, ErrorInfo, Operands);
   }
   case Match_InvalidTiedOperand:
-  case Match_InvalidMemoryIndexed1:
-  case Match_InvalidMemoryIndexed2:
-  case Match_InvalidMemoryIndexed4:
-  case Match_InvalidMemoryIndexed8:
-  case Match_InvalidMemoryIndexed16:
+  case Match_InvalidUImm12Offset1:
+  case Match_InvalidUImm12Offset2:
+  case Match_InvalidUImm12Offset4:
+  case Match_InvalidUImm12Offset8:
+  case Match_InvalidUImm12Offset16:
   case Match_InvalidCondCode:
   case Match_AddSubLSLImm3ShiftLarge:
   case Match_AddSubRegExtendSmall:
@@ -6872,32 +6886,32 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidMemoryXExtend32:
   case Match_InvalidMemoryXExtend64:
   case Match_InvalidMemoryXExtend128:
-  case Match_InvalidMemoryIndexed1SImm4:
-  case Match_InvalidMemoryIndexed2SImm4:
-  case Match_InvalidMemoryIndexed3SImm4:
-  case Match_InvalidMemoryIndexed4SImm4:
-  case Match_InvalidMemoryIndexed1SImm6:
-  case Match_InvalidMemoryIndexed16SImm4:
-  case Match_InvalidMemoryIndexed32SImm4:
-  case Match_InvalidMemoryIndexed4SImm7:
-  case Match_InvalidMemoryIndexed8SImm7:
-  case Match_InvalidMemoryIndexed16SImm7:
-  case Match_InvalidMemoryIndexed8UImm5:
-  case Match_InvalidMemoryIndexed8UImm3:
-  case Match_InvalidMemoryIndexed4UImm5:
-  case Match_InvalidMemoryIndexed2UImm5:
-  case Match_InvalidMemoryIndexed1UImm6:
-  case Match_InvalidMemoryIndexed2UImm6:
-  case Match_InvalidMemoryIndexed4UImm6:
-  case Match_InvalidMemoryIndexed8UImm6:
-  case Match_InvalidMemoryIndexed16UImm6:
-  case Match_InvalidMemoryIndexed32UImm8:
-  case Match_InvalidMemoryIndexedSImm6:
-  case Match_InvalidMemoryIndexedSImm5:
-  case Match_InvalidMemoryIndexedSImm8:
-  case Match_InvalidMemoryIndexedSImm9:
-  case Match_InvalidMemoryIndexed16SImm9:
-  case Match_InvalidMemoryIndexed8SImm10:
+  case Match_InvalidSImm4s1:
+  case Match_InvalidSImm4s2:
+  case Match_InvalidSImm4s3:
+  case Match_InvalidSImm4s4:
+  case Match_InvalidSImm6s1:
+  case Match_InvalidSImm4s16:
+  case Match_InvalidSImm4s32:
+  case Match_InvalidSImm7s4:
+  case Match_InvalidSImm7s8:
+  case Match_InvalidSImm7s16:
+  case Match_InvalidUImm5s8:
+  case Match_InvalidUImm3s8:
+  case Match_InvalidUImm5s4:
+  case Match_InvalidUImm5s2:
+  case Match_InvalidUImm6s1:
+  case Match_InvalidUImm6s2:
+  case Match_InvalidUImm6s4:
+  case Match_InvalidUImm6s8:
+  case Match_InvalidUImm6s16:
+  case Match_InvalidUImm8s32:
+  case Match_InvalidSImm6:
+  case Match_InvalidSImm5:
+  case Match_InvalidSImm8:
+  case Match_InvalidSImm9:
+  case Match_InvalidSImm9s16:
+  case Match_InvalidSImm10s8:
   case Match_InvalidImm0_0:
   case Match_InvalidImm0_1:
   case Match_InvalidImm0_3:
@@ -6919,13 +6933,13 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidImmM1_510:
   case Match_InvalidImmM255_256:
   case Match_InvalidImmM257_254:
-  case Match_InvalidMemoryIndexedRange2UImm0:
-  case Match_InvalidMemoryIndexedRange2UImm1:
-  case Match_InvalidMemoryIndexedRange2UImm2:
-  case Match_InvalidMemoryIndexedRange2UImm3:
-  case Match_InvalidMemoryIndexedRange4UImm0:
-  case Match_InvalidMemoryIndexedRange4UImm1:
-  case Match_InvalidMemoryIndexedRange4UImm2:
+  case Match_InvalidVecSelRange0s2:
+  case Match_InvalidVecSelRange1s2:
+  case Match_InvalidVecSelRange2s2:
+  case Match_InvalidVecSelRange3s2:
+  case Match_InvalidVecSelRange0s4:
+  case Match_InvalidVecSelRange1s4:
+  case Match_InvalidVecSelRange2s4:
   case Match_InvalidSVEAddSubImm8:
   case Match_InvalidSVEAddSubImm16:
   case Match_InvalidSVEAddSubImm32:
@@ -7052,6 +7066,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPRMul2_Lo64:
   case Match_InvalidZPRMul2_Hi64:
   case Match_InvalidZPR_K0:
+  case Match_InvalidZPR_K8:
   case Match_InvalidSVEVectorList2x8Mul2:
   case Match_InvalidSVEVectorList2x16Mul2:
   case Match_InvalidSVEVectorList2x32Mul2:
@@ -7129,6 +7144,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveCFIBKeyFrame();
   else if (IDVal == ".cfi_mte_tagged_frame")
     parseDirectiveCFIMTETaggedFrame();
+  else if (IDVal == ".cfi_non_hint_pauth_frame")
+    parseDirectiveCFINonHintPAuthFrame();
   else if (IDVal == ".arch_extension")
     parseDirectiveArchExtension(Loc);
   else if (IDVal == ".variant_pcs")
@@ -7648,6 +7665,15 @@ bool AArch64AsmParser::parseDirectiveCFIMTETaggedFrame() {
   if (parseEOL())
     return true;
   getStreamer().emitCFIMTETaggedFrame();
+  return false;
+}
+
+/// parseDirectiveCFINonHintPAuthFrame
+/// ::= .cfi_non_hint_pauth_frame
+bool AArch64AsmParser::parseDirectiveCFINonHintPAuthFrame() {
+  if (parseEOL())
+    return true;
+  getStreamer().emitCFINonHintPAuthFrame();
   return false;
 }
 
@@ -8399,7 +8425,6 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
 bool AArch64AsmParser::parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc) {
   MCAsmParser &Parser = getParser();
   MCContext &Ctx = getContext();
-  AsmToken Tok = Parser.getTok();
 
   // At this point, we encountered "<id>@AUTH". There is no fallback anymore.
   if (parseToken(AsmToken::LParen, "expected '('"))

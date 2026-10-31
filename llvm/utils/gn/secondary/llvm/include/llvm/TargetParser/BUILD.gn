@@ -10,7 +10,7 @@ tablegen("AArch64TargetParserDef") {
 tablegen("PPCGenTargetFeatures") {
   visibility = [ ":gen" ]
   args = [ "-gen-target-features" ]
-  td_file = "//llvm/lib/Target/PowerPC/PPC.td"
+  td_file = "//llvm/lib/Target/PowerPC/PPCTargetParserDef.td"
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 

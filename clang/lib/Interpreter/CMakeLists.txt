@@ -23,7 +23,7 @@ else()
     OrcTargetProcess
     )
   set(EXECUTOR_SOURCES
-    IncrementalExecutor.cpp
+    OrcIncrementalExecutorBuilder.cpp
     OrcIncrementalExecutor.cpp
     )
 endif()
@@ -32,6 +32,7 @@ add_clang_library(clangInterpreter
   DeviceOffload.cpp
   CodeCompletion.cpp
   IncrementalAction.cpp
+  IncrementalExecutorBuilder.cpp
   IncrementalParser.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp

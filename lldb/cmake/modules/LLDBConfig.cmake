@@ -448,4 +448,6 @@ else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
 endif()
 
+option(LLDB_BUILD_SWIFT_DEBUGSERVER "Build the Swift debugserver (experimental)" OFF)
+
 include(LLDBGenerateConfig)

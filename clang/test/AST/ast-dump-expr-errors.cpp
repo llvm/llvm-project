@@ -42,5 +42,5 @@ int d = static_cast<int>(bar() + 1);
 
 
 // Error type should result in an invalid decl.
-// CHECK: -VarDecl {{.*}} invalid f 'decltype(<recovery-expr>(bar))'
+// CHECK: -VarDecl {{.*}} invalid f 'int'
 decltype(bar()) f;

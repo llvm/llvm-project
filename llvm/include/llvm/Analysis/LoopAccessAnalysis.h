@@ -25,6 +25,7 @@
 namespace llvm {
 
 class AAResults;
+struct AnalysisOptions;
 class DataLayout;
 class Loop;
 class raw_ostream;
@@ -194,15 +195,11 @@ public:
                         const SmallVectorImpl<Instruction *> &Instrs) const;
   };
 
-  MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
-                   DominatorTree *DT, const Loop *L,
-                   const SymbolicStrideMap &SymbolicStrides,
-                   unsigned MaxTargetVectorWidthInBits,
-                   ScalarEvolution::LoopGuards &LoopGuards)
-      : PSE(PSE), AC(AC), DT(DT), InnermostLoop(L),
-        SymbolicStrides(SymbolicStrides),
-        MaxTargetVectorWidthInBits(MaxTargetVectorWidthInBits),
-        LoopGuards(LoopGuards) {}
+  LLVM_ABI MemoryDepChecker(PredicatedScalarEvolution &PSE, AssumptionCache *AC,
+                            DominatorTree *DT, const Loop *L,
+                            const SymbolicStrideMap &SymbolicStrides,
+                            unsigned MaxTargetVectorWidthInBits,
+                            ScalarEvolution::LoopGuards &LoopGuards);
 
   /// Register the location (instructions are given increasing numbers)
   /// of a write access.
@@ -297,7 +294,10 @@ public:
     return RecordDependences ? &Dependences : nullptr;
   }
 
-  void clearDependences() { Dependences.clear(); }
+  void removeUnknownDependences() {
+    erase_if(Dependences,
+             [](const Dependence &D) { return D.Type == Dependence::Unknown; });
+  }
 
   /// The vector of memory access instructions.  The indices are used as
   /// instruction identifiers in the Dependence class.
@@ -349,6 +349,8 @@ public:
   }
 
 private:
+  const AnalysisOptions &Opts;
+
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks, and
   /// applies dynamic knowledge to simplify SCEV expressions and convert them
   /// to a more usable form. We need this in case assumptions about SCEV
@@ -582,9 +584,8 @@ public:
           IsForked(IsForked) {}
   };
 
-  RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
-                         ScalarEvolution::LoopGuards &LoopGuards)
-      : DC(DC), SE(SE), LoopGuards(LoopGuards) {}
+  LLVM_ABI RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
+                                  ScalarEvolution::LoopGuards &LoopGuards);
 
   /// Reset the state of the pointer runtime information.
   void reset() {
@@ -692,6 +693,8 @@ private:
   /// checks cannot be used for the groups, set CanUseDiffCheck to false.
   bool tryToCreateDiffCheck(const RuntimeCheckingPtrGroup &CGI,
                             const RuntimeCheckingPtrGroup &CGJ);
+
+  const AnalysisOptions &Opts;
 
   MemoryDepChecker &DC;
 
@@ -857,6 +860,8 @@ private:
   // Emits nothing if there are no unsafe dependences
   // or if the dependences were not recorded.
   void emitUnsafeDependenceRemark();
+
+  const AnalysisOptions &Opts;
 
   std::unique_ptr<PredicatedScalarEvolution> PSE;
 

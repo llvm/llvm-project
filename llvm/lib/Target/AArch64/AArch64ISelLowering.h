@@ -152,8 +152,8 @@ public:
 
   bool isFPImmLegalAsFMov(const APFloat &Imm, EVT VT) const;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -227,6 +227,8 @@ public:
 
   bool optimizeExtendOrTruncateConversion(
       Instruction *I, Loop *L, const TargetTransformInfo &TTI) const override;
+
+  bool optimizeVectorCrossLaneOperation(Instruction *I, Loop *L) const override;
 
   bool hasPairedLoad(EVT LoadedType, Align &RequiredAlignment) const override;
 

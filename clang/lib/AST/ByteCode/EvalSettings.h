@@ -19,14 +19,17 @@ struct EvalSettings {
   const EvaluationMode EvalMode;
   const ConstantExprKind ConstexprKind;
 
+  SemaProxy *SProxy;
+
   bool InConstantContext = false;
   bool CheckingPotentialConstantExpression = false;
   bool CheckingForUndefinedBehavior = false;
 
   EvalSettings(EvaluationMode EvalMode, Expr::EvalStatus &EvalStatus,
+               SemaProxy *SProxy,
                ConstantExprKind ConstexprKind = ConstantExprKind::Normal)
       : EvalStatus(EvalStatus), EvalMode(EvalMode),
-        ConstexprKind(ConstexprKind) {}
+        ConstexprKind(ConstexprKind), SProxy(SProxy) {}
 };
 
 } // namespace interp

@@ -649,7 +649,7 @@ EXTERN void __tgt_target_nowait_query(void **AsyncHandle) {
 
 EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
                                                              unsigned)) {
-  if (!PM)
+  if (!PM || !PM->isLibOffloadInitialized())
     return;
 
   if (auto Err = iteratePlatforms(

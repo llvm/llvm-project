@@ -14,10 +14,12 @@
 #include "DeviceOffload.h"
 
 #include "clang/Basic/TargetOptions.h"
+#include "clang/CodeGen/BackendUtil.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -43,7 +45,8 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
     llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS,
     llvm::Error &Err, std::list<PartialTranslationUnit> &PTUs)
     : IncrementalDeviceParser(DeviceInstance, HostInstance, DeviceAct, FS, Err,
-                              PTUs) {
+                              PTUs),
+      DeviceCI(DeviceInstance) {
   if (Err)
     return;
   if (!llvm::Triple(TargetOpts.Triple).isAMDGCN()) {
@@ -56,8 +59,34 @@ IncrementalHIPDeviceParser::IncrementalHIPDeviceParser(
   }
 }
 
+llvm::Expected<llvm::StringRef>
+IncrementalHIPDeviceParser::GenerateDeviceObject() {
+  auto &PTU = PTUs.back();
+
+  CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
+  CodeGenOptsForObj.DisableLLVMPasses = true;
+
+  ObjectContent.clear();
+  auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(ObjectContent);
+  emitBackendOutput(DeviceCI, CodeGenOptsForObj, PTU.TheModule.get(),
+                    Backend_EmitObj, DeviceCI.getVirtualFileSystemPtr(),
+                    std::move(ObjOS));
+
+  if (DeviceCI.getDiagnostics().hasErrorOccurred())
+    return llvm::make_error<llvm::StringError>(
+        "Backend code generation failed for HIP device code.",
+        llvm::inconvertibleErrorCode());
+
+  return llvm::StringRef(ObjectContent.data(), ObjectContent.size());
+}
+
 llvm::Error IncrementalHIPDeviceParser::GenerateOffloadBinary() {
-  // FIXME: Generate the HSACO and bundle it for the host compilation.
+  llvm::Expected<llvm::StringRef> Object = GenerateDeviceObject();
+  if (!Object)
+    return Object.takeError();
+
+  // FIXME: Link the object into an HSACO and bundle it for the host
+  // compilation.
   return llvm::make_error<llvm::StringError>(
       "HIP offload binary generation is not supported yet.",
       llvm::inconvertibleErrorCode());
@@ -94,8 +123,8 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
   std::unique_ptr<llvm::TargetMachine> TM(Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_));
+      PTU.TheModule->getTargetTriple(), TargetOpts.CPU,
+      llvm::join(TargetOpts.Features, ","), TO, llvm::Reloc::Model::PIC_));
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);

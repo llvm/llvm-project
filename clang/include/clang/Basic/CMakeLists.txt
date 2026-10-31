@@ -107,6 +107,10 @@ clang_tablegen(BuiltinsAMDGPU.inc -gen-clang-builtins
   SOURCE BuiltinsAMDGPU.td
   TARGET ClangBuiltinsAMDGPU)
 
+clang_tablegen(BuiltinsAVR.inc -gen-clang-builtins
+  SOURCE BuiltinsAVR.td
+  TARGET ClangBuiltinsAVR)
+
 clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)

@@ -251,6 +251,7 @@ def SDT_AArch64FMA : SDTypeProfile<1, 4, [
 ]>;
 
 // Predicated operations with the result of inactive lanes being unspecified.
+def AArch64and_u  : SDNode<"AArch64ISD::AND_U", SDT_AArch64Arith>;
 def AArch64asr_p  : SDNode<"AArch64ISD::SRA_PRED",  SDT_AArch64Arith>;
 def AArch64lsl_p  : SDNode<"AArch64ISD::SHL_PRED",  SDT_AArch64Arith>;
 def AArch64lsr_p  : SDNode<"AArch64ISD::SRL_PRED",  SDT_AArch64Arith>;
@@ -559,6 +560,11 @@ def AArch64bic : PatFrags<(ops node:$op1, node:$op2),
                            (and node:$op1, (xor node:$op2, (SVEAllActive))),
                            (AArch64bic_node node:$op1, node:$op2)]>;
 
+// Match AND_U with either data operand order, keeping the predicate unchanged.
+def SVEAndU : PatFrags<(ops node:$pg, node:$a, node:$b),
+                      [(AArch64and_u node:$pg, node:$a, node:$b),
+                       (AArch64and_u node:$pg, node:$b, node:$a)]>;
+
 def AArch64and_z  : PatFrags<(ops node:$pg, node:$op1, node:$op2),
                              [(int_aarch64_sve_and_z node:$pg, node:$op1, node:$op2),
                               (and node:$pg, (and node:$op1, node:$op2))]>;
@@ -753,6 +759,46 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZZZ : sve_int_bin_cons_log<0b10, "eor", xor>;
   defm BIC_ZZZ : sve_int_bin_cons_log<0b11, "bic", AArch64bic>;
 
+  multiclass SVEAndNotPats<ValueType VT, ValueType PT> {
+    // Ordinary AND: NOT's undefined inactive lanes may take the value ~b.
+    def : Pat<(and VT:$a,
+                (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b))),
+              (BIC_ZZZ $a, $b)>;
+    // Ordinary AND: an all-active NOT produces ~b in every lane.
+    def : Pat<(and VT:$a,
+                (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U: matching predicates ensure NOT produces ~b in every active AND lane.
+    def : Pat<(VT (SVEAndU PT:$pg, VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), PT:$pg, VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U: NOT's undefined inactive lanes may take the value ~b,
+    // even when the predicates differ.
+    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
+                    (VT (int_aarch64_sve_not (VT (undef)), (PT srcvalue), VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U: an all-active NOT produces ~b regardless of AND_U's predicate.
+    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+
+    // AND_U with ordinary LLVM NOT, which produces ~b in every lane.
+    def : Pat<(VT (SVEAndU (PT srcvalue), VT:$a, (vnot VT:$b))),
+              (BIC_ZZZ $a, $b)>;
+
+    // Fall back to register AND when no BIC pattern matches.
+    // AND_U allows any result in inactive lanes.
+    def : Pat<(VT (AArch64and_u (PT srcvalue), VT:$a, VT:$b)),
+              (AND_ZZZ $a, $b)>;
+  }
+  defm : SVEAndNotPats<nxv16i8, nxv16i1>;
+  defm : SVEAndNotPats<nxv8i16, nxv8i1>;
+  defm : SVEAndNotPats<nxv4i32, nxv4i1>;
+  defm : SVEAndNotPats<nxv2i64, nxv2i1>;
+
   defm ADD_ZPmZ  : sve_int_bin_pred_arit_0<0b000, "add",  AArch64add_m1, DestructiveBinaryComm>;
   defm SUB_ZPmZ  : sve_int_bin_pred_arit_0<0b001, "sub",  AArch64sub_m1, DestructiveBinaryCommWithRev, "SUBR_ZPmZ">;
   defm SUBR_ZPmZ : sve_int_bin_pred_arit_0<0b011, "subr", AArch64subr_m1, DestructiveBinaryCommWithRev, "SUB_ZPmZ", /*isReverseInstr*/ 1>;
@@ -761,6 +807,26 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZPmZ : sve_int_bin_pred_log<0b001, "eor", AArch64eor_m1, DestructiveBinaryComm>;
   defm AND_ZPmZ : sve_int_bin_pred_log<0b010, "and", AArch64and_m1, DestructiveBinaryComm>;
   defm BIC_ZPmZ : sve_int_bin_pred_log<0b011, "bic", int_aarch64_sve_bic, DestructiveBinary>;
+
+  multiclass SVEMergingAndNotPats<ValueType VT, ValueType PT,
+                                Instruction PredBic> {
+    // Preserve A in inactive lanes. NOT must cover every active AND lane.
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), PT:$pg, VT:$b)))),
+              (PredBic $pg, $a, $b)>;
+    def : Pat<(VT (int_aarch64_sve_and PT:$pg, VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
+              (PredBic $pg, $a, $b)>;
+
+    // With both predicates all-active, no inactive lanes need preserving.
+    def : Pat<(VT (int_aarch64_sve_and (PT (SVEAllActive)), VT:$a,
+                    (VT (int_aarch64_sve_not (VT srcvalue), (PT (SVEAllActive)), VT:$b)))),
+              (BIC_ZZZ $a, $b)>;
+  }
+  defm : SVEMergingAndNotPats<nxv16i8, nxv16i1, BIC_ZPmZ_B>;
+  defm : SVEMergingAndNotPats<nxv8i16, nxv8i1, BIC_ZPmZ_H>;
+  defm : SVEMergingAndNotPats<nxv4i32, nxv4i1, BIC_ZPmZ_S>;
+  defm : SVEMergingAndNotPats<nxv2i64, nxv2i1, BIC_ZPmZ_D>;
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE_or_SME, UseExperimentalZeroingPseudos] in {
@@ -810,6 +876,17 @@ let Predicates = [HasSVE_or_SME] in {
   defm EOR_ZI : sve_int_log_imm<0b01, "eor", "eon", xor>;
   defm AND_ZI : sve_int_log_imm<0b10, "and", "bic", and>;
   defm BIC_ZI : sve_int_log_imm_bic<AArch64bic>;
+
+  // Allow AND_U nodes to select AND-immediate instructions.
+  class SVEAndUImmPat<ValueType VT, ValueType PT, ZPRRegOp ZPR,
+                     ValueType IT, ComplexPattern CP>
+    : Pat<(VT (SVEAndU (PT (SVEAnyPredicate)), (VT ZPR:$a),
+                (VT (splat_vector (IT (CP i64:$imm)))))),
+          (AND_ZI_PSEUDO $a, i64:$imm)>;
+  def : SVEAndUImmPat<nxv16i8, nxv16i1, ZPR8, i32, SVELogicalImm8Pat>;
+  def : SVEAndUImmPat<nxv8i16, nxv8i1, ZPR16, i32, SVELogicalImm16Pat>;
+  def : SVEAndUImmPat<nxv4i32, nxv4i1, ZPR32, i32, SVELogicalImm32Pat>;
+  def : SVEAndUImmPat<nxv2i64, nxv2i1, ZPR64, i64, SVELogicalImm64Pat>;
 
   defm SMAX_ZI   : sve_int_arith_imm1<0b00, "smax", AArch64smax_p>;
   defm SMIN_ZI   : sve_int_arith_imm1<0b10, "smin", AArch64smin_p>;
@@ -3252,15 +3329,46 @@ let Predicates = [HasSVE_or_SME] in {
   // 16-element contiguous stores
   defm : pred_store<nxv16i8, nxv16i1, nontrunc_masked_store, ST1B, ST1B_IMM, am_sve_regreg_lsl0>;
 
+  // non-temporal loads for packed integer types
   defm : pred_load<nxv16i8, nxv16i1, non_temporal_load, LDNT1B_ZRR, LDNT1B_ZRI, am_sve_regreg_lsl0>;
   defm : pred_load<nxv8i16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
   defm : pred_load<nxv4i32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2>;
   defm : pred_load<nxv2i64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3>;
 
+  // non-temporal loads for packed float types
+  defm : pred_load<nxv8f16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv8bf16, nxv8i1,  non_temporal_load, LDNT1H_ZRR, LDNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4f32, nxv4i1,  non_temporal_load, LDNT1W_ZRR, LDNT1W_ZRI, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2f64, nxv2i1,  non_temporal_load, LDNT1D_ZRR, LDNT1D_ZRI, am_sve_regreg_lsl3>;
+
+  // non-temporal loads for unpacked types. Unpacked integer types will be legalized to packed types
+  // in previous instruction selection phase, so only add patterns for unpacked float types.
+  // Since SVE has no non-temporal extending loads, use regular extending loads instead.
+  defm : pred_load<nxv4f16,  nxv4i1, non_temporal_load, LD1H_S, LD1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv4bf16, nxv4i1, non_temporal_load, LD1H_S, LD1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2f32,  nxv2i1, non_temporal_load, LD1W_D, LD1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_load<nxv2f16,  nxv2i1, non_temporal_load, LD1H_D, LD1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_load<nxv2bf16, nxv2i1, non_temporal_load, LD1H_D, LD1H_D_IMM, am_sve_regreg_lsl1>;
+
+  // non-temporal stores for packed integer types
   defm : pred_store<nxv16i8, nxv16i1, non_temporal_store, STNT1B_ZRR, STNT1B_ZRI, am_sve_regreg_lsl0>;
   defm : pred_store<nxv8i16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
   defm : pred_store<nxv4i32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
   defm : pred_store<nxv2i64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
+
+  // non-temporal stores for packed float types
+  defm : pred_store<nxv8f16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv8bf16, nxv8i1,  non_temporal_store, STNT1H_ZRR, STNT1H_ZRI, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4f32, nxv4i1,  non_temporal_store, STNT1W_ZRR, STNT1W_ZRI, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2f64, nxv2i1,  non_temporal_store, STNT1D_ZRR, STNT1D_ZRI, am_sve_regreg_lsl3>;
+
+  // non-temporal stores for unpacked types. Since SVE has no non-temporal truncating stores, use regular
+  // truncating stores instead.
+  defm : pred_store<nxv2f32,  nxv2i1, non_temporal_store,  ST1W_D, ST1W_D_IMM, am_sve_regreg_lsl2>;
+  defm : pred_store<nxv2f16,  nxv2i1, non_temporal_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv2bf16, nxv2i1, non_temporal_store,  ST1H_D, ST1H_D_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4f16,  nxv4i1, non_temporal_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
+  defm : pred_store<nxv4bf16, nxv4i1, non_temporal_store,  ST1H_S, ST1H_S_IMM, am_sve_regreg_lsl1>;
 
   multiclass unpred_store<PatFrag Store, ValueType Ty, Instruction RegRegInst,
                           Instruction RegImmInst, Instruction PTrue,
@@ -3958,14 +4066,14 @@ let Predicates = [HasSVE, HasMatMulFP64] in {
   defm LD1RO_D     : sve_mem_ldor_ss<0b11, "ld1rod", Z_d, ZPR64, GPR64NoXZRshifted64, nxv2i64, nxv2i1,  AArch64ld1ro_z, am_sve_regreg_lsl3>;
 } // End HasSVE, HasMatMulFP64
 
-let Predicates = [HasSVE_or_SME, HasMatMulFP64] in {
+let Predicates = [HasNonStreamingMatMulFP64_or_SVE_PERM256] in {
   defm ZIP1_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b00, 0, "zip1", int_aarch64_sve_zip1q>;
   defm ZIP2_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b00, 1, "zip2", int_aarch64_sve_zip2q>;
   defm UZP1_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b01, 0, "uzp1", int_aarch64_sve_uzp1q>;
   defm UZP2_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b01, 1, "uzp2", int_aarch64_sve_uzp2q>;
   defm TRN1_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b11, 0, "trn1", int_aarch64_sve_trn1q>;
   defm TRN2_ZZZ_Q  : sve_int_perm_bin_perm_128_zz<0b11, 1, "trn2", int_aarch64_sve_trn2q>;
-} // End HasSVE_or_SME, HasMatMulFP64
+} // End HasNonStreamingMatMulFP64_or_SVE_PERM256
 
 let Predicates = [HasSVE2_or_SME] in {
   // SVE2 integer multiply-add (indexed)
@@ -5323,6 +5431,29 @@ let Predicates = [HasSVE, HasCPA] in {
   // Multiply-add vectors, writing addend
   def MLA_CPA : sve_int_mla_cpa<"mlapt">;
 }
+
+//===----------------------------------------------------------------------===//
+// (FEAT_SVE2p3 || FEAT_SME2p3) && FEAT_FPv2 Instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2p3_or_SME2p3, HasFPv2] in {
+  defm FCMTL_PZZ   : sve_fp_3op_u_pd_totalcomp<0b100, "fcmtl">;
+  defm FCMTLMG_PZZ : sve_fp_3op_u_pd_totalcomp<0b101, "fcmtlmg">;
+
+  defm FMAXINM_ZPmZZ   : sve_fp_2op_p_zds_minmax<0b0, 0b00, "fmaxinm">;
+  defm FMININM_ZPmZZ   : sve_fp_2op_p_zds_minmax<0b0, 0b01, "fmininm">;
+  defm FMAXMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b00, "fmaxmginm">;
+  defm FMINMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b01, "fminmginm">;
+  defm FMAXMG_ZPmZZ    : sve_fp_2op_p_zds_minmax<0b1, 0b10, "fmaxmg">;
+  defm FMINMG_ZPmZZ    : sve_fp_2op_p_zds_minmax<0b1, 0b11, "fminmg">;
+
+  defm FMAXINMV_VPZ   : sve_fp_fast_red_minmax<0b00, 0b0, "fmaxinmv">;
+  defm FMININMV_VPZ   : sve_fp_fast_red_minmax<0b01, 0b0, "fmininmv">;
+  defm FMAXMGINMV_VPZ : sve_fp_fast_red_minmax<0b00, 0b1, "fmaxmginmv">;
+  defm FMINMGINMV_VPZ : sve_fp_fast_red_minmax<0b01, 0b1, "fminmginmv">;
+  defm FMAXMGV_VPZ    : sve_fp_fast_red_minmax<0b10, 0b1, "fmaxmgv">;
+  defm FMINMGV_VPZ    : sve_fp_fast_red_minmax<0b11, 0b1, "fminmgv">;
+} // End HasSVE2p3_or_SME2p3, HasFPv2
+
 
 //===----------------------------------------------------------------------===//
 // Load-Acquire/Store-Release octaword (FEAT_SVE_LRCPC)

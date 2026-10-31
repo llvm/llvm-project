@@ -1,4 +1,4 @@
-add_custom_target(libc-libgen-tests)
+add_libc_testsuite(libc-libgen-tests)
 
 add_libc_test(
   basename_test
@@ -20,7 +20,7 @@ add_libc_test(
     libc.src.libgen.dirname
 )
 
-if(NOT LLVM_USE_SANITIZER AND LIBC_TEST_SUBPROCESS_TESTS)
+if(LIBC_TEST_SUBPROCESS_TESTS)
   add_libc_test(
     basename_death_test
     SUITE

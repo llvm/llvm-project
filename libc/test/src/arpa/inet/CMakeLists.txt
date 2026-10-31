@@ -1,9 +1,9 @@
-add_custom_target(libc_arpa_inet_unittests)
+add_libc_testsuite(libc-arpa-inet-tests)
 
 add_libc_test(
   htonl
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     htonl_test.cpp
   DEPENDS
@@ -14,7 +14,7 @@ add_libc_test(
 add_libc_test(
   htons
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     htons_test.cpp
   DEPENDS
@@ -25,7 +25,7 @@ add_libc_test(
 add_libc_test(
   inet_addr
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     inet_addr_test.cpp
   DEPENDS
@@ -36,7 +36,7 @@ add_libc_test(
 add_libc_test(
   inet_aton
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     inet_aton_test.cpp
   DEPENDS
@@ -47,7 +47,7 @@ add_libc_test(
 add_libc_test(
   inet_ntoa
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     inet_ntoa_test.cpp
   DEPENDS
@@ -59,7 +59,7 @@ add_libc_test(
 add_libc_test(
   inet_ntop
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     inet_ntop_test.cpp
   DEPENDS
@@ -75,7 +75,7 @@ add_libc_test(
 add_libc_test(
   inet_pton
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     inet_pton_test.cpp
   DEPENDS
@@ -83,7 +83,6 @@ add_libc_test(
     libc.hdr.types.struct_in_addr
     libc.hdr.types.struct_in6_addr
     libc.src.arpa.inet.inet_pton
-    libc.src.__support.libc_errno
     libc.hdr.sys_socket_macros
     libc.src.string.memory_utils.inline_memcmp
     libc.test.UnitTest.ErrnoCheckingTest
@@ -92,7 +91,7 @@ add_libc_test(
 add_libc_test(
   ntohl
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     ntohl_test.cpp
   DEPENDS
@@ -103,7 +102,7 @@ add_libc_test(
 add_libc_test(
   ntohs
   SUITE
-    libc_arpa_inet_unittests
+    libc-arpa-inet-tests
   SRCS
     ntohs_test.cpp
   DEPENDS

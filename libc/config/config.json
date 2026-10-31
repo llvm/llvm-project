@@ -175,6 +175,10 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
       "doc": "Add nullptr checks in the library's implementations to some functions for which passing nullptr is undefined behavior."
+    },
+    "LIBC_COPT_PROVIDE_GNU_ALIASES": {
+      "value": false,
+      "doc": "Provide GNU/glibc compatibility symbol aliases (such as __errno_location)."
     }
   },
   "wctype": {

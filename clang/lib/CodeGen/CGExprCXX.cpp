@@ -1798,7 +1798,8 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
     EnterNewDeleteCleanup(*this, E, TypeIdentityArg, allocation, allocSize,
                           allocAlign, allocatorArgs);
     operatorDeleteCleanup = EHStack.stable_begin();
-    cleanupDominator = Builder.CreateUnreachable();
+    cleanupDominator =
+        Builder.CreateFlagLoad(llvm::Constant::getNullValue(Int8PtrTy));
   }
 
   // Without a cookie the two sizes must match. With a cookie they usually

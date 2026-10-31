@@ -27,7 +27,8 @@ namespace testing {
 namespace mathvec {
 
 template <typename T> using UnaryScalarFunc = T(T);
-template <typename T> using UnaryVectorFunc = cpp::simd<T>(cpp::simd<T>);
+template <typename T>
+using UnaryVectorFunc = LIBC_VECTOR_PCS cpp::simd<T>(cpp::simd<T>);
 
 template <typename T, UnaryScalarFunc<T> ScalarFunc,
           UnaryVectorFunc<T> VectorFunc>

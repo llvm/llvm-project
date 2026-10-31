@@ -61,6 +61,26 @@ protected:
   }
 };
 
+class DeviceOffloadHIPTest : public InterpreterTestBase {
+protected:
+  static void SetUpTestSuite() {
+    InterpreterTestBase::SetUpTestSuite();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
+  }
+
+  void SetUp() override {
+    InterpreterTestBase::SetUp();
+    if (IsSkipped())
+      return;
+    std::string Err;
+    if (!llvm::TargetRegistry::lookupTarget(llvm::Triple("amdgcn-amd-amdhsa"),
+                                            Err))
+      GTEST_SKIP() << Err;
+  }
+};
+
 TEST_F(DeviceOffloadTest, FirstDeviceModuleVerifies) {
 #if GTEST_HAS_DEATH_TEST
   // Release builds leave the IR verifier off. A broken module ends in
@@ -121,6 +141,25 @@ TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
       DeviceCI,
       llvm::FailedWithMessage("Multiple device architectures are not "
                               "supported. Pass a single --offload-arch"));
+}
+
+TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  auto HostCI = CB.CreateHost(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  auto Interp = Interpreter::createWithDevice(
+      std::move(*HostCI), std::move(*DeviceCI), OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(Interp, llvm::Succeeded());
+
+  // FIXME: Replace this with a check of the embedded bundle once the offload
+  // binary is generated.
+  auto PTU = (*Interp)->Parse("__attribute__((device)) void f() {}");
+  EXPECT_THAT_EXPECTED(
+      PTU, llvm::FailedWithMessage("HIP offload binary generation is not "
+                                   "supported yet."));
 }
 
 // A bitcode library with one float(float) function that doubles its argument,

@@ -159,8 +159,7 @@ PreservedAnalyses LoopDataPrefetchPass::run(Function &F,
       &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   const TargetTransformInfo *TTI = &AM.getResult<TargetIRAnalysis>(F);
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   LoopDataPrefetch LDP(Opts, AC, DT, LI, SE, TTI, ORE);
   bool Changed = LDP.run();
 
@@ -188,8 +187,7 @@ bool LoopDataPrefetchLegacyPass::runOnFunction(Function &F) {
   const TargetTransformInfo *TTI =
       &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   LoopDataPrefetch LDP(Opts, AC, DT, LI, SE, TTI, ORE);
   return LDP.run();
 }

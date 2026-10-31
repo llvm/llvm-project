@@ -27,24 +27,24 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-KNL-NEXT:    .cfi_def_cfa_offset 72
 ; CHECK64-KNL-NEXT:    pushq %rcx ## encoding: [0x51]
 ; CHECK64-KNL-NEXT:    .cfi_def_cfa_offset 80
-; CHECK64-KNL-NEXT:    subq $2096, %rsp ## encoding: [0x48,0x81,0xec,0x30,0x08,0x00,0x00]
-; CHECK64-KNL-NEXT:    ## imm = 0x830
+; CHECK64-KNL-NEXT:    subq $2064, %rsp ## encoding: [0x48,0x81,0xec,0x10,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## imm = 0x810
 ; CHECK64-KNL-NEXT:    kmovw %k7, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xbc,0x24,0x2e,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xbc,0x24,0x0e,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k6, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xb4,0x24,0x2c,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xb4,0x24,0x0c,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k5, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xac,0x24,0x2a,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xac,0x24,0x0a,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k4, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xa4,0x24,0x28,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0xa4,0x24,0x08,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k3, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x9c,0x24,0x26,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x9c,0x24,0x06,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k2, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x94,0x24,0x24,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x94,0x24,0x04,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x8c,0x24,0x22,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x8c,0x24,0x02,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x84,0x24,0x20,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x84,0x24,0x00,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    vmovups %zmm31, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
 ; CHECK64-KNL-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x11,0x7c,0x24,0x1f]
 ; CHECK64-KNL-NEXT:    vmovups %zmm30, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
@@ -109,7 +109,7 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x4c,0x24,0x01]
 ; CHECK64-KNL-NEXT:    vmovups %zmm0, (%rsp) ## 64-byte Spill
 ; CHECK64-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x04,0x24]
-; CHECK64-KNL-NEXT:    .cfi_def_cfa_offset 2176
+; CHECK64-KNL-NEXT:    .cfi_def_cfa_offset 2144
 ; CHECK64-KNL-NEXT:    .cfi_offset %rcx, -80
 ; CHECK64-KNL-NEXT:    .cfi_offset %rdx, -72
 ; CHECK64-KNL-NEXT:    .cfi_offset %rsi, -64
@@ -119,38 +119,38 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-KNL-NEXT:    .cfi_offset %r10, -32
 ; CHECK64-KNL-NEXT:    .cfi_offset %r11, -24
 ; CHECK64-KNL-NEXT:    .cfi_offset %rax, -16
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm0, -2176
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm1, -2112
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm2, -2048
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm3, -1984
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm4, -1920
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm5, -1856
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm6, -1792
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm7, -1728
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm8, -1664
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm9, -1600
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm10, -1536
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm11, -1472
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm12, -1408
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm13, -1344
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm14, -1280
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm15, -1216
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm16, -1152
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm17, -1088
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm18, -1024
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm19, -960
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm20, -896
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm21, -832
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm22, -768
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm23, -704
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm24, -640
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm25, -576
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm26, -512
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm27, -448
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm28, -384
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm29, -320
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm30, -256
-; CHECK64-KNL-NEXT:    .cfi_offset %xmm31, -192
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm0, -2144
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm1, -2080
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm2, -2016
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm3, -1952
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm4, -1888
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm5, -1824
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm6, -1760
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm7, -1696
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm8, -1632
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm9, -1568
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm10, -1504
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm11, -1440
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm12, -1376
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm13, -1312
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm14, -1248
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm15, -1184
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm16, -1120
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm17, -1056
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm18, -992
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm19, -928
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm20, -864
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm21, -800
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm22, -736
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm23, -672
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm24, -608
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm25, -544
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm26, -480
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm27, -416
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm28, -352
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm29, -288
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm30, -224
+; CHECK64-KNL-NEXT:    .cfi_offset %xmm31, -160
 ; CHECK64-KNL-NEXT:    .cfi_offset %k0, -96
 ; CHECK64-KNL-NEXT:    .cfi_offset %k1, -94
 ; CHECK64-KNL-NEXT:    .cfi_offset %k2, -92
@@ -227,23 +227,23 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-KNL-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm31 ## 64-byte Reload
 ; CHECK64-KNL-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x10,0x7c,0x24,0x1f]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x84,0x24,0x20,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x84,0x24,0x00,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x8c,0x24,0x22,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x8c,0x24,0x02,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x94,0x24,0x24,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x94,0x24,0x04,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x9c,0x24,0x26,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x9c,0x24,0x06,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xa4,0x24,0x28,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xa4,0x24,0x08,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xac,0x24,0x2a,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xac,0x24,0x0a,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xb4,0x24,0x2c,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xb4,0x24,0x0c,0x08,0x00,0x00]
 ; CHECK64-KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xbc,0x24,0x2e,0x08,0x00,0x00]
-; CHECK64-KNL-NEXT:    addq $2096, %rsp ## encoding: [0x48,0x81,0xc4,0x30,0x08,0x00,0x00]
-; CHECK64-KNL-NEXT:    ## imm = 0x830
+; CHECK64-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0xbc,0x24,0x0e,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    addq $2064, %rsp ## encoding: [0x48,0x81,0xc4,0x10,0x08,0x00,0x00]
+; CHECK64-KNL-NEXT:    ## imm = 0x810
 ; CHECK64-KNL-NEXT:    popq %rcx ## encoding: [0x59]
 ; CHECK64-KNL-NEXT:    popq %rdx ## encoding: [0x5a]
 ; CHECK64-KNL-NEXT:    popq %rsi ## encoding: [0x5e]
@@ -275,24 +275,24 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-SKX-NEXT:    .cfi_def_cfa_offset 72
 ; CHECK64-SKX-NEXT:    pushq %rcx ## encoding: [0x51]
 ; CHECK64-SKX-NEXT:    .cfi_def_cfa_offset 80
-; CHECK64-SKX-NEXT:    subq $2160, %rsp ## encoding: [0x48,0x81,0xec,0x70,0x08,0x00,0x00]
-; CHECK64-SKX-NEXT:    ## imm = 0x870
+; CHECK64-SKX-NEXT:    subq $2112, %rsp ## encoding: [0x48,0x81,0xec,0x40,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## imm = 0x840
 ; CHECK64-SKX-NEXT:    kmovq %k7, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xbc,0x24,0x68,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xbc,0x24,0x38,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k6, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xb4,0x24,0x60,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xb4,0x24,0x30,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k5, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xac,0x24,0x58,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xac,0x24,0x28,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k4, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xa4,0x24,0x50,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0xa4,0x24,0x20,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k3, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x9c,0x24,0x48,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x9c,0x24,0x18,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k2, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x94,0x24,0x40,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x94,0x24,0x10,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x8c,0x24,0x38,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x8c,0x24,0x08,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x84,0x24,0x30,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x84,0x24,0x00,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    vmovups %zmm31, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x11,0x7c,0x24,0x1f]
 ; CHECK64-SKX-NEXT:    vmovups %zmm30, {{[-0-9]+}}(%r{{[sb]}}p) ## 64-byte Spill
@@ -357,7 +357,7 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x4c,0x24,0x01]
 ; CHECK64-SKX-NEXT:    vmovups %zmm0, (%rsp) ## 64-byte Spill
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x04,0x24]
-; CHECK64-SKX-NEXT:    .cfi_def_cfa_offset 2240
+; CHECK64-SKX-NEXT:    .cfi_def_cfa_offset 2192
 ; CHECK64-SKX-NEXT:    .cfi_offset %rcx, -80
 ; CHECK64-SKX-NEXT:    .cfi_offset %rdx, -72
 ; CHECK64-SKX-NEXT:    .cfi_offset %rsi, -64
@@ -367,38 +367,38 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-SKX-NEXT:    .cfi_offset %r10, -32
 ; CHECK64-SKX-NEXT:    .cfi_offset %r11, -24
 ; CHECK64-SKX-NEXT:    .cfi_offset %rax, -16
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm0, -2240
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm1, -2176
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm2, -2112
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm3, -2048
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm4, -1984
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm5, -1920
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm6, -1856
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm7, -1792
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm8, -1728
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm9, -1664
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm10, -1600
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm11, -1536
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm12, -1472
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm13, -1408
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm14, -1344
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm15, -1280
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm16, -1216
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm17, -1152
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm18, -1088
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm19, -1024
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm20, -960
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm21, -896
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm22, -832
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm23, -768
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm24, -704
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm25, -640
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm26, -576
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm27, -512
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm28, -448
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm29, -384
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm30, -320
-; CHECK64-SKX-NEXT:    .cfi_offset %xmm31, -256
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm0, -2192
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm1, -2128
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm2, -2064
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm3, -2000
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm4, -1936
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm5, -1872
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm6, -1808
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm7, -1744
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm8, -1680
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm9, -1616
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm10, -1552
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm11, -1488
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm12, -1424
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm13, -1360
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm14, -1296
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm15, -1232
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm16, -1168
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm17, -1104
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm18, -1040
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm19, -976
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm20, -912
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm21, -848
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm22, -784
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm23, -720
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm24, -656
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm25, -592
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm26, -528
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm27, -464
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm28, -400
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm29, -336
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm30, -272
+; CHECK64-SKX-NEXT:    .cfi_offset %xmm31, -208
 ; CHECK64-SKX-NEXT:    .cfi_offset %k0, -144
 ; CHECK64-SKX-NEXT:    .cfi_offset %k1, -136
 ; CHECK64-SKX-NEXT:    .cfi_offset %k2, -128
@@ -476,23 +476,23 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK64-SKX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm31 ## 64-byte Reload
 ; CHECK64-SKX-NEXT:    ## encoding: [0x62,0x61,0x7c,0x48,0x10,0x7c,0x24,0x1f]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k0 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x84,0x24,0x30,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x84,0x24,0x00,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x8c,0x24,0x38,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x8c,0x24,0x08,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x94,0x24,0x40,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x94,0x24,0x10,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x9c,0x24,0x48,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x9c,0x24,0x18,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xa4,0x24,0x50,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xa4,0x24,0x20,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xac,0x24,0x58,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xac,0x24,0x28,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xb4,0x24,0x60,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xb4,0x24,0x30,0x08,0x00,0x00]
 ; CHECK64-SKX-NEXT:    kmovq {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 8-byte Reload
-; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xbc,0x24,0x68,0x08,0x00,0x00]
-; CHECK64-SKX-NEXT:    addq $2160, %rsp ## encoding: [0x48,0x81,0xc4,0x70,0x08,0x00,0x00]
-; CHECK64-SKX-NEXT:    ## imm = 0x870
+; CHECK64-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0xbc,0x24,0x38,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    addq $2112, %rsp ## encoding: [0x48,0x81,0xc4,0x40,0x08,0x00,0x00]
+; CHECK64-SKX-NEXT:    ## imm = 0x840
 ; CHECK64-SKX-NEXT:    popq %rcx ## encoding: [0x59]
 ; CHECK64-SKX-NEXT:    popq %rdx ## encoding: [0x5a]
 ; CHECK64-SKX-NEXT:    popq %rsi ## encoding: [0x5e]
@@ -515,8 +515,8 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-KNL-NEXT:    pushl %ecx ## encoding: [0x51]
 ; CHECK32-KNL-NEXT:    pushl %eax ## encoding: [0x50]
 ; CHECK32-KNL-NEXT:    andl $-16, %esp ## encoding: [0x83,0xe4,0xf0]
-; CHECK32-KNL-NEXT:    subl $560, %esp ## encoding: [0x81,0xec,0x30,0x02,0x00,0x00]
-; CHECK32-KNL-NEXT:    ## imm = 0x230
+; CHECK32-KNL-NEXT:    subl $544, %esp ## encoding: [0x81,0xec,0x20,0x02,0x00,0x00]
+; CHECK32-KNL-NEXT:    ## imm = 0x220
 ; CHECK32-KNL-NEXT:    kmovw %k7, {{[-0-9]+}}(%e{{[sb]}}p) ## 2-byte Spill
 ; CHECK32-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x7d,0xf2]
 ; CHECK32-KNL-NEXT:    kmovw %k6, {{[-0-9]+}}(%e{{[sb]}}p) ## 2-byte Spill
@@ -534,32 +534,32 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-KNL-NEXT:    kmovw %k0, {{[-0-9]+}}(%e{{[sb]}}p) ## 2-byte Spill
 ; CHECK32-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x91,0x45,0xe4]
 ; CHECK32-KNL-NEXT:    vmovups %zmm7, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xbd,0x88,0xff,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xbd,0x98,0xff,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm6, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xb5,0x48,0xff,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xb5,0x58,0xff,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm5, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xad,0x08,0xff,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xad,0x18,0xff,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm4, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xa5,0xc8,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xa5,0xd8,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x9d,0x88,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x9d,0x98,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x95,0x48,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x95,0x58,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x8d,0x08,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x8d,0x18,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x85,0xc8,0xfd,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x85,0xd8,0xfd,0xff,0xff]
 ; CHECK32-KNL-NEXT:    .cfi_offset %eax, -20
 ; CHECK32-KNL-NEXT:    .cfi_offset %ecx, -16
 ; CHECK32-KNL-NEXT:    .cfi_offset %edx, -12
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm0, -576
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm1, -512
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm2, -448
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm3, -384
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm4, -320
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm5, -256
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm6, -192
-; CHECK32-KNL-NEXT:    .cfi_offset %xmm7, -128
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm0, -560
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm1, -496
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm2, -432
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm3, -368
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm4, -304
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm5, -240
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm6, -176
+; CHECK32-KNL-NEXT:    .cfi_offset %xmm7, -112
 ; CHECK32-KNL-NEXT:    .cfi_offset %k0, -36
 ; CHECK32-KNL-NEXT:    .cfi_offset %k1, -34
 ; CHECK32-KNL-NEXT:    .cfi_offset %k2, -32
@@ -572,21 +572,21 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-KNL-NEXT:    calll _bar ## encoding: [0xe8,A,A,A,A]
 ; CHECK32-KNL-NEXT:    ## fixup A - offset: 1, value: _bar, kind: FK_PCRel_4
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm0 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x85,0xc8,0xfd,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x85,0xd8,0xfd,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm1 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x8d,0x08,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x8d,0x18,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm2 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x95,0x48,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x95,0x58,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm3 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x9d,0x88,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x9d,0x98,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm4 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xa5,0xc8,0xfe,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xa5,0xd8,0xfe,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm5 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xad,0x08,0xff,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xad,0x18,0xff,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm6 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xb5,0x48,0xff,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xb5,0x58,0xff,0xff,0xff]
 ; CHECK32-KNL-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm7 ## 64-byte Reload
-; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xbd,0x88,0xff,0xff,0xff]
+; CHECK32-KNL-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xbd,0x98,0xff,0xff,0xff]
 ; CHECK32-KNL-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k0 ## 2-byte Reload
 ; CHECK32-KNL-NEXT:    ## encoding: [0xc5,0xf8,0x90,0x45,0xe4]
 ; CHECK32-KNL-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 ## 2-byte Reload
@@ -621,8 +621,8 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-SKX-NEXT:    pushl %ecx ## encoding: [0x51]
 ; CHECK32-SKX-NEXT:    pushl %eax ## encoding: [0x50]
 ; CHECK32-SKX-NEXT:    andl $-16, %esp ## encoding: [0x83,0xe4,0xf0]
-; CHECK32-SKX-NEXT:    subl $624, %esp ## encoding: [0x81,0xec,0x70,0x02,0x00,0x00]
-; CHECK32-SKX-NEXT:    ## imm = 0x270
+; CHECK32-SKX-NEXT:    subl $592, %esp ## encoding: [0x81,0xec,0x50,0x02,0x00,0x00]
+; CHECK32-SKX-NEXT:    ## imm = 0x250
 ; CHECK32-SKX-NEXT:    kmovq %k7, {{[-0-9]+}}(%e{{[sb]}}p) ## 8-byte Spill
 ; CHECK32-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x7d,0xe8]
 ; CHECK32-SKX-NEXT:    kmovq %k6, {{[-0-9]+}}(%e{{[sb]}}p) ## 8-byte Spill
@@ -640,32 +640,32 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-SKX-NEXT:    kmovq %k0, {{[-0-9]+}}(%e{{[sb]}}p) ## 8-byte Spill
 ; CHECK32-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x91,0x45,0xb0]
 ; CHECK32-SKX-NEXT:    vmovups %zmm7, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xbd,0x48,0xff,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xbd,0x68,0xff,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm6, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xb5,0x08,0xff,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xb5,0x28,0xff,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm5, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xad,0xc8,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xad,0xe8,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm4, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xa5,0x88,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0xa5,0xa8,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm3, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x9d,0x48,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x9d,0x68,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm2, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x95,0x08,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x95,0x28,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x8d,0xc8,0xfd,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x8d,0xe8,0xfd,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups %zmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 64-byte Spill
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x85,0x88,0xfd,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x85,0xa8,0xfd,0xff,0xff]
 ; CHECK32-SKX-NEXT:    .cfi_offset %eax, -20
 ; CHECK32-SKX-NEXT:    .cfi_offset %ecx, -16
 ; CHECK32-SKX-NEXT:    .cfi_offset %edx, -12
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm0, -640
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm1, -576
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm2, -512
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm3, -448
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm4, -384
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm5, -320
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm6, -256
-; CHECK32-SKX-NEXT:    .cfi_offset %xmm7, -192
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm0, -608
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm1, -544
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm2, -480
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm3, -416
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm4, -352
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm5, -288
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm6, -224
+; CHECK32-SKX-NEXT:    .cfi_offset %xmm7, -160
 ; CHECK32-SKX-NEXT:    .cfi_offset %k0, -88
 ; CHECK32-SKX-NEXT:    .cfi_offset %k1, -80
 ; CHECK32-SKX-NEXT:    .cfi_offset %k2, -72
@@ -679,21 +679,21 @@ define x86_intrcc void @foo(ptr byval(i8) %frame) {
 ; CHECK32-SKX-NEXT:    calll _bar ## encoding: [0xe8,A,A,A,A]
 ; CHECK32-SKX-NEXT:    ## fixup A - offset: 1, value: _bar, kind: FK_PCRel_4
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm0 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x85,0x88,0xfd,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x85,0xa8,0xfd,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm1 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x8d,0xc8,0xfd,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x8d,0xe8,0xfd,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm2 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x95,0x08,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x95,0x28,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm3 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x9d,0x48,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x9d,0x68,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm4 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xa5,0x88,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xa5,0xa8,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm5 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xad,0xc8,0xfe,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xad,0xe8,0xfe,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm6 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xb5,0x08,0xff,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xb5,0x28,0xff,0xff,0xff]
 ; CHECK32-SKX-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %zmm7 ## 64-byte Reload
-; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xbd,0x48,0xff,0xff,0xff]
+; CHECK32-SKX-NEXT:    ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0xbd,0x68,0xff,0xff,0xff]
 ; CHECK32-SKX-NEXT:    kmovq {{[-0-9]+}}(%e{{[sb]}}p), %k0 ## 8-byte Reload
 ; CHECK32-SKX-NEXT:    ## encoding: [0xc4,0xe1,0xf8,0x90,0x45,0xb0]
 ; CHECK32-SKX-NEXT:    kmovq {{[-0-9]+}}(%e{{[sb]}}p), %k1 ## 8-byte Reload

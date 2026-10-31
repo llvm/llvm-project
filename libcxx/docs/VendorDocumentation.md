@@ -620,7 +620,7 @@ unavailable:
 
 1. A macro named `_LIBCPP_AVAILABILITY_HAS_<feature>` which must be defined to `_LIBCPP_INTRODUCED_IN_<version>` for
    the appropriate LLVM version.
-2. A macro named `_LIBCPP_AVAILABILITY_<feature>`, which must be defined to `_LIBCPP_INTRODUCED_IN_<version>_MARKUP`
+2. A macro named `_LIBCPP_AVAILABILITY_<feature>`, which must be defined to `_LIBCPP_INTRODUCED_IN_<version>_ATTRIBUTE`
    for the appropriate LLVM version.
 
 When vendors decide to ship the feature as part of their shared library, they can update the

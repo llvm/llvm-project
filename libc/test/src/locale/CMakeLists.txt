@@ -1,4 +1,4 @@
-add_custom_target(libc-locale-tests)
+add_libc_testsuite(libc-locale-tests)
 
 add_libc_test(
   locale_test

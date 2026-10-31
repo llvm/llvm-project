@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -acc-implicit-routine=the-device-types=3,4 -split-input-file -verify-diagnostics | FileCheck %s
 // RUN: mlir-opt %s -acc-implicit-routine -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=NODEVICE
+// RUN: mlir-opt %s -acc-implicit-routine=device-type=nvidia -split-input-file -verify-diagnostics | FileCheck %s --check-prefix=DEVICE-NVIDIA
 
 // -----
 
@@ -166,6 +167,34 @@ module {
 
 // CHECK: acc.routine @r_bind func(@foo) bind(@bar) seq
 // CHECK-NOT: acc.routine @{{.*}} func(@only_in_bound_routine)
+
+// -----
+
+// acc.routine with bind only for device_type(*). Since the test is run with device_type nvidia
+// the bind applies and therefore recursive walk is skipped for the calls in that routine.
+module {
+  acc.routine @r_bind_star func(@foo_star) seq bind(@bar_star [#acc.device_type<star>])
+  func.func @foo_star() attributes {acc.routine_info = #acc.routine_info<[@r_bind_star]>} {
+    func.call @only_in_bound_routine_star() : () -> ()
+    return
+  }
+  func.func @bar_star() {
+    return
+  }
+  func.func @only_in_bound_routine_star() {
+    return
+  }
+  func.func @test_bind_skips_recursive_star() {
+    acc.serial {
+      func.call @foo_star() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// DEVICE-NVIDIA: acc.routine @r_bind_star func(@foo_star) bind(@bar_star [#acc.device_type<star>]) seq
+// DEVICE-NVIDIA-NOT: acc.routine @{{.*}} func(@only_in_bound_routine_star)
 
 // -----
 

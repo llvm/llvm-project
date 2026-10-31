@@ -13,6 +13,7 @@ add_mlir_dialect_library(MLIRGPUTransformOps
 
   LINK_LIBS PUBLIC
   MLIRGPUDialect
+  MLIRGPUROCDLTransforms
   MLIRGPUTransforms
   MLIRIR
   MLIRParser

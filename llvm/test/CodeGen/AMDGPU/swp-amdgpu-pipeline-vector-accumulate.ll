@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s
 ; Reduced from Composable Kernels. Vector <2 x float> reduction with
 ; two accumulators fed by two buffer loads and vector-predicated selects.
 ; Verifies such a loop software-pipelines.

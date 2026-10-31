@@ -195,6 +195,14 @@ def LocationAttr : Attr<CPred<"::llvm::isa<::mlir::LocationAttr>($_self)">,
   let constBuilderCall = "(::mlir::LocationAttr)$0";
 }
 
+// Any distinct attribute.
+def AnyDistinctAttr : Attr<CPred<"::llvm::isa<::mlir::DistinctAttr>($_self)">,
+                           "distinct attribute"> {
+  let storageType = "::mlir::DistinctAttr";
+  let returnType = "::mlir::DistinctAttr";
+  let convertFromStorage = "$_self";
+}
+
 def BoolAttr : Attr<CPred<"::llvm::isa<::mlir::BoolAttr>($_self)">, "bool attribute"> {
   let storageType = [{ ::mlir::BoolAttr }];
   let returnType = [{ bool }];

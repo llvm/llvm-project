@@ -4,6 +4,7 @@
 // RUN: %clang -E -target bpfel -mcpu=v2 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V2 %s
 // RUN: %clang -E -target bpfel -mcpu=v3 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V3 %s
 // RUN: %clang -E -target bpfel -mcpu=v4 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V4 %s
+// RUN: %clang -E -target bpfel -mcpu=v5 -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_V5 %s
 // RUN: %clang -E -target bpfel -mcpu=generic -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_GENERIC %s
 // RUN: %clang -E -target bpfel -mcpu=probe -x c -o - %s | FileCheck -check-prefix=CHECK -check-prefix=CPU_PROBE %s
 
@@ -33,6 +34,9 @@ int i;
 #endif
 #if __BPF_CPU_VERSION__ == 4
 int j;
+#endif
+#if __BPF_CPU_VERSION__ == 5
+int aa;
 #endif
 #ifdef __BPF_FEATURE_JMP_EXT
 int k;
@@ -82,6 +86,12 @@ int y;
 #ifdef __BPF_FEATURE_UNWIND
 int z;
 #endif
+#ifdef __BPF_FEATURE_HMUL
+int ab;
+#endif
+#if __BPF_CPU_VERSION__ < 5 && defined(__BPF_FEATURE_HMUL)
+#error HMUL requires CPU v5 or later
+#endif
 
 // CHECK: int b;
 // CHECK: int c;
@@ -111,33 +121,53 @@ int z;
 // CPU_V4: int r;
 // CPU_V4: int s;
 
+// CPU_V5: int aa;
+// CPU_V5: int k;
+// CPU_V5: int l;
+// CPU_V5: int m;
+// CPU_V5: int n;
+// CPU_V5: int o;
+// CPU_V5: int p;
+// CPU_V5: int q;
+// CPU_V5: int r;
+// CPU_V5: int s;
+
 // CPU_V1: int t;
 // CPU_V2: int t;
 // CPU_V3: int t;
 // CPU_V4: int t;
+// CPU_V5: int t;
 
 // CPU_V1: int u;
 // CPU_V2: int u;
 // CPU_V3: int u;
 // CPU_V4: int u;
+// CPU_V5: int u;
 
 // CPU_V4: int v;
 // CPU_V4: int w;
+// CPU_V5: int v;
+// CPU_V5: int w;
 
 // CPU_V1: int x;
 // CPU_V2: int x;
 // CPU_V3: int x;
 // CPU_V4: int x;
+// CPU_V5: int x;
 
 // CPU_V1: int y;
 // CPU_V2: int y;
 // CPU_V3: int y;
 // CPU_V4: int y;
+// CPU_V5: int y;
 
 // CPU_V1: int z;
 // CPU_V2: int z;
 // CPU_V3: int z;
 // CPU_V4: int z;
+// CPU_V5: int z;
+
+// CPU_V5: int ab;
 
 // CPU_GENERIC: int g;
 

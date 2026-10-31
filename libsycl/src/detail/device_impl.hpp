@@ -98,7 +98,7 @@ public:
 
     constexpr ol_device_info_t OLInfo = mapInfoDesc<Param, ol_device_info_t>(
         Map::M<device_type>{OL_DEVICE_INFO_TYPE},
-        Map::M<name>{OL_DEVICE_INFO_NAME},
+        Map::M<name>{OL_DEVICE_INFO_PRODUCT_NAME},
         Map::M<vendor>{OL_DEVICE_INFO_VENDOR},
         Map::M<driver_version>{OL_DEVICE_INFO_DRIVER_VERSION});
 

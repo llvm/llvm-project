@@ -33,7 +33,6 @@
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
 #define GET_INSTRMAP_INFO
@@ -42,11 +41,6 @@ using namespace llvm;
 #define DEBUG_TYPE "lanai-mem-alu-combiner"
 
 STATISTIC(NumLdStAluCombined, "Number of memory and ALU instructions combined");
-
-static llvm::cl::opt<bool> DisableMemAluCombiner(
-    "disable-lanai-mem-alu-combiner", llvm::cl::init(false),
-    llvm::cl::desc("Do not combine ALU and memory operators"),
-    llvm::cl::Hidden);
 
 namespace {
 typedef MachineBasicBlock::iterator MbbIterator;
@@ -407,10 +401,11 @@ bool LanaiMemAluCombinerImpl::combineMemAluInBasicBlock(MachineBasicBlock *BB) {
 // Driver function that iterates over the machine basic building blocks of a
 // machine function
 bool LanaiMemAluCombinerImpl::runOnMachineFunction(MachineFunction &MF) {
-  if (DisableMemAluCombiner)
+  const LanaiSubtarget &STI = MF.getSubtarget<LanaiSubtarget>();
+  if (!STI.getCLOpts().enable_mem_alu_combiner)
     return false;
 
-  TII = MF.getSubtarget<LanaiSubtarget>().getInstrInfo();
+  TII = STI.getInstrInfo();
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
     Modified |= combineMemAluInBasicBlock(&MBB);

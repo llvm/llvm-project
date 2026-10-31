@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
-#include "llvm/ADT/APInt.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallString.h"
@@ -41,26 +41,20 @@ using namespace llvm::bfi_detail;
 #define DEBUG_TYPE "block-freq"
 
 namespace llvm {
-cl::opt<bool> CheckBFIUnknownBlockQueries(
-    "check-bfi-unknown-block-queries",
-    cl::init(false), cl::Hidden,
-    cl::desc("Check if block frequency is queried for an unknown block "
-             "for debugging missed BFI updates"));
-
 cl::opt<bool> UseIterativeBFIInference(
     "use-iterative-bfi-inference", cl::Hidden,
     cl::desc("Apply an iterative post-processing to infer correct BFI counts"));
-
-cl::opt<unsigned> IterativeBFIMaxIterationsPerBlock(
-    "iterative-bfi-max-iterations-per-block", cl::init(1000), cl::Hidden,
-    cl::desc("Iterative inference: maximum number of update iterations "
-             "per block"));
-
-cl::opt<double> IterativeBFIPrecision(
-    "iterative-bfi-precision", cl::init(1e-12), cl::Hidden,
-    cl::desc("Iterative inference: delta convergence precision; smaller values "
-             "typically lead to better results at the cost of worsen runtime"));
 } // namespace llvm
+
+bool llvm::shouldCheckBFIUnknownBlockQueries(const LLVMContext &C) {
+  return getAnalysisOptions(C).check_bfi_unknown_block_queries;
+}
+unsigned llvm::getIterativeBFIMaxIterationsPerBlock(const LLVMContext &C) {
+  return getAnalysisOptions(C).iterative_bfi_max_iterations_per_block;
+}
+double llvm::getIterativeBFIPrecision(const LLVMContext &C) {
+  return getAnalysisOptions(C).iterative_bfi_precision;
+}
 
 ScaledNumber<uint64_t> BlockMass::toScaled() const {
   if (isFull())
@@ -542,7 +536,7 @@ BlockFrequency
 BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
   if (!Node.isValid()) {
 #ifndef NDEBUG
-    if (CheckBFIUnknownBlockQueries) {
+    if (CheckUnknownBlockQueries) {
       SmallString<256> Msg;
       raw_svector_ostream OS(Msg);
       OS << "*** Detected BFI query for unknown block " << getBlockName(Node);
@@ -566,15 +560,8 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
   auto EntryCount = F.getEntryCount();
   if (!EntryCount)
     return std::nullopt;
-  // Use 128 bit APInt to do the arithmetic to avoid overflow.
-  APInt BlockCount(128, *EntryCount);
-  APInt BlockFreq(128, Freq.getFrequency());
-  APInt EntryFreq(128, getEntryFreq().getFrequency());
-  BlockCount *= BlockFreq;
-  // Rounded division of BlockCount by EntryFreq. Since EntryFreq is unsigned
-  // lshr by 1 gives EntryFreq/2.
-  BlockCount = (BlockCount + EntryFreq.lshr(1)).udiv(EntryFreq);
-  return BlockCount.getLimitedValue();
+  return mulDivNearest(*EntryCount, Freq.getFrequency(),
+                       getEntryFreq().getFrequency());
 }
 
 bool

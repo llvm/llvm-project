@@ -286,7 +286,7 @@ declare i32 @test_argv32i1helper(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)
 define dso_local x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, <32 x i1> %x2)  {
 ; X32-LABEL: test_argv32i1:
 ; X32:       # %bb.0: # %entry
-; X32-NEXT:    subl $76, %esp
+; X32-NEXT:    subl $64, %esp
 ; X32-NEXT:    vmovups %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -305,7 +305,7 @@ define dso_local x86_regcallcc i32 @test_argv32i1(<32 x i1> %x0, <32 x i1> %x1, 
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm6 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X32-NEXT:    addl $76, %esp
+; X32-NEXT:    addl $64, %esp
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
@@ -517,7 +517,7 @@ declare i16 @test_argv16i1helper(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)
 define dso_local x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, <16 x i1> %x2)  {
 ; X32-LABEL: test_argv16i1:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $76, %esp
+; X32-NEXT:    subl $64, %esp
 ; X32-NEXT:    vmovups %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -537,7 +537,7 @@ define dso_local x86_regcallcc i16 @test_argv16i1(<16 x i1> %x0, <16 x i1> %x1, 
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm6 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X32-NEXT:    addl $76, %esp
+; X32-NEXT:    addl $64, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argv16i1:
@@ -747,7 +747,7 @@ declare i8 @test_argv8i1helper(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)
 define dso_local x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x i1> %x2)  {
 ; X32-LABEL: test_argv8i1:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $76, %esp
+; X32-NEXT:    subl $64, %esp
 ; X32-NEXT:    vmovups %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm5, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
@@ -767,7 +767,7 @@ define dso_local x86_regcallcc i8 @test_argv8i1(<8 x i1> %x0, <8 x i1> %x1, <8 x
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm6 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X32-NEXT:    addl $76, %esp
+; X32-NEXT:    addl $64, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argv8i1:

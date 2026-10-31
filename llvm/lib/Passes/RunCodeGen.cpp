@@ -20,7 +20,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/CGPassBuilderOption.h"
 
@@ -28,7 +27,7 @@ using namespace llvm;
 
 static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
                                       raw_pwrite_stream &OS,
-                                      std::unique_ptr<ToolOutputFile> &DwoOS,
+                                      raw_pwrite_stream *DwoOS,
                                       CodeGenFileType CGFT, bool DisableVerify,
                                       bool DisableSimplifyLibCalls) {
   legacy::PassManager CodeGenPasses;
@@ -44,8 +43,7 @@ static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
   CodeGenPasses.add(
       new RuntimeLibraryInfoWrapper(Options.MCOptions.ABIName, Options.VecLib));
 
-  if (TM.addPassesToEmitFile(CodeGenPasses, OS, DwoOS ? &DwoOS->os() : nullptr,
-                             CGFT, DisableVerify))
+  if (TM.addPassesToEmitFile(CodeGenPasses, OS, DwoOS, CGFT, DisableVerify))
     return createStringError("Failed to construct CodeGen pipeline");
   CodeGenPasses.run(M);
 
@@ -54,7 +52,7 @@ static Error runCodeGenPipelineLegacy(TargetMachine &TM, Module &M,
 
 static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
                                      raw_pwrite_stream &OS,
-                                     std::unique_ptr<ToolOutputFile> &DwoOS,
+                                     raw_pwrite_stream *DwoOS,
                                      CodeGenFileType CGFT, bool DisableVerify,
                                      IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
   ModulePassManager MPM;
@@ -67,9 +65,9 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
   Opt.DisableVerify = DisableVerify;
   MachineModuleInfo MMI(&TM);
   PassInstrumentationCallbacks PIC;
-  PipelineTuningOptions PTOptions(&M.getContext().getLibraryOptions());
-  TargetMachine *TMPointer = &TM;
-  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC, VFS);
+  const auto &LibraryOptions = M.getContext().getLibraryOptions();
+  PipelineTuningOptions PTOptions(&LibraryOptions);
+  PassBuilder PB(M.getContext(), &TM, PTOptions, std::nullopt, &PIC, VFS);
   PB.registerModuleAnalyses(MAM);
   PB.registerCGSCCAnalyses(CGAM);
   PB.registerFunctionAnalyses(FAM);
@@ -79,9 +77,8 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  Error BuildPipelineError =
-      TM.buildCodeGenPipeline(MPM, MAM, OS, DwoOS ? &DwoOS->os() : nullptr,
-                              CGFT, Opt, MMI.getContext(), &PIC);
+  Error BuildPipelineError = TM.buildCodeGenPipeline(
+      MPM, MAM, OS, DwoOS, CGFT, Opt, MMI.getContext(), &PIC);
   if (BuildPipelineError)
     return BuildPipelineError;
 
@@ -90,13 +87,11 @@ static Error runCodeGenPipelineNewPM(TargetMachine &TM, Module &M,
 }
 
 Error llvm::runCodeGenPipeline(TargetMachine &TM, Module &M,
-                               raw_pwrite_stream &OS,
-                               std::unique_ptr<ToolOutputFile> &DwoOS,
+                               raw_pwrite_stream &OS, raw_pwrite_stream *DwoOS,
                                CodeGenFileType CGFT, bool DisableVerify,
                                bool DisableSimplifyLibCalls,
                                IntrusiveRefCntPtr<vfs::FileSystem> VFS) {
-  const PassesOptions &Opts =
-      M.getContext().getLibraryOptions().get<PassesOptions>();
+  const PassesOptions &Opts = getPassesOptions(M.getContext());
   if (valueOr(Opts.force_new_pm_codegen, TM.shouldDefaultToNewPM())) {
     return runCodeGenPipelineNewPM(TM, M, OS, DwoOS, CGFT, DisableVerify, VFS);
   }

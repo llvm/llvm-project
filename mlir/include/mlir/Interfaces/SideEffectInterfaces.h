@@ -15,7 +15,9 @@
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
+#include <cstdint>
 
 namespace mlir {
 namespace SideEffects {
@@ -545,6 +547,27 @@ bool isOpTriviallyDead(Operation *op);
 ///
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
+
+/// A cache for repeated deadness queries on nested operations. All changes to
+/// an operation or its nested IR must invalidate that operation. Moves must
+/// also invalidate the old parent. Invalidate operations before erasing them.
+class DeadnessCache {
+public:
+  enum class State : uint8_t { Alive, Dead };
+
+  /// Return true if the operation is unused and can be erased. Terminators and
+  /// symbols cannot be erased. Uses are checked on every query.
+  bool isOpTriviallyDead(Operation *op);
+
+  /// Invalidate the operation, its descendants, and its ancestors.
+  void invalidate(Operation *op);
+
+  /// Invalidate the operation and its ancestors, preserving descendant entries.
+  void invalidateAncestors(Operation *op);
+
+private:
+  DenseMap<Operation *, State> cache;
+};
 
 /// Returns true if the given operation is free of memory effects.
 ///

@@ -1367,13 +1367,13 @@ OnDiskGraphDB::load(ObjectID ExternalRef) {
 
   llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(*File); });
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(*File, Status))
+  ErrorOr<uint64_t> FileSize = sys::fs::file_size(*File);
+  if (!FileSize)
     return createCorruptObjectError(getDigest(*I));
 
   std::error_code EC;
   auto Region = std::make_unique<sys::fs::mapped_file_region>(
-      *File, sys::fs::mapped_file_region::readonly, Status.getSize(), 0, EC);
+      *File, sys::fs::mapped_file_region::readonly, *FileSize, 0, EC);
   if (EC)
     return createCorruptObjectError(getDigest(*I));
 

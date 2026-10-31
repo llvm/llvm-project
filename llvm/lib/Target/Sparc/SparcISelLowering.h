@@ -170,8 +170,8 @@ namespace llvm {
 
     bool isFNegFree(EVT VT) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     bool isCtlzFast() const override;
 

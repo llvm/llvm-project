@@ -2789,13 +2789,12 @@ define fp128 @select_LD(i32 signext %a, i64, fp128 %b, fp128 %c) {
 ;
 ; CMP_CC_FMT-LABEL: select_LD:
 ; CMP_CC_FMT:       # %bb.0: # %entry
-; CMP_CC_FMT-NEXT:    sll $1, $4, 0
-; CMP_CC_FMT-NEXT:    seleqz $2, $8, $1
-; CMP_CC_FMT-NEXT:    selnez $3, $6, $1
-; CMP_CC_FMT-NEXT:    or $2, $3, $2
-; CMP_CC_FMT-NEXT:    seleqz $3, $9, $1
-; CMP_CC_FMT-NEXT:    selnez $1, $7, $1
-; CMP_CC_FMT-NEXT:    or $4, $1, $3
+; CMP_CC_FMT-NEXT:    seleqz $1, $8, $4
+; CMP_CC_FMT-NEXT:    selnez $2, $6, $4
+; CMP_CC_FMT-NEXT:    or $2, $2, $1
+; CMP_CC_FMT-NEXT:    seleqz $1, $9, $4
+; CMP_CC_FMT-NEXT:    selnez $3, $7, $4
+; CMP_CC_FMT-NEXT:    or $4, $3, $1
 ; CMP_CC_FMT-NEXT:    jrc $ra
 entry:
   %tobool = icmp ne i32 %a, 0

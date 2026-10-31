@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 using namespace llvm;
@@ -25,6 +26,7 @@ using namespace llvm;
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430Target() {
   // Register the target.
   RegisterTargetMachine<MSP430TargetMachine> X(getTheMSP430Target());
+  static opt::RegisterLibraryOptions<MSP430Options> O;
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeMSP430AsmPrinterPass(PR);
   initializeMSP430DAGToDAGISelLegacyPass(PR);
@@ -43,6 +45,8 @@ MSP430TargetMachine::MSP430TargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<MSP430Options>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this) {
   initAsmInfo();

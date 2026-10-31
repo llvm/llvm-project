@@ -232,6 +232,9 @@ public:
   bool useHVXV79Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V79;
   }
+  bool useHVXV79OpsOnly() const {
+    return HexagonHVXVersion == Hexagon::ArchEnum::V79;
+  }
   bool hasV81Ops() const {
     return getHexagonArchVersion() >= Hexagon::ArchEnum::V81;
   }

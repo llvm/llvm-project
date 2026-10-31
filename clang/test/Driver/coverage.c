@@ -32,6 +32,14 @@
 
 // PROFILE-DIR: "-coverage-data-file=abc
 
+/// Test -fprofile-abs-path
+// RUN: %clang -### -S -ftest-coverage %s 2>&1 | FileCheck --check-prefix=NO-PROFILE-ABS-PATH %s
+// RUN: %clang -### -S -fprofile-abs-path %s 2>&1 | FileCheck --check-prefix=NO-PROFILE-ABS-PATH %s
+// RUN: %clang -### -S -ftest-coverage -fprofile-abs-path %s 2>&1 | FileCheck --check-prefix=PROFILE-ABS-PATH %s
+
+// NO-PROFILE-ABS-PATH-NOT: "-coverage-notes-abs-paths"
+// PROFILE-ABS-PATH: "-coverage-notes-abs-paths"
+
 /// These should only get passed if any of --coverage, -ftest-coverage, or
 /// -fprofile-arcs is passed.
 // RUN: %clang -### -c %s 2>&1 | FileCheck --check-prefix=NO-COV %s

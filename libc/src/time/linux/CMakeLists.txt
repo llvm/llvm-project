@@ -122,6 +122,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timer_getoverrun
+  SRCS
+    timer_getoverrun.cpp
+  HDRS
+    ../timer_getoverrun.h
+  DEPENDS
+    libc.hdr.types.timer_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.timer_getoverrun
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   timer_gettime
   SRCS
     timer_gettime.cpp

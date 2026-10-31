@@ -216,10 +216,12 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
     if (XRayThreshold == std::numeric_limits<uint64_t>::max())
       return false;
 
-    // Count the number of MachineInstr`s in MachineFunction
+    // Count the number of non-debug MachineInstrs in MachineFunction.
     uint64_t MICount = 0;
     for (const auto &MBB : MF)
-      MICount += MBB.size();
+      MICount += llvm::count_if(MBB.instrs(), [](const MachineInstr &MI) {
+        return !MI.isDebugInstr();
+      });
 
     bool TooFewInstrs = MICount < XRayThreshold;
 

@@ -27,6 +27,10 @@ void test_args(unsigned int x) {
 
   // expected-error@+1 {{builtin '__builtin_hlsl_resource_getpointer' resource coordinate dimension mismatch: expected 1, found 2}}
   __builtin_hlsl_resource_getpointer(res, uint2(1, 2));
+
+  int a[4][4];
+  // expected-error@* {{an array type is not allowed here}}
+  __builtin_hlsl_resource_getpointer_typed(res, 0u, a);
 }
 
 using tex2d_handle_t = __hlsl_resource_t

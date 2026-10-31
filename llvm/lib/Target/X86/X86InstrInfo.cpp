@@ -1171,8 +1171,7 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
             .addReg(SrcReg, getKillRegState(isKill), SubReg);
 
-    // Which is obviously going to be dead after we're done with it.
-    isKill = true;
+    isKill = false;
 
     if (LIS) {
       SlotIndex CopyIdx = LIS->InsertMachineInstrInMaps(*Copy);
@@ -1253,25 +1252,25 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   CASE_NF(SHL16ri) {
     unsigned ShAmt = MI.getOperand(2).getImm();
     MIB.addReg(0)
-        .addImm(1LL << ShAmt)
-        .addReg(InRegLEA, RegState::Kill)
-        .addImm(0)
-        .addReg(0);
+       .addImm(1LL << ShAmt)
+       .addReg(InRegLEA)
+       .addImm(0)
+       .addReg(0);
     break;
   }
   CASE_NF(INC8r)
   CASE_NF(INC16r)
-    addRegOffset(MIB, InRegLEA, true, 1);
+    addRegOffset(MIB, InRegLEA, 1);
     break;
   CASE_NF(DEC8r)
   CASE_NF(DEC16r)
-    addRegOffset(MIB, InRegLEA, true, -1);
+    addRegOffset(MIB, InRegLEA, -1);
     break;
   CASE_NF(ADD8ri)
   CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
   case X86::ADD16ri_DB:
-    addRegOffset(MIB, InRegLEA, true, MI.getOperand(2).getImm());
+    addRegOffset(MIB, InRegLEA, MI.getOperand(2).getImm());
     break;
   CASE_NF(ADD8rr)
   CASE_NF(ADD16rr)
@@ -1284,7 +1283,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
     if (Src == Src2) {
       // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
-      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA, false,
+      addRegReg(MIB, InRegLEA, false, X86::NoSubRegister, InRegLEA, false,
                 X86::NoSubRegister);
     } else {
       if (Subtarget.is64Bit())
@@ -1298,7 +1297,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
       InsMI2 = BuildMI(MBB, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
                    .addReg(Src2, getKillRegState(IsKill2), Src2SubReg);
-      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
+      addRegReg(MIB, InRegLEA, false, X86::NoSubRegister, InRegLEA2, false,
                 X86::NoSubRegister);
     }
     break;
@@ -1309,7 +1308,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineInstr *ExtMI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(Dest, RegState::Define | getDeadRegState(IsDead))
-          .addReg(OutRegLEA, RegState::Kill, SubReg);
+          .addReg(OutRegLEA, {}, SubReg);
 
   if (LIS) {
     LIS->InsertMachineInstrInMaps(*ImpDef);
@@ -2238,46 +2237,56 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::OP:                                                                \
   case X86::OP##_ND:
 
+#define CASE_SHXD(OP)                                                          \
+  CASE_ND(OP)                                                                  \
+  case X86::OP##_NF:                                                           \
+  case X86::OP##_NF_ND:                                                        \
+  case X86::OP##_EVEX:
+
+  // clang-format off
   switch (Opc) {
-  // SHLD B, C, I <-> SHRD C, B, (BitWidth - I)
-  CASE_ND(SHRD16rri8)
-  CASE_ND(SHLD16rri8)
-  CASE_ND(SHRD32rri8)
-  CASE_ND(SHLD32rri8)
-  CASE_ND(SHRD64rri8)
-  CASE_ND(SHLD64rri8) {
+  // SHLD B, C, I <-> SHRD C, B, (BitWidth - I). All rri8 variants (legacy,
+  // _ND, _NF, _NF_ND, _EVEX) are commutable; swapping only the sources would
+  // change the result, so the opcode and immediate must be updated too.
+  CASE_SHXD(SHRD16rri8)
+  CASE_SHXD(SHLD16rri8)
+  CASE_SHXD(SHRD32rri8)
+  CASE_SHXD(SHLD32rri8)
+  CASE_SHXD(SHRD64rri8)
+  CASE_SHXD(SHLD64rri8) {
     unsigned Size;
     switch (Opc) {
     default:
       llvm_unreachable("Unreachable!");
-#define FROM_TO_SIZE(A, B, S)                                                  \
-  case X86::A:                                                                 \
-    Opc = X86::B;                                                              \
+#define FROM_TO_SUFFIX(A, B, S, SFX)                                           \
+  case X86::A##SFX:                                                            \
+    Opc = X86::B##SFX;                                                         \
     Size = S;                                                                  \
     break;                                                                     \
-  case X86::A##_ND:                                                            \
-    Opc = X86::B##_ND;                                                         \
-    Size = S;                                                                  \
-    break;                                                                     \
-  case X86::B:                                                                 \
-    Opc = X86::A;                                                              \
-    Size = S;                                                                  \
-    break;                                                                     \
-  case X86::B##_ND:                                                            \
-    Opc = X86::A##_ND;                                                         \
+  case X86::B##SFX:                                                            \
+    Opc = X86::A##SFX;                                                         \
     Size = S;                                                                  \
     break;
+#define FROM_TO_SIZE(A, B, S)                                                  \
+  FROM_TO_SUFFIX(A, B, S, )                                                    \
+  FROM_TO_SUFFIX(A, B, S, _ND)                                                 \
+  FROM_TO_SUFFIX(A, B, S, _NF)                                                 \
+  FROM_TO_SUFFIX(A, B, S, _NF_ND)                                              \
+  FROM_TO_SUFFIX(A, B, S, _EVEX)
 
     FROM_TO_SIZE(SHRD16rri8, SHLD16rri8, 16)
     FROM_TO_SIZE(SHRD32rri8, SHLD32rri8, 32)
     FROM_TO_SIZE(SHRD64rri8, SHLD64rri8, 64)
 #undef FROM_TO_SIZE
+#undef FROM_TO_SUFFIX
+#undef CASE_SHXD
     }
     WorkingMI = CloneIfNew(MI);
     WorkingMI->setDesc(get(Opc));
     WorkingMI->getOperand(3).setImm(Size - MI.getOperand(3).getImm());
     break;
   }
+  // clang-format on
   case X86::PFSUBrr:
   case X86::PFSUBRrr:
     // PFSUB  x, y: x = x - y
@@ -3689,6 +3698,15 @@ bool X86InstrInfo::canMakeTailCallConditional(
     return false;
   }
 
+  if (TailCall.getCFIType()) {
+    // An indirect tail call that was lowered to a direct jump to an indirect
+    // thunk (e.g., __x86_indirect_thunk_r11 for retpolines) still carries a
+    // KCFI type, and must be preceded by a KCFI check of the call target. The
+    // check is emitted later, and cannot be made conditional, so folding the
+    // tail call into a conditional branch would silently drop it.
+    return false;
+  }
+
   if (Subtarget.isTargetWin64() && MF->hasWinCFI()) {
     // Conditional tail calls confuse the Win64 unwinder.
     return false;
@@ -4708,7 +4726,6 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
             .addReg(Reg, getKillRegState(isKill));
     MachineOperand &MO = NewMI->getOperand(X86::AddrIndexReg);
     MO.setReg(VirtReg);
-    MO.setIsKill(true);
     break;
   }
   case X86::TILELOADD:
@@ -4721,7 +4738,6 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
         BuildMI(MBB, MI, DebugLoc(), get(Opc), Reg), FrameIdx);
     MachineOperand &MO = NewMI->getOperand(1 + X86::AddrIndexReg);
     MO.setReg(VirtReg);
-    MO.setIsKill(true);
     break;
   }
   }
@@ -9600,7 +9616,7 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
         lookupAVX512(MI.getOpcode(), dom, ReplaceableCustomAVX512LogicInstrs);
     assert(table && "Instruction not found in table?");
     // Don't change integer Q instructions to D instructions and
-    // use D intructions if we started with a PS instruction.
+    // use D instructions if we started with a PS instruction.
     if (Domain == 3 && (dom == 1 || table[3] == MI.getOpcode()))
       Domain = 4;
     MI.setDesc(get(table[Domain - 1]));
@@ -11006,11 +11022,9 @@ genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
   InstrIdxForVirtReg.insert(std::make_pair(NewReg, 0));
   // Create vpaddd.
   Register DstReg = Root.getOperand(0).getReg();
-  bool IsKill = Root.getOperand(1).isKill();
-  MachineInstr *Add =
-      BuildMI(*MF, MIMetadata(Root), TII.get(AddOpc), DstReg)
-          .addReg(Root.getOperand(1).getReg(), getKillRegState(IsKill))
-          .addReg(Madd->getOperand(0).getReg(), getKillRegState(true));
+  MachineInstr *Add = BuildMI(*MF, MIMetadata(Root), TII.get(AddOpc), DstReg)
+                          .addReg(Root.getOperand(1).getReg())
+                          .addReg(Madd->getOperand(0).getReg());
   InsInstrs.push_back(Madd);
   InsInstrs.push_back(Add);
   DelInstrs.push_back(&Root);

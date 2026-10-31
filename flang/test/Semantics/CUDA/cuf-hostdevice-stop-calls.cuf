@@ -21,23 +21,23 @@ contains
 
   attributes(host,device) subroutine caller()
     ! Review example: the STOP code expression runs on both targets.
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     stop d()
   end subroutine
   attributes(host,device) subroutine host_code()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     stop h()
   end subroutine
   attributes(host,device) subroutine error_code()
-    !ERROR: 'd' may not be called in host code
+    !ERROR: 'd', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     error stop d()
   end subroutine
   attributes(host,device) subroutine quiet_device()
-    !ERROR: 'device_quiet' may not be called in host code
+    !ERROR: 'device_quiet', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     stop 1, quiet=device_quiet()
   end subroutine
   attributes(host,device) subroutine quiet_host()
-    !ERROR: 'host_quiet' may not be called in device code
+    !ERROR: 'host_quiet', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     error stop 'failed', quiet=host_quiet()
   end subroutine
   attributes(host,device) subroutine both_code()
@@ -51,7 +51,7 @@ contains
     end if
   end subroutine
   attributes(device) subroutine device_caller()
-    !ERROR: 'h' may not be called in device code
+    !ERROR: 'h', a procedure with the HOST attribute, may not be called from device code
     stop h()
   end subroutine
 end module

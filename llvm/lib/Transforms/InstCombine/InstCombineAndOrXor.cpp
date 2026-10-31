@@ -3594,42 +3594,6 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (!LHSC || !RHSC)
     return nullptr;
 
-  // (trunc x) == C1 & (and x, CA) == C2 -> (and x, CA|CMAX) == C1|C2
-  // (trunc x) != C1 | (and x, CA) != C2 -> (and x, CA|CMAX) != C1|C2
-  // where CMAX is the all ones value for the truncated type,
-  // iff the lower bits of C2 and CA are zero.
-  if (PredL == (IsAnd ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE) &&
-      PredL.dropSameSign() == PredR.dropSameSign() && LHSOneUse && RHSOneUse) {
-    Value *V;
-    const APInt *AndC, *SmallC = nullptr, *BigC = nullptr;
-
-    // (trunc x) == C1 & (and x, CA) == C2
-    // (and x, CA) == C2 & (trunc x) == C1
-    if (match(RHS0, m_Trunc(m_Value(V))) &&
-        match(LHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
-      SmallC = RHSC;
-      BigC = LHSC;
-    } else if (match(LHS0, m_Trunc(m_Value(V))) &&
-               match(RHS0, m_And(m_Specific(V), m_APInt(AndC)))) {
-      SmallC = LHSC;
-      BigC = RHSC;
-    }
-
-    if (SmallC && BigC) {
-      unsigned BigBitSize = BigC->getBitWidth();
-      unsigned SmallBitSize = SmallC->getBitWidth();
-
-      // Check that the low bits are zero.
-      APInt Low = APInt::getLowBitsSet(BigBitSize, SmallBitSize);
-      if ((Low & *AndC).isZero() && (Low & *BigC).isZero()) {
-        Value *NewAnd = Builder.CreateAnd(V, Low | *AndC);
-        APInt N = SmallC->zext(BigBitSize) | *BigC;
-        Value *NewVal = ConstantInt::get(NewAnd->getType(), N);
-        return Builder.CreateICmp(PredL, NewAnd, NewVal);
-      }
-    }
-  }
-
   // Match naive pattern (and its inverted form) for checking if two values
   // share same sign. An example of the pattern:
   // (icmp slt (X & Y), 0) | (icmp sgt (X | Y), -1) -> (icmp sgt (X ^ Y), -1)

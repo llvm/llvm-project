@@ -280,7 +280,7 @@ body:             |
     %0:vrm8 = COPY $v8m8
     %3:gpr = ADDI $x0, 1
     %4:vrm8 = PseudoSF_VTMV_V_T %3:gpr, %1:gprnox0, 3, 1
-    %5:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, killed %4:vrm8, %1:gprnox0, 3, 0
+    %5:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, %4:vrm8, %1:gprnox0, 3, 0
     PseudoSF_VSTE16 %3:gpr, %2:gpr, %1:gprnox0, 4, 1
     $v8m8 = COPY %5:vrm8
     PseudoRET implicit $v8m8
@@ -327,9 +327,9 @@ body:             |
     %1:gprnox0 = COPY $x10
     %0:vrm8 = COPY $v8m8
     %3:gpr = ADDI $x0, 1
-    %4:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, killed %0:vrm8, %1:gprnox0, 3, 0
+    %4:vrm8 = PseudoVADD_VV_M8 $noreg, %0:vrm8, %0:vrm8, %1:gprnox0, 3, 0
     %5:vrm8 = PseudoSF_VTMV_V_T %3:gpr, %1:gprnox0, 3, 1
-    %6:vrm8 = PseudoVADD_VV_M8 $noreg, %4:vrm8, killed %4:vrm8, %1:gprnox0, 3, 0
+    %6:vrm8 = PseudoVADD_VV_M8 $noreg, %4:vrm8, %4:vrm8, %1:gprnox0, 3, 0
     PseudoSF_VSTE16 %3:gpr, %2:gpr, %1:gprnox0, 4, 1
     $v8m8 = COPY %6:vrm8
     PseudoRET implicit $v8m8

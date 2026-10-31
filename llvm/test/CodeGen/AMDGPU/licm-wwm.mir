@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -run-pass=early-machinelicm,si-wqm -o - %s | FileCheck -check-prefix=GCN %s
 # RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -passes=early-machinelicm,si-wqm -o - %s | FileCheck -check-prefix=GCN %s
 
-# Machine LICM may hoist an intruction from a WWM region, which will force SI-WQM pass
+# Machine LICM may hoist an instruction from a WWM region, which will force SI-WQM pass
 # to create a second WWM region. This is an unwanted hoisting.
 
 ---

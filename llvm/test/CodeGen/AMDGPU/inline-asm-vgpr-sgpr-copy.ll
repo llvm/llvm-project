@@ -22,7 +22,7 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_cmpx_le_u32_e64 exec, 1, v8
-; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:0
+; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen
 ; CHECK-NEXT:  s_mov_b64 exec, s[4:5]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]

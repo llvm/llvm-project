@@ -746,10 +746,7 @@ RegisterAggr DataFlowGraph::getLandingPadLiveIns() const {
   const Function &F = MF.getFunction();
   const Constant *PF = F.hasPersonalityFn() ? F.getPersonalityFn() : nullptr;
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   ExceptionHandling EH = F.getParent()->getExceptionModel();
-  if (EH == ExceptionHandling::Default)
-    EH = TLI.getTargetMachine().getExceptionModel();
   if (RegisterId R = TLI.getExceptionPointerRegister(EH, PF))
     LR.insert(RegisterRef(R));
   if (!isFuncletEHPersonality(classifyEHPersonality(PF))) {

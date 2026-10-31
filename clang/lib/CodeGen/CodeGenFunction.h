@@ -627,6 +627,10 @@ public:
   /// region.
   bool IsInPreservedAIRegion = false;
 
+  /// True if CodeGen currently emits the argument of
+  /// __builtin_preserve_field_info.
+  bool IsInPreserveFieldInfo = false;
+
   /// True if the current statement has nomerge attribute.
   bool InNoMergeAttributedStmt = false;
 
@@ -4773,9 +4777,6 @@ public:
   /// Create the discriminator from the storage address and the entity hash.
   llvm::Value *EmitPointerAuthBlendDiscriminator(llvm::Value *StorageAddress,
                                                  llvm::Value *Discriminator);
-  CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
-                                        llvm::Value *StorageAddress,
-                                        llvm::ConstantInt *Discriminator);
   CGPointerAuthInfo EmitPointerAuthInfo(const PointerAuthSchema &Schema,
                                         llvm::Value *StorageAddress,
                                         GlobalDecl SchemaDecl,

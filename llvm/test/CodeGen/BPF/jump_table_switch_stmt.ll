@@ -66,25 +66,26 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: # %bb.0:                                # %entry
 ; CHECK:                                         # kill: def $w1 killed $w1 def $r1
 ; CHECK: 	w1 += -1
-; CHECK: 	if w1 > 29 goto .LBB0_5
+; CHECK: 	if w1 > 29 goto .LBB0_6
 ; CHECK: # %bb.1:                                # %entry
-; CHECK: 	w2 = 18
+; CHECK: 	r1 &= 31
 ; CHECK: 	r1 <<= 3
-; CHECK: 	r3 = BPF.JT.0.0 ll
-; CHECK: 	r4 = BPF.JT.0.0 ll
-; CHECK: 	r4 += r1
-; CHECK: 	r1 = *(u64 *)(r4 + 0)
-; CHECK: 	r3 += r1
-; CHECK: 	gotox r3
-; CHECK: .LBB0_2:                                # %sw.bb1
-; CHECK: 	w2 = 6
-; CHECK: 	goto .LBB0_4
-; CHECK: .LBB0_3:                                # %sw.bb2
-; CHECK: 	w2 = 2
-; CHECK: .LBB0_4:                                # %sw.epilog.sink.split
-; CHECK: 	r1 = ret_user ll
-; CHECK: 	*(u32 *)(r1 + 0) = w2
-; CHECK: .LBB0_5:                                # %sw.epilog
+; CHECK: 	r2 = BPF.JT.0.1 ll
+; CHECK: 	r2 += r1
+; CHECK: 	r1 = *(u64 *)(r2 + 0)
+; CHECK: 	gotox r1
+; CHECK: .LBB0_2:
+; CHECK: 	w1 = 18
+; CHECK: 	goto .LBB0_5
+; CHECK: .LBB0_4:                                # %sw.bb2
+; CHECK: 	w1 = 2
+; CHECK: 	goto .LBB0_5
+; CHECK: .LBB0_3:                                # %sw.bb1
+; CHECK: 	w1 = 6
+; CHECK: .LBB0_5:                                # %sw.epilog.sink.split
+; CHECK: 	r2 = ret_user ll
+; CHECK: 	*(u32 *)(r2 + 0) = w1
+; CHECK: .LBB0_6:                                # %sw.epilog
 ; CHECK: 	w0 = 0
 ; CHECK: 	exit
 ; CHECK: .Lfunc_end0:
@@ -92,35 +93,37 @@ llc -march=bpf -mcpu=v4 -bpf-min-jump-table-entries=3 < test.ll \
 ; CHECK: 	.size	.Lfoo$local, .Lfunc_end0-foo
 ; CHECK: 	.cfi_endproc
 ; CHECK: 	.section	.jumptables,"",@progbits
-; CHECK: BPF.JT.0.0:
-; CHECK: 	.quad	.LBB0_4-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: BPF.JT.0.1:
 ; CHECK: 	.quad	.LBB0_2-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
-; CHECK: 	.quad	.LBB0_5-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
 ; CHECK: 	.quad	.LBB0_3-.text
-; CHECK: 	.size	BPF.JT.0.0, 240
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_6-.text
+; CHECK: 	.quad	.LBB0_4-.text
+; CHECK: 	.quad	.LBB0_4-.text
+; CHECK: 	.quad	.LBB0_4-.text
+; CHECK: 	.size	BPF.JT.0.1, 256

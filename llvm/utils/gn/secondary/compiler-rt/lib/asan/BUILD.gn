@@ -118,6 +118,7 @@ if (current_toolchain != host_toolchain) {
         "-Wl,-U,___sanitizer_symbolize_flush",
         "-Wl,-U,___sanitizer_symbolize_set_demangle",
         "-Wl,-U,___sanitizer_symbolize_set_inline_frames",
+        "-Wl,-U,__dyld_get_dyld_header",
 
         # xray
         "-Wl,-U,___start_xray_fn_idx",

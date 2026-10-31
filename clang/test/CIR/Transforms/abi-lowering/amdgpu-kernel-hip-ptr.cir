@@ -13,7 +13,8 @@ module attributes {
   cir.lowering_lang_options = #cir.lowering_lang_options<
     exceptions = false, threadsafe_statics = true, cuda = true,
     cuda_is_device = true, hip = true, hlsl = false, gpu_rdc = false,
-    openmp = false, openmp_is_target_device = false, clang_abi_compat = 17>
+    openmp = false, openmp_is_target_device = false, clang_abi_compat = 17,
+    long_double_size = 0>
 } {
 
   // The kernel casts the incoming global pointer back to generic before the

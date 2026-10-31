@@ -313,6 +313,38 @@ TEST_F(OpenMPContextTest, ApplicabilityAllTraits) {
   }
 }
 
+TEST_F(OpenMPContextTest, ApplicabilityISATraits) {
+  struct SSE2Context : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef ISA) const override { return ISA == "sse2"; }
+  };
+  SSE2Context Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+
+  // An unsupported ISA in one selector must not fail the other selector.
+  for (auto [Supported, Unsupported] :
+       {std::pair(TraitProperty::device_isa___ANY,
+                  TraitProperty::target_device_isa___ANY),
+        std::pair(TraitProperty::target_device_isa___ANY,
+                  TraitProperty::device_isa___ANY)}) {
+    VariantMatchInfo VMI;
+    VMI.addTrait(Supported, "sse2");
+    VMI.addTrait(Unsupported, "bogus_isa");
+    EXPECT_FALSE(isVariantApplicableInContext(VMI, Context));
+    VariantMatchInfo Any = VMI, None = VMI;
+    Any.addTrait(TraitProperty::implementation_extension_match_any, "");
+    EXPECT_TRUE(isVariantApplicableInContext(Any, Context));
+    None.addTrait(TraitProperty::implementation_extension_match_none, "");
+    EXPECT_FALSE(isVariantApplicableInContext(None, Context));
+  }
+
+  // Every name in one selector is still required.
+  VariantMatchInfo TwoNames;
+  TwoNames.addTrait(TraitProperty::device_isa___ANY, "sse2");
+  TwoNames.addTrait(TraitProperty::device_isa___ANY, "bogus_isa");
+  TwoNames.addTrait(TraitProperty::implementation_extension_match_any, "");
+  EXPECT_FALSE(isVariantApplicableInContext(TwoNames, Context));
+}
+
 TEST_F(OpenMPContextTest, ScoringSimple) {
   // TODO: Add scoring tests (via getBestVariantMatchForContext).
 }
@@ -391,7 +423,7 @@ TEST_F(OpenMPContextTest, RepeatedConstructWithConditionOrISA) {
 
   // Each pair ties and requires the same traits, but the conditions or ISA
   // names may differ, so clause order decides.
-  APInt Four(64, 4), Twenty(64, 20);
+  APInt Four(64, 4), Twenty(64, 20), ThirtySix(64, 36);
   for (auto [Property, Score] :
        {std::pair(TraitProperty::user_condition_true, &Four),
         std::pair(TraitProperty::device_isa___ANY, &Twenty)}) {
@@ -419,6 +451,17 @@ TEST_F(OpenMPContextTest, RepeatedConstructWithConditionOrISA) {
       EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
       std::swap(Candidates[0], Candidates[1]);
       EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+      // The same ISA names in swapped selectors are not subsets of each other.
+      ParallelFor.addTrait(TraitProperty::implementation_vendor_llvm, "",
+                           &ThirtySix);
+      ParallelFor.addTrait(TraitProperty::target_device_isa___ANY, "sse2");
+      ParallelForParallel.addTrait(TraitProperty::target_device_isa___ANY,
+                                   "sse");
+      Candidates = {ParallelFor, ParallelForParallel};
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+      std::swap(Candidates[0], Candidates[1]);
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
     }
   }
 }
