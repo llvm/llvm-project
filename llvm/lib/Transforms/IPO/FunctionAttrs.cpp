@@ -1120,6 +1120,35 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   return true;
 }
 
+static bool inferWriteRange(Argument &A, Function &F) {
+  auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
+
+  ConstantRangeList WriteCRL;
+  for (auto &BBInfo : llvm::make_second_range(ArgumentUses.UsesPerBlock)) {
+    for (auto &Info : llvm::make_second_range(BBInfo.Insts)) {
+      if (Info.ArgAccessType == ArgumentAccessInfo::AccessType::Write)
+        WriteCRL = WriteCRL.unionWith(Info.AccessRanges);
+      else if (Info.ArgAccessType != ArgumentAccessInfo::AccessType::Read)
+        return false; // Unknown or WriteWithSideEffect: can't bound this arg.
+    }
+  }
+
+  if (WriteCRL.empty())
+    return false;
+
+  if (A.hasAttribute(Attribute::WriteRange)) {
+    ConstantRangeList PreviousCRL(
+        A.getAttribute(Attribute::WriteRange).getWriteRange());
+    if (PreviousCRL == WriteCRL)
+      return false;
+    WriteCRL = WriteCRL.unionWith(PreviousCRL);
+  }
+
+  A.addAttr(Attribute::get(A.getContext(), Attribute::WriteRange,
+                           WriteCRL.rangesRef()));
+  return true;
+}
+
 static bool inferInitializes(Argument &A, Function &F) {
   auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
   // No write anywhere in the function, bail.
@@ -1316,6 +1345,12 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
         if (DetermineAccessAttrsForSingleton(&A))
           Changed.insert(F);
       }
+
+      if (!A.onlyReadsMemory()) {
+        if(inferWriteRange(A, *F))
+          Changed.insert(F);
+      }
+
       if (!SkipInitializes && !A.onlyReadsMemory()) {
         if (inferInitializes(A, *F))
           Changed.insert(F);
