@@ -5,4 +5,13 @@
 module {
   // CHECK: cir.global {{.*}} @i = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<i, Variable, extern>}
   cir.global "private" internal dso_local @i = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<i, Variable, extern>}
+
+  // CHECK: cir.global {{.*}} @surf = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>}
+  cir.global "private" internal dso_local @surf = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<surf, Surface, surface_type = 2>}
+
+  // CHECK: cir.global {{.*}} @tex = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<tex, Texture, texture_type = 2, normalized>}
+  cir.global "private" internal dso_local @tex = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<tex, Texture, texture_type = 2, normalized>}
+
+  // CHECK: cir.global {{.*}} @tex_element = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<tex_element, Texture, texture_type = 1>}
+  cir.global "private" internal dso_local @tex_element = #cir.poison : !s32i align(4) {cu.var_registration = #cir.cu.var_registration<tex_element, Texture, texture_type = 1>}
 }
