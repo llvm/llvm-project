@@ -324,6 +324,8 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
                   (folded if known): acc.on_device
   }];
   let options = [ AccTheDeviceTypesOption ];
+  // Multi-block regions are unwrapped into scf.execute_region.
+  let dependentDialects = ["mlir::scf::SCFDialect"];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
