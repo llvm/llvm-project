@@ -4087,8 +4087,10 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
   // select (a || b), c, false -> select a, c, false
   // select c, (a || b), false -> select c, a, false
   //   if c implies that b is false.
+  // Replacing the condition can select the false arm in more lanes, so it
+  // must be the full false constant without poison elements.
   if (match(CondVal, m_LogicalOr(m_Value(A), m_Value(B))) &&
-      match(FalseVal, m_Zero())) {
+      match(FalseVal, m_Specific(Zero))) {
     std::optional<bool> Res = isImpliedCondition(TrueVal, B, DL);
     if (Res && *Res == false)
       return replaceOperand(SI, 0, A);
@@ -4108,8 +4110,9 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (Res && *Res == true)
       return replaceOperand(SI, 2, A);
   }
+  // As above, the true arm must be the full true constant.
   if (match(CondVal, m_LogicalAnd(m_Value(A), m_Value(B))) &&
-      match(TrueVal, m_One())) {
+      match(TrueVal, m_Specific(One))) {
     std::optional<bool> Res = isImpliedCondition(FalseVal, B, DL, false);
     if (Res && *Res == true)
       return replaceOperand(SI, 0, A);
