@@ -1410,6 +1410,13 @@ def VS_64_AlignTarget : SIRegisterClassLike<64, true, false, true>,
   let DecoderMethod = "decodeSrcRegOrImm9";
 }
 
+def VS_128_AlignTarget : SIRegisterClassLike<128, true, false, true>,
+  RegClassByHwMode<
+      [DefaultMode_Wave64, DefaultMode_Wave32, AVAlign2LoadStoreMode, AlignedVGPRNoAGPRMode_Wave64, AlignedVGPRNoAGPRMode_Wave32],
+      [VS_128,             VS_128,             VS_128_Align2,         VS_128_Align2,                VS_128_Align2]> {
+  let DecoderMethod = "decodeSrcRegOrImm9";
+}
+
 
 // Special case for DS_GWS instructions. The register input is really
 // 32-bit, but it needs to be even aligned on targets with a VGPR
@@ -1511,8 +1518,8 @@ def VSrc_f64    : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_FP64"> {
 }
 def VSrc_v2b32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2INT32">;
 def VSrc_v2f32 : SrcRegOrImm9 <VS_64_AlignTarget, "OPERAND_REG_IMM_V2FP32">;
-def VSrc_v2b64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2INT64">;
-def VSrc_v2f64 : SrcRegOrImm9 <VS_128, "OPERAND_REG_IMM_V2FP64">;
+def VSrc_v2b64 : SrcRegOrImm9 <VS_128_AlignTarget, "OPERAND_REG_IMM_V2INT64">;
+def VSrc_v2f64 : SrcRegOrImm9 <VS_128_AlignTarget, "OPERAND_REG_IMM_V2FP64">;
 
 def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16">;
 
