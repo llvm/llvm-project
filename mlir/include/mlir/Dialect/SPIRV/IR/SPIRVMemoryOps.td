@@ -25,7 +25,7 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
   let description = [{
     Result Type must be an OpTypePointer. Its Type operand must be the type
-    reached by walking the Base’s type hierarchy down to the last provided
+    reached by walking the Base's type hierarchy down to the last provided
     index in Indexes, and its Storage Class operand must be the same as the
     Storage Class of Base.
 
@@ -35,7 +35,7 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
     to scalar granularity. The first index in Indexes will select the top-
     level member/element/component/element of the base composite. All
     composite constituents use zero-based numbering, as described by their
-    OpType… instruction. The second index will apply similarly to that
+    OpType... instruction. The second index will apply similarly to that
     result, and so on. Once any non-composite type is reached, there must be
     no remaining (unused) indexes.
 

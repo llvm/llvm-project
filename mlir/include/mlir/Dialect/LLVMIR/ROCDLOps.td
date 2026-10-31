@@ -201,8 +201,8 @@ def ROCDL_DsBpermuteOp : ROCDL_ConcreteNonMemIntrOp<"ds_bpermute", [], 1>,
     Each lane reads the value of `src` from the lane whose byte address is
     given by `index` (i.e. lane id = `index / 4`).
 
-    This is “backward” (pull) in contrast to `ds_permute_b32`, which is
-    “forward” (push/scatter).
+    This is "backward" (pull) in contrast to `ds_permute_b32`, which is
+    "forward" (push/scatter).
 
     Example:
     ```mlir

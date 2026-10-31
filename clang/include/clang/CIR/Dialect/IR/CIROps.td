@@ -8177,7 +8177,7 @@ def CIR_ObjSizeOp : CIR_Op<"objsize", [Pure]> {
     The `cir.objsize` operation is designed to provide information to the
     optimizer to determine whether a) an operation (like memcpy) will
     overflow a buffer that corresponds to an object, or b) that a runtime
-    check for overflow isn’t necessary. An object in this context means an
+    check for overflow isn't necessary. An object in this context means an
     allocation of a specific class, structure, array, or other object.
 
     When the `min` attribute is present, the operation returns the minimum
@@ -8288,8 +8288,8 @@ def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
     Computes the square root of a floating-point value or vector.
 
     The input must be either:
-      • a floating-point scalar type, or
-      • a vector whose element type is floating-point.
+      - a floating-point scalar type, or
+      - a vector whose element type is floating-point.
 
     The result type must match the input type exactly.
 
@@ -8837,8 +8837,8 @@ def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
     Computes the fused multiply-add of three floating-point values or vector.
 
     The inputs must be either:
-      • floating-point scalar types, or
-      • vectors whose element type is floating-point.
+      - floating-point scalar types, or
+      - vectors whose element type is floating-point.
 
     The result type must match the input type exactly.
 
@@ -8866,8 +8866,8 @@ def CIR_FMulAddOp : CIR_TernaryFPToFPBuiltinOp<"fmuladd", "FMulAddOp"> {
     emit either a fused or an unfused sequence.
 
     The inputs must be either:
-      • floating-point scalar types, or
-      • vectors whose element type is floating-point.
+      - floating-point scalar types, or
+      - vectors whose element type is floating-point.
 
     The result type must match the input type exactly.
 

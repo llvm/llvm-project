@@ -267,7 +267,7 @@ def SPIRV_SwitchOp : SPIRV_Op<"Switch",
     `<id>`. It is invalid for any two literal to be equal to each other. If Selector
     does not equal any literal, control flow branches to the Default label `<id>`.
     Each literal is interpreted with the type of Selector: The bit width of
-    Selector’s type is the width of each literal’s type. If this width is not a
+    Selector's type is the width of each literal's type. If this width is not a
     multiple of 32-bits and the OpTypeInt Signedness is set to 1, the literal values
     are interpreted as being sign extended.
 

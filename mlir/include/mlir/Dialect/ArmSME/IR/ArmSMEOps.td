@@ -870,7 +870,7 @@ def FMopa2WayOp
 
                                   2 outer products
 
-                      Acol0 ⊗ Brow0      |           Acol1 ⊗ Brow1
+                      Acol0 * Brow0      |           Acol1 * Brow1
                       -------------      |           -------------
                                          |
                   [B0 B2 B4 B6]          |       [B1 B3 B5 B7]
@@ -885,7 +885,7 @@ def FMopa2WayOp
 
                               sum of 2 outer products
 
-                           Acol0 ⊗ Brow0 + Acol1 ⊗ Brow1
+                           Acol0 * Brow0 + Acol1 * Brow1
 
                  [A0B0 + A1B1 A0B2 + A1B3 A0B4 + A1B5 A0B6 + A1B7]
                  [A2B0 + A3B1 A2B2 + A3B3 A2B4 + A3B5 A2B6 + A3B7]
@@ -1107,7 +1107,7 @@ def SMopa4WayOp
 
                                   4 outer products
 
-                 Acol0 ⊗ Brow0           |            Acol1 ⊗ Brow1
+                 Acol0 * Brow0           |            Acol1 * Brow1
                  -------------           |            -------------
                                          |
              [B0 B4 B8 B12]              |        [B1 B5 B9 B13]
@@ -1117,7 +1117,7 @@ def SMopa4WayOp
         A8   [ A8B0  A8B4  A8B8  A8B12]  |   A9   [ A9B1  A9B5  A9B9  A9B13]
         A12] [A12B0 A12B4 A12B8 A12B12]  |   A13] [A13B1 A13B5 A13B9 A13B13]
                                          |
-                 Acol2 ⊗ Brow2           |            Acol3 ⊗ Brow3
+                 Acol2 * Brow2           |            Acol3 * Brow3
                  -------------           |            -------------
                                          |
              [B2, B6, B10, B14]          |        [B3 B7 B11 B15]
@@ -1132,7 +1132,7 @@ def SMopa4WayOp
 
                               sum of 4 outer products
 
-           Acol0 ⊗ Brow0 + Acol1 ⊗ Brow1 + Acol2 ⊗ Brow2 + Acol3 ⊗ Brow3
+           Acol0 * Brow0 + Acol1 * Brow1 + Acol2 * Brow2 + Acol3 * Brow3
 
      [ A0B0 +  A1B1 +  A2B2 +  A3B3 ... ...  A0B12 +  A1B13 +  A2B14 +  A3B15]
      [ A4B0 +  A5B1 +  A6B2 +  A7B3 ... ...  A4B12 +  A5B13 +  A6B14 +  A7B15]

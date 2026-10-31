@@ -57,7 +57,7 @@ def AffineApplyOp : Affine_Op<"apply",
     respective number of dimensional and symbolic inputs to the affine mapping;
     the affine mapping has to be one-dimensional, and so the `affine.apply`
     operation always returns one value. The input operands and result must all
-    have ‘index’ type.
+    have 'index' type.
 
     An operand that is a valid dimension as per the [rules on valid affine
     dimensions and symbols](#restrictions-on-dimensions-and-symbols)

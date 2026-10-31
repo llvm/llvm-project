@@ -86,7 +86,7 @@ def SPIRV_CompositeExtractOp : SPIRV_Op<"CompositeExtract",
     Indexes walk the type hierarchy, potentially down to component
     granularity, to select the part to extract. All indexes must be in
     bounds.  All composite constituents use zero-based numbering, as
-    described by their OpType… instruction.
+    described by their OpType... instruction.
 
     <!-- End of AutoGen section -->
 
@@ -140,7 +140,7 @@ def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
     Indexes walk the type hierarchy of Composite to the desired depth,
     potentially down to component granularity, to select the part to modify.
     All indexes must be in bounds. All composite constituents use zero-based
-    numbering, as described by their OpType… instruction. The type of the
+    numbering, as described by their OpType... instruction. The type of the
     part selected to modify must match the type of Object.
 
     <!-- End of AutoGen section -->
@@ -306,7 +306,7 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
     source and is undefined. All Component literals must either be FFFFFFFF
     or in [0, N - 1] (inclusive).
 
-    Note: A vector “swizzle” can be done by using the vector for both Vector
+    Note: A vector "swizzle" can be done by using the vector for both Vector
     operands, or using an OpUndef for one of the Vector operands.
 
     <!-- End of AutoGen section -->

@@ -76,7 +76,7 @@ def SparseTensor_Dialect : Dialect {
     Design and Implementation, June, 2020.
     * [Gustavson72] Fred G. Gustavson. Some basic techniques for solving
     sparse systems of linear equations. In Sparse Matrices and Their
-    Applications, pages 41–52. Plenum Press, New York, 1972.
+    Applications, pages 41-52. Plenum Press, New York, 1972.
     * [Kjolstad17] Fredrik Berg Kjolstad, Shoaib Ashraf Kamil, Stephen Chou, David
     Lugato, and Saman Amarasinghe. The Tensor Algebra Compiler. Proceedings of
     the ACM on Programming Languages, October 2017.

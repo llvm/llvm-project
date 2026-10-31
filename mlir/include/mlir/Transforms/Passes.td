@@ -448,7 +448,7 @@ def SCCPPass : Pass<"sccp"> {
     constant are replaced, and removed if possible.
 
     This implementation is based on the algorithm described by Wegman and Zadeck
-    in [“Constant Propagation with Conditional Branches”](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
+    in ["Constant Propagation with Conditional Branches"](https://dl.acm.org/doi/10.1145/103135.103136) (1991).
   }];
 }
 

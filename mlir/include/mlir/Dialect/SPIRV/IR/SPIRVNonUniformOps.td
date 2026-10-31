@@ -814,7 +814,7 @@ def SPIRV_GroupNonUniformShuffleDownOp : SPIRV_Op<"GroupNonUniformShuffleDown", 
 
   let summary = [{
     Result is the Value of the invocation identified by the current
-    invocation’s id within the group + Delta.
+    invocation's id within the group + Delta.
   }];
 
   let description = [{
@@ -829,7 +829,7 @@ def SPIRV_GroupNonUniformShuffleDownOp : SPIRV_Op<"GroupNonUniformShuffleDown", 
 
     Delta is treated as unsigned and the resulting value is undefined if
     Delta is greater than or equal to the size of the group, or if the
-    current invocation’s id within the group + Delta is either an inactive
+    current invocation's id within the group + Delta is either an inactive
     invocation or greater than or equal to the size of the group.
 
     <!-- End of AutoGen section -->
@@ -871,7 +871,7 @@ def SPIRV_GroupNonUniformShuffleUpOp : SPIRV_Op<"GroupNonUniformShuffleUp", [
 
   let summary = [{
     Result is the Value of the invocation identified by the current
-    invocation’s id within the group - Delta.
+    invocation's id within the group - Delta.
   }];
 
   let description = [{
@@ -885,7 +885,7 @@ def SPIRV_GroupNonUniformShuffleUpOp : SPIRV_Op<"GroupNonUniformShuffleUp", [
     Delta  must be a scalar of integer type, whose Signedness operand is 0.
 
     Delta is treated as unsigned and the resulting value is undefined if
-    Delta is greater than the current invocation’s id within the group or if
+    Delta is greater than the current invocation's id within the group or if
     the selected lane is inactive.
 
     <!-- End of AutoGen section -->
@@ -927,7 +927,7 @@ def SPIRV_GroupNonUniformShuffleXorOp : SPIRV_Op<"GroupNonUniformShuffleXor", [
 
   let summary = [{
     Result is the Value of the invocation identified by the current
-    invocation’s id within the group xor’ed with Mask.
+    invocation's id within the group xor'ed with Mask.
   }];
 
   let description = [{
@@ -940,8 +940,8 @@ def SPIRV_GroupNonUniformShuffleXorOp : SPIRV_Op<"GroupNonUniformShuffleXor", [
 
     Mask  must be a scalar of integer type, whose Signedness operand is 0.
 
-    The resulting value is undefined if current invocation’s id within the
-    group xor’ed with Mask is an inactive invocation, or is greater than or
+    The resulting value is undefined if current invocation's id within the
+    group xor'ed with Mask is an inactive invocation, or is greater than or
     equal to the size of the group.
 
     <!-- End of AutoGen section -->
