@@ -19,6 +19,34 @@ def _get_lldb_init_path(config):
     return os.path.join(config.test_exec_root, "lit-lldb-init-quiet")
 
 
+def _write_if_changed(path, content):
+    try:
+        with open(path) as f:
+            if f.read() == content:
+                return
+    except OSError:
+        pass
+    with open(path, "w") as f:
+        f.write(content)
+
+
+def _write_lldb_init_files(config):
+    """Write the init files that %lldb sources into the test execution root."""
+    with open(os.path.join(config.test_source_root, "lit-lldb-init.in")) as f:
+        init = f.read()
+    # The site config appends "lldb-shell" to LLDB_TEST_MODULE_CACHE_LLDB, but
+    # the init file uses the directory itself.
+    init = init.replace(
+        "@LLDB_TEST_MODULE_CACHE_LLDB@", os.path.dirname(config.lldb_module_cache)
+    )
+    os.makedirs(config.test_exec_root, exist_ok=True)
+    _write_if_changed(os.path.join(config.test_exec_root, "lit-lldb-init"), init)
+    _write_if_changed(
+        _get_lldb_init_path(config),
+        "command source -C --silent-run true lit-lldb-init\n",
+    )
+
+
 def _disallow(config, execName):
     warning = """
     echo '*** Do not use \'{0}\' in tests; use \'%''{0}\'. ***' &&
@@ -121,6 +149,7 @@ def use_lldb_substitutions(config):
     if config.cmake_sysroot:
         build_script_args.append("--sysroot={0}".format(config.cmake_sysroot))
 
+    _write_lldb_init_files(config)
     lldb_init = _get_lldb_init_path(config)
     launcher = getattr(config, "lldb_launcher", None)
 
