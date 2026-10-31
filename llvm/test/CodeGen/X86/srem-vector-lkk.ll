@@ -9,36 +9,36 @@
 define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) {
 ; SSE2-LABEL: fold_srem_vec_1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = [44151,48623,2675,32081,0,0,0,0]
-; SSE2-NEXT:    pmulhw %xmm0, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,65535,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm2, %xmm4
-; SSE2-NEXT:    pand %xmm3, %xmm4
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = [1,0,0,65535,0,0,0,0]
-; SSE2-NEXT:    pmullw %xmm0, %xmm1
-; SSE2-NEXT:    paddw %xmm2, %xmm1
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = [44151,48623,2675,32081,0,0,0,0]
+; SSE2-NEXT:    pmulhw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,65535,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm1, %xmm3
+; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    movq {{.*#+}} xmm4 = [1,0,0,65535,0,0,0,0]
+; SSE2-NEXT:    pmullw %xmm0, %xmm4
+; SSE2-NEXT:    paddw %xmm1, %xmm4
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
 ; SSE2-NEXT:    psraw $8, %xmm5
-; SSE2-NEXT:    pandn %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm4, %xmm3
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    psraw $4, %xmm4
-; SSE2-NEXT:    movss {{.*#+}} xmm3 = xmm4[0],xmm3[1,2,3]
-; SSE2-NEXT:    movaps %xmm3, %xmm4
-; SSE2-NEXT:    psraw $1, %xmm4
+; SSE2-NEXT:    pandn %xmm5, %xmm2
+; SSE2-NEXT:    por %xmm3, %xmm2
+; SSE2-NEXT:    movdqa %xmm4, %xmm3
+; SSE2-NEXT:    psraw $4, %xmm3
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = xmm3[0],xmm2[1,2,3]
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    psraw $1, %xmm3
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm5 = [65535,0,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    psraw $2, %xmm3
+; SSE2-NEXT:    psraw $2, %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [0,65535,0,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm6, %xmm2
-; SSE2-NEXT:    pandn %xmm3, %xmm6
-; SSE2-NEXT:    por %xmm2, %xmm6
+; SSE2-NEXT:    pand %xmm6, %xmm1
+; SSE2-NEXT:    pandn %xmm2, %xmm6
+; SSE2-NEXT:    por %xmm1, %xmm6
 ; SSE2-NEXT:    pand %xmm5, %xmm6
-; SSE2-NEXT:    pandn %xmm4, %xmm5
+; SSE2-NEXT:    pandn %xmm3, %xmm5
 ; SSE2-NEXT:    por %xmm6, %xmm5
-; SSE2-NEXT:    psrlw $15, %xmm1
-; SSE2-NEXT:    paddw %xmm5, %xmm1
-; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [95,65412,98,64533,u,u,u,u]
-; SSE2-NEXT:    psubw %xmm1, %xmm0
+; SSE2-NEXT:    psrlw $15, %xmm4
+; SSE2-NEXT:    paddw %xmm5, %xmm4
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [95,65412,98,64533,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm4, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: fold_srem_vec_1:
@@ -262,34 +262,34 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; SSE2-LABEL: dont_fold_srem_one:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = [65535,0,65535,0,0,0,0,0]
-; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,0,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    movq {{.*#+}} xmm4 = [0,12827,45591,12375,0,0,0,0]
-; SSE2-NEXT:    pmulhw %xmm0, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm1
-; SSE2-NEXT:    paddw %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm3, %xmm2
-; SSE2-NEXT:    movdqa %xmm1, %xmm5
-; SSE2-NEXT:    psraw $4, %xmm5
-; SSE2-NEXT:    pandn %xmm5, %xmm3
-; SSE2-NEXT:    por %xmm2, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm2, %xmm3
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = [65535,0,65535,0,0,0,0,0]
+; SSE2-NEXT:    pand %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,0,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    movq {{.*#+}} xmm3 = [0,12827,45591,12375,0,0,0,0]
+; SSE2-NEXT:    pmulhw %xmm0, %xmm3
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    paddw %xmm1, %xmm4
+; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    movdqa %xmm4, %xmm5
-; SSE2-NEXT:    psraw $10, %xmm5
+; SSE2-NEXT:    psraw $4, %xmm5
 ; SSE2-NEXT:    pandn %xmm5, %xmm2
-; SSE2-NEXT:    por %xmm3, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,65535,65535,65535,65535,65535,65535]
-; SSE2-NEXT:    pand %xmm3, %xmm2
-; SSE2-NEXT:    psraw $7, %xmm4
-; SSE2-NEXT:    pandn %xmm4, %xmm3
-; SSE2-NEXT:    por %xmm2, %xmm3
-; SSE2-NEXT:    psrlw $15, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    paddw %xmm3, %xmm1
-; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,654,23,5423,u,u,u,u]
-; SSE2-NEXT:    psubw %xmm1, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm1, %xmm2
+; SSE2-NEXT:    movdqa %xmm3, %xmm5
+; SSE2-NEXT:    psraw $10, %xmm5
+; SSE2-NEXT:    pandn %xmm5, %xmm1
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,65535,65535,65535,65535,65535]
+; SSE2-NEXT:    pand %xmm2, %xmm1
+; SSE2-NEXT:    psraw $7, %xmm3
+; SSE2-NEXT:    pandn %xmm3, %xmm2
+; SSE2-NEXT:    por %xmm1, %xmm2
+; SSE2-NEXT:    psrlw $15, %xmm4
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4
+; SSE2-NEXT:    paddw %xmm2, %xmm4
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm4 # [1,654,23,5423,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm4, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: dont_fold_srem_one:
@@ -363,17 +363,17 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 ; SSE2-LABEL: dont_fold_urem_i16_smax:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = [1,65535,1,0,0,0,0,0]
-; SSE2-NEXT:    pmullw %xmm0, %xmm2
-; SSE2-NEXT:    movq {{.*#+}} xmm1 = [0,32767,45591,12375,0,0,0,0]
-; SSE2-NEXT:    pmulhw %xmm0, %xmm1
-; SSE2-NEXT:    paddw %xmm2, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65535,0,65535,0,65535,65535,65535,65535]
-; SSE2-NEXT:    movdqa %xmm1, %xmm3
-; SSE2-NEXT:    pand %xmm2, %xmm3
-; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = [1,65535,1,0,0,0,0,0]
+; SSE2-NEXT:    pmullw %xmm0, %xmm1
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = [0,32767,45591,12375,0,0,0,0]
+; SSE2-NEXT:    pmulhw %xmm0, %xmm2
+; SSE2-NEXT:    paddw %xmm1, %xmm2
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [65535,0,65535,0,65535,65535,65535,65535]
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    movdqa %xmm2, %xmm4
 ; SSE2-NEXT:    psraw $8, %xmm4
-; SSE2-NEXT:    movdqa %xmm2, %xmm5
+; SSE2-NEXT:    movdqa %xmm1, %xmm5
 ; SSE2-NEXT:    pandn %xmm4, %xmm5
 ; SSE2-NEXT:    por %xmm3, %xmm5
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [65535,0,0,65535,65535,65535,65535,65535]
@@ -383,15 +383,15 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 ; SSE2-NEXT:    pandn %xmm5, %xmm3
 ; SSE2-NEXT:    por %xmm4, %xmm3
 ; SSE2-NEXT:    movdqa %xmm3, %xmm4
-; SSE2-NEXT:    pand %xmm2, %xmm4
+; SSE2-NEXT:    pand %xmm1, %xmm4
 ; SSE2-NEXT:    psraw $2, %xmm3
-; SSE2-NEXT:    pandn %xmm3, %xmm2
-; SSE2-NEXT:    por %xmm4, %xmm2
-; SSE2-NEXT:    psrlw $15, %xmm1
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    paddw %xmm2, %xmm1
-; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,32768,23,5423,u,u,u,u]
-; SSE2-NEXT:    psubw %xmm1, %xmm0
+; SSE2-NEXT:    pandn %xmm3, %xmm1
+; SSE2-NEXT:    por %xmm4, %xmm1
+; SSE2-NEXT:    psrlw $15, %xmm2
+; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    paddw %xmm1, %xmm2
+; SSE2-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [1,32768,23,5423,u,u,u,u]
+; SSE2-NEXT:    psubw %xmm2, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: dont_fold_urem_i16_smax:
@@ -465,7 +465,6 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE2-LABEL: fold_srem_i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    movq %xmm1, %rcx
 ; SSE2-NEXT:    movabsq $-5614226457215950491, %rdx # imm = 0xB21642C8590B2165
 ; SSE2-NEXT:    movq %rcx, %rax
@@ -479,9 +478,9 @@ define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    shlq $3, %rax
 ; SSE2-NEXT:    subq %rax, %rdx
 ; SSE2-NEXT:    addq %rcx, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; SSE2-NEXT:    movq %xmm2, %rcx
+; SSE2-NEXT:    movq %rdx, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE2-NEXT:    movq %xmm1, %rcx
 ; SSE2-NEXT:    movabsq $6966426675817289639, %rdx # imm = 0x60ADB826E5E517A7
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    imulq %rdx
@@ -491,8 +490,8 @@ define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    addq %rax, %rdx
 ; SSE2-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
 ; SSE2-NEXT:    subq %rax, %rcx
-; SSE2-NEXT:    movq %rcx, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    movabsq $7220743857598845893, %rdx # imm = 0x64353C48064353C5
@@ -506,11 +505,11 @@ define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    subq %rax, %rcx
 ; SSE2-NEXT:    movq %rcx, %xmm0
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: fold_srem_i64:
 ; SSE4:       # %bb.0:
-; SSE4-NEXT:    movdqa %xmm1, %xmm2
 ; SSE4-NEXT:    movq %xmm1, %rcx
 ; SSE4-NEXT:    movabsq $-5614226457215950491, %rdx # imm = 0xB21642C8590B2165
 ; SSE4-NEXT:    movq %rcx, %rax
@@ -524,8 +523,8 @@ define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE4-NEXT:    shlq $3, %rax
 ; SSE4-NEXT:    subq %rax, %rdx
 ; SSE4-NEXT:    addq %rcx, %rdx
-; SSE4-NEXT:    movq %rdx, %xmm1
-; SSE4-NEXT:    pextrq $1, %xmm2, %rcx
+; SSE4-NEXT:    movq %rdx, %xmm2
+; SSE4-NEXT:    pextrq $1, %xmm1, %rcx
 ; SSE4-NEXT:    movabsq $6966426675817289639, %rdx # imm = 0x60ADB826E5E517A7
 ; SSE4-NEXT:    movq %rcx, %rax
 ; SSE4-NEXT:    imulq %rdx
@@ -535,8 +534,8 @@ define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE4-NEXT:    addq %rax, %rdx
 ; SSE4-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
 ; SSE4-NEXT:    subq %rax, %rcx
-; SSE4-NEXT:    movq %rcx, %xmm2
-; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE4-NEXT:    movq %rcx, %xmm1
+; SSE4-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE4-NEXT:    pextrq $1, %xmm0, %rcx
 ; SSE4-NEXT:    movabsq $7220743857598845893, %rdx # imm = 0x64353C48064353C5
 ; SSE4-NEXT:    movq %rcx, %rax
@@ -549,6 +548,7 @@ define <4 x i64> @fold_srem_i64(<4 x i64> %x) {
 ; SSE4-NEXT:    subq %rax, %rcx
 ; SSE4-NEXT:    movq %rcx, %xmm0
 ; SSE4-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE4-NEXT:    movdqa %xmm2, %xmm1
 ; SSE4-NEXT:    retq
 ;
 ; AVX1-LABEL: fold_srem_i64:

@@ -711,15 +711,15 @@ define <2 x i16> @test_v2f16_oeq_q(<2 x i16> %a, <2 x i16> %b, <2 x half> %f1, <
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    vpsrld $16, %xmm2, %xmm3
 ; X86-NEXT:    vucomish 10(%ebp), %xmm3
-; X86-NEXT:    setnp %cl
-; X86-NEXT:    sete %al
-; X86-NEXT:    andb %cl, %al
+; X86-NEXT:    setnp %al
+; X86-NEXT:    sete %cl
+; X86-NEXT:    andb %al, %cl
 ; X86-NEXT:    vucomish 8(%ebp), %xmm2
-; X86-NEXT:    setnp %cl
+; X86-NEXT:    setnp %al
 ; X86-NEXT:    sete %dl
-; X86-NEXT:    andb %cl, %dl
+; X86-NEXT:    andb %al, %dl
 ; X86-NEXT:    vmovd %edx, %xmm2
-; X86-NEXT:    vpinsrb $1, %eax, %xmm2, %xmm2
+; X86-NEXT:    vpinsrb $1, %ecx, %xmm2, %xmm2
 ; X86-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,zero,zero,zero,zero,xmm2[1],zero,zero,zero,zero,zero,zero,zero,xmm2[2],zero,zero,zero,zero,zero,zero,zero,xmm2[3],zero,zero,zero,zero,zero,zero,zero,xmm2[4],zero,zero,zero,zero,zero,zero,zero,xmm2[5],zero,zero,zero,zero,zero,zero,zero,xmm2[6],zero,zero,zero,zero,zero,zero,zero,xmm2[7],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vptestmq {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %zmm2, %k1
 ; X86-NEXT:    vpblendmw %xmm0, %xmm1, %xmm0 {%k1}

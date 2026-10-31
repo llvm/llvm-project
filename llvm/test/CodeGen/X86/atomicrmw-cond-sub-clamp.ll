@@ -378,34 +378,32 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-32-NEXT:    .cfi_offset %ebp, -8
 ; CHECK-32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; CHECK-32-NEXT:    movl (%ebp), %esi
+; CHECK-32-NEXT:    movl (%ebp), %eax
 ; CHECK-32-NEXT:    movl 4(%ebp), %edi
 ; CHECK-32-NEXT:    jmp .LBB7_1
 ; CHECK-32-NEXT:    .p2align 4
 ; CHECK-32-NEXT:  .LBB7_3: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB7_1 Depth=1
-; CHECK-32-NEXT:    movl %esi, %eax
 ; CHECK-32-NEXT:    movl %edi, %edx
+; CHECK-32-NEXT:    movl %esi, %ebx
 ; CHECK-32-NEXT:    lock cmpxchg8b (%ebp)
-; CHECK-32-NEXT:    movl %eax, %esi
 ; CHECK-32-NEXT:    movl %edx, %edi
 ; CHECK-32-NEXT:    je .LBB7_4
 ; CHECK-32-NEXT:  .LBB7_1: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-32-NEXT:    xorl %ecx, %ecx
-; CHECK-32-NEXT:    movl %esi, %eax
-; CHECK-32-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; CHECK-32-NEXT:    movl %eax, %ebx
+; CHECK-32-NEXT:    subl {{[0-9]+}}(%esp), %ebx
 ; CHECK-32-NEXT:    movl %edi, %edx
 ; CHECK-32-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
-; CHECK-32-NEXT:    movl $0, %ebx
+; CHECK-32-NEXT:    movl $0, %esi
 ; CHECK-32-NEXT:    jb .LBB7_3
 ; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB7_1 Depth=1
 ; CHECK-32-NEXT:    movl %edx, %ecx
-; CHECK-32-NEXT:    movl %eax, %ebx
+; CHECK-32-NEXT:    movl %ebx, %esi
 ; CHECK-32-NEXT:    jmp .LBB7_3
 ; CHECK-32-NEXT:  .LBB7_4: # %atomicrmw.end
-; CHECK-32-NEXT:    movl %esi, %eax
 ; CHECK-32-NEXT:    movl %edi, %edx
 ; CHECK-32-NEXT:    popl %esi
 ; CHECK-32-NEXT:    .cfi_def_cfa_offset 16

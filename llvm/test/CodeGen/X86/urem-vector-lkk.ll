@@ -252,7 +252,6 @@ define <4 x i16> @dont_fold_urem_i16_smax(<4 x i16> %x) {
 define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; SSE2-LABEL: fold_urem_i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa %xmm1, %xmm2
 ; SSE2-NEXT:    movq %xmm1, %rcx
 ; SSE2-NEXT:    movabsq $7218291159277650633, %rdx # imm = 0x642C8590B21642C9
 ; SSE2-NEXT:    movq %rcx, %rax
@@ -266,17 +265,17 @@ define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    negq %rdx
 ; SSE2-NEXT:    leaq (%rax,%rdx,8), %rax
 ; SSE2-NEXT:    addq %rcx, %rax
-; SSE2-NEXT:    movq %rax, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[2,3,2,3]
-; SSE2-NEXT:    movq %xmm2, %rcx
+; SSE2-NEXT:    movq %rax, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; SSE2-NEXT:    movq %xmm1, %rcx
 ; SSE2-NEXT:    movabsq $-4513890722074972339, %rdx # imm = 0xC15B704DCBCA2F4D
 ; SSE2-NEXT:    movq %rcx, %rax
 ; SSE2-NEXT:    mulq %rdx
 ; SSE2-NEXT:    shrq $12, %rdx
 ; SSE2-NEXT:    imulq $5423, %rdx, %rax # imm = 0x152F
 ; SSE2-NEXT:    subq %rax, %rcx
-; SSE2-NEXT:    movq %rcx, %xmm2
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    movq %rcx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rcx
 ; SSE2-NEXT:    movq %rcx, %rax
@@ -288,6 +287,7 @@ define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; SSE2-NEXT:    subq %rax, %rcx
 ; SSE2-NEXT:    movq %rcx, %xmm0
 ; SSE2-NEXT:    pslldq {{.*#+}} xmm0 = zero,zero,zero,zero,zero,zero,zero,zero,xmm0[0,1,2,3,4,5,6,7]
+; SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: fold_urem_i64:

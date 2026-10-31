@@ -13,8 +13,8 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-NEXT:    .cfi_offset %rbx, -24
 ; CHECK-NEXT:    .cfi_offset %r14, -16
-; CHECK-NEXT:    movq %rdx, %r9
-; CHECK-NEXT:    movq %rsi, %r8
+; CHECK-NEXT:    movq %rdx, %r8
+; CHECK-NEXT:    movq %rsi, %r9
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    sarq $63, %rbx
 ; CHECK-NEXT:    imulq %rdx, %rbx
@@ -22,13 +22,13 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    mulq %rdx
 ; CHECK-NEXT:    movq %rdx, %r10
 ; CHECK-NEXT:    movq %rax, %rsi
-; CHECK-NEXT:    movq %r8, %rax
-; CHECK-NEXT:    mulq %r9
-; CHECK-NEXT:    movq %rdx, %r9
+; CHECK-NEXT:    movq %r9, %rax
+; CHECK-NEXT:    mulq %r8
+; CHECK-NEXT:    movq %rdx, %r8
 ; CHECK-NEXT:    movq %rax, %r11
 ; CHECK-NEXT:    addq %r10, %r11
-; CHECK-NEXT:    adcq %rbx, %r9
-; CHECK-NEXT:    movq %r9, %rbx
+; CHECK-NEXT:    adcq %rbx, %r8
+; CHECK-NEXT:    movq %r8, %rbx
 ; CHECK-NEXT:    sarq $63, %rbx
 ; CHECK-NEXT:    movq %rcx, %r14
 ; CHECK-NEXT:    sarq $63, %r14
@@ -41,9 +41,9 @@ define %0 @x(i64 %a.coerce0, i64 %a.coerce1, i64 %b.coerce0, i64 %b.coerce1) nou
 ; CHECK-NEXT:    adcq %r14, %r10
 ; CHECK-NEXT:    movq %r10, %r11
 ; CHECK-NEXT:    sarq $63, %r11
-; CHECK-NEXT:    addq %r9, %r10
+; CHECK-NEXT:    addq %r8, %r10
 ; CHECK-NEXT:    adcq %rbx, %r11
-; CHECK-NEXT:    movq %r8, %rax
+; CHECK-NEXT:    movq %r9, %rax
 ; CHECK-NEXT:    imulq %rcx
 ; CHECK-NEXT:    addq %r10, %rax
 ; CHECK-NEXT:    adcq %r11, %rdx

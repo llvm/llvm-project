@@ -182,6 +182,10 @@ public:
   unsigned getCSRCostScale(const MachineFunction &MF) const override {
     return 30;
   }
+
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace

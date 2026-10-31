@@ -1006,30 +1006,30 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    xorl %ebp, %ebp
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $-8, %ebx
+; X86-SSE-NEXT:    movl $-8, %edi
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
-; X86-SSE-NEXT:    movl $0, %edi
+; X86-SSE-NEXT:    movl $0, %ebx
 ; X86-SSE-NEXT:    jb .LBB8_2
 ; X86-SSE-NEXT:  # %bb.1:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE-NEXT:  .LBB8_2:
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movl $-1, %eax
-; X86-SSE-NEXT:    cmoval %eax, %edi
+; X86-SSE-NEXT:    cmoval %eax, %ebx
 ; X86-SSE-NEXT:    cmoval %eax, %edx
 ; X86-SSE-NEXT:    cmoval %eax, %ecx
 ; X86-SSE-NEXT:    movl $7, %eax
-; X86-SSE-NEXT:    cmovbel %ebx, %eax
+; X86-SSE-NEXT:    cmovbel %edi, %eax
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
 ; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %ecx
 ; X86-SSE-NEXT:    cmovpl %ebp, %edx
-; X86-SSE-NEXT:    cmovpl %ebp, %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    cmovpl %ebp, %ebx
+; X86-SSE-NEXT:    movl %ebx, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %ecx, (%esi)
 ; X86-SSE-NEXT:    andl $15, %eax
@@ -1222,21 +1222,21 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    cmovbl %ecx, %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:    cmovbl %ecx, %edi
-; X86-SSE-NEXT:    movl $-2147483648, %ebp # imm = 0x80000000
-; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %ebp
+; X86-SSE-NEXT:    movl $-2147483648, %ebx # imm = 0x80000000
+; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %ebx
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $2147483647, %ebx # imm = 0x7FFFFFFF
-; X86-SSE-NEXT:    cmovbel %ebp, %ebx
-; X86-SSE-NEXT:    movl $-1, %ebp
-; X86-SSE-NEXT:    cmoval %ebp, %edi
-; X86-SSE-NEXT:    cmoval %ebp, %edx
-; X86-SSE-NEXT:    cmoval %ebp, %eax
+; X86-SSE-NEXT:    movl $2147483647, %ebp # imm = 0x7FFFFFFF
+; X86-SSE-NEXT:    cmovbel %ebx, %ebp
+; X86-SSE-NEXT:    movl $-1, %ebx
+; X86-SSE-NEXT:    cmoval %ebx, %edi
+; X86-SSE-NEXT:    cmoval %ebx, %edx
+; X86-SSE-NEXT:    cmoval %ebx, %eax
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
 ; X86-SSE-NEXT:    cmovpl %ecx, %eax
 ; X86-SSE-NEXT:    cmovpl %ecx, %edx
 ; X86-SSE-NEXT:    cmovpl %ecx, %edi
-; X86-SSE-NEXT:    cmovpl %ecx, %ebx
-; X86-SSE-NEXT:    movl %ebx, 12(%esi)
+; X86-SSE-NEXT:    cmovpl %ecx, %ebp
+; X86-SSE-NEXT:    movl %ebp, 12(%esi)
 ; X86-SSE-NEXT:    movl %edi, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
 ; X86-SSE-NEXT:    movl %eax, (%esi)

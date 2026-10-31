@@ -466,38 +466,38 @@ define <8 x i64> @llrint_v8i64_v8f32(<8 x float> %x) nounwind {
 ;
 ; SSE-LABEL: llrint_v8i64_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm0, %xmm2
 ; SSE-NEXT:    cvtss2si %xmm0, %rax
-; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm2[1,1]
-; SSE-NEXT:    cvtss2si %xmm3, %rax
-; SSE-NEXT:    movq %rax, %xmm3
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
-; SSE-NEXT:    movaps %xmm2, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm2[3,3]
-; SSE-NEXT:    cvtss2si %xmm3, %rax
-; SSE-NEXT:    movq %rax, %xmm3
-; SSE-NEXT:    movhlps {{.*#+}} xmm2 = xmm2[1,1]
-; SSE-NEXT:    cvtss2si %xmm2, %rax
 ; SSE-NEXT:    movq %rax, %xmm4
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm3[0]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm0[1,1]
+; SSE-NEXT:    cvtss2si %xmm2, %rax
+; SSE-NEXT:    movq %rax, %xmm2
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm2[0]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm0[3,3]
+; SSE-NEXT:    cvtss2si %xmm2, %rax
+; SSE-NEXT:    movq %rax, %xmm2
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    cvtss2si %xmm0, %rax
+; SSE-NEXT:    movq %rax, %xmm5
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm5 = xmm5[0],xmm2[0]
 ; SSE-NEXT:    cvtss2si %xmm1, %rax
 ; SSE-NEXT:    movq %rax, %xmm2
-; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm1[1,1]
-; SSE-NEXT:    cvtss2si %xmm3, %rax
-; SSE-NEXT:    movq %rax, %xmm3
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE-NEXT:    movaps %xmm1, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm1[3,3]
-; SSE-NEXT:    cvtss2si %xmm3, %rax
-; SSE-NEXT:    movq %rax, %xmm5
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
+; SSE-NEXT:    cvtss2si %xmm0, %rax
+; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3],xmm1[3,3]
+; SSE-NEXT:    cvtss2si %xmm0, %rax
+; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    cvtss2si %xmm1, %rax
 ; SSE-NEXT:    movq %rax, %xmm3
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
-; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; SSE-NEXT:    movdqa %xmm4, %xmm0
+; SSE-NEXT:    movdqa %xmm5, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: llrint_v8i64_v8f32:

@@ -76,21 +76,21 @@ define i1 @is_snan_f80(x86_fp80 %x) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
+; X86-NEXT:    xorl %edx, %edx
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl $-2147483648, %esi # imm = 0x80000000
-; X86-NEXT:    sbbl %edx, %esi
-; X86-NEXT:    movl $32767, %esi # imm = 0x7FFF
 ; X86-NEXT:    sbbl %eax, %esi
+; X86-NEXT:    movl $32767, %esi # imm = 0x7FFF
+; X86-NEXT:    sbbl %ecx, %esi
 ; X86-NEXT:    movl $0, %esi
 ; X86-NEXT:    sbbl %esi, %esi
 ; X86-NEXT:    setl %bl
-; X86-NEXT:    cmpl $-1073741824, %edx # imm = 0xC0000000
-; X86-NEXT:    sbbl $32767, %eax # imm = 0x7FFF
-; X86-NEXT:    sbbl %ecx, %ecx
+; X86-NEXT:    cmpl $-1073741824, %eax # imm = 0xC0000000
+; X86-NEXT:    sbbl $32767, %ecx # imm = 0x7FFF
+; X86-NEXT:    sbbl %edx, %edx
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    andb %bl, %al
 ; X86-NEXT:    popl %esi
@@ -440,19 +440,19 @@ define i1 @is_subnormal_f80(x86_fp80 %x) nounwind {
 ; X86-LABEL: is_subnormal_f80:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andl $32767, %eax # imm = 0x7FFF
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    addl $-1, %esi
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    andl $32767, %edx # imm = 0x7FFF
+; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    addl $-1, %eax
 ; X86-NEXT:    adcl $-1, %ecx
-; X86-NEXT:    adcl $-1, %eax
 ; X86-NEXT:    adcl $-1, %edx
-; X86-NEXT:    cmpl $-1, %esi
+; X86-NEXT:    adcl $-1, %esi
+; X86-NEXT:    cmpl $-1, %eax
 ; X86-NEXT:    sbbl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    sbbl $0, %esi
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
@@ -516,22 +516,22 @@ define i1 @is_negsubnormal_f80(x86_fp80 %x) nounwind {
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    addl $-1, %edi
-; X86-NEXT:    adcl $-1, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    andl $32767, %esi # imm = 0x7FFF
+; X86-NEXT:    xorl %edi, %edi
+; X86-NEXT:    addl $-1, %eax
 ; X86-NEXT:    adcl $-1, %ecx
 ; X86-NEXT:    adcl $-1, %esi
-; X86-NEXT:    cmpl $-1, %edi
-; X86-NEXT:    sbbl $2147483647, %edx # imm = 0x7FFFFFFF
-; X86-NEXT:    sbbl $0, %ecx
+; X86-NEXT:    adcl $-1, %edi
+; X86-NEXT:    cmpl $-1, %eax
+; X86-NEXT:    sbbl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X86-NEXT:    sbbl $0, %esi
+; X86-NEXT:    sbbl $0, %edi
 ; X86-NEXT:    setb %cl
-; X86-NEXT:    testl $32768, %eax # imm = 0x8000
+; X86-NEXT:    testl $32768, %edx # imm = 0x8000
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    andb %cl, %al
 ; X86-NEXT:    popl %esi

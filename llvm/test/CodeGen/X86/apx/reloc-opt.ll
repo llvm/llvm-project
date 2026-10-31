@@ -64,10 +64,10 @@ declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immar
 
 ; TODO: update after R_X86_64_CODE_6_GOTPCRELX is supported.
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_2
-; APXREL: {nf} addq (%rip), %r11, %rcx
-; APXREL-NEXT: R_X86_64_GOTPCREL gvar2-0x4
+; APXREL: addq (%rip), %r10
+; APXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
 ; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar2-0x4
-; NOAPXREL: addq    (%rip), %r11
+; NOAPXREL: addq    (%rip), %r10
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
 
 @gvar2 = external constant [8 x [8 x i32]]
