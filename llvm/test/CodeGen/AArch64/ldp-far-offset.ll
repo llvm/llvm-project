@@ -493,6 +493,43 @@ define void @ldp_far_offset_merge_blocked_non_adjacent(ptr %p) {
   ret void
 }
 
+; BaseReg (defined by the CGP-generated SUBXri) is live-out to a successor
+; block: the 'then' block loads from %base, so the register holding %base
+; survives the branch. The fold must be rejected because rewriting the
+; SUBXri's immediate would corrupt the successor's use. Without the live-out
+; check in Zone 2, the intra-block scan sees no reads after the pair (only
+; volatile stores + branch) and allows the fold — a miscompile.
+define i32 @ldp_far_offset_merge_blocked_liveout(ptr %p, i1 %cond) {
+; ENABLED-LABEL: ldp_far_offset_merge_blocked_liveout:
+; ENABLED:       // %bb.0:
+; ENABLED-NEXT:    sub x[[BASE:[0-9]+]], x0, #1, lsl #12 // =4096
+; ENABLED-NEXT:    add x[[ADJ:[0-9]+]], x[[BASE]], #3696
+; ENABLED-NEXT:    ldp w{{[0-9]+}}, w{{[0-9]+}}, [x[[ADJ]]]
+; ENABLED:         ldr w{{[0-9]+}}, [x[[BASE]], #3800]
+;
+; DISABLED-LABEL: ldp_far_offset_merge_blocked_liveout:
+; DISABLED:       // %bb.0:
+; DISABLED-NOT:     ldp
+; DISABLED:         ret
+entry:
+  %base = getelementptr i8, ptr %p, i64 -4096
+  %g0 = getelementptr i8, ptr %base, i64 3696
+  %g1 = getelementptr i8, ptr %base, i64 3700
+  %v0 = load i32, ptr %g0
+  %v1 = load i32, ptr %g1
+  store volatile i32 %v0, ptr poison
+  store volatile i32 %v1, ptr poison
+  br i1 %cond, label %then, label %else
+
+then:
+  %g2 = getelementptr i8, ptr %base, i64 3800
+  %v2 = load i32, ptr %g2
+  ret i32 %v2
+
+else:
+  ret i32 %v0
+}
+
 ; When the combined constant from folding the preceding ADDXri with the
 ; base-adjust offset cannot be encoded as a single ADDXri/SUBXri (low 12
 ; bits are non-zero), the fold splits it: the 4096-aligned part goes into

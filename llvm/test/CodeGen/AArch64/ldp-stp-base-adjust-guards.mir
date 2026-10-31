@@ -197,3 +197,47 @@ body:             |
 # DISABLED-LABEL: name: reuse_basereg_clobber
 # DISABLED-NOT: ADDXri
 ...
+
+---
+# D-liveout: BaseReg (defined by SUBXri) is live-out to a successor block.
+# Without the live-out check in Zone 2, the intra-block scan sees no reads
+# after the pair (only volatile stores + branch) and folds the SUBXri —
+# corrupting the successor's use of BaseReg. The live-out check must reject
+# the fold, falling back to a standalone ADDXri.
+# SUBXri x8,x0,#1,#12 (= -4096); LDRWui [x8,#924] / [x8,#925]
+# ByteOffset = 924*4 = 3696. CombinedOffset = -4096 + 3696 = -400 (encodable).
+# x8 is live-out to bb.1 (read by LDRWui), so fold must be rejected.
+name: d_liveout_rejects_fold
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$w1' }
+body:             |
+  bb.0:
+    liveins: $x0, $w1
+
+    $x8 = SUBXri $x0, 1, 12
+    $w9 = LDRWui $x8, 924 :: (load (s32))
+    $w10 = LDRWui killed $x8, 925 :: (load (s32))
+    STRWui killed $w9, undef $x0, 0
+    STRWui killed $w10, undef $x0, 1
+    TBNZW killed $w1, 0, %bb.1
+    B %bb.2
+
+  bb.1:
+    liveins: $x8
+
+    $w0 = LDRWui killed $x8, 950 :: (load (s32))
+    RET undef $lr, implicit $w0
+
+  bb.2:
+    RET undef $lr
+
+# ENABLED-LABEL: name: d_liveout_rejects_fold
+# ENABLED: SUBXri $x0, 1, 12
+# ENABLED: ADDXri $x8, 3696, 0
+# ENABLED: LDPWi
+# ENABLED-NOT: SUBXri $x0, 400, 0
+# DISABLED-LABEL: name: d_liveout_rejects_fold
+# DISABLED-NOT: LDPWi
+...

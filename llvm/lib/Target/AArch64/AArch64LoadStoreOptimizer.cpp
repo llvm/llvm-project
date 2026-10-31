@@ -1199,12 +1199,31 @@ Register AArch64LoadStoreOpt::tryMergeBaseAdjust(
 
   // Zone 2: after PairedMI. Only needed when the pair does not itself write
   // a register overlapping BaseReg; if it does, post-pair reads of aliasing
-  // sub-registers observe the loaded value, not the changed base.
+  // sub-registers observe the loaded value, not the changed base. For AArch64
+  // GPR registers there are no independent lanes, so a sub-register def (e.g.
+  // w8) still zeroes the high half of the containing X reg, and a successor
+  // read of the full register sees the loaded value.
   if (!PairWritesBaseReg) {
     MachineInstr *AfterPair = PairedMI.getNextNode();
     if (AfterPair && !CheckRange(AfterPair->getIterator(), MBB->instr_end(),
                                  /*Exact=*/false))
       return AArch64::NoRegister;
+    // Check whether BaseReg is live-out (read in successor blocks). The
+    // fold changes BaseReg's value; if a successor reads it, the read sees
+    // the wrong value. This catches the case where PairedMI is near the end
+    // of the MBB (followed only by a branch), so the intra-block scan above
+    // sees no reads and would otherwise allow the fold.
+    // Requires accurate liveness: liveouts() walks successor live-ins, which
+    // is only valid when the function tracks liveness after regalloc. LSO
+    // does not require that property (getRequiredProperties only sets
+    // NoVRegs), so guard on it. When liveness is not tracked, conservatively
+    // reject the fold rather than risk a miscompile.
+    if (!MBB->getParent()->getRegInfo().tracksLiveness())
+      return AArch64::NoRegister;
+    for (const auto &LI : MBB->liveouts()) {
+      if (TRI->regsOverlap(LI.PhysReg, BaseReg))
+        return AArch64::NoRegister;
+    }
   }
 
   // Compute the merged offset (byte offset from SrcReg to the pair start).
