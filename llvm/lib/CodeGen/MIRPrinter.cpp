@@ -1030,6 +1030,12 @@ static void printMIOperand(raw_ostream &OS, MFPrintState &State,
         if (IsReg && F.getRegMayBeFolded())
           OS << " foldable";
 
+        // The count of operands that follow the flag, e.g. the two registers
+        // of an i128 or the five operands of an x86 memory reference, is
+        // needed to parse the flag back. Most flags have one, so it's implied.
+        if (unsigned NumOps = F.getNumOperandRegisters(); NumOps != 1)
+          OS << " ops:" << NumOps;
+
         break;
       }
     }
