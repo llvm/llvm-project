@@ -248,8 +248,10 @@ bool GCNRegPressure::less(const MachineFunction &MF, const GCNRegPressure &O,
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST,
                       unsigned DynamicVGPRBlockSize) {
   return Printable([&RP, ST, DynamicVGPRBlockSize](raw_ostream &OS) {
-    OS << "VGPRs: " << RP.getArchVGPRNum() << ' '
-       << "AGPRs: " << RP.getAGPRNum();
+    OS << "VGPRs: " << RP.getArchVGPRNum();
+    if (unsigned NumAVGPRs = RP.getAVGPRNum())
+      OS << " (AV: " << NumAVGPRs << ')';
+    OS << " AGPRs: " << RP.getAGPRNum();
     if (ST)
       OS << "(O"
          << ST->getOccupancyWithNumVGPRs(RP.getVGPRNum(ST->hasGFX90AInsts()),

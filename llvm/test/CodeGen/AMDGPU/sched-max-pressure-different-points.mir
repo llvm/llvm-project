@@ -15,8 +15,8 @@
 # 42 ArchVGPRs, not 82.
 
 # DEBUG-LABEL: Machine code for function av_and_vgpr_peaks:
-# DEBUG: Region register pressure: VGPRs: 42 AGPRs: 0
-# DEBUG: Pressure after scheduling: VGPRs: 42 AGPRs: 0
+# DEBUG: Region register pressure: VGPRs: 42 (AV: 40) AGPRs: 0
+# DEBUG: Pressure after scheduling: VGPRs: 42 (AV: 40) AGPRs: 0
 
 # CHECK-LABEL: name: av_and_vgpr_peaks
 # CHECK: occupancy: 8

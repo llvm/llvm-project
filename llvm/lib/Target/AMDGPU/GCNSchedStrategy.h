@@ -90,9 +90,30 @@ protected:
                             const GCNUpwardRPTracker &UpwardTracker,
                             ScheduleDAGMI *DAG, const SIRegisterInfo *SRI);
 
+  /// \returns the ArchVGPR and AGPR pressure of \p RP after distributing
+  /// bank-agnostic AVGPR pressure across the two banks.
+  std::pair<unsigned, unsigned>
+  getBankedPressure(const GCNRegPressure &RP) const;
+
   std::vector<unsigned> Pressure;
 
   std::vector<unsigned> MaxPressure;
+
+  /// Capacity of the ArchVGPR bank, captured before VGPRExcessLimit is cut
+  /// down by ErrorMargin, VGPRLimitBias, or VGPRThresholdPercent.
+  unsigned ArchVGPRBankLimit = 0;
+
+  /// Capacity of the AGPR bank, captured before AGPRExcessLimit is cut down by
+  /// ErrorMargin and VGPRLimitBias. Zero when no AGPRs are allocatable.
+  unsigned AGPRBankLimit = 0;
+
+  /// Budget for the combined ArchVGPR + AGPR file, or zero on targets without
+  /// one.
+  unsigned UnifiedVGPRExcessLimit = 0;
+
+  /// Combined-file pressure of the candidate most recently passed to
+  /// getRegisterPressures(). Only maintained when the GCN trackers are in use.
+  unsigned CandUnifiedVGPRPressure = 0;
 
   unsigned TargetOccupancy;
 
@@ -332,7 +353,12 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   RegionPressureMap RegionLiveOuts;
 
   // Return current region pressure.
-  GCNRegPressure getRealRegPressure(unsigned RegionIdx) const;
+  /// \returns the maximum pressure of region \p RegionIdx. If set, \p
+  /// PressureCallback is called with the pressure of every program point of
+  /// the region.
+  GCNRegPressure getRealRegPressure(unsigned RegionIdx,
+                                    std::function<void(const GCNRegPressure &)>
+                                        PressureCallback = nullptr) const;
 
   // Compute and cache live-ins and pressure for all regions in block.
   void computeBlockPressure(unsigned RegionIdx, const MachineBasicBlock *MBB);
