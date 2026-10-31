@@ -288,6 +288,7 @@ private:
   bool optimizeMemoryInst(Instruction *MemoryInst, Value *Addr, Type *AccessTy,
                           unsigned AddrSpace);
   bool optimizeGatherScatterInst(Instruction *MemoryInst, Value *Ptr);
+  bool optimizeVectorPhi(PHINode *PN);
   bool optimizeMulWithOverflow(Instruction *I, bool IsSigned,
                                ModifyDT &ModifiedDT);
   bool optimizeInlineAsmInst(CallInst *CS);
@@ -6258,6 +6259,95 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
   return true;
 }
 
+static PHINode *createElementPhi(PHINode *PN, unsigned Idx) {
+  PHINode *EltPN = PHINode::Create(
+      PN->getType()->getScalarType(), PN->getNumIncomingValues(),
+      PN->getName() + ".elt" + Twine(Idx), PN->getIterator());
+
+  for (auto &In : PN->incoming_values()) {
+    BasicBlock *Pred = PN->getIncomingBlock(In);
+    // A predecessor that appears more than once must get the same value.
+    int Prev = EltPN->getBasicBlockIndex(Pred);
+    if (Prev >= 0) {
+      EltPN->addIncoming(EltPN->getIncomingValue(Prev), Pred);
+      continue;
+    }
+
+    // Is the element already around? If not, create it.
+    Value *Elt = findScalarElement(In, Idx);
+    if (!Elt)
+      Elt = IRBuilder<>(Pred->getTerminator()).CreateExtractElement(In, Idx);
+
+    EltPN->addIncoming(Elt, Pred);
+  }
+
+  return EltPN;
+}
+
+/// On targets that carry non-power-of-2 vectors (e.g. <12 x float>) across
+/// blocks as legal vector parts, a PHI of such a type whose users only extract
+/// elements, and which some predecessor builds from scalars, is better carried
+/// as scalars.
+bool CodeGenPrepare::optimizeVectorPhi(PHINode *PN) {
+  // Only consider non-power-of-2 vector types carried as several vector parts.
+  EVT VT = TLI->getValueType(*DL, PN->getType(), /*AllowUnknown=*/true);
+  if (!TLI->shouldUseDynamicVectorTypeBreakdown(VT, /*ForCallingConv=*/false) ||
+      TLI->getNumRegisters(PN->getContext(), VT) < 2)
+    return false;
+
+  // Collect extracts (of constant indexes), grouped by index. Bail if any other
+  // user is present.
+  SmallMapVector<unsigned, SmallVector<ExtractElementInst *, 2>, 16> Extracts;
+  for (auto *U : PN->users()) {
+    auto *EE = dyn_cast<ExtractElementInst>(U);
+    if (!EE)
+      return false;
+    auto *Idx = dyn_cast<ConstantInt>(EE->getIndexOperand());
+    if (!Idx)
+      return false;
+    Extracts[Idx->getZExtValue()].push_back(EE);
+  }
+  if (Extracts.empty())
+    return false;
+
+  // Compute profitability: If an incoming value is mostly built from scalars.
+  const Loop *L = LI->getLoopFor(PN->getParent());
+  bool Profitable = false;
+  for (auto &In : PN->incoming_values()) {
+    // Ignore constants and edges entering the loop (the preheader). For a loop
+    // header, only backedges count (preheader runs only once).
+    if (!isa<Instruction>(In) || (L && !L->contains(PN->getIncomingBlock(In))))
+      continue;
+
+    // Profitable if at least half of extracted elements are available as
+    // scalars via incoming.
+    unsigned NumScalar = 0;
+    for (auto &Entry : Extracts)
+      NumScalar += findScalarElement(In, Entry.first) != nullptr;
+    if (2 * NumScalar >= Extracts.size()) {
+      Profitable = true;
+      break;
+    }
+  }
+  if (!Profitable)
+    return false;
+
+  // Profitable, do the rewrite: One scalar PHI per extracted element.
+  for (auto &Entry : Extracts) {
+    PHINode *EltPN = createElementPhi(PN, Entry.first);
+    for (ExtractElementInst *EE : Entry.second) {
+      EE->replaceAllUsesWith(EltPN);
+      if (CurInstIterator == EE->getIterator())
+        ++CurInstIterator;
+      removeAllAssertingVHReferences(EE); // might be a recorded GEP base
+      EE->eraseFromParent();
+    }
+  }
+
+  PN->eraseFromParent();
+  return true;
+}
+
 // This is a helper for CodeGenPrepare::optimizeMulWithOverflow.
 // Check the pattern we are interested in where there are maximum 2 uses
 // of the intrinsic which are the extract instructions.
@@ -8767,6 +8857,8 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       ++NumPHIsElim;
       return true;
     }
+    if (optimizeVectorPhi(P))
+      return true;
     return AnyChange;
   }
 
