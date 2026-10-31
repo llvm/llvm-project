@@ -1,9 +1,14 @@
-//===--- Futex Wrapper ------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Wrapper around a futex word.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_THREADS_LINUX_FUTEX_UTILS_H
@@ -34,6 +39,9 @@ static_assert(
     "with 64-bit tv_nsec.");
 #endif
 
+// What wait() does when a signal handler interrupts the futex wait.
+enum class FutexSigAction { Restart, Exit };
+
 class Futex : public cpp::Atomic<FutexWordType> {
 public:
   using Timeout = internal::AbsTimeout;
@@ -43,9 +51,10 @@ public:
     cpp::Atomic<FutexWordType>::store(value);
     return *this;
   }
-  LIBC_INLINE ErrorOr<int> wait(FutexWordType expected,
-                                cpp::optional<Timeout> timeout = cpp::nullopt,
-                                bool is_shared = false) {
+  LIBC_INLINE ErrorOr<int>
+  wait(FutexWordType expected, cpp::optional<Timeout> timeout = cpp::nullopt,
+       bool is_shared = false,
+       FutexSigAction sig_action = FutexSigAction::Restart) {
     // use bitset variants to enforce abs_time
     uint32_t op = is_shared ? FUTEX_WAIT_BITSET : FUTEX_WAIT_BITSET_PRIVATE;
     if (timeout && timeout->is_realtime()) {
@@ -89,10 +98,13 @@ public:
           /*ignored=*/nullptr,
           /*bitset=*/FUTEX_BITSET_MATCH_ANY);
 
-      // continue waiting if interrupted; otherwise return the result
-      // which should normally be 0 or -ETIMEOUT.
-      if (ret == -EINTR)
-        continue;
+      // continue waiting if interrupted, unless the caller asks to be notified;
+      // otherwise return the result which should normally be 0 or -ETIMEOUT.
+      if (ret == -EINTR) {
+        if (sig_action == FutexSigAction::Restart)
+          continue;
+        return cpp::unexpected(EINTR);
+      }
 
       // EAGAIN and EWOULDBLOCK will be treated as a normal finish, as the value
       // has changed.

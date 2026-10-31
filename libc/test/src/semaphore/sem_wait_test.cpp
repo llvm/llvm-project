@@ -13,8 +13,10 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/limits_macros.h"
+#include "hdr/signal_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/sem_t.h"
+#include "hdr/types/struct_sigaction.h"
 #include "hdr/types/struct_timespec.h"
 #include "src/__support/time/clock_gettime.h"
 #include "src/semaphore/sem_clockwait.h"
@@ -25,6 +27,8 @@
 #include "src/semaphore/sem_timedwait.h"
 #include "src/semaphore/sem_trywait.h"
 #include "src/semaphore/sem_wait.h"
+#include "src/signal/sigaction.h"
+#include "src/unistd/alarm.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -143,6 +147,26 @@ TEST_F(LlvmLibcSemWaitTest, ClockWaitUnsupportedClock) {
   ASSERT_THAT(
       LIBC_NAMESPACE::sem_clockwait(&sem, static_cast<clockid_t>(99), &ts),
       Fails(EINVAL));
+
+  ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
+}
+
+TEST_F(LlvmLibcSemWaitTest, ASignalHandlerEndsTheWaitWithEINTR) {
+  struct sigaction action{};
+  action.sa_handler = [](int) {};
+  // No SA_RESTART: the call is not to be started again.
+  ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGALRM, &action, nullptr), Succeeds());
+
+  sem_t sem;
+  ASSERT_THAT(LIBC_NAMESPACE::sem_init(&sem, 0, 0), Succeeds());
+
+  LIBC_NAMESPACE::alarm(1);
+  ASSERT_THAT(LIBC_NAMESPACE::sem_wait(&sem), Fails(EINTR));
+
+  LIBC_NAMESPACE::alarm(1);
+  timespec far = deadline_in_10ms(CLOCK_REALTIME);
+  far.tv_sec += 30;
+  ASSERT_THAT(LIBC_NAMESPACE::sem_timedwait(&sem, &far), Fails(EINTR));
 
   ASSERT_THAT(LIBC_NAMESPACE::sem_destroy(&sem), Succeeds());
 }
