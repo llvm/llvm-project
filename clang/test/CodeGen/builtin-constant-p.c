@@ -153,3 +153,16 @@ void test15(void) {
   int a, b;
   (void)__builtin_constant_p((a = b, test15_f()));
 }
+
+void test16(void) {
+  // CHECK-LABEL: test16
+  // CHECK: call i1 @llvm.is.constant
+  __complex__ double b = __builtin_constant_p(b);
+}
+
+void test17(void) {
+  // CHECK-LABEL: test17
+  // CHECK: call i1 @llvm.is.constant
+  __complex__ float b = __builtin_constant_p(b);
+}
+
