@@ -1651,13 +1651,13 @@ __device__ void nvvm_min_max_sm80() {
 // CHECK-LABEL: nvvm_fma_bf16_bf16x2_sm80
 __device__ void nvvm_fma_bf16_bf16x2_sm80() {
 #if __CUDA_ARCH__ >= 800
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.rn.bf16
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.bf16({{.*}}i32 1)
   __nvvm_fma_rn_bf16(BF16, BF16_2, BF16_2);
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.rn.relu.bf16
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fma.relu.bf16({{.*}}i32 1)
   __nvvm_fma_rn_relu_bf16(BF16, BF16_2, BF16_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.rn.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.v2bf16({{.*}}i32 1)
   __nvvm_fma_rn_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.rn.relu.bf16x2
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fma.relu.v2bf16({{.*}}i32 1)
   __nvvm_fma_rn_relu_bf16x2(BF16X2, BF16X2_2, BF16X2_2);
 #endif
   // CHECK: ret void
@@ -1723,21 +1723,21 @@ __device__ void nvvm_add_fma_f32_sat() {
   // CHECK: call float @llvm.nvvm.fadd.ftz.sat.f32({{.*}}i32 2)
   __nvvm_add_rp_ftz_sat_f(1.0f, 2.0f);
 
-  // CHECK: call float @llvm.nvvm.fma.rn.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 1)
   __nvvm_fma_rn_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rn.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 1)
   __nvvm_fma_rn_ftz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 0)
   __nvvm_fma_rz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rz.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 0)
   __nvvm_fma_rz_ftz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rm.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 3)
   __nvvm_fma_rm_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rm.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 3)
   __nvvm_fma_rm_ftz_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rp.sat.f
+  // CHECK: call float @llvm.nvvm.fma.sat.f32({{.*}}i32 2)
   __nvvm_fma_rp_sat_f(1.0f, 2.0f, 3.0f);
-  // CHECK: call float @llvm.nvvm.fma.rp.ftz.sat.f
+  // CHECK: call float @llvm.nvvm.fma.ftz.sat.f32({{.*}}i32 2)
   __nvvm_fma_rp_ftz_sat_f(1.0f, 2.0f, 3.0f);
 
   // CHECK: ret void

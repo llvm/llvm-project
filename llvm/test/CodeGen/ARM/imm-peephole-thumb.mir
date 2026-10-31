@@ -10,8 +10,8 @@
 # CHECK: [[SUM3TMP:%.*]]:rgpr = t2SUBri [[IN]], 25600
 # CHECK: [[SUM3:%.*]]:rgpr = t2SUBri [[SUM3TMP]], 133
 
-# CHECK: [[SUM4TMP:%.*]]:rgpr = t2ADDri killed [[IN]], 25600
-# CHECK: [[SUM4:%.*]]:rgpr = t2ADDri killed [[SUM4TMP]], 133
+# CHECK: [[SUM4TMP:%.*]]:rgpr = t2ADDri [[IN]], 25600
+# CHECK: [[SUM4:%.*]]:rgpr = t2ADDri [[SUM4TMP]], 133
 
 
 --- |
@@ -41,18 +41,18 @@ body:             |
     liveins: $r0
     %0 = COPY $r0
     %1 = t2MOVi32imm -25733
-    %2 = t2SUBrr %0, killed %1, 14, $noreg, $noreg
+    %2 = t2SUBrr %0, %1, 14, $noreg, $noreg
 
     %3 = t2MOVi32imm 25733
-    %4 = t2SUBrr %0, killed %3, 14, $noreg, $noreg
+    %4 = t2SUBrr %0, %3, 14, $noreg, $noreg
 
     %5 = t2MOVi32imm -25733
-    %6= t2ADDrr %0, killed %5, 14, $noreg, $noreg
+    %6= t2ADDrr %0, %5, 14, $noreg, $noreg
 
     %7 = t2MOVi32imm 25733
-    %8 = t2ADDrr killed %0, killed %7, 14, $noreg, $noreg
+    %8 = t2ADDrr %0, %7, 14, $noreg, $noreg
 
-    $r0 = COPY killed %8
+    $r0 = COPY %8
     tBX_RET 14, $noreg, implicit $r0
 
 ...

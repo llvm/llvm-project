@@ -33,7 +33,7 @@ body:             |
     %5:vr = IMPLICIT_DEF
     %6:vrm8 = PseudoVSLIDEDOWN_VI_M8 $noreg, %2, 26, 2, 5 /* e32 */, 3 /* ta, ma */
     %7:vr = PseudoVADD_VV_MF2 $noreg, %6.sub_vrm1_0, %2.sub_vrm1_0, 2, 5 /* e32 */, 1 /* ta, mu */
-    %8:vr = PseudoVADD_VV_MF2 $noreg, killed %7, killed %3, 2, 5 /* e32 */, 1 /* ta, mu */
+    %8:vr = PseudoVADD_VV_MF2 $noreg, %7, %3, 2, 5 /* e32 */, 1 /* ta, mu */
     PseudoRET implicit $v8
 
 ...

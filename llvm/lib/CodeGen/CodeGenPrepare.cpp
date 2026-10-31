@@ -3454,8 +3454,6 @@ class TypePromotionTransaction {
     /// instances of the new value with the original value.
     Value *New;
 
-    using use_iterator = SmallVectorImpl<InstructionAndIdx>::iterator;
-
   public:
     /// Replace all the use of \p Inst by \p New.
     UsesReplacer(Instruction *Inst, Value *New)
@@ -3585,9 +3583,6 @@ public:
 private:
   /// The ordered list of actions made so far.
   SmallVector<std::unique_ptr<TypePromotionAction>, 16> Actions;
-
-  using CommitPt =
-      SmallVectorImpl<std::unique_ptr<TypePromotionAction>>::iterator;
 
   SetOfInstrs &RemovedInsts;
 };
@@ -7801,7 +7796,7 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
   // If the operands of I can be folded into a target instruction together with
   // I, duplicate and sink them.
   SmallVector<Use *, 4> OpsToSink;
-  if (!TTI->isProfitableToSinkOperands(I, OpsToSink))
+  if (!TTI->isProfitableToSinkOperands(I, OpsToSink, LI))
     return false;
 
   // OpsToSink can contain multiple uses in a use chain (e.g.
@@ -8840,10 +8835,12 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (splitMergedValStore(*SI, *DL, *TLI, Opts.cgp_force_split_store))
       return true;
+    bool Modified = tryToSinkFreeOperands(I);
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     unsigned AS = SI->getPointerAddressSpace();
-    return optimizeMemoryInst(I, SI->getOperand(1),
-                              SI->getOperand(0)->getType(), AS);
+    Modified |= optimizeMemoryInst(I, SI->getOperand(1),
+                                   SI->getOperand(0)->getType(), AS);
+    return Modified;
   }
 
   if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {
