@@ -1,0 +1,67 @@
+# RUN: llc -mtriple=aarch64 -run-pass=instruction-select \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK-LABEL: name: shift_mask_neg_debug_use
+# CHECK: %value:gpr32 = COPY $w0
+# CHECK-NEXT: %amount:gpr32 = COPY $w1
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg
+# CHECK-NEXT: [[NEG:%[0-9]+]]:gpr32 = SUBWrr $wzr, %amount
+# CHECK-NEXT: %result:gpr32 = LSLVWr %value, [[NEG]]
+
+# CHECK-LABEL: name: shift_mask_not_debug_use
+# CHECK: %value:gpr32 = COPY $w0
+# CHECK-NEXT: %amount:gpr32 = COPY $w1
+# CHECK-NEXT: DBG_VALUE $noreg, $noreg
+# CHECK-NEXT: [[NOT:%[0-9]+]]:gpr32 = ORNWrr $wzr, %amount
+# CHECK-NEXT: %result:gpr32 = LSRVWr %value, [[NOT]]
+
+---
+name: shift_mask_neg_debug_use
+machineMetadataNodes:
+  - '!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "mir-test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)'
+  - '!1 = !DIFile(filename: "shift-mask-debug-use.mir", directory: "/")'
+  - '!2 = !DISubroutineType(types: !3)'
+  - '!3 = !{}'
+  - '!4 = distinct !DISubprogram(name: "shift_mask_neg_debug_use", scope: !1, file: !1, line: 1, type: !2, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0)'
+  - '!5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)'
+  - '!6 = !DILocalVariable(name: "amount", scope: !4, file: !1, line: 1, type: !5)'
+  - '!7 = !DILocation(line: 1, column: 1, scope: !4)'
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    %value:gpr(i32) = COPY $w0
+    %amount:gpr(i32) = COPY $w1
+    %width:gpr(i32) = G_CONSTANT i32 32
+    %sub:gpr(i32) = G_SUB %width, %amount
+    DBG_VALUE %sub(i32), $noreg, !6, !DIExpression(), debug-location !7
+    %result:gpr(i32) = G_SHL %value, %sub
+    $w0 = COPY %result(i32)
+...
+---
+name: shift_mask_not_debug_use
+machineMetadataNodes:
+  - '!0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "mir-test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)'
+  - '!1 = !DIFile(filename: "shift-mask-debug-use.mir", directory: "/")'
+  - '!2 = !DISubroutineType(types: !3)'
+  - '!3 = !{}'
+  - '!4 = distinct !DISubprogram(name: "shift_mask_not_debug_use", scope: !1, file: !1, line: 2, type: !2, scopeLine: 2, spFlags: DISPFlagDefinition, unit: !0)'
+  - '!5 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)'
+  - '!6 = !DILocalVariable(name: "amount", scope: !4, file: !1, line: 2, type: !5)'
+  - '!7 = !DILocation(line: 2, column: 1, scope: !4)'
+legalized: true
+regBankSelected: true
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $w0, $w1
+    %value:gpr(i32) = COPY $w0
+    %amount:gpr(i32) = COPY $w1
+    %mask:gpr(i32) = G_CONSTANT i32 31
+    %sub:gpr(i32) = G_SUB %mask, %amount
+    DBG_VALUE %sub(i32), $noreg, !6, !DIExpression(), debug-location !7
+    %result:gpr(i32) = G_LSHR %value, %sub
+    $w0 = COPY %result(i32)
+...

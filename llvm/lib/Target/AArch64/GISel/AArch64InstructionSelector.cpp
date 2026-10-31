@@ -7130,7 +7130,7 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
   // to generate a NEG instead of a SUB from a constant.
   Register SubSrcReg;
   int64_t SubImm;
-  if (MRI.hasOneUse(ShAmtReg) &&
+  if (MRI.hasOneNonDBGUse(ShAmtReg) &&
       mi_match(ShAmtReg, MRI, m_GSub(m_ICst(SubImm), m_Reg(SubSrcReg))) &&
       SubImm != 0 && (SubImm % ShiftWidth == 0)) {
     return {{[=](MachineInstrBuilder &MIB) {
@@ -7154,7 +7154,7 @@ AArch64InstructionSelector::selectShiftMask(MachineOperand &Root) const {
   // to generate a NOT (MVN) instead of a SUB from a constant.
   Register NotSrcReg;
   int64_t NotImm;
-  if (MRI.hasOneUse(ShAmtReg) &&
+  if (MRI.hasOneNonDBGUse(ShAmtReg) &&
       mi_match(ShAmtReg, MRI, m_GSub(m_ICst(NotImm), m_Reg(NotSrcReg))) &&
       (NotImm % ShiftWidth == ShiftWidth - 1)) {
     return {{[=](MachineInstrBuilder &MIB) {
