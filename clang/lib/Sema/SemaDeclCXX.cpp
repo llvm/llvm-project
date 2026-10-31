@@ -863,11 +863,10 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   // The syntax only allows a single ref-qualifier prior to the decomposition
   // declarator. No other declarator chunks are permitted. Also check the type
   // specifier here.
-  bool HasBadDeclarator =
-      D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
+  if (DS.getTypeSpecType() != DeclSpec::TST_auto || D.hasGroupingParens() ||
+      D.getNumTypeObjects() > 1 ||
       (D.getNumTypeObjects() == 1 &&
-       D.getTypeObject(0).Kind != DeclaratorChunk::Reference);
-  if (DS.getTypeSpecType() != DeclSpec::TST_auto || HasBadDeclarator) {
+       D.getTypeObject(0).Kind != DeclaratorChunk::Reference)) {
     Diag(Decomp.getLSquareLoc(),
          (D.hasGroupingParens() ||
           (D.getNumTypeObjects() &&
@@ -879,30 +878,19 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // In most cases, there's no actual problem with an explicitly-specified
     // type, but a function type won't work here, and ActOnVariableDeclarator
     // shouldn't be called for such a type.
-    // Recover from invalid pointer declarators by removing pointer chunks
-    // so type deduction can proceed and the bindings remain usable.
-    bool DroppedPointer = false;
-    for (unsigned I = D.getNumTypeObjects(); I > 0; --I) {
-      const DeclaratorChunk &Chunk = D.getTypeObject(I - 1);
-      if (Chunk.Kind == DeclaratorChunk::Pointer ||
-          Chunk.Kind == DeclaratorChunk::MemberPointer) {
-        D.DropTypeObject(I - 1);
-        DroppedPointer = true;
-      }
-    }
+    if (R->isFunctionType())
+      D.setInvalidType();
 
-    if (DroppedPointer) {
+    // Recover from an invalid 'auto *' structured binding by removing the
+    // pointer declarator. This allows type deduction to proceed and keeps
+    // the bindings usable in subsequent code.
+    if (D.getNumTypeObjects() == 1 &&
+        D.getTypeObject(0).Kind == DeclaratorChunk::Pointer &&
+        D.getTypeObject(0).Ptr.TypeQuals == 0) {
+      D.DropFirstTypeObject();
       TInfo = GetTypeForDeclarator(D);
       R = TInfo->getType();
     }
-
-    bool StillHasBadDeclarator =
-        D.hasGroupingParens() || D.getNumTypeObjects() > 1 ||
-        (D.getNumTypeObjects() == 1 &&
-         D.getTypeObject(0).Kind != DeclaratorChunk::Reference);
-
-    if (R->isFunctionType() || StillHasBadDeclarator)
-      D.setInvalidType();
   }
 
   // Constrained auto is prohibited by [decl.pre]p6, so check that here.
@@ -1009,11 +997,6 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   if (AddToScope) {
     S->AddDecl(New);
     CurContext->addHiddenDecl(New);
-  }
-
-  if (New && New->isInvalidDecl()) {
-    for (auto *B : Bindings)
-      B->setInvalidDecl();
   }
 
   if (OpenMP().isInOpenMPDeclareTargetContext())

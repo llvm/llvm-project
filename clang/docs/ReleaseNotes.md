@@ -889,11 +889,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   type. (#GH204756)
 
 #### Bug Fixes to C++ Support
-- Clang now handles invalid pointer declarators in structured bindings
-  (such as ``auto* [x, y] = s;``) by removing the pointer part. This
-  avoids extra type deduction errors and improves error messages.
-  (#GH222605)
-  
+- Clang now recovers from invalid single pointer declarators in structured
+  bindings (such as ``auto *[x, y] = s;``) by removing the pointer declarator.
+  This allows type deduction to proceed and avoids redundant follow-up
+  diagnostics. (#GH222605)
+
 - Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 - Fixed lambdas with specifiers or attributes after the capture list being
