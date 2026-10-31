@@ -13,6 +13,7 @@
 
 #include <ranges>
 
+#include <cassert>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -41,6 +42,18 @@ static_assert(!std::is_constructible_v<OuterIterNonConst, OuterIterConst>);
 
 constexpr bool test() {
   [[maybe_unused]] OuterIterConst i(OuterIterNonConst{});
+
+  // LWG3904: the converting constructor copies trailing_empty_.
+  {
+    SplitViewDiff v("a,", ",");
+    auto it = v.begin();
+    ++it;
+
+    OuterIterConst cit = std::move(it);
+    assert(cit != std::default_sentinel);
+    ++cit;
+    assert(cit == std::default_sentinel);
+  }
 
   return true;
 }
