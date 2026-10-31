@@ -109,6 +109,22 @@ body:             |
     RET undef $lr
 ...
 
+# CHECK-LABEL: no_fuse_write_pn
+# CHECK: SU({{[0-9]+}}): dead %0:pnr_p8to15 = PTRUE_C_B
+# CHECK-NOT: SU({{[0-9]+}}): Ord  Latency={{[0-9]+}} Cluster
+# CHECK: SU({{[0-9]+}}): $za = FMLA_VG2_M2ZZ_S
+---
+name:            no_fuse_write_pn
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $za
+    %0:pnr_p8to15 = PTRUE_C_B implicit $vg
+    %1:gpr32sp = ORRWri undef %2:gpr32common, 4096
+    $za = FMLA_VG2_M2ZZ_S $za, undef %3:matrixindexgpr32_8_11, 0, undef %4:zpr2, undef %5:zpr_4b
+    RET undef $lr
+...
+
 # CHECK-LABEL: no_fuse_write_gpr32
 # CHECK: SU({{[0-9]+}}): %0:zpr = ADD_ZZZ_S
 # CHECK: Successors:
