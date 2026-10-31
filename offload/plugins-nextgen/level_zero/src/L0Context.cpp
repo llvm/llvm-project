@@ -68,7 +68,7 @@ Error LevelZeroPluginContextTy::initAllocators() {
   return Plugin::success();
 }
 
-Expected<void *> LevelZeroPluginContextTy::allocate(
+Expected<void *> LevelZeroPluginContextTy::allocateImpl(
     GenericDeviceTy &Device, int64_t Size, void * /*HostPtr*/,
     TargetAllocTy Kind, size_t Alignment, GenericProfilerTy * /*ProfilerPtr*/) {
   MemAllocatorTy *Allocator = nullptr;
@@ -95,7 +95,7 @@ Expected<void *> LevelZeroPluginContextTy::allocate(
                           AllocOptionTy::ALLOC_OPT_NONE);
 }
 
-Error LevelZeroPluginContextTy::deallocate(
+Error LevelZeroPluginContextTy::deallocateImpl(
     GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
     GenericProfilerTy * /*ProfilerPtr*/) {
   if (Kind == TARGET_ALLOC_HOST) {

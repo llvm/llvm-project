@@ -1274,6 +1274,11 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   VPValue *A, *B;
 
+  // icmp Pred X, X -> true if Pred is true when equal, false otherwise.
+  CmpPredicate Pred;
+  if (match(Def, m_ICmp(Pred, m_VPValue(A), m_Deferred(A))))
+    return ICmpInst::isTrueWhenEqual(Pred) ? Plan.getTrue() : Plan.getFalse();
+
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return A;
 
@@ -2394,6 +2399,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
       if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
         return false;
+    // Whether to expand in IR is left out and handled by cse.
     if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
       if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
         return false;
@@ -2451,6 +2457,13 @@ void VPlanTransforms::cse(VPlan &Plan, const VPDominatorTree &VPDT) {
         }
         // Keep only metadata common to both loads on the survivor.
         cast<VPIRMetadata>(V)->intersect(*cast<VPIRMetadata>(Def));
+      }
+      // Only expansions in IR can replace expansions in IR.
+      auto *DefExp = dyn_cast<VPExpandSCEVRecipe>(Def);
+      if (DefExp && DefExp->expandInIR() &&
+          !cast<VPExpandSCEVRecipe>(V)->expandInIR()) {
+        It->second = Def;
+        continue;
       }
       // Only keep flags present on both V and Def.
       if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
