@@ -9,7 +9,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS GcovOpts.td)
-tablegen(LLVM GcovOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(GcovOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(CovGcovOptsTableGen)
 
 add_llvm_tool(llvm-cov

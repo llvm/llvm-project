@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS IROptions.td)
-tablegen(LLVM IROptions.inc -gen-opt-parser-defs)
+llvm_tablegen(IROptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(IROptionsTableGen)
 
 add_llvm_component_library(LLVMCore

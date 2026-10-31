@@ -18,7 +18,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS NVLinkOpts.td)
-tablegen(LLVM NVLinkOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(NVLinkOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(NVLinkWrapperOpts)
 
 if(NOT CLANG_BUILT_STANDALONE)

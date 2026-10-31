@@ -1,9 +1,9 @@
 set(LLVM_TARGET_DEFINITIONS LLGSOptions.td)
-tablegen(LLVM LLGSOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(LLGSOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(LLGSOptionsTableGen)
 
 set(LLVM_TARGET_DEFINITIONS PlatformOptions.td)
-tablegen(LLVM PlatformOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(PlatformOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(PlatformOptionsTableGen)
 
 set(LLDB_PLUGINS)

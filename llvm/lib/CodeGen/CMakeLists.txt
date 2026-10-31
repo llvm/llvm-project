@@ -36,7 +36,7 @@ endif()
 
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS CodeGenOptions.td)
-tablegen(LLVM CodeGenOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(CodeGenOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(CodeGenOptionsTableGen)
 
 add_llvm_component_library(LLVMCodeGen

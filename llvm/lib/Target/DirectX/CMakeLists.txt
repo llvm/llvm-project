@@ -2,12 +2,12 @@ add_llvm_component_group(DirectX)
 
 set(LLVM_TARGET_DEFINITIONS DirectX.td)
 
-tablegen(LLVM DirectXGenSubtargetInfo.inc -gen-subtarget)
-tablegen(LLVM DirectXGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM DirectXGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(DirectXGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(DirectXGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(DirectXGenRegisterInfo.inc -gen-register-info)
 
 set(LLVM_TARGET_DEFINITIONS DXIL.td)
-tablegen(LLVM DXILOperation.inc -gen-dxil-operation)
+llvm_tablegen(DXILOperation.inc -gen-dxil-operation)
 
 add_public_tablegen_target(DirectXCommonTableGen)
 

@@ -1,6 +1,6 @@
 set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
 set(LLVM_TARGET_DEFINITIONS PassesOptions.td)
-tablegen(LLVM PassesOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(PassesOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(PassesOptionsTableGen)
 
 add_llvm_component_library(LLVMPasses

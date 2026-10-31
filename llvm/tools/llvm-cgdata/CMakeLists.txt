@@ -8,7 +8,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(CGDataOptsTableGen)
 
 add_llvm_tool(llvm-cgdata

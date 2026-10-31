@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS COFFOptions.td)
-tablegen(LLVM COFFOptions.inc -gen-opt-parser-defs)
+llvm_tablegen(COFFOptions.inc -gen-opt-parser-defs)
 add_public_tablegen_target(JITLinkTableGen)
 
 add_llvm_component_library(LLVMJITLink
