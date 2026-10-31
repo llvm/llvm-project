@@ -1,9 +1,16 @@
 # REQUIRES: asserts
 # RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -debug-only=pipeliner \
-# RUN: -window-sched=force -filetype=null -verify-machineinstrs 2>&1 \
-# RUN: | FileCheck %s
+# RUN: -window-sched=force -filetype=null -verify-machineinstrs \
+# RUN: -verify-machine-dom-info 2>&1 | FileCheck %s
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -verify-machine-dom-info \
+# RUN: -filetype=null -stats 2>&1 | FileCheck --check-prefix=SMS %s
+# RUN: llc --mtriple=hexagon %s -run-pass=pipeliner -pipeliner-experimental-cg \
+# RUN: -verify-machine-dom-info -filetype=null -stats 2>&1 \
+# RUN: | FileCheck --check-prefix=SMS %s
 
 # CHECK: Best window offset is {{[0-9]+}} and Best II is {{[0-9]+}}.
+
+# SMS: 1 pipeliner - Number of loops software pipelined
 
 --- |
   define void @exp_approx_top_six(i32 %N, ptr noalias %x, ptr noalias %y) #0 {

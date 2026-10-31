@@ -27,6 +27,17 @@ static cl::opt<bool> SwapBranchTargetsMVE(
     "pipeliner-swap-branch-targets-mve", cl::Hidden, cl::init(false),
     cl::desc("Swap target blocks of a conditional branch for MVE expander"));
 
+static void eraseBlock(MachineBasicBlock *MBB, MachineDomTreeUpdater &MDTU) {
+  SmallVector<MachineDominatorTree::UpdateType, 4> Updates;
+  while (!MBB->succ_empty()) {
+    Updates.push_back({MachineDominatorTree::Delete, MBB, *MBB->succ_begin()});
+    MBB->removeSuccessor(MBB->succ_begin());
+  }
+
+  MDTU.applyUpdates(Updates);
+  MDTU.deleteBB(MBB);
+}
+
 void ModuloSchedule::print(raw_ostream &OS) {
   for (MachineInstr *MI : ScheduledInstrs)
     OS << "[stage " << getStage(MI) << " @" << getCycle(MI) << "c] " << *MI;
@@ -159,6 +170,20 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   KernelBB->transferSuccessors(BB);
   KernelBB->replaceSuccessor(BB, KernelBB);
 
+  SmallVector<MachineDominatorTree::UpdateType, 8> Updates = {
+      {MachineDominatorTree::Insert, PrologBBs.back(), KernelBB}};
+  for (MachineBasicBlock *Succ : KernelBB->successors())
+    Updates.push_back({MachineDominatorTree::Insert, KernelBB, Succ});
+
+  Updates.push_back({MachineDominatorTree::Delete, PrologBBs.back(), BB});
+
+  for (MachineBasicBlock *Succ : KernelBB->successors()) {
+    Updates.push_back(
+        {MachineDominatorTree::Delete, BB, Succ == KernelBB ? BB : Succ});
+  }
+
+  MDTU.applyUpdates(Updates);
+
   generateExistingPhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap,
                        VRMapPhi, InstrMap, MaxStageCount, MaxStageCount, false);
   generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, VRMapPhi,
@@ -190,7 +215,7 @@ void ModuloScheduleExpander::cleanup() {
   for (auto &I : *BB)
     LIS.RemoveMachineInstrFromMaps(I);
   BB->clear();
-  BB->eraseFromParent();
+  eraseBlock(BB, MDTU);
 }
 
 /// Generate the pipeline prolog code.
@@ -212,6 +237,7 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
     MF.insert(BB->getIterator(), NewBB);
     NewBB->transferSuccessors(PredBB);
     PredBB->addSuccessor(NewBB);
+    MDTU.splitCriticalEdge(PredBB, BB, NewBB);
     PredBB = NewBB;
     LIS.insertMBBInMaps(NewBB);
 
@@ -288,6 +314,7 @@ void ModuloScheduleExpander::generateEpilog(
 
     PredBB->replaceSuccessor(LoopExitBB, NewBB);
     NewBB->addSuccessor(LoopExitBB);
+    MDTU.splitCriticalEdge(PredBB, LoopExitBB, NewBB);
     LIS.insertMBBInMaps(NewBB);
 
     if (EpilogStart == LoopExitBB)
@@ -890,20 +917,18 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
     unsigned numAdded = 0;
     if (!StaticallyGreater) {
       Prolog->addSuccessor(Epilog);
+      MDTU.applyUpdates({{MachineDominatorTree::Insert, Prolog, Epilog}});
       numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
     } else if (*StaticallyGreater == false) {
       Prolog->addSuccessor(Epilog);
       Prolog->removeSuccessor(LastPro);
       LastEpi->removeSuccessor(Epilog);
+      MDTU.applyUpdates({{MachineDominatorTree::Insert, Prolog, Epilog},
+                         {MachineDominatorTree::Delete, Prolog, LastPro},
+                         {MachineDominatorTree::Delete, LastEpi, Epilog}});
       numAdded = TII->insertBranch(*Prolog, Epilog, nullptr, Cond, DebugLoc());
       Epilog->removePHIsIncomingValuesForPredecessor(*LastEpi);
       // Remove the blocks that are no longer referenced.
-      if (LastPro != LastEpi) {
-        for (auto &MI : *LastEpi)
-          LIS.RemoveMachineInstrFromMaps(MI);
-        LastEpi->clear();
-        LastEpi->eraseFromParent();
-      }
       if (LastPro == KernelBB) {
         LoopInfo->disposed(&LIS);
         NewKernel = nullptr;
@@ -911,7 +936,13 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
       for (auto &MI : *LastPro)
         LIS.RemoveMachineInstrFromMaps(MI);
       LastPro->clear();
-      LastPro->eraseFromParent();
+      eraseBlock(LastPro, MDTU);
+      if (LastPro != LastEpi) {
+        for (auto &MI : *LastEpi)
+          LIS.RemoveMachineInstrFromMaps(MI);
+        LastEpi->clear();
+        eraseBlock(LastEpi, MDTU);
+      }
     } else {
       numAdded = TII->insertBranch(*Prolog, LastPro, nullptr, Cond, DebugLoc());
       Epilog->removePHIsIncomingValuesForPredecessor(*Prolog);
@@ -1606,7 +1637,7 @@ private:
 
 MachineBasicBlock *
 PeelingModuloScheduleExpander::peelKernel(LoopPeelDirection LPD) {
-  MachineBasicBlock *NewBB = PeelSingleBlockLoop(LPD, BB, MRI, TII);
+  MachineBasicBlock *NewBB = PeelSingleBlockLoop(LPD, BB, MRI, TII, &MDTU);
   if (LPD == LPD_Front)
     PeeledFront.push_back(NewBB);
   else
@@ -1825,6 +1856,7 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
   for (; PI != Prologs.end(); ++PI, ++EI) {
     MachineBasicBlock *Pred = *(*EI)->pred_begin();
     (*PI)->addSuccessor(*EI);
+    MDTU.applyUpdates({{MachineDominatorTree::Insert, *PI, *EI}});
     for (MachineInstr &MI : (*EI)->phis()) {
       Register Reg = MI.getOperand(1).getReg();
       MachineInstr *Use = MRI.getUniqueVRegDef(Reg);
@@ -1900,6 +1932,7 @@ MachineBasicBlock *PeelingModuloScheduleExpander::CreateLCSSAExitingBlock() {
   BB->replaceSuccessor(Exit, NewBB);
   Exit->replacePhiUsesWith(BB, NewBB);
   NewBB->addSuccessor(Exit);
+  MDTU.splitCriticalEdge(BB, Exit, NewBB);
 
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
@@ -1986,6 +2019,7 @@ void PeelingModuloScheduleExpander::fixupBranches() {
       // Prolog never falls through; branch to epilog and orphan interior
       // blocks. Leave it to unreachable-block-elim to clean up.
       Prolog->removeSuccessor(Fallthrough);
+      MDTU.applyUpdates({{MachineDominatorTree::Delete, Prolog, Fallthrough}});
       for (MachineInstr &P : Fallthrough->phis()) {
         P.removeOperand(2);
         P.removeOperand(1);
@@ -1996,6 +2030,7 @@ void PeelingModuloScheduleExpander::fixupBranches() {
       LLVM_DEBUG(dbgs() << "Static-true: TC > " << TC << "\n");
       // Prolog always falls through; remove incoming values in epilog.
       Prolog->removeSuccessor(Epilog);
+      MDTU.applyUpdates({{MachineDominatorTree::Delete, Prolog, Epilog}});
       for (MachineInstr &P : Epilog->phis()) {
         P.removeOperand(4);
         P.removeOperand(3);
@@ -2042,7 +2077,8 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   // InstrChanges.
   assert(LIS && "Requires LiveIntervals!");
   ModuloScheduleExpander MSE(MF, Schedule, *LIS,
-                             ModuloScheduleExpander::InstrChangesTy());
+                             ModuloScheduleExpander::InstrChangesTy(),
+                             MDTU.hasDomTree() ? &MDTU.getDomTree() : nullptr);
   MSE.expand();
   MachineBasicBlock *ExpandedKernel = MSE.getRewrittenKernel();
   if (!ExpandedKernel) {
@@ -2052,6 +2088,7 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   }
   // Before running the KernelRewriter, re-add BB into the CFG.
   Preheader->addSuccessor(BB);
+  MDTU.applyUpdates({{MachineDominatorTree::Insert, Preheader, BB}});
 
   // Now run the new expansion algorithm.
   KernelRewriter KR(*Schedule.getLoop(), Schedule, BB);
@@ -2110,6 +2147,7 @@ void PeelingModuloScheduleExpander::validateAgainstModuloScheduleExpander() {
   // Cleanup by removing BB from the CFG again as the original
   // ModuloScheduleExpander intended.
   Preheader->removeSuccessor(BB);
+  MDTU.applyUpdates({{MachineDominatorTree::Delete, Preheader, BB}});
   MSE.cleanup();
 }
 
@@ -2127,7 +2165,8 @@ MachineInstr *ModuloScheduleExpanderMVE::cloneInstr(MachineInstr *OldMI) {
 /// block between them and return the new block.
 static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
                                               MachineBasicBlock *Exit,
-                                              LiveIntervals &LIS) {
+                                              LiveIntervals &LIS,
+                                              MachineDomTreeUpdater &MDTU) {
   if (Exit->pred_size() == 1)
     return Exit;
 
@@ -2153,6 +2192,7 @@ static MachineBasicBlock *createDedicatedExit(MachineBasicBlock *Loop,
   Loop->replaceSuccessor(Exit, NewExit);
   TII->insertUnconditionalBranch(*NewExit, Exit, DebugLoc());
   NewExit->addSuccessor(Exit);
+  MDTU.splitCriticalEdge(Loop, Exit, NewExit);
 
   Exit->replacePhiUsesWith(Loop, NewExit);
 
@@ -2283,7 +2323,7 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
   MF.insert(OrigKernel->getIterator(), NewPreheader);
   LIS.insertMBBInMaps(NewPreheader);
 
-  NewExit = createDedicatedExit(OrigKernel, OrigExit, LIS);
+  NewExit = createDedicatedExit(OrigKernel, OrigExit, LIS, MDTU);
 
   NewPreheader->transferSuccessorsAndUpdatePHIs(OrigPreheader);
   TII->insertUnconditionalBranch(*NewPreheader, OrigKernel, DebugLoc());
@@ -2302,6 +2342,18 @@ void ModuloScheduleExpanderMVE::generatePipelinedLoop() {
 
   Epilog->addSuccessor(NewPreheader);
   Epilog->addSuccessor(NewExit);
+
+  MDTU.applyUpdates(
+      {{MachineDominatorTree::Insert, OrigPreheader, Check},
+       {MachineDominatorTree::Insert, Check, Prolog},
+       {MachineDominatorTree::Insert, Check, NewPreheader},
+       {MachineDominatorTree::Insert, NewPreheader, OrigKernel},
+       {MachineDominatorTree::Insert, Prolog, NewKernel},
+       {MachineDominatorTree::Insert, NewKernel, NewKernel},
+       {MachineDominatorTree::Insert, NewKernel, Epilog},
+       {MachineDominatorTree::Insert, Epilog, NewPreheader},
+       {MachineDominatorTree::Insert, Epilog, NewExit},
+       {MachineDominatorTree::Delete, OrigPreheader, OrigKernel}});
 
   InstrMapTy LastStage0Insts;
   insertCondBranch(*Check, Schedule.getNumStages() + NumUnroll - 2,
