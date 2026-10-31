@@ -1,0 +1,168 @@
+# A real call through a linker thunk must keep caller -> callee context.
+# Use one ELF fixture for long/short thunks and conservative recognition controls.
+# The branch records and ELF are synthetic regression inputs.
+#
+# DEFINE: %{pg} = llvm-profgen --format=text --csspgo-preinliner=false \
+# DEFINE:   --csprof-merge-cold-context=false --trim-cold-profile=false
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/long
+# RUN: %{pg} --binary=%t/long --perfscript=%t/long.perfscript --output=%t/on
+# RUN: FileCheck %s --input-file=%t/on --check-prefix=CS
+# RUN: %{pg} --binary=%t/long --perfscript=%t/long.perfscript --output=%t/off --resolve-linker-thunks=false
+# RUN: FileCheck %s --input-file=%t/off --check-prefix=OFF
+# RUN: %{pg} --binary=%t/long --perfscript=%t/long.perfscript --output=%t/flat --ignore-stack-samples
+# RUN: FileCheck %s --input-file=%t/flat --check-prefix=FLAT
+#
+# Short b callee, optional BTI prefix, negative ADRP displacement, low page offset.
+# RUN: yaml2obj %t/binary.yaml -DTHUNK=FABF3F14 -DSIZE=4 -DEND=0x1001c -DCALLEE=0x1000000 -o %t/short
+# RUN: %{pg} --binary=%t/short --perfscript=%t/short.perfscript --output=%t/short.txt
+# RUN: FileCheck %s --input-file=%t/short.txt --check-prefix=CS
+# RUN: yaml2obj %t/binary.yaml -DTHUNK=5F2403D590FF07901002009100021FD6 -DSIZE=16 -DEND=0x10028 -o %t/bti
+# RUN: %{pg} --binary=%t/bti --perfscript=%t/bti.perfscript --output=%t/bti.txt
+# RUN: FileCheck %s --input-file=%t/bti.txt --check-prefix=CS
+# RUN: yaml2obj %t/binary.yaml -DTHUNK=D0FFFF901002009100021FD6 -DCALLEE=0x8000 -o %t/negative
+# RUN: %{pg} --binary=%t/negative --perfscript=%t/negative.perfscript --output=%t/negative.txt
+# RUN: FileCheck %s --input-file=%t/negative.txt --check-prefix=CS
+# RUN: yaml2obj %t/binary.yaml -DTHUNK=90FF07901092049100021FD6 -DCALLEE=0x10000124 -o %t/pageoff
+# RUN: %{pg} --binary=%t/pageoff --perfscript=%t/pageoff.perfscript --output=%t/pageoff.txt
+# RUN: FileCheck %s --input-file=%t/pageoff.txt --check-prefix=CS
+#
+# Reject the wrong name, wrong register, wrong opcode, and a truncated sequence.
+# RUN: yaml2obj %t/binary.yaml -DNAME=ordinary_function -o %t/name
+# RUN: yaml2obj %t/binary.yaml -DTHUNK=91FF07903102009120021FD6 -o %t/register
+# RUN: yaml2obj %t/binary.yaml -DTHUNK=90FF0790100240F900021FD6 -o %t/opcode
+# RUN: yaml2obj %t/binary.yaml -DSIZE=8 -o %t/truncated
+# RUN: %{pg} --binary=%t/name --perfscript=%t/long.perfscript --output=%t/name.on
+# RUN: %{pg} --binary=%t/name --perfscript=%t/long.perfscript --output=%t/name.off --resolve-linker-thunks=false
+# RUN: diff %t/name.on %t/name.off
+# RUN: %{pg} --binary=%t/register --perfscript=%t/long.perfscript --output=%t/register.on
+# RUN: %{pg} --binary=%t/register --perfscript=%t/long.perfscript --output=%t/register.off --resolve-linker-thunks=false
+# RUN: diff %t/register.on %t/register.off
+# RUN: %{pg} --binary=%t/opcode --perfscript=%t/long.perfscript --output=%t/opcode.on
+# RUN: %{pg} --binary=%t/opcode --perfscript=%t/long.perfscript --output=%t/opcode.off --resolve-linker-thunks=false
+# RUN: diff %t/opcode.on %t/opcode.off
+# RUN: %{pg} --binary=%t/truncated --perfscript=%t/long.perfscript --output=%t/truncated.on
+# RUN: %{pg} --binary=%t/truncated --perfscript=%t/long.perfscript --output=%t/truncated.off --resolve-linker-thunks=false
+# RUN: diff %t/truncated.on %t/truncated.off
+#
+# A real probed function with the same name and instructions must keep its frame.
+# RUN: yaml2obj %t/binary.yaml -DPROBES=7A02CDD4ACCA9C810200018000028208 -o %t/probed
+# RUN: %{pg} --binary=%t/probed --perfscript=%t/long.perfscript --output=%t/probed.on
+# RUN: %{pg} --binary=%t/probed --perfscript=%t/long.perfscript --output=%t/probed.off --resolve-linker-thunks=false
+# RUN: diff %t/probed.on %t/probed.off
+# RUN: FileCheck %s --input-file=%t/probed.on --check-prefix=PROBED
+#
+# CS:      caller:100:0
+# CS-NEXT:  2: callee:100
+# CS-NEXT:   1: 100
+# CS-NOT:  __AArch64ADRPThunk_callee
+# OFF:      callee:100:100
+# OFF:      caller:100:0
+# OFF-NEXT:  2: 100 __AArch64ADRPThunk_callee:100
+# FLAT:      caller:0:0
+# FLAT-NEXT:  2: 100 callee:100
+# PROBED:      caller:200:0
+# PROBED-NEXT:  2: __AArch64ADRPThunk_callee:200
+# PROBED-NEXT:   1: 100
+# PROBED-NEXT:   2: callee:100
+
+#--- long.perfscript
+100
+	1000c
+ 0x1000000c/0x1000c/P/-/-/0 0x10020/0x10000000/P/-/-/0 0x10008/0x10018/P/-/-/0
+
+#--- short.perfscript
+100
+	1000c
+ 0x100000c/0x1000c/P/-/-/0 0x10018/0x1000000/P/-/-/0 0x10008/0x10018/P/-/-/0
+
+#--- bti.perfscript
+100
+	1000c
+ 0x1000000c/0x1000c/P/-/-/0 0x10024/0x10000000/P/-/-/0 0x10008/0x10018/P/-/-/0
+
+#--- negative.perfscript
+100
+	1000c
+ 0x800c/0x1000c/P/-/-/0 0x10020/0x8000/P/-/-/0 0x10008/0x10018/P/-/-/0
+
+#--- pageoff.perfscript
+100
+	1000c
+ 0x10000130/0x1000c/P/-/-/0 0x10020/0x10000124/P/-/-/0 0x10008/0x10018/P/-/-/0
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_AARCH64
+  Entry: 0x10000
+ProgramHeaders:
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    FirstSec: .text.caller
+    LastSec: .text.caller
+    VAddr: 0x10000
+    Align: 0x10000
+    Offset: 0x10000
+  - Type: PT_LOAD
+    Flags: [ PF_X, PF_R ]
+    FirstSec: .text.callee
+    LastSec: .text.callee
+    VAddr: [[CALLEE=0x10000000]]
+    Align: 0x4
+    Offset: 0x20000
+Sections:
+  - Name: .text.caller
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x10000
+    Offset: 0x10000
+    AddressAlign: 4
+    # caller: stp; mov; bl thunk; add; ldp; ret, followed by the thunk.
+    Content: FD7BBFA9FD0300910400009400040011FD7BC1A8C0035FD6[[THUNK=90FF07901002009100021FD6]]
+  - Name: .text.callee
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: [[CALLEE=0x10000000]]
+    Offset: 0x20000
+    AddressAlign: 4
+    Content: 08701D530801004B000D0011C0035FD6
+  - Name: .pseudo_probe_desc
+    Type: SHT_PROGBITS
+    # Descriptors for caller, callee, and the optionally probed thunk-named code.
+    Content: E06B1EF99E5973E7FFFFFFFF000001000663616C6C65722B746179E2631CA4FFFFFFFF000000000663616C6C65657A02CDD4ACCA9C81FFFFFFFF00000100195F5F41417263683634414452505468756E6B5F63616C6C6565
+  - Name: .pseudo_probe
+    Type: SHT_PROGBITS
+    Flags: [ SHF_LINK_ORDER ]
+    Link: .text.caller
+    Content: E06B1EF99E5973E702000180080282002B746179E2631CA40100018000[[PROBES=]]
+Symbols:
+  - Name: '$x'
+    Section: .text.caller
+    Value: 0x10000
+  - Name: '$x.callee'
+    Section: .text.callee
+    Value: [[CALLEE=0x10000000]]
+  - Name: caller
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.caller
+    Value: 0x10000
+    Size: 0x18
+  - Name: [[NAME=__AArch64ADRPThunk_callee]]
+    Type: STT_FUNC
+    Section: .text.caller
+    Value: 0x10018
+    Size: [[SIZE=12]]
+  - Name: thunk_end
+    Section: .text.caller
+    Value: [[END=0x10024]]
+  - Name: callee
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text.callee
+    Value: [[CALLEE=0x10000000]]
+    Size: 0x10

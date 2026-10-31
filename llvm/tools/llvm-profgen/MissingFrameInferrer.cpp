@@ -46,6 +46,7 @@ void MissingFrameInferrer::initialize(
   if (SampleCounters) {
     DenseMap<uint64_t, DenseSet<uint64_t>> SampledCalls;
     DenseMap<uint64_t, DenseSet<uint64_t>> SampledTailCalls;
+    const bool HasLinkerThunks = Binary->hasLinkerThunks();
 
     // Populate SampledCalls based on static call sites. Similarly to
     // SampledTailCalls.
@@ -53,6 +54,14 @@ void MissingFrameInferrer::initialize(
       for (auto Item : CI.second.BranchCounter) {
         auto From = Item.first.first;
         auto To = Item.first.second;
+        // A linker thunk only forwards to its destination: record the
+        // destination as the target, and do not treat the thunk's own branch
+        // as a tail call, otherwise it is inserted as an unprobed frame.
+        if (HasLinkerThunks) {
+          if (Binary->isLinkerThunkBranch(From))
+            continue;
+          To = Binary->resolveLinkerThunk(To);
+        }
         if (CallEdges.count(From)) {
           assert(CallEdges[From].size() == 1 &&
                  "A callsite should only appear once with either a known or a "
