@@ -72,24 +72,17 @@ func.func @ceildivs(%n: index, %m: index) -> index {
   // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = spirv.Constant 0
   // CHECK: %[[POS_ONE:.*]] = spirv.Constant 1
-  // CHECK: %[[NEG_ONE:.*]] = spirv.Constant -1
 
-  // CHECK: %[[M_POS:.*]] = spirv.SGreaterThan %[[M]], %[[ZERO]]
-  // CHECK: %[[X:.*]] = spirv.Select %[[M_POS]], %[[NEG_ONE]], %[[POS_ONE]]
-
-  // CHECK: %[[N_PLUS_X:.*]] = spirv.IAdd %[[N]], %[[X]]
-  // CHECK: %[[N_PLUS_X_DIV_M:.*]] = spirv.SDiv %[[N_PLUS_X]], %[[M]]
-  // CHECK: %[[POS_RES:.*]] = spirv.IAdd %[[N_PLUS_X_DIV_M]], %[[POS_ONE]]
-
-  // CHECK: %[[NEG_N:.*]] = spirv.ISub %[[ZERO]], %[[N]]
-  // CHECK: %[[NEG_N_DIV_M:.*]] = spirv.SDiv %[[NEG_N]], %[[M]]
-  // CHECK: %[[NEG_RES:.*]] = spirv.ISub %[[ZERO]], %[[NEG_N_DIV_M]]
-
-  // CHECK: %[[N_POS:.*]] = spirv.SGreaterThan %[[N]], %[[ZERO]]
-  // CHECK: %[[SAME_SIGN:.*]] = spirv.LogicalEqual %[[N_POS]], %[[M_POS]]
-  // CHECK: %[[N_NON_ZERO:.*]] = spirv.INotEqual %[[N]], %[[ZERO]]
-  // CHECK: %[[CMP:.*]] = spirv.LogicalAnd %[[SAME_SIGN]], %[[N_NON_ZERO]]
-  // CHECK: %[[RESULT:.*]] = spirv.Select %[[CMP]], %[[POS_RES]], %[[NEG_RES]]
+  // Divide the original numerator directly, including when it is INT_MIN.
+  // CHECK: %[[Q:.*]] = spirv.SDiv %[[N]], %[[M]]
+  // CHECK: %[[PRODUCT:.*]] = spirv.IMul %[[Q]], %[[M]]
+  // CHECK: %[[INEXACT:.*]] = spirv.INotEqual %[[PRODUCT]], %[[N]]
+  // CHECK: %[[N_NEG:.*]] = spirv.SLessThan %[[N]], %[[ZERO]]
+  // CHECK: %[[M_NEG:.*]] = spirv.SLessThan %[[M]], %[[ZERO]]
+  // CHECK: %[[SAME_SIGN:.*]] = spirv.LogicalEqual %[[N_NEG]], %[[M_NEG]]
+  // CHECK: %[[ROUND_UP:.*]] = spirv.LogicalAnd %[[INEXACT]], %[[SAME_SIGN]]
+  // CHECK: %[[ROUNDED:.*]] = spirv.IAdd %[[Q]], %[[POS_ONE]]
+  // CHECK: %[[RESULT:.*]] = spirv.Select %[[ROUND_UP]], %[[ROUNDED]], %[[Q]]
   %result = index.ceildivs %n, %m
 
   // %[[RESULTI:.*] = builtin.unrealized_conversion_cast %[[RESULT]]

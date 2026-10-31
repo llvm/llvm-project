@@ -55,24 +55,17 @@ func.func @ceildivs(%n: index, %m: index) -> index {
   // CHECK-DAG: %[[M:.*]] = builtin.unrealized_conversion_cast %[[MI]]
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 :
   // CHECK: %[[POS_ONE:.*]] = llvm.mlir.constant(1 :
-  // CHECK: %[[NEG_ONE:.*]] = llvm.mlir.constant(-1 :
 
-  // CHECK: %[[M_POS:.*]] = llvm.icmp "sgt" %[[M]], %[[ZERO]]
-  // CHECK: %[[X:.*]] = llvm.select %[[M_POS]], %[[NEG_ONE]], %[[POS_ONE]]
-
-  // CHECK: %[[N_PLUS_X:.*]] = llvm.add %[[N]], %[[X]]
-  // CHECK: %[[N_PLUS_X_DIV_M:.*]] = llvm.sdiv %[[N_PLUS_X]], %[[M]]
-  // CHECK: %[[POS_RES:.*]] = llvm.add %[[N_PLUS_X_DIV_M]], %[[POS_ONE]]
-
-  // CHECK: %[[NEG_N:.*]] = llvm.sub %[[ZERO]], %[[N]]
-  // CHECK: %[[NEG_N_DIV_M:.*]] = llvm.sdiv %[[NEG_N]], %[[M]]
-  // CHECK: %[[NEG_RES:.*]] = llvm.sub %[[ZERO]], %[[NEG_N_DIV_M]]
-
-  // CHECK: %[[N_POS:.*]] = llvm.icmp "sgt" %[[N]], %[[ZERO]]
-  // CHECK: %[[SAME_SIGN:.*]] = llvm.icmp "eq" %[[N_POS]], %[[M_POS]]
-  // CHECK: %[[N_NON_ZERO:.*]] = llvm.icmp "ne" %[[N]], %[[ZERO]]
-  // CHECK: %[[CMP:.*]] = llvm.and %[[SAME_SIGN]], %[[N_NON_ZERO]]
-  // CHECK: %[[RESULT:.*]] = llvm.select %[[CMP]], %[[POS_RES]], %[[NEG_RES]]
+  // Divide the original numerator directly, including when it is INT_MIN.
+  // CHECK: %[[Q:.*]] = llvm.sdiv %[[N]], %[[M]]
+  // CHECK: %[[PRODUCT:.*]] = llvm.mul %[[Q]], %[[M]]
+  // CHECK: %[[INEXACT:.*]] = llvm.icmp "ne" %[[PRODUCT]], %[[N]]
+  // CHECK: %[[N_NEG:.*]] = llvm.icmp "slt" %[[N]], %[[ZERO]]
+  // CHECK: %[[M_NEG:.*]] = llvm.icmp "slt" %[[M]], %[[ZERO]]
+  // CHECK: %[[SAME_SIGN:.*]] = llvm.icmp "eq" %[[N_NEG]], %[[M_NEG]]
+  // CHECK: %[[ROUND_UP:.*]] = llvm.and %[[INEXACT]], %[[SAME_SIGN]]
+  // CHECK: %[[ROUNDED:.*]] = llvm.add %[[Q]], %[[POS_ONE]]
+  // CHECK: %[[RESULT:.*]] = llvm.select %[[ROUND_UP]], %[[ROUNDED]], %[[Q]]
   %result = index.ceildivs %n, %m
 
   // CHECK: %[[RESULTI:.*]] = builtin.unrealized_conversion_cast %[[RESULT]]

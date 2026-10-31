@@ -165,7 +165,8 @@ func.func @ceildivs_edge() -> (index, index) {
   %cIntMin = index.constant -2147483648
   %cIntMax = index.constant 2147483647
 
-  // The result is 0 on 32-bit.
+  // The 64-bit quotient is 2^31. On 32-bit targets this is INT_MIN / -1,
+  // which has undefined behavior, so folding to this constant is valid.
   // CHECK-DAG: %[[A:.*]] = index.constant 2147483648
   %0 = index.ceildivs %cIntMin, %cn1
 
@@ -174,6 +175,52 @@ func.func @ceildivs_edge() -> (index, index) {
 
   // CHECK: return %[[A]], %[[B]]
   return %0, %1 : index, index
+}
+
+// Folding is valid at both index widths. With 64-bit index, the numerator is
+// INT_MIN and the quotients are -2^62 and 2^62. With 32-bit index, the numerator
+// truncates to zero and both divisions produce zero; 2 and -2 are unchanged.
+// Both folded result constants also truncate to zero.
+// CHECK-LABEL: @ceildivs_intmin64
+func.func @ceildivs_intmin64() -> (index, index) {
+  %min = index.constant -9223372036854775808
+  %c2 = index.constant 2
+  %cn2 = index.constant -2
+  // CHECK-DAG: %[[NEG:.*]] = index.constant -4611686018427387904
+  // CHECK-DAG: %[[POS:.*]] = index.constant 4611686018427387904
+  %negative = index.ceildivs %min, %c2
+  %positive = index.ceildivs %min, %cn2
+  // CHECK: return %[[NEG]], %[[POS]] : index, index
+  return %negative, %positive : index, index
+}
+
+// -2^31 has the same signed value at both index widths. Division by 2 is exact
+// and division by 3 rounds toward positive infinity. Both results fit in i32,
+// so their 64-bit folded constants also represent the correct 32-bit results.
+// CHECK-LABEL: @ceildivs_intmin32
+func.func @ceildivs_intmin32() -> (index, index) {
+  %min = index.constant -2147483648
+  %c2 = index.constant 2
+  %c3 = index.constant 3
+  // CHECK-DAG: %[[EXACT:.*]] = index.constant -1073741824
+  // CHECK-DAG: %[[INEXACT:.*]] = index.constant -715827882
+  %exact = index.ceildivs %min, %c2
+  %inexact = index.ceildivs %min, %c3
+  // CHECK: return %[[EXACT]], %[[INEXACT]] : index, index
+  return %exact, %inexact : index, index
+}
+
+// 2^31 is positive with 64-bit index and INT_MIN with 32-bit index. Dividing
+// by 2 gives 2^30 and -2^30, respectively. Truncating the 64-bit result does
+// not change its sign, so the results disagree and this cannot be folded.
+// CHECK-LABEL: @ceildivs_intmin32_nofold
+func.func @ceildivs_intmin32_nofold() -> index {
+  %lhs = index.constant 2147483648
+  %c2 = index.constant 2
+  // CHECK: %[[Q:.*]] = index.ceildivs
+  %q = index.ceildivs %lhs, %c2
+  // CHECK: return %[[Q]] : index
+  return %q : index
 }
 
 // CHECK-LABEL: @ceildivu

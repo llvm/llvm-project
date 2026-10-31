@@ -245,27 +245,14 @@ OpFoldResult DivUOp::fold(FoldAdaptor adaptor) {
 // CeilDivSOp
 //===----------------------------------------------------------------------===//
 
-/// Compute `ceildivs(n, m)` as `x = m > 0 ? -1 : 1` and then
-/// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`.
+/// Use APInt's signed rounding helper, which handles INT_MIN without requiring
+/// its positive magnitude to fit in a signed value. INT_MIN / -1 has undefined
+/// behavior in the Index dialect, so a wrapped APInt result is acceptable there.
 static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
     return std::nullopt;
-  // Short-circuit the zero case.
-  if (n.isZero())
-    return n;
-
-  bool mGtZ = m.sgt(0);
-  if (n.sgt(0) != mGtZ) {
-    // If the operands have different signs, compute the negative result. Signed
-    // division overflow is not possible, since if `m == -1`, `n` can be at most
-    // `INT_MAX`, and `-INT_MAX != INT_MIN` in two's complement.
-    return -(-n).sdiv(m);
-  }
-  // Otherwise, compute the positive result. Signed division overflow is not
-  // possible since if `m == -1`, `x` will be `1`.
-  int64_t x = mGtZ ? -1 : 1;
-  return (n + x).sdiv(m) + 1;
+  return llvm::APIntOps::RoundingSDiv(n, m, APInt::Rounding::UP);
 }
 
 OpFoldResult CeilDivSOp::fold(FoldAdaptor adaptor) {

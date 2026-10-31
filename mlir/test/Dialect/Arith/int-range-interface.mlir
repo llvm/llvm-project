@@ -273,16 +273,40 @@ func.func @ceil_divsi_full_range(%6: index) -> index {
 }
 
 // CHECK-LABEL: func @ceil_divsi_intmin_bug_115293
-// CHECK: %[[ret:.*]] = arith.constant true
+// CHECK: %[[ret:.*]] = arith.constant -7754212542 : i64
 // CHECK: return %[[ret]]
-func.func @ceil_divsi_intmin_bug_115293() -> i1 {
+func.func @ceil_divsi_intmin_bug_115293() -> i64 {
     %intMin_i64 = test.with_bounds < smin = -9223372036854775808 : si64, smax = -9223372036854775808 : si64, umin = 9223372036854775808 : ui64, umax = 9223372036854775808 : ui64 > : i64
     %denom_i64 = test.with_bounds < smin = 1189465982 : si64, smax = 1189465982 : si64, umin = 1189465982 : ui64, umax = 1189465982 : ui64 > : i64
-    %res_i64 = test.with_bounds < smin = 7754212542 : si64, smax = 7754212542 : si64, umin = 7754212542 : ui64, umax = 7754212542 : ui64 >  : i64
 
     %0 = arith.ceildivsi %intMin_i64, %denom_i64 : i64
-    %1 = arith.cmpi eq, %0, %res_i64 : i64
-    func.return %1 : i1
+    func.return %0 : i64
+}
+
+// INT_MIN divided by a positive number stays negative, both for exact and
+// inexact quotients.
+// CHECK-LABEL: func @ceil_divsi_intmin
+// CHECK-DAG: %[[EXACT:.*]] = arith.constant -64 : i8
+// CHECK-DAG: %[[INEXACT:.*]] = arith.constant -42 : i8
+// CHECK: return %[[EXACT]], %[[INEXACT]] : i8, i8
+func.func @ceil_divsi_intmin() -> (i8, i8) {
+  %min = test.with_bounds <umin = 128 : ui8, umax = 128 : ui8, smin = -128 : si8, smax = -128 : si8> : i8
+  %c2 = arith.constant 2 : i8
+  %c3 = arith.constant 3 : i8
+  %exact = arith.ceildivsi %min, %c2 : i8
+  %inexact = arith.ceildivsi %min, %c3 : i8
+  return %exact, %inexact : i8, i8
+}
+
+// Ceiling division by 2 maps [-128, -127], which includes INT_MIN, to [-64, -63].
+// CHECK-LABEL: func @ceil_divsi_range_from_intmin
+// CHECK: test.reflect_bounds <umin = 192 : ui8, umax = 193 : ui8, smin = -64 : si8, smax = -63 : si8>
+func.func @ceil_divsi_range_from_intmin() -> i8 {
+  %lhs = test.with_bounds <umin = 128 : ui8, umax = 129 : ui8, smin = -128 : si8, smax = -127 : si8> : i8
+  %c2 = arith.constant 2 : i8
+  %q = arith.ceildivsi %lhs, %c2 : i8
+  %bounds = test.reflect_bounds %q : i8
+  return %bounds : i8
 }
 
 // CHECK-LABEL: func @floor_divsi

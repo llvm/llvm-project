@@ -25,8 +25,18 @@ namespace {
 // ConvertIndexCeilDivS
 //===----------------------------------------------------------------------===//
 
-/// Convert `ceildivs(n, m)` into `x = m > 0 ? -1 : 1` and then
-/// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`.
+/// Compute `q = n / m`, then select `q + 1` when `q * m != n` and the
+/// operands have the same sign, or `q` otherwise. Truncation toward zero already
+/// rounds up for opposite-sign operands; same-sign operands need the increment
+/// only when the division is inexact.
+///
+/// This uses one division and avoids negating operands. Negating INT_MIN would
+/// cause signed overflow and wrap back to INT_MIN, since its positive magnitude
+/// is not representable, even though a quotient such as INT_MIN / 2 fits.
+/// For defined divisions, `q * m` lies between `n` and zero, so it cannot
+/// overflow. When the increment is selected, `q < INT_MAX`, so the selected
+/// result is also representable. An unselected `q + 1` may overflow; the
+/// wrapping add is safe because that value is discarded.
 struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -38,33 +48,20 @@ struct ConvertIndexCeilDivS : mlir::ConvertOpToLLVMPattern<CeilDivSOp> {
     Value m = adaptor.getRhs();
     Value zero = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 0);
     Value posOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), 1);
-    Value negOne = LLVM::ConstantOp::create(rewriter, loc, n.getType(), -1);
 
-    // Compute `x`.
-    Value mPos =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, m, zero);
-    Value x = LLVM::SelectOp::create(rewriter, loc, mPos, negOne, posOne);
-
-    // Compute the positive result.
-    Value nPlusX = LLVM::AddOp::create(rewriter, loc, n, x);
-    Value nPlusXDivM = LLVM::SDivOp::create(rewriter, loc, nPlusX, m);
-    Value posRes = LLVM::AddOp::create(rewriter, loc, nPlusXDivM, posOne);
-
-    // Compute the negative result.
-    Value negN = LLVM::SubOp::create(rewriter, loc, zero, n);
-    Value negNDivM = LLVM::SDivOp::create(rewriter, loc, negN, m);
-    Value negRes = LLVM::SubOp::create(rewriter, loc, zero, negNDivM);
-
-    // Pick the positive result if `n` and `m` have the same sign and `n` is
-    // non-zero, i.e. `(n > 0) == (m > 0) && n != 0`.
-    Value nPos =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::sgt, n, zero);
+    Value quotient = LLVM::SDivOp::create(rewriter, loc, n, m);
+    Value product = LLVM::MulOp::create(rewriter, loc, quotient, m);
+    Value inexact = LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne,
+                                         product, n);
+    Value nNeg =
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, n, zero);
+    Value mNeg =
+        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::slt, m, zero);
     Value sameSign = LLVM::ICmpOp::create(rewriter, loc,
-                                          LLVM::ICmpPredicate::eq, nPos, mPos);
-    Value nNonZero =
-        LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::ne, n, zero);
-    Value cmp = LLVM::AndOp::create(rewriter, loc, sameSign, nNonZero);
-    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, cmp, posRes, negRes);
+                                          LLVM::ICmpPredicate::eq, nNeg, mNeg);
+    Value roundUp = LLVM::AndOp::create(rewriter, loc, inexact, sameSign);
+    Value rounded = LLVM::AddOp::create(rewriter, loc, quotient, posOne);
+    rewriter.replaceOpWithNewOp<LLVM::SelectOp>(op, roundUp, rounded, quotient);
     return success();
   }
 };
