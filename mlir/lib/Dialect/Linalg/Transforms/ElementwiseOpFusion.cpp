@@ -24,6 +24,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
@@ -154,6 +155,11 @@ bool mlir::linalg::areElementwiseOpsFusable(OpOperand *fusedOperand) {
   // aliasing between producer and consumer memrefs.
   if (!producer.hasPureTensorSemantics() ||
       !isa<RankedTensorType>(fusedOperand->get().getType()))
+    return false;
+
+  // The producer payload is cloned into the fused op. Do not duplicate or
+  // reorder operations with memory effects.
+  if (!isMemoryEffectFree(producer))
     return false;
 
   // Verify that

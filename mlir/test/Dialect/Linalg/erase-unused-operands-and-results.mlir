@@ -422,6 +422,82 @@ func.func @drop_dead_results_with_unused_cycles(%arg0 : tensor<?x?x?xf32>) -> (t
 
 // -----
 
+// A dead output may be computed by a multi-result op.
+
+#map = affine_map<(d0) -> (d0)>
+func.func @drop_dead_multi_result_output(%init0: tensor<1xi32>, %init1: tensor<1xi32>, %rhs: i32) -> tensor<1xi32> {
+  %results:2 = linalg.generic {
+      indexing_maps = [#map, #map],
+      iterator_types = ["parallel"]}
+      outs(%init0, %init1 : tensor<1xi32>, tensor<1xi32>) {
+    ^bb0(%out0: i32, %out1: i32):
+      %diff, %borrow = arith.subui_extended %out0, %rhs : i32, i1
+      linalg.yield %diff, %out1 : i32, i32
+    } -> (tensor<1xi32>, tensor<1xi32>)
+  return %results#1 : tensor<1xi32>
+}
+
+// CHECK-LABEL: func.func @drop_dead_multi_result_output(
+// CHECK-SAME: %[[INIT0:[^:]+]]: tensor<1xi32>, %[[INIT1:[^:]+]]: tensor<1xi32>
+// CHECK: linalg.generic
+// CHECK-SAME: outs(%[[INIT1]] : tensor<1xi32>)
+// CHECK-NOT: arith.subui_extended
+// CHECK: linalg.yield
+
+// -----
+
+// Drop a dead output and its chain of computations.
+
+#map = affine_map<(d0) -> (d0)>
+func.func @drop_dead_output_computation_chain(%init0: tensor<1xi32>, %init1: tensor<1xi32>, %rhs: i32) -> tensor<1xi32> {
+  %results:2 = linalg.generic {
+      indexing_maps = [#map, #map],
+      iterator_types = ["parallel"]}
+      outs(%init0, %init1 : tensor<1xi32>, tensor<1xi32>) {
+    ^bb0(%out0: i32, %out1: i32):
+      %sum = arith.addi %out0, %rhs : i32
+      %product = arith.muli %sum, %rhs : i32
+      linalg.yield %product, %out1 : i32, i32
+    } -> (tensor<1xi32>, tensor<1xi32>)
+  return %results#1 : tensor<1xi32>
+}
+
+// CHECK-LABEL: func.func @drop_dead_output_computation_chain(
+// CHECK-SAME: %[[INIT0:[^:]+]]: tensor<1xi32>, %[[INIT1:[^:]+]]: tensor<1xi32>
+// CHECK: linalg.generic
+// CHECK-SAME: outs(%[[INIT1]] : tensor<1xi32>)
+// CHECK-NOT: arith.addi
+// CHECK-NOT: arith.muli
+// CHECK: linalg.yield
+
+// -----
+
+// Preserve a dead output whose block argument feeds a side effect.
+
+#map = affine_map<(d0) -> (d0)>
+func.func @preserve_effectful_output_computation(%init0: tensor<1xi32>, %init1: tensor<1xi32>, %rhs: i32, %mem: memref<1xi32>) -> tensor<1xi32> {
+  %c0 = arith.constant 0 : index
+  %results:2 = linalg.generic {
+      indexing_maps = [#map, #map],
+      iterator_types = ["parallel"]}
+      outs(%init0, %init1 : tensor<1xi32>, tensor<1xi32>) {
+    ^bb0(%out0: i32, %out1: i32):
+      %sum = arith.addi %out0, %rhs : i32
+      memref.store %out0, %mem[%c0] : memref<1xi32>
+      linalg.yield %sum, %out1 : i32, i32
+    } -> (tensor<1xi32>, tensor<1xi32>)
+  return %results#1 : tensor<1xi32>
+}
+
+// CHECK-LABEL: func.func @preserve_effectful_output_computation(
+// CHECK: %[[RESULTS:.+]]:2 = linalg.generic
+// CHECK: %[[SUM:.+]] = arith.addi %[[OUT0:[^,]+]],
+// CHECK: memref.store %[[OUT0]],
+// CHECK: linalg.yield %[[SUM]],
+// CHECK: return %[[RESULTS]]#1
+
+// -----
+
 // Drop only the results not used by others.
 
 #map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
