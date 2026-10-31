@@ -104,12 +104,8 @@ public:
                 MachineCopyPropagationPass, TailDuplicatePass,
                 StackMapLivenessPass, PostRAMachineSinkingPass,
                 PostRASchedulerPass, FuncletLayoutPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass>();
-
-    // Leave block placement to ptxas. Its CFG transformations can invalidate
-    // layout decisions made at the PTX level, and block placement here can
-    // interfere with ptxas analyses.
-    disablePass<MachineBlockPlacementPass>();
+                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
+                MachineBlockPlacementPass>();
   }
 
   void addIRPasses(PassManagerWrapper &PMW) override;
