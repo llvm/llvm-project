@@ -774,13 +774,14 @@ public:
 
     const MCSymbol *Target = getTargetSymbol(LDRInst, 1);
     assert(Target && "missing target symbol in LDR instruction");
+    const int64_t Addend = getTargetAddend(LDRInst, 1);
 
     InstructionListType Insts(2);
     Insts[0].setOpcode(AArch64::ADRP);
     Insts[0].clear();
     Insts[0].addOperand(MCOperand::createReg(AddrReg));
     Insts[0].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, 0, Ctx,
+    setOperandToSymbolRef(Insts[0], /* OpNum */ 1, Target, Addend, Ctx,
                           ELF::R_AARCH64_NONE);
     Insts[1].setOpcode(OpCode);
     Insts[1].clear();
@@ -788,7 +789,8 @@ public:
     Insts[1].addOperand(MCOperand::createReg(AddrReg));
     Insts[1].addOperand(MCOperand::createImm(0));
     Insts[1].addOperand(MCOperand::createImm(0));
-    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, 0, Ctx, RelType);
+    setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
+                          RelType);
     return Insts;
   }
 

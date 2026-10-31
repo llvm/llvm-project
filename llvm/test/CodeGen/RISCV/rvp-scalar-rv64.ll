@@ -1150,6 +1150,30 @@ define i64 @maccu_w00(i64 %rd, i32 %a, i32 %b) nounwind {
   ret i64 %result
 }
 
+define i64 @maccu_w01(i64 %rd, i32 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccu_w01:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccu.w01 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bhi = lshr i64 %b, 32
+  %mul = mul i64 %aext, %bhi
+  %result = add i64 %rd, %mul
+  ret i64 %result
+}
+
+define i64 @maccu_w11(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccu_w11:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccu.w11 a0, a1, a2
+; CHECK-NEXT:    ret
+  %ahi = lshr i64 %a, 32
+  %bhi = lshr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
+  %result = add i64 %rd, %mul
+  ret i64 %result
+}
+
 define i64 @maccu_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: maccu_w00_commute:
 ; CHECK:       # %bb.0:
@@ -1158,6 +1182,30 @@ define i64 @maccu_w00_commute(i64 %rd, i32 %a, i32 %b) nounwind {
   %aext = zext i32 %a to i64
   %bext = zext i32 %b to i64
   %mul = mul i64 %aext, %bext
+  %result = add i64 %mul, %rd
+  ret i64 %result
+}
+
+define i64 @maccu_w01_commute(i64 %rd, i32 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccu_w01_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccu.w01 a0, a1, a2
+; CHECK-NEXT:    ret
+  %aext = zext i32 %a to i64
+  %bhi = lshr i64 %b, 32
+  %mul = mul i64 %aext, %bhi
+  %result = add i64 %mul, %rd
+  ret i64 %result
+}
+
+define i64 @maccu_w11_commute(i64 %rd, i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: maccu_w11_commute:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    maccu.w11 a0, a1, a2
+; CHECK-NEXT:    ret
+  %ahi = lshr i64 %a, 32
+  %bhi = lshr i64 %b, 32
+  %mul = mul i64 %ahi, %bhi
   %result = add i64 %mul, %rd
   ret i64 %result
 }
@@ -1538,8 +1586,8 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
 define i64 @and_mul_32bitsplat(i64 %x) {
 ; CHECK-LABEL: and_mul_32bitsplat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, %hi(.LCPI115_0)
-; CHECK-NEXT:    ld a1, %lo(.LCPI115_0)(a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI119_0)
+; CHECK-NEXT:    ld a1, %lo(.LCPI119_0)(a1)
 ; CHECK-NEXT:    lui a2, 65664
 ; CHECK-NEXT:    addi a2, a2, 1024
 ; CHECK-NEXT:    slli a3, a2, 27
