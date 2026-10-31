@@ -36,7 +36,12 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.sigprocmask
 )
-
+add_entrypoint_object(
+  sigwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigwait
+)
 add_entrypoint_object(
   pthread_sigmask
   ALIAS
