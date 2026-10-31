@@ -12,7 +12,7 @@ define void @recur_i8_128(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 128
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 128
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -40,7 +40,7 @@ define void @recur_i8_128_no_nusw(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 128
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr i8, ptr [[IV]], i64 128
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -68,7 +68,7 @@ define void @recur_i8_64(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 64
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 64
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -124,7 +124,7 @@ define void @recur_i8_32(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 32
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 32
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -152,7 +152,7 @@ define void @recur_i8_16(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 16
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -180,7 +180,7 @@ define void @recur_i8_8(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 8
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -208,7 +208,7 @@ define void @recur_i8_4(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 4
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -236,7 +236,7 @@ define void @recur_i8_2(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 2
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -356,7 +356,7 @@ define void @recur_i8_i16_128(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 128
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i16 128
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -384,7 +384,7 @@ define void @recur_i8_i8_132(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i8 -124
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -412,7 +412,7 @@ define void @recur_i32_4(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i32, ptr [[IV]], i64 4
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -440,7 +440,7 @@ define void @recur_i32_3(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 16
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i32, ptr [[IV]], i64 4
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -468,7 +468,7 @@ define void @recur_i8_neg_128(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 128
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 -128
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -496,7 +496,7 @@ define void @recur_i8_neg64(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 64
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 -64
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -552,7 +552,7 @@ define void @recur_i8_neg_32(ptr align 128 %dst) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 32
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 -32
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
@@ -566,6 +566,164 @@ loop:
   %iv = phi ptr [ %dst, %entry ], [ %iv.next, %loop ]
   store i64 0, ptr %iv, align 1
   %iv.next = getelementptr nusw i8, ptr %iv, i64 -32
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The start value's alignment can come from a global rather than an argument
+; attribute. This is what makes it safe for InstCombine to drop a redundant
+; align assume on such a pointer: the alignment of the loop-carried pointer is
+; still recoverable from the global itself.
+@g = external global [1024 x i8], align 8
+
+define void @recur_global_start() {
+; CHECK-LABEL: define void @recur_global_start() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ @g, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 16
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi ptr [ @g, %entry ], [ %iv.next, %loop ]
+  store i64 0, ptr %iv, align 1
+  %iv.next = getelementptr nusw i8, ptr %iv, i64 16
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; A step smaller than the start alignment limits the result to the step.
+define void @recur_global_start_small_step() {
+; CHECK-LABEL: define void @recur_global_start_small_step() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ @g, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 4
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi ptr [ @g, %entry ], [ %iv.next, %loop ]
+  store i64 0, ptr %iv, align 1
+  %iv.next = getelementptr nusw i8, ptr %iv, i64 4
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Address space 1 has an index width (32) narrower than its pointer size (64).
+define void @recur_addrspace1(ptr addrspace(1) align 128 %dst) {
+; CHECK-LABEL: define void @recur_addrspace1(
+; CHECK-SAME: ptr addrspace(1) align 128 [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr addrspace(1) [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i64 0, ptr addrspace(1) [[IV]], align 64
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr addrspace(1) [[IV]], i32 64
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi ptr addrspace(1) [ %dst, %entry ], [ %iv.next, %loop ]
+  store i64 0, ptr addrspace(1) %iv, align 1
+  %iv.next = getelementptr nusw i8, ptr addrspace(1) %iv, i32 64
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The step is a multi-index GEP; its accumulated offset bounds the result.
+define void @recur_struct_step(ptr align 128 %dst) {
+; CHECK-LABEL: define void @recur_struct_step(
+; CHECK-SAME: ptr align 128 [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 16
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw { i32, i32 }, ptr [[IV]], i64 2, i32 0
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi ptr [ %dst, %entry ], [ %iv.next, %loop ]
+  store i64 0, ptr %iv, align 1
+  %iv.next = getelementptr nusw { i32, i32 }, ptr %iv, i64 2, i32 0
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Not a two-input recurrence, so the alignment is not inferred.
+define void @recur_three_incoming(ptr align 128 %dst, i1 %c2) {
+; CHECK-LABEL: define void @recur_three_incoming(
+; CHECK-SAME: ptr align 128 [[DST:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[PRE1:.*]], label %[[PRE2:.*]]
+; CHECK:       [[PRE1]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[PRE2]]:
+; CHECK-NEXT:    br label %[[LOOP]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi ptr [ [[DST]], %[[PRE1]] ], [ [[DST]], %[[PRE2]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    store i64 0, ptr [[IV]], align 1
+; CHECK-NEXT:    [[IV_NEXT]] = getelementptr nusw i8, ptr [[IV]], i64 128
+; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c2, label %pre1, label %pre2
+
+pre1:
+  br label %loop
+
+pre2:
+  br label %loop
+
+loop:
+  %iv = phi ptr [ %dst, %pre1 ], [ %dst, %pre2 ], [ %iv.next, %loop ]
+  store i64 0, ptr %iv, align 1
+  %iv.next = getelementptr nusw i8, ptr %iv, i64 128
   %c = call i1 @cond()
   br i1 %c, label %loop, label %exit
 
