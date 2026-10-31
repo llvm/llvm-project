@@ -132,6 +132,11 @@ LIBC_INLINE int CharacterConverter::push(char32_t utf32) {
   if (!isEmpty())
     return -1;
 
+  if (utf32 >= 0xd800 && utf32 <= 0xdfff) {
+    clear();
+    return EILSEQ;
+  }
+
   state->partial = utf32;
 
   // determine number of utf-8 bytes needed to represent this utf32 value

@@ -155,6 +155,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  c32rtomb
+  SRCS
+    c32rtomb.cpp
+  HDRS
+    c32rtomb.h
+  DEPENDS
+    libc.hdr.types.char32_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.libc_errno
+    libc.src.__support.wchar.c32rtomb
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
   mbsinit
   SRCS
     mbsinit.cpp
