@@ -482,47 +482,6 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 
   if (Head->succ_size() != 2)
     return false;
-  MachineBasicBlock *Succ0 = Head->succ_begin()[0];
-  MachineBasicBlock *Succ1 = Head->succ_begin()[1];
-
-  // Canonicalize so Succ0 has MBB as its single predecessor.
-  if (Succ0->pred_size() != 1)
-    std::swap(Succ0, Succ1);
-
-  if (Succ0->pred_size() != 1 || Succ0->succ_size() != 1)
-    return false;
-
-  Tail = Succ0->succ_begin()[0];
-
-  // This is not a triangle.
-  if (Tail != Succ1) {
-    // Check for a diamond. We won't deal with any critical edges.
-    if (Succ1->pred_size() != 1 || Succ1->succ_size() != 1 ||
-        Succ1->succ_begin()[0] != Tail)
-      return false;
-    LLVM_DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
-                      << printMBBReference(*Succ0) << "/"
-                      << printMBBReference(*Succ1) << " -> "
-                      << printMBBReference(*Tail) << '\n');
-
-    // Live-in physregs are tricky to get right when speculating code.
-    if (!Tail->livein_empty()) {
-      LLVM_DEBUG(dbgs() << "Tail has live-ins.\n");
-      return false;
-    }
-  } else {
-    LLVM_DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
-                      << printMBBReference(*Succ0) << " -> "
-                      << printMBBReference(*Tail) << '\n');
-  }
-
-  // This is a triangle or a diamond.
-  // Skip if we cannot predicate and there are no phis skip as there must be
-  // side effects that can only be handled with predication.
-  if (!Predicate && (Tail->empty() || !Tail->front().isPHI())) {
-    LLVM_DEBUG(dbgs() << "No phis in tail.\n");
-    return false;
-  }
 
   // The branch we're looking to eliminate must be analyzable.
   Cond.clear();
@@ -546,7 +505,56 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 
   // analyzeBranch doesn't set FBB on a fall-through branch.
   // Make sure it is always set.
-  FBB = TBB == Succ0 ? Succ1 : Succ0;
+  if (!FBB)
+    FBB = Head->getNextNode();
+
+  // A conditional block must have Head as its single predecessor and Tail as
+  // its single successor. We won't deal with any critical edges.
+  bool IsTBBCond = TBB->pred_size() == 1 && TBB->succ_size() == 1;
+  bool IsFBBCond = FBB->pred_size() == 1 && FBB->succ_size() == 1;
+
+  if (IsTBBCond && IsFBBCond && TBB->succ_begin()[0] == FBB->succ_begin()[0]) {
+    Tail = TBB->succ_begin()[0];
+    LLVM_DEBUG(dbgs() << "\nDiamond: " << printMBBReference(*Head) << " -> "
+                      << printMBBReference(*TBB) << "/"
+                      << printMBBReference(*FBB) << " -> "
+                      << printMBBReference(*Tail) << '\n');
+
+    // Live-in physregs are tricky to get right when speculating code.
+    if (!Tail->livein_empty()) {
+      LLVM_DEBUG(dbgs() << "Tail has live-ins.\n");
+      return false;
+    }
+  } else if (IsTBBCond && TBB->succ_begin()[0] == FBB) {
+    Tail = FBB;
+    LLVM_DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
+                      << printMBBReference(*TBB) << " -> "
+                      << printMBBReference(*Tail) << '\n');
+  } else if (IsFBBCond && FBB->succ_begin()[0] == TBB) {
+    Tail = TBB;
+    LLVM_DEBUG(dbgs() << "\nTriangle: " << printMBBReference(*Head) << " -> "
+                      << printMBBReference(*FBB) << " -> "
+                      << printMBBReference(*Tail) << '\n');
+  } else {
+    return false;
+  }
+
+  // Conversion erases the conditional blocks. If a conditional block's address
+  // is taken, prevent the conversion. Otherwise, its references would be
+  // dangling.
+  if ((TBB != Tail && TBB->hasAddressTaken()) ||
+      (FBB != Tail && FBB->hasAddressTaken())) {
+    LLVM_DEBUG(dbgs() << "Conditional block has its address taken.\n");
+    return false;
+  }
+
+  // This is a triangle or a diamond.
+  // Skip if we cannot predicate and there are no phis skip as there must be
+  // side effects that can only be handled with predication.
+  if (!Predicate && (Tail->empty() || !Tail->front().isPHI())) {
+    LLVM_DEBUG(dbgs() << "No phis in tail.\n");
+    return false;
+  }
 
   // Any phis in the tail block must be convertible to selects.
   PHIs.clear();
@@ -808,7 +816,9 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
   }
 
   assert(Head->succ_empty() && "Additional head successors?");
-  if (!ExtraPreds && Head->isLayoutSuccessor(Tail)) {
+  // Joining erases Tail, so an address-taken Tail must stay a separate block.
+  if (!ExtraPreds && Head->isLayoutSuccessor(Tail) &&
+      !Tail->hasAddressTaken()) {
     // Splice Tail onto the end of Head.
     LLVM_DEBUG(dbgs() << "Joining tail " << printMBBReference(*Tail)
                       << " into head " << printMBBReference(*Head) << '\n');
