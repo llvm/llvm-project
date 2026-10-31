@@ -2344,6 +2344,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoOutline;
   case bitc::ATTR_KIND_NOIPA:
     return Attribute::NoIPA;
+  case bitc::ATTR_KIND_LIKELY_MODULE_LOCAL:
+    return Attribute::LikelyModuleLocal;
   }
 }
 

@@ -3328,6 +3328,21 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
     B.addAttribute(llvm::Attribute::NoOutline);
 
+  // An inline function or template instantiation defined in the main source
+  // file is (ignoring unusual setups like #include-ing a .cpp file) not
+  // referenced or emitted by any other translation unit.
+  if (CodeGenOpts.ModuleLocalHints) {
+    const auto *FD = dyn_cast<FunctionDecl>(D);
+    const SourceManager &SM = getContext().getSourceManager();
+    // D->getLocation(), for a template instantiation, is the location of the
+    // template's definition, not instantiation.
+    // TODO: Also consider template instantiations where a template argument is
+    // a class declared in the main file.
+    bool InMainFile = SM.isInMainFile(D->getLocation());
+    if (FD && (FD->isInlined() || FD->isTemplateInstantiation()) && InMainFile)
+      B.addAttribute(llvm::Attribute::LikelyModuleLocal);
+  }
+
   F->addFnAttrs(B);
 
   llvm::MaybeAlign ExplicitAlignment;
