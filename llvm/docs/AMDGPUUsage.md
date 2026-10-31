@@ -2804,6 +2804,13 @@ keep different policies distinct during DAG and MachineIR CSE, survive cloning a
 allocation and rewrite passes. They have no hardware encoding and are omitted
 when lowering to MC instructions. No hardware operand carries policy bits.
 
+`AMDGPUPrepareAGPRAlloc` enforces hard requests after selection and before
+register allocation, including at `-O0` and for `optnone`. It switches the
+existing MFMA form and inserts C/D bank-transfer copies where needed.
+Scheduler and AGPR-copy rewrites preserve explicit policies while retaining
+existing behavior for `auto`. Disabling the optional scheduler rewrite does
+not disable hard requests.
+
 (amdgpu-av-load-store)=
 
 #### '`llvm.amdgcn.av`' Intrinsics

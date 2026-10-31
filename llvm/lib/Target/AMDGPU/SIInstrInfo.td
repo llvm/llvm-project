@@ -3576,6 +3576,15 @@ def getAGPRFormOp : InstrMapping {
   let ValueCols = [["AGPR"]];
 }
 
+// Reverse mapping for explicit VGPR C/D requests after instruction selection.
+def getVGPRFormOp : InstrMapping {
+  let FilterClass = "AGPRFormTable";
+  let RowFields = ["AGPRFormOp"];
+  let ColFields = ["AGPRFormKind"];
+  let KeyCol = ["AGPR"];
+  let ValueCols = [["VGPR"]];
+}
+
 // Maps an v_cmp instruction to its v_cmpx equivalent.
 def getVCMPXOpFromVCMP : InstrMapping {
   let FilterClass = "VCMPVCMPXTable";

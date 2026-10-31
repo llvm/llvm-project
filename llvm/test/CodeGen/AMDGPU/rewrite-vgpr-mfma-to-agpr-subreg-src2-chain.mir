@@ -331,3 +331,27 @@ body:             |
     GLOBAL_STORE_DWORDX2 %0, %other_use1, 0, 0, implicit $exec :: (store (s64), addrspace 1)
     SI_RETURN
 ...
+
+---
+name:  require_vgpr_src2_is_subreg
+tracksRegLiveness: true
+body:             |
+  ; Unlike the automatic case above, a hard VGPR request must keep its MFMA
+  ; form even when an AGPR use makes a form rewrite profitable.
+  ; CHECK-LABEL: name: require_vgpr_src2_is_subreg
+  ; CHECK: [[C:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4
+  ; CHECK: [[D:%[0-9]+]]:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 {{.*}}, [[C]].sub0_sub1, 0, {{.*}}target-index(amdgpu-mfma-cd-vgpr)
+  ; CHECK: :areg_128_align2 = COPY [[D]]
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+
+    %0:vreg_64_align2 = COPY $vgpr4_vgpr5
+    %1:av_64_align2 = COPY $vgpr0_vgpr1
+    %2:av_64_align2 = COPY $vgpr2_vgpr3
+    %3:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 %0, 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    %4:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %1, %2, %3.sub0_sub1, 0, 0, 0, target-index(amdgpu-mfma-cd-vgpr), implicit $mode, implicit $exec
+    undef %5.sub0_sub1:areg_128_align2 = COPY %4
+    INLINEASM &"; use $0", sideeffect attdialect, reguse:AReg_128_Align2, %5
+    GLOBAL_STORE_DWORDX4 %0, %5, 0, 0, implicit $exec :: (store (s128), addrspace 1)
+    SI_RETURN
+...

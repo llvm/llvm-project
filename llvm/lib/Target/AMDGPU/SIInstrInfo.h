@@ -1995,6 +1995,7 @@ namespace AMDGPU {
   /// given an \p Opcode which uses VGPRs for coupled operands.
   LLVM_READONLY
   int32_t getAGPRFormOp(uint32_t Opcode);
+  int32_t getVGPRFormOp(uint32_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
