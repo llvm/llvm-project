@@ -1,8 +1,8 @@
 ; agx-lower-air drops PTX's explicit .ftz flushes written on the bits (a
 ; front end's strict mode tests the bits: a flushing GPU compares a denormal
 ; as zero) where the f32 ALU flushes anyway: the flush of an fma's result,
-; also through its canonical NaN select, and the flush of an operand that only
-; an fma reads. A flush of a value that no flushing operation makes or reads
+; also through its canonical NaN select (made one comparison with the ALU's
+; NaN), and the flush of an operand that only an fma reads. A flush of a value that no flushing operation makes or reads
 ; stays.
 ; RUN: llc -mtriple=air -air-portable %s -o %t.air.ll
 ; RUN: opt -mtriple=agx -mcpu=agx-g14g -passes=agx-lower-air -S %t.air.ll | FileCheck %s
@@ -10,8 +10,9 @@
 ; CHECK-LABEL: define agx_kernel void @k(
 ; CHECK-NOT: select i1 %zt
 ; CHECK: %r = call float @llvm.fma.f32(float %x.val, float %y.val, float %zff)
-; CHECK: %rn = icmp ugt i32 %ra, 2139095040
-; CHECK-NEXT: %rf = select i1 %rn, i32 2147483647, i32 %rb
+; the fma's canonical NaN as a comparison with the ALU's NaN, 0x7fc00000
+; CHECK: [[IS:%.*]] = icmp eq i32 %rb, 2143289344
+; CHECK-NEXT: %rf = select i1 [[IS]], i32 2147483647, i32 %rb
 ; CHECK-NEXT: store i32 %rf
 ; CHECK: %wf = select i1 %wt, i32 %ws, i32 %w.val
 ; CHECK: ret void

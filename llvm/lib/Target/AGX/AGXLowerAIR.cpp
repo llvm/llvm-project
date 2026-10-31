@@ -1788,6 +1788,10 @@ void LowerAIR::recoverAGXOperations(Function &F) {
                                                 m_And(m_Value(Y),
                                                       m_SpecificInt(0x7fffffff)),
                                                 m_SpecificInt(0x7f800000)),
+                                 m_SpecificInt(0x7fffffff), m_Deferred(Y))) ||
+            // (the ALU's form of it, below)
+            match(Bits, m_Select(m_SpecificICmp(ICmpInst::ICMP_EQ, m_Value(Y),
+                                                m_SpecificInt(0x7fc00000)),
                                  m_SpecificInt(0x7fffffff), m_Deferred(Y))))
           Bits = Y;
         Value *A = nullptr;
@@ -1800,6 +1804,23 @@ void LowerAIR::recoverAGXOperations(Function &F) {
         if (Made || Read)
           R = X;
       }
+      // A canonical NaN on the bits of an f32 ALU result (fadd32, fmul32,
+      // fmadd32: their NaN is always 0x7fc00000, the operands' payloads and
+      // signs dropped; playground novel-results/2026-10-11-float-semantics),
+      // select((x & 0x7fffffff) > 0x7f800000, 0x7fffffff, x): one comparison
+      // with that NaN, select(x == 0x7fc00000, 0x7fffffff, x), instead of two
+      // instructions (a front end's strict mode makes one for every result it
+      // lets be seen). On the bits: LLVM may fold a float select of a NaN.
+      Value *Y = nullptr, *A = nullptr;
+      if (!R &&
+          match(Sel, m_Select(m_SpecificICmp(ICmpInst::ICMP_UGT,
+                                             m_And(m_Value(Y),
+                                                   m_SpecificInt(0x7fffffff)),
+                                             m_SpecificInt(0x7f800000)),
+                              m_SpecificInt(0x7fffffff), m_Deferred(Y))) &&
+          match(Y, m_BitCast(m_Value(A))) && FlushingArith(A))
+        R = B.CreateSelect(B.CreateICmpEQ(Y, ConstantInt::get(Ty, 0x7fc00000)),
+                           ConstantInt::get(Ty, 0x7fffffff), Y);
     }
     if (!R)
       continue;
