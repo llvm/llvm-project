@@ -382,9 +382,7 @@ namespace llvm {
 namespace bolt {
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
   for (const auto &[Address, Data] : BC.getBinaryData()) {
-    // Filter out all symbols that are not vtables.
-    if (!Data->nameStartsWith("_ZTV") && // vtable
-        !Data->nameStartsWith("_ZTCN"))  // construction vtable
+    if (!Data->isVTable())
       continue;
     for (uint64_t I = Address, End = I + Data->getSize(); I < End;
          I += VTableAddressGranularity)

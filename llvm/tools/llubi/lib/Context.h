@@ -298,8 +298,6 @@ class Context {
 
   AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
                          GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
                                AnyValue &AccumulatedOffset);
@@ -387,6 +385,12 @@ public:
   /// calling resetNoncacheableConstantBuffer after all references are dropped.
   const MaterializedConstant *getConstantValue(Constant *C);
   void resetNoncacheableConstantBuffer();
+  /// Returns true if an object of \p Size bytes in address space \p AS is
+  /// larger than the largest signed integer that fits into the index type.
+  /// Creating such an object is undefined behavior.
+  bool exceedsMaxObjectSize(uint64_t Size, unsigned AS) const {
+    return !isUIntN(DL.getIndexSizeInBits(AS) - 1, Size);
+  }
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
@@ -441,6 +445,8 @@ public:
 
   AnyValue computeGEP(GEPOperator &GEP,
                       function_ref<const AnyValue &(Value *V)> GetValue);
+  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

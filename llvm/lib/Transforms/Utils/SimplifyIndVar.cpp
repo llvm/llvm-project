@@ -361,6 +361,8 @@ void SimplifyIndvar::replaceRemWithNumerator(BinaryOperator *Rem) {
 
 bool SimplifyIndvar::replaceRemWithNumeratorOrZeroUpdateProfiles(
     SelectInst &SI) {
+  if (ProfcheckDisableMetadataFixes)
+    return false;
   // The select instruction condition is guaranteed to evaluate to true exactly
   // once through the duration of the loop if it is executed on every loop
   // iteration. So we set the branch weights to be {1, LoopIterations - 1}.

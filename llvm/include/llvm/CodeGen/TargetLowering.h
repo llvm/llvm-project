@@ -1225,6 +1225,18 @@ public:
     }
   }
 
+  /// For vector types that are widened, this returns the type reached by
+  /// widening repeatedly, i.e. the first type whose action is not
+  /// TypeWidenVector. Unlike getLegalTypeToTransformTo, this does not follow
+  /// other actions, so the result may still be illegal (e.g. if it is split).
+  /// For vector types that are not widened, this is an identity function.
+  EVT getTypeToWidenTo(LLVMContext &Context, EVT VT) const {
+    assert(VT.isVector());
+    while (getTypeAction(Context, VT) == TypeWidenVector)
+      VT = getTypeToTransformTo(Context, VT);
+    return VT;
+  }
+
   /// Vector types are broken down into some number of legal first class types.
   /// For example, EVT::v8f32 maps to 2 EVT::v4f32 with Altivec or SSE1, or 8
   /// promoted EVT::f64 values with the X86 FP stack.  Similarly, EVT::v2i64
@@ -1310,6 +1322,12 @@ public:
 
   /// Returns how the legalizer should materialize the specified FP immediate.
   virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, EVT /*VT*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
+  /// \copydoc getFPImmAction(const APFloat&,EVT,bool) const
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, LLT /*Ty*/,
                                      bool ForCodeSize = false) const {
     return FPImmAction::ConstantPool;
   }
@@ -1786,6 +1804,10 @@ public:
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
            Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
+    // If the inputs aren't simple (e.g. non-power-of-two element type), just
+    // expand.
+    if (!AccVT.isSimple() || !InputVT.isSimple())
+      return Expand;
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -5785,6 +5807,13 @@ public:
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
+
+  /// Expand MODF node into fractional and integer parts.
+  /// \param N Node to expand
+  /// \param Results Vector to store the resulting fractional and integer parts
+  /// \returns true if the node has been expanded, false if it has not
+  bool expandMODF(SDNode *N, SelectionDAG &DAG,
+                  SmallVectorImpl<SDValue> &Results) const;
 
   /// Expand parallel bit extract (compress).
   /// \param N Node to expand

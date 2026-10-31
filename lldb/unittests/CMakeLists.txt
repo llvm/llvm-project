@@ -33,6 +33,7 @@ function(add_lldb_unittest test_name)
   if ("lldbSBUtilityHelpers" IN_LIST ARG_LINK_LIBS AND NOT ARG_SBAPITEST)
     message(FATAL_ERROR "The ${test_name} are not allowed to link lldbSBUtilityHelpers.")
   endif()
+  lldb_check_liblldb_last(${test_name} "${ARG_LINK_LIBS}")
 
   list(APPEND LLVM_LINK_COMPONENTS ${ARG_LINK_COMPONENTS})
 

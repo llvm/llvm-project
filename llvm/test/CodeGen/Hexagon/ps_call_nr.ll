@@ -2,7 +2,7 @@
 
 ; Test that the compiler does not generate an invalid packet with three
 ; instructions that each requires slot 2 or 3. The specification for
-; PS_call_nr was incorrect, which allowed that instrution to go in any slot.
+; PS_call_nr was incorrect, which allowed that instruction to go in any slot.
 
 ; CHECK: extractu
 ; CHECK: extractu

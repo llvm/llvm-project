@@ -15,8 +15,11 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -25,11 +28,11 @@ using namespace llvm;
 
 namespace {
 
-class RISCVLandingPadSetup : public MachineFunctionPass {
+class RISCVLandingPadSetupLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RISCVLandingPadSetup() : MachineFunctionPass(ID) {}
+  RISCVLandingPadSetupLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -43,7 +46,7 @@ public:
 
 } // end anonymous namespace
 
-bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
+static bool runLandingPadSetup(MachineFunction &MF) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
@@ -78,10 +81,22 @@ bool RISCVLandingPadSetup::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-INITIALIZE_PASS(RISCVLandingPadSetup, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(RISCVLandingPadSetupLegacy, DEBUG_TYPE, PASS_NAME, false, false)
 
-char RISCVLandingPadSetup::ID = 0;
+char RISCVLandingPadSetupLegacy::ID = 0;
 
-FunctionPass *llvm::createRISCVLandingPadSetupPass() {
-  return new RISCVLandingPadSetup();
+FunctionPass *llvm::createRISCVLandingPadSetupLegacyPass() {
+  return new RISCVLandingPadSetupLegacy();
+}
+
+bool RISCVLandingPadSetupLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runLandingPadSetup(MF);
+}
+
+PreservedAnalyses
+RISCVLandingPadSetupPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  return runLandingPadSetup(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
 }

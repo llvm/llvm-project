@@ -22,11 +22,11 @@ ld4q {z21.q, z22.q, z23.q, z24.q}, p2.q, [x10, x21, lsl #4]
 // Invalid immediate offset
 
 ld4q {z23.q, z24.q, z25.q, z26.q}, p3/z, [x13, #-33, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [-32, 28].
 // CHECK-NEXT: ld4q {z23.q, z24.q, z25.q, z26.q}, p3/z, [x13, #-33, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld4q {z23.q, z24.q, z25.q, z26.q}, p3/z, [x13, #29, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be a multiple of 4 in range [-32, 28].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be a multiple of 4 in range [-32, 28].
 // CHECK-NEXT: ld4q {z23.q, z24.q, z25.q, z26.q}, p3/z, [x13, #29, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

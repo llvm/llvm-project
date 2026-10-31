@@ -1143,7 +1143,7 @@ exit:
 ;; The latch exit can be taken early, so the reduction must not be used on it.
 define i64 @combined_exit_conditions_with_reduction(ptr align 1 dereferenceable(1024) %src, ptr noalias %dst) {
 ; CHECK-DEBUG-LABEL: LV: Checking a loop in 'combined_exit_conditions_with_reduction'
-; CHECK-DEBUG:       LV: Not vectorizing: Found reductions or recurrences in early-exit loop.
+; CHECK-DEBUG:       LV: Vectorization is not possible. Failed to create any vector VPlans.
 entry:
   br label %for.body
 

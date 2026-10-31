@@ -89,17 +89,17 @@ void XCorePassConfig::addIRPasses() {
 }
 
 bool XCorePassConfig::addPreISel() {
-  addPass(createXCoreLowerThreadLocalPass());
+  addPass(createXCoreLowerThreadLocalLegacyPass());
   return false;
 }
 
 bool XCorePassConfig::addInstSelector() {
-  addPass(createXCoreISelDag(getXCoreTargetMachine(), getOptLevel()));
+  addPass(createXCoreISelDagLegacyPass(getXCoreTargetMachine(), getOptLevel()));
   return false;
 }
 
 void XCorePassConfig::addPreEmitPass() {
-  addPass(createXCoreFrameToArgsOffsetEliminationPass());
+  addPass(createXCoreFrameToArgsOffsetEliminationLegacyPass());
 }
 
 // Force static initialization.
@@ -109,7 +109,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXCoreTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeXCoreAsmPrinterPass(PR);
   initializeXCoreDAGToDAGISelLegacyPass(PR);
-  initializeXCoreLowerThreadLocalPass(PR);
+  initializeXCoreLowerThreadLocalLegacyPass(PR);
 }
 
 TargetTransformInfo

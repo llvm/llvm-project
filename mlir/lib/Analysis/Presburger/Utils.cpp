@@ -516,7 +516,9 @@ void DivisionRepr::print(raw_ostream &os) const {
   os << "\n";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void DivisionRepr::dump() const { print(llvm::errs()); }
+#endif
 
 SmallVector<DynamicAPInt, 8>
 presburger::getDynamicAPIntVec(ArrayRef<int64_t> range) {

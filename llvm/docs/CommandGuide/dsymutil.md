@@ -12,7 +12,9 @@
 {program}`dsymutil` links the DWARF debug information found in the object files
 for an executable *executable* by using debug symbols information contained in
 its symbol table. By default, the linked debug information is placed in a
-`.dSYM` bundle with the same name as the executable.
+`.dSYM` bundle with the same name as the executable. Each `LC_BUILD_VERSION`
+load command in the output lists {program}`dsymutil` and its version as the
+build tool.
 
 ## OPTIONS
 

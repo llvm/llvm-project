@@ -14,19 +14,19 @@ void test_gcc_registers(void) {
 
     // Test remapping register names in register ... asm("rN") statments.
 
-    // CHECK: call void asm sideeffect "add $0,$1,$2", "{r14},{r14},{r14}"
+    // CHECK: call void asm sideeffect "add $0,$1,$2", "{r14},{r14},{r14},~{y}"
     asm volatile("add %0,%1,%2" : : "r" (regO6), "r" (regSP), "r" (reg14));
 
-    // CHECK: call void asm sideeffect "add $0,$1,$2", "{r30},{r30},{r30}"
+    // CHECK: call void asm sideeffect "add $0,$1,$2", "{r30},{r30},{r30},~{y}"
     asm volatile("add %0,%1,%2" : : "r" (regI6), "r" (regFP), "r" (reg30));
 
-    // CHECK: call void asm sideeffect "fadds $0,$1,$2", "{f20},{f20},{f20}"
+    // CHECK: call void asm sideeffect "fadds $0,$1,$2", "{f20},{f20},{f20},~{y}"
     asm volatile("fadds %0,%1,%2" : : "f" (fF20), "f" (fF20), "f"(fF20));
 
-    // CHECK: call void asm sideeffect "faddd $0,$1,$2", "{f40},{f40},{f40}"
+    // CHECK: call void asm sideeffect "faddd $0,$1,$2", "{f40},{f40},{f40},~{y}"
     asm volatile("faddd %0,%1,%2" : : "f" (dF40), "f" (dF40), "f"(dF40));
 
-    // CHECK: call void asm sideeffect "faddq $0,$1,$2", "{f40},{f40},{f40}"
+    // CHECK: call void asm sideeffect "faddq $0,$1,$2", "{f40},{f40},{f40},~{y}"
     asm volatile("faddq %0,%1,%2" : : "f" (qF40), "f" (qF40), "f"(qF40));
 
 }

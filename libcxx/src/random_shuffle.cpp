@@ -43,8 +43,8 @@ __rs_default::~__rs_default() {
 }
 
 __rs_default::result_type __rs_default::operator()() {
-  static mt19937 __rs_g;
-  return __rs_g();
+  static constinit mt19937 __random_shuffle_mersenne_twister;
+  return __random_shuffle_mersenne_twister();
 }
 
 __rs_default __rs_get() { return __rs_default(); }

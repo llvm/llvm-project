@@ -6,8 +6,8 @@
 define void @test_group_memory_barrier() #0 {
 entry:
   ; CHECK: %[[#TY:]] = OpTypeInt 32 0
-  ; CHECK-DAG: %[[#MEM_SCOPE:]] = OpConstant %[[#TY]] 2
   ; CHECK-DAG: %[[#MEM_SEM:]] = OpConstant %[[#TY]] 264
+  ; CHECK-DAG: %[[#MEM_SCOPE:]] = OpConstant %[[#TY]] 2
   ; CHECK: OpMemoryBarrier %[[#MEM_SCOPE]] %[[#MEM_SEM]]
   call void @llvm.spv.group.memory.barrier()
   ret void

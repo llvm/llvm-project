@@ -2,6 +2,9 @@
 
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
 ! RUN: bbc -emit-hlfir -fopenmp -o - %s 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=WARN --allow-empty
+
+! WARN-NOT: warning
 
 ! CHECK-LABEL: omp.private {type = linear} @_QFsimd_linear_allocatableEa_linear_box_heap_i32 : !fir.box<!fir.heap<i32>> init {
 ! CHECK:         fir.allocmem i32
@@ -110,4 +113,21 @@ subroutine original_used_after_loop()
   end do
   !$omp end simd
   a = 5
+end subroutine
+
+! An allocatable loop iteration variable is implicitly linear.
+! CHECK-LABEL: func.func @_QPimplicit_allocatable_iv
+! CHECK:         %[[I:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFimplicit_allocatable_ivEi") fortran_attrs<allocatable>
+! CHECK:         omp.simd linear(@_QFimplicit_allocatable_ivEi_linear_box_heap_i32 %[[I]]#0 -> %{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>> = %{{.*}} : i32) linear_var_types([i32])
+! CHECK:           omp.loop_nest (%{{.*}}) : i32 =
+subroutine implicit_allocatable_iv()
+  integer, allocatable :: i
+  integer :: k
+  allocate(i)
+  k = 0
+  !$omp simd
+  do i = 1, 4
+    k = k + 1
+  end do
+  !$omp end simd
 end subroutine

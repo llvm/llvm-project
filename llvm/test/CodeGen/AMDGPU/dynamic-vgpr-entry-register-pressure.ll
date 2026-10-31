@@ -8,13 +8,41 @@ define amdgpu_cs void @dvgpr_spill_under_cap() #0 {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_getreg_b32 s33, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v9
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_cmp_lg_u32 0, s33
+; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 offset:4 ; 4-byte Folded Spill
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v1
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v2
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v3
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v4
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v5
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v6
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v7
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v8
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; def v9
+; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v10
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_cmovk_i32 s33, 0x1c0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v11
 ; CHECK-NEXT:    ;;#ASMEND
@@ -33,49 +61,50 @@ define amdgpu_cs void @dvgpr_spill_under_cap() #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v1
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v2
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 offset:12 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v3
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v8
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v7
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v6
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v5
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v4
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_store_b32 off, v4, s33 offset:16 ; 4-byte Folded Spill
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v4
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_store_b32 off, v4, s33 offset:12 ; 4-byte Folded Spill
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v4
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_store_b32 off, v4, s33 offset:8 ; 4-byte Folded Spill
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v4
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_store_b32 off, v4, s33 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def v4
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_store_b32 off, v4, s33 ; 4-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b32 off, v0, s33 offset:16 ; 4-byte Folded Spill
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; barrier
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    scratch_load_b32 v0, off, s33 offset:4 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v0
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v1
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v2
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v3
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v4
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v5
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v6
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v7
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ; use v8
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v9
@@ -98,36 +127,7 @@ define amdgpu_cs void @dvgpr_spill_under_cap() #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v15
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v0
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v1
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v2
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v3
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v8
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v7
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v6
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v5
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_load_b32 v0, off, s33 offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; use v0
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_load_b32 v0, off, s33 offset:12 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v0, off, s33 th:TH_LOAD_LU ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v0
@@ -137,12 +137,12 @@ define amdgpu_cs void @dvgpr_spill_under_cap() #0 {
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_load_b32 v0, off, s33 offset:4 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v0, off, s33 offset:12 th:TH_LOAD_LU ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v0
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    scratch_load_b32 v0, off, s33 th:TH_LOAD_LU ; 4-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v0, off, s33 offset:16 th:TH_LOAD_LU ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use v0

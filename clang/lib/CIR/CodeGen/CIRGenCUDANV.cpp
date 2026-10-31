@@ -348,10 +348,16 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
 void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
                                          FunctionArgList &args) {
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  StringRef kernelName = cgm.getMangledName(
+      cgf.curGD.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
+  auto kernelNameAttr = cir::CUDAKernelNameAttr::get(
+      builder.getContext(), builder.getStringAttr(kernelName));
+  fn->setDiscardableAttr(cir::CUDAKernelNameAttr::getMnemonic(),
+                         kernelNameAttr);
 
   if (auto globalOp =
           llvm::dyn_cast<cir::GlobalOp>(kernelHandles[fn.getSymName()])) {
-    CIRGenBuilderTy &builder = cgm.getBuilder();
     mlir::Type fnPtrTy = globalOp.getSymType();
     auto sym = mlir::FlatSymbolRefAttr::get(fn.getSymNameAttr());
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);

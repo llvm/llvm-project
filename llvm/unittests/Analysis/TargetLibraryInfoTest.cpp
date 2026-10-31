@@ -153,11 +153,16 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       // Struct pointers are replaced with an opaque pointer.
       "%struct = type opaque\n"
 
+      // The _stret functions can return either a struct or a vector.
+      // Testing a non-exhaustive combination here.
+      "declare <2 x double> @__sincos_stret(double)\n"
+      "declare { float, float } @__sincosf_stret(float)\n"
+      "declare { double, double } @__sincospi_stret(double)\n"
+      "declare <2 x float> @__sincospif_stret(float)\n"
+
       // These functions were extracted as-is from the OS X headers.
       "declare double @__cospi(double)\n"
       "declare float @__cospif(float)\n"
-      "declare { double, double } @__sincospi_stret(double)\n"
-      "declare <2 x float> @__sincospif_stret(float)\n"
       "declare double @__sinpi(double)\n"
       "declare float @__sinpif(float)\n"
       "declare i32 @abs(i32)\n"
@@ -735,6 +740,28 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
     TLII.setAvailable(LF);
     Function *F = M->getFunction(TLI.getName(LF));
     EXPECT_TRUE(isLibFunc(F, LF));
+  }
+}
+
+TEST_F(TargetLibraryInfoTest, SinCosStretInvalidProto) {
+  // The _stret functions may return either a struct or a vector, as long as
+  // there are exactly two elements that match the input parameter.
+  parseAssembly("target datalayout = \"p:64:64:64\"\n"
+                ";; Too many inputs \n"
+                "declare <2 x double> @__sincos_stret(double, double)\n"
+                ";; Too few outputs \n"
+                "declare float @__sincosf_stret(float)\n"
+                ";; Inconsistent outputs \n"
+                "declare { double, float } @__sincospi_stret(double)\n"
+                ";; Wrong output types \n"
+                "declare <2 x double> @__sincospif_stret(float)\n");
+
+  for (const LibFunc LF : {LibFunc_sincos_stret, LibFunc_sincosf_stret,
+                           LibFunc_sincospi_stret, LibFunc_sincospif_stret}) {
+    TLII.setAvailable(LF);
+    Function *F = M->getFunction(TLI.getName(LF));
+    ASSERT_NE(F, nullptr);
+    EXPECT_FALSE(isLibFunc(F, LF));
   }
 }
 

@@ -1,16 +1,11 @@
-! RUN: split-file %s %t
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -o - %t/source.f90 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -o - %t/source.f90 2>&1 | FileCheck %s
-! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -o - %t/source.f90 | FileCheck %s --check-prefix=SIMD
-! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 %t/source.f90 | FileCheck %s --check-prefix=SYMBOLS
-! RUN: %flang_fc1 -fsyntax-only -fopenmp -fopenmp-version=51 -module-dir %t %t/source.f90
+! RUN: mkdir -p %t
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK5X,SCOPE,SCOPE5X
 ! RUN: FileCheck %s --check-prefix=MODFILE --input-file=%t/assumes_module.mod
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -I %t -module-dir %t -o - %t/submodule.f90 | FileCheck %s --check-prefix=SUBMODULE
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=51 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefix=SCOPE
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %t/versioned-scope.f90 | FileCheck %s --check-prefix=SCOPE
+! RUN: FileCheck %s --check-prefix=USE-MODFILE --input-file=%t/use_parent-use_child.mod
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=60 -module-dir %t -o - %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK60,SCOPE,SCOPE60
+! RUN: %flang_fc1 -emit-hlfir -fopenmp-simd -fopenmp-version=51 -module-dir %t -o - %s | FileCheck %s --check-prefix=SIMD
+! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=51 -module-dir %t %s | FileCheck %s --check-prefix=SYMBOLS
 
-!--- source.f90
 ! SIMD: module
 ! SIMD-NOT: "omp_no_openmp"
 
@@ -19,7 +14,7 @@
 ! SYMBOLS-DAG: assumes_no_openmp (Subroutine, OmpAssumesNoOpenmp): Subprogram
 ! SYMBOLS-DAG: assumes_no_openmp_parallel (Subroutine, OmpAssumesNoOpenmp): Subprogram
 ! SYMBOLS-DAG: assumes_no_openmp_host (Subroutine, OmpAssumesNoOpenmp): Subprogram
-! SYMBOLS-DAG: uses_assumes_module (Subroutine): Subprogram
+! SYMBOLS-DAG: uses_assumes_module (Subroutine, OmpAssumesNoOpenmp): Subprogram
 
 ! Lowering of the OpenMP ASSUME construct. The HOLDS clause asserts a scalar
 ! logical expression, which is lowered to an llvm.assume intrinsic. The block is
@@ -108,7 +103,8 @@ contains
 end subroutine assumes_no_openmp_host
 
 ! CHECK-LABEL: func.func @_QPuses_assumes_module
-! CHECK-NOT: "omp_no_openmp"
+! CHECK5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+! CHECK60-NOT: "omp_no_openmp"
 subroutine uses_assumes_module(x)
   use assumes_module, only: set_value
   implicit none
@@ -130,21 +126,9 @@ subroutine assumes_no_openmp_local
   call set_value(x)
 end subroutine assumes_no_openmp_local
 
-!--- submodule.f90
-submodule (assumes_module) assumes_implementation
-contains
-  module procedure separate_work
-  end procedure separate_work
-end submodule assumes_implementation
-
 ! MODFILE: module assumes_module
 ! MODFILE: !$omp assumes no_openmp
 
-! SUBMODULE-LABEL: func.func @_QMassumes_modulePseparate_work()
-! SUBMODULE-NOT: "omp_no_openmp"
-! SUBMODULE: return
-
-!--- versioned-scope.f90
 module scoped_assumes
   implicit none
   !$omp assumes no_openmp
@@ -178,3 +162,22 @@ contains
     !$omp assumes no_openmp
   end subroutine local_work
 end submodule scoped_implementation
+
+module use_parent
+  interface
+    module subroutine imported_work()
+    end subroutine imported_work
+  end interface
+end module use_parent
+
+! USE-MODFILE: !$omp assumes no_openmp
+submodule (use_parent) use_child
+  use scoped_assumes, only:
+  implicit none
+contains
+  ! SCOPE-LABEL: func.func @_QMuse_parentPimported_work()
+  ! SCOPE5X-SAME: llvm.passthrough = {{\[\[}}"llvm.assume", "omp_no_openmp"]]
+  ! SCOPE60-NOT: "omp_no_openmp"
+  module procedure imported_work
+  end procedure imported_work
+end submodule use_child

@@ -1430,6 +1430,10 @@ LLVM_ABI AttributeMask typeIncompatible(Type *Ty, AttributeSet AS,
 /// implementation rather than the passed value.
 LLVM_ABI AttributeMask getUBImplyingAttributes();
 
+/// Get param/return attributes which make an invalid value poison, e.g.,
+/// nonnull, where null becomes poison.
+LLVM_ABI AttributeMask getPoisonGeneratingAttributes();
+
 /// \returns Return true if the two functions have compatible target-independent
 /// attributes for inlining purposes.
 LLVM_ABI bool areInlineCompatible(const Function &Caller,

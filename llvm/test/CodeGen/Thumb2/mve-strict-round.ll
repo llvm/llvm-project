@@ -4,7 +4,22 @@
 define arm_aapcs_vfpcc <8 x half> @test_rint_f16(<8 x half> %a) #0 {
 ; CHECK-LABEL: test_rint_f16:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vrintx.f16 q0, q0
+; CHECK-NEXT:    vmovx.f16 s4, s0
+; CHECK-NEXT:    vrintx.f16 s0, s0
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vins.f16 s0, s4
+; CHECK-NEXT:    vmovx.f16 s4, s1
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vrintx.f16 s1, s1
+; CHECK-NEXT:    vins.f16 s1, s4
+; CHECK-NEXT:    vmovx.f16 s4, s2
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vrintx.f16 s2, s2
+; CHECK-NEXT:    vins.f16 s2, s4
+; CHECK-NEXT:    vmovx.f16 s4, s3
+; CHECK-NEXT:    vrintx.f16 s4, s4
+; CHECK-NEXT:    vrintx.f16 s3, s3
+; CHECK-NEXT:    vins.f16 s3, s4
 ; CHECK-NEXT:    bx lr
 entry:
   %0 = tail call <8 x half> @llvm.experimental.constrained.rint.v8f16(<8 x half> %a, metadata !"round.dynamic", metadata !"fpexcept.strict")

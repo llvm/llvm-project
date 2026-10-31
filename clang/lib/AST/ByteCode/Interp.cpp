@@ -2998,7 +2998,7 @@ bool CheckPointerToIntegralCast(InterpState &S, CodePtr OpPC,
   S.CCEDiag(E, diag::note_constexpr_invalid_cast_ptrtoint)
       << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
       << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  if (Ptr.isBlockPointer() && !Ptr.isZero())
+  if ((Ptr.isBlockPointer() && !Ptr.isZero()) || Ptr.isOpaquePointer())
     S.CCEDiag(E, diag::note_constexpr_has_lvalue) << S.Current->getRange(OpPC);
   if (Ptr.isIntegralPointer())
     return true;

@@ -17,13 +17,11 @@
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::misc {
 
 namespace {
-// FIXME: This matcher exists in some other code-review as well.
-// It should probably move to ASTMatchers.
-AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 // FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
 // nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
 // 'hasName("")'.
@@ -155,7 +153,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
-      isLocal(), hasInitializer(anything()),
+      isLocalVarDecl(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), RValueReference,
                    FunctionPointerRef, isImplicit(), AllowedType,

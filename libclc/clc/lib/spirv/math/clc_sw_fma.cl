@@ -142,16 +142,24 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
 
   struct fp st_a, st_b, st_c;
 
-  st_a.exponent = a == .0f ? 0 : ((__clc_as_uint(a) & 0x7f800000) >> 23) - 127;
-  st_b.exponent = b == .0f ? 0 : ((__clc_as_uint(b) & 0x7f800000) >> 23) - 127;
-  st_c.exponent = c == .0f ? 0 : ((__clc_as_uint(c) & 0x7f800000) >> 23) - 127;
+  uint ua = __clc_as_uint(a) & 0x7fffffff;
+  uint ub = __clc_as_uint(b) & 0x7fffffff;
+  uint uc = __clc_as_uint(c) & 0x7fffffff;
+
+  uint sa = ua < 0x800000u ? __clc_clz(ua) - 8 : 0;
+  uint sb = ub < 0x800000u ? __clc_clz(ub) - 8 : 0;
+  uint sc = uc < 0x800000u ? __clc_clz(uc) - 8 : 0;
+
+  st_a.exponent = ua < 0x800000u ? -126 - (int)sa : (int)(ua >> 23) - 127;
+  st_b.exponent = ub < 0x800000u ? -126 - (int)sb : (int)(ub >> 23) - 127;
+  st_c.exponent = uc < 0x800000u ? -126 - (int)sc : (int)(uc >> 23) - 127;
 
   st_a.mantissa =
-      u2_set_u(a == .0f ? 0 : (__clc_as_uint(a) & 0x7fffff) | 0x800000);
+      u2_set_u(ua < 0x800000u ? (ua << sa) : (ua & 0x7fffff) | 0x800000);
   st_b.mantissa =
-      u2_set_u(b == .0f ? 0 : (__clc_as_uint(b) & 0x7fffff) | 0x800000);
+      u2_set_u(ub < 0x800000u ? (ub << sb) : (ub & 0x7fffff) | 0x800000);
   st_c.mantissa =
-      u2_set_u(c == .0f ? 0 : (__clc_as_uint(c) & 0x7fffff) | 0x800000);
+      u2_set_u(uc < 0x800000u ? (uc << sc) : (uc & 0x7fffff) | 0x800000);
 
   st_a.sign = __clc_as_uint(a) & 0x80000000;
   st_b.sign = __clc_as_uint(b) & 0x80000000;
@@ -214,6 +222,10 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
     st_fma.sign = st_mul.sign ^ 0x80000000;
   }
 
+  if (u2_zero(st_fma.mantissa)) {
+    return 0.0f;
+  }
+
   // detect overflow/underflow
   int overflow_bits = 3 - u2_clz(st_fma.mantissa);
 
@@ -224,6 +236,19 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   if (overflow_bits < 0) {
     st_fma.mantissa = u2_sll(st_fma.mantissa, -overflow_bits);
     overflow_bits = 0;
+  }
+
+  if (st_fma.exponent <= -127) {
+    if (__clc_denormals_are_zero_fp32() || st_fma.exponent < -150) {
+      return __clc_as_float(st_fma.sign);
+    }
+    int sub_shift = -126 - st_fma.exponent;
+    uint2 sub_mask =
+        u2_add(u2_sll(u2_set_u(1), sub_shift), u2_set(0xffffffff, 0xffffffff));
+    cutoff_bits =
+        u2_or(cutoff_bits, !u2_zero(u2_and(st_fma.mantissa, sub_mask)));
+    st_fma.mantissa = u2_srl(st_fma.mantissa, sub_shift);
+    st_fma.exponent = -127;
   }
 
   // rounding
@@ -245,24 +270,19 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
   // Shift mantissa back to bit 23
   st_fma.mantissa = u2_srl(st_fma.mantissa, C_ADJUST + overflow_bits);
 
+  if (st_fma.exponent == -127) {
+    return __clc_as_float(st_fma.sign | (uint)st_fma.mantissa.lo);
+  }
+
   // Detect rounding overflow
   if (u2_gt(st_fma.mantissa, u2_set_u(0xffffff))) {
     ++st_fma.exponent;
     st_fma.mantissa = u2_srl(st_fma.mantissa, 1);
   }
 
-  if (u2_zero(st_fma.mantissa)) {
-    return 0.0f;
-  }
-
   // Flating point range limit
   if (st_fma.exponent > 127) {
     return __clc_as_float(__clc_as_uint(INFINITY) | st_fma.sign);
-  }
-
-  // Flush denormals
-  if (st_fma.exponent <= -127) {
-    return __clc_as_float(st_fma.sign);
   }
 
   return __clc_as_float(st_fma.sign | ((st_fma.exponent + 127) << 23) |

@@ -147,11 +147,12 @@ Value lowerToVectorReductions(TypedValue<VectorType> src,
                               Location loc, PatternRewriter &rewriter);
 
 /// Creates a constant filled with the neutral (identity) value for the
-/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL/AND,
-/// max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and +/-infinity
-/// for float min/max operations. If \p type is a VectorType, returns a splat
-/// vector constant; otherwise returns a scalar constant. Returns nullptr if
-/// the element type is incompatible with the requested reduction kind.
+/// given reduction kind. For example: 0 for ADD/OR/XOR, 1 for MUL, all ones
+/// for AND, max/min signed/unsigned int for MINSI/MINUI/MAXSI/MAXUI, and
+/// +/-infinity for float min/max operations. If \p type is a VectorType,
+/// returns a splat vector constant; otherwise returns a scalar constant.
+/// Returns nullptr if the element type is incompatible with the requested
+/// reduction kind.
 Value createReductionNeutralValue(OpBuilder &builder, Location loc, Type type,
                                   vector::CombiningKind kind);
 

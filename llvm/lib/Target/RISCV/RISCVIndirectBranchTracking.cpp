@@ -18,9 +18,13 @@
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/Pass.h"
 
 #define DEBUG_TYPE "riscv-indirect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
@@ -28,28 +32,30 @@
 using namespace llvm;
 
 namespace {
-class RISCVIndirectBranchTracking : public MachineFunctionPass {
+class RISCVIndirectBranchTrackingLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  RISCVIndirectBranchTracking() : MachineFunctionPass(ID) {}
+  RISCVIndirectBranchTrackingLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return PASS_NAME; }
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-private:
-  const Align LpadAlign = Align(4);
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(RISCVIndirectBranchTracking, DEBUG_TYPE, PASS_NAME, false,
+INITIALIZE_PASS(RISCVIndirectBranchTrackingLegacy, DEBUG_TYPE, PASS_NAME, false,
                 false)
 
-char RISCVIndirectBranchTracking::ID = 0;
+char RISCVIndirectBranchTrackingLegacy::ID = 0;
 
-FunctionPass *llvm::createRISCVIndirectBranchTrackingPass() {
-  return new RISCVIndirectBranchTracking();
+FunctionPass *llvm::createRISCVIndirectBranchTrackingLegacyPass() {
+  return new RISCVIndirectBranchTrackingLegacy();
 }
 
 static void
@@ -61,9 +67,10 @@ emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII, uint32_t Label,
       .addImm(Label);
 }
 
-bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
+static bool runIndirectBranchTracking(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
+  const Align LpadAlign = Align(4);
 
   if (!MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch())
     return false;
@@ -102,4 +109,18 @@ bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool RISCVIndirectBranchTrackingLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return runIndirectBranchTracking(MF);
+}
+
+PreservedAnalyses
+RISCVIndirectBranchTrackingPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  return runIndirectBranchTracking(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

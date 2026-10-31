@@ -8,3 +8,17 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.eventfd
 )
+
+add_entrypoint_object(
+  eventfd_read
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.eventfd_read
+)
+
+add_entrypoint_object(
+  eventfd_write
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.eventfd_write
+)

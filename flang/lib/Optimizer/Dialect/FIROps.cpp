@@ -5509,7 +5509,7 @@ mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
       result.addAttribute("cacheType", parser.getBuilder().getUnitAttr());
     } else
       return parser.emitError(parser.getCurrentLocation(),
-                              "Expected either intruction or data keyword");
+                              "Expected either instruction or data keyword");
 
     if (parser.parseComma())
       return mlir::failure();
@@ -6058,45 +6058,64 @@ fir::parseSelector(mlir::OpAsmParser &parser, mlir::OperationState &result,
   return mlir::success();
 }
 
+void fir::registerSymbol(mlir::SymbolTable *symbolTable,
+                         mlir::Operation *symbol) {
+  if (!symbolTable)
+    return;
+  mlir::StringAttr name = mlir::SymbolTable::getSymbolName(symbol);
+  if (symbolTable->lookup(name)) {
+    // Semantics does not diagnose every pair of entities that share a global
+    // identifier, so lowering can create a second symbol with this name.
+    // SymbolTable::insert would rename it; leave the duplicate definition in
+    // place for the verifier to report instead.
+    return;
+  }
+  symbolTable->insert(symbol);
+}
+
 mlir::func::FuncOp fir::createFuncOp(mlir::Location loc, mlir::ModuleOp module,
                                      llvm::StringRef name,
                                      mlir::FunctionType type,
                                      llvm::ArrayRef<mlir::NamedAttribute> attrs,
-                                     const mlir::SymbolTable *symbolTable) {
-  if (symbolTable)
-    if (auto f = symbolTable->lookup<mlir::func::FuncOp>(name)) {
+                                     mlir::SymbolTable *symbolTable) {
+  if (symbolTable) {
+    auto f = symbolTable->lookup<mlir::func::FuncOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(f == module.lookupSymbol<mlir::func::FuncOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(f == module.lookupSymbol<mlir::func::FuncOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
+    if (f)
       return f;
-    }
-  if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name))
+  } else if (auto f = module.lookupSymbol<mlir::func::FuncOp>(name)) {
     return f;
+  }
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   modBuilder.setInsertionPointToEnd(module.getBody());
   auto result = mlir::func::FuncOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(symbolTable, result);
   return result;
 }
 
 fir::GlobalOp fir::createGlobalOp(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::Type type,
                                   llvm::ArrayRef<mlir::NamedAttribute> attrs,
-                                  const mlir::SymbolTable *symbolTable) {
-  if (symbolTable)
-    if (auto g = symbolTable->lookup<fir::GlobalOp>(name)) {
+                                  mlir::SymbolTable *symbolTable) {
+  if (symbolTable) {
+    auto g = symbolTable->lookup<fir::GlobalOp>(name);
 #ifdef EXPENSIVE_CHECKS
-      assert(g == module.lookupSymbol<fir::GlobalOp>(name) &&
-             "symbolTable and module out of sync");
+    assert(g == module.lookupSymbol<fir::GlobalOp>(name) &&
+           "symbolTable and module out of sync");
 #endif
+    if (g)
       return g;
-    }
-  if (auto g = module.lookupSymbol<fir::GlobalOp>(name))
+  } else if (auto g = module.lookupSymbol<fir::GlobalOp>(name)) {
     return g;
+  }
   mlir::OpBuilder modBuilder(module.getBodyRegion());
   auto result = fir::GlobalOp::create(modBuilder, loc, name, type, attrs);
   result.setVisibility(mlir::SymbolTable::Visibility::Private);
+  fir::registerSymbol(symbolTable, result);
   return result;
 }
 

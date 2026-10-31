@@ -6013,7 +6013,8 @@ static Value *simplifyFNegInst(Value *Op, FastMathFlags FMF,
 
   Value *X;
   // fneg (fneg X) ==> X
-  if (match(Op, m_FNeg(m_Value(X))))
+  // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+  if (match(Op, m_FNegOrFSubNegZero(m_Value(X))))
     return X;
 
   return nullptr;
@@ -6157,8 +6158,9 @@ simplifyFAddInst(Value *Op0, Value *Op1, FastMathFlags FMF,
         match(Op1, m_FSub(m_AnyZeroFP(), m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
 
-    if (match(Op0, m_FNeg(m_Specific(Op1))) ||
-        match(Op1, m_FNeg(m_Specific(Op0))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_FNegOrFSubNegZero(m_Specific(Op1))) ||
+        match(Op1, m_FNegOrFSubNegZero(m_Specific(Op0))))
       return ConstantFP::getZero(Op0->getType());
   }
 
@@ -6204,7 +6206,9 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   // fsub -0.0, (fneg X) ==> X
   Value *X;
   if (canIgnoreSNaN(ExBehavior, FMF))
-    if (match(Op0, m_NegZeroFP()) && match(Op1, m_FNeg(m_Value(X))))
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op0, m_NegZeroFP()) &&
+        match(Op1, m_FNegOrFSubNegZero(m_Value(X))))
       return X;
 
   // fsub 0.0, (fsub 0.0, X) ==> X if signed zeros are ignored.
@@ -6849,7 +6853,7 @@ static Value *foldMinMaxSharedOp(Intrinsic::ID IID, Value *Op0, Value *Op1) {
 /// operand that is another min/max intrinsic with shared operand(s). The caller
 /// is expected to swap the operand arguments to handle commutation.
 static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
-                                         Value *Op1) {
+                                         Value *Op1, unsigned MaxRecurse) {
   auto IsMinimumMaximumIntrinsic = [](Intrinsic::ID ID) {
     switch (ID) {
     case Intrinsic::maxnum:
@@ -6882,6 +6886,13 @@ static Value *foldMinimumMaximumSharedOp(Intrinsic::ID IID, Value *Op0,
   // For minnum/maxnum, Y is NaN => m(X, NaN) == X and m(X, NaN) == X.
   if (X0 == Op1 || Y0 == Op1)
     return M0;
+
+  // m(m(X, Y), Z) --> m(X, Y) if m(X, Z) == X or m(Y, Z) == Y.
+  if (MaxRecurse--) {
+    if (foldMinimumMaximumSharedOp(IID, X0, Op1, MaxRecurse) == X0 ||
+        foldMinimumMaximumSharedOp(IID, Y0, Op1, MaxRecurse) == Y0)
+      return M0;
+  }
 
   auto *M1 = dyn_cast<IntrinsicInst>(Op1);
   if (!M1 || !IsMinimumMaximumIntrinsic(M1->getIntrinsicID()))
@@ -7410,10 +7421,11 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     }
 
     // Min/max of the same operation with common operand:
-    // m(m(X, Y)), X --> m(X, Y) (4 commuted variants)
-    if (Value *V = foldMinimumMaximumSharedOp(IID, Op0, Op1))
+    // m(m(X, Y), X) --> m(X, Y) (4 commuted variants), also through nested m,
+    // e.g. m(m(m(X, Y), Z), X) --> m(m(X, Y), Z).
+    if (Value *V = foldMinimumMaximumSharedOp(IID, Op0, Op1, RecursionLimit))
       return V;
-    if (Value *V = foldMinimumMaximumSharedOp(IID, Op1, Op0))
+    if (Value *V = foldMinimumMaximumSharedOp(IID, Op1, Op0, RecursionLimit))
       return V;
 
     break;

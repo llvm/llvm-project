@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: target={{x86_64-.+}}
-// UNSUPPORTED: target={{.*-windows.*}}, msan
+// REQUIRES: target={{x86_64-.*-freebsd.*}}
+// UNSUPPORTED: msan
 
 #undef NDEBUG
 #include <assert.h>
@@ -16,13 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__FreeBSD__)
 #include <machine/sysarch.h>
-#elif defined(__linux__)
-#include <asm/prctl.h>
-#include <sys/syscall.h>
-#include <unistd.h>
-#endif
 
 #define STRINGIFY_IMPL(x) #x
 #define STRINGIFY(x) STRINGIFY_IMPL(x)
@@ -73,15 +67,9 @@ static void test_capture_and_access() {
     assert(get(cursor, selectors[i]) == 0x5678);
   }
 
-#if defined(__FreeBSD__) || defined(__linux__)
   uintptr_t fs, gs;
-#if defined(__FreeBSD__)
   assert(sysarch(AMD64_GET_FSBASE, &fs) == 0);
   assert(sysarch(AMD64_GET_GSBASE, &gs) == 0);
-#else
-  assert(syscall(SYS_arch_prctl, ARCH_GET_FS, &fs) == 0);
-  assert(syscall(SYS_arch_prctl, ARCH_GET_GS, &gs) == 0);
-#endif
   assert(get(cursor, UNW_X86_64_FS_BASE) == fs);
   assert(get(cursor, UNW_X86_64_GS_BASE) == gs);
   assert(strcmp(unw_regname(&cursor, UNW_X86_64_FS_BASE), "fs.base") == 0);
@@ -90,7 +78,6 @@ static void test_capture_and_access() {
   assert(get(cursor, UNW_X86_64_FS_BASE) == 0x12345678);
   assert(unw_set_reg(&cursor, UNW_X86_64_GS_BASE, 0x87654321) == UNW_ESUCCESS);
   assert(get(cursor, UNW_X86_64_GS_BASE) == 0x87654321);
-#endif
 
   unw_word_t value;
   assert(unw_get_reg(&cursor, 56, &value) == UNW_EBADREG);
@@ -108,10 +95,8 @@ extern "C" void check_cfi() {
   assert(get(cursor, UNW_X86_64_RFLAGS) == 0x203);
   for (unsigned i = 0; i != 6; ++i)
     assert(get(cursor, selectors[i]) == unsigned(selectors[i]));
-#if defined(__FreeBSD__) || defined(__linux__)
   assert(get(cursor, UNW_X86_64_FS_BASE) == 0x12345678);
   assert(get(cursor, UNW_X86_64_GS_BASE) == 0x87654321);
-#endif
 }
 
 // Model the previously disabled FreeBSD sigtramp CFI, including the packed
@@ -142,13 +127,11 @@ __attribute__((naked)) void trampoline() {
           "movq $55, -56(%rbp)\n"
           "movw $0xabcd, -54(%rbp)\n"
           ".cfi_offset 55, -72\n"
-#if defined(__FreeBSD__) || defined(__linux__)
           "movq $0x12345678, -64(%rbp)\n"
           ".cfi_offset 58, -80\n"
           "movl $0x87654321, -72(%rbp)\n"
           "movl $0, -68(%rbp)\n"
           ".cfi_offset 59, -88\n"
-#endif
           "call " SYMBOL(check_cfi) "\n"
                                     "leave\n"
                                     ".cfi_def_cfa 7, 8\n"

@@ -18,7 +18,7 @@
 // Ops in CIR emitted by CIRGen are located in the original source, which is not
 // loaded for ClangIR input; the location is kept as text in the message.
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %t/src.c -o - \
-// RUN:   | sed -E 's/cir\.return %[0-9]+ : !s32i/cir.return/' > %t/src-verifier.cir
+// RUN:   | sed 's/cir\.return %[0-9]\{1,\} : !s32i/cir.return/' > %t/src-verifier.cir
 // RUN: not %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-cir %t/src-verifier.cir -o - 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=SRC-VERIFIER --implicit-check-not=error:
 // SRC-VERIFIER: error: {{.*}}src.c:2:3: 'cir.return' op returns '!cir.void' but enclosing function returns '!cir.int<s, 32>'

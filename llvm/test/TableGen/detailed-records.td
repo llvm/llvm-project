@@ -10,6 +10,11 @@
 // CHECK: ----- Classes
 // CHECK: Class1
 // CHECK: Class2
+// CHECK: Class3
+// CHECK-NEXT: Template args:
+// CHECK-NEXT:   int Class3:Arg = ?
+// CHECK-NEXT: Superclasses: (none)
+// CHECK-NEXT: Fields: (none)
 
 // CHECK: ----- Records
 // CHECK: ""
@@ -24,6 +29,9 @@ class Class1 {
 }
 
 class Class2 {
+}
+
+class Class3<int Arg> {
 }
 
 def : Class1;

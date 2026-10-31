@@ -108,6 +108,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -859,6 +860,7 @@ private:
   AccessList *getOrCreateAccessList(const BasicBlock *);
   DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;

@@ -2183,7 +2183,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // own caller's stack.
     NumBytes = 0;
   else if (ShouldGuaranteeTCO && canGuaranteeTCO(CallConv))
-    NumBytes = GetAlignedArgumentStackSize(NumBytes, DAG);
+    // The callee pops this amount, so compute it as LowerFormalArguments does.
+    NumBytes = GetAlignedArgumentStackSize(CCInfo.getStackSize(), DAG);
 
   // A sibcall is ABI-compatible and does not need to adjust the stack pointer.
   int FPDiff = 0;

@@ -1202,6 +1202,19 @@ func.func @test_resize_scale_x(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x7970
 
 // -----
 
+// A non-positive scale is invalid and reported by the ERROR_IF check under
+// strict-op-spec-alignment. Here (non-strict), the level check must skip the
+// scale ratio comparison to avoid dividing by scale_x_d = 0.
+func.func @test_resize_nonpositive_scale_skips_level_check(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
+  %scale = tosa.const_shape values(dense<[4, 2, 1, 0]> : tensor<4xindex>) : () -> !tosa.shape<4>
+  %offset = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %border = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
+  %1 = tosa.resize %arg0, %scale, %offset, %border mode<BILINEAR> : (tensor<1x32x32x8xf32>, !tosa.shape<4>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x64x64x8xf32>
+  return %1 : tensor<1x64x64x8xf32>
+}
+
+// -----
+
 func.func @test_tensor_size_valid(%arg0: tensor<1x536870911xf32>) {
   %0 = tosa.const_shape values(dense<0> : tensor<2xindex>) : () -> !tosa.shape<2>
   %1 = tosa.const_shape values(dense<1> : tensor<2xindex>) : () -> !tosa.shape<2>

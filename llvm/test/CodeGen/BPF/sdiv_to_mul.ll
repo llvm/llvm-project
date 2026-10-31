@@ -19,10 +19,9 @@ entry:
   %conv = trunc i64 %sub.ptr.div to i32
   ret i32 %conv
 }
-; CHECK-V1:        r0 = r1
-; CHECK-V1:        r0 -= r2
-; CHECK-V1:        r0 s>>= 2
-; CHECK-V1:        r1 = -6148914691236517205 ll
+; CHECK-V1:        r1 -= r2
+; CHECK-V1:        r1 s>>= 2
+; CHECK-V1:        r0 = -6148914691236517205 ll
 ; CHECK-V1:        r0 *= r1
 ; CHECK-V1:        exit
 
