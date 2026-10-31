@@ -5,8 +5,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=ARCH_I686
 // ARCH_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// ARCH_I686:      "-internal-isystem"
-// ARCH_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0"
+// ARCH_I686:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0"
 // ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/i686-pc-linux-gnu"
 // ARCH_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward"
 // ARCH_I686-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
@@ -27,8 +27,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
 // DEBIAN_X86_64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_X86_64:      "-internal-isystem"
-// DEBIAN_X86_64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
+// DEBIAN_X86_64:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
@@ -57,8 +57,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
 // DEBIAN_X86_64_M32:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_X86_64_M32:      "-internal-isystem"
-// DEBIAN_X86_64_M32-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
+// DEBIAN_X86_64_M32:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10/32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
@@ -82,8 +82,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
 // DEBIAN_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_I686:      "-internal-isystem"
-// DEBIAN_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
+// DEBIAN_I686:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
 /// Debian specific - the path component after 'include' is i386-linux-gnu even
 /// though the installation is i686-linux-gnu.
 // DEBIAN_I686-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/i386-linux-gnu/c++/10"
@@ -107,8 +107,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
 // DEBIAN_I686_M64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_I686_M64:      "-internal-isystem"
-// DEBIAN_I686_M64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
+// DEBIAN_I686_M64:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
 /// Debian specific - the path component after 'include' is i386-linux-gnu even
 /// though the installation is i686-linux-gnu.
 // DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/i386-linux-gnu/c++/10/64"
@@ -134,8 +134,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
 // DEBIAN_AARCH64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_AARCH64:      "-internal-isystem"
-// DEBIAN_AARCH64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10"
+// DEBIAN_AARCH64:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10/aarch64-linux-gnu"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10/backward"
 // DEBIAN_AARCH64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
@@ -160,8 +160,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/debian_per_target_tree/usr/lib/llvm-14/bin -resource-dir=%S/Inputs/debian_per_target_tree/usr/lib/llvm-14/lib/clang/14.0.0 \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_PER_TARGET
 // DEBIAN_X86_64_PER_TARGET:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_X86_64_PER_TARGET:      "-internal-isystem"
-// DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "[[PREFIX:[^"]+llvm-14]]/bin/../include/c++/v1"
+// DEBIAN_X86_64_PER_TARGET:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[PREFIX:[^"]+llvm-14]]/bin/../include/c++/v1"
 // DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // DEBIAN_X86_64_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
@@ -187,8 +187,8 @@
 // RUN:   -ccc-install-dir %S/Inputs/debian_per_target_tree/usr/lib/llvm-14/bin -resource-dir=%S/Inputs/debian_per_target_tree/usr/lib/llvm-14/lib/clang/14.0.0 \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32_PER_TARGET
 // DEBIAN_X86_64_M32_PER_TARGET:      "-resource-dir" "[[RESOURCE:[^"]+]]"
-// DEBIAN_X86_64_M32_PER_TARGET:      "-internal-isystem"
-// DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "[[PREFIX:[^"]+llvm-14]]/bin/../include/c++/v1"
+// DEBIAN_X86_64_M32_PER_TARGET:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[PREFIX:[^"]+llvm-14]]/bin/../include/c++/v1"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/local/include"
 // DEBIAN_X86_64_M32_PER_TARGET-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
@@ -219,8 +219,9 @@
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform -r 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
 // RELOCATABLE-NOT:  "-dynamic-linker"
-// RELOCATABLE:      "-internal-isystem"
-// RELOCATABLE-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
+// RELOCATABLE:      "-resource-dir" "[[RESOURCE:[^"]+]]"
+// RELOCATABLE:      "-internal-isystem" "[[RESOURCE]]{{(/|\\\\)}}include{{(/|\\\\)}}cxx"
+// RELOCATABLE-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
 // RELOCATABLE:      "-L
 // RELOCATABLE-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10"
 // RELOCATABLE-NOT:  "-l
