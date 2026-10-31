@@ -165,10 +165,13 @@ FunctionPass *createAArch64StackTaggingPass(const AArch64Options &CLOpts,
 FunctionPass *createAArch64StackTaggingPreRALegacyPass();
 ModulePass *createAArch64Arm64ECCallLoweringPass();
 
+FunctionPass *createAArch64BiasedBranchOptPass();
+
 void initializeAArch64A53Fix835769LegacyPass(PassRegistry &);
 void initializeAArch64A57FPLoadBalancingLegacyPass(PassRegistry &);
 void initializeAArch64AdvSIMDScalarLegacyPass(PassRegistry &);
 void initializeAArch64AsmPrinterPass(PassRegistry &);
+void initializeAArch64BiasedBranchOptPass(PassRegistry &);
 void initializeAArch64PointerAuthLegacyPass(PassRegistry &);
 void initializeAArch64PredicateAsCounterLoopRewritesPass(PassRegistry &);
 void initializeAArch64BranchTargetsLegacyPass(PassRegistry &);

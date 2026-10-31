@@ -307,6 +307,7 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   default:
     llvm_unreachable("Unknown branch instruction?");
   case AArch64::Bcc:
+  case AArch64::BCcc:
     Target = LastInst->getOperand(1).getMBB();
     Cond.push_back(LastInst->getOperand(0));
     break;
@@ -372,6 +373,7 @@ static unsigned getBranchDisplacementBits(const AArch64Options &CLOpts,
   case AArch64::CBZX:
     return CLOpts.cbz_offset_bits;
   case AArch64::Bcc:
+  case AArch64::BCcc:
     return CLOpts.bcc_offset_bits;
   case AArch64::CBWPri:
   case AArch64::CBXPri:
@@ -408,6 +410,7 @@ AArch64InstrInfo::getBranchDestBlock(const MachineInstr &MI) const {
   case AArch64::CBZX:
   case AArch64::CBNZX:
   case AArch64::Bcc:
+  case AArch64::BCcc:
     return MI.getOperand(1).getMBB();
   case AArch64::CBWPri:
   case AArch64::CBXPri:
@@ -2215,7 +2218,8 @@ int AArch64InstrInfo::findCondCodeUseOperandIdxForBranchOrSelect(
   default:
     return -1;
 
-  case AArch64::Bcc: {
+  case AArch64::Bcc:
+  case AArch64::BCcc: {
     int Idx = Instr.findRegisterUseOperandIdx(AArch64::NZCV, /*TRI=*/nullptr);
     assert(Idx >= 2);
     return Idx - 2;
@@ -10171,6 +10175,7 @@ bool AArch64InstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   default:
     llvm_unreachable("Unknown branch instruction?");
   case AArch64::Bcc:
+  case AArch64::BCcc:
   case AArch64::CBWPri:
   case AArch64::CBXPri:
   case AArch64::CBBAssertExt:
@@ -12199,7 +12204,8 @@ void AArch64PipelinerLoopInfo::createRemainingIterationsGreaterCondition(
   //   ... (repeat TC times)
   //   SUBSXri cond, 0, implicit-def $nzcv
 
-  assert(CondBranch->getOpcode() == AArch64::Bcc);
+  assert(CondBranch->getOpcode() == AArch64::Bcc ||
+         CondBranch->getOpcode() == AArch64::BCcc);
   // CondCode to exit the loop
   AArch64CC::CondCode CC =
       (AArch64CC::CondCode)CondBranch->getOperand(0).getImm();
@@ -12432,7 +12438,8 @@ AArch64InstrInfo::analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const {
   MachineInstr *CondBranch = &*LoopBB->getFirstTerminator();
   const TargetRegisterInfo &TRI = getRegisterInfo();
 
-  if (CondBranch->getOpcode() != AArch64::Bcc)
+  if (CondBranch->getOpcode() != AArch64::Bcc &&
+      CondBranch->getOpcode() != AArch64::BCcc)
     return nullptr;
 
   // Normalization for createTripCountGreaterCondition()

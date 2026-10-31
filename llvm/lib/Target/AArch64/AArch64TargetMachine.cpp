@@ -75,6 +75,7 @@ LLVMInitializeAArch64Target() {
   initializeAArch64CodeLayoutOptPass(PR);
   initializeAArch64AdvSIMDScalarLegacyPass(PR);
   initializeAArch64AsmPrinterPass(PR);
+  initializeAArch64BiasedBranchOptPass(PR);
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
@@ -787,6 +788,8 @@ void AArch64PassConfig::addPostBBSections() {
   addPass(createAArch64PointerAuthPass());
   if (CLOpts.enable_branch_targets)
     addPass(createAArch64BranchTargetsPass());
+
+  addPass(createAArch64BiasedBranchOptPass());
   // Relax conditional branch instructions if they're otherwise out of
   // range of their destination.
   if (CLOpts.enable_branch_relax)
