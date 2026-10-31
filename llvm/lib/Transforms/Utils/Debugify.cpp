@@ -161,7 +161,13 @@ void collectStackAddresses(Instruction &I) {}
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 uint64_t getAllocSizeInBits(Module &M, Type *Ty) {
-  return Ty->isSized() ? M.getDataLayout().getTypeAllocSizeInBits(Ty) : 0;
+  if (!Ty->isSized())
+    return 0;
+  TypeSize Size = M.getDataLayout().getTypeAllocSizeInBits(Ty);
+  // Scalable types have no fixed size; report 0, the same sentinel used for
+  // unsized types, instead of converting the scalable TypeSize to a scalar,
+  // which is a fatal error.
+  return Size.isScalable() ? 0 : Size.getFixedValue();
 }
 
 bool isFunctionSkipped(Function &F) {
