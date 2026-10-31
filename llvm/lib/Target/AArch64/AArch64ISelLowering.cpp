@@ -16176,13 +16176,11 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
           bool Input2 = Entry.RHSID >> 16;
 
           SDValue Input = Input2 ? V2 : V1;
-          // Be careful about creating illegal types. Use f16 instead of i16.
-          if (VT == MVT::v4i16) {
-            Input = DAG.getBitcast(MVT::v4f16, Input);
-            OpLHS = DAG.getBitcast(MVT::v4f16, OpLHS);
-          }
-          SDValue Ext = DAG.getExtractVectorElt(
-              DL, Input.getValueType().getVectorElementType(), Input, ExtLane);
+          // Be careful about creating illegal types.
+          EVT ScalarVT = getTypeToTransformTo(*DAG.getContext(),
+                                              VT.getVectorElementType());
+
+          SDValue Ext = DAG.getExtractVectorElt(DL, ScalarVT, Input, ExtLane);
           SDValue Ins = DAG.getInsertVectorElt(DL, OpLHS, Ext, ToLane);
           Vals.push_back(DAG.getBitcast(VT, Ins));
           break;
