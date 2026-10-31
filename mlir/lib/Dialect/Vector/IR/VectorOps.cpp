@@ -1264,9 +1264,14 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
   return -1;
 }
 
+// Returns the (lhs dim, rhs dim) pairs of the dims indexed by an iterator of
+// type `targetIteratorType`. If `oneOperand` is false, only the dims indexed on
+// both lhs and rhs are returned. Otherwise only the dims indexed on exactly one
+// of them are returned, and the dim of the other operand is -1.
 static std::vector<std::pair<int64_t, int64_t>>
 getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
-          IteratorType targetIteratorType, MLIRContext *context) {
+          IteratorType targetIteratorType, bool oneOperand,
+          MLIRContext *context) {
   std::vector<std::pair<int64_t, int64_t>> dimMap;
   for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorType = llvm::cast<IteratorTypeAttr>(it.value()).getValue();
@@ -1276,7 +1281,9 @@ getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
     auto targetExpr = getAffineDimExpr(it.index(), context);
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
-    if (lhsDim >= 0 && rhsDim >= 0)
+    bool isOneOperand = (lhsDim >= 0) != (rhsDim >= 0);
+    bool isBothOperands = lhsDim >= 0 && rhsDim >= 0;
+    if (oneOperand ? isOneOperand : isBothOperands)
       dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
@@ -1285,6 +1292,7 @@ getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
 void ContractionOp::getIterationBounds(
     SmallVectorImpl<int64_t> &iterationBounds) {
   auto lhsShape = getLhsType().getShape();
+  auto rhsShape = getRhsType().getShape();
   auto resVectorType = llvm::dyn_cast<VectorType>(getResultType());
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
   for (const auto &it : llvm::enumerate(getIteratorTypes())) {
@@ -1292,10 +1300,16 @@ void ContractionOp::getIterationBounds(
     auto targetExpr = getAffineDimExpr(it.index(), getContext());
     auto iteratorType = llvm::cast<IteratorTypeAttr>(it.value()).getValue();
     if (iteratorType == IteratorType::reduction) {
-      // Get reduction dim size from lhs shape (same size in rhsShape).
+      // Get reduction dim size from lhs shape (same size in rhsShape), or from
+      // rhs shape if the dim is not indexed on lhs.
       int64_t lhsDimIndex = getResultIndex(indexingMaps[0], targetExpr);
-      assert(lhsDimIndex >= 0);
-      iterationBounds.push_back(lhsShape[lhsDimIndex]);
+      if (lhsDimIndex >= 0) {
+        iterationBounds.push_back(lhsShape[lhsDimIndex]);
+        continue;
+      }
+      int64_t rhsDimIndex = getResultIndex(indexingMaps[1], targetExpr);
+      assert(rhsDimIndex >= 0);
+      iterationBounds.push_back(rhsShape[rhsDimIndex]);
       continue;
     }
     // Get parallel dimension size from result shape.
@@ -1323,13 +1337,26 @@ void ContractionOp::getIterationIndexMap(
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
   return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::reduction,
-                   getContext());
+                   /*oneOperand=*/false, getContext());
 }
 
 std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
   SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
   return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::parallel,
-                   getContext());
+                   /*oneOperand=*/false, getContext());
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getFreeDimMap() {
+  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
+  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::parallel,
+                   /*oneOperand=*/true, getContext());
+}
+
+std::vector<std::pair<int64_t, int64_t>>
+ContractionOp::getOneOperandReductionDimMap() {
+  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
+  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::reduction,
+                   /*oneOperand=*/true, getContext());
 }
 
 std::optional<SmallVector<int64_t, 4>>

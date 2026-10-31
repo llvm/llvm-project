@@ -434,6 +434,89 @@ func.func @batch_contract_fmf(%arg0: vector<2x2xf32>,
   return %0 : vector<2xf32>
 }
 
+// CHECK-LABEL: @contract_one_sided_unit_reduction_dim_rhs
+// CHECK-SAME: (%[[A:.+]]: vector<2x2xi32>, %[[B:.+]]: vector<1x2xi32>, %[[C:.+]]: vector<2xi32>)
+// CHECK-DAG: %[[Z:.+]] = arith.constant dense<0> : vector<2xi32>
+// CHECK:     %[[A0:.+]] = vector.extract %[[A]][0] : vector<2xi32> from vector<2x2xi32>
+// CHECK:     %[[C0:.+]] = vector.extract %[[C]][0] : i32 from vector<2xi32>
+// CHECK:     %[[B0:.+]] = vector.extract %[[B]][0] : vector<2xi32> from vector<1x2xi32>
+// CHECK:     %[[M0:.+]] = arith.muli %[[A0]], %[[B0]] : vector<2xi32>
+// CHECK:     %[[R0:.+]] = vector.reduction <add>, %[[M0]], %[[C0]] : vector<2xi32> into i32
+// CHECK:     %[[I0:.+]] = vector.insert %[[R0]], %[[Z]] [0] : i32 into vector<2xi32>
+// CHECK:     %[[I1:.+]] = vector.insert %{{.+}}, %[[I0]] [1] : i32 into vector<2xi32>
+// CHECK:     return %[[I1]] : vector<2xi32>
+
+func.func @contract_one_sided_unit_reduction_dim_rhs(%arg0 : vector<2x2xi32>, %arg1 : vector<1x2xi32>, %arg2 : vector<2xi32>) -> vector<2xi32> {
+  %res = vector.contract {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d0, d2)>,
+      affine_map<(d0, d1, d2) -> (d1)>
+    ],
+    iterator_types = ["reduction", "parallel", "reduction"],
+    kind = #vector.kind<add>
+  } %arg0, %arg1, %arg2 : vector<2x2xi32>, vector<1x2xi32>, vector<2xi32> into vector<2xi32>
+  return %res : vector<2xi32>
+}
+
+// CHECK-LABEL: @contract_one_sided_unit_reduction_dim_masked
+// CHECK-SAME: %[[M:arg[0-9]+]]: vector<1x2x2xi1>
+// CHECK:     %[[M0:.+]] = vector.extract %[[M]][0, 0] : vector<2xi1> from vector<1x2x2xi1>
+// CHECK:     %[[MUL0:.+]] = arith.muli
+// CHECK:     vector.mask %[[M0]] { vector.reduction <add>, %[[MUL0]], %{{.+}} : vector<2xi32> into i32 } : vector<2xi1> -> i32
+// CHECK:     %[[M1:.+]] = vector.extract %[[M]][0, 1] : vector<2xi1> from vector<1x2x2xi1>
+// CHECK:     %[[MUL1:.+]] = arith.muli
+// CHECK:     vector.mask %[[M1]] { vector.reduction <add>, %[[MUL1]], %{{.+}} : vector<2xi32> into i32 } : vector<2xi1> -> i32
+
+func.func @contract_one_sided_unit_reduction_dim_masked(%arg0 : vector<1x2xi32>, %arg1 : vector<2x2xi32>, %arg2 : vector<2xi32>, %mask : vector<1x2x2xi1>) -> vector<2xi32> {
+  %res = vector.mask %mask {
+    vector.contract {
+      indexing_maps = [
+        affine_map<(d0, d1, d2) -> (d0, d2)>,
+        affine_map<(d0, d1, d2) -> (d1, d2)>,
+        affine_map<(d0, d1, d2) -> (d1)>
+      ],
+      iterator_types = ["reduction", "parallel", "reduction"],
+      kind = #vector.kind<add>
+    } %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2x2xi32> into vector<2xi32>
+  } : vector<1x2x2xi1> -> vector<2xi32>
+  return %res : vector<2xi32>
+}
+
+// CHECK-LABEL: @contract_one_sided_non_unit_reduction_dim
+// CHECK:     vector.contract
+// CHECK-NOT: vector.reduction
+
+func.func @contract_one_sided_non_unit_reduction_dim(%arg0 : vector<3x2xi32>, %arg1 : vector<2x2xi32>, %arg2 : vector<2xi32>) -> vector<2xi32> {
+  %res = vector.contract {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d2)>,
+      affine_map<(d0, d1, d2) -> (d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d1)>
+    ],
+    iterator_types = ["reduction", "parallel", "reduction"],
+    kind = #vector.kind<add>
+  } %arg0, %arg1, %arg2 : vector<3x2xi32>, vector<2x2xi32>, vector<2xi32> into vector<2xi32>
+  return %res : vector<2xi32>
+}
+
+// CHECK-LABEL: @contract_one_sided_scalable_unit_reduction_dim
+// CHECK:     vector.contract
+// CHECK-NOT: vector.reduction
+
+func.func @contract_one_sided_scalable_unit_reduction_dim(%arg0 : vector<[1]x2xi32>, %arg1 : vector<2x2xi32>, %arg2 : vector<2xi32>) -> vector<2xi32> {
+  %res = vector.contract {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d2)>,
+      affine_map<(d0, d1, d2) -> (d1, d2)>,
+      affine_map<(d0, d1, d2) -> (d1)>
+    ],
+    iterator_types = ["reduction", "parallel", "reduction"],
+    kind = #vector.kind<add>
+  } %arg0, %arg1, %arg2 : vector<[1]x2xi32>, vector<2x2xi32>, vector<2xi32> into vector<2xi32>
+  return %res : vector<2xi32>
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op
