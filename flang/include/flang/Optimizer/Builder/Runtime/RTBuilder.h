@@ -268,10 +268,10 @@ getModel<void *(*)(void *, const void *, unsigned long)>() {
     return fir::LLVMPointerType::get(context, funcTy);
   };
 }
-#ifdef _MSC_VER
+#ifdef _WIN32
 template <>
 constexpr TypeBuilderFunc
-getModel<void *(*)(void *, const void *, unsigned __int64)>() {
+getModel<void *(*)(void *, const void *, std::uint64_t)>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     auto voidPtrTy =
         fir::LLVMPointerType::get(context, mlir::IntegerType::get(context, 8));
