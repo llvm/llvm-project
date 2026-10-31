@@ -494,11 +494,11 @@ m_ComputeReductionResult(const Op0_t &Op0) {
 /// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
 ///        ComputeReductionResult(ReducedIV), Start.
 template <typename Op0_t, typename Op1_t>
-inline bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV, Op1_t Start) {
-  return match(VPI, m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
-                                            m_ComputeReductionResult(ReducedIV),
-                                            m_VPValue()),
-                             m_ComputeReductionResult(ReducedIV), Start));
+inline auto m_FindIVResult(Op0_t ReducedIV, Op1_t Start) {
+  return m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
+                                 m_ComputeReductionResult(ReducedIV),
+                                 m_VPValue()),
+                  m_ComputeReductionResult(ReducedIV), Start);
 }
 
 template <typename Op0_t>
