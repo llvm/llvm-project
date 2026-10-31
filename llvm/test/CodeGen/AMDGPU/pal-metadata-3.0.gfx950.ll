@@ -52,6 +52,7 @@
 ; CHECK-NEXT:    .hardware_stages:
 ; CHECK-NEXT:      .cs:
 ; CHECK-NEXT:	     .agpr_count:     0
+; CHECK-NEXT:        .backend_stack_size: 0
 ; CHECK-NEXT:        .checksum_value: 0x9444d7d0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_cs
@@ -112,6 +113,7 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .gs:
 ; CHECK-NEXT:        .agpr_count:     0
+; CHECK-NEXT:        .backend_stack_size: 0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_gs
 ; CHECK-NEXT:        .entry_point_symbol:    gs_shader
@@ -126,6 +128,7 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .hs:
 ; CHECK-NEXT:        .agpr_count:     0
+; CHECK-NEXT:        .backend_stack_size: 0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_hs
 ; CHECK-NEXT:        .entry_point_symbol:    hs_shader
@@ -140,6 +143,7 @@
 ; CHECK-NEXT:        .wgp_mode:       false
 ; CHECK-NEXT:      .ps:
 ; CHECK-NEXT:        .agpr_count:     0
+; CHECK-NEXT:        .backend_stack_size: 0
 ; CHECK-NEXT:        .debug_mode:     false
 ; CHECK-NEXT:        .entry_point:    _amdgpu_ps
 ; CHECK-NEXT:        .entry_point_symbol:    ps_shader

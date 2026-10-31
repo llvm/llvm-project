@@ -366,6 +366,10 @@ void AMDGPUPALMetadata::setScratchSize(unsigned CC, const MCExpr *Val,
   setHwStage(CC, ".scratch_memory_size", msgpack::Type::UInt, Val);
 }
 
+void AMDGPUPALMetadata::setBackendStackSize(unsigned CC, const MCExpr *Val) {
+  setHwStage(CC, ".backend_stack_size", msgpack::Type::UInt, Val);
+}
+
 void AMDGPUPALMetadata::setFunctionStackFrameSize(StringRef FnName,
                                                   unsigned Val) {
   auto Node = getShaderFunction(FnName);
