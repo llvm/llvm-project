@@ -134,6 +134,9 @@ public:
     return static_cast<int>(HintsAndCustomOrder.size()) > NumHints;
   }
 
+  /// True when iteration visits preferred hints and not the rest of the order.
+  bool hintsOnly() const { return IterationLimit == 0; }
+
   /// Return true if Reg is a preferred physical register.
   bool isHint(Register Reg) const {
     assert(!Reg.isPhysical() ||

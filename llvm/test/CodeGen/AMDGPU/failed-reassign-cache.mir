@@ -1,0 +1,116 @@
+# RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -run-pass=greedy -stress-regalloc=8 -enable-local-reassign=true -regalloc-reassign-cache-min-order=0 -o - %s | FileCheck --check-prefix=CHECK %s
+# RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -run-pass=greedy -stress-regalloc=8 -enable-local-reassign=true -regalloc-reassign-cache-min-order=512 -o - %s | FileCheck --check-prefix=CHECK %s
+# RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -run-pass=greedy -stress-regalloc=8 -enable-local-reassign=true -regalloc-reassign-cache-min-order=0 -regalloc-reassign-cache-max-freed=1 -o - %s | FileCheck --check-prefix=CHECK %s
+
+# -stress-regalloc=8 leaves eight allocatable registers, so a failed
+# canReassign examines fewer than the default cutoff of 512 and is not cached.
+# -regalloc-reassign-cache-min-order=0 caches those failures. Recording only
+# one freed register saturates an entry and replaces it on the next failure,
+# which erases the previous buckets. All three runs use the CHECK prefix and
+# must produce the same allocation.
+
+---
+name: failed_reassign_cache
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: failed_reassign_cache
+    ; CHECK: assigned-phys: '$vgpr6'
+    ; CHECK: assigned-phys: '$vgpr4'
+    ; CHECK: assigned-phys: '$vgpr3'
+    ; CHECK: assigned-phys: '$vgpr2'
+    ; CHECK: assigned-phys: '$vgpr1'
+    ; CHECK: assigned-phys: '$vgpr0'
+    ; CHECK: split-from: '%0'
+    ; CHECK: assigned-phys: '$vgpr7'
+    ; CHECK: split-from: '%1'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%2'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%3'
+    ; CHECK: assigned-phys: '$vgpr7'
+    ; CHECK: split-from: '%4'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%5'
+    ; CHECK: assigned-phys: '$vgpr7'
+    ; CHECK: split-from: '%6'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%7'
+    ; CHECK: assigned-phys: '$vgpr7'
+    ; CHECK: split-from: '%8'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%9'
+    ; CHECK: assigned-phys: '$vgpr7'
+    ; CHECK: split-from: '%10'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%11'
+    ; CHECK: assigned-phys: '$vgpr7'
+    ; CHECK: split-from: '%12'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: split-from: '%14'
+    ; CHECK: assigned-phys: '$vgpr5'
+    ; CHECK: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF5:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF6:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF6]], implicit [[DEF7]]
+    ; CHECK-NEXT: [[DEF8:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF9:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF8]], implicit [[DEF9]]
+    ; CHECK-NEXT: [[DEF10:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF11:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF10]], implicit [[DEF11]]
+    ; CHECK-NEXT: [[DEF12:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF13:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF12]], implicit [[DEF13]]
+    ; CHECK-NEXT: [[DEF14:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF15:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF14]], implicit [[DEF15]]
+    ; CHECK-NEXT: [[DEF16:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF17:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF16]], implicit [[DEF17]]
+    ; CHECK-NEXT: [[DEF18:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF18]], implicit [[DEF]]
+    ; CHECK-NEXT: [[DEF19:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF19]], implicit [[DEF1]]
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF2]], implicit [[DEF3]]
+    ; CHECK-NEXT: S_NOP 0, implicit [[DEF4]], implicit [[DEF5]]
+    ; CHECK-NEXT: S_ENDPGM 0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = IMPLICIT_DEF
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = IMPLICIT_DEF
+    %5:vgpr_32 = IMPLICIT_DEF
+    %6:vgpr_32 = IMPLICIT_DEF
+    %7:vgpr_32 = IMPLICIT_DEF
+    %8:vgpr_32 = IMPLICIT_DEF
+    %9:vgpr_32 = IMPLICIT_DEF
+    %10:vgpr_32 = IMPLICIT_DEF
+    %11:vgpr_32 = IMPLICIT_DEF
+    %12:vgpr_32 = IMPLICIT_DEF
+    %13:vgpr_32 = IMPLICIT_DEF
+    %14:vgpr_32 = IMPLICIT_DEF
+    %15:vgpr_32 = IMPLICIT_DEF
+    %16:vgpr_32 = IMPLICIT_DEF
+    %17:vgpr_32 = IMPLICIT_DEF
+    %18:vgpr_32 = IMPLICIT_DEF
+    %19:vgpr_32 = IMPLICIT_DEF
+    S_NOP 0, implicit %0, implicit %1
+    S_NOP 0, implicit %2, implicit %3
+    S_NOP 0, implicit %4, implicit %5
+    S_NOP 0, implicit %6, implicit %7
+    S_NOP 0, implicit %8, implicit %9
+    S_NOP 0, implicit %10, implicit %11
+    S_NOP 0, implicit %12, implicit %13
+    S_NOP 0, implicit %14, implicit %15
+    S_NOP 0, implicit %16, implicit %17
+    S_NOP 0, implicit %18, implicit %19
+    S_ENDPGM 0
+...

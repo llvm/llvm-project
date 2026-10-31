@@ -11,7 +11,12 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/RegAllocEvictionAdvisor.h"
 #include "AllocationOrder.h"
+#include "FailedReassignCache.h"
 #include "RegAllocGreedy.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalUnion.h"
+#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -20,12 +25,29 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
+
+#define DEBUG_TYPE "regalloc"
+
+STATISTIC(NumCanReassignCalls, "Number of canReassign calls");
+STATISTIC(NumCanReassignSuccess,
+          "Number of canReassign calls that found a free register");
+STATISTIC(NumCanReassignFail, "Number of canReassign calls that failed");
+STATISTIC(NumCanReassignCandidates,
+          "Number of physical registers examined by canReassign");
+STATISTIC(NumCanReassignCacheHits,
+          "Number of failed canReassign answers reused without a search");
+STATISTIC(NumCanReassignRechecks,
+          "Number of failed canReassign answers rechecked against freed "
+          "registers");
 
 static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
     "regalloc-enable-advisor", cl::Hidden,
@@ -39,6 +61,18 @@ static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
         clEnumValN(
             RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
             "development", "for training")));
+
+static cl::opt<unsigned> ReassignCacheMinOrder(
+    "regalloc-reassign-cache-min-order", cl::Hidden,
+    cl::desc("Cache a failed canReassign only when the scan examined more "
+             "physical registers than this"),
+    cl::init(32));
+
+static cl::opt<unsigned> ReassignCacheMaxFreed(
+    "regalloc-reassign-cache-max-freed", cl::Hidden,
+    cl::desc("Number of freed physical registers recorded for one cached "
+             "canReassign failure before the entry is saturated"),
+    cl::init(reassign::Cache::DefaultMaxFreedRegs));
 
 static cl::opt<cl::boolOrDefault> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
@@ -185,7 +219,93 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
           EnableLocalReassignment == cl::boolOrDefault::BOU_TRUE ||
           (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
            MF.getSubtarget().enableRALocalReassignment(
-               MF.getTarget().getOptLevel()))) {}
+               MF.getTarget().getOptLevel()))) {
+  assert(Matrix && LIS && "Eviction advisor requires LiveRegMatrix and LIS");
+  FailedCache = std::make_unique<reassign::Cache>(
+      *LIS, *Matrix, *MRI, *TRI, RegClassInfo, ReassignCacheMaxFreed);
+  Matrix->setUnassignListener(&RegAllocEvictionAdvisor::unassignListener, this);
+}
+
+RegAllocEvictionAdvisor::~RegAllocEvictionAdvisor() {
+  if (Matrix)
+    Matrix->clearUnassignListener(this);
+}
+
+void RegAllocEvictionAdvisor::unassignListener(
+    void *Ctx, const LiveInterval &Unassigned, MCRegister PhysReg,
+    bool ClearAllReferencingSegments) {
+  static_cast<RegAllocEvictionAdvisor *>(Ctx)->noteUnassign(
+      Unassigned, PhysReg, ClearAllReferencingSegments);
+}
+
+void RegAllocEvictionAdvisor::noteUnassign(
+    const LiveInterval &Unassigned, MCRegister PhysReg,
+    bool ClearAllReferencingSegments) const {
+  FailedCache->noteUnassign(Unassigned, PhysReg, ClearAllReferencingSegments);
+}
+
+void RegAllocEvictionAdvisor::rememberFailedReassign(
+    const LiveInterval &VirtReg, bool HintOnly) const {
+  FailedCache->remember(VirtReg, HintOnly);
+}
+
+void RegAllocEvictionAdvisor::forgetFailedReassign(
+    const LiveInterval &VirtReg) const {
+  FailedCache->erase(VirtReg.reg().id());
+}
+
+bool RegAllocEvictionAdvisor::canReassign(const LiveInterval &VirtReg,
+                                          MCRegister FromReg) const {
+  ++NumCanReassignCalls;
+  switch (FailedCache->reuse(VirtReg, FromReg)) {
+  case reassign::Reuse::HitFalse:
+    ++NumCanReassignFail;
+    ++NumCanReassignCacheHits;
+    return false;
+  case reassign::Reuse::RecheckFalse:
+    ++NumCanReassignFail;
+    ++NumCanReassignRechecks;
+    return false;
+  case reassign::Reuse::RecheckTrue:
+    ++NumCanReassignSuccess;
+    ++NumCanReassignRechecks;
+    return true;
+  case reassign::Reuse::Miss:
+    break;
+  }
+
+  auto HasRegUnitInterference = [&](MCRegUnit Unit) {
+    // Instantiate a "subquery", not to be confused with the Queries array.
+    LiveIntervalUnion::Query SubQ(
+        VirtReg, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
+    return SubQ.checkInterference();
+  };
+
+  AllocationOrder Order =
+      AllocationOrder::create(VirtReg.reg(), *VRM, RegClassInfo, Matrix);
+  unsigned Examined = 0;
+  for (MCRegister Reg : Order) {
+    if (Reg == FromReg)
+      continue;
+    ++Examined;
+    ++NumCanReassignCandidates;
+    // If no units have interference, reassignment is possible.
+    if (none_of(TRI->regunits(Reg), HasRegUnitInterference)) {
+      LLVM_DEBUG(dbgs() << "can reassign: " << VirtReg << " from "
+                        << printReg(FromReg, TRI) << " to "
+                        << printReg(Reg, TRI) << '\n');
+      forgetFailedReassign(VirtReg);
+      ++NumCanReassignSuccess;
+      return true;
+    }
+  }
+  // Short orders do not repay the unassign bookkeeping. The scan above is
+  // their whole cost.
+  if (Examined > ReassignCacheMinOrder)
+    rememberFailedReassign(VirtReg, Order.hintsOnly());
+  ++NumCanReassignFail;
+  return false;
+}
 
 /// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
 /// range becomes small enough, it is urgent that we find a register for it.
