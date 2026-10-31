@@ -34,6 +34,12 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### Breaking changes
 
+* On x86-64, `-z lrodata-after-bss` is now the default, and `.ltext` is also
+  placed after `.bss` with the other large sections. This prevents large
+  sections from overflowing small-model references to ELF headers and small
+  data. `-z nolrodata-after-bss` places `.lrodata` before `.text`; `.ltext`
+  remains after `.bss` regardless of this option.
+
 ### COFF Improvements
 
 ### MinGW Improvements
