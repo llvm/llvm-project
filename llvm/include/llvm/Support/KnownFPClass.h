@@ -472,6 +472,11 @@ public:
     return Known;
   }
 
+  // Special cases of fmul -x, x and fmul x, -x.
+  LLVM_ABI static KnownFPClass
+  neg_square(const KnownFPClass &Src,
+             DenormalMode Mode = DenormalMode::getDynamic());
+
   LLVM_ABI static KnownFPClass
   fmul(const KnownFPClass &LHS, const APFloat &RHS,
        DenormalMode Mode = DenormalMode::getDynamic());
@@ -513,10 +518,21 @@ public:
   fma_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
              DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Report known values for fma (-x, x, addend) and fma (x, -x, addend)
+  LLVM_ABI static KnownFPClass
+  fma_neg_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                 DenormalMode Mode = DenormalMode::getDynamic());
+
   /// Report known values for fmuladd squared, squared, addend
   LLVM_ABI static KnownFPClass
   fmuladd_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
                  DenormalMode Mode = DenormalMode::getDynamic());
+
+  /// Report known values for fmuladd (-x, x, addend) and fmuladd (x, -x,
+  /// addend)
+  LLVM_ABI static KnownFPClass
+  fmuladd_neg_square(const KnownFPClass &Squared, const KnownFPClass &Addend,
+                     DenormalMode = DenormalMode::getDynamic());
 
   /// Propagate known class for sqrt
   LLVM_ABI static KnownFPClass
