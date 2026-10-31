@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/Passes.h"
+#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -225,7 +226,9 @@ public:
     rewriter.replaceOpWithNewOp<TransferReadOp>(
         maskingOp.getOperation(), readOp.getVectorType(), readOp.getBase(),
         readOp.getIndices(), readOp.getPermutationMap(), readOp.getPadding(),
-        maskingOp.getMask(), readOp.getInBounds());
+        vector::combineMasks(rewriter, readOp.getLoc(), maskingOp.getMask(),
+                             readOp.getMask()),
+        readOp.getInBounds());
     return success();
   }
 };
@@ -247,7 +250,9 @@ public:
     rewriter.replaceOpWithNewOp<TransferWriteOp>(
         maskingOp.getOperation(), resultType, writeOp.getVector(),
         writeOp.getBase(), writeOp.getIndices(), writeOp.getPermutationMap(),
-        maskingOp.getMask(), writeOp.getInBounds());
+        vector::combineMasks(rewriter, writeOp.getLoc(), maskingOp.getMask(),
+                             writeOp.getMask()),
+        writeOp.getInBounds());
     return success();
   }
 };
@@ -260,17 +265,14 @@ public:
   LogicalResult
   matchAndRewriteMaskableOp(GatherOp gatherOp, MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const override {
-    Value passthru = maskingOp.hasPassthru()
-                         ? maskingOp.getPassthru()
-                         : arith::ConstantOp::create(
-                               rewriter, gatherOp.getLoc(),
-                               rewriter.getZeroAttr(gatherOp.getVectorType()));
-
-    // Replace the `vector.mask` operation.
+    // `vector.mask` takes no passthru for `vector.gather`, so lanes disabled
+    // by either mask take the gather's own passthru.
     rewriter.replaceOpWithNewOp<GatherOp>(
         maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
-        gatherOp.getOffsets(), gatherOp.getIndices(), maskingOp.getMask(),
-        passthru);
+        gatherOp.getOffsets(), gatherOp.getIndices(),
+        vector::combineMasks(rewriter, gatherOp.getLoc(), maskingOp.getMask(),
+                             gatherOp.getMask()),
+        gatherOp.getPassThru());
     return success();
   }
 };

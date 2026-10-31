@@ -47,6 +47,13 @@ Value mlir::vector::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
   llvm_unreachable("Expected MemRefType or TensorType");
 }
 
+Value vector::combineMasks(OpBuilder &builder, Location loc, Value mask,
+                           Value optionalMask) {
+  if (!optionalMask)
+    return mask;
+  return arith::AndIOp::create(builder, loc, mask, optionalMask);
+}
+
 /// Given the n-D transpose pattern 'transp', return true if 'dim0' and 'dim1'
 /// should be transposed with each other within the context of their 2D
 /// transposition slice.
