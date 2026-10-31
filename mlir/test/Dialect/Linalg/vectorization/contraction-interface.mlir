@@ -39,6 +39,60 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+func.func @dot(%A: tensor<8xf32>, %B: tensor<8xf32>,
+    %C: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.dot
+    ins(%A, %B : tensor<8xf32>, tensor<8xf32>)
+    outs(%C: tensor<f32>) -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @dot(
+// CHECK-SAME:    %[[A:.*]]: tensor<8xf32>, %[[B:.*]]: tensor<8xf32>,
+// CHECK-SAME:    %[[C:.*]]: tensor<f32>)
+//      CHECK: %[[LOAD_A:.*]] = vector.transfer_read %[[A]]{{.*}}: tensor<8xf32>, vector<8xf32>
+//      CHECK: %[[LOAD_B:.*]] = vector.transfer_read %[[B]]{{.*}}: tensor<8xf32>, vector<8xf32>
+//      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %[[C]]{{.*}}: tensor<f32>, vector<f32>
+//      CHECK: %[[CONTRACT:.*]] = vector.contract
+// CHECK-SAME:   kind = #vector.kind<add>
+// CHECK-SAME:   %[[LOAD_A]], %[[LOAD_B]], %[[LOAD_C]] : vector<8xf32>, vector<8xf32> into vector<f32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %[[C]]{{.*}}: vector<f32>, tensor<f32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 create_named_contraction : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @dot_dynamic(%A: tensor<?xf32>, %B: tensor<?xf32>,
+    %C: tensor<f32>) -> tensor<f32> {
+  %0 = linalg.dot
+    ins(%A, %B : tensor<?xf32>, tensor<?xf32>)
+    outs(%C: tensor<f32>) -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// CHECK-LABEL: func.func @dot_dynamic(
+//      CHECK: %[[LOAD_C:.*]] = vector.transfer_read %{{.*}}[]{{.*}}: tensor<f32>, vector<f32>
+//      CHECK: %[[MASK:.*]] = vector.create_mask %{{.*}} : vector<8xi1>
+//      CHECK: %[[CONTRACT:.*]] = vector.mask %[[MASK]] { vector.contract
+// CHECK-SAME:   %[[LOAD_C]] : vector<8xf32>, vector<8xf32> into vector<f32> } : vector<8xi1> -> vector<f32>
+//      CHECK: vector.transfer_write %[[CONTRACT]], %{{.*}}[] : vector<f32>, tensor<f32>
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.dot"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8] create_named_contraction : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 func.func @matmul_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
     %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   %0 = linalg.matmul

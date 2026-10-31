@@ -1095,10 +1095,11 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
   VectorType lhsType = op.getLhsType();
   VectorType rhsType = op.getRhsType();
   Type resType = op.getResultType();
-  if (isa<VectorType>(resType))
+  auto resVectorType = dyn_cast<VectorType>(resType);
+  if (resVectorType && resVectorType.getRank() != 0)
     return rewriter.notifyMatchFailure(op,
                                        "did not expect a VectorType result");
-  bool isInt = isa<IntegerType>(resType);
+  bool isInt = isa<IntegerType>(getElementTypeOrSelf(resType));
   // Use iterator index 0.
   int64_t iterIndex = 0;
   SmallVector<AffineMap> iMap = op.getIndexingMapsArray();
@@ -1130,12 +1131,19 @@ FailureOr<Value> ContractionOpLowering::lowerReduction(
     auto kind = vector::CombiningKind::ADD;
 
     Value acc = op.getAcc();
+    // vector.reduction takes a scalar accumulator.
+    if (resVectorType)
+      acc = vector::ExtractOp::create(rewriter, loc, acc, ArrayRef<int64_t>{});
     Operation *reductionOp =
         acc ? vector::ReductionOp::create(rewriter, loc, kind, m, acc,
                                           op.getFastmath())
             : vector::ReductionOp::create(rewriter, loc, kind, m,
                                           op.getFastmath());
-    return maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    Value reduced = maskOperation(rewriter, reductionOp, mask)->getResult(0);
+    if (resVectorType)
+      reduced =
+          vector::BroadcastOp::create(rewriter, loc, resVectorType, reduced);
+    return reduced;
   }
   // Construct new iterator types and affine map array attribute.
   std::array<AffineMap, 3> lowIndexingMaps = {
