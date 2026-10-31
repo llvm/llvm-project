@@ -744,3 +744,14 @@ define <2 x i128> @umulh_v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
   %r = call <2 x i128> @llvm.umulh(<2 x i128> %x, <2 x i128> %y)
   ret <2 x i128> %r
 }
+
+; umulh(x, -1) in i1: the only non-zero i1 constant is -1, and the high bit of
+; the 2-bit product of two booleans is never set, so the result is always 0.
+define i1 @umulh_i1_allones(i1 %x) nounwind {
+; CHECK-LABEL: umulh_i1_allones:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+  %r = call i1 @llvm.umulh.i1(i1 %x, i1 -1)
+  ret i1 %r
+}
