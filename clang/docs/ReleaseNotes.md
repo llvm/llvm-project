@@ -1078,6 +1078,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH214128)
 - Fixed a crash when a coroutine keyword appeared inside a mem-initializer on a
   function that is not a constructor. (#GH194298)
+- Fixed a crash (and, without assertions, a call to a consteval function being
+  emitted) when a temporary created with a `consteval` constructor, such as
+  `S{1}`, was instantiated from a function template. (#GH219272)
 
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
