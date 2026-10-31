@@ -7,6 +7,7 @@
 
 @g = global i32 0, align 8
 @g16 = global i32 0, align 16
+@gp = external global ptr
 
 define nonnull ptr @nonnull(ptr noundef %p) {
 ; ATTRIBUTOR-LABEL: define nonnull ptr @nonnull(
@@ -123,7 +124,7 @@ b:
 define nonnull ptr @nonnull_assume_all_returns(i1 noundef %c, ptr noundef %p) {
 ; ATTRIBUTOR-LABEL: define noundef nonnull ptr @nonnull_assume_all_returns(
 ; ATTRIBUTOR-SAME: i1 noundef [[C:%.*]], ptr nofree noundef nonnull readnone returned [[P:%.*]]) #[[ATTR1:[0-9]+]] {
-; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR3:[0-9]+]] [ "nonnull"(ptr [[P]]) ]
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4:[0-9]+]] [ "nonnull"(ptr [[P]]) ]
 ; ATTRIBUTOR-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; ATTRIBUTOR:       [[A]]:
 ; ATTRIBUTOR-NEXT:    ret ptr [[P]]
@@ -153,7 +154,7 @@ define nonnull ptr @nonnull_assume_one_return(i1 noundef %c, ptr noundef %p) {
 ; ATTRIBUTOR-SAME: i1 noundef [[C:%.*]], ptr nofree noundef readnone returned [[P:%.*]]) #[[ATTR1]] {
 ; ATTRIBUTOR-NEXT:    br i1 [[C]], label %[[A:.*]], label %[[B:.*]]
 ; ATTRIBUTOR:       [[A]]:
-; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR3]] [ "nonnull"(ptr [[P]]) ]
+; ATTRIBUTOR-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR4]] [ "nonnull"(ptr [[P]]) ]
 ; ATTRIBUTOR-NEXT:    ret ptr [[P]]
 ; ATTRIBUTOR:       [[B]]:
 ; ATTRIBUTOR-NEXT:    ret ptr [[P]]
@@ -189,7 +190,7 @@ define internal i32 @mask(i32 noundef %x) {
 define range(i32 0, 10) i32 @range_holds_callee(i32 noundef %x) {
 ; ATTRIBUTOR-LABEL: define noundef range(i32 0, 10) i32 @range_holds_callee(
 ; ATTRIBUTOR-SAME: i32 noundef [[X:%.*]]) #[[ATTR0]] {
-; ATTRIBUTOR-NEXT:    [[R:%.*]] = call noundef range(i32 0, 8) i32 @mask(i32 noundef [[X]]) #[[ATTR4:[0-9]+]]
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = call noundef range(i32 0, 8) i32 @mask(i32 noundef [[X]]) #[[ATTR5:[0-9]+]]
 ; ATTRIBUTOR-NEXT:    ret i32 [[R]]
 ;
 ; FNATTRS-LABEL: define range(i32 0, 10) i32 @range_holds_callee(
@@ -254,3 +255,62 @@ define range(i32 0, 10) <2 x i32> @vec_range(<2 x i32> noundef %x) {
 ;
   ret <2 x i32> %x
 }
+
+; The call site nonnull may not hold for the callee return value.
+define ptr @get_load() {
+; CHECK-LABEL: define noundef ptr @get_load(
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr @gp, align 8, !noundef [[META0:![0-9]+]]
+; CHECK-NEXT:    ret ptr [[V]]
+;
+  %v = load ptr, ptr @gp, align 8, !noundef !0
+  ret ptr %v
+}
+
+; FIXME: FunctionAttrs ignores the call site nonnull.
+define nonnull ptr @callsite_nonnull() {
+; ATTRIBUTOR-LABEL: define nonnull ptr @callsite_nonnull(
+; ATTRIBUTOR-SAME: ) #[[ATTR2]] {
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = call nonnull ptr @get_load() #[[ATTR6:[0-9]+]]
+; ATTRIBUTOR-NEXT:    ret ptr [[R]]
+;
+; FNATTRS-LABEL: define noundef nonnull ptr @callsite_nonnull(
+; FNATTRS-SAME: ) #[[ATTR3:[0-9]+]] {
+; FNATTRS-NEXT:    [[R:%.*]] = call nonnull ptr @get_load()
+; FNATTRS-NEXT:    ret ptr [[R]]
+;
+  %r = call nonnull ptr @get_load()
+  ret ptr %r
+}
+
+define ptr @get_load_nonnull() {
+; CHECK-LABEL: define noundef nonnull ptr @get_load_nonnull(
+; CHECK-SAME: ) #[[ATTR2]] {
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr @gp, align 8, !nonnull [[META0]], !noundef [[META0]]
+; CHECK-NEXT:    ret ptr [[V]]
+;
+  %v = load ptr, ptr @gp, align 8, !nonnull !0, !noundef !0
+  ret ptr %v
+}
+
+define nonnull ptr @callsite_nonnull_holds() {
+; ATTRIBUTOR-LABEL: define noundef nonnull ptr @callsite_nonnull_holds(
+; ATTRIBUTOR-SAME: ) #[[ATTR2]] {
+; ATTRIBUTOR-NEXT:    [[R:%.*]] = call noundef nonnull ptr @get_load_nonnull() #[[ATTR6]]
+; ATTRIBUTOR-NEXT:    ret ptr [[R]]
+;
+; FNATTRS-LABEL: define noundef nonnull ptr @callsite_nonnull_holds(
+; FNATTRS-SAME: ) #[[ATTR3]] {
+; FNATTRS-NEXT:    [[R:%.*]] = call nonnull ptr @get_load_nonnull()
+; FNATTRS-NEXT:    ret ptr [[R]]
+;
+  %r = call nonnull ptr @get_load_nonnull()
+  ret ptr %r
+}
+
+!0 = !{}
+;.
+; ATTRIBUTOR: [[META0]] = !{}
+;.
+; FNATTRS: [[META0]] = !{}
+;.
