@@ -6,11 +6,11 @@
 ; RUN: llvm-as a.ll -o a.bc
 ; RUN: llvm-as b.ll -o b.bc
 
-; RUN: ld.lld --export-dynamic-symbol=kern --lto-emit-asm --plugin-opt=mcpu=sm_70 --plugin-opt=-mattr=+ptx70 a.bc b.bc -o out
+; RUN: ld.lld --export-dynamic-symbol=kern --lto-emit-asm --plugin-opt=mcpu=sm_90 a.bc b.bc -o out
 ; RUN: FileCheck %s --check-prefix=PTX < out.lto.s
 
-; PTX:      .version 7.0
-; PTX-NEXT: .target sm_70
+; PTX:      .version 7.8
+; PTX-NEXT: .target sm_90
 ; PTX-NEXT: .address_size 64
 ; PTX-NOT:  .func
 ; PTX:      .visible .entry kern(
