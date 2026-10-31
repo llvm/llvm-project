@@ -233,22 +233,18 @@ define float @caller2(ptr %error_ref) {
 ;
 ; CHECK-i386-LABEL: caller2:
 ; CHECK-i386:       ## %bb.0: ## %entry
-; CHECK-i386-NEXT:    pushl %edi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-i386-NEXT:    pushl %esi
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-i386-NEXT:    subl $20, %esp
-; CHECK-i386-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-i386-NEXT:    .cfi_offset %esi, -12
-; CHECK-i386-NEXT:    .cfi_offset %edi, -8
-; CHECK-i386-NEXT:    movl 32(%esp), %esi
-; CHECK-i386-NEXT:    leal 16(%esp), %edi
+; CHECK-i386-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-i386-NEXT:    subl $8, %esp
+; CHECK-i386-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-i386-NEXT:    .cfi_offset %esi, -8
+; CHECK-i386-NEXT:    leal 4(%esp), %esi
 ; CHECK-i386-NEXT:  LBB2_1: ## %bb_loop
 ; CHECK-i386-NEXT:    ## =>This Inner Loop Header: Depth=1
-; CHECK-i386-NEXT:    movl $0, 16(%esp)
-; CHECK-i386-NEXT:    movl %edi, (%esp)
+; CHECK-i386-NEXT:    movl $0, 4(%esp)
+; CHECK-i386-NEXT:    movl %esi, (%esp)
 ; CHECK-i386-NEXT:    calll _foo
-; CHECK-i386-NEXT:    movl 16(%esp), %ecx
+; CHECK-i386-NEXT:    movl 4(%esp), %ecx
 ; CHECK-i386-NEXT:    testl %ecx, %ecx
 ; CHECK-i386-NEXT:    jne LBB2_4
 ; CHECK-i386-NEXT:  ## %bb.2: ## %cont
@@ -262,16 +258,16 @@ define float @caller2(ptr %error_ref) {
 ; CHECK-i386-NEXT:    jbe LBB2_1
 ; CHECK-i386-NEXT:  ## %bb.3: ## %bb_end
 ; CHECK-i386-NEXT:    movzbl 8(%ecx), %eax
-; CHECK-i386-NEXT:    movb %al, (%esi)
+; CHECK-i386-NEXT:    movl 16(%esp), %edx
+; CHECK-i386-NEXT:    movb %al, (%edx)
 ; CHECK-i386-NEXT:    fldz
 ; CHECK-i386-NEXT:  LBB2_4: ## %handler
 ; CHECK-i386-NEXT:    fstp %st(0)
 ; CHECK-i386-NEXT:    movl %ecx, (%esp)
 ; CHECK-i386-NEXT:    calll _free
 ; CHECK-i386-NEXT:    fld1
-; CHECK-i386-NEXT:    addl $20, %esp
+; CHECK-i386-NEXT:    addl $8, %esp
 ; CHECK-i386-NEXT:    popl %esi
-; CHECK-i386-NEXT:    popl %edi
 ; CHECK-i386-NEXT:    retl
 ; Access part of the error object and save it to error_ref
 
