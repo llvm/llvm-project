@@ -27,8 +27,9 @@ static inline char *call_asctime_r(struct tm *tm_data, int year, int month,
 // asctime and asctime_r share the same code and thus didn't repeat all the
 // tests from asctime. Added couple of validation tests.
 TEST_F(LlvmLibcAsctimeR, Nullptr) {
-  char buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
-  struct tm tm_data;
+  [[maybe_unused]] char
+      buffer[LIBC_NAMESPACE::time_constants::ASCTIME_BUFFER_SIZE];
+  [[maybe_unused]] struct tm tm_data;
   EXPECT_DEATH([] { LIBC_NAMESPACE::asctime_r(nullptr, nullptr); },
                WITH_SIGNAL(-1));
   EXPECT_DEATH([&] { LIBC_NAMESPACE::asctime_r(nullptr, buffer); },
