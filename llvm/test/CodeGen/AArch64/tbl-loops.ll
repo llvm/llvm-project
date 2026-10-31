@@ -1517,8 +1517,7 @@ define void @loop2_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    fcvtzs v1.4s, v1.4s
 ; CHECK-NEXT:    xtn v2.4h, v2.4s
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    zip1 v1.8h, v2.8h, v1.8h
-; CHECK-NEXT:    xtn v1.8b, v1.8h
+; CHECK-NEXT:    trn1 v1.8b, v2.8b, v1.8b
 ; CHECK-NEXT:    str d1, [x0], #8
 ; CHECK-NEXT:    b.ne .LBB4_8
 ; CHECK-NEXT:  // %bb.9: // %middle.block
@@ -2123,9 +2122,9 @@ define void @loop4_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-NEXT:    zip1 v2.4h, v2.4h, v3.4h
 ; CHECK-NEXT:    zip2 v6.4h, v4.4h, v1.4h
 ; CHECK-NEXT:    zip1 v1.4h, v4.4h, v1.4h
-; CHECK-NEXT:    zip1 v3.8h, v6.8h, v5.8h
-; CHECK-NEXT:    zip1 v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    uzp1 v1.16b, v1.16b, v3.16b
+; CHECK-NEXT:    trn1 v3.8b, v6.8b, v5.8b
+; CHECK-NEXT:    trn1 v1.8b, v1.8b, v2.8b
+; CHECK-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-NEXT:    str q1, [x0], #16
 ; CHECK-NEXT:    b.ne .LBB6_8
 ; CHECK-NEXT:  // %bb.9: // %middle.block
@@ -2231,9 +2230,9 @@ define void @loop4_intrinsic(ptr noalias nocapture noundef writeonly %dst, ptr n
 ; CHECK-GI-NEXT:    zip1 v2.4h, v2.4h, v3.4h
 ; CHECK-GI-NEXT:    zip2 v6.4h, v4.4h, v1.4h
 ; CHECK-GI-NEXT:    zip1 v1.4h, v4.4h, v1.4h
-; CHECK-GI-NEXT:    zip1 v3.8h, v6.8h, v5.8h
-; CHECK-GI-NEXT:    zip1 v1.8h, v1.8h, v2.8h
-; CHECK-GI-NEXT:    uzp1 v1.16b, v1.16b, v3.16b
+; CHECK-GI-NEXT:    trn1 v3.8b, v6.8b, v5.8b
+; CHECK-GI-NEXT:    trn1 v1.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    mov v1.d[1], v3.d[0]
 ; CHECK-GI-NEXT:    str q1, [x0], #16
 ; CHECK-GI-NEXT:    b.ne .LBB6_8
 ; CHECK-GI-NEXT:  // %bb.9: // %middle.block

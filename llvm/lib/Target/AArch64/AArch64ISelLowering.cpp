@@ -24265,6 +24265,19 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
       N0.hasOneUse() && (VT == MVT::v8i8 || VT == MVT::v4i16))
     return DAG.getBuildVector(VT, DL, N0->ops());
 
+  // trunc(zip1(concat(a, undef), concat(b, undef))) -> trn1(a, b)
+  {
+    using namespace llvm::SDPatternMatch;
+    SDValue A, B;
+    if (sd_match(N0,
+                 m_Node(AArch64ISD::ZIP1,
+                        m_Node(ISD::CONCAT_VECTORS, m_Value(A), m_Undef()),
+                        m_Node(ISD::CONCAT_VECTORS, m_Value(B), m_Undef()))) &&
+        A.getScalarValueSizeInBits() == 2 * VT.getScalarSizeInBits())
+      return DAG.getNode(AArch64ISD::TRN1, DL, VT,
+                         DAG.getNode(AArch64ISD::NVCAST, DL, VT, A),
+                         DAG.getNode(AArch64ISD::NVCAST, DL, VT, B));
+  }
   return SDValue();
 }
 
