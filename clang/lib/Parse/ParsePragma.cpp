@@ -1310,7 +1310,8 @@ bool Parser::HandlePragmaMSStrictGuardStackCheck(
 
   bool Value = false;
   if (Action & Sema::PSK_Push || Action & Sema::PSK_Set) {
-    const IdentifierInfo *II = Tok.getIdentifierInfo();
+    const IdentifierInfo *II =
+        Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
     if (II && II->isStr("off")) {
       PP.Lex(Tok);
       Value = false;
@@ -1553,7 +1554,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
   if (StateOption) {
     ConsumeAnnotationToken();
     SourceLocation StateLoc = Toks[0].getLocation();
-    IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
+    IdentifierInfo *StateInfo =
+        Toks[0].is(tok::identifier) ? Toks[0].getIdentifierInfo() : nullptr;
 
     bool Valid =
         StateInfo &&
@@ -1583,7 +1585,8 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
     ConsumeAnnotationToken();
 
     SourceLocation StateLoc = Toks[0].getLocation();
-    IdentifierInfo *StateInfo = Toks[0].getIdentifierInfo();
+    IdentifierInfo *StateInfo =
+        Toks[0].is(tok::identifier) ? Toks[0].getIdentifierInfo() : nullptr;
     StringRef IsScalableStr = StateInfo ? StateInfo->getName() : "";
 
     // Look for vectorize_width(fixed|scalable)
@@ -1612,7 +1615,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
       if (Tok.is(tok::comma)) {
         PP.Lex(Tok); // ,
 
-        StateInfo = Tok.getIdentifierInfo();
+        StateInfo = Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
         IsScalableStr = StateInfo ? StateInfo->getName() : "";
 
         if (IsScalableStr != "scalable" && IsScalableStr != "fixed") {
@@ -1860,7 +1863,8 @@ enum class MissingAttributeSubjectRulesRecoveryPoint {
 
 MissingAttributeSubjectRulesRecoveryPoint
 getAttributeSubjectRulesRecoveryPointForToken(const Token &Tok) {
-  if (const auto *II = Tok.getIdentifierInfo()) {
+  if (Tok.is(tok::identifier)) {
+    const auto *II = Tok.getIdentifierInfo();
     if (II->isStr("apply_to"))
       return MissingAttributeSubjectRulesRecoveryPoint::ApplyTo;
     if (II->isStr("any"))
@@ -2028,7 +2032,7 @@ void Parser::HandlePragmaAttribute() {
     ParseMicrosoftDeclSpecs(Attrs);
   } else {
     Diag(Tok, diag::err_pragma_attribute_expected_attribute_syntax);
-    if (Tok.getIdentifierInfo()) {
+    if (Tok.is(tok::identifier) || tok::getKeywordSpelling(Tok.getKind())) {
       // If we suspect that this is an attribute suggest the use of
       // '__attribute__'.
       if (ParsedAttr::getParsedKind(
@@ -2141,7 +2145,8 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
   Token Tok;
   PP.LexUnexpandedToken(Tok);
 
-  const IdentifierInfo *PushPop = Tok.getIdentifierInfo();
+  const IdentifierInfo *PushPop =
+      Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
 
   const IdentifierInfo *VisType;
   if (PushPop && PushPop->isStr("pop")) {
@@ -2154,7 +2159,9 @@ void PragmaGCCVisibilityHandler::HandlePragma(Preprocessor &PP,
       return;
     }
     PP.LexUnexpandedToken(Tok);
-    VisType = Tok.getIdentifierInfo();
+    VisType = Tok.isOneOf(tok::identifier, tok::kw_default, tok::kw_protected)
+                  ? Tok.getIdentifierInfo()
+                  : nullptr;
     if (!VisType) {
       PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
         << "visibility";
@@ -2842,7 +2849,8 @@ void PragmaMSPointersToMembers::HandlePragma(Preprocessor &PP,
     return;
   }
   PP.Lex(Tok);
-  const IdentifierInfo *Arg = Tok.getIdentifierInfo();
+  const IdentifierInfo *Arg =
+      Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
   if (!Arg) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
       << "pointers_to_members";
@@ -2858,7 +2866,7 @@ void PragmaMSPointersToMembers::HandlePragma(Preprocessor &PP,
       if (Tok.is(tok::comma)) {
         PP.Lex(Tok);
 
-        Arg = Tok.getIdentifierInfo();
+        Arg = Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
         if (!Arg) {
           PP.Diag(Tok.getLocation(),
                   diag::err_pragma_pointers_to_members_unknown_kind)
@@ -2937,7 +2945,8 @@ void PragmaMSVtorDisp::HandlePragma(Preprocessor &PP,
   PP.Lex(Tok);
 
   Sema::PragmaMsStackAction Action = Sema::PSK_Set;
-  const IdentifierInfo *II = Tok.getIdentifierInfo();
+  const IdentifierInfo *II =
+      Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
   if (II) {
     if (II->isStr("push")) {
       // #pragma vtordisp(push, mode)
@@ -2965,7 +2974,8 @@ void PragmaMSVtorDisp::HandlePragma(Preprocessor &PP,
 
   uint64_t Value = 0;
   if (Action & Sema::PSK_Push || Action & Sema::PSK_Set) {
-    const IdentifierInfo *II = Tok.getIdentifierInfo();
+    const IdentifierInfo *II =
+        Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
     if (II && II->isStr("off")) {
       PP.Lex(Tok);
       Value = 0;
@@ -3338,7 +3348,7 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
   }
   if (Tok.isNot(tok::identifier)) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_invalid_argument)
-      << PP.getSpelling(Tok);
+        << PP.getSpelling(Tok);
     return;
   }
   const IdentifierInfo *II = Tok.getIdentifierInfo();
@@ -3348,14 +3358,14 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
     IsOn = true;
   } else if (!II->isStr("off")) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_invalid_argument)
-      << PP.getSpelling(Tok);
+        << PP.getSpelling(Tok);
     return;
   }
   PP.Lex(Tok);
 
   if (Tok.isNot(tok::eod)) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_extra_argument)
-      << PP.getSpelling(Tok);
+        << PP.getSpelling(Tok);
     return;
   }
 
@@ -3883,11 +3893,12 @@ bool Parser::HandlePragmaMSOptimize(StringRef PragmaName,
         << PragmaName << /*Expected=*/true << "'on' or 'off'";
     return false;
   }
-  IdentifierInfo *II = Tok.getIdentifierInfo();
+  IdentifierInfo *II =
+      Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
   if (!II || (!II->isStr("on") && !II->isStr("off"))) {
     PP.Diag(PragmaLocation, diag::warn_pragma_invalid_argument)
-        << PP.getSpelling(Tok) << PragmaName << /*Expected=*/true
-        << "'on' or 'off'";
+        << (Tok.isAnnotation() ? "" : PP.getSpelling(Tok)) << PragmaName
+        << /*Expected=*/true << "'on' or 'off'";
     return false;
   }
   bool IsOn = II->isStr("on");
@@ -3968,7 +3979,8 @@ void PragmaForceCUDAHostDeviceHandler::HandlePragma(
   Token FirstTok = Tok;
 
   PP.Lex(Tok);
-  IdentifierInfo *Info = Tok.getIdentifierInfo();
+  IdentifierInfo *Info =
+      Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
   if (!Info || (!Info->isStr("begin") && !Info->isStr("end"))) {
     PP.Diag(FirstTok.getLocation(),
             diag::warn_pragma_force_cuda_host_device_bad_arg);
@@ -4227,21 +4239,23 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
                                       Token &FirstToken) {
   Token Tok;
   PP.Lex(Tok);
-  IdentifierInfo *II = Tok.getIdentifierInfo();
+  IdentifierInfo *II =
+      Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
 
   if (!II || !II->isStr("intrinsic")) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
-        << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true << "'intrinsic'";
+        << (Tok.isAnnotation() ? "" : PP.getSpelling(Tok)) << "riscv"
+        << /*Expected=*/true << "'intrinsic'";
     return;
   }
 
   PP.Lex(Tok);
-  II = Tok.getIdentifierInfo();
+  II = Tok.is(tok::identifier) ? Tok.getIdentifierInfo() : nullptr;
   if (!II || !(II->isStr("vector") || II->isStr("sifive_vector") ||
                II->isStr("andes_vector"))) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
-        << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true
-        << "'vector', 'sifive_vector' or 'andes_vector'";
+        << (Tok.isAnnotation() ? "" : PP.getSpelling(Tok)) << "riscv"
+        << /*Expected=*/true << "'vector', 'sifive_vector' or 'andes_vector'";
     return;
   }
 

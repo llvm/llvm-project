@@ -1179,6 +1179,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed crashes when `_Pragma` is used inside another pragma. (#GH225035)
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
