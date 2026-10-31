@@ -577,6 +577,9 @@ Constant *FunctionSpecializer::getConstantStackValue(CallInst *Call,
 //       ret void
 //     }
 //
+// If a stack value is promoted, every occurence in the call arguments
+// must be promoteable and have the same replacement.
+//
 // See if there are any new constant values for the callers of \p F via
 // stack variables and promote them to global variables.
 void FunctionSpecializer::promoteConstantStackValues(Function *F) {
@@ -589,21 +592,38 @@ void FunctionSpecializer::promoteConstantStackValues(Function *F) {
     if (!Solver.isBlockExecutable(Call->getParent()))
       continue;
 
+    llvm::DenseSet<Value *> NoPromote;
+    SmallVector<unsigned> ConstValArgs;
     for (const Use &U : Call->args()) {
       unsigned Idx = Call->getArgOperandNo(&U);
       Value *ArgOp = Call->getArgOperand(Idx);
       Type *ArgOpType = ArgOp->getType();
 
-      if (!Call->onlyReadsMemory(Idx) || !ArgOpType->isPointerTy())
+      if (!Call->onlyReadsMemory(Idx) || !ArgOpType->isPointerTy()) {
+        NoPromote.insert(ArgOp);
         continue;
+      }
 
       auto *ConstVal = getConstantStackValue(Call, ArgOp);
-      if (!ConstVal)
+      if (ConstVal)
+        ConstValArgs.push_back(Idx);
+    }
+
+    llvm::DenseMap<Value *, Value *> ArgVals;
+    for (unsigned Idx : ConstValArgs) {
+      Value *ArgOp = Call->getArgOperand(Idx);
+
+      if (NoPromote.contains(ArgOp))
         continue;
 
-      Value *GV = new GlobalVariable(M, ConstVal->getType(), true,
-                                     GlobalValue::InternalLinkage, ConstVal,
-                                     "specialized.arg." + Twine(++NGlobals));
+      Value *GV = ArgVals.lookup_or(ArgOp, nullptr);
+      if (!GV) {
+        auto *ConstVal = getConstantStackValue(Call, ArgOp);
+        GV = new GlobalVariable(M, ConstVal->getType(), true,
+                                GlobalValue::InternalLinkage, ConstVal,
+                                "specialized.arg." + Twine(++NGlobals));
+        ArgVals[ArgOp] = GV;
+      }
       Call->setArgOperand(Idx, GV);
     }
   }
