@@ -155,33 +155,37 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
     for (Value v : emptyTensors) {
       auto emptyTensorOp = v.getDefiningOp<tensor::EmptyOp>();
       assert(emptyTensorOp && "expected tensor.empty op");
-      // Find the use to be replaced from the use-def chain.
-      auto iter = llvm::find_if(
-          visitedOpOperands, [&emptyTensorOp](OpOperand *opOperand) {
-            return llvm::count(emptyTensorOp->getUses(), *opOperand);
-          });
-
-      assert(iter != visitedOpOperands.end() && "could not find use");
-      OpOperand *useToBeReplaced = *iter;
-      Operation *user = useToBeReplaced->getOwner();
-      auto replacement = subsetsExtractionFn(rewriter, op, emptyTensorOp, user);
-      if (!replacement)
-        continue;
-      if (emptyTensorOp == replacement.getDefiningOp())
-        continue;
-      if (replacement.getType() != v.getType()) {
-        if (cast<ShapedType>(replacement.getType()).getElementType() !=
-            cast<ShapedType>(v.getType()).getElementType())
-          continue;
-        rewriter.setInsertionPointAfterValue(replacement);
-        replacement = tensor::CastOp::create(rewriter, v.getLoc(), v.getType(),
-                                             replacement);
+      // Find all the uses that are in the reverse use-def chain and whose
+      // immediate defining op is the tensor.empty op.
+      SmallVector<OpOperand *> usesForReplacement;
+      for (OpOperand *opOperand : visitedOpOperands) {
+        if (llvm::count(emptyTensorOp->getUses(), *opOperand))
+          usesForReplacement.push_back(opOperand);
       }
-      // Replace the specific use of the tensor::EmptyOp.
-      rewriter.modifyOpInPlace(user, [&]() {
-        user->setOperand(useToBeReplaced->getOperandNumber(), replacement);
-      });
-      state.resetCache();
+
+      assert(!usesForReplacement.empty() && "could not find any use");
+      for (OpOperand *useToBeReplaced : usesForReplacement) {
+        Operation *user = useToBeReplaced->getOwner();
+        auto replacement =
+            subsetsExtractionFn(rewriter, op, emptyTensorOp, user);
+        if (!replacement)
+          continue;
+        if (emptyTensorOp == replacement.getDefiningOp())
+          continue;
+        if (replacement.getType() != v.getType()) {
+          if (cast<ShapedType>(replacement.getType()).getElementType() !=
+              cast<ShapedType>(v.getType()).getElementType())
+            continue;
+          rewriter.setInsertionPointAfterValue(replacement);
+          replacement = tensor::CastOp::create(rewriter, v.getLoc(),
+                                               v.getType(), replacement);
+        }
+        // Replace the specific use of the tensor::EmptyOp.
+        rewriter.modifyOpInPlace(user, [&]() {
+          user->setOperand(useToBeReplaced->getOperandNumber(), replacement);
+        });
+        state.resetCache();
+      }
     }
 
     return WalkResult::advance();
