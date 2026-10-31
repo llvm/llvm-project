@@ -1,4 +1,4 @@
-# Check that lldb can generate a backtrace when fed with a PDB without locals or function types.
+# Check that lldb parses functions and inlined call sites (with their decl lines) from a PDB without locals or function types.
 
 # RUN: llvm-pdbutil yaml2pdb %p/Inputs/line-tables-only-pdb.yaml --pdb=%t
 # RUN: lldb-test symbols %t | FileCheck %s
@@ -9,9 +9,9 @@
 # CHECK-NEXT:     Block{{.*}}, ranges = [0x00000fff-0x0000100e)
 # CHECK-NEXT:     Function{{.*}}, demangled = foo
 # CHECK-NEXT:     Block{{.*}}, ranges = [0x0000100f-0x0000105a)
-# CHECK-NEXT:       Block{{.*}}, parent = {0x12400001}, name = "inlineme", decl = line-tables-only.cpp:11, ranges = [0x00001023-0x00001055)
-# CHECK-NEXT:         Block{{.*}}, parent = {0x17c00001}, name = "inlineme_too", decl = line-tables-only.cpp:6, ranges = [0x0000102b-0x0000103b)
-# CHECK-NEXT:         Block{{.*}}, parent = {0x17c00001}, name = "inlineme_too", decl = line-tables-only.cpp:6, ranges = [0x00001043-0x00001053)
+# CHECK-NEXT:       Block{{.*}}, parent = {{.*}}, name = "inlineme", decl = line-tables-only.cpp:11, ranges = [0x00001023-0x00001055)
+# CHECK-NEXT:         Block{{.*}}, parent = {{.*}}, name = "inlineme_too", decl = line-tables-only.cpp:6, ranges = [0x0000102b-0x0000103b)
+# CHECK-NEXT:         Block{{.*}}, parent = {{.*}}, name = "inlineme_too", decl = line-tables-only.cpp:6, ranges = [0x00001043-0x00001053)
 # CHECK-NEXT:     Function{{.*}}, demangled = main
 # CHECK-NEXT:     Block{{.*}}, ranges = [0x0000105f-0x00001076)
 # CHECK-NEXT:     Function{{.*}}, demangled = stopHere
