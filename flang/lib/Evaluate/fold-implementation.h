@@ -2463,10 +2463,11 @@ Expr<T> FoldOperation(FoldingContext &context, ConditionalExpr<T> &&x) {
 template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
   if (auto array{ApplyElementwise(context, x,
-          std::function<Expr<T>(Expr<T> &&, Expr<T> &&)>{[=](Expr<T> &&l,
-                                                             Expr<T> &&r) {
-            return Expr<T>{Extremum<T>{x.ordering, std::move(l), std::move(r)}};
-          }})}) {
+          std::function<Expr<T>(Expr<T> &&, Expr<T> &&)>{
+              [ordering{x.ordering}](Expr<T> &&l, Expr<T> &&r) {
+                return Expr<T>{
+                    Extremum<T>{ordering, std::move(l), std::move(r)}};
+              }})}) {
     return *array;
   }
   if (auto folded{OperandsAreConstants(x)}) {
@@ -2569,9 +2570,9 @@ Expr<Type<TypeCategory::Real, KIND>> FoldOperation(
   using Result = Type<TypeCategory::Real, KIND>;
   if (auto array{ApplyElementwise(context, x,
           std::function<Expr<Result>(Expr<Operand> &&)>{
-              [=](Expr<Operand> &&operand) {
+              [isImaginaryPart{x.isImaginaryPart}](Expr<Operand> &&operand) {
                 return Expr<Result>{ComplexComponent<KIND>{
-                    x.isImaginaryPart, std::move(operand)}};
+                    isImaginaryPart, std::move(operand)}};
               }})}) {
     return *array;
   }
