@@ -461,6 +461,12 @@ public:
   AMDGPU::InstCounterType getCounterFromEvent(HWEvents E) const {
     return WCG->getCounterFromEvent(E);
   }
+
+  /// Returns the appropriate wait to abide by the callable-return ABI:
+  /// - All non-VScnt/STOREcnt, non-VMcnt/LOADcnt are zero'd
+  /// - VMcnt/LOADcnt is zero'd if there are any non-VMEM_INV events
+  AMDGPU::Waitcnt
+  getFunctionReturnWaitcnt(const WaitcntBrackets &ScoreBrackets) const;
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -566,8 +572,7 @@ public:
   void simplifyVmemInvOnlyWait(AMDGPU::Waitcnt &Wait) const {
     // LOAD_CNT also includes store events on targets without VScnt.
     HWEvents LoadEvents =
-        PendingEvents & (Context->getWaitEvents(AMDGPU::LOAD_CNT) -
-                         Context->getWaitEvents(AMDGPU::STORE_CNT));
+        PendingEvents & Context->getWaitEvents(AMDGPU::LOAD_CNT);
     if (LoadEvents == HWEvents::VMEM_INV_ACCESS)
       Wait.clear(AMDGPU::LOAD_CNT);
   }
@@ -650,10 +655,19 @@ public:
     }
   }
 
-  void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(AMDGPU::STORE_CNT,
-               getScoreUB(AMDGPU::STORE_CNT) + getLimit(AMDGPU::STORE_CNT));
-    PendingEvents |= Context->getWaitEvents(AMDGPU::STORE_CNT);
+  void setIndeterminateStateAtFunctionBoundary(bool OnReturn) {
+    // On return the ABI leaves VScnt/STOREcnt possibly outstanding. On entry
+    // we wait for all counters except VScnt/StoreCnt.
+    if (Context->ST.hasVscnt() || Context->ST.hasExtendedWaitCounts()) {
+      setIndeterminate(AMDGPU::STORE_CNT);
+    }
+
+    // On return VMCnt/LOADcnt can be outstanding if there're trailing
+    // GLOBAL_INV or BUFFER_INV; see also simplifyVmemInvOnlyWait.
+    if (OnReturn && (Context->ST.hasBufferInvInst() ||
+                     Context->ST.hasExtendedWaitCounts())) {
+      setIndeterminate(AMDGPU::LOAD_CNT, HWEvents::VMEM_INV_ACCESS);
+    }
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
@@ -715,6 +729,15 @@ private:
     if (getScoreRange(AMDGPU::EXP_CNT) > getLimit(AMDGPU::EXP_CNT))
       ScoreLBs[AMDGPU::EXP_CNT] =
           ScoreUBs[AMDGPU::EXP_CNT] - getLimit(AMDGPU::EXP_CNT);
+  }
+
+  void setIndeterminate(AMDGPU::InstCounterType T, HWEvents E) {
+    setScoreUB(T, getScoreUB(T) + getLimit(T));
+    PendingEvents |= E;
+  }
+
+  void setIndeterminate(AMDGPU::InstCounterType T) {
+    setIndeterminate(T, Context->getWaitEvents(T));
   }
 
   void setRegScore(MCRegister Reg, AMDGPU::InstCounterType T, unsigned Val) {
@@ -826,6 +849,13 @@ private:
 };
 
 SIInsertWaitcnts::BlockInfo::~BlockInfo() = default;
+
+AMDGPU::Waitcnt SIInsertWaitcnts::getFunctionReturnWaitcnt(
+    const WaitcntBrackets &ScoreBrackets) const {
+  AMDGPU::Waitcnt W = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
+  ScoreBrackets.simplifyVmemInvOnlyWait(W);
+  return W;
+}
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
 public:
@@ -2354,10 +2384,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
     // NOTE: this could be improved with knowledge of all call sites or
     //   with knowledge of the called routines.
     ReturnInsts.insert(&MI);
-    AMDGPU::Waitcnt AllZeroWait =
-        WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
-    ScoreBrackets.simplifyVmemInvOnlyWait(AllZeroWait);
-    Wait = AllZeroWait;
+    Wait = getFunctionReturnWaitcnt(ScoreBrackets);
     break;
   }
   case AMDGPU::S_ENDPGM:
@@ -2755,10 +2782,10 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       ScoreBrackets->setPendingFlat();
     }
   } else if (Inst.isCall()) {
-    // Act as a wait on everything, but AsyncCnt and TensorCnt are never
-    // included in such blanket waits.
-    ScoreBrackets->applyWaitcnt(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
-    ScoreBrackets->setStateOnFunctionEntryOrReturn();
+    // Update scorecard according to callable return ABI. See also the
+    // handling of S_SETPC_B64_return.
+    ScoreBrackets->applyWaitcnt(getFunctionReturnWaitcnt(*ScoreBrackets));
+    ScoreBrackets->setIndeterminateStateAtFunctionBoundary(/*OnReturn=*/true);
   } else if (TII.isVINTERP(Inst)) {
     int64_t Imm = TII.getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
     ScoreBrackets->applyWaitcnt(AMDGPU::EXP_CNT, static_cast<unsigned>(Imm));
@@ -3540,7 +3567,8 @@ bool SIInsertWaitcnts::run() {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(this);
-    NonKernelInitialState->setStateOnFunctionEntryOrReturn();
+    NonKernelInitialState->setIndeterminateStateAtFunctionBoundary(
+        /*OnReturn=*/false);
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
     Modified = true;
