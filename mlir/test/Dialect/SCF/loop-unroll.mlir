@@ -24,9 +24,11 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //  UNROLL-BY-2-SAME:  %[[MEM:.*3]]: memref<?xf32>
 //
 //   UNROLL-BY-2-DAG:  %[[V0:.*]] = arith.subi %[[UB]], %[[LB]] : index
+//   UNROLL-BY-2-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//   UNROLL-BY-2-DAG:  %[[V0_NONNEG:.*]] = arith.maxsi %[[V0]], %[[C0]] : index
 //   UNROLL-BY-2-DAG:  %[[C1:.*]] = arith.constant 1 : index
 //   UNROLL-BY-2-DAG:  %[[V1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
-//   UNROLL-BY-2-DAG:  %[[V2:.*]] = arith.addi %[[V0]], %[[V1]] : index
+//   UNROLL-BY-2-DAG:  %[[V2:.*]] = arith.addi %[[V0_NONNEG]], %[[V1]] : index
 //       Compute trip count in V3.
 //   UNROLL-BY-2-DAG:  %[[V3:.*]] = arith.divui %[[V2]], %[[STEP]] : index
 //       Store unroll factor in C2.
@@ -57,9 +59,11 @@ func.func @dynamic_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
 //  UNROLL-BY-3-SAME:  %[[MEM:.*3]]: memref<?xf32>
 //
 //   UNROLL-BY-3-DAG:  %[[V0:.*]] = arith.subi %[[UB]], %[[LB]] : index
+//   UNROLL-BY-3-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//   UNROLL-BY-3-DAG:  %[[V0_NONNEG:.*]] = arith.maxsi %[[V0]], %[[C0]] : index
 //   UNROLL-BY-3-DAG:  %[[C1:.*]] = arith.constant 1 : index
 //   UNROLL-BY-3-DAG:  %[[V1:.*]] = arith.subi %[[STEP]], %[[C1]] : index
-//   UNROLL-BY-3-DAG:  %[[V2:.*]] = arith.addi %[[V0]], %[[V1]] : index
+//   UNROLL-BY-3-DAG:  %[[V2:.*]] = arith.addi %[[V0_NONNEG]], %[[V1]] : index
 //       Compute trip count in V3.
 //   UNROLL-BY-3-DAG:  %[[V3:.*]] = arith.divui %[[V2]], %[[STEP]] : index
 //       Store unroll factor in C3.
@@ -155,6 +159,73 @@ func.func @dynamic_loop_unroll_inner_by_2(
 //  UNROLL-INNER-BY-2-NEXT:    }
 //  UNROLL-INNER-BY-2-NEXT:  }
 //  UNROLL-INNER-BY-2-NEXT:  return
+
+func.func @dynamic_unsigned_loop_unroll(%arg0 : index, %arg1 : index, %arg2 : index,
+                          %arg3: memref<?xf32>) {
+  %0 = arith.constant 7.0 : f32
+  scf.for unsigned %i0 = %arg0 to %arg1 step %arg2 {
+    memref.store %0, %arg3[%i0] : memref<?xf32>
+  }
+  return
+}
+// UNROLL-BY-2-LABEL: func @dynamic_unsigned_loop_unroll
+//  UNROLL-BY-2-SAME:  %[[LB:.*0]]: index,
+//  UNROLL-BY-2-SAME:  %[[UB:.*1]]: index,
+//  UNROLL-BY-2-SAME:  %[[STEP:.*2]]: index,
+//  UNROLL-BY-2-SAME:  %[[MEM:.*3]]: memref<?xf32>
+//
+//   UNROLL-BY-2-DAG:  %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] : index
+//   UNROLL-BY-2-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//   UNROLL-BY-2-DAG:  %[[NONEMPTY:.*]] = arith.cmpi ult, %[[LB]], %[[UB]] : index
+//   UNROLL-BY-2-DAG:  %[[NONNEG:.*]] = arith.select %[[NONEMPTY]], %[[DIFF]], %[[C0]] : index
+//   UNROLL-BY-2-DAG:  %[[C1:.*]] = arith.constant 1 : index
+//   UNROLL-BY-2-DAG:  %[[STEP_MINUS_ONE:.*]] = arith.subi %[[STEP]], %[[C1]] : index
+//   UNROLL-BY-2-DAG:  %[[SUM:.*]] = arith.addi %[[NONNEG]], %[[STEP_MINUS_ONE]] : index
+//   UNROLL-BY-2-DAG:  %[[TRIP_COUNT:.*]] = arith.divui %[[SUM]], %[[STEP]] : index
+//   UNROLL-BY-2-DAG:  %[[C2:.*]] = arith.constant 2 : index
+//   UNROLL-BY-2-DAG:  %[[REM:.*]] = arith.remsi %[[TRIP_COUNT]], %[[C2]] : index
+//   UNROLL-BY-2-DAG:  %[[EVEN:.*]] = arith.subi %[[TRIP_COUNT]], %[[REM]] : index
+//   UNROLL-BY-2-DAG:  %[[UB_OFFSET:.*]] = arith.muli %[[EVEN]], %[[STEP]] : index
+//   UNROLL-BY-2-DAG:  %[[UNROLLED_UB:.*]] = arith.addi %[[LB]], %[[UB_OFFSET]] : index
+//   UNROLL-BY-2-DAG:  %[[UNROLLED_STEP:.*]] = arith.muli %[[STEP]], %[[C2]] : index
+//   UNROLL-BY-2:  scf.for unsigned %[[IV:.*]] = %[[LB]] to %[[UNROLLED_UB]] step %[[UNROLLED_STEP]] {
+//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-2:    memref.store
+//  UNROLL-BY-2-NEXT:  }
+//  UNROLL-BY-2-NEXT:  scf.for unsigned %[[IV:.*]] = %[[UNROLLED_UB]] to %[[UB]] step %[[STEP]] {
+//  UNROLL-BY-2-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-2-NEXT:  }
+//  UNROLL-BY-2-NEXT:  return
+
+// UNROLL-BY-3-LABEL: func @dynamic_unsigned_loop_unroll
+//  UNROLL-BY-3-SAME:  %[[LB:.*0]]: index,
+//  UNROLL-BY-3-SAME:  %[[UB:.*1]]: index,
+//  UNROLL-BY-3-SAME:  %[[STEP:.*2]]: index,
+//  UNROLL-BY-3-SAME:  %[[MEM:.*3]]: memref<?xf32>
+//
+//   UNROLL-BY-3-DAG:  %[[DIFF:.*]] = arith.subi %[[UB]], %[[LB]] : index
+//   UNROLL-BY-3-DAG:  %[[C0:.*]] = arith.constant 0 : index
+//   UNROLL-BY-3-DAG:  %[[NONEMPTY:.*]] = arith.cmpi ult, %[[LB]], %[[UB]] : index
+//   UNROLL-BY-3-DAG:  %[[NONNEG:.*]] = arith.select %[[NONEMPTY]], %[[DIFF]], %[[C0]] : index
+//   UNROLL-BY-3-DAG:  %[[C1:.*]] = arith.constant 1 : index
+//   UNROLL-BY-3-DAG:  %[[STEP_MINUS_ONE:.*]] = arith.subi %[[STEP]], %[[C1]] : index
+//   UNROLL-BY-3-DAG:  %[[SUM:.*]] = arith.addi %[[NONNEG]], %[[STEP_MINUS_ONE]] : index
+//   UNROLL-BY-3-DAG:  %[[TRIP_COUNT:.*]] = arith.divui %[[SUM]], %[[STEP]] : index
+//   UNROLL-BY-3-DAG:  %[[C3:.*]] = arith.constant 3 : index
+//   UNROLL-BY-3-DAG:  %[[REM:.*]] = arith.remsi %[[TRIP_COUNT]], %[[C3]] : index
+//   UNROLL-BY-3-DAG:  %[[EVEN:.*]] = arith.subi %[[TRIP_COUNT]], %[[REM]] : index
+//   UNROLL-BY-3-DAG:  %[[UB_OFFSET:.*]] = arith.muli %[[EVEN]], %[[STEP]] : index
+//   UNROLL-BY-3-DAG:  %[[UNROLLED_UB:.*]] = arith.addi %[[LB]], %[[UB_OFFSET]] : index
+//   UNROLL-BY-3-DAG:  %[[UNROLLED_STEP:.*]] = arith.muli %[[STEP]], %[[C3]] : index
+//   UNROLL-BY-3:  scf.for unsigned %[[IV:.*]] = %[[LB]] to %[[UNROLLED_UB]] step %[[UNROLLED_STEP]] {
+//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3:    memref.store
+//  UNROLL-BY-3:    memref.store
+//  UNROLL-BY-3-NEXT:  }
+//  UNROLL-BY-3-NEXT:  scf.for unsigned %[[IV:.*]] = %[[UNROLLED_UB]] to %[[UB]] step %[[STEP]] {
+//  UNROLL-BY-3-NEXT:    memref.store %{{.*}}, %[[MEM]][%[[IV]]] : memref<?xf32>
+//  UNROLL-BY-3-NEXT:  }
+//  UNROLL-BY-3-NEXT:  return
 
 // Test that no epilogue clean-up loop is generated because the trip count is
 // a multiple of the unroll factor.
