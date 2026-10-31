@@ -75,14 +75,30 @@ struct __tombstone_traits_assume_aligned_pointer {
     template <class... _Args>
     constexpr __representation(_Args&&... __args) : __payload_(std::forward<_Args>(__args)...), __value_(_Np + 1) {}
 
-    bool __is_tombstone() { return __value_ == _Np + 1; }
+    constexpr bool __is_tombstone() { return __value_ == _Np + 1; }
+
+    static_assert(sizeof(_Tp*) - 1 - (alignof(_Payload) - 1) >= sizeof(_Payload));
+
+    // clang-format off
+#  ifdef _LIBCPP_LITTLE_ENDIAN
+    // TODO: Figure out a better explanation for the layout
+    // On little-endian, the value is the first byte, and how much we can use the remaining 7 bytes depends on the payload's alignment requirements.
+    // If alignof == 1, we have to pad 0 bytes.
+    // If alignof == 2, we have to pad 1 byte.
+    // If alignof == 4, we have to pad 3 bytes.
+    unsigned char __value_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<alignof(_Payload) - 1> __padding_;
+    _LIBCPP_NO_UNIQUE_ADDRESS _Payload __payload_;
+#  else
+    // On big-endian, we actually only need to use the datasize of _Payload because it sits first, which relaxes the requirements for the payload quite a bit
+    // since we can fill all 7 bytes without worrying about alignment. However, to keep things consistent, maintain the same requirements as little-endian.
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Payload __payload_;
-    _LIBCPP_NO_UNIQUE_ADDRESS __padding<sizeof(_Tp*) - 1 - __datasizeof_v<_Payload>> __padding_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __padding<alignof(_Payload) - 1> __padding_;
     unsigned char __value_;
+#  endif
+    // clang-format on
   };
-
-  static constexpr size_t __max_tombstone = 0; // TODO: Calculate this correctly
 };
 
 // TODO: Look into
@@ -197,6 +213,13 @@ union _MaybeTombstone<_Tp, _Payload, true> {
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 ~_MaybeTombstone() = default;
 };
+
+// For a type to have a tombstone, it must have a specialization of __tombstone_traits.
+// __tombstoned_value that can contain one of either _Tp, or a specialized _Payload class/struct, which must occupy
+// the same memory footprint as _Tp.
+// If _Tp has a valid memory represntation of that type, then __tombstoned_value is engaged and contains that
+// instance of _Tp. Otherwise, it is _Payload, which represents an impossible in-memory value of _Tp, as well as any
+// extra metadata which can fit inside.
 
 template <class _Tp, class _Payload>
 struct __tombstoned_value final {
