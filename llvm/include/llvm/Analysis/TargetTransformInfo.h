@@ -1078,6 +1078,12 @@ public:
   /// by referencing its sub-register AX.
   LLVM_ABI bool isTruncateFree(Type *Ty1, Type *Ty2) const;
 
+  /// Return true if a non-strict scalar floor followed by FPToSI can be
+  /// folded into an integer conversion from SrcTy to DestTy. This query
+  /// describes target support, not the profitability of reconstructing
+  /// any additional floating-point uses of the floor result.
+  LLVM_ABI bool canFoldFloorIntoFPToSI(Type *SrcTy, Type *DestTy) const;
+
   /// Return true if it is profitable to hoist instruction in the
   /// then/else to before if.
   LLVM_ABI bool isProfitableToHoist(Instruction *I) const;

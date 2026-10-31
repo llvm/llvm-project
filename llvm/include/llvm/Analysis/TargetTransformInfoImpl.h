@@ -481,6 +481,10 @@ public:
 
   virtual bool isTruncateFree(Type *Ty1, Type *Ty2) const { return false; }
 
+  virtual bool canFoldFloorIntoFPToSI(Type *SrcTy, Type *DestTy) const {
+    return false;
+  }
+
   virtual bool isProfitableToHoist(Instruction *I) const { return true; }
 
   virtual bool useAA() const { return false; }

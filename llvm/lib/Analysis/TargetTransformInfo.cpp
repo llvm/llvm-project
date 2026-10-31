@@ -604,6 +604,11 @@ bool TargetTransformInfo::isTruncateFree(Type *Ty1, Type *Ty2) const {
   return TTIImpl->isTruncateFree(Ty1, Ty2);
 }
 
+bool TargetTransformInfo::canFoldFloorIntoFPToSI(Type *SrcTy,
+                                                 Type *DestTy) const {
+  return TTIImpl->canFoldFloorIntoFPToSI(SrcTy, DestTy);
+}
+
 bool TargetTransformInfo::isProfitableToHoist(Instruction *I) const {
   return TTIImpl->isProfitableToHoist(I);
 }
