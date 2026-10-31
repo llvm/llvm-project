@@ -85,6 +85,8 @@ public:
   //   pointer.
   //   - Structured bindings (`auto [a, b] = pair;`) -- the per-element
   //     `BindingDecl`s are neither `VarDecl` nor `FieldDecl`.
+  //   - Compound literals (`(T){...}`) -- not handled, and not covered by
+  //     tests.
 
   /// Match and collect pointer flow.
   /// The macth function 'F' can be described by the following rules:
