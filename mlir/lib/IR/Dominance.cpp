@@ -13,8 +13,13 @@
 
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/RegionExitInterfaces.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
+
+#define DEBUG_TYPE "dominance"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -38,6 +43,7 @@ void DominanceInfoBase<IsPostDom>::invalidate() {
   for (auto entry : dominanceInfos)
     delete entry.second.getPointer();
   dominanceInfos.clear();
+  breakingControlFlowOpsCache.clear();
 }
 
 template <bool IsPostDom>
@@ -53,6 +59,7 @@ void DominanceInfoBase<IsPostDom>::invalidate(Region *region, bool recursive) {
     region->walk([&](Region *r) { invalidate(r); });
   else
     invalidate(region);
+  breakingControlFlowOpsCache.clear();
 }
 
 /// Return the dom tree and "hasSSADominance" bit for the given region.  The
@@ -256,6 +263,15 @@ static bool isBeforeInBlock(Block *block, Block::iterator a,
 }
 
 template <bool IsPostDom>
+bool DominanceInfoBase<IsPostDom>::hasEscapingBreakingControlFlowCached(
+    Operation *op) const {
+  auto [it, inserted] = breakingControlFlowOpsCache.try_emplace(op, false);
+  if (inserted)
+    it->second = hasEscapingBreakingControlFlow(op);
+  return it->second;
+}
+
+template <bool IsPostDom>
 bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
     Block *aBlock, Block::iterator aIt, Block *bBlock, Block::iterator bIt,
     bool enclosingOk) const {
@@ -288,6 +304,23 @@ bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
       return true;
   }
 
+  auto hasEscapingBreakingControlFlowInRange =
+      [&](Block *block, Block::iterator begin, Block::iterator end) {
+        assert(begin == block->end() || begin->getBlock() == block);
+        assert(end == block->end() || end->getBlock() == block);
+        for (auto it = begin; it != end; ++it) {
+          Operation *op = &*it;
+          if ((op->hasTrait<OpTrait::PropagateControlFlowBreak>() ||
+               !op->isRegistered()) &&
+              hasEscapingBreakingControlFlowCached(op)) {
+            LDBG() << "Breaking control flow: "
+                   << OpWithFlags(op, OpPrintingFlags().skipRegions());
+            return true;
+          }
+        }
+        return false;
+      };
+
   // Ok, they are in the same region now.
   if (aBlock == bBlock) {
     // Dominance changes based on the region type. In a region with SSA
@@ -295,15 +328,63 @@ bool DominanceInfoBase<IsPostDom>::properlyDominatesImpl(
     // regions kinds, uses and defs can come in any order inside a block.
     if (!hasSSADominance(aBlock))
       return true;
+
     if constexpr (IsPostDom) {
-      return isBeforeInBlock(aBlock, bIt, aIt);
+      if (!isBeforeInBlock(aBlock, bIt, aIt))
+        return false;
+      if (aIt != aBlock->end() && bIt != bBlock->end() &&
+          mightHaveBreakingControlFlow(aBlock->getParent()) &&
+          hasEscapingBreakingControlFlowInRange(aBlock, bIt, aIt))
+        return false;
+      return true;
     } else {
       return isBeforeInBlock(aBlock, aIt, bIt);
     }
   }
 
   // If the blocks are different, use DomTree to resolve the query.
-  return getDomTree(aRegion).properlyDominates(aBlock, bBlock);
+  bool properlyDominates =
+      getDomTree(aRegion).properlyDominates(aBlock, bBlock);
+  if (!IsPostDom || !properlyDominates ||
+      !mightHaveBreakingControlFlow(aRegion))
+    return properlyDominates;
+
+  // A nested breaking terminator can bypass the containing block's ordinary
+  // CFG terminator, so the block post-dominator tree is not enough for
+  // operation post-dominance. Look for escaping breaks on paths from bBlock to
+  // aBlock. This requires a traversal per query, only for multi-block regions
+  // whose parent permits breaking control flow.
+  if (bIt != bBlock->end() &&
+      hasEscapingBreakingControlFlowInRange(bBlock, bIt, bBlock->end()))
+    return false;
+
+  SmallPtrSet<Block *, 16> visited;
+  SmallVector<Block *> worklist;
+  auto enqueueSuccessor = [&](Block *successor) {
+    if (!successor || successor == aBlock || successor->getParent() != aRegion)
+      return;
+    if (visited.insert(successor).second)
+      worklist.push_back(successor);
+  };
+  for (Block *successor : bBlock->getSuccessors())
+    enqueueSuccessor(successor);
+
+  while (!worklist.empty()) {
+    Block *block = worklist.pop_back_val();
+    if (hasEscapingBreakingControlFlowInRange(block, block->begin(),
+                                              block->end()))
+      return false;
+    for (Block *successor : block->getSuccessors())
+      enqueueSuccessor(successor);
+  }
+
+  if (aIt != aBlock->end()) {
+    Block::iterator endIt = std::next(aIt);
+    if (hasEscapingBreakingControlFlowInRange(aBlock, aBlock->begin(), endIt))
+      return false;
+  }
+
+  return true;
 }
 
 /// Return true if the specified block is reachable from the entry block of

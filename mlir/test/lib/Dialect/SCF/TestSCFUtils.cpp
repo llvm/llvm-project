@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -83,6 +84,39 @@ struct TestSCFForUtilsPass
           signalPassFailure();
       });
     }
+  }
+};
+
+// Exercise result type inference while the callback-built regions are detached.
+struct TestSCFIfCallbackBuilderPass
+    : public PassWrapper<TestSCFIfCallbackBuilderPass,
+                         OperationPass<func::FuncOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFIfCallbackBuilderPass)
+
+  StringRef getArgument() const final { return "test-scf-if-callback-builder"; }
+  StringRef getDescription() const final {
+    return "Rebuild scf.if operations using the callback builder";
+  }
+
+  void runOnOperation() override {
+    getOperation().walk([&](scf::IfOp op) {
+      IRRewriter rewriter(op);
+      IRMapping mapping;
+      auto thenBuilder = [&](OpBuilder &b, Location) {
+        for (Operation &nested : *op.thenBlock())
+          b.clone(nested, mapping);
+      };
+      auto elseBuilder = [&](OpBuilder &b, Location) {
+        for (Operation &nested : *op.elseBlock())
+          b.clone(nested, mapping);
+      };
+      function_ref<void(OpBuilder &, Location)> elseCallback = nullptr;
+      if (!op.getElseRegion().empty())
+        elseCallback = elseBuilder;
+      auto replacement = scf::IfOp::create(
+          rewriter, op.getLoc(), op.getCondition(), thenBuilder, elseCallback);
+      rewriter.replaceOp(op, replacement.getResults());
+    });
   }
 };
 
@@ -337,6 +371,7 @@ namespace test {
 void registerTestSCFUtilsPass() {
   PassRegistration<TestSCFForUtilsPass>();
   PassRegistration<TestSCFIfUtilsPass>();
+  PassRegistration<TestSCFIfCallbackBuilderPass>();
   PassRegistration<TestSCFPipeliningPass>();
   PassRegistration<TestSplitForOpAtPointPass>();
 }

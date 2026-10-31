@@ -109,6 +109,7 @@ exports_files(glob(["include/**/*.td"]))
         deps = [":OpBaseTdFiles"],
     )
     for name in [
+        "RegionExitInterfaces",
         "RegionKindInterface",
         "SymbolInterfaces",
     ]
@@ -473,6 +474,7 @@ cc_library(
         ":InferIntRangeInterfaceIncGen",
         ":OpAsmInterfaceIncGen",
         ":QuantStorageTypeInterfaceIncGen",
+        ":RegionExitInterfacesIncGen",
         ":RegionKindInterfaceIncGen",
         ":SideEffectInterfacesIncGen",
         ":Support",
@@ -1438,6 +1440,7 @@ td_library(
         "include/mlir/IR/OpBase.td",
         "include/mlir/IR/PatternBase.td",
         "include/mlir/IR/Properties.td",
+        "include/mlir/IR/RegionExitInterfaces.td",
         "include/mlir/IR/RegionKindInterface.td",
         "include/mlir/IR/SymbolInterfaces.td",
         "include/mlir/IR/TensorEncoding.td",

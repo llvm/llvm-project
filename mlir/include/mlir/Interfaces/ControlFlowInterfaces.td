@@ -235,7 +235,15 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         When `point = RegionBranchPoint::parent()`, this method returns the
         region successors when entering the operation. Otherwise, this method
         returns the successor regions when branching from the region indicated
-        by `point`.
+        by `point`. A propagated region exit may target an ancestor operation
+        or one of its regions instead of a region/result owned by this op.
+        Query `getRegionBranchSuccessorOwner(successor).getSuccessorInputs(...)`
+        for those inputs. Clients that mutate inputs must check ownership.
+
+        For a `HasBreakingControlFlowOpInterface` receiver, `point` may also be
+        a nested terminator that targets this op or an ancestor through
+        propagating operations. Ordinary propagators enumerate only immediate
+        terminators; the receiver accounts for the nested incoming edges.
 
         Example: In the above example, this method returns the region of the
         `scf.for` and `parent` for either region branch point. An implementation
@@ -269,7 +277,9 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         Return all successor inputs for the given region successor. If the
         given region successor is a region, then the returned values are block
         arguments. Otherwise, if the given region successor is an operation,
-        the returned values are op results.
+        the returned values are op results. This method is queried on the
+        owner of the successor, which may differ from the op that enumerated
+        the edge when control flow propagates to an ancestor.
       }],
       "::mlir::ValueRange", "getSuccessorInputs",
       (ins "::mlir::RegionSuccessor":$successor),
@@ -392,7 +402,10 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// successor operand could be forwarded to multiple successor inputs.
     /// Operands that are not forwarded are not added to the map. Unless a
     /// specific region branch point is specified, this function takes into
-    /// account all possible region branch points.
+    /// account all possible region branch points. Inputs may belong to an
+    /// ancestor operation or its regions. Such entries describe only the
+    /// edges visible from this op, not the owner's complete predecessor set;
+    /// callers must not use them to rewrite another owner's inputs.
     void getSuccessorOperandInputMapping(
         ::mlir::RegionBranchSuccessorMapping &mapping,
         std::optional<::mlir::RegionBranchPoint> src = std::nullopt);
@@ -403,7 +416,9 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         ::mlir::RegionBranchInverseSuccessorMapping &mapping);
 
     /// Return all possible region branch points: the region branch op itself
-    /// and all region branch terminators.
+    /// and its immediate region branch terminators. Receivers implementing
+    /// HasBreakingControlFlowOpInterface additionally enumerate nested breaking
+    /// terminators targeting them or an ancestor through propagating ops.
     ::llvm::SmallVector<::mlir::RegionBranchPoint> getAllRegionBranchPoints();
   }];
 }
@@ -442,7 +457,8 @@ def RegionBranchTerminatorOpInterface :
     >,
     InterfaceMethod<[{
         Returns all potential region successors that are branched to after this
-        terminator based on the given constant operands.
+        terminator based on the given constant operands. A propagated exit may
+        target an ancestor operation or a region owned by that ancestor.
 
         This method also receives the constant operands of this op (one entry
         per operand, "null" if the operand has no/unknown constant value). The

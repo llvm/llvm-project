@@ -17,6 +17,7 @@ add_mlir_library(MLIRTransformUtils
 
   DEPENDS
   MLIRTransformsDialectInterfaceIncGen
+  MLIRRegionExitInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRAnalysisBase
