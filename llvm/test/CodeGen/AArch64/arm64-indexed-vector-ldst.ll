@@ -14135,12 +14135,11 @@ define void @chained_insert_zero(ptr noundef %fenc, ptr noundef %pred, ptr nound
 ; CHECK-SD-NEXT:    ldr s0, [x1]
 ; CHECK-SD-NEXT:    ldr s1, [x0]
 ; CHECK-SD-NEXT:    ; kill: def $w3 killed $w3 def $x3
-; CHECK-SD-NEXT:    sxtw x8, w3
+; CHECK-SD-NEXT:    sbfiz x8, x3, #1, #32
 ; CHECK-SD-NEXT:    usubl.8h v0, v1, v0
 ; CHECK-SD-NEXT:    str d0, [x2]
-; CHECK-SD-NEXT:    ldr s0, [x0, x8]
-; CHECK-SD-NEXT:    ldr s1, [x1, x8]
-; CHECK-SD-NEXT:    sbfiz x8, x3, #1, #32
+; CHECK-SD-NEXT:    ldr s0, [x0, w3, sxtw]
+; CHECK-SD-NEXT:    ldr s1, [x1, w3, sxtw]
 ; CHECK-SD-NEXT:    usubl.8h v0, v0, v1
 ; CHECK-SD-NEXT:    str d0, [x2, x8]
 ; CHECK-SD-NEXT:    ret
