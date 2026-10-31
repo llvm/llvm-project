@@ -262,6 +262,23 @@ llvm::getNoCommonBitsSetResult(const WithCache<const Value *> &LHSCache,
                                      RHSCache.getKnownBits(SQ)))
     return NoCommonBitsSetResult::Known;
 
+  // Try to infer from assumptions.
+  if (SQ.AC && SQ.CtxI) {
+    for (AssumptionCache::ResultElem &Elem : SQ.AC->assumptionsFor(LHS)) {
+      if (!Elem.Assume || Elem.Index != AssumptionCache::ExprResultIdx)
+        continue;
+      AssumeInst *I = cast<AssumeInst>(Elem.Assume);
+      if (match(I->getArgOperand(0),
+                m_SpecificICmp(ICmpInst::ICMP_EQ,
+                               m_c_And(m_Specific(LHS), m_Specific(RHS)),
+                               m_Zero())) &&
+          isValidAssumeForContext(I, SQ) &&
+          isGuaranteedNotToBeUndef(LHS, SQ.AC, SQ.CtxI, SQ.DT) &&
+          isGuaranteedNotToBeUndef(RHS, SQ.AC, SQ.CtxI, SQ.DT))
+        return NoCommonBitsSetResult::Known;
+    }
+  }
+
   if (Result == NoCommonBitsSetResult::OnlyIfUndefIgnored ||
       CommuteResult == NoCommonBitsSetResult::OnlyIfUndefIgnored)
     return NoCommonBitsSetResult::OnlyIfUndefIgnored;
