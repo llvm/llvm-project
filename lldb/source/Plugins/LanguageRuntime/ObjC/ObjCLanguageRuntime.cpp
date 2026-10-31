@@ -58,9 +58,9 @@ ObjCLanguageRuntime::ObjCLanguageRuntime(Process *process)
       m_isa_to_descriptor_stop_id(UINT32_MAX), m_complete_class_cache(),
       m_negative_complete_class_cache() {}
 
-bool ObjCLanguageRuntime::IsAllowedRuntimeValue(ConstString name) {
-  static ConstString g_self = ConstString("self");
-  static ConstString g_cmd = ConstString("_cmd");
+bool ObjCLanguageRuntime::IsAllowedRuntimeValue(llvm::StringRef name) {
+  static constexpr llvm::StringLiteral g_self = "self";
+  static constexpr llvm::StringLiteral g_cmd = "_cmd";
   return name == g_self || name == g_cmd;
 }
 

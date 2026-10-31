@@ -120,7 +120,7 @@ public:
   // ExecutionContextScope in which one can actually fetch any specialization
   // information required.
   virtual CompilerType GetConcreteType(ExecutionContextScope *exe_scope,
-                                       ConstString abstract_type_name) {
+                                       llvm::StringRef abstract_type_name) {
     return CompilerType();
   }
 
@@ -204,7 +204,7 @@ public:
 
   /// Identify whether a name is a runtime value that should not be hidden by
   /// from the user interface.
-  virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
+  virtual bool IsAllowedRuntimeValue(llvm::StringRef name) { return false; }
 
   virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
     return std::nullopt;
@@ -224,7 +224,7 @@ public:
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
   // would be. Useful when the underlying binary is stripped.
-  virtual lldb::addr_t LookupRuntimeSymbol(ConstString name) {
+  virtual lldb::addr_t LookupRuntimeSymbol(llvm::StringRef name) {
     return LLDB_INVALID_ADDRESS;
   }
 
