@@ -2614,6 +2614,19 @@ int CommandInterpreter::GetOptionArgumentPosition(const char *in_string) {
   return position;
 }
 
+static void GetHomeOrConfigFile(FileSpec &file, llvm::StringRef name) {
+  FileSpec home_file =
+      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(name);
+  FileSpec config_dir = HostInfo::GetUserConfigDir();
+  if (FileSystem::Instance().Exists(home_file) || !config_dir) {
+    file = std::move(home_file);
+    return;
+  }
+  bool ok = name.consume_front(".lldb");
+  assert(ok);
+  file = config_dir.CopyByAppendingPathComponent(name);
+}
+
 static void GetHomeInitFile(FileSpec &init_file, llvm::StringRef suffix = {}) {
   std::string init_file_name = ".lldbinit";
   if (!suffix.empty()) {
@@ -2621,8 +2634,7 @@ static void GetHomeInitFile(FileSpec &init_file, llvm::StringRef suffix = {}) {
     init_file_name.append(suffix.str());
   }
 
-  init_file =
-      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(init_file_name);
+  GetHomeOrConfigFile(init_file, init_file_name);
 }
 
 static void GetHomeREPLInitFile(FileSpec &init_file, LanguageType language) {
@@ -2640,8 +2652,7 @@ static void GetHomeREPLInitFile(FileSpec &init_file, LanguageType language) {
        llvm::Twine("-repl"))
           .str();
 
-  init_file =
-      HostInfo::GetUserHomeDir().CopyByAppendingPathComponent(init_file_name);
+  GetHomeOrConfigFile(init_file, init_file_name);
 }
 
 static void GetCwdInitFile(llvm::SmallVectorImpl<char> &init_file) {

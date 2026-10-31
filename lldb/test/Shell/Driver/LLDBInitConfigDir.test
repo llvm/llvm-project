@@ -1,0 +1,56 @@
+# REQUIRES: python && system-linux
+
+# RUN: rm -rf %t.config
+# RUN: rm -rf %t.home
+# RUN: rm -rf %t.root
+
+# RUN: mkdir -p %t.config/lldb
+# RUN: mkdir -p %t.home/lldb
+# RUN: mkdir -p %t.root/lldb
+
+# RUN: echo 'script -- print("CFG: .config/.lldbinit#")' > %t.config/.lldbinit
+# RUN: echo 'script -- print("CFG: .config/lldb/.lldbinit#")' > %t.config/lldb/.lldbinit
+# RUN: echo 'script -- print("CFG: .config/lldb/init#")' > %t.config/lldb/init
+# RUN: echo 'script -- print("CFG: .config/lldb/init-lldb#")' > %t.config/lldb/init-lldb
+
+# RUN: echo 'script -- print("CFG: .home/lldb/init#")' > %t.home/lldb/init
+# RUN: echo 'script -- print("CFG: .home/.lldbinit#")' > %t.home/.lldbinit
+# RUN: echo 'script -- print("CFG: .home/.lldbinit-lldb#")' > %t.home/.lldbinit-lldb
+
+# RUN: echo 'script -- print("CFG: .root/lldb/init#")' > %t.root/lldb/init
+# RUN: echo 'script -- print("CFG: .root/.lldbinit#")' > %t.root/.lldbinit
+
+# RUN: cd %t.root
+
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init 2>&1 | FileCheck %s -check-prefix=HOME-LLDB,CHECK
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init -local-lldbinit 2>&1 | FileCheck %s -check-prefix=LOCAL,HOME-LLDB,CHECK
+
+# RUN: rm %t.home/.lldbinit-lldb
+
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init 2>&1 | FileCheck %s -check-prefix=XDG-LLDB,CHECK
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init -local-lldbinit 2>&1 | FileCheck %s -check-prefix=LOCAL,XDG-LLDB,CHECK
+
+# RUN: rm %t.config/lldb/init-lldb
+
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init 2>&1 | FileCheck %s -check-prefix=HOME,CHECK
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init -local-lldbinit 2>&1 | FileCheck %s -check-prefix=LOCAL,HOME,CHECK
+
+# RUN: rm %t.home/.lldbinit
+
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init 2>&1 | FileCheck %s -check-prefix=XDG,CHECK
+# RUN: env HOME=%t.home XDG_CONFIG_HOME=%t.config %lldb-init -local-lldbinit 2>&1 | FileCheck %s -check-prefix=LOCAL,XDG,CHECK
+
+# HOME-LLDB: CFG: .home/.lldbinit-lldb#
+# CHECK-NOT: CFG:
+
+# HOME: CFG: .home/.lldbinit#
+# CHECK-NOT: CFG:
+
+# XDG: CFG: .config/lldb/init#
+# CHECK-NOT: CFG:
+
+# XDG-LLDB: CFG: .config/lldb/init-lldb#
+# CHECK-NOT: CFG:
+
+# LOCAL: CFG: .root/.lldbinit#
+# CHECK-NOT: CFG:

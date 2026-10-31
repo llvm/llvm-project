@@ -307,32 +307,40 @@ CONFIGURATION FILES
 -------------------
 
 :program:`lldb` reads things like settings, aliases and commands from the
-.lldbinit file.
+``.lldbinit`` / ``init`` file.
 
-First, :program:`lldb` will try to read the application specific init file
-whose name is ~/.lldbinit followed by a "-" and the name of the current
-program. This would be ~/.lldbinit-lldb for the command line :program:`lldb`
-and ~/.lldbinit-Xcode for Xcode. If there is no application specific init
-file, :program:`lldb` will look for an init file in the home directory.
+The lookup order is as follows:
+
+1. ``~/.lldbinit-{program}`` - the program specific init file. This would be
+   ``~/.lldbinit-lldb`` for the command line :program:`lldb` and 
+   ``~/.lldbinit-Xcode`` for Xcode.
+2. ``{config-dir}/lldb/init-{program}`` - the program specific init file in the
+   user's config directory. On Linux, ``config-dir`` is resolved through
+   ``XDG_CONFIG_HOME`` (or ``~/.config`` if unset). On macOS, it's
+   ``~/Library/Preferences/``. On Windows, it's ``%USERPROFILE%\AppData\Local``.
+3. ``~/.lldbinit``
+4. ``{config-dir}/lldb/init``
+
 If launched with a `REPL`_ option, it will first look for a REPL configuration
 file, specific to the REPL language. The init file should be named as follow:
-``.lldbinit-<language>-repl`` (i.e. ``.lldbinit-swift-repl``). If this file doesn't
-exist, or :program:`lldb` wasn't launch with `REPL`_, meaning there is neither
+``.lldbinit-<language>-repl`` (i.e. ``.lldbinit-swift-repl`` or 
+``init-swift-repl`` in the config directory). If this file doesn't
+exist, or :program:`lldb` wasn't launched with `REPL`_, meaning there is neither
 a REPL init file nor an application specific init file, ``lldb`` will fallback to
-the global ~/.lldbinit.
+the global ``~/.lldbinit``.
 
-Secondly, it will look for an .lldbinit file in the current working directory.
+Secondly, it will look for an ``.lldbinit`` file in the current working directory.
 For security reasons, :program:`lldb` will print a warning and not source this
 file by default. This behavior can be changed by changing the
-target.load-cwd-lldbinit setting.
+``target.load-cwd-lldbinit`` setting.
 
-To always load the .lldbinit file in the current working directory, add the
-following command to ~/.lldbinit:
+To always load the ``.lldbinit`` file in the current working directory, add the
+following command to ``~/.lldbinit``:
 
   settings set target.load-cwd-lldbinit true
 
-To never load the .lldbinit file in the current working directory and silence
-the warning, add the following command to ~/.lldbinit:
+To never load the ``.lldbinit`` file in the current working directory and silence
+the warning, add the following command to ``~/.lldbinit``:
 
   settings set target.load-cwd-lldbinit false
 
