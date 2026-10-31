@@ -1,0 +1,12 @@
+; REQUIRES: x86_64-linux
+; Ensure the virtual unwinder tolerates an LBR return whose target is not
+; preceded by a call instruction (getCallAddrFromFrameAddr == 0). Without the
+; guard in unwindReturn this asserts with "Address can't be zero!"; with it, the
+; trace is truncated and a valid profile is still produced.
+
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-invalid-ret-unwind.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t
+; RUN: FileCheck %s --input-file %t
+
+; CHECK-DAG: main:{{.*}}
+; CHECK-DAG: foo:{{.*}}
+; CHECK-DAG: bar:{{.*}}
