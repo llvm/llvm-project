@@ -33,7 +33,6 @@
 #include <__memory/destroy.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/shared_count.h>
-#include <__memory/tombstone_traits.h>
 #include <__memory/uninitialized_algorithms.h>
 #include <__memory/uninitialized_multidimensional_algorithms.h>
 #include <__memory/unique_ptr.h>
