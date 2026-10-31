@@ -1732,6 +1732,9 @@ bool RISCVLegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SUB:
   case TargetOpcode::G_ADD: {
     Helper.Observer.changingInstr(MI);
+    // The G_ANYEXTs below leave the new high bits unconstrained, so no-wrap
+    // claims proved at the narrow width no longer hold.
+    MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
     Helper.widenScalarSrc(MI, sXLen, 1, TargetOpcode::G_ANYEXT);
     Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ANYEXT);
 
@@ -1760,6 +1763,10 @@ bool RISCVLegalizerInfo::legalizeCustom(
         ExtOpc = TargetOpcode::G_ZEXT;
 
       Helper.Observer.changingInstr(MI);
+      // The G_ANYEXT leave the new high bits unconstrained, so no-wrap
+      // claims proved at the narrow width no longer hold.
+      if (ExtOpc == TargetOpcode::G_ANYEXT)
+        MI.clearFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
       Helper.widenScalarSrc(MI, sXLen, 1, ExtOpc);
       Helper.widenScalarSrc(MI, sXLen, 2, TargetOpcode::G_ZEXT);
       Helper.widenScalarDst(MI, sXLen);
