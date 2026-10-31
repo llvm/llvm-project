@@ -70,13 +70,28 @@ define i32 @test_lround_i32_f16(half %x) nounwind {
 }
 
 define i32 @test_lround_i32_f32(float %x) nounwind {
-; X86-LABEL: test_lround_i32_f32:
-; X86:       # %bb.0:
-; X86-NEXT:    jmp lroundf # TAILCALL
+; X86-NOSSE-LABEL: test_lround_i32_f32:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    jmp lroundf # TAILCALL
+;
+; X86-SSE2-LABEL: test_lround_i32_f32:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-SSE2-NEXT:    andps %xmm0, %xmm1
+; X86-SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    addss %xmm0, %xmm1
+; X86-SSE2-NEXT:    cvttss2si %xmm1, %eax
+; X86-SSE2-NEXT:    retl
 ;
 ; X64-LABEL: test_lround_i32_f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp lroundf@PLT # TAILCALL
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    andps %xmm0, %xmm1
+; X64-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    addss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
+; X64-NEXT:    retq
 ;
 ; GISEL-X86-LABEL: test_lround_i32_f32:
 ; GISEL-X86:       # %bb.0:
@@ -98,13 +113,28 @@ define i32 @test_lround_i32_f32(float %x) nounwind {
 }
 
 define i32 @test_lround_i32_f64(double %x) nounwind {
-; X86-LABEL: test_lround_i32_f64:
-; X86:       # %bb.0:
-; X86-NEXT:    jmp lround # TAILCALL
+; X86-NOSSE-LABEL: test_lround_i32_f64:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    jmp lround # TAILCALL
+;
+; X86-SSE2-LABEL: test_lround_i32_f64:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; X86-SSE2-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; X86-SSE2-NEXT:    andpd %xmm0, %xmm1
+; X86-SSE2-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    addsd %xmm0, %xmm1
+; X86-SSE2-NEXT:    cvttsd2si %xmm1, %eax
+; X86-SSE2-NEXT:    retl
 ;
 ; X64-LABEL: test_lround_i32_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    jmp lround@PLT # TAILCALL
+; X64-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; X64-NEXT:    andpd %xmm0, %xmm1
+; X64-NEXT:    orpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    addsd %xmm0, %xmm1
+; X64-NEXT:    cvttsd2si %xmm1, %eax
+; X64-NEXT:    retq
 ;
 ; GISEL-X86-LABEL: test_lround_i32_f64:
 ; GISEL-X86:       # %bb.0:
@@ -155,6 +185,80 @@ define i32 @test_lround_i32_f80(x86_fp80 %x) nounwind {
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %conv = tail call i32 @llvm.lround.i32.f80(x86_fp80 %x)
+  ret i32 %conv
+}
+
+define i32 @test_lround_i32_f32_optsize(float %x) nounwind optsize {
+; X86-NOSSE-LABEL: test_lround_i32_f32_optsize:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    jmp lroundf # TAILCALL
+;
+; X86-SSE2-LABEL: test_lround_i32_f32_optsize:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-SSE2-NEXT:    andps %xmm0, %xmm1
+; X86-SSE2-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-SSE2-NEXT:    addss %xmm0, %xmm1
+; X86-SSE2-NEXT:    cvttss2si %xmm1, %eax
+; X86-SSE2-NEXT:    retl
+;
+; X64-LABEL: test_lround_i32_f32_optsize:
+; X64:       # %bb.0:
+; X64-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    andps %xmm0, %xmm1
+; X64-NEXT:    orps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    addss %xmm0, %xmm1
+; X64-NEXT:    cvttss2si %xmm1, %eax
+; X64-NEXT:    retq
+;
+; GISEL-X86-LABEL: test_lround_i32_f32_optsize:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $12, %esp
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    calll lroundf
+; GISEL-X86-NEXT:    addl $12, %esp
+; GISEL-X86-NEXT:    retl
+;
+; GISEL-X64-LABEL: test_lround_i32_f32_optsize:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq lroundf
+; GISEL-X64-NEXT:    popq %rcx
+; GISEL-X64-NEXT:    retq
+  %conv = tail call i32 @llvm.lround.i32.f32(float %x)
+  ret i32 %conv
+}
+
+define i32 @test_lround_i32_f64_minsize(double %x) nounwind minsize {
+; X86-LABEL: test_lround_i32_f64_minsize:
+; X86:       # %bb.0:
+; X86-NEXT:    jmp lround # TAILCALL
+;
+; X64-LABEL: test_lround_i32_f64_minsize:
+; X64:       # %bb.0:
+; X64-NEXT:    jmp lround@PLT # TAILCALL
+;
+; GISEL-X86-LABEL: test_lround_i32_f64_minsize:
+; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    subl $12, %esp
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl (%eax), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    calll lround
+; GISEL-X86-NEXT:    addl $12, %esp
+; GISEL-X86-NEXT:    retl
+;
+; GISEL-X64-LABEL: test_lround_i32_f64_minsize:
+; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq lround
+; GISEL-X64-NEXT:    popq %rcx
+; GISEL-X64-NEXT:    retq
+  %conv = tail call i32 @llvm.lround.i32.f64(double %x)
   ret i32 %conv
 }
 
