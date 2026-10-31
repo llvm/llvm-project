@@ -410,6 +410,27 @@ TEST_F(OpenMPIRBuilderTest, CreateBarrier) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST_F(OpenMPIRBuilderTest, FinalizeRuntimeCallWithoutDebugLoc) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = false;
+  OMPBuilder.initialize();
+  F->setName("func");
+
+  IRBuilder<> Builder(BB);
+  CallInst *Call = Builder.CreateCall(
+      OMPBuilder.getOrCreateRuntimeFunctionPtr(OMPRTL_omp_get_thread_num));
+  Builder.CreateRetVoid();
+
+  EXPECT_DEATH(OMPBuilder.finalize(),
+               "OpenMP runtime call to 'omp_get_thread_num' in function 'func' "
+               "has no debug location");
+
+  Call->setDebugLoc(DL);
+  OMPBuilder.finalize();
+}
+#endif
+
 TEST_F(OpenMPIRBuilderTest, CreateCancel) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   OpenMPIRBuilder OMPBuilder(*M);
@@ -645,6 +666,7 @@ TEST_F(OpenMPIRBuilderTest, ParallelSimpleGPU) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
   BasicBlock *EnterBB = BasicBlock::Create(Ctx, "parallel.enter", F);
   Builder.CreateBr(EnterBB);
   Builder.SetInsertPoint(EnterBB);
@@ -3153,6 +3175,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSource) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
   LLVMContext &Ctx = M->getContext();
 
   InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
@@ -3236,6 +3259,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveDependSink) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
   LLVMContext &Ctx = M->getContext();
 
   InsertPointTy AllocaIP(F->getEntryBlock().getFirstInsertionPt());
@@ -3319,6 +3343,7 @@ TEST_F(OpenMPIRBuilderTest, OrderedDirectiveThreads) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Type *PrivType = F->arg_begin()->getType();
   AllocaInst *PrivAI = Builder.CreateAlloca(PrivType, nullptr, "priv.inst");
@@ -4695,6 +4720,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Function *FakeFunction =
       Function::Create(FunctionType::get(Builder.getVoidTy(), false),
@@ -4751,6 +4777,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Function *FakeFunction =
       Function::Create(FunctionType::get(Builder.getVoidTy(), false),
@@ -4808,6 +4835,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Function *FakeFunction =
       Function::Create(FunctionType::get(Builder.getVoidTy(), false),
@@ -4868,6 +4896,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   BasicBlock *CodegenBB = splitBB(Builder, true);
   Builder.SetInsertPoint(CodegenBB);
@@ -4933,6 +4962,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithIfCondition) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Value *IfExpr = Builder.CreateLoad(Builder.getInt1Ty(),
                                      Builder.CreateAlloca(Builder.getInt1Ty()));
@@ -4997,6 +5027,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithIfConditionAndNumTeams) {
   F->setName("func");
   IRBuilder<> &Builder = OMPBuilder.Builder;
   Builder.SetInsertPoint(BB);
+  Builder.SetCurrentDebugLocation(DL);
 
   Value *IfExpr = Builder.CreateLoad(
       Builder.getInt32Ty(), Builder.CreateAlloca(Builder.getInt32Ty()));
@@ -7363,6 +7394,13 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
   };
 
   auto CustomMapperCB = [&](unsigned int I) { return nullptr; };
+  auto *mainSP = F->getSubprogram();
+  DIBuilder DIB(*M, false, mainSP->getUnit());
+  auto SPTy = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  auto SP = DIB.createFunction(mainSP->getScope(), "target", "",
+                               mainSP->getFile(), 2, SPTy, 2, DINode::FlagZero,
+                               DISubprogram::SPFlagDefinition |
+                                   DISubprogram::SPFlagOptimized);
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
                        OpenMPIRBuilder::InsertPointTy CodeGenIP,
                        ArrayRef<BasicBlock *> DeallocBlocks)
@@ -7370,13 +7408,6 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
     IRBuilderBase::InsertPointGuard guard(Builder);
     Builder.SetCurrentDebugLocation(llvm::DebugLoc());
     Builder.restoreIP(CodeGenIP);
-    auto *mainSP = F->getSubprogram();
-    DIBuilder DIB(*M, false, mainSP->getUnit());
-    auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
-    auto SP = DIB.createFunction(
-        mainSP->getScope(), "target", "", mainSP->getFile(), 2, Type, 2,
-        DINode::FlagZero,
-        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized);
     OutlinedFn = CodeGenIP.getNodeParent()->getParent();
     OutlinedFn->setSubprogram(SP);
     DebugLoc Loc = DILocation::get(Ctx, 3, 7, SP);
@@ -7435,7 +7466,9 @@ TEST_F(OpenMPIRBuilderTest, DebugRecordLoc) {
           Loc, /*IsOffloadEntry=*/true, EntryIP, EntryIP,
           /*DeallocBlocks=*/{}, Info, EntryInfo, DefaultAttrs, RuntimeAttrs,
           /*IfCond=*/nullptr, CapturedArgs, GenMapInfoCB, BodyGenCB,
-          SimpleArgAccessorCB, CustomMapperCB, {}, false));
+          SimpleArgAccessorCB, CustomMapperCB, {}, false,
+          /*DynCGroupMem=*/nullptr, omp::OMPDynGroupprivateFallbackType::Abort,
+          /*OutlinedFnLoc=*/DILocation::get(Ctx, 2, 0, SP)));
   EXPECT_EQ(DL, Builder.getCurrentDebugLocation());
   Builder.restoreIP(AfterIP);
 
