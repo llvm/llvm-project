@@ -104,7 +104,8 @@ template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
 }
 
 template <typename T> constexpr T step_impl(T Y, T X) {
-  return select(X < Y, (T)0, (T)1);
+  return select(X < Y, (T)(__detail::elem_type_t<T>)0,
+                (T)(__detail::elem_type_t<T>)1);
 }
 
 template <typename T> constexpr T lerp_impl(T X, T Y, T S) {

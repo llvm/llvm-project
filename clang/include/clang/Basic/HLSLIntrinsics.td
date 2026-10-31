@@ -1630,7 +1630,6 @@ Step is based on the following formula: (x >= y) ? 1 : 0
   let ParamNames = ["y", "x"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the tangent of the input value, Val.
