@@ -1651,9 +1651,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: object allocated and stored into &apos;date&apos; is returned from a function whose name (&apos;f7&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: object allocated and stored into &apos;date&apos; is returned from a function whose name (&apos;f7&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
      <key>message</key>
-     <string>Object leaked: object allocated and stored into &apos;date&apos; is returned from a function whose name (&apos;f7&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: object allocated and stored into &apos;date&apos; is returned from a function whose name (&apos;f7&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object stored into &apos;date&apos;</string>
@@ -12124,9 +12124,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;NoCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;NoCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;NoCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;NoCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;NSString *&apos;</string>
@@ -12209,9 +12209,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;noCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;noCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;noCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;noCopyString&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;NSString *&apos;</string>
@@ -12786,9 +12786,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;:&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;:&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;:&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;NSString *&apos; is returned from a method whose name (&apos;:&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;NSString *&apos;</string>
@@ -18505,9 +18505,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetained&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetained&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetained&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetained&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFDateRef&apos;</string>
@@ -18768,9 +18768,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetainedAsCF&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetainedAsCF&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetainedAsCF&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;.  This violates the naming convention rules given in the Memory Management Guide for Cocoa</string>
+     <string>Object leaked: allocated object of type &apos;CFDateRef&apos; is returned from a method whose name (&apos;alsoReturnsRetainedAsCF&apos;) does not start with &apos;copy&apos;, &apos;mutableCopy&apos;, &apos;alloc&apos; or &apos;new&apos;; violating the naming convention rules given in the Memory Management Guide for Cocoa</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFDateRef&apos;</string>
@@ -20049,9 +20049,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_createno&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_createno&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_createno&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_createno&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFMutableArrayRef&apos;</string>
@@ -20135,9 +20135,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_copying&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_copying&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_copying&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camelcase_copying&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFMutableArrayRef&apos;</string>
@@ -20221,9 +20221,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_creat&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_creat&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_creat&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_creat&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFMutableArrayRef&apos;</string>
@@ -20307,9 +20307,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_copymachine&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_copymachine&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
      <key>message</key>
-     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_copymachine&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;.  This violates the naming convention rules given in the Memory Management Guide for Core Foundation</string>
+     <string>Object leaked: allocated object of type &apos;CFMutableArrayRef&apos; is returned from a function whose name (&apos;camel_copymachine&apos;) does not contain &apos;Copy&apos; or &apos;Create&apos;; violating the naming convention rules given in the Memory Management Guide for Core Foundation</string>
     </dict>
    </array>
    <key>description</key><string>Potential leak of an object of type &apos;CFMutableArrayRef&apos;</string>

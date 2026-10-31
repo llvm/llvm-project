@@ -745,8 +745,8 @@ RefLeakReportVisitor::getEndPath(const ExplodedNode *EndN,
         } else {
           os << "whose name ('" << MD->getSelector().getAsString()
              << "') does not start with "
-                "'copy', 'mutableCopy', 'alloc' or 'new'."
-                "  This violates the naming convention rules"
+                "'copy', 'mutableCopy', 'alloc' or 'new';"
+                " violating the naming convention rules"
                 " given in the Memory Management Guide for Cocoa";
         }
       } else {
@@ -754,7 +754,7 @@ RefLeakReportVisitor::getEndPath(const ExplodedNode *EndN,
         ObjKind K = RV->getObjKind();
         if (K == ObjKind::ObjC || K == ObjKind::CF) {
           os << "whose name ('" << *FD
-             << "') does not contain 'Copy' or 'Create'.  This violates the "
+             << "') does not contain 'Copy' or 'Create'; violating the "
                 "naming convention rules given in the Memory Management Guide "
                 "for Core Foundation";
         } else if (RV->getObjKind() == ObjKind::OS) {

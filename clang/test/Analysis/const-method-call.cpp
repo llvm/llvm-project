@@ -314,6 +314,6 @@ public:
 
 void entry() {
   callable<bool()>{}.call().const_method();
-  // expected-warning@-1 {{Address of stack memory associated with temporary object of type 'callable<bool ()>' is still referred to by the static variable 'L' upon returning to the caller.  This will be a dangling reference}}
+  // expected-warning@-1 {{Address of stack memory associated with temporary object of type 'callable<bool ()>' is still referred to by the static variable 'L' upon returning to the caller; this will be a dangling reference}}
 }
 } // namespace gh77378

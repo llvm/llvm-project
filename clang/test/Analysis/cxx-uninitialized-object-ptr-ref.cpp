@@ -86,7 +86,7 @@ struct UntypedAllocaTest {
 
   // expected-warning-re@+3 {{Address of stack memory allocated by call to \
 alloca() on line {{[0-9]+}} is still referred to by a temporary object on the \
-stack upon returning to the caller.  This will be a dangling reference}}
+stack upon returning to the caller; this will be a dangling reference}}
   UntypedAllocaTest() : allocaPtr(__builtin_alloca(sizeof(int))) {
     // All good!
   }
@@ -104,7 +104,7 @@ struct TypedAllocaTest1 {
       : allocaPtr(static_cast<int *>(__builtin_alloca(sizeof(int)))) {}
   // expected-warning-re@-2 {{Address of stack memory allocated by call to \
 alloca() on line {{[0-9]+}} is still referred to by a temporary object on the \
-stack upon returning to the caller.  This will be a dangling reference}}
+stack upon returning to the caller; this will be a dangling reference}}
 };
 
 void fTypedAllocaTest1() {
@@ -117,7 +117,7 @@ struct TypedAllocaTest2 {
 
   // expected-warning-re@+5 {{Address of stack memory allocated by call to \
 alloca() on line {{[0-9]+}} is still referred to by a temporary object on the \
-stack upon returning to the caller.  This will be a dangling reference}}
+stack upon returning to the caller; this will be a dangling reference}}
   TypedAllocaTest2()
       : allocaPtr(static_cast<int *>(__builtin_alloca(sizeof(int)))) {
     *allocaPtr = 55555;
@@ -370,7 +370,7 @@ class VoidPointerRRefTest1 {
 public:
   // expected-warning@+3 {{Address of stack memory associated with local \
 variable 'vptr' is still referred to by a temporary object on the stack \
-upon returning to the caller.  This will be a dangling reference}}
+upon returning to the caller; this will be a dangling reference}}
   VoidPointerRRefTest1(void *vptr, char) : vptrrref(static_cast<void *&&>(vptr)) { // expected-warning {{binding reference member 'vptrrref' to stack allocated parameter 'vptr'}}
     // All good!
   }
@@ -388,7 +388,7 @@ class VoidPointerRRefTest2 {
 public:
   // expected-warning@+3 {{Address of stack memory associated with local \
 variable 'vptr' is still referred to by a temporary object on the stack \
-upon returning to the caller.  This will be a dangling reference}}
+upon returning to the caller; this will be a dangling reference}}
   VoidPointerRRefTest2(void **vptr, char) : vpptrrref(static_cast<void **&&>(vptr)) { // expected-warning {{binding reference member 'vpptrrref' to stack allocated parameter 'vptr'}}
     // All good!
   }
@@ -406,7 +406,7 @@ class VoidPointerLRefTest {
 public:
   // expected-warning@+3 {{Address of stack memory associated with local \
 variable 'vptr' is still referred to by a temporary object on the stack \
-upon returning to the caller.  This will be a dangling reference}}
+upon returning to the caller; this will be a dangling reference}}
   VoidPointerLRefTest(void *vptr, char) : vptrrref(static_cast<void *&>(vptr)) { // expected-warning {{binding reference member 'vptrrref' to stack allocated parameter 'vptr'}}
     // All good!
   }

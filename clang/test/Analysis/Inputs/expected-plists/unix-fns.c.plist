@@ -551,12 +551,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value; using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
      <key>message</key>
-     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value; using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
     </dict>
    </array>
-   <key>description</key><string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+   <key>description</key><string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value; using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
    <key>category</key><string>API Misuse (Apple)</string>
    <key>type</key><string>Improper use of &apos;dispatch_once&apos;</string>
    <key>check_name</key><string>osx.API</string>
@@ -643,12 +643,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to &apos;pthread_once&apos; uses the local variable &apos;pred&apos; for the &quot;control&quot; value.  Using such transient memory for the control value is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+     <string>Call to &apos;pthread_once&apos; uses the local variable &apos;pred&apos; for the &quot;control&quot; value; using such transient memory for the control value is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
      <key>message</key>
-     <string>Call to &apos;pthread_once&apos; uses the local variable &apos;pred&apos; for the &quot;control&quot; value.  Using such transient memory for the control value is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+     <string>Call to &apos;pthread_once&apos; uses the local variable &apos;pred&apos; for the &quot;control&quot; value; using such transient memory for the control value is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
     </dict>
    </array>
-   <key>description</key><string>Call to &apos;pthread_once&apos; uses the local variable &apos;pred&apos; for the &quot;control&quot; value.  Using such transient memory for the control value is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+   <key>description</key><string>Call to &apos;pthread_once&apos; uses the local variable &apos;pred&apos; for the &quot;control&quot; value; using such transient memory for the control value is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
    <key>category</key><string>Unix API</string>
    <key>type</key><string>Improper use of &apos;pthread_once&apos;</string>
    <key>check_name</key><string>unix.API</string>
@@ -1463,12 +1463,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value; using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
      <key>message</key>
-     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+     <string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value; using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
     </dict>
    </array>
-   <key>description</key><string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value.  Using such transient memory for the predicate is potentially dangerous.  Perhaps you intended to declare the variable as &apos;static&apos;?</string>
+   <key>description</key><string>Call to &apos;dispatch_once&apos; uses the local variable &apos;pred&apos; for the predicate value; using such transient memory for the predicate is potentially dangerous; perhaps you intended to declare the variable as &apos;static&apos;?</string>
    <key>category</key><string>API Misuse (Apple)</string>
    <key>type</key><string>Improper use of &apos;dispatch_once&apos;</string>
    <key>check_name</key><string>osx.API</string>
