@@ -258,12 +258,22 @@ private:
         [&](mlir::Operation *op) { processOp(op, rewriter, typeConverter); });
   }
 
-  /// Process non-function ops at module level (globals, etc.)
+  /// Process non-function ops at module level (globals, etc.), including the
+  /// ops nested in their regions: a procedure pointer with an initializer is a
+  /// fir.global whose initializer region contains a fir.emboxproc, and that
+  /// op has no codegen, so it must be rewritten here like the default path's
+  /// recursive walk does. Functions were already processed one by one above
+  /// (also those nested in a gpu.module), so their contents are skipped.
   void processModuleLevelOps(mlir::IRRewriter &rewriter,
                              BoxprocTypeRewriter &typeConverter) {
     for (auto &op : getModule().getBody()->getOperations())
       if (!mlir::isa<mlir::func::FuncOp>(op))
-        processOp(&op, rewriter, typeConverter);
+        op.walk([&](mlir::Operation *nested) {
+          if (mlir::isa<mlir::func::FuncOp>(nested) ||
+              nested->getParentOfType<mlir::func::FuncOp>())
+            return;
+          processOp(nested, rewriter, typeConverter);
+        });
   }
 
   /// Insert _FortranATrampolineFree calls before every return in the function.
