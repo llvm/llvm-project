@@ -1,5 +1,4 @@
-include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-include_directories(${LLVM_BINARY_DIR}/tools/mlir/include)
+include_directories(${CLANG_CIR_MLIR_INCLUDE_DIRS})
 
 add_clang_tool(cir-translate
   cir-translate.cpp

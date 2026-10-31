@@ -5,12 +5,8 @@ add_custom_target(clang-cir-doc)
 # which is not the case for CIR (and also FIR, both have similar workarounds).
 function(add_clang_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
-  # NB: MLIR_*_INCLUDE_DIR variables cannot be used here: MLIR configures
-  # after Clang, so they are still empty at this point. Derive the same
-  # roots from LLVM dirs instead (as CIR/CMakeLists.txt already does).
   tablegen(MLIR ${output_file}.md ${command} ${ARGN}
-           EXTRA_INCLUDES ${LLVM_MAIN_SRC_DIR}/../mlir/include
-                          ${LLVM_BINARY_DIR}/tools/mlir/include)
+           EXTRA_INCLUDES ${CLANG_CIR_MLIR_INCLUDE_DIRS})
   set(GEN_DOC_FILE ${CLANG_BINARY_DIR}/docs/CIR/_raw/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}

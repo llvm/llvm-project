@@ -31,8 +31,7 @@ if(CLANG_ENABLE_CIR)
     MLIRPass
     )
 
-  include_directories(${LLVM_MAIN_SRC_DIR}/../mlir/include)
-  include_directories(${LLVM_BINARY_DIR}/tools/mlir/include)
+  include_directories(${CLANG_CIR_MLIR_INCLUDE_DIRS})
 endif()
 
 if(CLANG_ENABLE_STATIC_ANALYZER)
@@ -53,6 +52,5 @@ add_clang_library(clangFrontendTool
   )
 
 if(CLANG_ENABLE_CIR)
-  target_include_directories(clangFrontendTool PRIVATE ${LLVM_MAIN_SRC_DIR}/../mlir/include)
-  target_include_directories(clangFrontendTool PRIVATE ${LLVM_BINARY_DIR}/tools/mlir/include)
+  target_include_directories(clangFrontendTool PRIVATE ${CLANG_CIR_MLIR_INCLUDE_DIRS})
 endif()
