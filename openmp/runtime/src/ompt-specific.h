@@ -103,9 +103,11 @@ inline void *__ompt_load_return_address(int gtid) {
       !__kmp_threads[gtid]->th.ompt_thread_info.return_address)                \
   __kmp_threads[gtid]->th.ompt_thread_info.return_address =                    \
       __builtin_extract_return_addr(__builtin_return_address(0))*/
+#define OMPT_STORE_RETURN_ADDRESS_VALUE(gtid, codeptr_ra)                      \
+  OmptReturnAddressGuard ReturnAddressGuard{gtid, codeptr_ra};
 #define OMPT_STORE_RETURN_ADDRESS(gtid)                                        \
-  OmptReturnAddressGuard ReturnAddressGuard{                                   \
-      gtid, __builtin_extract_return_addr(__builtin_return_address(0))};
+  OMPT_STORE_RETURN_ADDRESS_VALUE(                                             \
+      gtid, __builtin_extract_return_addr(__builtin_return_address(0)))
 #define OMPT_LOAD_RETURN_ADDRESS(gtid) __ompt_load_return_address(gtid)
 #define OMPT_LOAD_OR_GET_RETURN_ADDRESS(gtid)                                  \
   ((ompt_enabled.enabled && gtid >= 0 && __kmp_threads[gtid] &&                \
