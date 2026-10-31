@@ -147,7 +147,8 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
   }
 }
 
-static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
+static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L,
+                           bool SwitchGuards) {
   // To unify the loop exits, we need a list of the exiting blocks as
   // well as exit blocks. The functions for locating these lists both
   // traverse the entire loop body. It is more efficient to first
@@ -241,8 +242,9 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   SmallVector<BasicBlock *, 8> GuardBlocks;
   BasicBlock *LoopExitBlock;
   bool ChangedCFG;
-  std::tie(LoopExitBlock, ChangedCFG) = CHub.finalize(
-      &DTU, GuardBlocks, "loop.exit", MaxBooleansInControlFlowHub.getValue());
+  std::tie(LoopExitBlock, ChangedCFG) =
+      CHub.finalize(&DTU, GuardBlocks, "loop.exit",
+                    MaxBooleansInControlFlowHub.getValue(), SwitchGuards);
   ChangedCFG |= Changed;
   if (!ChangedCFG)
     return false;
@@ -281,13 +283,13 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   return true;
 }
 
-static bool runImpl(LoopInfo &LI, DominatorTree &DT) {
+static bool runImpl(LoopInfo &LI, DominatorTree &DT, bool SwitchGuards) {
 
   bool Changed = false;
   auto Loops = LI.getLoopsInPreorder();
   for (auto *L : Loops) {
     LLVM_DEBUG(dbgs() << "Processing loop:\n"; L->print(dbgs()));
-    Changed |= unifyLoopExits(DT, LI, L);
+    Changed |= unifyLoopExits(DT, LI, L, SwitchGuards);
   }
   return Changed;
 }
@@ -298,7 +300,7 @@ bool UnifyLoopExitsLegacyPass::runOnFunction(Function &F) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
 
-  return runImpl(LI, DT);
+  return runImpl(LI, DT, false);
 }
 
 namespace llvm {
@@ -310,11 +312,20 @@ PreservedAnalyses UnifyLoopExitsPass::run(Function &F,
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (!runImpl(LI, DT))
+  if (!runImpl(LI, DT, SwitchGuards))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<LoopAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
 }
+
+void UnifyLoopExitsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<UnifyLoopExitsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SwitchGuards)
+    OS << "<switch-guards>";
+}
+
 } // namespace llvm
