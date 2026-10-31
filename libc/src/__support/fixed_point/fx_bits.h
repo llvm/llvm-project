@@ -404,6 +404,48 @@ divifx(IntType n, FXType d) {
   return static_cast<IntType>(result);
 }
 
+// Multiply an integer operand by a fixed-point operand and return the
+// mathematically exact result as an IntType rounded towards 0. Assumes
+// signedness of IntType matches the signedness of FXType.
+template <typename IntType, typename FXType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_fixed_point_v<FXType>, IntType>
+mulifx(IntType n, FXType m) {
+  using FXBits = FXBits<FXType>;
+  using FXRep = FXRep<FXType>;
+  using CompType = typename FXRep::CompType;
+
+  static_assert(cpp::is_signed_v<IntType> == (FXRep::SIGN_LEN > 0),
+                "IntType and FXType must have matching signedness");
+
+  CompType m_comp = static_cast<CompType>(FXBits(m).get_bits());
+
+  constexpr int F = FXRep::FRACTION_LEN;
+
+  constexpr int INTERMEDIATE_BITS =
+      cpp::numeric_limits<IntType>::digits + FXRep::VALUE_LEN;
+
+  using WideType = cpp::conditional_t<
+      cpp::is_signed_v<IntType>,
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<int64_t>::digits,
+                         int64_t, Int128>,
+      cpp::conditional_t<INTERMEDIATE_BITS <=
+                             cpp::numeric_limits<uint64_t>::digits,
+                         uint64_t, UInt128>>;
+
+  WideType unscaled_result =
+      static_cast<WideType>(n) * static_cast<WideType>(m_comp);
+
+  if constexpr (FXRep::SIGN_LEN > 0) {
+    constexpr WideType BIAS = (WideType(1) << F) - 1;
+    WideType result =
+        (unscaled_result + (unscaled_result < 0 ? BIAS : WideType(0))) >> F;
+    return static_cast<IntType>(result);
+  }
+  WideType result = unscaled_result >> F;
+  return static_cast<IntType>(result);
+}
+
 } // namespace fixed_point
 } // namespace LIBC_NAMESPACE_DECL
 
