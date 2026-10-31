@@ -36941,6 +36941,13 @@ bool X86TargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
 
 bool X86TargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                               EVT DestVT) const {
+  // Without AVX-512BW, narrow unsigned vector compares need several
+  // instructions, while the wide compare of zero-extended values can use a
+  // single signed compare.
+  if (N->getOpcode() == ISD::SETCC && DestVT.isVector() &&
+      ISD::isUnsignedIntSetCC(cast<CondCodeSDNode>(N->getOperand(2))->get()) &&
+      !Subtarget.hasBWI())
+    return false;
   // i16 instructions are longer (0x66 prefix) and potentially slower.
   return !(SrcVT == MVT::i32 && DestVT == MVT::i16);
 }
