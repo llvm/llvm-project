@@ -27,6 +27,7 @@
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/Specifiers.h"
@@ -19129,6 +19130,50 @@ bool Sema::CheckOverridingFunctionAttributes(CXXMethodDecl *New,
         Diag(Old->getParamDecl(I)->getLocation(),
              diag::note_overridden_marked_noescape);
       }
+  }
+
+  // An overriding method should not add [[clang::lifetimebound]] annotations
+  // that are missing from the overridden method, as virtual calls through the
+  // base class would not enforce the required lifetime contracts.
+  if (!Diags.isIgnored(diag::warn_overriding_method_missing_lifetimebound,
+                       New->getLocation())) {
+    const FunctionDecl *OldMostRecent =
+        lifetimes::getDeclWithMergedLifetimeBoundAttrs(Old);
+    const FunctionDecl *NewMostRecent =
+        lifetimes::getDeclWithMergedLifetimeBoundAttrs(New);
+
+    for (unsigned I = 0, E = std::min(NewMostRecent->getNumParams(),
+                                      OldMostRecent->getNumParams());
+         I != E; ++I) {
+      const ParmVarDecl *NewParam = NewMostRecent->getParamDecl(I);
+      const ParmVarDecl *OldParam = OldMostRecent->getParamDecl(I);
+      if (const auto *Attr = NewParam->getAttr<LifetimeBoundAttr>()) {
+        // Skip inferred (implicit) attributes; only diagnose explicit ones.
+        if (!Attr->isImplicit() && !OldParam->hasAttr<LifetimeBoundAttr>()) {
+          bool HasName = !NewParam->getDeclName().isEmpty();
+          Diag(Attr->getLocation(),
+               diag::warn_overriding_method_missing_lifetimebound)
+              << (HasName ? 1 : 0) << NewParam;
+          Diag(OldParam->getLocation(),
+               diag::note_overridden_missing_lifetimebound)
+              << 0;
+        }
+      }
+    }
+
+    const LifetimeBoundAttr *NewThisAttr =
+        lifetimes::getImplicitObjectParamLifetimeBoundAttr(NewMostRecent);
+    const LifetimeBoundAttr *OldThisAttr =
+        lifetimes::getImplicitObjectParamLifetimeBoundAttr(OldMostRecent);
+    // Skip inferred (implicit) attributes; only diagnose explicit ones.
+    if (NewThisAttr && !NewThisAttr->isImplicit() && !OldThisAttr) {
+      SourceLocation Loc = NewThisAttr->getLocation();
+      if (Loc.isInvalid())
+        Loc = New->getLocation();
+      Diag(Loc, diag::warn_overriding_method_missing_lifetimebound) << 2 << "";
+      Diag(Old->getLocation(), diag::note_overridden_missing_lifetimebound)
+          << 1;
+    }
   }
 
   // SME attributes must match when overriding a function declaration.

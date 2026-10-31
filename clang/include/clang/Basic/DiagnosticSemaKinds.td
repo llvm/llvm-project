@@ -11109,6 +11109,13 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       InGroup<LifetimeSafetyInapplicableLifetimebound>,
       DefaultIgnore;
 
+def warn_overriding_method_missing_lifetimebound : Warning<
+  "overriding method has 'lifetimebound' attribute on %select{an unnamed parameter|parameter %1|the implicit object parameter}0, but overridden method is not marked 'lifetimebound'">,
+  InGroup<LifetimeSafetyOverriddenMissingLifetimebound>,
+  DefaultIgnore;
+def note_overridden_missing_lifetimebound : Note<
+  "overridden method %select{parameter is |is }0here">;
+
 def note_lifetime_safety_used_here : Note<"later used here">;
 def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
