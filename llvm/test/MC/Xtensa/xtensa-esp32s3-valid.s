@@ -205,6 +205,10 @@ ee.slcxxp.2q q6, q7, a11, a4
 # CHECK: encoding: [0xe4,0x6a,0xfc]
 ee.srci.2q q6, q6, 14
 
+# CHECK-INST:  ee.srci.2q  q6, q6, 15
+# CHECK: encoding: [0xf4,0x6a,0xfc]
+ee.srci.2q q6, q6, 15
+
 # CHECK-INST:  ee.srcmb.s16.qacc  q3, a7, 0
 # CHECK: encoding: [0x74,0xf2,0xdd]
 ee.srcmb.s16.qacc q3, a7, 0

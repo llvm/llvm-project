@@ -291,7 +291,7 @@ public:
 
   bool isSelect_8() const { return isImm(0, 7); }
 
-  bool isSelect_16() const { return isImm(0, 16); }
+  bool isSelect_16() const { return isImm(0, 15); }
 
   bool isSelect_256() const { return isImm(0, 255); }
 

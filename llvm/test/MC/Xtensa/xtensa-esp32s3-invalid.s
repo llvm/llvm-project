@@ -22,6 +22,9 @@ ee.ldxq.32 q2, q6, a11, 2, 9
 ee.slci.2q q7, q4, 17
 # CHECK: :[[#@LINE-1]]:20: error: expected immediate in range [0, 15]
 
+ee.srci.2q q6, q6, 16
+# CHECK: :[[#@LINE-1]]:20: error: expected immediate in range [0, 15]
+
 # Select_256
 ee.set_bit_gpio_out 300
 # CHECK: :[[#@LINE-1]]:21: error: expected immediate in range [0, 255]
