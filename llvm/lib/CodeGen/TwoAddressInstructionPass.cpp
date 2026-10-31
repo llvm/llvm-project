@@ -1539,6 +1539,17 @@ bool TwoAddressInstructionImpl::collectTiedOperands(
   return AnyOps;
 }
 
+// Find the last copy for the LaneMask.
+static SlotIndex
+findLastCopyIdx(ArrayRef<std::pair<LaneBitmask, SlotIndex>> CopiedLanes,
+                LaneBitmask LaneMask, SlotIndex Default) {
+  for (const auto &[CopiedMask, CopyIdx] : reverse(CopiedLanes)) {
+    if ((CopiedMask & LaneMask).any())
+      return CopyIdx;
+  }
+  return Default;
+}
+
 // Process a list of tied MI operands that all use the same source register.
 // The tied pairs are of the form (SrcIdx, DstIdx).
 void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
@@ -1552,6 +1563,9 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
   bool AllUsesCopied = true;
   Register LastCopiedReg;
   SlotIndex LastCopyIdx;
+  // Remember which lanes each copy reads so that subrange is shrunk to its own
+  // copy rather than to the last copy.
+  SmallVector<std::pair<LaneBitmask, SlotIndex>, 4> CopiedLanes;
   Register RegB = 0;
   unsigned SubRegB = 0;
   for (auto &TP : TiedPairs) {
@@ -1615,6 +1629,9 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
 
     if (LIS) {
       LastCopyIdx = LIS->InsertMachineInstrInMaps(*PrevMI).getRegSlot();
+      CopiedLanes.emplace_back(SubRegB ? TRI->getSubRegIndexLaneMask(SubRegB)
+                                       : LaneBitmask::getAll(),
+                               LastCopyIdx);
 
       SlotIndex endIdx =
           LIS->getInstructionIndex(*MI).getRegSlot(DstMO.isEarlyClobber());
@@ -1692,15 +1709,16 @@ void TwoAddressInstructionImpl::processTiedPairs(MachineInstr *MI,
     // Update LiveIntervals.
     if (LIS) {
       SlotIndex UseIdx = LIS->getInstructionIndex(*MI);
-      auto Shrink = [=](LiveRange &LR, LaneBitmask LaneMask) {
-        LiveRange::Segment *S = LR.getSegmentContaining(LastCopyIdx);
+      auto Shrink = [&](LiveRange &LR, LaneBitmask LaneMask) {
+        SlotIndex CopyIdx = findLastCopyIdx(CopiedLanes, LaneMask, LastCopyIdx);
+        LiveRange::Segment *S = LR.getSegmentContaining(CopyIdx);
         if (!S)
           return true;
         if ((LaneMask & RemainingUses).any())
           return false;
         if (S->end.getBaseIndex() != UseIdx)
           return false;
-        S->end = LastCopyIdx;
+        S->end = CopyIdx;
         return true;
       };
 
