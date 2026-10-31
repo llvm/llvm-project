@@ -62,6 +62,7 @@ public:
 
     CanUseBSDABICalls = Triple.isOSFreeBSD() ||
                         Triple.isOSOpenBSD();
+    HasStrictFP = true;
   }
 
   bool isIEEE754_2008Default() const {
