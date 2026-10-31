@@ -1309,7 +1309,6 @@ bool SimplifyRODataLoads::simplifyRODataLoads(BinaryFunction &BF) {
         // Do not proceed if there aren't data markers for CIs
         BinaryFunction *TargetBF =
             BC.getBinaryFunctionContainingAddress(TargetAddress,
-                                                  /*CheckPastEnd*/ false,
                                                   /*UseMaxSize*/ true);
         const bool IsInsideFunc =
             TargetBF && TargetBF->isInConstantIsland(TargetAddress);
