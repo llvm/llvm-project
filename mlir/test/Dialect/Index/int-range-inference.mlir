@@ -64,3 +64,21 @@ func.func @add_big(%arg0 : index) -> i1 {
   %3 = index.cmp uge(%1, %cmin)
   func.return %3 : i1
 }
+
+// The dividend range starts at INT_MIN once truncated to 32 bits. The 32-bit
+// inference used to negate the quotient there, which put a positive value in
+// the result range and left the comparison unresolved.
+// CHECK-LABEL: func @ceildivs_intmin_dividend
+// CHECK: %[[true:.*]] = index.bool.constant true
+// CHECK: return %[[true]]
+func.func @ceildivs_intmin_dividend(%arg0 : index) -> i1 {
+  %c0 = index.constant 0
+  %c7 = index.constant 7
+  %cmin = index.constant -2147483648
+  %cmax = index.constant -2147483393
+  %0 = index.maxs %arg0, %cmin
+  %1 = index.mins %0, %cmax
+  %2 = index.ceildivs %1, %c7
+  %3 = index.cmp slt(%2, %c0)
+  func.return %3 : i1
+}
