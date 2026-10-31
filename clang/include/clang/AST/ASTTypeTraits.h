@@ -133,6 +133,7 @@ private:
     NKI_TemplateName,
     NKI_NestedNameSpecifier,
     NKI_NestedNameSpecifierLoc,
+    NKI_ObjCProtocolLoc,
     NKI_QualType,
 #define TYPELOC(CLASS, PARENT) NKI_##CLASS##TypeLoc,
 #include "clang/AST/TypeLocNodes.def"
@@ -156,7 +157,6 @@ private:
     NKI_Attr,
 #define ATTR(A) NKI_##A##Attr,
 #include "clang/Basic/AttrList.inc"
-    NKI_ObjCProtocolLoc,
     NKI_ConceptReference,
     NKI_OffsetOfNode,
     NKI_NumberOfKinds
@@ -253,9 +253,15 @@ inline raw_ostream &operator<<(raw_ostream &OS, ASTNodeKind K) {
 class DynTypedNode {
 public:
   /// Creates a \c DynTypedNode from \c Node.
-  template <typename T>
-  static DynTypedNode create(const T &Node) {
-    return BaseConverter<T>::create(Node);
+  template <typename T> static DynTypedNode create(const T &Node) {
+    using Converter = BaseConverter<T>;
+    static_assert(
+        Converter::StoresPointer ==
+            ASTNodeKind::getFromNodeKind<typename Converter::StoredType>()
+                .hasPointerIdentity(),
+        "hasPointerIdentity() must agree with whether DynTypedNode "
+        "stores a node by pointer");
+    return Converter::create(Node);
   }
 
   /// Retrieve the stored node as type \c T.
@@ -341,6 +347,15 @@ public:
       return getUnchecked<NestedNameSpecifier>().getAsVoidPointer() <
              Other.getUnchecked<NestedNameSpecifier>().getAsVoidPointer();
 
+    if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(NodeKind)) {
+      auto PLA = getUnchecked<ObjCProtocolLoc>();
+      auto PLB = Other.getUnchecked<ObjCProtocolLoc>();
+      return std::make_pair(PLA.getProtocol(),
+                            PLA.getLocation().getRawEncoding()) <
+             std::make_pair(PLB.getProtocol(),
+                            PLB.getLocation().getRawEncoding());
+    }
+
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() < Other.getMemoizationData();
   }
@@ -364,6 +379,13 @@ public:
     if (ASTNodeKind::getFromNodeKind<NestedNameSpecifier>().isSame(NodeKind))
       return getUnchecked<NestedNameSpecifier>() ==
              Other.getUnchecked<NestedNameSpecifier>();
+
+    if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(NodeKind)) {
+      auto PLA = getUnchecked<ObjCProtocolLoc>();
+      auto PLB = Other.getUnchecked<ObjCProtocolLoc>();
+      return PLA.getProtocol() == PLB.getProtocol() &&
+             PLA.getLocation() == PLB.getLocation();
+    }
 
     assert(getMemoizationData() && Other.getMemoizationData());
     return getMemoizationData() == Other.getMemoizationData();
@@ -396,6 +418,13 @@ public:
         return llvm::DenseMapInfo<NestedNameSpecifier>::getHashValue(
             Val.getUnchecked<NestedNameSpecifier>());
 
+      if (ASTNodeKind::getFromNodeKind<ObjCProtocolLoc>().isSame(
+              Val.NodeKind)) {
+        auto PL = Val.getUnchecked<ObjCProtocolLoc>();
+        return llvm::hash_combine(PL.getProtocol(),
+                                  PL.getLocation().getRawEncoding());
+      }
+
       assert(Val.getMemoizationData());
       return llvm::hash_value(Val.getMemoizationData());
     }
@@ -410,6 +439,8 @@ private:
 
   /// Converter that uses dyn_cast<T> from a stored BaseT*.
   template <typename T, typename BaseT> struct DynCastPtrConverter {
+    static constexpr bool StoresPointer = true;
+    using StoredType = BaseT;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -430,6 +461,8 @@ private:
 
   /// Converter that stores T* (by pointer).
   template <typename T> struct PtrConverter {
+    static constexpr bool StoresPointer = true;
+    using StoredType = T;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return &getUnchecked(NodeKind, Storage);
@@ -450,6 +483,8 @@ private:
 
   /// Converter that stores T (by value).
   template <typename T> struct ValueConverter {
+    static constexpr bool StoresPointer = false;
+    using StoredType = T;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isSame(NodeKind))
         return reinterpret_cast<const T *>(Storage);
@@ -473,6 +508,8 @@ private:
   template <typename T, typename BaseT,
             typename = std::enable_if_t<(sizeof(T) == sizeof(BaseT))>>
   struct DynCastValueConverter {
+    static constexpr bool StoresPointer = false;
+    using StoredType = BaseT;
     static const T *get(ASTNodeKind NodeKind, const void *Storage) {
       if (ASTNodeKind::getFromNodeKind<T>().isBaseOf(NodeKind))
         return &getUnchecked(NodeKind, Storage);

@@ -127,6 +127,7 @@ TEST(ASTNodeKind, ConstexprHasPointerIdentity) {
   EXPECT_FALSE(HasPointerIdentity<TypeLoc>);
   EXPECT_FALSE(HasPointerIdentity<QualType>);
   EXPECT_FALSE(HasPointerIdentity<NestedNameSpecifier>);
+  EXPECT_FALSE(HasPointerIdentity<ObjCProtocolLoc>);
   EXPECT_FALSE(HasPointerIdentity<Foo>);
 
   constexpr bool DefaultConstructedHasPointerIdentity =
@@ -242,6 +243,44 @@ TEST(DynTypedNode, QualType) {
   DynTypedNode Node = DynTypedNode::create(Q);
   EXPECT_TRUE(Node == Node);
   EXPECT_FALSE(Node < Node);
+}
+
+TEST(DynTypedNode, ObjCProtocolLoc) {
+  std::string code = R"cc(
+    @protocol P
+    @end
+    @interface I <P>
+    @end
+    @interface J <P>
+    @end
+  )cc";
+  auto AST =
+      clang::tooling::buildASTFromCodeWithArgs(code, {"-x", "objective-c"});
+  auto IMatches =
+      match(objcInterfaceDecl(hasName("I")).bind("i"), AST->getASTContext());
+  auto JMatches =
+      match(objcInterfaceDecl(hasName("J")).bind("j"), AST->getASTContext());
+  ASSERT_EQ(IMatches.size(), 1u);
+  ASSERT_EQ(JMatches.size(), 1u);
+  const auto *I = IMatches[0].getNodeAs<ObjCInterfaceDecl>("i");
+  const auto *J = JMatches[0].getNodeAs<ObjCInterfaceDecl>("j");
+
+  // Both references name the same protocol at different locations.
+  ObjCProtocolLoc InI(*I->protocol_begin(), *I->protocol_loc_begin());
+  ObjCProtocolLoc InJ(*J->protocol_begin(), *J->protocol_loc_begin());
+  ASSERT_EQ(InI.getProtocol(), InJ.getProtocol());
+
+  DynTypedNode Node = DynTypedNode::create(InI);
+  DynTypedNode Copy = DynTypedNode::create(InI);
+  DynTypedNode Other = DynTypedNode::create(InJ);
+  EXPECT_EQ(Node.getMemoizationData(), nullptr);
+  EXPECT_TRUE(Node == Copy);
+  EXPECT_FALSE(Node < Copy);
+  EXPECT_FALSE(Copy < Node);
+  EXPECT_EQ(DynTypedNode::DenseMapInfo::getHashValue(Node),
+            DynTypedNode::DenseMapInfo::getHashValue(Copy));
+  EXPECT_FALSE(Node == Other);
+  EXPECT_NE(Node < Other, Other < Node);
 }
 
 TEST(DynTypedNode, NestedNameSpecifier) {
