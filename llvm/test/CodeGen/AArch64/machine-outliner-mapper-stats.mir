@@ -1,10 +1,10 @@
 # RUN: llc -mtriple aarch64 -stats -run-pass=machine-outliner -verify-machineinstrs %s -o /dev/null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# CHECK: 2 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
+# CHECK: 1 machine-outliner - Unoutlinable instructions mapped + number of sentinel values
 # CHECK: 3 machine-outliner - Outlinable instructions mapped
 # CHECK: 1 machine-outliner - Sentinel values inserted during mapping
-# CHECK: 5 machine-outliner - Total number of instructions mapped and saved to mapping vector
+# CHECK: 4 machine-outliner - Total number of instructions mapped and saved to mapping vector
 
 ...
 ---

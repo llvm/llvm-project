@@ -24,11 +24,11 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    movl $1, -4(%rbp)
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
 ; CHECK-NEXT:    cmpl $0, -8(%rbp)
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $20, %rsp
@@ -81,11 +81,11 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    subq $20, %rsp
 ; CHECK-NEXT:    movl $0, -20(%rbp)
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    movl $1, x(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $20, %rsp
 ; CHECK-NEXT:    popq %rbp
