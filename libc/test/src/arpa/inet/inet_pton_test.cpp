@@ -16,7 +16,6 @@
 #include "hdr/types/struct_in6_addr.h"
 #include "hdr/types/struct_in_addr.h"
 #include "src/__support/endian_internal.h"
-#include "src/__support/libc_errno.h"
 #include "src/arpa/inet/inet_pton.h"
 #include "src/string/memory_utils/inline_memcmp.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"

@@ -86,8 +86,7 @@ define float @nearbyint_f32(float %x) {
 ; R6-O32-NEXT:    .cfi_def_cfa_offset 24
 ; R6-O32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; R6-O32-NEXT:    .cfi_offset 31, -4
-; R6-O32-NEXT:    jal nearbyintf
-; R6-O32-NEXT:    nop
+; R6-O32-NEXT:    balc nearbyintf
 ; R6-O32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    addiu $sp, $sp, 24
@@ -98,8 +97,7 @@ define float @nearbyint_f32(float %x) {
 ; R6-N64-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N64-NEXT:    .cfi_offset 31, -8
-; R6-N64-NEXT:    jal nearbyintf
-; R6-N64-NEXT:    nop
+; R6-N64-NEXT:    balc nearbyintf
 ; R6-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N64-NEXT:    jr $ra
 ; R6-N64-NEXT:    daddiu $sp, $sp, 16
@@ -137,8 +135,7 @@ define double @nearbyint_f64(double %x) {
 ; R6-O32-NEXT:    .cfi_def_cfa_offset 24
 ; R6-O32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
 ; R6-O32-NEXT:    .cfi_offset 31, -4
-; R6-O32-NEXT:    jal nearbyint
-; R6-O32-NEXT:    nop
+; R6-O32-NEXT:    balc nearbyint
 ; R6-O32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; R6-O32-NEXT:    jr $ra
 ; R6-O32-NEXT:    addiu $sp, $sp, 24
@@ -149,8 +146,7 @@ define double @nearbyint_f64(double %x) {
 ; R6-N64-NEXT:    .cfi_def_cfa_offset 16
 ; R6-N64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
 ; R6-N64-NEXT:    .cfi_offset 31, -8
-; R6-N64-NEXT:    jal nearbyint
-; R6-N64-NEXT:    nop
+; R6-N64-NEXT:    balc nearbyint
 ; R6-N64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
 ; R6-N64-NEXT:    jr $ra
 ; R6-N64-NEXT:    daddiu $sp, $sp, 16

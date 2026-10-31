@@ -18,8 +18,8 @@ using namespace lldb_private;
 TypeCategoryMap::TypeCategoryMap(IFormatChangeListener *lst)
     : m_map_mutex(), listener(lst), m_map(), m_active_categories() {
   constexpr llvm::StringRef default_category_name("default");
-  lldb::TypeCategoryImplSP default_sp = std::make_shared<TypeCategoryImpl>(
-      listener, ConstString(default_category_name));
+  lldb::TypeCategoryImplSP default_sp =
+      std::make_shared<TypeCategoryImpl>(listener, default_category_name.str());
   Add(default_category_name, default_sp);
   Enable(default_category_name, First);
 }
@@ -169,9 +169,9 @@ void TypeCategoryMap::Get(FormattersMatchData &match_data, ImplSP &retval) {
 
   if (log) {
     for (auto match : match_data.GetMatchesVector()) {
-      LLDB_LOGF(
-          log, "[%s] candidate match = %s %s %s %s ptr-stripped-depth=%u",
-          __FUNCTION__, match.GetTypeName().GetCString(),
+      LLDB_LOG(
+          log, "[{0}] candidate match = {1} {2} {3} {4} ptr-stripped-depth={5}",
+          __FUNCTION__, match.GetTypeName(),
           match.DidStripPointer() ? "strip-pointers" : "no-strip-pointers",
           match.DidStripReference() ? "strip-reference" : "no-strip-reference",
           match.DidStripTypedef() ? "strip-typedef" : "no-strip-typedef",

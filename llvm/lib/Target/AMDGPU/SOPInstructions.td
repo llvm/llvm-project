@@ -325,7 +325,7 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
 
-let SubtargetPredicate = HasAddPC64Inst in
+let SubtargetPredicate = HasSAddPCI64Inst in
 def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
@@ -1925,7 +1925,7 @@ let SubtargetPredicate = HasWaitXcnt, hasSideEffects = 1 in {
     SOPP_Pseudo<"s_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 } // End SubtargetPredicate = hasWaitXcnt, hasSideEffects = 1
 
-let SubtargetPredicate = Has1024AddressableVGPRs in {
+let SubtargetPredicate = HasVGPRMSBs in {
   def S_SET_VGPR_MSB : SOPP_Pseudo<"s_set_vgpr_msb" , (ins i16imm:$simm16), "$simm16"> {
     let hasSideEffects = 1;
     let Defs = [MODE];

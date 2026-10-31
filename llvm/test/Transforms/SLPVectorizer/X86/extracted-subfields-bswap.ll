@@ -242,3 +242,38 @@ entry:
   store i8 %t3, ptr %g3, align 1
   ret void
 }
+
+; The source scalar is extracted from the upper half of a wide vector: the
+; extraction of its bytes as a subvector plus their permutation is not cheaper
+; than the extraction plus the byte swap.
+
+define void @extracted_src_upper_half(<8 x i32> %v, ptr %p) #0 {
+; CHECK-LABEL: define void @extracted_src_upper_half(
+; CHECK-SAME: <8 x i32> [[V:%.*]], ptr [[P:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X:%.*]] = extractelement <8 x i32> [[V]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to <4 x i8>
+; CHECK-NEXT:    store <4 x i8> [[TMP1]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = extractelement <8 x i32> %v, i64 5
+  %s0 = lshr i32 %x, 24
+  %t0 = trunc i32 %s0 to i8
+  store i8 %t0, ptr %p, align 1
+  %s1 = lshr i32 %x, 16
+  %t1 = trunc i32 %s1 to i8
+  %g1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  store i8 %t1, ptr %g1, align 1
+  %s2 = lshr i32 %x, 8
+  %t2 = trunc i32 %s2 to i8
+  %g2 = getelementptr inbounds nuw i8, ptr %p, i64 2
+  store i8 %t2, ptr %g2, align 1
+  %t3 = trunc i32 %x to i8
+  %g3 = getelementptr inbounds nuw i8, ptr %p, i64 3
+  store i8 %t3, ptr %g3, align 1
+  ret void
+}
+
+attributes #0 = { "target-cpu"="x86-64-v3" }

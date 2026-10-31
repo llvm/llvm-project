@@ -366,8 +366,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::ROTL, ISD::ROTR}, XLenVT, Expand);
   }
 
-  if (Subtarget.hasStdExtP())
+  if (Subtarget.hasStdExtP()) {
     setOperationAction({ISD::FSHL, ISD::FSHR}, XLenVT, Legal);
+    if (!Subtarget.is64Bit())
+      setOperationAction({ISD::FSHL, ISD::FSHR}, MVT::i64, Custom);
+  }
 
   setOperationAction(ISD::BSWAP, XLenVT,
                      Subtarget.hasREV8Like() ? Legal : Expand);
@@ -2862,6 +2865,29 @@ RISCVTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
              : FPImmAction::ConstantPool;
 }
 
+static bool hasFPType(const RISCVSubtarget &Subtarget, LLT Ty) {
+  if (Ty.isBFloat16())
+    return Subtarget.hasStdExtZfbfmin();
+
+  switch (Ty.getSizeInBits()) {
+  case 16:
+    return Subtarget.hasStdExtZfhmin();
+  case 32:
+    return Subtarget.hasStdExtF();
+  case 64:
+    return Subtarget.hasStdExtD();
+  default:
+    return false;
+  }
+}
+
+TargetLowering::FPImmAction
+RISCVTargetLowering::getFPImmAction(const APFloat &Imm, LLT Ty,
+                                    bool ForCodeSize) const {
+  return hasFPType(Subtarget, Ty) ? FPImmAction::ConstantPool
+                                  : FPImmAction::Bitcast;
+}
+
 // TODO: This is very conservative.
 TargetLowering::ExtractSubvectorCost
 RISCVTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
@@ -3568,7 +3594,9 @@ InstructionCost RISCVTargetLowering::getVRGatherVICost(MVT VT) const {
 /// variants.)  Slides may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
 InstructionCost RISCVTargetLowering::getVSlideVXCost(MVT VT) const {
-  return getLMULCost(VT);
+  // Slides aren't as pipelined as arithmetic ops and don't have the same
+  // throughput on most hardware.
+  return getLMULCost(VT) * 2;
 }
 
 /// Return the cost of a vslidedown.vi or vslideup.vi instruction
@@ -3576,7 +3604,9 @@ InstructionCost RISCVTargetLowering::getVSlideVXCost(MVT VT) const {
 /// variants.)  Slides may be linear in the number of vregs implied by LMUL,
 /// or may track the vrgather.vv cost. It is implementation-dependent.
 InstructionCost RISCVTargetLowering::getVSlideVICost(MVT VT) const {
-  return getLMULCost(VT);
+  // Slides aren't as pipelined as arithmetic ops and don't have the same
+  // throughput on most hardware.
+  return getLMULCost(VT) * 2;
 }
 
 static SDValue lowerINT_TO_FP(SDValue Op, SelectionDAG &DAG,
@@ -17565,6 +17595,56 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
 
     break;
   }
+  case ISD::FSHL:
+  case ISD::FSHR: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           N->getValueType(0) == MVT::i64 &&
+           "Unexpected custom funnel shift legalization");
+
+    // The generic expansion folds its selects for constant shifts.
+    if (isa<ConstantSDNode>(N->getOperand(2)))
+      return;
+
+    auto [XLo, XHi] = DAG.SplitScalar(N->getOperand(0), DL, MVT::i32, MVT::i32);
+    auto [YLo, YHi] = DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+    SDValue Shamt = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, N->getOperand(2));
+    unsigned Opc = N->getOpcode();
+    auto Funnel = [&](SDValue Lo, SDValue Hi) {
+      return DAG.getNode(Opc, DL, MVT::i32, Lo, Hi, Shamt);
+    };
+
+    // The i32 funnel shifts use the low 5 shift bits. Convert bit 5 into a
+    // mask and use packed merge instructions to select the adjacent results.
+    SDValue Mask = DAG.getNode(ISD::SRA, DL, MVT::i32,
+                               DAG.getNode(ISD::SHL, DL, MVT::i32, Shamt,
+                                           DAG.getConstant(26, DL, MVT::i32)),
+                               DAG.getConstant(31, DL, MVT::i32));
+    auto Merge = [&](SDValue Below32, SDValue AtLeast32) {
+      return DAG.getNode(RISCVISD::MERGE, DL, MVT::i32, Mask, Below32,
+                         AtLeast32);
+    };
+
+    // Form the three adjacent 32-bit funnel shifts. The mask then selects the
+    // two parts corresponding to shifts below or above 32 bits.
+    SDValue Cross = Funnel(XLo, YHi);
+    SDValue LoBelow32, HiBelow32, LoAtLeast32, HiAtLeast32;
+    if (Opc == ISD::FSHL) {
+      LoBelow32 = Cross;
+      HiBelow32 = Funnel(XHi, XLo);
+      LoAtLeast32 = Funnel(YHi, YLo);
+      HiAtLeast32 = Cross;
+    } else {
+      LoBelow32 = Funnel(YHi, YLo);
+      HiBelow32 = Cross;
+      LoAtLeast32 = Cross;
+      HiAtLeast32 = Funnel(XHi, XLo);
+    }
+
+    SDValue Lo = Merge(LoBelow32, LoAtLeast32);
+    SDValue Hi = Merge(HiBelow32, HiAtLeast32);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi));
+    return;
+  }
   case ISD::ROTL:
   case ISD::ROTR:
     assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
@@ -18338,17 +18418,17 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     }
     case Intrinsic::riscv_sati:
     case Intrinsic::riscv_usati: {
-      // RV64 has no 32-bit sati; use psati.w on the low word.
+      // RV64 has no 32-bit sati; promote to i64.
       if (!Subtarget.is64Bit() || N->getValueType(0) != MVT::i32)
         return;
       unsigned Opc =
           IntNo == Intrinsic::riscv_sati ? RISCVISD::SATI : RISCVISD::USATI;
       SDValue Rs1 =
-          DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32, N->getOperand(1));
+          DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, N->getOperand(1));
       SDValue Res = DAG.getNode(
-          Opc, DL, MVT::v2i32, Rs1,
+          Opc, DL, MVT::i64, Rs1,
           DAG.getTargetConstant(N->getConstantOperandVal(2), DL, MVT::i64));
-      Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+      Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
     case Intrinsic::riscv_mulhr_i32:
@@ -19362,6 +19442,53 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::ADD, DL, VT, New1, DAG.getSignedConstant(CB, DL, VT));
 }
 
+// add (ext X), (ext Y) -> ext (add X, Y)
+// if the add can't overflow in the narrow type.
+static SDValue
+combineAddOfExtsAlreadyExtended(SDNode *N, SelectionDAG &DAG,
+                                const RISCVSubtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  if (!VT.isVector() || !Subtarget.hasVInstructions())
+    return SDValue();
+
+  // Ensure the user has a widening variant so the extend can be moved after
+  // the add and still be combined. Do not interfere with existing fusion
+  // opportunities, such as mul-add or .vx patterns.
+  if (!N->hasOneUse())
+    return SDValue();
+
+  const SDUse &Use = *N->use_begin();
+  const SDNode *User = Use.getUser();
+  if (User->getOpcode() == ISD::ADD) {
+    const SDValue OtherOp = User->getOperand(1 - Use.getOperandNo());
+    if (OtherOp->getOpcode() == ISD::MUL || DAG.isSplatValue(OtherOp))
+      return SDValue();
+  } else if (User->getOpcode() != ISD::VECREDUCE_ADD) {
+    return SDValue();
+  }
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  unsigned ExtOpc = LHS.getOpcode();
+  if ((ExtOpc != ISD::SIGN_EXTEND && ExtOpc != ISD::ZERO_EXTEND) ||
+      RHS.getOpcode() != ExtOpc || !LHS.hasOneUse() || !RHS.hasOneUse())
+    return SDValue();
+
+  SDValue LHSSrc = LHS.getOperand(0);
+  SDValue RHSSrc = RHS.getOperand(0);
+  if (LHSSrc.getValueType() != RHSSrc.getValueType() ||
+      !DAG.getTargetLoweringInfo().isTypeLegal(LHSSrc.getValueType()))
+    return SDValue();
+
+  if (!DAG.willNotOverflowAdd(ExtOpc == ISD::SIGN_EXTEND, LHSSrc, RHSSrc))
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue Add =
+      DAG.getNode(ISD::ADD, DL, LHSSrc.getValueType(), LHSSrc, RHSSrc);
+  return DAG.getNode(ExtOpc, DL, N->getValueType(0), Add);
+}
+
 // add (zext, zext) -> zext (add (zext, zext))
 // sub (zext, zext) -> sext (sub (zext, zext))
 // mul (zext, zext) -> zext (mul (zext, zext))
@@ -19834,6 +19961,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpOfExt(N, DAG))
     return V;
   if (SDValue V = combineAddOfExts(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combineAddOfExtsAlreadyExtended(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddPackedByteDot(N, DAG, Subtarget))
     return V;
@@ -30890,6 +31019,8 @@ bool RISCVTargetLowering::shouldInsertFencesForAtomic(
 }
 
 bool RISCVTargetLowering::fallBackToDAGISel(const Instruction &Inst) const {
+  if (Subtarget.hasStdExtZfinx())
+    return true;
 
   // GISel support is in progress or complete for these opcodes.
   unsigned Op = Inst.getOpcode();

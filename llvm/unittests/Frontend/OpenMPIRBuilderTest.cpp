@@ -10,6 +10,7 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/BundleAttributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -2076,7 +2077,7 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdCustomAligned) {
     AssumeInst *AssumeInstruction = cast<AssumeInst>(&Instr);
     if (AssumeInstruction->getNumTotalBundleOperands()) {
       auto Bundle = AssumeInstruction->getOperandBundleAt(0);
-      if (Bundle.getTagName() == "align") {
+      if (getBundleAttrFromOBU(Bundle) == BundleAttr::Align) {
         EXPECT_TRUE(isa<ConstantInt>(Bundle.Inputs[1]));
         auto ConstIntVal = dyn_cast<ConstantInt>(Bundle.Inputs[1]);
         EXPECT_EQ(ConstIntVal->getSExtValue(), AlignmentValue);

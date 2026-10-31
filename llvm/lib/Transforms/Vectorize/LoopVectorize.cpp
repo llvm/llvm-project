@@ -3558,6 +3558,55 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   assert(IC > 0 && "Interleave count must be greater than 0.");
 
+  // FIXME: VF is required to be a vector only because there are several recipes
+  // whose computeCost function asserts that the VF is a vector.
+  if (Opts.enable_interleave_to_reduce_stalls && VF.isVector()) {
+    LLVM_DEBUG(dbgs() << "LV: Interleaving to reduce stall cycles due to "
+                         "instruction latency.\n");
+    // Interleaving a replicator region means we get extra copies of the blocks
+    // in the region. Vector values used in those blocks are expected to later
+    // be sunk to just before them, negating any reduction in stalls. Therefore
+    // there's no gain to be had from interleaving.
+    if (hasReplicatorRegion(Plan)) {
+      LLVM_DEBUG(dbgs() << "LV: Not interleaving due to replicator region.\n");
+      return 1;
+    }
+    VPCostContext LatencyCtx(*TLI, Plan, *CM, Config,
+                             /*ReusePrintingSlotTracker=*/true);
+    LatencyCtx.CostKind = TTI::TCK_Latency;
+    VPCostContext ThroughputCtx(*TLI, Plan, *CM, Config,
+                                /*ReusePrintingSlotTracker=*/true);
+    ThroughputCtx.CostKind = TTI::TCK_RecipThroughput;
+    // Find the largest interleave count that will help with reducing stalls.
+    unsigned StallsIC = 1;
+    for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      for (VPRecipeBase &R : *VPBB) {
+        // Assuming that each value will be needed as soon as it's generated the
+        // number of stall cycles is one less than the latency.
+        InstructionCost StallCycles = R.cost(VF, LatencyCtx) - 1;
+        if (Opts.force_target_load_latency > 0 && R.mayReadFromMemory())
+          StallCycles = Opts.force_target_load_latency - 1;
+        // Each interleaving above 1 will reduce the stalls by RecipThroughput,
+        // so pick the interleaving that will reduce stalls to zero.
+        InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
+        if (StallCycles.isValid() && RecipThroughput.isValid() &&
+            StallCycles > 0 && RecipThroughput > 0) {
+          unsigned ThisIC = bit_floor<uint64_t>(
+              1 + (StallCycles / RecipThroughput).getValue());
+          StallsIC = std::max(StallsIC, ThisIC);
+        }
+      }
+    }
+    if (StallsIC <= 1) {
+      LLVM_DEBUG(
+          dbgs() << "LV: Not interleaving as it wouldn't reduce stalls.\n");
+      return 1;
+    }
+    IC = std::min(IC, StallsIC);
+    return IC;
+  }
+
   // Interleave if we vectorized this loop and there is a reduction that could
   // benefit from interleaving.
   if (VF.isVector() && HasReductions) {
@@ -4594,13 +4643,13 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
 
       // All instructions in an Any-of reduction chain are narrowed to bool.
       // Check if that is the case for this phi node.
-      auto *HeaderUser = cast_if_present<PHINode>(
-          find_singleton<User>(Phi->users(), [this](User *U, bool) -> User * {
+      auto *HeaderUser = find_singleton<PHINode>(
+          Phi->users(), [this](User *U, bool) -> PHINode * {
             auto *Phi = dyn_cast<PHINode>(U);
             if (Phi && Phi->getParent() == TheLoop->getHeader())
               return Phi;
             return nullptr;
-          }));
+          });
       if (HeaderUser) {
         auto &ReductionVars = Legal->getReductionVars();
         auto Iter = ReductionVars.find(HeaderUser);
@@ -4642,9 +4691,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     [[fallthrough]];
   case Instruction::Add:
   case Instruction::Sub: {
-    auto Info = Legal->getHistogramInfo(I);
-    if (Info && VF.isVector()) {
-      const HistogramInfo *HGram = Info.value();
+    const HistogramInfo *HGram = Legal->getHistogramInfo(I);
+    if (HGram && VF.isVector()) {
       // Assume that a non-constant update value (or a constant != 1) requires
       // a multiply, and add that into the cost.
       InstructionCost MulCost = TTI::TCC_Free;
@@ -5556,8 +5604,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // which may be needed for epilogue vectorization.
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, BestVPlan,
                  /*OnlyLatches=*/true);
-  RUN_VPLAN_PASS(VPlanTransforms::materializeBackedgeTakenCount, BestVPlan,
-                 VectorPH);
   std::optional<uint64_t> MaxRuntimeStep = getMaxRuntimeElementCount(
       BestVF * BestUF, *OrigLoop->getHeader()->getParent());
 
@@ -5574,7 +5620,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   if (EpilogueVecKind == EpilogueVectorizationKind::None)
     RUN_VPLAN_PASS(VPlanTransforms::expandSCEVsToVPInstructions, BestVPlan,
                    *PSE.getSE());
-  RUN_VPLAN_PASS(VPlanTransforms::removeRedundantExpandSCEVRecipes, BestVPlan);
   RUN_VPLAN_PASS(VPlanTransforms::cse, BestVPlan, VPDominatorTree(BestVPlan));
   RUN_VPLAN_PASS(VPlanTransforms::combineRecipes, BestVPlan);
   // Removing branches and incoming values may expose additional simplification
@@ -5819,25 +5864,23 @@ VPHistogramRecipe *VPRecipeBuilder::widenIfHistogram(VPInstruction *VPI) {
   if (VPI->getOpcode() != Instruction::Store)
     return nullptr;
 
-  auto HistInfo =
+  const HistogramInfo *HistInfo =
       Legal->getHistogramInfo(cast<StoreInst>(VPI->getUnderlyingInstr()));
   if (!HistInfo)
     return nullptr;
-
-  const HistogramInfo *HI = *HistInfo;
 
   SmallVector<VPValue *, 3> HGramOps;
   // Bucket address.
   HGramOps.push_back(VPI->getOperand(1));
   // Increment value.
-  HGramOps.push_back(Plan.getOrAddLiveIn(HI->Update->getOperand(1)));
+  HGramOps.push_back(Plan.getOrAddLiveIn(HistInfo->Update->getOperand(1)));
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (CM.isMaskRequired(HI->Store))
+  if (CM.isMaskRequired(HistInfo->Store))
     HGramOps.push_back(VPI->getMask());
 
-  return new VPHistogramRecipe(HI->UpdateKind, HGramOps,
+  return new VPHistogramRecipe(HistInfo->UpdateKind, HGramOps,
                                cast<VPIRMetadata>(*VPI), VPI->getDebugLoc());
 }
 
@@ -5852,10 +5895,10 @@ bool VPRecipeBuilder::replaceWithFinalIfReductionStore(
       VPValue *Addr = VPI->getOperand(1);
       // We need to store the exiting value of the reduction, so use the blend
       // if tail folded.
-      if (auto *Blend = VPlanPatternMatch::findUserOf<VPBlendRecipe>(Val))
+      if (auto *Blend = VPlanPatternMatch::findSingleUser<VPBlendRecipe>(Val))
         Val = Blend;
       [[maybe_unused]] auto *Rdx =
-          VPlanPatternMatch::findUserOf<VPReductionPHIRecipe>(Val);
+          VPlanPatternMatch::findSingleUser<VPReductionPHIRecipe>(Val);
       assert((isa<VPIRValue>(Val) || !Rdx || Rdx->getBackedgeValue() == Val) &&
              "Store of reduction thats not the backedge value?");
       auto *Recipe = new VPReplicateRecipe(
@@ -6346,7 +6389,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
           vputils::onlyFirstLaneUsed(&VPI))
         continue;
 
-      // Only VPInstrutions with an underlying value need to be processed.
+      // Only VPInstructions with an underlying value need to be processed.
       if (!VPI.getUnderlyingValue())
         continue;
 
@@ -6511,8 +6554,9 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     // the reduction phi to operate on bools before creating the final
     // reduction result.
     if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RecurrenceKind)) {
-      auto *AnyOfSelect = cast<VPSingleDefRecipe>(
-          findUserOf(PhiR, m_Select(m_VPValue(), m_VPValue(), m_VPValue())));
+      auto *AnyOfSelect = findSingleUser<VPSingleDefRecipe>(
+          PhiR,
+          m_Select(m_Unless(m_Specific(HeaderMask)), m_VPValue(), m_VPValue()));
       VPValue *Start = PhiR->getStartValue();
       bool TrueValIsPhi = AnyOfSelect->getOperand(1) == PhiR;
       // NewVal is the non-phi operand of the select.
@@ -6694,32 +6738,10 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
       });
     }
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
-    auto DiffChecks = RtPtrChecking.getDiffChecks();
-    auto HasUnsupportedBounds = [&]() {
-      // VPSCEVExpander expands AddRecs in the plan's entry, not the check
-      // block.
-      auto IsUnsupported = [](const SCEV *S) {
-        return SCEVExprContains(S, IsaPred<SCEVAddRecExpr>);
-      };
-      if (DiffChecks)
-        return any_of(*DiffChecks, [&](const PointerDiffInfo &C) {
-          return IsUnsupported(C.SrcStart) || IsUnsupported(C.SinkStart);
-        });
-      return any_of(RtPtrChecking.CheckingGroups,
-                    [&](const RuntimeCheckingPtrGroup &CG) {
-                      return IsUnsupported(CG.Low) || IsUnsupported(CG.High);
-                    });
-    };
-    // The VPlan expander cannot hoist bounds out of an enclosing loop.
-    if (OrigLoop->getParentLoop() || HasUnsupportedBounds())
-      return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
-                            MemCheckCond, MemCheckBlock, HasBranchWeights);
-
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
     RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
-                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
-                   HasBranchWeights);
+                   OrigLoop, *PSE.getSE(), VF, UF, HasBranchWeights);
   }
 }
 
@@ -7016,10 +7038,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
       VPInstruction::ResumeForEpilogue,
       {VectorTC, MainPlan.getZero(VectorTC->getScalarType())});
 
-  // Create ResumeForEpilogue instructions for the resume phis of the
-  // VPIRPhis and their bypass values in the scalar header of the main plan and
-  // return them so they can be used as resume values when vectorizing the
-  // epilogue.
+  // Replace the resume phis of the VPIRPhis in the scalar header of the main
+  // plan by ResumeForEpilogue instructions for their incoming values and return
+  // them so they can be used as resume values when vectorizing the epilogue.
+  // The epilogue plan creates the resume phis after the main plan executed.
   VPRecipeBase *MiddleTerm = MiddleVPBB->getTerminator();
   MiddleBuilder.setInsertPoint(
       MiddleVPBB, MiddleTerm ? MiddleTerm->getIterator() : MiddleVPBB->end());
@@ -7032,31 +7054,22 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  return {VectorTCMarker, std::move(ResumeValues)};
-}
-
-/// Replace the resume phis in \p MainPlan's scalar preheader by their bypass
-/// values. The epilogue plan creates them after \p MainPlan executed.
-static void removeScalarResumePhis(VPlan &MainPlan) {
   for (VPRecipeBase &R :
        make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
     auto *ResumePhi = cast<VPPhi>(&R);
-    assert(ResumePhi->getIncomingBlock(0) == MainPlan.getMiddleBlock() &&
-           all_equal(drop_begin(ResumePhi->operands())) &&
-           "expected resume phi merging middle block and bypass values");
     ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
     ResumePhi->eraseFromParent();
   }
+  return {VectorTCMarker, std::move(ResumeValues)};
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
 /// SCEVs from \p ExpandedSCEVs and set resume values for header recipes.
 static void preparePlanForEpilogueVectorLoop(
-    VPlan &MainPlan, VPlan &Plan, Loop *L, const SCEV2ValueTy &ExpandedSCEVs,
+    VPlan &MainPlan, VPlan &Plan, const SCEV2ValueTy &ExpandedSCEVs,
     ElementCount MainLoopVF, unsigned MainLoopUF, ElementCount EpilogueVF,
-    LoopVectorizationPlanner &LVP, VFSelectionContext &Config,
-    ScalarEvolution &SE, const MainPlanResumeMarkers &Markers,
-    VPBasicBlock *MainCheck) {
+    VFSelectionContext &Config, ScalarEvolution &SE,
+    const MainPlanResumeMarkers &Markers, VPBasicBlock *MainCheck) {
   // Build a map from the scalar-header PHI to the ResumeForEpilogue markers
   // from the main plan.
   // TODO: Replace the IR PHI key.
@@ -7371,8 +7384,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                              TTI->enableInterleavedAccessVectorization());
 
   // Analyze interleaved memory accesses.
-  if (UseInterleaved)
+  if (UseInterleaved) {
     IAI.analyzeInterleaving(useMaskedInterleavedAccesses(Opts, *TTI));
+    // If the loop exits from a block other than the latch, the scalar
+    // iteration reserved for the exit may leave the loop before reaching the
+    // grouped accesses.
+    if (L->getExitingBlock() != L->getLoopLatch() &&
+        !LVL.hasUncountableEarlyExit())
+      IAI.invalidateGroupsRequiringScalarEpilogue();
+  }
 
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();
@@ -7750,7 +7770,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                    HasBranchWeights ? MinItersBypassWeights : nullptr,
                    L->getLoopPredecessor()->getTerminator()->getDebugLoc(),
                    PSE);
-    removeScalarResumePhis(BestMainPlan);
 
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (first pass)\n"
@@ -7782,9 +7801,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // edges from the first pass.
     InnerLoopVectorizer EpilogILV(L, PSE, LI, DT, TTI, AC, EpilogueVF,
                                   /*UnrollFactor=*/1, Checks);
-    preparePlanForEpilogueVectorLoop(
-        BestMainPlan, BestEpiPlan, L, ExpandedSCEVs, VF.Width, IC, EpilogueVF,
-        LVP, Config, *PSE.getSE(), Markers, MainCheck);
+    preparePlanForEpilogueVectorLoop(BestMainPlan, BestEpiPlan, ExpandedSCEVs,
+                                     VF.Width, IC, EpilogueVF, Config,
+                                     *PSE.getSE(), Markers, MainCheck);
     RUN_VPLAN_PASS(VPlanTransforms::simplifyLiveInsWithSCEV, BestEpiPlan, PSE);
     LLVM_DEBUG({
       dbgs() << "Create Skeleton for epilogue vectorized loop (second pass)\n"

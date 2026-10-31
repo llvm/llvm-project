@@ -153,6 +153,33 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
+InstructionCost LoongArchTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
+                                                  Align Alignment,
+                                                  unsigned AddressSpace,
+                                                  TTI::TargetCostKind CostKind,
+                                                  TTI::OperandValueInfo OpInfo,
+                                                  const Instruction *I) const {
+  // Vectors narrower than 128 bits are widened, and on LA64 loading or storing
+  // one takes a single instruction: FLD.{S/D} or VLDREPL.{B/H} for loads, and
+  // VSTELM.{B/H/W/D} for stores. The generic model costs them as scalarized.
+  // TODO: LA32 splits 64-bit loads and doesn't use VSTELM.{W/D} for stores.
+  auto *VTy = dyn_cast<FixedVectorType>(Src);
+  if (CostKind == TTI::TCK_RecipThroughput && ST->is64Bit() &&
+      ST->hasExtLSX() && VTy && isPowerOf2_32(VTy->getNumElements())) {
+    unsigned Size = VTy->getPrimitiveSizeInBits().getFixedValue();
+    EVT VT = getTLI()->getValueType(DL, Src);
+    if (Size >= 16 && Size < 128 &&
+        getTLI()->getTypeAction(Src->getContext(), VT) ==
+            TargetLowering::TypeWidenVector &&
+        getTLI()->allowsMemoryAccessForAlignment(Src->getContext(), DL, VT,
+                                                 AddressSpace, Alignment))
+      return 1;
+  }
+
+  return BaseT::getMemoryOpCost(Opcode, Src, Alignment, AddressSpace, CostKind,
+                                OpInfo, I);
+}
+
 LoongArchTTIImpl::TTI::MemCmpExpansionOptions
 LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   TTI::MemCmpExpansionOptions Options;

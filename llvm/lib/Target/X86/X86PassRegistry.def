@@ -23,6 +23,7 @@ MODULE_PASS("x86-winehstate", X86WinEHStatePass())
 #ifndef FUNCTION_PASS
 #define FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+FUNCTION_PASS("x86-fence-nontemporal-stores", X86FenceNonTemporalStoresPass(this))
 FUNCTION_PASS("x86-lower-amx-intrinsics", X86LowerAMXIntrinsicsPass(this))
 FUNCTION_PASS("x86-lower-amx-type", X86LowerAMXTypePass(this))
 FUNCTION_PASS("x86-partial-reduction", X86PartialReductionPass(this))

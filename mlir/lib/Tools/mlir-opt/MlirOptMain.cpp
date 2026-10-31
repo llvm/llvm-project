@@ -377,8 +377,8 @@ MlirOptMainConfig &MlirOptMainConfig::setPassPipelineParser(
     if (failed(passPipeline.addToPipeline(pm, errorHandler)))
       return failure();
     if (this->shouldDumpPassPipeline()) {
-
-      pm.dump();
+      llvm::errs() << "Pass Manager with " << pm.size() << " passes:\n";
+      pm.printAsTextualPipeline(llvm::errs(), /*pretty=*/true);
       llvm::errs() << "\n";
     }
     return success();

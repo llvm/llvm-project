@@ -598,13 +598,12 @@ SmallBitVector selectBSwapGathers(
     if (FieldWidth != 8 || NumFields % 2 != 0 ||
         !ShuffleVectorInst::isReverseMask(Mask, NumFields))
       continue;
+    Type *ByteTy = Type::getInt8Ty(SrcTy->getContext());
+    auto *FieldVecTy = cast<VectorType>(getWidenedType(ByteTy, NumFields));
     IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, SrcTy, {SrcTy});
-    InstructionCost Cost =
-        TTI.getIntrinsicInstrCost(CostAttrs, CostKind) -
-        getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
-                       cast<VectorType>(getWidenedType(
-                           Type::getInt8Ty(SrcTy->getContext()), NumFields)),
-                       CostKind, Mask);
+    InstructionCost BSwapCost = TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+    InstructionCost PermuteCost = getShuffleCost(TTI, TTI::SK_PermuteSingleSrc,
+                                                 FieldVecTy, CostKind, Mask);
     std::optional<std::tuple<const void *, FixedVectorType *, unsigned>>
         Source = GetVectorizedSource(Src);
     if (!Source)
@@ -615,11 +614,24 @@ SmallBitVector selectBSwapGathers(
             cast<FixedVectorType>(EE->getVectorOperandType()), *Lane);
       }
     if (!Source) {
-      if (Cost <= 0)
+      if (BSwapCost <= PermuteCost)
         BSwapGathers.set(Idx);
       continue;
     }
     auto &[Vec, VecTy, Lane] = *Source;
+    // The bytes of the scalar are either extracted from the vector as a
+    // subvector and permuted, or permuted from the whole vector directly.
+    auto *VecBytesTy = cast<VectorType>(
+        getWidenedType(ByteTy, NumFields * VecTy->getNumElements()));
+    for (int &I : Mask)
+      if (I != PoisonMaskElem)
+        I += Lane * NumFields;
+    PermuteCost =
+        std::min(PermuteCost + getShuffleCost(TTI, TTI::SK_ExtractSubvector,
+                                              VecBytesTy, CostKind, {},
+                                              Lane * NumFields, FieldVecTy),
+                 getShuffleCost(TTI, TTI::SK_PermuteSingleSrc, VecBytesTy,
+                                CostKind, Mask));
     auto [It, Inserted] = SourceVectors.try_emplace(Vec);
     SourceVector &Info = It->second;
     if (Inserted) {
@@ -627,7 +639,7 @@ SmallBitVector selectBSwapGathers(
       Info.DemandedElts = APInt::getZero(VecTy->getNumElements());
     }
     Info.DemandedElts.setBit(Lane);
-    Info.Cost += Cost;
+    Info.Cost += BSwapCost - PermuteCost;
     Info.Gathers.push_back(Idx);
   }
   for (const SourceVector &Info : make_second_range(SourceVectors)) {
