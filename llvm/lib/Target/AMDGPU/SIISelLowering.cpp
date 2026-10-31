@@ -20629,6 +20629,24 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   case AMDGPU::G_INTRINSIC_CONVERGENT: {
     Intrinsic::ID IID = cast<GIntrinsic>(MI)->getIntrinsicID();
     switch (IID) {
+    case Intrinsic::amdgcn_mul_i24:
+    case Intrinsic::amdgcn_mul_u24: {
+      KnownBits Known2;
+      VT.computeKnownBitsImpl(MI->getOperand(2).getReg(), Known, DemandedElts,
+                              Depth + 1);
+      VT.computeKnownBitsImpl(MI->getOperand(3).getReg(), Known2, DemandedElts,
+                              Depth + 1);
+      unsigned BitWidth = Known.getBitWidth();
+      if (IID == Intrinsic::amdgcn_mul_i24) {
+        Known = Known.trunc(24).sext(BitWidth);
+        Known2 = Known2.trunc(24).sext(BitWidth);
+      } else {
+        Known = Known.trunc(24).zext(BitWidth);
+        Known2 = Known2.trunc(24).zext(BitWidth);
+      }
+      Known = KnownBits::mul(Known, Known2);
+      break;
+    }
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), VT, Known, 0);
       break;
