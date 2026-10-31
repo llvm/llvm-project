@@ -1274,11 +1274,6 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   VPValue *A, *B;
 
-  // icmp Pred X, X -> true if Pred is true when equal, false otherwise.
-  CmpPredicate Pred;
-  if (match(Def, m_ICmp(Pred, m_VPValue(A), m_Deferred(A))))
-    return ICmpInst::isTrueWhenEqual(Pred) ? Plan.getTrue() : Plan.getFalse();
-
   if (match(Def, m_c_Add(m_VPValue(A), m_ZeroInt())))
     return A;
 
@@ -2399,13 +2394,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (auto *LL = dyn_cast<VPWidenMemoryRecipe>(L))
       if (LL->isConsecutive() != cast<VPWidenMemoryRecipe>(R)->isConsecutive())
         return false;
-    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L)) {
-      auto *RExp = cast<VPExpandSCEVRecipe>(R);
-      if (LExp->getSCEV() != RExp->getSCEV())
+    if (auto *LExp = dyn_cast<VPExpandSCEVRecipe>(L))
+      if (LExp->getSCEV() != cast<VPExpandSCEVRecipe>(R)->getSCEV())
         return false;
-      assert(LExp->expandInIR() == RExp->expandInIR() &&
-             "cannot CSE recipes expanded in IR and as VPInstructions");
-    }
     // Phi recipes can only be equal if they are in the same VPBB, as they
     // implicitly depend on their predecessors.
     if (isa<VPWidenPHIRecipe>(L) && L->getParent() != R->getParent())

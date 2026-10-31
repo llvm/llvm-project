@@ -471,9 +471,9 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr, bool ExpandInIR)
+VPExpandSCEVRecipe::VPExpandSCEVRecipe(const SCEV *Expr)
     : VPSingleDefRecipe(VPRecipeBase::VPExpandSCEVSC, {}, Expr->getType()),
-      Expr(Expr), ExpandInIR(ExpandInIR) {}
+      Expr(Expr) {}
 
 static SmallVector<unsigned> getExtractValueIndices(ArrayRef<VPValue *> Ops) {
   return map_to_vector(drop_begin(Ops), [](VPValue *Op) {
@@ -5205,8 +5205,6 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << Indent << "EMIT ";
   printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
-  if (ExpandInIR)
-    O << " (in IR)";
 }
 #endif
 

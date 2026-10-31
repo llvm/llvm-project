@@ -661,21 +661,6 @@ LLVM_ABI void appendLoopsToWorklist(LoopInfo &,
 LLVM_ABI Loop *cloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM, LoopInfo *LI,
                          LPPassManager *LPM);
 
-/// SCEV bounds of a pointer group: the first accessed byte, the last accessed
-/// byte plus one, and a stride that must be checked to be non-negative, if any.
-struct RuntimeCheckBounds {
-  const SCEV *Low;
-  const SCEV *High;
-  const SCEV *StrideToCheck;
-};
-
-/// Return the bounds of \p CG in \p TheLoop. If \p HoistRuntimeChecks is true,
-/// bounds varying in the parent loop of \p TheLoop may be widened to cover the
-/// whole parent loop, so that checks using them can be hoisted out of it.
-LLVM_ABI RuntimeCheckBounds
-getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG, const Loop *TheLoop,
-                      ScalarEvolution &SE, bool HoistRuntimeChecks);
-
 /// Add code that checks at runtime if the accessed arrays in \p PointerChecks
 /// overlap. Returns the final comparator value or NULL if no check is needed.
 LLVM_ABI Value *

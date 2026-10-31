@@ -6737,11 +6737,17 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
                   "(e.g., adding 'restrict').";
       });
     }
+    // The VPlan expander cannot hoist bounds out of an enclosing loop.
     const auto &RtPtrChecking = *Legal->getRuntimePointerChecking();
+    if (OrigLoop->getParentLoop())
+      return RUN_VPLAN_PASS(VPlanTransforms::attachCheckBlock, Plan,
+                            MemCheckCond, MemCheckBlock, HasBranchWeights);
+
     // Erase the temporary IR before recipe expansion can reuse its values.
     RTChecks.eraseMemCheckBlock();
     RUN_VPLAN_PASS(VPlanTransforms::attachMemoryChecks, Plan, RtPtrChecking,
-                   OrigLoop, *PSE.getSE(), VF, UF, HasBranchWeights);
+                   *PSE.getSE(), VF, UF, OrigLoop->getStartLoc(),
+                   HasBranchWeights);
   }
 }
 
@@ -7384,8 +7390,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                              TTI->enableInterleavedAccessVectorization());
 
   // Analyze interleaved memory accesses.
-  if (UseInterleaved)
+  if (UseInterleaved) {
     IAI.analyzeInterleaving(useMaskedInterleavedAccesses(Opts, *TTI));
+    // If the loop exits from a block other than the latch, the scalar
+    // iteration reserved for the exit may leave the loop before reaching the
+    // grouped accesses.
+    if (L->getExitingBlock() != L->getLoopLatch() &&
+        !LVL.hasUncountableEarlyExit())
+      IAI.invalidateGroupsRequiringScalarEpilogue();
+  }
 
   if (LVL.hasUncountableEarlyExit()) {
     BasicBlock *LoopLatch = L->getLoopLatch();
