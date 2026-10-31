@@ -284,6 +284,7 @@
 ; GCN-O1-NEXT:      AMDGPU Annotate Uniform Values
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      SI annotate control flow
+; GCN-O1-NEXT:      SI sink async DMA out of divergent then-blocks
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
 ; GCN-O1-NEXT:      AMDGPU Rewrite Undef for PHI
@@ -599,6 +600,7 @@
 ; GCN-O1-OPTS-NEXT:      AMDGPU Annotate Uniform Values
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      SI annotate control flow
+; GCN-O1-OPTS-NEXT:      SI sink async DMA out of divergent then-blocks
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
 ; GCN-O1-OPTS-NEXT:      AMDGPU Rewrite Undef for PHI
@@ -926,6 +928,7 @@
 ; GCN-O2-NEXT:      AMDGPU Annotate Uniform Values
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      SI annotate control flow
+; GCN-O2-NEXT:      SI sink async DMA out of divergent then-blocks
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
 ; GCN-O2-NEXT:      AMDGPU Rewrite Undef for PHI
@@ -1270,6 +1273,7 @@
 ; GCN-O3-NEXT:      AMDGPU Annotate Uniform Values
 ; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      SI annotate control flow
+; GCN-O3-NEXT:      SI sink async DMA out of divergent then-blocks
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
 ; GCN-O3-NEXT:      AMDGPU Rewrite Undef for PHI
