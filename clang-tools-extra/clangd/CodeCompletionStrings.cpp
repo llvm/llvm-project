@@ -54,13 +54,39 @@ void appendOptionalChunk(const CodeCompletionString &CCS, std::string *Out) {
   }
 }
 
+/// A divider line is a long run of a single repeated character, as used in
+/// section banners. These are never documentation, even when combined with
+/// a title line, as in:
+///   // Per-frame pump
+///   // ====================================================================
+/// The length threshold keeps short runs (e.g. markdown `---` rules or RST
+/// adornments) working as documentation.
+bool isDividerLine(llvm::StringRef Line) {
+  constexpr unsigned MinDividerLength = 10;
+  Line = Line.trim(" \t\r\n");
+  if (Line.size() < MinDividerLength)
+    return false;
+  return Line.find_first_not_of(Line.front()) == llvm::StringRef::npos;
+}
+
 bool looksLikeDocComment(llvm::StringRef CommentText) {
   // We don't report comments that only contain "special" chars.
   // This avoids reporting various delimiters, like:
   //   =================
   //   -----------------
   //   *****************
-  return CommentText.find_first_not_of("/*-= \t\r\n") != llvm::StringRef::npos;
+  if (CommentText.find_first_not_of("/*-= \t\r\n") == llvm::StringRef::npos)
+    return false;
+  // Nor comments containing a section-divider line. Without this, the title
+  // of a divider block is reported as documentation for the next declaration.
+  llvm::StringRef Rest = CommentText;
+  while (!Rest.empty()) {
+    const auto Split = Rest.split('\n');
+    if (isDividerLine(Split.first))
+      return false;
+    Rest = Split.second;
+  }
+  return true;
 }
 
 // Determine whether the completion string should be patched

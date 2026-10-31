@@ -57,6 +57,106 @@ TEST(Hover, Structured) {
          HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
+      // A section divider with a title is not documentation.
+      {R"cpp(
+          // Per-frame pump
+          // ========================================================================
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void ()";
+         HI.Parameters.emplace();
+       }},
+      // Same, with a blank line between the divider and the declaration.
+      {R"cpp(
+          // Per-frame pump
+          // ========================================================================
+
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void ()";
+         HI.Parameters.emplace();
+       }},
+      // Other divider styles are not documentation either.
+      {R"cpp(
+          // Appearance
+          // ------------------------------------------------------------------------
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void ()";
+         HI.Parameters.emplace();
+       }},
+      // Block-comment banners are not documentation either.
+      {R"cpp(
+          /*
+          ##########################################################################
+          Private
+          ##########################################################################
+          */
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void ()";
+         HI.Parameters.emplace();
+       }},
+      // Plus-run dividers are not documentation either.
+      {R"cpp(
+          // Helpers
+          // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void ()";
+         HI.Parameters.emplace();
+       }},
+      // Short runs (e.g. markdown rules) are still documentation.
+      {R"cpp(
+          // Best foo ever.
+          // ---
+          void [[fo^o]]() {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.\n---";
+         HI.Definition = "void foo()";
+         HI.ReturnType = "void";
+         HI.Type = "void ()";
+         HI.Parameters.emplace();
+       }},
       {R"cpp(
           // Best foo ever.
           void [[fo^o]](auto x) {}
