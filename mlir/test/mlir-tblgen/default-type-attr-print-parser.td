@@ -40,7 +40,7 @@ def AttrA : TestAttr<"AttrA"> {
 
 // ATTR: void TestDialect::printAttribute(::mlir::Attribute attr,
 // ATTR:                          ::mlir::DialectAsmPrinter &printer) const {
-// ATTR:   if (::mlir::succeeded(generatedAttributePrinter(attr, printer)))
+// ATTR:   if (::llvm::succeeded(generatedAttributePrinter(attr, printer)))
 // ATTR:     return;
 // ATTR: }
 
@@ -66,7 +66,7 @@ def TypeA : TestType<"TypeA"> {
 
 // TYPE: void TestDialect::printType(::mlir::Type type,
 // TYPE:                     ::mlir::DialectAsmPrinter &printer) const {
-// TYPE:   if (::mlir::succeeded(generatedTypePrinter(type, printer)))
+// TYPE:   if (::llvm::succeeded(generatedTypePrinter(type, printer)))
 // TYPE:     return;
 // TYPE: }
 

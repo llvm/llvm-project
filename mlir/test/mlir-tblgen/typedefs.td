@@ -26,11 +26,11 @@ include "mlir/IR/OpBase.td"
 // DEF-SAME: ::mlir::Type &value) {
 // DEF: .Case(::test::CompoundAType::getMnemonic()
 // DEF-NEXT:   value = ::test::CompoundAType::parse(parser);
-// DEF-NEXT:   return ::mlir::success(!!value);
+// DEF-NEXT:   return ::llvm::success(!!value);
 // DEF-NEXT: })
 // DEF-NEXT: .Case(::test::IndexType::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexType::parse(parser);
-// DEF-NEXT:   return ::mlir::success(!!value);
+// DEF-NEXT:   return ::llvm::success(!!value);
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
 // DEF-NEXT:   return std::nullopt;

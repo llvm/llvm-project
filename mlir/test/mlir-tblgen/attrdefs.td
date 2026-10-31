@@ -26,10 +26,10 @@ include "mlir/IR/OpBase.td"
 // DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser)
 // DEF: .Case(::test::IndexAttr::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
-// DEF-NEXT:   return ::mlir::success(!!value);
+// DEF-NEXT:   return ::llvm::success(!!value);
 // DEF: .Case(::test::CompoundAAttr::getMnemonic()
 // DEF-NEXT: value = ::test::CompoundAAttr::parse(parser, type);
-// DEF-NEXT: return ::mlir::success(!!value);
+// DEF-NEXT: return ::llvm::success(!!value);
 // DEF-NEXT: })
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;

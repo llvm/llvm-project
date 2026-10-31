@@ -59,7 +59,6 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 class StaticMatcherHelper;
 
 class PatternEmitter {
@@ -349,7 +348,6 @@ private:
   // Static type/attribute verification function emitter.
   StaticVerifierFunctionEmitter staticVerifierEmitter;
 };
-
 } // namespace
 
 PatternEmitter::PatternEmitter(const Record *pat, RecordOperatorMap *mapper,
@@ -391,7 +389,7 @@ void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
   // entry.
   emitMatch(tree, "op0", /*depth=*/1);
 
-  os << "return ::mlir::success();\n";
+  os << "return ::llvm::success();\n";
   os.unindent();
   os << "}\n\n";
 }
@@ -413,7 +411,7 @@ void PatternEmitter::emitMatch(DagNode tree, StringRef name, int depth) {
 
 void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
   std::string funcName = staticMatcherHelper.getMatcherName(tree);
-  os << formatv("if(::mlir::failed({0}(rewriter, {1}, tblgen_ops", funcName,
+  os << formatv("if(::llvm::failed({0}(rewriter, {1}, tblgen_ops", funcName,
                 opName);
 
   // TODO(chiahungduan): Add a lookupBoundSymbols() to do the subtree lookup in
@@ -436,16 +434,16 @@ void PatternEmitter::emitStaticMatchCall(DagNode tree, StringRef opName) {
   }
 
   os << "))) {\n";
-  os.scope().os << "return ::mlir::failure();\n";
+  os.scope().os << "return ::llvm::failure();\n";
   os << "}\n";
 }
 
 void PatternEmitter::emitStaticVerifierCall(StringRef funcName,
                                             StringRef opName, StringRef arg,
                                             StringRef failureStr) {
-  os << formatv("if(::mlir::failed({0}(rewriter, {1}, {2}, {3}))) {{\n",
+  os << formatv("if(::llvm::failed({0}(rewriter, {1}, {2}, {3}))) {{\n",
                 funcName, opName, arg, failureStr);
-  os.scope().os << "return ::mlir::failure();\n";
+  os.scope().os << "return ::llvm::failure();\n";
   os << "}\n";
 }
 
@@ -525,8 +523,8 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
       tgfmtv(fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()),
              static_cast<ArrayRef<std::string>>(capture)));
 
-  emitMatchCheck(opName, formatv("!::mlir::failed({0})", nativeCodeCall),
-                 formatv("\"{0} return ::mlir::failure\"", nativeCodeCall));
+  emitMatchCheck(opName, formatv("!::llvm::failed({0})", nativeCodeCall),
+                 formatv("\"{0} return ::llvm::failure\"", nativeCodeCall));
 
   for (int i = 0, e = tree.getNumArgs() - tail.numDirectives; i != e; ++i) {
     auto name = tree.getArgName(i);
@@ -802,7 +800,7 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   }
 
   os << tblgenOps.str();
-  os << "return ::mlir::success();\n";
+  os << "return ::llvm::success();\n";
   os.unindent() << "};\n";
 
   os << "{\n";
@@ -813,11 +811,11 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
   os << formatv("auto eitherOperand1 = {0}.getODSOperands({1});\n", opName,
                 operandIndex - 1);
 
-  os << formatv("if(::mlir::failed({0}(eitherOperand0, eitherOperand1)) && "
-                "::mlir::failed({0}(eitherOperand1, "
+  os << formatv("if(::llvm::failed({0}(eitherOperand0, eitherOperand1)) && "
+                "::llvm::failed({0}(eitherOperand1, "
                 "eitherOperand0)))\n",
                 lambda);
-  os.indent() << "return ::mlir::failure();\n";
+  os.indent() << "return ::llvm::failure();\n";
 
   os.unindent().unindent() << "}\n";
 }
@@ -834,7 +832,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
   os << formatv("auto variadic_operand_range = {0}.getODSOperands({1});\n",
                 opName, operandIndex);
   os << formatv("if (variadic_operand_range.size() != {0}) "
-                "return ::mlir::failure();\n",
+                "return ::llvm::failure();\n",
                 variadicArgTree.getNumArgs());
 
   StringRef variadicTreeName = variadicArgTree.getSymbol();
@@ -933,7 +931,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef castedName,
       // through.
       if (!StringRef(matcher.getConditionTemplate()).contains("!$_self") &&
           StringRef(matcher.getConditionTemplate()).contains("$_self")) {
-        os << "if (!tblgen_attr) return ::mlir::failure();\n";
+        os << "if (!tblgen_attr) return ::llvm::failure();\n";
       }
     }
     emitStaticVerifierCall(
@@ -1177,7 +1175,7 @@ void PatternEmitter::emit(StringRef rewriteName) {
       os << "\n// Rewrite\n";
       emitRewriteLogic();
 
-      os << "return ::mlir::success();\n";
+      os << "return ::llvm::success();\n";
     }
     os << "}\n";
   }

@@ -89,7 +89,7 @@ static void emitFieldParserDecls(const EnumInfo &enumInfo, StringRef qualName,
 namespace mlir {
 template<>
 struct FieldParser<{0}, {0}> {{{1}
-  static FailureOr<{0}> parse(AsmParser &parser);
+  static ::llvm::FailureOr<{0}> parse(AsmParser &parser);
 };
 
 /// Support for std::optional, useful in attribute/type definition where the enum is
@@ -100,7 +100,7 @@ template<>
 struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
   static constexpr bool isKeyValueCompositional = false;
 
-  static FailureOr<std::optional<{0}>> parse(AsmParser &parser);
+  static ::llvm::FailureOr<std::optional<{0}>> parse(AsmParser &parser);
 };
 } // namespace mlir
 )";
@@ -147,11 +147,11 @@ static void emitFieldParserDefs(const EnumInfo &enumInfo, raw_ostream &os) {
   // Generate the parser for the enum, excluding non-quoted bit enums.
   const char *const fieldParserDefs = R"(
 namespace mlir {
-FailureOr<{0}> FieldParser<{0}, {0}>::parse(AsmParser &parser) {{
+::llvm::FailureOr<{0}> FieldParser<{0}, {0}>::parse(AsmParser &parser) {{
   // Parse the keyword/string containing the enum.
   std::string enumKeyword;
   auto loc = parser.getCurrentLocation();
-  if (failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
+  if (::llvm::failed(parser.parseOptionalKeywordOrString(&enumKeyword)))
     return parser.emitError(loc, "expected keyword for {2}");
 
   // Symbolize the keyword.
@@ -160,12 +160,12 @@ FailureOr<{0}> FieldParser<{0}, {0}>::parse(AsmParser &parser) {{
   return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
 }
 
-FailureOr<std::optional<{0}>>
+::llvm::FailureOr<std::optional<{0}>>
 FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
   // Parse the keyword/string containing the enum.
   std::string enumKeyword;
   auto loc = parser.getCurrentLocation();
-  if (failed(parser.parseOptionalKeywordOrString(&enumKeyword, {4})))
+  if (::llvm::failed(parser.parseOptionalKeywordOrString(&enumKeyword, {4})))
     return std::optional<{0}>{{};
 
   // Symbolize the keyword.
@@ -178,13 +178,13 @@ FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
 
   const char *const fieldParserDefsUnquotedBitEnum = R"(
 namespace mlir {
-FailureOr<{0}> FieldParser<{0}, {0}>::parse(AsmParser &parser) {{
+::llvm::FailureOr<{0}> FieldParser<{0}, {0}>::parse(AsmParser &parser) {{
   {0} flags = {{};
   do {{
     // Parse the keyword containing a part of the enum.
     ::llvm::StringRef enumKeyword;
     auto loc = parser.getCurrentLocation();
-    if (failed(parser.parseOptionalKeyword(&enumKeyword))) {{
+    if (::llvm::failed(parser.parseOptionalKeyword(&enumKeyword))) {{
       return parser.emitError(loc, "expected keyword for {2}");
     }
 
@@ -194,11 +194,11 @@ FailureOr<{0}> FieldParser<{0}, {0}>::parse(AsmParser &parser) {{
     } else {{
       return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
     }
-  } while (::mlir::succeeded(parser.{5}()));
+  } while (::llvm::succeeded(parser.{5}()));
   return flags;
 }
 
-FailureOr<std::optional<{0}>>
+::llvm::FailureOr<std::optional<{0}>>
 FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
   {0} flags = {{};
   bool firstIter = true;
@@ -206,7 +206,7 @@ FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
     // Parse the keyword containing a part of the enum.
     ::llvm::StringRef enumKeyword;
     auto loc = parser.getCurrentLocation();
-    if (failed(parser.parseOptionalKeyword(&enumKeyword, {6}))) {{
+    if (::llvm::failed(parser.parseOptionalKeyword(&enumKeyword, {6}))) {{
       if (firstIter)
         return std::optional<{0}>{{};
       return parser.emitError(loc, "expected keyword for {2} after '{4}'");
@@ -219,7 +219,7 @@ FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
     } else {{
       return parser.emitError(loc, "expected one of {3} for {2}, got: ") << enumKeyword;
     }
-  } while(::mlir::succeeded(parser.{5}()));
+  } while(::llvm::succeeded(parser.{5}()));
   return std::optional<{0}>{{flags};
 }
 } // namespace mlir

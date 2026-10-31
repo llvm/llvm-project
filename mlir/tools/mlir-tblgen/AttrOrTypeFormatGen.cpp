@@ -181,7 +181,6 @@ public:
     return llvm::any_of(getElements(), formatIsOptional);
   }
 };
-
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -218,7 +217,7 @@ static const char *const parserErrorStr =
 static const char *const variableParser = R"(
 // Parse variable '{0}'{5}
 _result_{0} = {1};
-if (::mlir::failed(_result_{0})) {{
+if (::llvm::failed(_result_{0})) {{
   {2}"failed to parse {3} parameter '{0}' which is to be a `{4}`");
   return {{};
 }
@@ -366,7 +365,7 @@ void DefFormat::genParser(MethodBody &os) {
   // a loop (parsers return FailureOr anyways).
   ArrayRef<AttrOrTypeParameter> params = def.getParameters();
   for (const AttrOrTypeParameter &param : params) {
-    os << formatv("::mlir::FailureOr<{0}> _result_{1};\n",
+    os << formatv("::llvm::FailureOr<{0}> _result_{1};\n",
                   param.getCppStorageType(), param.getName());
     if (auto *selfTypeParam = dyn_cast<AttributeSelfTypeParameter>(&param))
       genAttrSelfTypeParser(os, ctx, *selfTypeParam);
@@ -381,7 +380,7 @@ void DefFormat::genParser(MethodBody &os) {
   for (const AttrOrTypeParameter &param : params) {
     if (param.isOptional())
       continue;
-    os << formatv("assert(::mlir::succeeded(_result_{0}));\n", param.getName());
+    os << formatv("assert(::llvm::succeeded(_result_{0}));\n", param.getName());
   }
 
   // Generate call to the attribute or type builder. Use the checked getter
@@ -515,11 +514,11 @@ void DefFormat::genStructParameterParser(ParameterElement *el, FmtContext &ctx,
 
   std::string parser;
   llvm::raw_string_ostream parserOS(parser);
-  parserOS << "[&]() -> ::mlir::FailureOr<" << param.getCppStorageType()
+  parserOS << "[&]() -> ::llvm::FailureOr<" << param.getCppStorageType()
            << "> {\n  auto odsEnumValue = "
            << tgfmt(defaultParameterParser, &ctx, enumType)
-           << ";\n  if (::mlir::failed(odsEnumValue))\n"
-              "    return ::mlir::failure();\n  return "
+           << ";\n  if (::llvm::failed(odsEnumValue))\n"
+              "    return ::llvm::failure();\n  return "
            << param.getCppStorageType() << "::get(" << tgfmt("$_ctxt", &ctx)
            << ", *odsEnumValue);\n}()";
   genVariableParser(el, ctx, os, parserOS.str());
@@ -555,7 +554,7 @@ void DefFormat::genParamsParser(ParamsDirective *el, FmtContext &ctx,
     ParameterElement *el = *std::prev(it);
     // Parse a comma if the last optional parameter had a value.
     if (el->isOptional()) {
-      os << formatv("if (::mlir::succeeded(_result_{0}) && !({1})) {{\n",
+      os << formatv("if (::llvm::succeeded(_result_{0}) && !({1})) {{\n",
                     el->getName(),
                     el->genIsPresent(ctx, "(*_result_" + el->getName() + ")"));
       os.indent();
@@ -757,19 +756,19 @@ void DefFormat::genCustomParser(CustomDirective *el, FmtContext &ctx,
   os.unindent() << ");\n";
   if (isOptional) {
     os << "if (!odsCustomResult.has_value()) return {};\n";
-    os << "if (::mlir::failed(*odsCustomResult)) return ::mlir::failure();\n";
+    os << "if (::llvm::failed(*odsCustomResult)) return ::llvm::failure();\n";
   } else {
-    os << "if (::mlir::failed(odsCustomResult)) return {};\n";
+    os << "if (::llvm::failed(odsCustomResult)) return {};\n";
   }
   for (FormatElement *arg : el->getElements()) {
     if (auto *param = dyn_cast<ParameterElement>(arg)) {
       if (param->isOptional())
         continue;
-      os << formatv("if (::mlir::failed(_result_{0})) {{\n", param->getName());
+      os << formatv("if (::llvm::failed(_result_{0})) {{\n", param->getName());
       os.indent() << tgfmt("$_parser.emitError(odsCustomLoc, ", &ctx)
                   << "\"custom parser failed to parse parameter '"
                   << param->getName() << "'\");\n";
-      os << "return " << (isOptional ? "::mlir::failure()" : "{}") << ";\n";
+      os << "return " << (isOptional ? "::llvm::failure()" : "{}") << ";\n";
       os.unindent() << "}\n";
     }
   }
@@ -788,7 +787,7 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
     llvm::interleave(
         params, os,
         [&](ParameterElement *el) {
-          os << formatv("(::mlir::succeeded(_result_{0}) && *_result_{0})",
+          os << formatv("(::llvm::succeeded(_result_{0}) && *_result_{0})",
                         el->getName());
         },
         " || ");
@@ -807,9 +806,9 @@ void DefFormat::genOptionalGroupParser(OptionalElement *el, FmtContext &ctx,
     os << "if (auto result = [&]() -> ::mlir::OptionalParseResult {\n";
     os.indent();
     genCustomParser(custom, ctx, os, /*isOptional=*/true);
-    os << "return ::mlir::success();\n";
+    os << "return ::llvm::success();\n";
     os.unindent();
-    os << "}(); result.has_value() && ::mlir::failed(*result)) {\n";
+    os << "}(); result.has_value() && ::llvm::failed(*result)) {\n";
     os.indent();
     os << "return {};\n";
     os.unindent();

@@ -363,7 +363,7 @@ void DefGen::emitVerifierDecl() {
 static const char *const patternParameterVerificationCode = R"(
 if (!({0})) {
   emitError() << "failed to verify '{1}': {2}";
-  return ::mlir::failure();
+  return ::llvm::failure();
 }
 )";
 
@@ -403,14 +403,14 @@ void DefGen::emitInvariantsVerifierImpl() {
         verifier->body() << tgfmt(
             "if (!($0)) {\n"
             "  emitError() << \"failed to verify that $1\";\n"
-            "  return ::mlir::failure();\n"
+            "  return ::llvm::failure();\n"
             "}\n",
             &traitCtx, tgfmt(t->getPredTemplate(), &traitCtx), t->getSummary());
       }
     }
   }
 
-  verifier->body() << "return ::mlir::success();";
+  verifier->body() << "return ::llvm::success();";
 }
 
 void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
@@ -425,13 +425,13 @@ void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
   verifier->body().indent();
 
   auto emitVerifierCall = [&](StringRef name) {
-    verifier->body() << strfmt("if (::mlir::failed({0}(", name);
+    verifier->body() << strfmt("if (::llvm::failed({0}(", name);
     llvm::interleaveComma(
         llvm::map_range(builderParams,
                         [](auto &param) { return param.getName(); }),
         verifier->body());
     verifier->body() << ")))\n";
-    verifier->body() << "  return ::mlir::failure();\n";
+    verifier->body() << "  return ::llvm::failure();\n";
   };
 
   if (hasImpl) {
@@ -442,7 +442,7 @@ void DefGen::emitInvariantsVerifier(bool hasImpl, bool hasCustomVerifier) {
     // Call the custom verifier that is provided by the user.
     emitVerifierCall("verify");
   }
-  verifier->body() << "return ::mlir::success();";
+  verifier->body() << "return ::llvm::success();";
 }
 
 void DefGen::emitParserPrinter() {
@@ -969,7 +969,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
 /// Print an attribute registered to this dialect.
 void {0}::printAttribute(::mlir::Attribute attr,
                          ::mlir::DialectAsmPrinter &printer) const {{
-  if (::mlir::succeeded(generatedAttributePrinter(attr, printer)))
+  if (::llvm::succeeded(generatedAttributePrinter(attr, printer)))
     return;
   {2}
 }
@@ -981,7 +981,7 @@ static const char *const dialectDynamicAttrParserDispatch = R"(
     ::mlir::Attribute genAttr;
     auto parseResult = parseOptionalDynamicAttr(attrTag, parser, genAttr);
     if (parseResult.has_value()) {
-      if (::mlir::succeeded(parseResult.value()))
+      if (::llvm::succeeded(parseResult.value()))
         return genAttr;
       return Attribute();
     }
@@ -990,7 +990,7 @@ static const char *const dialectDynamicAttrParserDispatch = R"(
 
 /// The code block for dynamic type printer dispatch boilerplate.
 static const char *const dialectDynamicAttrPrinterDispatch = R"(
-  if (::mlir::succeeded(printIfDynamicAttr(attr, printer)))
+  if (::llvm::succeeded(printIfDynamicAttr(attr, printer)))
     return;
 )";
 
@@ -1015,7 +1015,7 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
 /// Print a type registered to this dialect.
 void {0}::printType(::mlir::Type type,
                     ::mlir::DialectAsmPrinter &printer) const {{
-  if (::mlir::succeeded(generatedTypePrinter(type, printer)))
+  if (::llvm::succeeded(generatedTypePrinter(type, printer)))
     return;
   {2}
 }
@@ -1026,7 +1026,7 @@ static const char *const dialectDynamicTypeParserDispatch = R"(
   {
     auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);
     if (parseResult.has_value()) {
-      if (::mlir::succeeded(parseResult.value()))
+      if (::llvm::succeeded(parseResult.value()))
         return genType;
       return ::mlir::Type();
     }
@@ -1035,7 +1035,7 @@ static const char *const dialectDynamicTypeParserDispatch = R"(
 
 /// The code block for dynamic type printer dispatch boilerplate.
 static const char *const dialectDynamicTypePrinterDispatch = R"(
-  if (::mlir::succeeded(printIfDynamicType(type, printer)))
+  if (::llvm::succeeded(printIfDynamicType(type, printer)))
     return;
 )";
 
@@ -1102,7 +1102,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   const char *const getValueForMnemonic =
       R"(    .Case({0}::getMnemonic(), [&](llvm::StringRef, llvm::SMLoc) {{
       value = {0}::{1};
-      return ::mlir::success(!!value);
+      return ::llvm::success(!!value);
     })
 )";
 
@@ -1112,7 +1112,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                  << ", ::llvm::LogicalResult>(def)";
   const char *const printValue = R"(    .Case<{0}>([&](auto t) {{
       printer << {0}::getMnemonic();{1}
-      return ::mlir::success();
+      return ::llvm::success();
     })
 )";
   for (const AttrOrTypeDef &def : defs) {
@@ -1156,7 +1156,7 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                   "      *mnemonic = keyword;\n"
                   "      return std::nullopt;\n"
                   "    });";
-  printer.body() << "    .Default([](auto) { return ::mlir::failure(); });";
+  printer.body() << "    .Default([](auto) { return ::llvm::failure(); });";
 
   raw_indented_ostream indentedOs(os);
   parse.writeDeclTo(indentedOs);

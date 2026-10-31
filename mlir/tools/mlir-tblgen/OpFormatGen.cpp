@@ -16,10 +16,10 @@
 #include "mlir/TableGen/Operator.h"
 #include "mlir/TableGen/Trait.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -306,7 +306,6 @@ private:
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 using ConstArgument =
     llvm::PointerUnion<const NamedAttribute *, const NamedTypeConstraint *>;
 
@@ -529,7 +528,7 @@ const char *const getPropertiesCode =
 /// {1}: The type for the attribute.
 const char *const attrParserCode = R"(
   if (parser.parseCustomAttributeWithFallback({0}Attr, {1})) {{
-    return ::mlir::failure();
+    return ::llvm::failure();
   }
 )";
 
@@ -539,14 +538,14 @@ const char *const attrParserCode = R"(
 /// {1}: The type for the attribute.
 const char *const genericAttrParserCode = R"(
   if (parser.parseAttribute({0}Attr, {1}))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 
 const char *const optionalAttrParserCode = R"(
   ::mlir::OptionalParseResult parseResult{0}Attr =
     parser.parseOptionalAttribute({0}Attr, {1});
   if (parseResult{0}Attr.has_value() && failed(*parseResult{0}Attr))
-    return ::mlir::failure();
+    return ::llvm::failure();
   if (parseResult{0}Attr.has_value() && succeeded(*parseResult{0}Attr))
 )";
 
@@ -555,7 +554,7 @@ const char *const optionalAttrParserCode = R"(
 /// {0}: The name of the attribute.
 const char *const symbolNameAttrParserCode = R"(
   if (parser.parseSymbolName({0}Attr))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 const char *const optionalSymbolNameAttrParserCode = R"(
   // Parsing an optional symbol name doesn't fail, so no need to check the
@@ -585,7 +584,7 @@ const char *const enumAttrParserCode = R"(
                                       "{0}", attrStorage);
       if (parseResult.has_value()) {{
         if (failed(*parseResult))
-          return ::mlir::failure();
+          return ::llvm::failure();
         attrStr = attrVal.getValue();
       } else {
         {5}
@@ -632,7 +631,7 @@ const char *const unquotedBitEnumAttrParserCode = R"(
         if (failed(parser.{8}()))
           break;
         if (parser.parseKeyword(&attrStr))
-          return ::mlir::failure();
+          return ::llvm::failure();
       }
       auto attrOptional = ::std::optional<{7}>(flags);
       {0}Attr = {3};
@@ -649,9 +648,9 @@ const char *const unquotedBitEnumAttrParserCode = R"(
 /// expected property for the error message.
 const char *const propertyParserCode = R"(
   auto {0}PropLoc = parser.getCurrentLocation();
-  auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::ParseResult {{
+  auto {0}PropParseResult = [&](auto& propStorage) -> ::llvm::ParseResult {{
     {2}
-    return ::mlir::success();
+    return ::llvm::success();
   }({1}.{0});
   if (failed({0}PropParseResult)) {{
     return parser.emitError({0}PropLoc, "invalid value for property {0}, expected {3}");
@@ -666,10 +665,10 @@ const char *const propertyParserCode = R"(
 const char *const optionalPropertyParserCode = R"(
   auto {0}PropParseResult = [&](auto& propStorage) -> ::mlir::OptionalParseResult {{
     {2}
-    return ::mlir::success();
+    return ::llvm::success();
   }({1}.{0});
   if ({0}PropParseResult.has_value() && failed(*{0}PropParseResult)) {{
-    return ::mlir::failure();
+    return ::llvm::failure();
   }
 )";
 
@@ -679,17 +678,17 @@ const char *const optionalPropertyParserCode = R"(
 const char *const variadicOperandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
   if (parser.parseOperandList({0}Operands))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 const char *const optionalOperandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
   if (::mlir::detail::parseOptionalOperandInto(parser, {0}Operands))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 const char *const operandParserCode = R"(
   {0}OperandsLoc = parser.getCurrentLocation();
   if (parser.parseOperand({0}RawOperand))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 /// The code snippet used to generate a parser call for a VariadicOfVariadic
 /// operand.
@@ -704,7 +703,7 @@ const char *const variadicOfVariadicOperandParserCode = R"(
       if (parser.parseOptionalLParen())
         break;
       if (parser.parseOperandList({0}Operands) || parser.parseRParen())
-        return ::mlir::failure();
+        return ::llvm::failure();
       {0}OperandGroupSizes.push_back({0}Operands.size() - curSize);
       curSize = {0}Operands.size();
     } while (succeeded(parser.parseOptionalComma()));
@@ -720,28 +719,28 @@ const char *const variadicOfVariadicTypeParserCode = R"(
       break;
     if (parser.parseOptionalRParen() &&
         (parser.parseTypeList({0}Types) || parser.parseRParen()))
-      return ::mlir::failure();
+      return ::llvm::failure();
   } while (succeeded(parser.parseOptionalComma()));
 )";
 const char *const variadicTypeParserCode = R"(
   if (parser.parseTypeList({0}Types))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 const char *const optionalTypeParserCode = R"(
   if (::mlir::detail::parseOptionalTypeInto(parser, {0}Types))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 const char *const typeParserCode = R"(
   {
     {0} type;
     if (parser.parseCustomTypeWithFallback(type))
-      return ::mlir::failure();
+      return ::llvm::failure();
     {1}RawType = type;
   }
 )";
 const char *const qualifiedTypeParserCode = R"(
   if (parser.parseType({1}RawType))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 
 /// The code snippet used to generate a parser call for a functional type.
@@ -751,7 +750,7 @@ const char *const qualifiedTypeParserCode = R"(
 const char *const functionalTypeParserCode = R"(
   ::mlir::FunctionType {0}__{1}_functionType;
   if (parser.parseType({0}__{1}_functionType))
-    return ::mlir::failure();
+    return ::llvm::failure();
   {0}Types = {0}__{1}_functionType.getInputs();
   {1}Types = {0}__{1}_functionType.getResults();
 )";
@@ -761,12 +760,12 @@ const char *const functionalTypeParserCode = R"(
 /// {0}: The operation class name
 const char *const inferReturnTypesParserCode = R"(
   ::llvm::SmallVector<::mlir::Type> inferredReturnTypes;
-  if (::mlir::failed({0}::inferReturnTypes(parser.getContext(),
+  if (::llvm::failed({0}::inferReturnTypes(parser.getContext(),
       result.location, result.operands,
       result.attributes.getDictionary(parser.getContext()),
       result.getRawProperties(),
       result.regions, inferredReturnTypes)))
-    return ::mlir::failure();
+    return ::llvm::failure();
   result.addTypes(inferredReturnTypes);
 )";
 
@@ -779,14 +778,14 @@ static const char *regionListParserCode = R"(
     auto firstRegionResult = parser.parseOptionalRegion(region);
     if (firstRegionResult.has_value()) {
       if (failed(*firstRegionResult))
-        return ::mlir::failure();
+        return ::llvm::failure();
       {0}Regions.emplace_back(std::move(region));
 
       // Parse any trailing regions.
       while (succeeded(parser.parseOptionalComma())) {
         region = std::make_unique<::mlir::Region>();
         if (parser.parseRegion(*region))
-          return ::mlir::failure();
+          return ::llvm::failure();
         {0}Regions.emplace_back(std::move(region));
       }
     }
@@ -816,7 +815,7 @@ static const char *optionalRegionParserCode = R"(
   {
      auto parseResult = parser.parseOptionalRegion(*{0}Region);
      if (parseResult.has_value() && failed(*parseResult))
-       return ::mlir::failure();
+       return ::llvm::failure();
   }
 )";
 
@@ -825,7 +824,7 @@ static const char *optionalRegionParserCode = R"(
 /// {0}: The name of the region.
 static const char *regionParserCode = R"(
   if (parser.parseRegion(*{0}Region))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 
 /// The code snippet used to ensure a region has a terminator.
@@ -851,13 +850,13 @@ static const char *successorListParserCode = R"(
     auto firstSucc = parser.parseOptionalSuccessor(succ);
     if (firstSucc.has_value()) {
       if (failed(*firstSucc))
-        return ::mlir::failure();
+        return ::llvm::failure();
       {0}Successors.emplace_back(succ);
 
       // Parse any trailing successors.
       while (succeeded(parser.parseOptionalComma())) {
         if (parser.parseSuccessor(succ))
-          return ::mlir::failure();
+          return ::llvm::failure();
         {0}Successors.emplace_back(succ);
       }
     }
@@ -869,7 +868,7 @@ static const char *successorListParserCode = R"(
 /// {0}: The name of the successor.
 static const char *successorParserCode = R"(
   if (parser.parseSuccessor({0}Successor))
-    return ::mlir::failure();
+    return ::llvm::failure();
 )";
 
 /// The code snippet used to generate a parser for OIList
@@ -1017,9 +1016,9 @@ static void genElementParserStorage(FormatElement *element, const Operator &op,
         body << "  auto &" << name << "Operands = odsOperandVectors[" << index
              << "];\n";
       } else {
-        body
-            << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, 4> "
-            << name << "Operands;\n";
+        body << "  ::llvm::SmallVector<::mlir::OpAsmParser::UnresolvedOperand, "
+                "4> "
+             << name << "Operands;\n";
       }
       if (operand->getVar()->isVariadicOfVariadic()) {
         body << "    llvm::SmallVector<int32_t> " << name
@@ -1212,9 +1211,9 @@ static void genCustomDirectiveParser(CustomDirective *dir, MethodBody &body,
 
   if (isOptional) {
     body << "    if (!odsResult.has_value()) return {};\n"
-         << "    if (::mlir::failed(*odsResult)) return ::mlir::failure();\n";
+         << "    if (::llvm::failed(*odsResult)) return ::llvm::failure();\n";
   } else {
-    body << "    if (odsResult) return ::mlir::failure();\n";
+    body << "    if (odsResult) return ::llvm::failure();\n";
   }
 
   // After parsing, add handling for any of the optional constructs.
@@ -1419,7 +1418,7 @@ static void genParsedAttrPropertiesSetter(OperationFormat &fmt, Operator &op,
 ::mlir::DictionaryAttr dict = ::llvm::dyn_cast<::mlir::DictionaryAttr>(attr);
 if (!dict) {
   emitError() << "expected DictionaryAttr to set properties";
-  return ::mlir::failure();
+  return ::llvm::failure();
 }
 // keep track of used keys in the input dictionary to be able to error out
 // if there are some unknown ones.
@@ -1449,12 +1448,12 @@ auto attr = dict.get({0}AttrName);
 if (!attr) {{
   emitError() << "expected key entry for {0} in DictionaryAttr to set "
              "Properties.";
-  return ::mlir::failure();
+  return ::llvm::failure();
 }
-if (::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
+if (::llvm::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
       return emitError() << "for `{0}`: ";
     })))
-  return ::mlir::failure();
+  return ::llvm::failure();
 )decl";
   bool hasNoDeclarativeFormat = !op.hasAssemblyFormat();
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments") &&
@@ -1473,7 +1472,7 @@ if (::mlir::failed(::mlir::convertFromAttribute(prop.{0}, attr, [&]() {{
   // {2}: isRequired
   const char *propFromAttrFmt = R"decl(
 auto setFromAttr = [] (auto &propStorage, ::mlir::Attribute propAttr,
-         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::mlir::LogicalResult {{
+         ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError) -> ::llvm::LogicalResult {{
   {0};
 };
 auto {1}AttrName = ::mlir::StringAttr::get(ctx, "{1}");
@@ -1482,12 +1481,12 @@ auto attr = dict.get({1}AttrName);
 if (!attr && {2}) {{
   emitError() << "expected key entry for {1} in DictionaryAttr to set "
              "Properties.";
-  return ::mlir::failure();
+  return ::llvm::failure();
 }
-if (attr && ::mlir::failed(setFromAttr(prop.{1}, attr, [&]() {{
+if (attr && ::llvm::failed(setFromAttr(prop.{1}, attr, [&]() {{
       return emitError() << "for `{1}`: ";
     })))
-  return ::mlir::failure();
+  return ::llvm::failure();
 )decl";
 
   // Generate the setter for any property not parsed elsewhere.
@@ -1537,14 +1536,14 @@ if (attr || /*isRequired=*/{1}) {{
   if (!attr) {{
     emitError() << "expected key entry for {0} in DictionaryAttr to set "
                "Properties.";
-    return ::mlir::failure();
+    return ::llvm::failure();
   }
   auto convertedAttr = ::llvm::dyn_cast<std::remove_reference_t<decltype(propStorage)>>(attr);
   if (convertedAttr) {{
     propStorage = convertedAttr;
   } else {{
     emitError() << "Invalid attribute `{0}` in property conversion: " << attr;
-    return ::mlir::failure();
+    return ::llvm::failure();
   }
 }
 )decl",
@@ -1556,7 +1555,7 @@ for (::mlir::NamedAttribute attr : dict) {
     return emitError() << "unknown key '" << attr.getName() <<
         "' when parsing properties dictionary";
 }
-return ::mlir::success();
+return ::llvm::success();
 )decl";
 }
 
@@ -1577,7 +1576,7 @@ static void genKeyValuePropDictParser(OperationFormat &fmt, Operator &op,
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
   paramList.emplace_back("::mlir::OperationState &", "result");
 
-  Method *method = opClass.addStaticMethod("::mlir::ParseResult",
+  Method *method = opClass.addStaticMethod("::llvm::ParseResult",
                                            "parsePropertiesFromKeyValueList",
                                            std::move(paramList));
   MethodBody &body = method->body().indent();
@@ -1621,10 +1620,10 @@ if (succeeded(parser.parseOptionalLess())) {
   ::llvm::SMLoc dictionaryLoc = parser.getCurrentLocation();
   ::mlir::NamedAttrList propertyAttributes;
   if (parser.parseOptionalAttrDict(propertyAttributes))
-    return ::mlir::failure();
+    return ::llvm::failure();
   if (dictionaryLoc != parser.getCurrentLocation()) {
     if (parser.parseGreater())
-      return ::mlir::failure();
+      return ::llvm::failure();
     auto propertyDictionary =
         ::mlir::DictionaryAttr::get(parser.getContext(), propertyAttributes);
     return setPropertiesFromParsedAttr(prop, propertyDictionary, [&]() {
@@ -1638,7 +1637,7 @@ if (succeeded(parser.parseOptionalLess())) {
     ::llvm::SMLoc keyLoc = parser.getCurrentLocation();
     ::llvm::StringRef key;
     if (parser.parseKeyword(&key))
-      return ::mlir::failure();
+      return ::llvm::failure();
 )decl";
 
   SmallVector<StringRef> unitKeys;
@@ -1659,7 +1658,7 @@ if (succeeded(parser.parseOptionalLess())) {
     body << ";\n"
          << "    if (!isUnitKey && parser.parseEqual())\n";
   }
-  body << "      return ::mlir::failure();\n";
+  body << "      return ::llvm::failure();\n";
 
   bool isFirst = true;
   FmtContext attrTypeCtx;
@@ -1675,11 +1674,11 @@ if (succeeded(parser.parseOptionalLess())) {
               ::mlir::AsmParser::Delimiter::Square, [&]() {
                 int32_t size;
                 if (parser.parseInteger(size))
-                  return ::mlir::failure();
+                  return ::llvm::failure();
                 parsedSegmentSizes.push_back(size);
-                return ::mlir::success();
+                return ::llvm::success();
               }))
-        return ::mlir::failure();
+        return ::llvm::failure();
 )decl"
          << "      if (parsedSegmentSizes.size() != prop." << name
          << ".size())\n"
@@ -1726,7 +1725,7 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
     parser, prop.)decl"
                     << property.name << R"decl(,
     [&](auto &propStorage,
-        ::mlir::Attribute propertyAttr) -> ::mlir::LogicalResult {
+        ::mlir::Attribute propertyAttr) -> ::llvm::LogicalResult {
   auto emitError = [&]() {
     return parser.emitError(parser.getCurrentLocation())
            << "invalid value for property " << key << ": ";
@@ -1736,7 +1735,7 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
            << ";\n";
       body << "});\n"
            << "if (failed(parseResult))\n"
-           << "  return ::mlir::failure();\n";
+           << "  return ::llvm::failure();\n";
       body.unindent();
     }
     body.unindent() << "    }\n";
@@ -1768,14 +1767,14 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
         bool useBrackets = needsPropDictEnumBrackets(&attribute);
         if (useBrackets)
           body << "      if (parser.parseLSquare())\n"
-                  "        return ::mlir::failure();\n";
+                  "        return ::llvm::failure();\n";
         genEnumAttrParser(&attribute, body.indent(), attrTypeCtx,
                           /*parseAsOptional=*/false, fmt.opCppClassName,
                           /*formatAsEnumDirective=*/true,
                           /*formatBitEnumAsUnquoted=*/true);
         if (useBrackets)
           body << "      if (parser.parseRSquare())\n"
-                  "        return ::mlir::failure();\n";
+                  "        return ::llvm::failure();\n";
       } else {
         genAttrParser(&attributeVariable, body.indent(), attrTypeCtx,
                       /*parseAsOptional=*/false, fmt.opCppClassName);
@@ -1805,7 +1804,7 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
   body << R"decl(
     reachedEnd = succeeded(parser.parseOptionalGreater());
     if (!reachedEnd && parser.parseComma())
-      return ::mlir::failure();
+      return ::llvm::failure();
   }
 }
 )decl";
@@ -1836,7 +1835,7 @@ auto parseResult = ::mlir::detail::parsePropertyWithFallback(
               "\"properties dictionary is missing required attribute: "
            << attribute.name << "\");\n";
   }
-  body << "return ::mlir::success();\n";
+  body << "return ::llvm::success();\n";
 }
 
 void OperationFormat::genParser(Operator &op, OpClass &opClass) {
@@ -1844,15 +1843,15 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   paramList.emplace_back("::mlir::OpAsmParser &", "parser");
   paramList.emplace_back("::mlir::OperationState &", "result");
 
-  auto *method = opClass.addStaticMethod("::mlir::ParseResult", "parse",
+  auto *method = opClass.addStaticMethod("::llvm::ParseResult", "parse",
                                          std::move(paramList));
   auto &body = method->body();
 
   // Generate variables to store the operands and type within the format. This
   // allows for referencing these variables in the presence of optional
   // groupings.
-  unsigned numVariableLengthOperands = llvm::count_if(
-      op.getOperands(), [](const NamedTypeConstraint &operand) {
+  unsigned numVariableLengthOperands =
+      llvm::count_if(op.getOperands(), [](const NamedTypeConstraint &operand) {
         return operand.isVariableLength();
       });
   bool groupOperandStorage = !allOperands && numVariableLengthOperands > 1;
@@ -1877,7 +1876,7 @@ void OperationFormat::genParser(Operator &op, OpClass &opClass) {
   genParserVariadicSegmentResolution(op, body);
   genParserTypeResolution(op, body);
 
-  body << "  return ::mlir::success();\n";
+  body << "  return ::llvm::success();\n";
 
   genParsedAttrPropertiesSetter(*this, op, opClass);
   genKeyValuePropDictParser(*this, op, opClass);
@@ -1938,7 +1937,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                       propVar->getVar()->name)
            << " {\n";
     } else if (auto *literal = dyn_cast<LiteralElement>(firstElement)) {
-      body << "  if (::mlir::succeeded(parser.parseOptional";
+      body << "  if (::llvm::succeeded(parser.parseOptional";
       genLiteralParser(literal->getSpelling(), body);
       body << ")) {\n";
     } else if (auto *opVar = dyn_cast<OperandVariable>(firstElement)) {
@@ -1961,9 +1960,9 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
       body << "  if (auto optResult = [&]() -> ::mlir::OptionalParseResult {\n";
       genCustomDirectiveParser(custom, body, opCppClassName,
                                /*isOptional=*/true);
-      body << "    return ::mlir::success();\n"
-           << "  }(); optResult.has_value() && ::mlir::failed(*optResult)) {\n"
-           << "    return ::mlir::failure();\n"
+      body << "    return ::llvm::success();\n"
+           << "  }(); optResult.has_value() && ::llvm::failed(*optResult)) {\n"
+           << "    return ::llvm::failure();\n"
            << "  } else if (optResult.has_value()) {\n";
     }
 
@@ -2061,7 +2060,7 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
   } else if (LiteralElement *literal = dyn_cast<LiteralElement>(element)) {
     body << "  if (parser.parse";
     genLiteralParser(literal->getSpelling(), body);
-    body << ")\n    return ::mlir::failure();\n";
+    body << ")\n    return ::llvm::failure();\n";
 
     /// Whitespaces.
   } else if (isa<WhitespaceElement>(element)) {
@@ -2112,14 +2111,14 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
                   << "if (parser.parseOptionalAttrDict"
                   << (attrDict->isWithKeyword() ? "WithKeyword" : "")
                   << "(result.attributes))\n"
-                  << "  return ::mlir::failure();\n";
+                  << "  return ::llvm::failure();\n";
     if (!useStrictPropertiesInAssemblyFormat) {
       body << "if (failed(verifyInherentAttrs(result.name, result.attributes, "
               "[&]() {\n"
            << "    return parser.emitError(loc) << \"'\" << "
               "result.name.getStringRef() << \"' op \";\n"
            << "  })))\n"
-           << "  return ::mlir::failure();\n";
+           << "  return ::llvm::failure();\n";
     } else {
       for (StringRef name : inherentAttrNames) {
         body << "if (result.attributes.get(\"" << name << "\"))\n"
@@ -2132,14 +2131,14 @@ void OperationFormat::genElementParser(FormatElement *element, MethodBody &body,
     body.unindent();
   } else if (isa<PropDictDirective>(element)) {
     body << "  if (parseProperties(parser, result))\n"
-         << "    return ::mlir::failure();\n";
+         << "    return ::llvm::failure();\n";
   } else if (auto *customDir = dyn_cast<CustomDirective>(element)) {
     genCustomDirectiveParser(customDir, body, opCppClassName);
   } else if (isa<OperandsDirective>(element)) {
     body << "  [[maybe_unused]] ::llvm::SMLoc allOperandLoc ="
          << " parser.getCurrentLocation();\n"
          << "  if (parser.parseOperandList(allOperands))\n"
-         << "    return ::mlir::failure();\n";
+         << "    return ::llvm::failure();\n";
 
   } else if (isa<RegionsDirective>(element)) {
     body << formatv(regionListParserCode, "full");
@@ -2293,7 +2292,7 @@ void OperationFormat::genParserOperandTypeResolution(
       emitArrayVsSingletonSuppression();
       body << "  if (parser.resolveOperands(allOperands, allOperandTypes, "
               "allOperandLoc, result.operands))\n"
-              "    return ::mlir::failure();\n";
+              "    return ::llvm::failure();\n";
       return;
     }
 
@@ -2311,7 +2310,7 @@ void OperationFormat::genParserOperandTypeResolution(
       body << op.operand_begin()->name << "Operands";
     }
     body << ", allOperandTypes, parser.getNameLoc(), result.operands))\n"
-         << "    return ::mlir::failure();\n";
+         << "    return ::llvm::failure();\n";
     return;
   }
 
@@ -2337,7 +2336,7 @@ void OperationFormat::genParserOperandTypeResolution(
     }
 
     body << ", allOperandLoc, result.operands))\n    return "
-            "::mlir::failure();\n";
+            "::llvm::failure();\n";
     return;
   }
 
@@ -2360,7 +2359,7 @@ void OperationFormat::genParserOperandTypeResolution(
     emitTypeResolver(operandType, operand.name);
 
     body << ", " << operand.name
-         << "OperandsLoc, result.operands))\n    return ::mlir::failure();\n";
+         << "OperandsLoc, result.operands))\n    return ::llvm::failure();\n";
     if (guardOptionalOperand)
       body << "  }\n";
   }
