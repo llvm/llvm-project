@@ -33567,6 +33567,47 @@ bool AArch64TargetLowering::shouldInsertTrailingSeqCstFenceForAtomicStore(
   return !Subtarget->hasLSE();
 }
 
+static bool isSupportedFPAtomicType(Type *Ty) {
+  return Ty->isHalfTy() || Ty->isBFloatTy() || Ty->isFloatTy() ||
+         Ty->isDoubleTy();
+}
+
+TargetLoweringBase::AtomicExpansionKind
+AArch64TargetLowering::shouldCastAtomicLoadInIR(LoadInst *LI) const {
+  if (Subtarget->hasFPARMv8() && isSupportedFPAtomicType(LI->getType())) {
+    switch (LI->getOrdering()) {
+    case AtomicOrdering::Unordered:
+    case AtomicOrdering::Monotonic:
+      return AtomicExpansionKind::None;
+    default:
+      break;
+    }
+  }
+
+  return TargetLowering::shouldCastAtomicLoadInIR(LI);
+}
+
+TargetLoweringBase::AtomicExpansionKind
+AArch64TargetLowering::shouldCastAtomicStoreInIR(StoreInst *SI) const {
+  // Atomic stores with memory hints use target pseudos that currently expect
+  // non-integral values to be cast to integers.
+  if (SI->getMetadata(LLVMContext::MD_mem_cache_hint))
+    return TargetLowering::shouldCastAtomicStoreInIR(SI);
+
+  if (Subtarget->hasFPARMv8() &&
+      isSupportedFPAtomicType(SI->getValueOperand()->getType())) {
+    switch (SI->getOrdering()) {
+    case AtomicOrdering::Unordered:
+    case AtomicOrdering::Monotonic:
+      return AtomicExpansionKind::None;
+    default:
+      break;
+    }
+  }
+
+  return TargetLowering::shouldCastAtomicStoreInIR(SI);
+}
+
 Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                      Instruction *Inst,
                                                      AtomicOrdering Ord) const {
