@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/Compiler.h"
@@ -301,6 +302,14 @@ public:
                          function_ref<void(Error)> RecoverableErrorHandler,
                          raw_ostream *OS = nullptr, bool Verbose = false);
 
+    /// Parse the prologue and statement program, returning the address ranges
+    /// of valid sequences without retaining rows or sequences.
+    /// Ranges are returned in statement-program order.
+    LLVM_ABI Expected<DWARFAddressRangesVector>
+    parseSequenceRanges(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+                        const DWARFContext &Ctx, const DWARFUnit *U,
+                        function_ref<void(Error)> RecoverableErrorHandler);
+
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
     using SequenceVector = std::vector<Sequence>;
@@ -311,6 +320,12 @@ public:
     SequenceVector Sequences;
 
   private:
+    Error parseImpl(DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+                    const DWARFContext &Ctx, const DWARFUnit *U,
+                    function_ref<void(Error)> RecoverableErrorHandler,
+                    raw_ostream *OS, bool Verbose,
+                    DWARFAddressRangesVector *SequenceRanges);
+
     uint32_t findRowInSeq(const DWARFDebugLine::Sequence &Seq,
                           object::SectionedAddress Address) const;
     std::optional<StringRef>

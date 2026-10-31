@@ -795,6 +795,28 @@ Error DWARFDebugLine::LineTable::parse(
     const DWARFContext &Ctx, const DWARFUnit *U,
     function_ref<void(Error)> RecoverableErrorHandler, raw_ostream *OS,
     bool Verbose) {
+  return parseImpl(DebugLineData, OffsetPtr, Ctx, U, RecoverableErrorHandler,
+                   OS, Verbose, nullptr);
+}
+
+Expected<DWARFAddressRangesVector>
+DWARFDebugLine::LineTable::parseSequenceRanges(
+    DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+    const DWARFContext &Ctx, const DWARFUnit *U,
+    function_ref<void(Error)> RecoverableErrorHandler) {
+  DWARFAddressRangesVector SequenceRanges;
+  if (Error Err =
+          parseImpl(DebugLineData, OffsetPtr, Ctx, U, RecoverableErrorHandler,
+                    nullptr, false, &SequenceRanges))
+    return std::move(Err);
+  return SequenceRanges;
+}
+
+Error DWARFDebugLine::LineTable::parseImpl(
+    DWARFDataExtractor &DebugLineData, uint64_t *OffsetPtr,
+    const DWARFContext &Ctx, const DWARFUnit *U,
+    function_ref<void(Error)> RecoverableErrorHandler, raw_ostream *OS,
+    bool Verbose, DWARFAddressRangesVector *SequenceRanges) {
   assert((OS || !Verbose) && "cannot have verbose output without stream");
   const uint64_t DebugLineOffset = *OffsetPtr;
 
@@ -865,7 +887,24 @@ Error DWARFDebugLine::LineTable::parse(
       }
       if (OS)
         State.Row.dump(*OS);
-      State.appendRowToMatrix();
+      if (SequenceRanges) {
+        if (State.Sequence.Empty) {
+          State.Sequence.Empty = false;
+          State.Sequence.LowPC = State.Row.Address.Address;
+        }
+        if (State.Row.EndSequence) {
+          State.Sequence.HighPC = State.Row.Address.Address;
+          State.Sequence.SectionIndex = State.Row.Address.SectionIndex;
+          if (State.Sequence.LowPC < State.Sequence.HighPC)
+            SequenceRanges->emplace_back(State.Sequence.LowPC,
+                                         State.Sequence.HighPC,
+                                         State.Sequence.SectionIndex);
+          State.Sequence.reset();
+        }
+        State.Row.postAppend();
+      } else {
+        State.appendRowToMatrix();
+      }
     }
   };
   while (*OffsetPtr < EndOffset) {
