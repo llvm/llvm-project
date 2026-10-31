@@ -10,11 +10,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "LeonPasses.h"
+#include "Sparc.h"
 #include "SparcSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -319,9 +323,6 @@ bool ErrataWorkaround::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
-    : MachineFunctionPass(ID) {}
-
 //*****************************************************************************
 //**** InsertNOPLoad pass
 //*****************************************************************************
@@ -332,12 +333,13 @@ LEONMachineFunctionPass::LEONMachineFunctionPass(char &ID)
 //
 // This pass inserts a NOP after any LD or LDF instruction.
 //
-char InsertNOPLoad::ID = 0;
+char SparcInsertNOPLoadLegacy::ID = 0;
 
-InsertNOPLoad::InsertNOPLoad() : LEONMachineFunctionPass(ID) {}
+SparcInsertNOPLoadLegacy::SparcInsertNOPLoadLegacy()
+    : MachineFunctionPass(ID) {}
 
-bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+static bool insertNOPLoadInMachineFunction(MachineFunction &MF) {
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->insertNOPLoad())
     return false;
 
@@ -360,7 +362,18 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
   return Modified;
 }
 
+bool SparcInsertNOPLoadLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return insertNOPLoadInMachineFunction(MF);
+}
 
+PreservedAnalyses
+SparcInsertNOPLoadPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  return insertNOPLoadInMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
+}
 
 //*****************************************************************************
 //**** DetectRoundChange pass
@@ -373,10 +386,10 @@ bool InsertNOPLoad::runOnMachineFunction(MachineFunction &MF) {
 
 char DetectRoundChange::ID = 0;
 
-DetectRoundChange::DetectRoundChange() : LEONMachineFunctionPass(ID) {}
+DetectRoundChange::DetectRoundChange() : MachineFunctionPass(ID) {}
 
 bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->detectRoundChange())
     return false;
 
@@ -423,10 +436,10 @@ bool DetectRoundChange::runOnMachineFunction(MachineFunction &MF) {
 //
 char FixAllFDIVSQRT::ID = 0;
 
-FixAllFDIVSQRT::FixAllFDIVSQRT() : LEONMachineFunctionPass(ID) {}
+FixAllFDIVSQRT::FixAllFDIVSQRT() : MachineFunctionPass(ID) {}
 
 bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &MF.getSubtarget<SparcSubtarget>();
+  const SparcSubtarget *Subtarget = &MF.getSubtarget<SparcSubtarget>();
   if (!Subtarget->fixAllFDIVSQRT())
     return false;
 

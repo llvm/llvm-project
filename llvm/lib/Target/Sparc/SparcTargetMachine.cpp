@@ -156,7 +156,8 @@ void SparcPassConfig::addIRPasses() {
 }
 
 bool SparcPassConfig::addInstSelector() {
-  addPass(createSparcISelDag(getSparcTargetMachine(), getOptLevel()));
+  addPass(createSparcDAGToDAGISelLegacyPass(getSparcTargetMachine(),
+                                            getOptLevel()));
   return false;
 }
 
@@ -164,8 +165,8 @@ void SparcPassConfig::addPreEmitPass(){
   if (getSparcTargetMachine().getCLOpts().enable_branch_relax)
     addPass(&BranchRelaxationPassID);
 
-  addPass(createSparcDelaySlotFillerPass());
-  addPass(new InsertNOPLoad());
+  addPass(createSparcDelaySlotFillerLegacyPass());
+  addPass(new SparcInsertNOPLoadLegacy());
   addPass(new DetectRoundChange());
   addPass(new FixAllFDIVSQRT());
   addPass(new ErrataWorkaround());
