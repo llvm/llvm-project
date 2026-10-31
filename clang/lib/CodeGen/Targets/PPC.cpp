@@ -744,6 +744,14 @@ PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
   if (const auto *ED = Ty->getAsEnumDecl())
     Ty = ED->getIntegerType();
 
+  // The bits of a _BitInt above its width are unspecified when it is passed
+  // or returned in a register, matching GCC. Clang 23 and earlier sign- or
+  // zero-extended a _BitInt narrower than 64 bits.
+  if (const auto *EIT = Ty->getAs<BitIntType>())
+    return EIT->getNumBits() < 64 &&
+           getContext().getLangOpts().isCompatibleWith(
+               LangOptions::ClangABI::Ver23);
+
   // Promotable integer types are required to be promoted by the ABI.
   if (isPromotableIntegerTypeForABI(Ty))
     return true;
@@ -758,10 +766,6 @@ PPC64_SVR4_ABIInfo::isPromotableTypeForABI(QualType Ty) const {
     default:
       break;
     }
-
-  if (const auto *EIT = Ty->getAs<BitIntType>())
-    if (EIT->getNumBits() < 64)
-      return true;
 
   return false;
 }

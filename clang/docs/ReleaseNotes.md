@@ -128,6 +128,12 @@ features cannot lower the translation-unit ABI level;
 - On MIPS N32/N64, an `__int128` now correctly start in an even-numbered register
   or 16-byte aligned stack slot, matching GCC.
 
+- On 64-bit PowerPC ELF targets, a `_BitInt(N)` narrower than 64 bits is no
+  longer sign- or zero-extended when it is passed or returned in a register; the
+  bits above its width are unspecified, matching GCC. Code that calls or is
+  called by code built with an older Clang may see the wrong value.
+  `-fclang-abi-compat=23` restores the previous behavior.
+
 - Except on PlayStation, on x86-64 System V a non-zero-width unnamed bit-field
   now classifies the eightbytes it occupies as INTEGER, like a named bit-field,
   matching GCC. Aggregates where this changes the classification may be passed
