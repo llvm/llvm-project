@@ -504,37 +504,18 @@ static MemoryEffects getEffectiveME(const CodeGenIntrinsic &Int) {
 
 static bool compareFnAttributes(const CodeGenIntrinsic *L,
                                 const CodeGenIntrinsic *R) {
-  auto TieBoolAttributes = [](const CodeGenIntrinsic *I) -> auto {
-    // Sort throwing intrinsics after non-throwing intrinsics.
-    return std::tie(I->canThrow, I->isNoDuplicate, I->isNoMerge, I->isNoReturn,
-                    I->isNoCallback, I->isNoSync, I->isNoFree, I->isWillReturn,
-                    I->isCold, I->isConvergent, I->isSpeculatable,
-                    I->isStrictFP, I->isNoCreateUndefOrPoison);
-  };
+  if (L->FnAttributes != R->FnAttributes) {
+    return std::lexicographical_compare(
+        L->FnAttributes.begin(), L->FnAttributes.end(), R->FnAttributes.begin(),
+        R->FnAttributes.end(), LessRecordByID());
+  }
 
-  auto TieL = TieBoolAttributes(L);
-  auto TieR = TieBoolAttributes(R);
-
-  if (TieL != TieR)
-    return TieL < TieR;
-
-  // Try to order by readonly/readnone attribute.
-  uint32_t LME = getEffectiveME(*L).toIntValue();
-  uint32_t RME = getEffectiveME(*R).toIntValue();
-  if (LME != RME)
-    return LME > RME;
-
-  return false;
+  return getEffectiveME(*L).toIntValue() < getEffectiveME(*R).toIntValue();
 }
 
-/// Returns true if \p Int has a non-empty set of function attributes. Note that
-/// NoUnwind = !canThrow, so we need to negate it's sense to test if the
-// intrinsic has NoUnwind attribute.
+/// Returns true if \p Int has a non-empty set of function attributes.
 static bool hasFnAttributes(const CodeGenIntrinsic &Int) {
-  return !Int.canThrow || Int.isNoReturn || Int.isNoCallback || Int.isNoSync ||
-         Int.isNoFree || Int.isWillReturn || Int.isCold || Int.isNoDuplicate ||
-         Int.isNoMerge || Int.isConvergent || Int.isSpeculatable ||
-         Int.isStrictFP || Int.isNoCreateUndefOrPoison ||
+  return !Int.FnAttributes.empty() ||
          getEffectiveME(Int) != MemoryEffects::unknown();
 }
 
@@ -553,39 +534,6 @@ struct AttributeComparator {
   }
 };
 } // End anonymous namespace
-
-/// Returns the name of the IR enum for argument attribute kind \p Kind.
-static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
-  switch (Kind) {
-  case CodeGenIntrinsic::NoCapture:
-    llvm_unreachable("Handled separately");
-  case CodeGenIntrinsic::NoAlias:
-    return "NoAlias";
-  case CodeGenIntrinsic::NoUndef:
-    return "NoUndef";
-  case CodeGenIntrinsic::NonNull:
-    return "NonNull";
-  case CodeGenIntrinsic::Returned:
-    return "Returned";
-  case CodeGenIntrinsic::ReadOnly:
-    return "ReadOnly";
-  case CodeGenIntrinsic::WriteOnly:
-    return "WriteOnly";
-  case CodeGenIntrinsic::ReadNone:
-    return "ReadNone";
-  case CodeGenIntrinsic::ImmArg:
-    return "ImmArg";
-  case CodeGenIntrinsic::Alignment:
-    return "Alignment";
-  case CodeGenIntrinsic::Dereferenceable:
-    return "Dereferenceable";
-  case CodeGenIntrinsic::Range:
-    return "Range";
-  case CodeGenIntrinsic::NoFreeObj:
-    return "NoFreeObj";
-  }
-  llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
-}
 
 /// EmitAttributes - This emits the Intrinsic::getAttributes method.
 void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
@@ -617,17 +565,12 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
 )",
                     ID);
       for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
-        if (Attr.Kind == CodeGenIntrinsic::NoCapture) {
-          OS << "      Attribute::getWithCaptureInfo(C, "
-                "CaptureInfo::none()),\n";
-          continue;
-        }
-        StringRef AttrName = getArgAttrEnumName(Attr.Kind);
-        if (Attr.Kind == CodeGenIntrinsic::Alignment ||
-            Attr.Kind == CodeGenIntrinsic::Dereferenceable)
-          OS << formatv("      Attribute::get(C, Attribute::{}, {}),\n",
-                        AttrName, Attr.Value);
-        else if (Attr.Kind == CodeGenIntrinsic::Range)
+        StringRef AttrName = Attr.Attr->getName();
+        if (Attr.Attr->isSubClassOf("IntAttr")) {
+          OS << formatv(
+              "      Attribute::get(C, Attribute::{}, uint64_t({})),\n",
+              AttrName, Attr.Value);
+        } else if (Attr.Attr->isSubClassOf("ConstantRangeAttr")) {
           // This allows implicitTrunc because the range may only fit the
           // type based on rules implemented in the IR verifier. E.g. the
           // [-1, 1] range for ucmp/scmp intrinsics requires a minimum i2 type.
@@ -638,8 +581,9 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
                         "/*implicitTrunc=*/true), APInt(BitWidth, {}, "
                         "/*isSigned=*/true, /*implicitTrunc=*/true))),\n",
                         AttrName, (int64_t)Attr.Value, (int64_t)Attr.Value2);
-        else
+        } else {
           OS << formatv("      Attribute::get(C, Attribute::{}),\n", AttrName);
+        }
       }
       OS << "    });";
     }
@@ -669,35 +613,10 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     return AttributeSet::get(C, {{
 )",
                   ID, Int.Name);
-    auto addAttribute = [&OS](StringRef Attr) {
-      OS << formatv("      Attribute::get(C, Attribute::{}),\n", Attr);
-    };
-    if (!Int.canThrow)
-      addAttribute("NoUnwind");
-    if (Int.isNoReturn)
-      addAttribute("NoReturn");
-    if (Int.isNoCallback)
-      addAttribute("NoCallback");
-    if (Int.isNoSync)
-      addAttribute("NoSync");
-    if (Int.isNoFree)
-      addAttribute("NoFree");
-    if (Int.isWillReturn)
-      addAttribute("WillReturn");
-    if (Int.isCold)
-      addAttribute("Cold");
-    if (Int.isNoDuplicate)
-      addAttribute("NoDuplicate");
-    if (Int.isNoMerge)
-      addAttribute("NoMerge");
-    if (Int.isConvergent)
-      addAttribute("Convergent");
-    if (Int.isSpeculatable)
-      addAttribute("Speculatable");
-    if (Int.isStrictFP)
-      addAttribute("StrictFP");
-    if (Int.isNoCreateUndefOrPoison)
-      addAttribute("NoCreateUndefOrPoison");
+    for (const Record *Attr : Int.FnAttributes) {
+      OS << formatv("      Attribute::get(C, Attribute::{}),\n",
+                    Attr->getName());
+    }
 
     const MemoryEffects ME = getEffectiveME(Int);
     if (ME != MemoryEffects::unknown()) {
