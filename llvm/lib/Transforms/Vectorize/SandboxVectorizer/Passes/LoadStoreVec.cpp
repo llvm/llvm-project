@@ -72,9 +72,6 @@ bool LoadStoreVec::acceptOrRevert() {
 }
 
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
-  if (!canVectorize(Loads))
-    return nullptr;
-
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
   Align LdAlign = VecUtils::getVecAlignment(Loads);
@@ -252,11 +249,12 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
-    VecOp = createVectorLoad(Loads);
-    if (VecOp == nullptr) {
+    if (!canVectorize(Loads)) {
       Ctx->accept();
       return false;
     }
+    VecOp = createVectorLoad(Loads);
+    assert(VecOp != nullptr && "Expected vector value!");
   } else if (AllConstants) {
     SmallVector<Constant *, 8> Constants;
     Constants.reserve(Operands.size());
@@ -300,10 +298,7 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   saveIR(Rgn);
 
   auto *VecLoad = createVectorLoad(Loads);
-  if (VecLoad == nullptr) {
-    Ctx->accept();
-    return nullptr;
-  }
+  assert(VecLoad != nullptr && "Expected vector load");
 
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
   for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
