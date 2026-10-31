@@ -3377,10 +3377,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (std::optional<mlir::Value> rst =
           emitTargetBuiltinExpr(builtinID, e, returnValue)) {
     mlir::Value v = rst.value();
-    // CIR dialect operations may have no results, no values will be returned
-    // even if it executes successfully.
+    // A null value means either a void builtin or an already diagnosed NYI.
     if (!v)
-      return RValue::get(nullptr);
+      return getUndefRValue(e->getType());
 
     switch (evalKind) {
     case cir::TEK_Scalar:
