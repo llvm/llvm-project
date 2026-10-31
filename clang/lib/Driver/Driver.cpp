@@ -940,6 +940,17 @@ Driver::OpenMPRuntimeKind Driver::getOpenMPRuntime(const ArgList &Args) const {
   return RT;
 }
 
+/// \return the OffloadArch \p Arch names. An AMD GPU may come with target
+/// features, which are ignored, e.g. "gfx90a:sramecc+:xnack-" is gfx90a.
+static OffloadArch getOffloadArchIgnoringFeatures(StringRef Arch) {
+  OffloadArch ID = StringToOffloadArch(Arch);
+  if (!ID.isUnknown())
+    return ID;
+  llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
+                            llvm::Triple::AMD, llvm::Triple::AMDHSA);
+  return StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
+}
+
 // Handles `native` offload architectures by using the 'offload-arch' utility.
 static llvm::SmallVector<std::string>
 getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
@@ -974,9 +985,18 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
       return GPUArchs;
     }
 
-    for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n"))
-      if (!Arch.empty())
-        GPUArchs.push_back(Arch.str());
+    for (StringRef Arch : llvm::split((*StdoutOrErr)->getBuffer(), "\n")) {
+      if (Arch.empty())
+        continue;
+      // Skip NVIDIA and AMD GPUs, since clang does not support SYCL offloading
+      // to them.
+      if (Kind == Action::OFK_SYCL) {
+        OffloadArch ID = getOffloadArchIgnoringFeatures(Arch);
+        if (ID.isNVPTX() || ID.isAMDGPU() || ID.isAMDGCNSPIRV())
+          continue;
+      }
+      GPUArchs.push_back(Arch.str());
+    }
   } else {
     C.getDriver().Diag(diag::err_drv_command_failure) << "offload-arch";
   }
@@ -984,6 +1004,13 @@ getSystemOffloadArchs(Compilation &C, Action::OffloadKind Kind) {
 }
 
 using TripleSet = std::multiset<llvm::Triple>;
+
+/// \return the SPIR-V target for SYCL on \p HostTriple: spirv64 on a 64-bit
+/// host, spirv32 otherwise.
+static llvm::Triple getSYCLDefaultTriple(const llvm::Triple &HostTriple) {
+  return llvm::Triple(HostTriple.isArch64Bit() ? llvm::Triple::spirv64
+                                               : llvm::Triple::spirv32);
+}
 
 // Attempts to infer the correct offloading toolchain triple by looking at the
 // requested offloading kind and architectures.
@@ -1010,12 +1037,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
   TripleSet Triples;
   for (llvm::StringRef Arch : Archs) {
-    OffloadArch ID = StringToOffloadArch(Arch);
-    if (ID.isUnknown()) {
-      llvm::Triple AMDGPUTriple(llvm::Triple::amdgpu, llvm::Triple::NoSubArch,
-                                llvm::Triple::AMD, llvm::Triple::AMDHSA);
-      ID = StringToOffloadArch(getProcessorFromTargetID(AMDGPUTriple, Arch));
-    }
+    OffloadArch ID = getOffloadArchIgnoringFeatures(Arch);
 
     bool UsesLLVMOffloading =
         C.getArgs().hasFlag(options::OPT_foffload_via_llvm,
@@ -1045,6 +1067,11 @@ static TripleSet inferOffloadToolchains(Compilation &C,
 
     llvm::Triple Triple =
         OffloadArchToTriple(C.getDefaultToolChain().getTriple(), ID);
+    // For SYCL, compile an Intel GPU or CPU, an IGCA target or "generic" for
+    // SPIR-V: spirv64-unknown-unknown on a 64-bit host, spirv32-unknown-unknown
+    // otherwise.
+    if (Kind == Action::OFK_SYCL && (ID.isIntel() || ID.isGeneric()))
+      Triple = getSYCLDefaultTriple(C.getDefaultToolChain().getTriple());
     if (UsesLLVMOffloading)
       Triple.setEnvironment(llvm::Triple::LLVM);
 
@@ -1077,10 +1104,7 @@ static TripleSet inferOffloadToolchains(Compilation &C,
     Triples.insert(llvm::Triple(Arch, llvm::Triple::NoSubArch,
                                 llvm::Triple::NVIDIA, llvm::Triple::CUDA));
   } else if (Archs.empty() && Kind == Action::OFK_SYCL)
-    Triples.insert(
-        llvm::Triple(C.getDefaultToolChain().getTriple().isArch64Bit()
-                         ? llvm::Triple::spirv64
-                         : llvm::Triple::spirv32));
+    Triples.insert(getSYCLDefaultTriple(C.getDefaultToolChain().getTriple()));
 
   // We need to dispatch these to the appropriate toolchain now.
   C.getArgs().eraseArg(options::OPT_offload_arch_EQ);
