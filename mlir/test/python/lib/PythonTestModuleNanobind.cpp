@@ -178,5 +178,15 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
   PyTestAttr::bind(m);
   PyTestType::bind(m);
   PyTestIntegerRankedTensorType::bind(m);
+  // `bind` registers `TestIntegerRankedTensorType` as the type caster for the
+  // builtin `RankedTensorType` TypeID. Its isa check only accepts integer
+  // element types, so every other ranked tensor type would then fail to
+  // downcast as soon as this module is imported. Restore the builtin caster;
+  // tests opt into the custom caster explicitly via `register_type_caster`.
+  PyGlobals::get().registerTypeCaster(
+      mlirRankedTensorTypeGetTypeID(),
+      nb::cast<nb::callable>(nb::cpp_function(
+          [](PyType pyType) { return PyRankedTensorType(pyType); })),
+      /*replace=*/true);
   PyTestTensorValue::bind(m);
 }

@@ -15,8 +15,9 @@ define float @ld_float_test() #0 {
 ; CHECK-NEXT:    st %o0, [%sp+92]
 ; CHECK-NEXT:    ld [%sp+92], %f0
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    retl
 ; CHECK-NEXT:    add %sp, 96, %sp
+; CHECK-NEXT:    retl
+; CHECK-NEXT:    nop
 entry:
   %f = alloca float, align 4
   store float 0x3FF3C08320000000, ptr %f, align 4

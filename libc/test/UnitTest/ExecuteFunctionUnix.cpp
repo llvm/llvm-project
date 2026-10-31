@@ -19,6 +19,7 @@
 #include "include/llvm-libc-types/struct_pollfd.h"
 #include "src/poll/poll.h"
 #include "src/signal/kill.h"
+#include "src/signal/signal.h"
 #include "src/stdio/fflush.h"
 #include "src/stdio/stderr.h"
 #include "src/stdio/stdout.h"
@@ -66,7 +67,7 @@ int ProcessStatus::get_fatal_signal() {
   return WTERMSIG(platform_defined);
 }
 
-ProcessStatus invoke_in_subprocess(cpp::function<void(void)> func,
+ProcessStatus invoke_in_subprocess(cpp::function_ref<void(void)> func,
                                    int timeout_ms) {
   int pipe_fds[2];
   if (LIBC_IMPL::pipe(pipe_fds) == -1)
@@ -84,6 +85,18 @@ ProcessStatus invoke_in_subprocess(cpp::function<void(void)> func,
 #if defined(__linux__) && defined(PR_SET_DUMPABLE)
     LIBC_IMPL::prctl(PR_SET_DUMPABLE, 0);
 #endif
+    // The test may run under a runtime, such as a sanitizer, that installed
+    // its own handlers for fatal signals. Such a handler can turn the signal
+    // into a normal exit (e.g. ASan with handle_sigill=1 reports the SIGILL and
+    // then calls _exit()), which hides how the child actually died. Restore the
+    // default dispositions so that the child dies the same way it would in a
+    // plain process. Sanitizers can't be used in full build mode, but we do
+    // this there too, so that handlers installed by the test itself are
+    // treated the same way in both modes.
+    constexpr int FATAL_SIGNALS[] = {SIGABRT, SIGBUS,  SIGFPE,
+                                     SIGILL,  SIGSEGV, SIGTRAP};
+    for (int sig : FATAL_SIGNALS)
+      LIBC_IMPL::signal(sig, SIG_DFL);
     func();
     LIBC_IMPL::exit(0);
   }

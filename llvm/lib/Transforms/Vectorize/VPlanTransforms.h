@@ -214,13 +214,13 @@ struct VPlanTransforms {
   static void attachCheckBlock(VPlan &Plan, Value *Cond, BasicBlock *CheckBlock,
                                bool AddBranchWeights);
 
-  /// Generate the memory runtime checks of \p RtPtrChecking as recipes and
-  /// attach the check block to \p Plan. \p VF and \p UF are used to compute
-  /// the thresholds of difference checks.
+  /// Generate the memory runtime checks of \p RtPtrChecking for \p TheLoop as
+  /// recipes and attach the check block to \p Plan. \p VF and \p UF are used
+  /// to compute the thresholds of difference checks.
   static void attachMemoryChecks(VPlan &Plan,
                                  const RuntimePointerChecking &RtPtrChecking,
-                                 ScalarEvolution &SE, ElementCount VF,
-                                 unsigned UF, DebugLoc DL,
+                                 const Loop *TheLoop, ScalarEvolution &SE,
+                                 ElementCount VF, unsigned UF,
                                  bool AddBranchWeights);
 
   /// Model the blocks the executed \p MainPlan generated for the main vector
@@ -489,11 +489,6 @@ struct VPlanTransforms {
       VPlan &Plan, VPBasicBlock *VectorPHVPBB, bool TailByMasking,
       bool RequiresScalarEpilogue, VPValue *Step,
       std::optional<uint64_t> MaxRuntimeStep = std::nullopt);
-
-  /// Materialize the backedge-taken count to be computed explicitly using
-  /// VPInstructions.
-  static void materializeBackedgeTakenCount(VPlan &Plan,
-                                            VPBasicBlock *VectorPH);
 
   /// Add explicit Unpack recipes to extract scalars from vectors as needed.
   static void materializeUnpacks(VPlan &Plan);
