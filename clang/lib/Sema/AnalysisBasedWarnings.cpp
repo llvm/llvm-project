@@ -2742,6 +2742,11 @@ public:
     return S.Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc);
   }
 
+  bool
+  ignoreUnsafeBufferInFormatAttrCall(const SourceLocation &Loc) const override {
+    return S.Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc);
+  }
+
   bool ignoreUnsafeBufferInStaticSizedArray(
       const SourceLocation &Loc) const override {
     return S.Diags.isIgnored(
@@ -3058,8 +3063,9 @@ static bool shouldRunUnsafeBufferUsageAnalysis(const Sema &S,
   return !Diags.isIgnored(diag::warn_unsafe_buffer_operation, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_variable, Loc) ||
          !Diags.isIgnored(diag::warn_unsafe_buffer_usage_in_container, Loc) ||
-         (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) &&
-          S.getLangOpts().CPlusPlus);
+         (S.getLangOpts().CPlusPlus &&
+          (!Diags.isIgnored(diag::warn_unsafe_buffer_libc_call, Loc) ||
+           !Diags.isIgnored(diag::warn_unsafe_buffer_format_attr_call, Loc)));
 }
 
 /// \return true iff fix-its should be emitted along with -Wunsafe-buffer-usage
