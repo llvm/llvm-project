@@ -1267,10 +1267,14 @@ bool SITargetLowering::isFPExtFoldable(const MachineInstr &MI, unsigned Opcode,
          denormalModeIsFlushAllF32(*MI.getMF());
 }
 
-bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT) const {
-  // SI has some legal vector types, but no legal vector operations. Say no
-  // shuffles are legal in order to prefer scalarizing some vector operations.
-  return false;
+bool SITargetLowering::isShuffleMaskLegal(ArrayRef<int>, EVT VT) const {
+  // Preserve packed 16-bit pairs so lowering can use op_sel and v_pk_mov_b32
+  // instead of extracting each half into a separate register. Prefer
+  // scalarization for other shapes. Larger vectors can inhibit load narrowing,
+  // while 32-bit shuffles can add register copies.
+  return VT.isFixedLengthVector() && VT.getScalarSizeInBits() == 16 &&
+         VT.getVectorNumElements() == 4 && isTypeLegal(VT) &&
+         isOperationLegalOrCustom(ISD::VECTOR_SHUFFLE, VT);
 }
 
 MVT SITargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
