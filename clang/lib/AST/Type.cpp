@@ -25,6 +25,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/PrettyPrinter.h"
+#include "clang/AST/Reflection.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/TypeVisitor.h"
@@ -53,6 +54,20 @@
 #include <optional>
 
 using namespace clang;
+
+bool clang::isTypeAliasAsReflectionName(QualType QT) {
+  // Look only at the written type: decltype, typeof and substituted template
+  // parameters represent types even when they desugar to an alias.
+  if (QT.hasLocalQualifiers())
+    return false;
+  if (const auto *T = dyn_cast<TypedefType>(QT.getTypePtr()))
+    return T->getKeyword() == ElaboratedTypeKeyword::None;
+  if (const auto *T = dyn_cast<TemplateSpecializationType>(QT.getTypePtr()))
+    return T->getKeyword() == ElaboratedTypeKeyword::None &&
+           isa_and_nonnull<TypeAliasTemplateDecl>(
+               T->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true));
+  return false;
+}
 
 bool Qualifiers::isStrictSupersetOf(Qualifiers Other) const {
   return (*this != Other) &&

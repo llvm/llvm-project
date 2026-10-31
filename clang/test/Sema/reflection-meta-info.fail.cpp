@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -std=c++26 -freflection -fsyntax-only -verify
-// RUN: %clang_cc1 %s -std=c++26 -freflection -fexperimental-new-constant-interpreter -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++26 -freflection -Wno-vla-cxx-extension -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++26 -freflection -fexperimental-new-constant-interpreter -Wno-vla-cxx-extension -fsyntax-only -verify
 
 using info = decltype(^^int);
 
@@ -53,4 +53,23 @@ consteval void test()
     // expected-error@+2 {{value of type 'std::meta::info' is not contextually convertible to 'bool'}}
     // expected-error@+1 {{invalid operands to binary expression ('std::meta::info' and 'std::meta::info')}}
     (^^int) || (^^int);
+}
+
+void vla(int n) {
+  (void)^^int[n]; // expected-error {{cannot reflect variably modified type}}
+  (void)^^int (*)[n]; // expected-error {{cannot reflect variably modified type}}
+  (void)^^int (&)[n]; // expected-error {{cannot reflect variably modified type}}
+  int array[n];
+  (void)^^decltype(array); // expected-error {{cannot reflect variably modified type}}
+  (void)^^__typeof__(array); // expected-error {{cannot reflect variably modified type}}
+  using VLA = int[n];
+  (void)^^VLA; // expected-error {{cannot reflect variably modified type}}
+  (void)^^VLA *; // expected-error {{cannot reflect variably modified type}}
+}
+
+template <class T> void dependent_vla(T n) {
+  (void)^^int[n]; // expected-error {{cannot reflect variably modified type}}
+}
+void instantiate() {
+  dependent_vla<int>(3); // expected-note {{in instantiation of function template specialization 'dependent_vla<int>' requested here}}
 }
