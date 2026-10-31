@@ -2982,6 +2982,24 @@ bool SPIRVInstructionSelector::selectAddrSpaceCast(Register ResVReg,
     // correct value of ResType and use general i8* instead. Maybe this should
     // be addressed in the emit-intrinsic step to infer a correct
     // OpConstantComposite type.
+    // Generic casts require matching pointee types, so cast the source to i8*
+    // first.
+    SPIRVTypeInst UcharSrcPtrTy =
+        SrcSC == SPIRV::StorageClass::CodeSectionINTEL
+            ? SrcPtrTy
+            : GR.getOrCreateSPIRVPointerType(
+                  Type::getInt8Ty(I.getMF()->getFunction().getContext()), I,
+                  SrcSC);
+    if (SrcPtrTy != UcharSrcPtrTy) {
+      Register Tmp = createVirtualRegister(UcharSrcPtrTy, &GR, MRI, *I.getMF());
+      MachineInstrBuilder MIB =
+          buildSpecConstantOp(I, Tmp, SrcPtr, GR.getSPIRVTypeID(UcharSrcPtrTy),
+                              static_cast<uint32_t>(SPIRV::Opcode::Bitcast));
+      GR.add(MIB.getInstr(), MIB);
+      MIB.constrainAllUses(TII, TRI, RBI);
+      SrcPtr = Tmp;
+      SrcPtrTy = UcharSrcPtrTy;
+    }
     if (SpecOpcode) {
       buildSpecConstantOp(I, ResVReg, SrcPtr, getUcharPtrTypeReg(I, DstSC),
                           SpecOpcode)

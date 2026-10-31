@@ -1,6 +1,5 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
-; RUNx: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
-;; FIXME: spirv-val fails with OpConstantComposite expects i8*
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpName %[[F:.*]] "F"
 ; CHECK-DAG: OpName %[[B:.*]] "B"
@@ -19,24 +18,28 @@
 ; CHECK-DAG: %[[Struct1:.*]] = OpTypeStruct %[[Arr1]]
 ; CHECK-DAG: %[[Arr2:.*]] = OpTypeArray %[[GenPtrChar]] %[[#]]
 ; CHECK-DAG: %[[Struct2:.*]] = OpTypeStruct %[[Arr2]]
-; CHECK-DAG: %[[GenPtr:.*]] = OpTypePointer Generic %[[Int]]
 ; CHECK-DAG: %[[CWPtr:.*]] = OpTypePointer CrossWorkgroup %[[Int]]
 ; CHECK-DAG: %[[WPtr:.*]] = OpTypePointer Workgroup %[[Int]]
+; CHECK-DAG: %[[WPtrChar:.*]] = OpTypePointer Workgroup %[[Char]]
 
 ; CHECK-DAG: %[[F]] = OpVariable %[[CWPtr]] CrossWorkgroup %[[#]]
-; CHECK-DAG: %[[GenF:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[F]]
+; CHECK-DAG: %[[CharF:.*]] = OpSpecConstantOp %[[CWPtrChar]] Bitcast %[[F]]
+; CHECK-DAG: %[[GenF:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[CharF]]
 ; CHECK-DAG: %[[B]] = OpVariable %[[CWPtr]] CrossWorkgroup %[[#]]
-; CHECK-DAG: %[[GenB:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[B]]
+; CHECK-DAG: %[[CharB:.*]] = OpSpecConstantOp %[[CWPtrChar]] Bitcast %[[B]]
+; CHECK-DAG: %[[GenB:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[CharB]]
 ; CHECK-DAG: %[[GenFB:.*]] = OpSpecConstantComposite %[[Arr2]] %[[GenF]] %[[GenB]]
 ; CHECK-DAG: %[[GenBF:.*]] = OpSpecConstantComposite %[[Arr2]] %[[GenB]] %[[GenF]]
 ; CHECK-DAG: %[[CG1:.*]] = OpSpecConstantComposite %[[Struct2]] %[[GenFB]]
 ; CHECK-DAG: %[[CG2:.*]] = OpSpecConstantComposite %[[Struct2]] %[[GenBF]]
 
 ; CHECK-DAG: %[[X]] = OpVariable %[[WPtr]] Workgroup %[[#]]
-; CHECK-DAG: %[[GenX:.*]] = OpSpecConstantOp %[[GenPtr]] PtrCastToGeneric %[[X]]
+; CHECK-DAG: %[[CharX:.*]] = OpSpecConstantOp %[[WPtrChar]] Bitcast %[[X]]
+; CHECK-DAG: %[[GenX:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[CharX]]
 ; CHECK-DAG: %[[CWX:.*]] = OpSpecConstantOp %[[CWPtrChar]] GenericCastToPtr %[[GenX]]
 ; CHECK-DAG: %[[Y]] = OpVariable %[[WPtr]] Workgroup %[[#]]
-; CHECK-DAG: %[[GenY:.*]] = OpSpecConstantOp %[[GenPtr]] PtrCastToGeneric %[[Y]]
+; CHECK-DAG: %[[CharY:.*]] = OpSpecConstantOp %[[WPtrChar]] Bitcast %[[Y]]
+; CHECK-DAG: %[[GenY:.*]] = OpSpecConstantOp %[[GenPtrChar]] PtrCastToGeneric %[[CharY]]
 ; CHECK-DAG: %[[CWY:.*]] = OpSpecConstantOp %[[CWPtrChar]] GenericCastToPtr %[[GenY]]
 ; CHECK-DAG: %[[CWXY:.*]] = OpSpecConstantComposite %[[Arr1]] %[[CWX]] %[[CWY]]
 ; CHECK-DAG: %[[CWYX:.*]] = OpSpecConstantComposite %[[Arr1]] %[[CWY]] %[[CWX]]
