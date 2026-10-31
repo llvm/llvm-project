@@ -1301,7 +1301,7 @@ class AccessQualifier<string name, bits<32> value> {
 }
 
 multiclass AccessQualifierOperand<bits<32> value, list<Capability> reqCapabilities> {
-  def NAME : AccessQualifier<NAME, value>;
+  def : AccessQualifier<NAME, value>;
   defm : SymbolicOperandWithRequirements<AccessQualifierOperand, value, NAME, 0,
                                          0, [], reqCapabilities, []>;
 }

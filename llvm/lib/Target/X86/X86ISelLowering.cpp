@@ -32665,13 +32665,11 @@ static SDValue LowerRotate(SDValue Op, const X86Subtarget &Subtarget,
     return SignBitSelect(VT, Amt, BuildRotate(R, 1), R);
   }
 
-  bool IsSplatAmt = DAG.isSplatValue(Amt);
   bool LegalVarShifts = supportedVectorVarShift(VT, Subtarget, ISD::SHL) &&
                         supportedVectorVarShift(VT, Subtarget, ISD::SRL);
 
-  // Fallback for splats + all supported variable shifts.
-  // Fallback for non-constants AVX2 vXi16 as well.
-  if (IsSplatAmt || LegalVarShifts || (Subtarget.hasAVX2() && !ConstantAmt)) {
+  // Fallback for all supported variable shifts and non-constants AVX2 vXi16.
+  if (LegalVarShifts || (Subtarget.hasAVX2() && !ConstantAmt)) {
     Amt = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
     SDValue AmtR = DAG.getConstant(EltSizeInBits, DL, VT);
     AmtR = DAG.getNode(ISD::SUB, DL, VT, AmtR, Amt);
