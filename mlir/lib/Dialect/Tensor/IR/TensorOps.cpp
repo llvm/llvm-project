@@ -1418,7 +1418,6 @@ static bool verifySliceValueDisjoint(Value v1, Value v2) {
   auto c1 = getConstantIntValue(v1);
   auto c2 = getConstantIntValue(v2);
 
-  // Return false if dynamic
   if (!c1 || !c2) {
     return false;
   }
@@ -1431,19 +1430,14 @@ static bool verifyRangeDisjoint(OperandRange r1, OperandRange r2) {
     return false;
   }
 
-  for (size_t i = 0; i < r1.size(); i++) {
-    if (verifySliceValueDisjoint(r1[i], r2[i])) {
-      return true;
-    }
-  }
-
-  return false;
+  return llvm::any_of(llvm::zip(r1, r2), [](auto pair) {
+    auto [v1, v2] = pair;
+    return verifySliceValueDisjoint(v1, v2);
+  });
 }
 
 /// If we have an ExtractOp consuming an InsertOp with the same
 /// indices, we can return the InsertOp's scalar directly.
-// TODO: This only checks the immediate producer; extend to go up the
-// insert/extract chain if the slices are disjoint.
 static Value foldExtractAfterInsert(ExtractOp extractOp) {
   auto insertOp = extractOp.getTensor().getDefiningOp<InsertOp>();
 
@@ -1452,7 +1446,7 @@ static Value foldExtractAfterInsert(ExtractOp extractOp) {
   };
 
   while (insertOp) {
-    if (insertOp && insertOp.getScalar().getType() == extractOp.getType() &&
+    if (insertOp.getScalar().getType() == extractOp.getType() &&
         llvm::equal(insertOp.getIndices(), extractOp.getIndices(), isSame))
       return insertOp.getScalar();
 
