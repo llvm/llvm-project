@@ -197,19 +197,20 @@ private:
   MachineBasicBlock::instr_iterator
   handleCoissue(MachineBasicBlock::instr_iterator I);
 
-  /// S_SET_VGPR_MSB immediately after S_SETREG_IMM32_B32 targeting MODE is
+  /// S_SET_VGPR_MSB immediately after an S_SETREG variant targeting MODE is
   /// silently dropped on GFX1250. When set, the next S_SET_VGPR_MSB insertion
   /// must be preceded by S_NOP to avoid the hazard.
   bool needNopBeforeSetVGPRMSB(MachineBasicBlock::instr_iterator I);
 
-  /// Handle S_SETREG_IMM32_B32 targeting MODE register. On certain hardware,
-  /// this instruction clobbers VGPR MSB bits[12:19], so we need to restore
-  /// the current mode. \returns true if the instruction was modified or a
-  /// new one was inserted.
+  /// Handle an S_SETREG_IMM32_B32 variant targeting MODE register. On certain
+  /// hardware, this instruction clobbers VGPR MSB bits[12:19], so we need to
+  /// restore the current mode. \returns true if the instruction was modified
+  /// or a new one was inserted.
   bool handleSetregMode(MachineInstr &MI);
 
-  /// Update bits[12:19] of the imm operand in S_SETREG_IMM32_B32 to contain
-  /// the VGPR MSB mode value. \returns true if the immediate was changed.
+  /// Update bits[12:19] of the imm operand in an S_SETREG_IMM32_B32 variant to
+  /// contain the VGPR MSB mode value. \returns true if the immediate was
+  /// changed.
   bool updateSetregModeImm(MachineInstr &MI, int64_t ModeValue);
 };
 
@@ -433,9 +434,14 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   return I;
 }
 
-/// Returns whether \p MI is a S_SETREG_IMM32_B32(MODE).
+static bool isSetregImm32(unsigned Opcode) {
+  return Opcode == AMDGPU::S_SETREG_IMM32_B32 ||
+         Opcode == AMDGPU::S_SETREG_IMM32_B32_mode;
+}
+
+/// Returns whether \p MI is an S_SETREG variant targeting MODE.
 static bool isSetregMode(const MachineInstr &MI, const SIInstrInfo &TII) {
-  if (MI.getOpcode() != AMDGPU::S_SETREG_IMM32_B32)
+  if (!SIInstrInfo::isSSetReg(MI.getOpcode()))
     return false;
 
   const MachineOperand *SIMM16Op =
@@ -460,7 +466,7 @@ bool AMDGPULowerVGPREncoding::needNopBeforeSetVGPRMSB(
     }
 
     // Look for a potential fallthrough predecessor block. When it ends with a
-    // S_SETREG_IMM32_B32(MODE) we need to insert a S_NOP too. We assume that an
+    // setreg targeting MODE we need to insert a S_NOP too. We assume that an
     // explicit jump to the current block from the block that would otherwise
     // have naturally fallen through to it will remain in the final assembly.
     CurrentMBB = CurrentMBB->getPrevNode();
@@ -482,7 +488,7 @@ static int64_t convertModeToSetregFormat(int64_t Mode) {
 
 bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
                                                   int64_t ModeValue) {
-  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32);
+  assert(isSetregImm32(MI.getOpcode()));
 
   // Convert from S_SET_VGPR_MSB format to MODE register format
   int64_t SetregMode = convertModeToSetregFormat(ModeValue);
@@ -499,8 +505,8 @@ bool AMDGPULowerVGPREncoding::updateSetregModeImm(MachineInstr &MI,
 bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   using namespace AMDGPU::Hwreg;
 
-  assert(MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-         "only S_SETREG_IMM32_B32 needs to be handled");
+  assert(isSetregImm32(MI.getOpcode()) &&
+         "only S_SETREG_IMM32_B32 variants need to be handled");
 
   LLVM_DEBUG(dbgs() << "  handleSetregMode: " << MI);
 
@@ -623,8 +629,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
         continue;
       }
 
-      if (MI.getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
-          ST.hasSetregVGPRMSBFixup()) {
+      if (isSetregImm32(MI.getOpcode()) && ST.hasSetregVGPRMSBFixup()) {
         Changed |= handleSetregMode(MI);
         continue;
       }
