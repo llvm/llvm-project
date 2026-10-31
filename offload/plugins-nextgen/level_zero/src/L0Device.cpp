@@ -167,8 +167,21 @@ Error L0DeviceTy::initImpl(GenericPluginTy &Plugin,
   const auto zeDevice = getZeDevice();
   CALL_ZE_RET_ERROR(zeDeviceGetProperties, zeDevice, &DeviceProperties);
   CALL_ZE_RET_ERROR(zeDeviceGetComputeProperties, zeDevice, &ComputeProperties);
-  CALL_ZE_RET_ERROR(zeDeviceGetMemoryProperties, zeDevice, &Count,
-                    &MemoryProperties);
+
+  // Query all memory heaps; global memory size is the sum of their sizes.
+  uint32_t MemCount = 0;
+  CALL_ZE_RET_ERROR(zeDeviceGetMemoryProperties, zeDevice, &MemCount, nullptr);
+  // Copy MemoryProperties as the prototype to inherit its stype/pNext.
+  SmallVector<ze_device_memory_properties_t, 1> AllMemoryProperties(
+      MemCount, MemoryProperties);
+  CALL_ZE_RET_ERROR(zeDeviceGetMemoryProperties, zeDevice, &MemCount,
+                    AllMemoryProperties.data());
+  AllMemoryProperties.truncate(MemCount);
+  if (!AllMemoryProperties.empty())
+    MemoryProperties = AllMemoryProperties.front();
+  for (const auto &Props : AllMemoryProperties)
+    TotalGlobalMemorySize += Props.totalSize;
+
   CALL_ZE_RET_ERROR(zeDeviceGetCacheProperties, zeDevice, &Count,
                     &CacheProperties);
   CALL_ZE_RET_ERROR(zeDeviceGetModuleProperties, zeDevice, &ModuleProperties);
