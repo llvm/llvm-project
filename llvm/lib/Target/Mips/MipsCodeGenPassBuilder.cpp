@@ -43,11 +43,11 @@ public:
 void MipsCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   Base::addIRPasses(PMW);
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
+  flushFPMsToMPM(PMW);
   if (getTM().getCLOpts().os16) {
-    flushFPMsToMPM(PMW);
     addModulePass(MipsOs16Pass(), PMW);
   }
-  // TODO(boomanaiden154): Add Mips16HardFloatPass
+  addModulePass(Mips16HardFloatPass(getTM()), PMW);
 }
 
 Error MipsCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {

@@ -30,6 +30,8 @@
 ; MIPS-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-NEXT:   expand-reductions
 ; MIPS-NEXT:   atomic-expand
+; MIPS-NEXT: mips-mips16-hard-float
+; MIPS-NEXT: function
 ; MIPS-NEXT:   codegenprepare
 ; MIPS-NEXT:   sjlj-eh-prepare
 ; MIPS-NEXT:   dwarf-eh-prepare
@@ -118,6 +120,7 @@
 ; MIPS-OS16-NEXT:   expand-reductions
 ; MIPS-OS16-NEXT:   atomic-expand
 ; MIPS-OS16-NEXT: mips-os16
+; MIPS-OS16-NEXT: mips-mips16-hard-float
 ; MIPS-OS16-NEXT: function
 ; MIPS-OS16-NEXT:   codegenprepare
 ; MIPS-OS16-NEXT:   sjlj-eh-prepare
@@ -206,6 +209,8 @@
 ; MIPS-MFIX4300-NEXT:   scalarize-masked-mem-intrin
 ; MIPS-MFIX4300-NEXT:   expand-reductions
 ; MIPS-MFIX4300-NEXT:   atomic-expand
+; MIPS-MFIX4300-NEXT: mips-mips16-hard-float
+; MIPS-MFIX4300-NEXT: function
 ; MIPS-MFIX4300-NEXT:   codegenprepare
 ; MIPS-MFIX4300-NEXT:   sjlj-eh-prepare
 ; MIPS-MFIX4300-NEXT:   dwarf-eh-prepare
