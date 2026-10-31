@@ -1571,10 +1571,11 @@ static llvm::MDNode *convertVecTypeHintToMDNode(llvm::LLVMContext &context,
 static llvm::MDNode *convertIntegerArrayToMDNode(llvm::LLVMContext &context,
                                                  ArrayRef<int32_t> values) {
   SmallVector<llvm::Metadata *> mdValues;
-  llvm::transform(
-      values, std::back_inserter(mdValues), [&context](int32_t value) {
-        return convertIntegerToMetadata(context, llvm::APInt(32, value));
-      });
+  llvm::transform(values, std::back_inserter(mdValues),
+                  [&context](int32_t value) {
+                    return convertIntegerToMetadata(
+                        context, llvm::APInt(32, value, /*isSigned=*/true));
+                  });
   return llvm::MDNode::get(context, mdValues);
 }
 
