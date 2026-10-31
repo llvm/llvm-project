@@ -896,17 +896,22 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     parameters are optional.
 
     - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
-      instruction is executed. Otherwise the behavior is undefined.
+      instruction is executed. If the actual mode differs, the behavior is
+      undefined.
     - `except_mode`: the known exception mode at the point the instruction is
-      executed. Otherwise the behavior is undefined.
+      executed. If the actual mode differs, the behavior is undefined.
     - `strict_except`: if `false`, any case that would produce an FP exception
       produces it non-deterministically instead (i.e. it may or may not occur).
       This means the FP status is written non-deterministically, and, if
       exceptions are unmasked, the instruction traps non-deterministically.
 
-    An absent `dynamic_rounding_mode` defaults to `unknown`, an absent
-    `except_mode` defaults to `masked`, and an absent `strict_except` defaults
-    to `false`.
+    An absent parameter takes its value in the default floating-point
+    environment: `dynamic_rounding_mode` defaults to `tonearest`, `except_mode`
+    to `masked`, and `strict_except` to `false`.
+
+    The empty `#cir.fenv<>`, with no parameter set, does not constrain the
+    operation that carries it. It is the default value of the `fenv`
+    attribute of floating-point operations, which omit it when printing.
 
     Example:
     ```
@@ -926,9 +931,16 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
   }];
 
   let extraClassDeclaration = [{
+    /// Whether this is the empty attribute, which does not constrain the
+    /// operation that carries it.
+    bool isEmpty() const {
+      return !getDynamicRoundingMode() && !getExceptMode() &&
+             !getStrictExcept();
+    }
+
     static constexpr cir::FPDynamicRoundingMode
     getDefaultDynamicRoundingMode() {
-      return cir::FPDynamicRoundingMode::Unknown;
+      return cir::FPDynamicRoundingMode::ToNearest;
     }
 
     static constexpr cir::FPExceptionMode getDefaultExceptionMode() {
@@ -950,8 +962,12 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
     }
   }];
 
+  let constBuilderCall = "$0";
   let canHaveIllegalCXXABIType = 0;
 }
+
+def CIR_DefaultValuedFenvAttr : DefaultValuedAttr<CIR_FenvAttr,
+    "cir::FenvAttr::get($_builder.getContext(), {}, {}, {})">;
 
 //===----------------------------------------------------------------------===//
 // CIR_FlagParam

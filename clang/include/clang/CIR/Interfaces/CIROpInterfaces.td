@@ -267,42 +267,24 @@ let cppNamespace = "::cir" in {
   def CIR_FPEnvConstrainedOpInterface
       : OpInterface<"FPEnvConstrainedOpInterface"> {
     let description = [{
-      Interface for floating-point operations that carry an optional
-      `#cir.fenv` attribute. It provides effective values for each field,
-      substituting the floating-point environment defaults for absent fields.
+      Interface for floating-point operations that carry a `#cir.fenv`
+      attribute. The attribute defaults to the empty `#cir.fenv<>`, which does
+      not constrain the operation.
     }];
 
     let methods = [
-      InterfaceMethod<
-        "Return the `#cir.fenv` attribute, or a null attribute if absent.",
-        "cir::FenvAttr", "getFenvAttr", (ins), [{}],
-        /*defaultImplementation=*/[{
-          return $_op.getFenvAttr();
-        }]>,
-      InterfaceMethod<
-        "Return the effective dynamic rounding mode.",
-        "cir::FPDynamicRoundingMode", "getFenvDynamicRoundingMode", (ins),
-        [{}], /*defaultImplementation=*/[{
-          cir::FenvAttr fenv = $_op.getFenvAttr();
-          return fenv ? fenv.getDynamicRoundingModeOrDefault()
-                      : cir::FenvAttr::getDefaultDynamicRoundingMode();
-        }]>,
-      InterfaceMethod<
-        "Return the effective floating-point exception mode.",
-        "cir::FPExceptionMode", "getFenvExceptionMode", (ins), [{}],
-        /*defaultImplementation=*/[{
-          cir::FenvAttr fenv = $_op.getFenvAttr();
-          return fenv ? fenv.getExceptionModeOrDefault()
-                      : cir::FenvAttr::getDefaultExceptionMode();
-        }]>,
-      InterfaceMethod<
-        "Return the effective strict-exception flag.",
-        "bool", "getFenvStrictExcept", (ins), [{}],
-        /*defaultImplementation=*/[{
-          cir::FenvAttr fenv = $_op.getFenvAttr();
-          return fenv ? fenv.getStrictExceptOrDefault() : false;
-        }]>,
+      InterfaceMethod<"Return the `#cir.fenv` attribute.",
+        "cir::FenvAttr", "getFenv">,
     ];
+
+    let extraSharedClassDeclaration = [{
+      /// Return the `#cir.fenv` attribute if it constrains the operation, or
+      /// a null attribute if it is the empty `#cir.fenv<>`.
+      cir::FenvAttr getConstrainedFenv() {
+        cir::FenvAttr fenv = $_op.getFenv();
+        return fenv.isEmpty() ? cir::FenvAttr{} : fenv;
+      }
+    }];
   }
 
   def CIR_BinaryOpInterface : OpInterface<"BinaryOpInterface"> {
