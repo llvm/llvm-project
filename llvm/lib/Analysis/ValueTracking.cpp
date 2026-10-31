@@ -513,6 +513,60 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
   KnownOut.Zero.setHighBits(MinimumNumberOfLeadingZeros);
 }
 
+/// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
+/// A must be a non-negative Y or abs(Y).
+static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
+                                             KnownBits &KnownOut,
+                                             const SimplifyQuery &Q,
+                                             unsigned Depth) {
+  Type *Ty = Op0->getType();
+
+  // Only handle scalars for now.
+  if (Ty->isVectorTy())
+    return;
+
+  const Value *Divisor = nullptr, *Cond = nullptr, *Remainder = nullptr,
+              *AdjustmentValue = nullptr;
+  CmpPredicate Pred;
+  const APInt *Threshold = nullptr;
+  bool TrueIfNegative = false;
+
+  const auto Match = [&](const Value *Rem, const Value *Adjustment) {
+    Remainder = Rem;
+
+    // Match an adjustment added only when this remainder is negative.
+    return match(Rem, m_SRem(m_Value(), m_Value(Divisor))) &&
+           match(Adjustment,
+                 m_Select(m_Value(Cond), m_Value(AdjustmentValue), m_Zero())) &&
+           match(Cond, m_ICmp(Pred, m_Specific(Rem), m_APInt(Threshold))) &&
+           isSignBitCheck(Pred, *Threshold, TrueIfNegative) && TrueIfNegative;
+  };
+
+  if (!Match(Op0, Op1) && !Match(Op1, Op0))
+    return;
+
+  // Accept Y itself if non-negative, or abs(Y).
+  bool IsPositiveDivisorCase =
+      Divisor == AdjustmentValue && isKnownNonNegative(Divisor, Q, Depth + 1);
+  bool IsAbsoluteValueCase =
+      match(AdjustmentValue,
+            m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value()));
+
+  if (!IsPositiveDivisorCase && !IsAbsoluteValueCase)
+    return;
+
+  // Repeated uses must agree. An undef value could break this relationship.
+  if (!isGuaranteedNotToBeUndef(Remainder, Q.AC, Q.CtxI, Q.DT, Depth + 1) ||
+      !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
+    return;
+
+  // For Y other than signed minimum, adding abs(Y) to a negative remainder
+  // gives a non-negative result without overflow. For signed minimum, the
+  // wrapping addition clears the remainder's sign bit. Poison-producing cases
+  // do not invalidate this deduction.
+  KnownOut.makeNonNegative();
+}
+
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    bool NSW, bool NUW,
                                    const APInt &DemandedElts,
@@ -520,10 +574,15 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    const SimplifyQuery &Q, unsigned Depth) {
   computeKnownBits(Op1, DemandedElts, KnownOut, Q, Depth + 1);
 
-  // If one operand is unknown and we have no nowrap information,
-  // the result will be unknown independently of the second operand.
-  if (KnownOut.isUnknown() && !NSW && !NUW)
+  if (KnownOut.isUnknown() && !NSW && !NUW) {
+    if (Add) {
+      // Independent operand bits give no result, but the Euclidean remainder
+      // pattern can establish non-negativity through the operands'
+      // relationship.
+      computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+    }
     return;
+  }
 
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
@@ -534,9 +593,13 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
        match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
     KnownOut.makeNonNegative();
 
-  if (Add)
+  if (Add) {
     // Try to match lerp pattern and combine results
     computeKnownBitsFromLerpPattern(Op0, Op1, DemandedElts, KnownOut, Q, Depth);
+
+    // Use the relationship between the remainder and its adjustment.
+    computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+  }
 }
 
 static void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
