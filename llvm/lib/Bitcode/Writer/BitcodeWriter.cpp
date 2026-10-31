@@ -1920,7 +1920,35 @@ void ModuleBitcodeWriter::writeMDTuple(const MDTuple *N,
 void ModuleBitcodeWriter::writeMDFunctionLocalContext(
     const MDFunctionLocalContext *N, SmallVectorImpl<uint64_t> &Record,
     unsigned &Abbrev) {
-  report_fatal_error("!MDFunctionLocalContext bitcode not yet implemented");
+  // Don't record distinctness, since MDFunctionLocalContext is always distinct,
+  // but use a spare bit in the version record to record isNonDebug.
+  const uint64_t Version = 1 << 1;
+  Record.push_back((uint64_t)N->isNonDebug() | Version);
+  // Also do not record MaxAtomGroup, as it is a transient field.
+  // Print each array separately, leading with a length-field.
+  // Scopes
+  Record.push_back(N->getScopes().size());
+  for (const FLScope &Scope : N->getScopes())
+    Record.push_back(VE.getMetadataID(Scope.get()));
+  // SrcLocs
+  Record.push_back(N->getSrcLocs().size());
+  for (const FLSrcLoc &SrcLoc : N->getSrcLocs()) {
+    Record.push_back(SrcLoc.Line);
+    Record.push_back(SrcLoc.Column);
+    // Raw FLIndex is more efficiently encoded than the underlying value.
+    Record.push_back(SrcLoc.ScopeIdx.asRaw());
+  }
+  // InlinedCalls
+  Record.push_back(N->getInlinedCalls().size());
+  for (const FLInlinedCall &InlinedCall : N->getInlinedCalls()) {
+    Record.push_back(InlinedCall.SrcLocIdx.asRaw());
+    Record.push_back(InlinedCall.InlinedAtIdx.asRaw());
+    // Don't record MaxAtomGroup, as it is a transient field.
+    Record.push_back(InlinedCall.Uniquable);
+    Record.push_back(VE.getMetadataID(InlinedCall.InlineeContext));
+  }
+  Stream.EmitRecord(bitc::METADATA_FLMD, Record, Abbrev);
+  Record.clear();
 }
 
 unsigned ModuleBitcodeWriter::createDILocationAbbrev(bool WithIRLayers) {

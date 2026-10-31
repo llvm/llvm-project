@@ -253,6 +253,7 @@ public:
   friend class LLVMContextImpl;
   friend class MDNode;
   friend class LLParser;
+  friend class MetadataLoader;
   constexpr static uint16_t MaxAllowedAtomGroup =
       FLInlinedCall::MaxAllowedAtomGroup;
 
