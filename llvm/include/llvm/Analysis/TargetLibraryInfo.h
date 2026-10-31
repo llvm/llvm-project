@@ -219,6 +219,13 @@ public:
   LLVM_ABI const VecDesc *
   getVectorMappingInfo(StringRef F, const ElementCount &VF, bool Masked) const;
 
+  /// Return a pointer to a VecDesc object holding all info for the vector to
+  /// scalar mapping of the unmasked fixed width vector function, called by
+  /// \p CB with the vector of the vectorization factor elements as the first
+  /// argument. If several scalar functions are mapped to this vector function,
+  /// any of them is returned. If no such mapping exists, return nullpointer.
+  LLVM_ABI const VecDesc *getScalarizedMappingInfo(const CallBase &CB) const;
+
   /// Set to true iff i32 parameters to library functions should have signext
   /// or zeroext attributes if they correspond to C-level int or unsigned int,
   /// respectively.
@@ -405,6 +412,9 @@ public:
   const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
                                       bool Masked) const {
     return Impl->getVectorMappingInfo(F, VF, Masked);
+  }
+  const VecDesc *getScalarizedMappingInfo(const CallBase &CB) const {
+    return Impl->getScalarizedMappingInfo(CB);
   }
 
   /// Tests if the function is both available and a candidate for optimized code

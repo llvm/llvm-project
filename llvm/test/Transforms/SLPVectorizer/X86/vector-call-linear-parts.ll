@@ -5,23 +5,13 @@
 define void @sincos_parts(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 ; CHECK-LABEL: define void @sincos_parts(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
 ; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds float, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds float, ptr [[S]], i64 2
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds float, ptr [[S]], i64 3
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
 ; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
-; CHECK-NEXT:    [[C3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
-; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR1]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR1]]
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[X2P]], align 4
+; CHECK-NEXT:    call void @vsincosf2(<2 x float> [[TMP1]], ptr [[S]], ptr [[C]])
+; CHECK-NEXT:    call void @vsincosf2(<2 x float> [[TMP2]], ptr [[S2]], ptr [[C2]])
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
@@ -47,51 +37,16 @@ define void @sincos_parts(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 define void @modf_parts(ptr noalias %x, ptr noalias %ip, ptr noalias %r) {
 ; CHECK-LABEL: define void @modf_parts(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
 ; CHECK-NEXT:    [[X4P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 4
-; CHECK-NEXT:    [[X5P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 5
-; CHECK-NEXT:    [[X6P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 6
-; CHECK-NEXT:    [[X7P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 7
-; CHECK-NEXT:    [[IP1:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 1
-; CHECK-NEXT:    [[IP2:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 2
-; CHECK-NEXT:    [[IP3:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 3
 ; CHECK-NEXT:    [[IP4:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 4
-; CHECK-NEXT:    [[IP5:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 5
-; CHECK-NEXT:    [[IP6:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 6
-; CHECK-NEXT:    [[IP7:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 7
-; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds float, ptr [[R]], i64 1
-; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds float, ptr [[R]], i64 2
-; CHECK-NEXT:    [[R3:%.*]] = getelementptr inbounds float, ptr [[R]], i64 3
-; CHECK-NEXT:    [[R4:%.*]] = getelementptr inbounds float, ptr [[R]], i64 4
-; CHECK-NEXT:    [[R5:%.*]] = getelementptr inbounds float, ptr [[R]], i64 5
-; CHECK-NEXT:    [[R6:%.*]] = getelementptr inbounds float, ptr [[R]], i64 6
-; CHECK-NEXT:    [[R7:%.*]] = getelementptr inbounds float, ptr [[R]], i64 7
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
-; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    [[X4:%.*]] = load float, ptr [[X4P]], align 4
-; CHECK-NEXT:    [[X5:%.*]] = load float, ptr [[X5P]], align 4
-; CHECK-NEXT:    [[X6:%.*]] = load float, ptr [[X6P]], align 4
-; CHECK-NEXT:    [[X7:%.*]] = load float, ptr [[X7P]], align 4
-; CHECK-NEXT:    [[M0:%.*]] = call float @modff(float [[X0]], ptr [[IP]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    [[M1:%.*]] = call float @modff(float [[X1]], ptr [[IP1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M2:%.*]] = call float @modff(float [[X2]], ptr [[IP2]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M3:%.*]] = call float @modff(float [[X3]], ptr [[IP3]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M4:%.*]] = call float @modff(float [[X4]], ptr [[IP4]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M5:%.*]] = call float @modff(float [[X5]], ptr [[IP5]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M6:%.*]] = call float @modff(float [[X6]], ptr [[IP6]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M7:%.*]] = call float @modff(float [[X7]], ptr [[IP7]]) #[[ATTR2]]
-; CHECK-NEXT:    store float [[M0]], ptr [[R]], align 4
-; CHECK-NEXT:    store float [[M1]], ptr [[R1]], align 4
-; CHECK-NEXT:    store float [[M2]], ptr [[R2]], align 4
-; CHECK-NEXT:    store float [[M3]], ptr [[R3]], align 4
-; CHECK-NEXT:    store float [[M4]], ptr [[R4]], align 4
-; CHECK-NEXT:    store float [[M5]], ptr [[R5]], align 4
-; CHECK-NEXT:    store float [[M6]], ptr [[R6]], align 4
-; CHECK-NEXT:    store float [[M7]], ptr [[R7]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[X4P]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @vmodff4(<4 x float> [[TMP1]], ptr [[IP]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call <4 x float> @vmodff4(<4 x float> [[TMP2]], ptr [[IP4]])
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x float> [[TMP5]], <8 x float> [[TMP6]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+; CHECK-NEXT:    store <8 x float> [[TMP7]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1

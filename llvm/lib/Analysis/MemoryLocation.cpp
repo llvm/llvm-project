@@ -178,6 +178,18 @@ getKnownTypeFromMaskedOp(Value *Mask, VectorType *Ty) {
   return FixedVectorType::get(Ty->getElementType(), NumElts.getZExtValue());
 }
 
+/// Returns sincos or modf if \p Call is their vector variant, NotLibFunc
+/// otherwise.
+static LibFunc getVectorVariantLibFunc(const CallBase *Call,
+                                       const TargetLibraryInfo &TLI) {
+  const VecDesc *VD = TLI.getScalarizedMappingInfo(*Call);
+  LibFunc F = VD ? TLI.getLibFunc(VD->getScalarFnName()) : NotLibFunc;
+  return is_contained(
+             {LibFunc_sincos, LibFunc_sincosf, LibFunc_modf, LibFunc_modff}, F)
+             ? F
+             : NotLibFunc;
+}
+
 MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
                                               unsigned ArgIdx,
                                               const TargetLibraryInfo *TLI) {
@@ -328,6 +340,8 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
   // LoopIdiomRecognizer likes to turn loops into calls to memset_pattern16
   // whenever possible.
   LibFunc F = TLI ? TLI->getLibFunc(*Call) : NotLibFunc;
+  if (F == NotLibFunc && TLI)
+    F = getVectorVariantLibFunc(Call, *TLI);
   if (F != NotLibFunc && TLI->has(F)) {
     switch (F) {
     case LibFunc_strcpy:
@@ -406,6 +420,17 @@ MemoryLocation MemoryLocation::getForArgument(const CallBase *Call,
         return MemoryLocation(
             Arg, LocationSize::upperBound(LenCI->getZExtValue()), AATags);
       return MemoryLocation::getAfter(Arg, AATags);
+    case LibFunc_sincos:
+    case LibFunc_sincosf:
+    case LibFunc_modf:
+    case LibFunc_modff:
+      assert(ArgIdx != 0 && "Invalid argument index for sincos/modf");
+      // Each pointer argument receives one value of the first argument type.
+      return MemoryLocation(
+          Arg,
+          LocationSize::precise(Call->getDataLayout().getTypeStoreSize(
+              Call->getArgOperand(0)->getType())),
+          AATags);
     default:
       break;
     };

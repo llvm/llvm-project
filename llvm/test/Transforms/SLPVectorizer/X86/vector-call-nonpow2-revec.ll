@@ -6,19 +6,11 @@
 define void @sin3(ptr noalias %x, ptr noalias %r) {
 ; CHECK-LABEL: define void @sin3(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds float, ptr [[R]], i64 1
-; CHECK-NEXT:    [[R2P:%.*]] = getelementptr inbounds float, ptr [[R]], i64 2
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
-; CHECK-NEXT:    [[V0:%.*]] = call float @sinf(float [[X0]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    [[V1:%.*]] = call float @sinf(float [[X1]]) #[[ATTR3]]
-; CHECK-NEXT:    [[V2:%.*]] = call float @sinf(float [[X2]]) #[[ATTR3]]
-; CHECK-NEXT:    store float [[V0]], ptr [[R]], align 4
-; CHECK-NEXT:    store float [[V1]], ptr [[R1P]], align 4
-; CHECK-NEXT:    store float [[V2]], ptr [[R2P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x float> [[TMP1]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    store <3 x float> [[TMP4]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define void @sin3(
@@ -57,24 +49,11 @@ define void @sin3(ptr noalias %x, ptr noalias %r) {
 define void @sin7(ptr noalias %x, ptr noalias %r) {
 ; CHECK-LABEL: define void @sin7(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X4P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 4
-; CHECK-NEXT:    [[X5P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 5
-; CHECK-NEXT:    [[X6P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 6
-; CHECK-NEXT:    [[R4P:%.*]] = getelementptr inbounds float, ptr [[R]], i64 4
-; CHECK-NEXT:    [[R5P:%.*]] = getelementptr inbounds float, ptr [[R]], i64 5
-; CHECK-NEXT:    [[R6P:%.*]] = getelementptr inbounds float, ptr [[R]], i64 6
-; CHECK-NEXT:    [[X4:%.*]] = load float, ptr [[X4P]], align 4
-; CHECK-NEXT:    [[X5:%.*]] = load float, ptr [[X5P]], align 4
-; CHECK-NEXT:    [[X6:%.*]] = load float, ptr [[X6P]], align 4
-; CHECK-NEXT:    [[V4:%.*]] = call float @sinf(float [[X4]]) #[[ATTR3]]
-; CHECK-NEXT:    [[V5:%.*]] = call float @sinf(float [[X5]]) #[[ATTR3]]
-; CHECK-NEXT:    [[V6:%.*]] = call float @sinf(float [[X6]]) #[[ATTR3]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[TMP1]])
-; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[R]], align 4
-; CHECK-NEXT:    store float [[V4]], ptr [[R4P]], align 4
-; CHECK-NEXT:    store float [[V5]], ptr [[R5P]], align 4
-; CHECK-NEXT:    store float [[V6]], ptr [[R6P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <7 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <7 x float> [[TMP1]], <7 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 poison>
+; CHECK-NEXT:    [[TMP3:%.*]] = call <8 x float> @amd_vrs8_sinf(<8 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <7 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    store <7 x float> [[TMP4]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define void @sin7(
@@ -139,14 +118,9 @@ define void @sin7(ptr noalias %x, ptr noalias %r) {
 define void @revec_sinf(ptr noalias %x, ptr noalias %r) {
 ; CHECK-LABEL: define void @revec_sinf(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[R:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
-; CHECK-NEXT:    [[R1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[R]], i64 1
-; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
-; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
-; CHECK-NEXT:    [[VA:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[A]])
-; CHECK-NEXT:    [[VB:%.*]] = call <4 x float> @amd_vrs4_sinf(<4 x float> [[B]])
-; CHECK-NEXT:    store <4 x float> [[VA]], ptr [[R]], align 16
-; CHECK-NEXT:    store <4 x float> [[VB]], ptr [[R1P]], align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x float> @amd_vrs8_sinf(<8 x float> [[TMP1]])
+; CHECK-NEXT:    store <8 x float> [[TMP2]], ptr [[R]], align 16
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define void @revec_sinf(
@@ -175,13 +149,8 @@ define void @revec_sinf(ptr noalias %x, ptr noalias %r) {
 define void @revec_sincosf(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 ; CHECK-LABEL: define void @revec_sincosf(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds <4 x float>, ptr [[X]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds <4 x float>, ptr [[S]], i64 1
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds <4 x float>, ptr [[C]], i64 1
-; CHECK-NEXT:    [[A:%.*]] = load <4 x float>, ptr [[X]], align 16
-; CHECK-NEXT:    [[B:%.*]] = load <4 x float>, ptr [[X1P]], align 16
-; CHECK-NEXT:    call void @amd_vrs4_sincosf(<4 x float> [[A]], ptr [[S]], ptr [[C]])
-; CHECK-NEXT:    call void @amd_vrs4_sincosf(<4 x float> [[B]], ptr [[S1]], ptr [[C1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x float>, ptr [[X]], align 16
+; CHECK-NEXT:    call void @amd_vrs8_sincosf(<8 x float> [[TMP1]], ptr [[S]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: define void @revec_sincosf(

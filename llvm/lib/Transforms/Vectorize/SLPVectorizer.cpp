@@ -2395,6 +2395,21 @@ private:
   /// alternative must pay their full price.
   InstructionCost getUnfusedFMulsPenalty(const TreeEntry &TE) const;
 
+  /// \returns true if the graph has a vectorized call of the vector function,
+  /// which takes some arguments of the first lane as linear scalars, so the
+  /// lanes cannot be reordered.
+  bool hasLinearCallArgs() const {
+    return any_of(VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+      if (TE->State != TreeEntry::Vectorize ||
+          TE->getOpcode() != Instruction::Call)
+        return false;
+      // The trailing linear arguments are dropped from the operands.
+      auto *CI = cast<CallInst>(TE->getMainOp());
+      return TE->getNumOperands() < CI->arg_size() &&
+             getVectorIntrinsicIDForCall(CI, TLI) == Intrinsic::not_intrinsic;
+    });
+  }
+
   /// \returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
   TreeEntry *getOperandEntry(TreeEntry *E, unsigned Idx) {
@@ -3555,16 +3570,29 @@ private:
   /// Checks if two instructions may access the same memory.
   ///
   /// \p Loc1 is the location of \p Inst1. It is passed explicitly because it
-  /// is invariant in the calling loop.
+  /// is invariant in the calling loop. If \p Loc1 is empty, \p Inst1 is a call,
+  /// accessing only the memory of its arguments.
   bool isAliased(const MemoryLocation &Loc1, Instruction *Inst1,
                  Instruction *Inst2) {
-    assert(Loc1.Ptr && isSimple(Inst1) && "Expected simple first instruction.");
+    assert(isSimple(Inst1) &&
+           (Loc1.Ptr || cast<CallBase>(Inst1)->onlyAccessesArgMemory()) &&
+           "Expected simple first instruction.");
     // First check if the result is already in the cache.
     AliasCacheKey Key = std::make_pair(Inst1, Inst2);
     auto Res = AliasCache.try_emplace(Key);
     if (!Res.second)
       return Res.first->second;
-    bool Aliased = isModOrRefSet(BatchAA->getModRefInfo(Inst2, Loc1));
+    bool Aliased;
+    if (Loc1.Ptr) {
+      Aliased = isModOrRefSet(BatchAA->getModRefInfo(Inst2, Loc1));
+    } else if (isa<CallBase>(Inst2) ||
+               (isa<LoadInst, StoreInst>(Inst2) && isSimple(Inst2))) {
+      Aliased =
+          isModOrRefSet(BatchAA->getModRefInfo(Inst2, cast<CallBase>(Inst1)));
+    } else {
+      // Atomic and other ordered accesses must not be reordered with calls.
+      Aliased = true;
+    }
     // Store the result in the cache.
     Res.first->getSecond() = Aliased;
     return Aliased;
@@ -4944,7 +4972,8 @@ private:
               DecrUnsched(OpSD, /*IsControl=*/false);
           }
           // Vector intrinsics may keep some arguments scalar (e.g. the
-          // exponent of llvm.powi). Such scalar arguments are not modeled as
+          // exponent of llvm.powi), as well as the vector functions with the
+          // linear arguments. Such scalar arguments are not modeled as
           // tree-entry operands, so the per-lane loop above never releases the
           // dependency that calculateDependencies() registered for the
           // definition feeding such an argument. Release it here to keep the
@@ -4953,8 +4982,17 @@ private:
           if (TotalOpCount > 0) {
             if (auto *CI = dyn_cast<CallInst>(In)) {
               Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, R.TLI);
+              // The trailing linear arguments are dropped from the operands.
+              const TreeEntry *TE = Bundles.front()->getTreeEntry();
+              unsigned NumVecArgs =
+                  ID == Intrinsic::not_intrinsic &&
+                          TE->getOpcode() == Instruction::Call &&
+                          !TE->isCopyableElement(In)
+                      ? TE->getNumOperands()
+                      : CI->arg_size();
               for (unsigned ArgIdx : seq<unsigned>(CI->arg_size())) {
-                if (!isVectorIntrinsicWithScalarOpAtArg(ID, ArgIdx, R.TTI))
+                if (ArgIdx < NumVecArgs &&
+                    !isVectorIntrinsicWithScalarOpAtArg(ID, ArgIdx, R.TTI))
                   continue;
                 auto *OpI = dyn_cast<Instruction>(CI->getArgOperand(ArgIdx));
                 if (!OpI)
@@ -7201,6 +7239,9 @@ void BoUpSLP::reorderTopToBottom() {
                    getValueType(TE->Scalars.front(), Opts.slp_revec));
       }))
     return;
+  // The calls with linear arguments keep the lane order.
+  if (hasLinearCallArgs())
+    return;
   // Compute IgnoreReorder once - it depends only on UserIgnoreList and
   // getRootNode(), which do not change during this loop.
   const bool IgnoreReorder =
@@ -7565,6 +7606,9 @@ void BoUpSLP::buildReorderableOperands(
 }
 
 void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
+  // The calls with linear arguments keep the lane order.
+  if (hasLinearCallArgs())
+    return;
   struct TreeEntryCompare {
     bool operator()(const TreeEntry *LHS, const TreeEntry *RHS) const {
       if (LHS->UserTreeIndex && RHS->UserTreeIndex)
@@ -9153,22 +9197,68 @@ buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
   return ArgTys;
 }
 
+/// Returns true if the linear pointer arguments of the vector variant
+/// \p Variant may overlap in some of the calls \p VL. The vector function may
+/// write the results in the order, different from the scalar function.
+static bool mayOverlapLinearPointers(const VFInfo &Variant,
+                                     ArrayRef<Value *> VL,
+                                     BatchAAResults &BatchAA,
+                                     const TargetLibraryInfo *TLI) {
+  SmallVector<unsigned> LinearPtrArgs;
+  for (const VFParameter &P : Variant.Shape.Parameters) {
+    if (P.ParamKind == VFParamKind::OMP_Linear &&
+        cast<CallInst>(VL.front())
+            ->getArgOperand(P.ParamPos)
+            ->getType()
+            ->isPointerTy())
+      LinearPtrArgs.push_back(P.ParamPos);
+  }
+  return any_of(VL, [&](Value *V) {
+    auto *Call = cast<CallInst>(V);
+    for (auto [Idx, I] : enumerate(LinearPtrArgs)) {
+      for (unsigned J : drop_begin(LinearPtrArgs, Idx + 1)) {
+        if (!BatchAA.isNoAlias(MemoryLocation::getForArgument(Call, I, TLI),
+                               MemoryLocation::getForArgument(Call, J, TLI)))
+          return true;
+      }
+    }
+    return false;
+  });
+}
+
 /// Calculates the costs of vectorized intrinsic (if possible) and vectorized
 /// function (if possible) calls. Returns invalid cost for the corresponding
-/// calls, if they cannot be vectorized/will be scalarized.
+/// calls, if they cannot be vectorized/will be scalarized. The lane calls
+/// \p VL, if known, allow the vector function with linear arguments.
 static std::pair<InstructionCost, InstructionCost>
 getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
                    const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
-                   const TTI::TargetCostKind CostKind) {
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(getNumElements(VecTy)),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+                   const TTI::TargetCostKind CostKind, ArrayRef<Value *> VL,
+                   ScalarEvolution *SE) {
   auto LibCost = InstructionCost::getInvalid();
-  if (!CI->isNoBuiltin() && VecFunc) {
+  unsigned VF = getNumElements(VecTy);
+  std::optional<VFInfo> Variant =
+      CI->isNoBuiltin() ? std::nullopt
+                        : getCallVectorVariant(CI, VF, VL, SE, TLI);
+  if (Variant) {
     // Calculate the cost of the vector library call.
     // If the corresponding vector call is cheaper, return its cost.
     LibCost = TTI->getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
+    // The padded lanes are added to the arguments and dropped from the result.
+    unsigned PaddedVF = Variant->Shape.VF.getFixedValue();
+    if (PaddedVF > VF) {
+      SmallVector<int> WidenMask = createSequentialMask(0, VF, PaddedVF - VF);
+      for (auto *ArgTy : make_filter_range(ArgTys, IsaPred<VectorType>)) {
+        LibCost += TTI->getShuffleCost(
+            TTI::SK_PermuteSingleSrc,
+            cast<VectorType>(getWidenedType(ArgTy->getScalarType(), PaddedVF)),
+            cast<VectorType>(ArgTy), CostKind, WidenMask);
+      }
+      LibCost += TTI->getShuffleCost(
+          TTI::SK_PermuteSingleSrc, cast<VectorType>(VecTy),
+          cast<VectorType>(getWidenedType(VecTy->getScalarType(), PaddedVF)),
+          CostKind, createSequentialMask(0, VF, 0));
+    }
   }
   Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
@@ -9213,7 +9303,8 @@ static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
     SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
     auto [IntrCost, LibCost] =
-        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys, CostKind);
+        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys, CostKind,
+                           /*VL=*/{}, /*SE=*/nullptr);
     return std::min(IntrCost, LibCost);
   }
   SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
@@ -9825,13 +9916,17 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     CallInst *CI = cast<CallInst>(VL0);
     Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
 
-    VFShape Shape = VFShape::get(
-        CI->getFunctionType(),
-        ElementCount::getFixed(static_cast<unsigned int>(VL.size())),
-        false /*HasGlobalPred*/);
-    Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+    auto *VecTy =
+        getWidenedType(getValueType(S.getMainOp(), Opts.slp_revec), VL.size());
+    std::optional<VFInfo> Variant =
+        getCallVectorVariant(CI, getNumElements(VecTy), VL, SE, TLI);
+    // The vector variant of the calls of the vector function is defined by the
+    // called function and may be not declared yet.
+    Function *VecFunc = Variant && !TLI->getScalarizedMappingInfo(*CI)
+                            ? CI->getModule()->getFunction(Variant->VectorName)
+                            : nullptr;
 
-    if (!VecFunc && !isTriviallyVectorizable(ID)) {
+    if (!Variant && !isTriviallyVectorizable(ID)) {
       LLVM_DEBUG(dbgs() << "SLP: Non-vectorizable call.\n");
       return TreeEntry::NeedToGather;
     }
@@ -9861,7 +9956,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
                Intrinsic::not_intrinsic) ||
           (ID != ID2 && Equivalent == Intrinsic::not_intrinsic) ||
           (VecFunc &&
-           VecFunc != VFDatabase(*CI2).getVectorizedFunction(Shape)) ||
+           VecFunc != VFDatabase(*CI2).getVectorizedFunction(Variant->Shape)) ||
           !CI->hasIdenticalOperandBundleSchema(*CI2)) {
         LLVM_DEBUG(dbgs() << "SLP: mismatched calls:" << *CI << "!=" << *V
                           << "\n");
@@ -9890,11 +9985,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         return TreeEntry::NeedToGather;
       }
     }
+    if (Variant && mayOverlapLinearPointers(*Variant, VL, *BatchAA, TLI)) {
+      LLVM_DEBUG(dbgs() << "SLP: overlapping linear pointers in calls.\n");
+      return TreeEntry::NeedToGather;
+    }
     SmallVector<Type *> ArgTys =
         buildIntrinsicArgTypes(CI, ID, VL.size(), 0, TTI);
-    auto *VecTy = getWidenedType(S.getMainOp()->getType(), VL.size());
     auto VecCallCosts =
-        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+        getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind, VL, SE);
     if (!VecCallCosts.first.isValid() && !VecCallCosts.second.isValid())
       return TreeEntry::NeedToGather;
 
@@ -12338,13 +12436,14 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   SmallVector<int> ReuseShuffleIndices;
   SmallVector<Value *> VL(VLRef);
 
-  // Tries to build split node.
+  // Tries to build split node. The non-zero SplitPos splits the lanes at this
+  // position, keeping their order.
   auto TrySplitNode = [&](const InstructionsState &LocalState,
-                          bool SplitInHalves = false) {
+                          unsigned SplitPos = 0) {
     SmallVector<Value *> Op1, Op2;
     OrdersType ReorderIndices;
-    if (SplitInHalves) {
-      auto *Mid = std::next(VL.begin(), VL.size() / 2);
+    if (SplitPos != 0) {
+      auto *Mid = std::next(VL.begin(), SplitPos);
       Op1.assign(VL.begin(), Mid);
       Op2.assign(Mid, VL.end());
     } else if (!canBuildSplitNode(VL, LocalState, Op1, Op2, ReorderIndices)) {
@@ -12412,7 +12511,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   }
 
   if (SplitStoredValues && S && UserTreeIdx.UserTE &&
-      UserTreeIdx.UserTE->Idx == 0 && TrySplitNode(S, /*SplitInHalves=*/true))
+      UserTreeIdx.UserTE->Idx == 0 && TrySplitNode(S, VL.size() / 2))
     return;
 
   // FIXME: investigate if there are profitable cases for VL.size() <= 4.
@@ -12462,6 +12561,18 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   TreeEntry::EntryState State = getScalarsVectorizationState(
       S, VL, IsScatterVectorizeUserTE, CurrentOrder, PointerOps, SPtrInfo,
       ExpandShuffleMask);
+  // The calls of the library function without the vector variant for all the
+  // lanes are vectorized in parts, each matching a vector variant.
+  if (State == TreeEntry::NeedToGather && ReuseShuffleIndices.empty() && S &&
+      S.getOpcode() == Instruction::Call && all_of(VL, IsaPred<CallInst>)) {
+    auto *CI = cast<CallInst>(S.getMainOp());
+    unsigned PartVF =
+        getVectorIntrinsicIDForCall(CI, TLI) == Intrinsic::not_intrinsic
+            ? getCallVariantPartVF(CI, VL, SE, TLI)
+            : 0;
+    if (PartVF != 0 && PartVF < VL.size() && TrySplitNode(S, PartVF))
+      return;
+  }
   // The zero-extended sub-fields of the same wider integer scalar are
   // gathered and emitted as a bitcast to the field vector plus a permutation.
   // For 2 lanes the emission is not cheaper than the insertelement chain.
@@ -13146,8 +13257,12 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         Operands[0] = Ops.getVL(0);
         Operands[1] = Ops.getVL(1);
       }
+      // The trailing linear arguments of the vector function are passed as the
+      // scalars of the first lane.
+      if (ID == Intrinsic::not_intrinsic)
+        Operands.truncate(getNumVectorCallArgs(CI, VL, SE, TLI));
       TE->setOperands(Operands);
-      for (unsigned I : seq<unsigned>(CI->arg_size())) {
+      for (unsigned I : seq<unsigned>(TE->getNumOperands())) {
         // For scalar operands no need to create an entry since no need to
         // vectorize it.
         if (isVectorIntrinsicWithScalarOpAtArg(ID, I, TTI))
@@ -16785,6 +16900,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return 0;
     if (isa<InsertElementInst, InsertValueInst>(VL[0]))
       return InstructionCost::getInvalid();
+    // The gathered void calls stay scalar.
+    if (VL[0]->getType()->isVoidTy())
+      return 0;
     // The fmuls of the node turned into a gather stay scalar and lose the
     // fusion with their vectorized fadd/fsub users.
     return SpillsReloads +
@@ -16796,6 +16914,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     assert(E->CombinedEntriesWithIndices.size() == 2 &&
            "Expected exactly 2 combined entries.");
     assert(E->ReuseShuffleIndices.empty() && "Expected empty reuses mask.");
+    // The parts of the void calls are not combined.
+    if (VL[0]->getType()->isVoidTy())
+      return 0;
     InstructionCost VectorCost = 0;
     if (E->ReorderIndices.empty()) {
       VectorCost = getShuffleCost(
@@ -18106,8 +18227,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(
           CI, ID, getNumElements(VecTy),
           It != MinBWs.end() ? It->second.first : 0, TTI);
-      auto VecCallCosts =
-          getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys,
+                                             CostKind, E->Scalars, SE);
       return std::min(VecCallCosts.first, VecCallCosts.second) + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -24034,6 +24155,9 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 }
 
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
+  // The gathered void calls stay scalar.
+  if (E->Scalars.front()->getType()->isVoidTy())
+    return E->Scalars.back();
   // Do not do this for split vectorize node, marked to be gathers/buildvectors.
   if (E->State != TreeEntry::SplitVectorize ||
       !TransformedToGatherNodes.contains(E)) {
@@ -24090,6 +24214,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         OpTE2.isSame(ArrayRef(E->Scalars).take_back(OpTE2.getVectorFactor())) &&
         "Expected same second part of scalars.");
     Value *Op2 = vectorizeTree(&OpTE2);
+    // The parts of the void calls are not combined.
+    if (Op2->getType()->isVoidTy()) {
+      E->VectorizedValue = Op2;
+      return Op2;
+    }
     auto GetOperandSignedness = [&](const TreeEntry *OpE) {
       bool IsSigned = false;
       auto It = MinBWs.find(OpE);
@@ -24164,6 +24293,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
   bool IsReverseOrder = E->isReverse() && !isWidenedStridedLoad(E);
   auto FinalShuffle = [&](Value *V, const TreeEntry *E) {
+    if (V->getType()->isVoidTy()) {
+      assert(E->ReorderIndices.empty() && E->ReuseShuffleIndices.empty() &&
+             "Expected no shuffles of void calls.");
+      return V;
+    }
     if (isa<StructType>(ScalarTy)) {
       // TODO: Reordering of struct types is not supported.
       assert(E->ReorderIndices.empty() &&
@@ -25603,10 +25737,15 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(
           CI, ID, getNumElements(VecTy),
           It != MinBWs.end() ? It->second.first : 0, TTI);
-      auto VecCallCosts =
-          getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys, CostKind);
+      auto VecCallCosts = getVectorCallCosts(CI, VecTy, TTI, TLI, ArgTys,
+                                             CostKind, E->Scalars, SE);
       bool UseIntrinsic = ID != Intrinsic::not_intrinsic &&
                           VecCallCosts.first <= VecCallCosts.second;
+      std::optional<VFInfo> Variant;
+      if (!UseIntrinsic) {
+        Variant = getCallVectorVariant(CI, getNumElements(VecTy), E->Scalars,
+                                       SE, TLI);
+      }
 
       Value *ScalarArg = nullptr;
       SmallVector<Value *> OpVecs;
@@ -25635,6 +25774,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             TysForDecl.push_back(ScalarArg->getType());
           continue;
         }
+        // The vector function takes the linear argument of the first lane.
+        if (Variant &&
+            Variant->Shape.Parameters[I].ParamKind == VFParamKind::OMP_Linear) {
+          OpVecs.push_back(
+              cast<CallInst>(E->Scalars.front())->getArgOperand(I));
+          continue;
+        }
 
         Value *OpVec = vectorizeOperand(E, I);
         ScalarArg = CEI->getArgOperand(I);
@@ -25655,13 +25801,31 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       Function *CF;
       if (!UseIntrinsic) {
-        VFShape Shape =
-            VFShape::get(CI->getFunctionType(),
-                         ElementCount::getFixed(getNumElements(VecTy)),
-                         false /*HasGlobalPred*/);
-        CF = VFDatabase(*CI).getVectorizedFunction(Shape);
+        CF = F->getParent()->getFunction(Variant->VectorName);
+        // The wider vector function of the calls of the vector function is
+        // declared like the called vector function.
+        if (!CF) {
+          CF = Function::Create(
+              VFABI::createFunctionType(
+                  *Variant, getScalarFunctionType(CI->getFunctionType())),
+              Function::ExternalLinkage, Variant->VectorName, F->getParent());
+          CF->copyAttributesFrom(CI->getCalledFunction());
+        }
       } else {
         CF = Intrinsic::getOrInsertDeclaration(F->getParent(), ID, TysForDecl);
+      }
+
+      // The padded lanes are added to the arguments and dropped from the
+      // result.
+      unsigned VF = getNumElements(VecTy);
+      unsigned PaddedVF = Variant ? Variant->Shape.VF.getFixedValue() : VF;
+      if (PaddedVF > VF) {
+        for (Value *&OpVec : OpVecs) {
+          if (OpVec->getType()->isVectorTy()) {
+            OpVec = Builder.CreateShuffleVector(
+                OpVec, createSequentialMask(0, VF, PaddedVF - VF));
+          }
+        }
       }
 
       SmallVector<OperandBundleDef, 1> OpBundles;
@@ -25670,6 +25834,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       V = PropagateIRFlags(V);
       cast<CallInst>(V)->setCallingConv(CF->getCallingConv());
+      if (PaddedVF > VF)
+        V = Builder.CreateShuffleVector(V, createSequentialMask(0, VF, 0));
       V = FinalShuffle(V, E);
 
       E->VectorizedValue = V;
@@ -28603,6 +28769,13 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     unsigned NumAliased = 0;
     unsigned DistToSrc = 1;
     bool IsNonSimpleSrc = !SrcLoc.Ptr || !isSimple(SrcInst);
+    // The vectorizable calls, accessing only the memory of their arguments, are
+    // checked against the argument locations.
+    auto *SrcCall = dyn_cast<CallInst>(SrcInst);
+    bool IsUnknownSrc =
+        IsNonSimpleSrc &&
+        !(SrcCall &&
+          isVectorizableArgMemCall(SrcCall, SLP->TLI, SLP->Opts.slp_revec));
 
     for (ScheduleData *DepDest = NextLoadStore; DepDest;
          DepDest = DepDest->getNextLoadStore()) {
@@ -28618,7 +28791,7 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
       Instruction *DepInst = DepDest->getInst();
       bool MayConflict = SrcMayWrite || DepInst->mayWriteToMemory();
       if (DistToSrc >= MaxMemDepDistance ||
-          (MayConflict && (IsNonSimpleSrc || NumAliased >= AliasedCheckLimit ||
+          (MayConflict && (IsUnknownSrc || NumAliased >= AliasedCheckLimit ||
                            SLP->isAliased(SrcLoc, SrcInst, DepInst)))) {
         // Try to turn a may-alias dependency between distinct, range-checkable
         // base objects into a runtime alias check. This covers both concrete
@@ -29102,7 +29275,7 @@ unsigned BoUpSLP::getVectorElementSize(Value *V) {
   if (!Width) {
     if (V->getType() == Builder.getInt1Ty() && FirstNonBool)
       V = FirstNonBool;
-    Width = DL->getTypeSizeInBits(V->getType());
+    Width = DL->getTypeSizeInBits(getValueType(V, Opts.slp_revec));
   }
 
   for (Instruction *I : Visited)
@@ -29534,7 +29707,7 @@ bool BoUpSLP::collectValuesToDemote(
           buildIntrinsicArgTypes(IC, ID, VF, MinBW, TTI);
       auto VecCallCosts = getVectorCallCosts(
           IC, getWidenedType(IntegerType::get(IC->getContext(), MinBW), VF),
-          TTI, TLI, ArgTys, CostKind);
+          TTI, TLI, ArgTys, CostKind, E.Scalars, SE);
       InstructionCost Cost = std::min(VecCallCosts.first, VecCallCosts.second);
       if (Cost < BestCost) {
         BestCost = Cost;
@@ -29562,6 +29735,11 @@ void BoUpSLP::computeMinimumValueSizes() {
   // Detect booleanized i1 and/or nodes first: they are registered in MinBWs
   // like the demoted nodes and processed the same way.
   detectBooleanizedNodes();
+
+  // The void calls produce no value to demote.
+  if (isa<CallInst>(getRootNode().Scalars.front()) &&
+      getRootNode().Scalars.front()->getType()->isVoidTy())
+    return;
 
   // We only attempt to truncate integer expressions.
   bool IsStoreOrInsertElt =
@@ -30023,6 +30201,7 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
 
   Stores.clear();
   GEPs.clear();
+  VoidCalls.clear();
   bool Changed = false;
 
   // If the target claims to have no vector registers don't attempt
@@ -30072,6 +30251,10 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
                         << " underlying objects.\n");
       Changed |= vectorizeStoreChains(R);
     }
+
+    // Vectorize trees that end at void calls.
+    if (!VoidCalls.empty())
+      Changed |= vectorizeVoidCalls(R);
 
     // Vectorize trees that end at reductions.
     Changed |= vectorizeChainsInBlock(BB, R, FMACandidates);
@@ -31217,10 +31400,12 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
   // Initialize the collections. We will make a single pass over the block.
   Stores.clear();
   GEPs.clear();
+  VoidCalls.clear();
 
   // Visit the store and getelementptr instructions in BB and organize them in
   // Stores and GEPs according to the underlying objects of their pointer
-  // operands.
+  // operands, and the void calls in VoidCalls according to the called
+  // functions.
   for (Instruction &I : *BB) {
     // Ignore store instructions that are volatile or have a pointer operand
     // that doesn't point to a scalar type.
@@ -31248,6 +31433,14 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
         continue;
       GEPs[GEP->getPointerOperand()].push_back(GEP);
     }
+
+    // Only the void calls, accessing just the memory of their arguments, can
+    // be scheduled together.
+    else if (auto *CI = dyn_cast<CallInst>(&I)) {
+      if (CI->getType()->isVoidTy() && CI->getCalledFunction() &&
+          isVectorizableArgMemCall(CI, TLI, Opts->slp_revec))
+        VoidCalls[CI->getCalledFunction()].push_back(CI);
+    }
   }
 }
 
@@ -31270,7 +31463,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   // Make sure invalid types (including vector type) are rejected before
   // determining vectorization factor for scalar instructions.
   for (Value *V : VL) {
-    Type *Ty = V->getType();
+    Type *Ty = V->getType()->isVoidTy() ? getValueType(V, Opts->slp_revec)
+                                        : V->getType();
     if (!isa<InsertElementInst, InsertValueInst>(V) &&
         !isValidElementType(Ty, Opts->slp_revec)) {
       // NOTE: the following will give user internal llvm type name, which may
@@ -31332,8 +31526,9 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
 
   unsigned NextInst = 0, MaxInst = VL.size();
   for (unsigned VF = MaxVF; NextInst + 1 < MaxInst && VF >= MinVF;
-       VF = getFloorFullVectorNumberOfElements(*TTI, I0->getType(), VF - 1,
-                                               Opts->slp_revec)) {
+       VF = getFloorFullVectorNumberOfElements(
+           *TTI, I0->getType()->isVoidTy() ? ScalarTy : I0->getType(), VF - 1,
+           Opts->slp_revec)) {
     // No actual vectorization should happen, if number of parts is the same as
     // provided vectorization factor (i.e. the scalar type is used for vector
     // code during codegen).
@@ -37360,6 +37555,15 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
         return SeedGroups.at(V1) < SeedGroups.at(V2);
       },
       R);
+}
+
+bool SLPVectorizerPass::vectorizeVoidCalls(BoUpSLP &R) {
+  bool Changed = false;
+  for (ArrayRef<Value *> VL : make_second_range(VoidCalls)) {
+    Changed |= tryToVectorizeList(VL, R, /*MaxVFOnly=*/false,
+                                  /*StandaloneSeeds=*/true);
+  }
+  return Changed;
 }
 
 bool SLPVectorizerPass::vectorizeGEPIndices(BasicBlock *BB, BoUpSLP &R) {

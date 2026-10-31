@@ -25,6 +25,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/VFABIDemangler.h"
 
 #include <cstdint>
 #include <limits>
@@ -34,9 +35,11 @@
 
 namespace llvm {
 class AssumptionCache;
+class CallInst;
 class Constant;
 class DataLayout;
 class DebugLoc;
+class FunctionType;
 class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
@@ -128,6 +131,41 @@ bool isSplat(ArrayRef<Value *> VL);
 /// otherwise Intrinsic::fma), or Intrinsic::not_intrinsic if they are not
 /// equivalent.
 Intrinsic::ID isEquivalentIntrinsicID(Intrinsic::ID LHS, Intrinsic::ID RHS);
+
+/// Returns true if \p CI accesses only the memory of its arguments and has the
+/// vector variants or, for \p ReVec, calls the vector function.
+bool isVectorizableArgMemCall(const CallInst *CI, const TargetLibraryInfo *TLI,
+                              bool ReVec);
+
+/// Returns the type of the scalar function of the vector function type \p FTy.
+FunctionType *getScalarFunctionType(FunctionType *FTy);
+
+/// Returns the unmasked vector variant of \p CI for \p VF elements. For the
+/// known lane calls \p VL, the variant, taking the trailing arguments as linear
+/// scalars of the first lane, is preferred if these arguments advance by the
+/// linear steps across the lanes. Otherwise, the variant with all the
+/// arguments vectorized is returned, which may be wider than \p VF for the
+/// non-power-of-2 \p VF of the calls without memory accesses. The calls of the
+/// vector function use the vector function of the same scalar function, which
+/// processes all the elements.
+std::optional<VFInfo> getCallVectorVariant(const CallInst *CI, unsigned VF,
+                                           ArrayRef<Value *> VL,
+                                           ScalarEvolution *SE,
+                                           const TargetLibraryInfo *TLI);
+
+/// Returns the number of the leading calls of \p VL, which form the widest
+/// power-of-2 part with the vector variant of \p CI, if the remaining calls are
+/// covered by such parts of at least 2 calls too. Returns 0 otherwise.
+unsigned getCallVariantPartVF(const CallInst *CI, ArrayRef<Value *> VL,
+                              ScalarEvolution *SE,
+                              const TargetLibraryInfo *TLI);
+
+/// Returns the number of the leading arguments of the calls \p VL with the main
+/// call \p CI, vectorized for the vector variant. The remaining linear
+/// arguments are passed as the scalars of the first lane.
+unsigned getNumVectorCallArgs(const CallInst *CI, ArrayRef<Value *> VL,
+                              ScalarEvolution *SE,
+                              const TargetLibraryInfo *TLI);
 
 /// \returns True if \p I is commutative, handles CmpInst and BinaryOperator.
 /// For BinaryOperator, it also checks if \p ValWithUses is used in specific
