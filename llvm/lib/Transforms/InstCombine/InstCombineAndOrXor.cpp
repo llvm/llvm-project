@@ -3443,6 +3443,69 @@ static Value *foldAndOrOfICmpEqConstantAndICmp(CmpPredicate PredL, Value *LHS0,
       Other);
 }
 
+// (icmp ult A, C) & (icmp Pred (A op B), Bound)
+//   -> (icmp ult A, C) & (icmp Pred B, Bound)
+// where op is or/xor and C <= 2^K:
+//  * Pred is ult/slt and Bound has K trailing zeros, or
+//  * Pred is ugt/sgt and Bound has K trailing ones.
+// K must be below the bit width, so A cannot affect the sign bit.
+// Also handles logical AND, preserving operand order for poison safety.
+static Value *foldGuardedOrXorOfICmps(Value *LHS, Value *RHS, bool IsLogical,
+                                      InstCombiner::BuilderTy &Builder) {
+  auto Fold = [&](Value *Guard, Value *Test, bool GuardIsLHS) -> Value * {
+    Value *A, *Bits, *BoundValue;
+    const APInt *C, *Bound;
+    CmpPredicate GuardPred, TestPred;
+    if (!match(Guard, m_ICmp(GuardPred, m_Value(A), m_APInt(C))) ||
+        GuardPred != ICmpInst::ICMP_ULT ||
+        !match(Test, m_OneUse(m_ICmp(TestPred, m_Value(Bits),
+                                     m_Value(BoundValue)))) ||
+        !match(BoundValue, m_APIntForbidPoison(Bound)))
+      return nullptr;
+
+    // Transforming a logical AND could expose poison from a samesign guard.
+    if (IsLogical && !GuardIsLHS && GuardPred.hasSameSign())
+      return nullptr;
+
+    Value *B;
+    if (!match(Bits, m_c_Or(m_Specific(A), m_Value(B))) &&
+        !match(Bits, m_c_Xor(m_Specific(A), m_Value(B))))
+      return nullptr;
+
+    unsigned K;
+    // Rely on InstCombine canonicalizing <=/>= to </> comparisons.
+    switch (TestPred) {
+    case ICmpInst::ICMP_ULT:
+    case ICmpInst::ICMP_SLT:
+      K = Bound->countr_zero();
+      break;
+    case ICmpInst::ICMP_UGT:
+    case ICmpInst::ICMP_SGT:
+      K = Bound->countr_one();
+      break;
+    default:
+      return nullptr;
+    }
+
+    // Ensure that A cannot affect bits at or above K, including the sign bit.
+    if (K == Bound->getBitWidth() ||
+        C->ugt(APInt::getOneBitSet(Bound->getBitWidth(), K)))
+      return nullptr;
+
+    // Drop samesign on the new test: removing a poison condition is safe.
+    Value *NewTest = Builder.CreateICmp(TestPred.dropSameSign(), B, BoundValue);
+    Value *NewLHS = GuardIsLHS ? Guard : NewTest;
+    Value *NewRHS = GuardIsLHS ? NewTest : Guard;
+    // Keep the operand order: a logical AND may suppress poison in its RHS.
+    if (IsLogical)
+      return Builder.CreateLogicalAnd(NewLHS, NewRHS);
+    return Builder.CreateAnd(NewLHS, NewRHS);
+  };
+  if (Value *V = Fold(LHS, RHS, true))
+    return V;
+  return Fold(RHS, LHS, false);
+}
+
 /// Fold (icmp)&(icmp) or (icmp)|(icmp) if possible.
 /// If IsLogical is true, then the and/or is in select form and the transform
 /// must be poison-safe.
@@ -3454,6 +3517,10 @@ Value *InstCombinerImpl::foldAndOrOfICmps(Value *LHS, Value *RHS,
   if (!match(LHS, m_ICmpLike(PredL, m_Value(LHS0), m_Value(LHS1))) ||
       !match(RHS, m_ICmpLike(PredR, m_Value(RHS0), m_Value(RHS1))))
     return nullptr;
+
+  if (IsAnd)
+    if (Value *V = foldGuardedOrXorOfICmps(LHS, RHS, IsLogical, Builder))
+      return V;
 
   bool LHSOneUse = LHS->hasOneUse();
   bool RHSOneUse = RHS->hasOneUse();
