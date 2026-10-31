@@ -323,53 +323,19 @@ cc_library(
     alwayslink = True,
 )
 
-cc_library(
+alias(
     name = "Breakpoint",
-    srcs = glob(["source/Breakpoint/**/*.cpp"]),
-    hdrs = glob(["include/lldb/Breakpoint/**/*.h"]),
-    includes = ["include"],
-    deps = [
-        ":Core",
-        ":Expression",
-        ":Headers",
-        ":Utility",
-        "//llvm:Support",
-    ],
+    actual = ":CoreLibraries",
 )
 
-cc_library(
+alias(
     name = "DataFormatters",
-    srcs = glob([
-        "source/DataFormatters/**/*.cpp",
-    ]),
-    hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
-    includes = ["include"],
-    textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
-    deps = [
-        ":Headers",
-        ":Utility",
-        "//llvm:Support",
-        "//llvm:Telemetry",
-    ],
+    actual = ":CoreLibraries",
 )
 
-cc_library(
+alias(
     name = "Expression",
-    srcs = glob(["source/Expression/**/*.cpp"]),
-    hdrs = glob(["include/lldb/Expression/**/*.h"]) + [":lldb-sbapi-dwarf-enums"],
-    includes = ["include"],
-    deps = [
-        ":Core",
-        ":Headers",
-        ":Host",
-        ":Utility",
-        "//llvm:BinaryFormat",
-        "//llvm:Core",
-        "//llvm:DebugInfoDWARF",
-        "//llvm:DebugInfoDWARFLowLevel",
-        "//llvm:ExecutionEngine",
-        "//llvm:Support",
-    ],
+    actual = ":CoreLibraries",
 )
 
 cc_library(
@@ -407,20 +373,9 @@ gentbl_cc_library(
     deps = [":CoreTdFiles"],
 )
 
-cc_library(
+alias(
     name = "Interpreter",
-    srcs = glob(["source/Interpreter/**/*.cpp"]),
-    deps = [
-        ":Commands",
-        ":Core",
-        ":DataFormatters",
-        ":Headers",
-        ":Host",
-        ":InterpreterProperties",
-        ":Utility",
-        "//llvm:Support",
-        "//llvm:Telemetry",
-    ],
+    actual = ":CoreLibraries",
 )
 
 td_library(
@@ -437,45 +392,14 @@ gentbl_cc_library(
     deps = [":CommandsTdFiles"],
 )
 
-cc_library(
+alias(
     name = "Commands",
-    srcs = glob(["source/Commands/**/*.cpp"]),
-    hdrs = glob(["source/Commands/**/*.h"]),
-    includes = ["source"],
-    deps = [
-        ":Breakpoint",
-        ":CommandOptions",
-        ":Core",
-        ":DataFormatters",
-        ":Expression",
-        ":Headers",
-        ":Host",
-        ":Target",
-        ":Utility",
-        ":Version",
-        "//clang:codegen",
-        "//clang:driver",
-        "//clang:frontend",
-        "//clang:serialization",
-        "//llvm:Support",
-    ],
+    actual = ":CoreLibraries",
 )
 
-cc_library(
+alias(
     name = "Symbol",
-    srcs = glob(["source/Symbol/**/*.cpp"]),
-    deps = [
-        ":Core",
-        ":Expression",
-        ":Headers",
-        ":Host",
-        ":Utility",
-        "//llvm:BinaryFormat",
-        "//llvm:DebugInfo",
-        "//llvm:DebugInfoDWARF",
-        "//llvm:DebugInfoDWARFLowLevel",
-        "//llvm:Support",
-    ],
+    actual = ":CoreLibraries",
 )
 
 objc_library(
@@ -580,6 +504,7 @@ cc_library(
     }),
     deps = [
         ":Headers",
+        ":Utility",
         "//llvm:DebugInfoDWARF",
         "//llvm:Object",
         "//llvm:Support",
@@ -629,41 +554,80 @@ cc_library(
     textual_hdrs = [":safe_autoload_paths_inc_gen"],
 )
 
+# These libraries have too many cyclic dependencies to be split out.
 cc_library(
-    name = "Core",
-    srcs = glob(
-        [
-            "source/Core/**/*.cpp",
-            "source/ValueObject/**/*.cpp",  # This should be its own library.
-        ],
-    ),
-    hdrs = glob(
-        [
-            "include/lldb/Core/**/*.h",
-            "include/lldb/ValueObject/**/*.h",  # This should be its own library.
-        ],
-    ),
-    includes = ["include"],
-    textual_hdrs = glob(
-        [
-            "source/Core/**/*.inc",
-        ],
-    ),
+    name = "CoreLibraries",
+    srcs = glob([
+        "source/Breakpoint/**/*.cpp",
+        "source/Commands/**/*.cpp",
+        "source/Core/**/*.cpp",
+        "source/DataFormatters/**/*.cpp",
+        "source/Expression/**/*.cpp",
+        "source/Interpreter/**/*.cpp",
+        "source/Symbol/**/*.cpp",
+        "source/Target/**/*.cpp",
+        "source/ValueObject/**/*.cpp",
+    ]) + [
+        # UnixSignals::Create constructs these.
+        "//lldb/source/Plugins:Process/Utility/FreeBSDSignals.cpp",
+        "//lldb/source/Plugins:Process/Utility/LinuxSignals.cpp",
+        "//lldb/source/Plugins:Process/Utility/NetBSDSignals.cpp",
+        "//lldb/source/Plugins:Process/Utility/OpenBSDSignals.cpp",
+    ],
+    hdrs = glob([
+        "include/lldb/Breakpoint/**/*.h",
+        "include/lldb/Core/**/*.h",
+        "include/lldb/DataFormatters/**/*.h",
+        "include/lldb/Expression/**/*.h",
+        "include/lldb/ValueObject/**/*.h",
+        "source/Commands/**/*.h",
+    ]) + [
+        ":lldb-sbapi-dwarf-enums",
+        "//lldb/source/Plugins:Process/Utility/FreeBSDSignals.h",
+        "//lldb/source/Plugins:Process/Utility/LinuxSignals.h",
+        "//lldb/source/Plugins:Process/Utility/NetBSDSignals.h",
+        "//lldb/source/Plugins:Process/Utility/OpenBSDSignals.h",
+    ],
+    includes = [
+        "include",
+        "source",
+    ],
+    textual_hdrs = glob([
+        "include/lldb/DataFormatters/**/*.def",
+        "source/Core/**/*.inc",
+    ]),
     deps = [
+        ":CommandOptions",
         ":CoreProperties",
         ":Headers",
         ":Host",
+        ":InterpreterProperties",
         ":SafeAutoloadPaths",
+        ":TargetProperties",
         ":Utility",
         ":Version",
+        "//clang:codegen",
         "//clang:driver",
+        "//clang:frontend",
+        "//clang:serialization",
         "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:DebugInfo",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:DebugInfoDWARFLowLevel",
         "//llvm:Demangle",
+        "//llvm:ExecutionEngine",
+        "//llvm:MC",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:Telemetry",
         "//llvm:config",
     ],
+)
+
+alias(
+    name = "Core",
+    actual = ":CoreLibraries",
 )
 
 gentbl_cc_library(
@@ -678,22 +642,9 @@ gentbl_cc_library(
     deps = [":CoreTdFiles"],
 )
 
-cc_library(
+alias(
     name = "Target",
-    srcs = glob(["source/Target/**/*.cpp"]),
-    deps = [
-        ":Core",
-        ":Headers",
-        ":Host",
-        ":Symbol",
-        ":TargetProperties",
-        ":Utility",
-        "//clang:codegen",
-        "//lldb/source/Plugins:PluginProcessUtility",
-        "//llvm:BinaryFormat",
-        "//llvm:MC",
-        "//llvm:Support",
-    ],
+    actual = ":CoreLibraries",
 )
 
 cc_library(
@@ -777,6 +728,7 @@ cc_library(
     includes = ["source"],
     deps = [
         ":Headers",
+        ":Target",
         ":Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
