@@ -46,3 +46,27 @@ spirv.func @split_barrier() "None" {
   spirv.INTEL.ControlBarrierWait <Workgroup> <Workgroup> <WorkgroupMemory>
   spirv.Return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.MemoryBarrier
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @memory_barrier
+spirv.func @memory_barrier() "None" {
+  // CHECK: llvm.fence acquire
+  spirv.MemoryBarrier <Device>, <Acquire|UniformMemory>
+  // CHECK: llvm.fence release
+  spirv.MemoryBarrier <Workgroup>, <Release|WorkgroupMemory>
+  // CHECK: llvm.fence acq_rel
+  spirv.MemoryBarrier <Workgroup>, <AcquireRelease|WorkgroupMemory|CrossWorkgroupMemory>
+  // CHECK: llvm.fence seq_cst
+  spirv.MemoryBarrier <CrossDevice>, <SequentiallyConsistent>
+  // Relaxed memory barrier (no ordering bits) orders nothing and is erased.
+  // CHECK-NOT: llvm.fence
+  spirv.MemoryBarrier <Workgroup>, <WorkgroupMemory>
+  // CHECK: llvm.return
+  spirv.Return
+}
+
