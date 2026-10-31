@@ -7787,7 +7787,6 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
   MVT DestVT = Op.getSimpleValueType();
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   AddrSpaceCastSDNode *N = cast<AddrSpaceCastSDNode>(Op.getNode());
 
   unsigned SrcAS = N->getSrcAddressSpace();
@@ -7797,7 +7796,6 @@ static SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) {
   assert(DAG.getDataLayout().getPointerSize(SrcAS) !=
              DAG.getDataLayout().getPointerSize(DestAS) &&
          "addrspacecast must be between different ptr sizes");
-  (void)TLI;
 
   if (SrcAS == ARM64AS::PTR32_SPTR) {
     return DAG.getNode(ISD::SIGN_EXTEND, DL, DestVT, Src);

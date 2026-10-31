@@ -10,6 +10,5 @@ add_libc_test(
     libc.hdr.signal_macros
     libc.hdr.types.sigset_t
     libc.src.__support.OSUtil.darwin.syscall_wrappers.sigprocmask
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )

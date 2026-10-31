@@ -230,38 +230,6 @@ typedef __char32_t char32_t;
 #    define __STDCPP_THREADS__ 1
 #  endif
 
-// The glibc and Bionic implementation of pthreads implements
-// pthread_mutex_destroy as nop for regular mutexes. Additionally, Win32
-// mutexes have no destroy mechanism.
-//
-// This optimization can't be performed on Apple platforms, where
-// pthread_mutex_destroy can allow the kernel to release resources.
-// See https://llvm.org/D64298 for details.
-//
-// clang-format off
-#  if (_LIBCPP_HAS_THREAD_API_PTHREAD && (defined(__GLIBC__) || defined(__BIONIC__))) ||                                \
-      (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) ||                                                          \
-       _LIBCPP_HAS_THREAD_API_WIN32
-// clang-format on
-#    define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION 1
-#  else
-#    define _LIBCPP_HAS_TRIVIAL_MUTEX_DESTRUCTION 0
-#  endif
-
-// Destroying a condvar is a nop on Windows.
-//
-// This optimization can't be performed on Apple platforms, where
-// pthread_cond_destroy can allow the kernel to release resources.
-// See https://llvm.org/D64298 for details.
-//
-// TODO(EricWF): This is potentially true for some pthread implementations
-// as well.
-#  if (_LIBCPP_HAS_THREAD_API_C11 && defined(__Fuchsia__)) || _LIBCPP_HAS_THREAD_API_WIN32
-#    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 1
-#  else
-#    define _LIBCPP_HAS_TRIVIAL_CONDVAR_DESTRUCTION 0
-#  endif
-
 // We often repeat things just for handling wide characters in the library.
 // When wide characters are disabled, it can be useful to have a quick way of
 // disabling it without having to resort to #if-#endif, which has a larger

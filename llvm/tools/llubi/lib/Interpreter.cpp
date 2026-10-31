@@ -78,9 +78,9 @@ static void applyAlignAttr(AnyValue &V, Align Alignment) {
   });
 }
 
-static bool violatesNoUndefAttr(AnyValue &V) {
+static bool violatesNoUndefAttr(const AnyValue &V) {
   bool ContainsPoison = false;
-  forEachScalarValue(V, [&](AnyValue &Scalar) {
+  forEachScalarValue(const_cast<AnyValue &>(V), [&](const AnyValue &Scalar) {
     if (Scalar.isPoison()) {
       ContainsPoison = true;
       return;
@@ -1170,20 +1170,47 @@ public:
           auto GetBundleArg = [&](uint32_t Offset) -> Value * {
             return OBU.Inputs[Offset];
           };
+          // Bail out on "cold"()
           if (OBU.Inputs.empty())
             continue;
           Value *WasOnVal = GetBundleArg(0);
+          const AnyValue &WasOn = getValue(WasOnVal);
+          auto Kind = getBundleAttrFromOBU(OBU);
+          switch (Kind) {
+          case BundleAttr::Ignore:
+            continue;
+          case BundleAttr::NoUndef:
+            if (violatesNoUndefAttr(WasOn))
+              reportImmediateUB()
+                  << "The value " << WasOn << " violates noundef assumption.";
+            break;
+          case BundleAttr::Range: {
+            AnyValue V = WasOn;
+            const APInt &Lower = cast<ConstantInt>(OBU.Inputs[1])->getValue();
+            const APInt &Upper = cast<ConstantInt>(OBU.Inputs[2])->getValue();
+            applyRangeAttr(V, ConstantRange(Lower, Upper));
+            if (violatesNoUndefAttr(V))
+              reportImmediateUB() << "The value " << WasOn << " violates range("
+                                  << Lower << ", " << Upper << ") assumption.";
+            break;
+          }
+          default:
+            // Other assumptions on pointers or
+            // unrecognized ones.
+            break;
+          }
+          if (hasProgramExited())
+            break;
+
           // Bail out on unrecognized operand bundles.
           if (!WasOnVal->getType()->isPointerTy())
             continue;
           unsigned AS = WasOnVal->getType()->getPointerAddressSpace();
-          const AnyValue &WasOn = getValue(WasOnVal);
           if (WasOn.isPoison()) {
             reportImmediateUB() << "Assume on poison pointer.";
             break;
           }
           const Pointer &WasOnPtr = WasOn.asPointer();
-          auto Kind = getBundleAttrFromOBU(OBU);
           switch (Kind) {
           case BundleAttr::Align: {
             // Alignment assumptions should have 2 or 3 arguments.
@@ -1676,6 +1703,25 @@ public:
       Res.reserve(Len);
       Res.insert(Res.end(), NumActive, AnyValue::boolean(true));
       Res.insert(Res.end(), Len - NumActive, AnyValue::boolean(false));
+      return std::move(Res);
+    }
+    case Intrinsic::mask_beforefirst: {
+      const auto &Mask = Args[0].asAggregate();
+      std::vector<AnyValue> Res;
+      Res.reserve(Mask.size());
+      bool SeenActive = false;
+      for (const AnyValue &Lane : Mask) {
+        switch (Lane.asBoolean()) {
+        case BooleanKind::True:
+          SeenActive = true;
+          break;
+        case BooleanKind::False:
+          break;
+        case BooleanKind::Poison:
+          return AnyValue::getPoisonValue(Ctx, RetTy);
+        }
+        Res.push_back(AnyValue::boolean(!SeenActive));
+      }
       return std::move(Res);
     }
     case Intrinsic::vector_reduce_fadd:
@@ -2741,13 +2787,18 @@ public:
   }
 
   void visitICmpInst(ICmpInst &I) {
+    Type *OpTy = I.getOperand(0)->getType();
+    unsigned AddrWidth =
+        OpTy->isPtrOrPtrVectorTy() ? DL.getAddressSizeInBits(OpTy) : 0;
     visitBinOp(I, [&](const AnyValue &LHS, const AnyValue &RHS) -> AnyValue {
       if (LHS.isPoison() || RHS.isPoison())
         return AnyValue::poison();
-      const APInt &LHSVal =
-          LHS.isPointer() ? LHS.asPointer().address() : LHS.asInteger();
-      const APInt &RHSVal =
-          RHS.isPointer() ? RHS.asPointer().address() : RHS.asInteger();
+      const APInt &LHSVal = LHS.isPointer()
+                                ? LHS.asPointer().address().trunc(AddrWidth)
+                                : LHS.asInteger();
+      const APInt &RHSVal = RHS.isPointer()
+                                ? RHS.asPointer().address().trunc(AddrWidth)
+                                : RHS.asInteger();
       if (I.hasSameSign() && LHSVal.isNonNegative() != RHSVal.isNonNegative())
         return AnyValue::poison();
       return AnyValue::boolean(
