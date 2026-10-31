@@ -64,7 +64,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTarget() {
   initializeMipsBranchExpansionLegacyPass(*PR);
   initializeMicroMipsSizeReduceLegacyPass(*PR);
   initializeMipsPreLegalizerCombinerLegacyPass(*PR);
-  initializeMipsPostLegalizerCombinerPass(*PR);
+  initializeMipsPostLegalizerCombinerLegacyPass(*PR);
   initializeMipsMulMulBugFixLegacyPass(*PR);
   initializeMipsDAGToDAGISelLegacyPass(*PR);
 }
@@ -292,7 +292,7 @@ bool MipsPassConfig::addLegalizeMachineIR() {
 
 void MipsPassConfig::addPreRegBankSelect() {
   bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
-  addPass(createMipsPostLegalizeCombiner(IsOptNone));
+  addPass(createMipsPostLegalizeCombinerLegacyPass(IsOptNone));
 }
 
 bool MipsPassConfig::addRegBankSelect() {

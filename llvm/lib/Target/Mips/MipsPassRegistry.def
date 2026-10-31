@@ -34,6 +34,8 @@ MACHINE_FUNCTION_PASS("mips-expand-pseudo", MipsExpandPseudoPass())
 MACHINE_FUNCTION_PASS("mips-micromips-size-reduce", MicroMipsSizeReducePass())
 MACHINE_FUNCTION_PASS("mips-mul-mul-bug-fix", MipsMulMulBugFixPass())
 MACHINE_FUNCTION_PASS("mips-optimize-pic-call", MipsOptimizePICCallPass())
+MACHINE_FUNCTION_PASS("mips-postlegalizer-combiner",
+                      MipsPostLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("mips-prelegalizer-combiner",
                       MipsPreLegalizerCombinerPass())
 MACHINE_FUNCTION_PASS("mips-mipsse-isel", MipsSEISelDAGPass(*this, getOptLevel()))
