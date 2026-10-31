@@ -374,6 +374,11 @@ define i32 @test4(i32 %inp) {
   ; AIX64-NEXT:   successors: %bb.1(0x80000000)
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.3, [[COPY1]], %bb.0
+  ; AIX64-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgdm) @tls_var, $x2 :: (load (s64) from got)
+  ; AIX64-NEXT:   [[LDtoc1:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgd) @tls_var, $x2 :: (load (s64) from got)
+  ; AIX64-NEXT:   [[TLSGDAIX8_:%[0-9]+]]:g8rc = TLSGDAIX8 [[LDtoc1]], [[LDtoc]]
+  ; AIX64-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[TLSGDAIX8_]].sub_32
+  ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[PHI]], [[COPY2]]
   ; AIX64-NEXT:   [[SUBF:%[0-9]+]]:gprc = SUBF [[PHI]], [[COPY1]]
   ; AIX64-NEXT:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
   ; AIX64-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[SUBF]], %subreg.sub_32
@@ -389,11 +394,6 @@ define i32 @test4(i32 %inp) {
   ; AIX64-NEXT:   B %bb.2
   ; AIX64-NEXT: {{  $}}
   ; AIX64-NEXT: bb.2.return:
-  ; AIX64-NEXT:   [[LDtoc:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgdm) @tls_var, $x2 :: (load (s64) from got)
-  ; AIX64-NEXT:   [[LDtoc1:%[0-9]+]]:g8rc = LDtoc target-flags(ppc-tlsgd) @tls_var, $x2 :: (load (s64) from got)
-  ; AIX64-NEXT:   [[TLSGDAIX8_:%[0-9]+]]:g8rc = TLSGDAIX8 [[LDtoc1]], [[LDtoc]]
-  ; AIX64-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[TLSGDAIX8_]].sub_32
-  ; AIX64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[COPY2]], [[PHI]]
   ; AIX64-NEXT:   [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
   ; AIX64-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF1]], [[ADD4_]], %subreg.sub_32
   ; AIX64-NEXT:   $x3 = COPY [[INSERT_SUBREG1]]
@@ -416,6 +416,10 @@ define i32 @test4(i32 %inp) {
   ; AIX32-NEXT:   successors: %bb.1(0x80000000)
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT:   [[PHI:%[0-9]+]]:gprc = PHI [[LI]], %bb.3, [[COPY]], %bb.0
+  ; AIX32-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgdm) @tls_var, $r2 :: (load (s32) from got)
+  ; AIX32-NEXT:   [[LWZtoc1:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgd) @tls_var, $r2 :: (load (s32) from got)
+  ; AIX32-NEXT:   [[TLSGDAIX:%[0-9]+]]:gprc = TLSGDAIX [[LWZtoc1]], [[LWZtoc]]
+  ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[PHI]], [[TLSGDAIX]]
   ; AIX32-NEXT:   [[SUBF:%[0-9]+]]:gprc_and_gprc_nor0 = SUBF [[PHI]], [[COPY]]
   ; AIX32-NEXT:   [[ADDI:%[0-9]+]]:gprc = ADDI [[SUBF]], 1
   ; AIX32-NEXT:   MTCTRloop [[ADDI]], implicit-def dead $ctr
@@ -428,10 +432,6 @@ define i32 @test4(i32 %inp) {
   ; AIX32-NEXT:   B %bb.2
   ; AIX32-NEXT: {{  $}}
   ; AIX32-NEXT: bb.2.return:
-  ; AIX32-NEXT:   [[LWZtoc:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgdm) @tls_var, $r2 :: (load (s32) from got)
-  ; AIX32-NEXT:   [[LWZtoc1:%[0-9]+]]:gprc = LWZtoc target-flags(ppc-tlsgd) @tls_var, $r2 :: (load (s32) from got)
-  ; AIX32-NEXT:   [[TLSGDAIX:%[0-9]+]]:gprc = TLSGDAIX [[LWZtoc1]], [[LWZtoc]]
-  ; AIX32-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[TLSGDAIX]], [[PHI]]
   ; AIX32-NEXT:   $r3 = COPY [[ADD4_]]
   ; AIX32-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
   ;
@@ -445,6 +445,11 @@ define i32 @test4(i32 %inp) {
   ; LE64-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[COPY1]], 1
   ; LE64-NEXT:   [[LI:%[0-9]+]]:gprc_and_gprc_nor0 = LI 1
   ; LE64-NEXT:   [[ISEL:%[0-9]+]]:gprc = ISEL [[COPY1]], [[LI]], [[CMPWI]].sub_lt
+  ; LE64-NEXT:   [[ADDISgotTprelHA:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDISgotTprelHA $x2, @tls_var
+  ; LE64-NEXT:   [[LDgotTprelL:%[0-9]+]]:g8rc_and_g8rc_nox0 = LDgotTprelL @tls_var, [[ADDISgotTprelHA]]
+  ; LE64-NEXT:   [[ADD8TLS:%[0-9]+]]:g8rc = ADD8TLS [[LDgotTprelL]], target-flags(ppc-tls) @tls_var
+  ; LE64-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[ADD8TLS]].sub_32
+  ; LE64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[ISEL]], [[COPY2]]
   ; LE64-NEXT:   [[SUBF:%[0-9]+]]:gprc = SUBF [[ISEL]], [[COPY1]]
   ; LE64-NEXT:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
   ; LE64-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[SUBF]], %subreg.sub_32
@@ -460,11 +465,6 @@ define i32 @test4(i32 %inp) {
   ; LE64-NEXT:   B %bb.2
   ; LE64-NEXT: {{  $}}
   ; LE64-NEXT: bb.2.return:
-  ; LE64-NEXT:   [[ADDISgotTprelHA:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDISgotTprelHA $x2, @tls_var
-  ; LE64-NEXT:   [[LDgotTprelL:%[0-9]+]]:g8rc_and_g8rc_nox0 = LDgotTprelL @tls_var, [[ADDISgotTprelHA]]
-  ; LE64-NEXT:   [[ADD8TLS:%[0-9]+]]:g8rc = ADD8TLS [[LDgotTprelL]], target-flags(ppc-tls) @tls_var
-  ; LE64-NEXT:   [[COPY2:%[0-9]+]]:gprc = COPY [[ADD8TLS]].sub_32
-  ; LE64-NEXT:   [[ADD4_:%[0-9]+]]:gprc = ADD4 [[COPY2]], [[ISEL]]
   ; LE64-NEXT:   [[DEF1:%[0-9]+]]:g8rc = IMPLICIT_DEF
   ; LE64-NEXT:   [[INSERT_SUBREG1:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF1]], [[ADD4_]], %subreg.sub_32
   ; LE64-NEXT:   $x3 = COPY [[INSERT_SUBREG1]]

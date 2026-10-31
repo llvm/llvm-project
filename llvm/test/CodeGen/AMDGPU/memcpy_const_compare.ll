@@ -42,22 +42,20 @@ define amdgpu_kernel void @_start() {
 ; CHECK-NEXT:    s_cmp_eq_u32 13, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_5
 ; CHECK-NEXT:  ; %bb.3: ; %dynamic-memcpy-expansion-residual-body.preheader
-; CHECK-NEXT:    s_sub_u32 s4, 29, 13
-; CHECK-NEXT:    s_subb_u32 s5, 0, 0
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_add_u32 s0, s0, src_array@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, src_array@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_add_u32 s2, s0, s4
-; CHECK-NEXT:    s_addc_u32 s3, s1, s5
+; CHECK-NEXT:    s_add_u32 s2, s0, 16
+; CHECK-NEXT:    s_addc_u32 s3, s1, 0
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_add_u32 s0, s0, dst_array@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s1, s1, dst_array@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_add_u32 s4, s0, s4
-; CHECK-NEXT:    s_addc_u32 s5, s1, s5
+; CHECK-NEXT:    s_add_u32 s4, s0, 16
+; CHECK-NEXT:    s_addc_u32 s5, s1, 0
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0
 ; CHECK-NEXT:  .LBB0_4: ; %dynamic-memcpy-expansion-residual-body
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1

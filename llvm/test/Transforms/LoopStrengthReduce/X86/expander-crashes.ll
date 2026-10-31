@@ -21,8 +21,8 @@ define i64 @blam(ptr %start, ptr %end, ptr %ptr.2) {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[IV_NEXT]], [[END:%.*]]
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_2_PH:%.*]], label [[LOOP_1_HEADER]]
 ; CHECK:       loop.2.ph:
-; CHECK-NEXT:    [[LSR_IV_NEXT5_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT5]], [[LOOP_1_HEADER]] ]
 ; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi ptr [ [[IV_NEXT]], [[LOOP_1_HEADER]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT5_LCSSA:%.*]] = phi i64 [ [[LSR_IV_NEXT5]], [[LOOP_1_HEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
 ; CHECK:       loop.2.header:
 ; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi i64 [ [[LSR_IV_NEXT3:%.*]], [[LOOP_2_LATCH:%.*]] ], [ [[LSR_IV_NEXT5_LCSSA]], [[LOOP_2_PH]] ]
@@ -38,7 +38,8 @@ define i64 @blam(ptr %start, ptr %end, ptr %ptr.2) {
 ; CHECK-NEXT:    [[LSR_IV_NEXT3]] = add i64 [[LSR_IV2]], 16
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER]]
 ; CHECK:       loop.2.exit:
-; CHECK-NEXT:    ret i64 [[LSR_IV2]]
+; CHECK-NEXT:    [[LSR_IV2_LCSSA:%.*]] = phi i64 [ [[LSR_IV2]], [[LOOP_2_HEADER]] ]
+; CHECK-NEXT:    ret i64 [[LSR_IV2_LCSSA]]
 ;
 entry:
   br label %loop.1.header

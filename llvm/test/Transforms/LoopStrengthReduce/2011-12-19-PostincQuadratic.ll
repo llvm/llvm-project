@@ -24,9 +24,10 @@ define void @vb() nounwind {
 ; CHECK-NEXT:    [[SCEVGEP]] = getelementptr i8, ptr [[LSR_IV1]], i32 [[LSR_IV]]
 ; CHECK-NEXT:    br i1 true, label [[FOR_BODY43_PREHEADER:%.*]], label [[FOR_BODY7]]
 ; CHECK:       for.body43.preheader:
+; CHECK-NEXT:    [[LSR_IV1_LCSSA:%.*]] = phi ptr [ [[LSR_IV1]], [[FOR_BODY7]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY43:%.*]]
 ; CHECK:       for.body43:
-; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[LSR_IV1]], [[FOR_BODY43_PREHEADER]] ], [ [[SCEVGEP3:%.*]], [[FOR_BODY43]] ]
+; CHECK-NEXT:    [[LSR_IV2:%.*]] = phi ptr [ [[LSR_IV1_LCSSA]], [[FOR_BODY43_PREHEADER]] ], [ [[SCEVGEP3:%.*]], [[FOR_BODY43]] ]
 ; CHECK-NEXT:    [[T2:%.*]] = load i32, ptr [[LSR_IV2]], align 4
 ; CHECK-NEXT:    [[SCEVGEP3]] = getelementptr i8, ptr [[LSR_IV2]], i32 4
 ; CHECK-NEXT:    br label [[FOR_BODY43]]

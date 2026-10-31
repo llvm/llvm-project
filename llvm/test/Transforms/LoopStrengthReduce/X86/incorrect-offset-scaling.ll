@@ -24,13 +24,14 @@ define void @incorrect_offset_scaling(i1 %c, i1 %c2, i1 %c3, ptr %p, i64, ptr) {
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    br i1 [[C2]], label [[L_LOOPEXIT:%.*]], label [[L1]]
 ; CHECK:       if6:
+; CHECK-NEXT:    [[LSR_IV_LCSSA:%.*]] = phi i64 [ [[LSR_IV]], [[IDXEND_8]] ]
 ; CHECK-NEXT:    [[R2:%.*]] = add i64 [[TMP0]], -1
 ; CHECK-NEXT:    [[R3:%.*]] = load i64, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    br label [[IB:%.*]]
 ; CHECK:       idxend.8:
 ; CHECK-NEXT:    br i1 [[C3]], label [[IF6:%.*]], label [[L2]]
 ; CHECK:       ib:
-; CHECK-NEXT:    [[R4:%.*]] = mul i64 [[R3]], [[LSR_IV]]
+; CHECK-NEXT:    [[R4:%.*]] = mul i64 [[R3]], [[LSR_IV_LCSSA]]
 ; CHECK-NEXT:    [[R5:%.*]] = add i64 [[R2]], [[R4]]
 ; CHECK-NEXT:    [[R6:%.*]] = icmp ult i64 [[R5]], undef
 ; CHECK-NEXT:    [[R7:%.*]] = getelementptr i64, ptr [[P]], i64 [[R5]]

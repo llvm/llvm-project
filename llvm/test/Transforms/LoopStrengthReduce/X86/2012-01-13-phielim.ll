@@ -163,9 +163,10 @@ define fastcc void @test3(ptr nocapture %u, i1 %arg) nounwind uwtable ssp {
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[SCEVGEP]], align 8
 ; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_INC8_US_I:%.*]], label [[MESHBB]]
 ; CHECK:       for.body3.lr.ph.us.i.loopexit:
+; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI24:%.*]] = phi i64 [ [[INDVARS_IV8_I_SV_PHI25:%.*]], [[MESHBB]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH_US_I]]
 ; CHECK:       for.body3.lr.ph.us.i:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ undef, [[MESHBB1]] ], [ [[INDVARS_IV8_I_SV_PHI24:%.*]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ undef, [[MESHBB1]] ], [ [[INDVARS_IV8_I_SV_PHI24]], [[FOR_BODY3_LR_PH_US_I_LOOPEXIT:%.*]] ]
 ; CHECK-NEXT:    [[ARRAYIDX_US_I:%.*]] = getelementptr inbounds double, ptr undef, i64 [[LSR_IV]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV]], 1
 ; CHECK-NEXT:    [[TMP3]] = trunc i64 [[LSR_IV]] to i32
@@ -175,7 +176,7 @@ define fastcc void @test3(ptr nocapture %u, i1 %arg) nounwind uwtable ssp {
 ; CHECK:       eval_At_times_u.exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       meshBB:
-; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI24]] = phi i64 [ undef, [[FOR_BODY3_US_I]] ], [ [[TMP1]], [[FOR_INC8_US_I]] ]
+; CHECK-NEXT:    [[INDVARS_IV8_I_SV_PHI25]] = phi i64 [ undef, [[FOR_BODY3_US_I]] ], [ [[TMP1]], [[FOR_INC8_US_I]] ]
 ; CHECK-NEXT:    [[MESHSTACKVARIABLE_PHI:%.*]] = phi i32 [ [[OPQ_SA_CALC12]], [[FOR_BODY3_US_I]] ], [ undef, [[FOR_INC8_US_I]] ]
 ; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr [[SCEVGEP]], i64 8
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[TMP]], 1

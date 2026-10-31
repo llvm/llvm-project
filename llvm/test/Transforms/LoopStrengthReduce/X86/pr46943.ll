@@ -19,7 +19,8 @@ define i8 @drop_nuw() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[IV_NEXT]], -1
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[IV_NEXT_LCSSA]], -1
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -49,7 +50,8 @@ define i8 @drop_nsw() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], 127
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[IV_NEXT]], 1
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[IV_NEXT_LCSSA]], 1
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
@@ -79,7 +81,8 @@ define i8 @already_postinc() {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[IV_NEXT]], -1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[IV_NEXT]], -1
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i8 [ [[IV_NEXT]], [[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[IV_NEXT_LCSSA]], -1
 ; CHECK-NEXT:    ret i8 [[TMP0]]
 ;
 entry:
