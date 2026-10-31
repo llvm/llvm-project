@@ -38,6 +38,7 @@
 #include "clang/CIR/TypeEvaluationKind.h"
 #include "clang/CodeGenUtils/CallUtils.h"
 #include "clang/CodeGenUtils/StmtUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -2636,6 +2637,8 @@ public:
   mlir::Value emitX86CpuSupports(mlir::Location loc,
                                  std::array<uint32_t, 4> FeatureMask);
   mlir::Value emitX86CpuInit(mlir::Location loc);
+  using MSVCIntrin = CodeGenUtils::MSVCIntrin;
+  mlir::Value emitX86MSVCIntrin(MSVCIntrin builtinID, const CallExpr *E);
   std::optional<mlir::Value> emitX86BuiltinExpr(unsigned builtinID,
                                                 const CallExpr *expr);
 

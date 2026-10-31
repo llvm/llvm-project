@@ -24,6 +24,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -1172,6 +1173,94 @@ mlir::Value CIRGenFunction::emitX86CpuInit(mlir::Location loc) {
   return builder.createCallOp(loc, initFunc, {}).getResult();
 }
 
+mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
+                                              const CallExpr *E) {
+  switch (builtinID) {
+  case MSVCIntrin::_BitScanForward:
+  case MSVCIntrin::_BitScanReverse: {
+    Address indexAddress(emitPointerWithAlignment(E->getArg(0)));
+    mlir::Value argValue = emitScalarExpr(E->getArg(1));
+
+    mlir::Location loc = getLoc(E->getExprLoc());
+    mlir::Type argType = argValue.getType();
+    mlir::Type indexType = indexAddress.getElementType();
+    mlir::Type resultType = convertType(E->getType());
+
+    mlir::Value argZero = builder.getNullValue(argType, loc);
+    mlir::Value notZero =
+        cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne, argValue, argZero);
+
+    cir::IfOp::create(
+        builder, loc, notZero, /*no else branch*/ false,
+        [&](mlir::OpBuilder &b, mlir::Location) {
+          if (builtinID == MSVCIntrin::_BitScanForward) {
+            mlir::Value zeroCount =
+                cir::BitCtzOp::create(builder, loc, argValue, true);
+            mlir::Value castCount = builder.createCast(
+                loc, cir::CastKind::integral, zeroCount, indexType);
+            builder.createStore(loc, castCount, indexAddress, false);
+          } else {
+            unsigned argWidth = mlir::cast<cir::IntType>(argType).getWidth();
+            mlir::Value argTypeLastIndex =
+                builder.getConstantInt(loc, indexType, argWidth - 1);
+
+            mlir::Value zeroCount =
+                cir::BitClzOp::create(builder, loc, argValue, true);
+            mlir::Value castCount = builder.createCast(
+                loc, cir::CastKind::integral, zeroCount, indexType);
+            mlir::Value index =
+                builder.createNSWSub(loc, argTypeLastIndex, castCount);
+            builder.createStore(loc, index, indexAddress, false);
+          }
+          builder.createYield(loc);
+        });
+    return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
+                              resultType);
+  }
+  case MSVCIntrin::_InterlockedAnd:
+  case MSVCIntrin::_InterlockedExchange:
+  case MSVCIntrin::_InterlockedExchangeAdd:
+  case MSVCIntrin::_InterlockedExchangeSub:
+  case MSVCIntrin::_InterlockedOr:
+  case MSVCIntrin::_InterlockedXor:
+  case MSVCIntrin::_InterlockedExchangeAdd_acq:
+  case MSVCIntrin::_InterlockedExchangeAdd_rel:
+  case MSVCIntrin::_InterlockedExchangeAdd_nf:
+  case MSVCIntrin::_InterlockedExchange_acq:
+  case MSVCIntrin::_InterlockedExchange_rel:
+  case MSVCIntrin::_InterlockedExchange_nf:
+  case MSVCIntrin::_InterlockedCompareExchange:
+  case MSVCIntrin::_InterlockedCompareExchange_acq:
+  case MSVCIntrin::_InterlockedCompareExchange_rel:
+  case MSVCIntrin::_InterlockedCompareExchange_nf:
+  case MSVCIntrin::_InterlockedCompareExchange128:
+  case MSVCIntrin::_InterlockedCompareExchange128_acq:
+  case MSVCIntrin::_InterlockedCompareExchange128_rel:
+  case MSVCIntrin::_InterlockedCompareExchange128_nf:
+  case MSVCIntrin::_InterlockedOr_acq:
+  case MSVCIntrin::_InterlockedOr_rel:
+  case MSVCIntrin::_InterlockedOr_nf:
+  case MSVCIntrin::_InterlockedXor_acq:
+  case MSVCIntrin::_InterlockedXor_rel:
+  case MSVCIntrin::_InterlockedXor_nf:
+  case MSVCIntrin::_InterlockedAnd_acq:
+  case MSVCIntrin::_InterlockedAnd_rel:
+  case MSVCIntrin::_InterlockedAnd_nf:
+  case MSVCIntrin::_InterlockedIncrement_acq:
+  case MSVCIntrin::_InterlockedIncrement_rel:
+  case MSVCIntrin::_InterlockedIncrement_nf:
+  case MSVCIntrin::_InterlockedDecrement_acq:
+  case MSVCIntrin::_InterlockedDecrement_rel:
+  case MSVCIntrin::_InterlockedDecrement_nf:
+  case MSVCIntrin::_InterlockedDecrement:
+  case MSVCIntrin::_InterlockedIncrement:
+  case MSVCIntrin::__fastfail:
+    cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
+    return {};
+  }
+  llvm_unreachable("Incorrect MSVC intrinsic!");
+}
+
 std::optional<mlir::Value>
 CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   if (builtinID == Builtin::BI__builtin_cpu_is)
@@ -1183,7 +1272,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
-  assert(!cir::MissingFeatures::msvcBuiltins());
+
+  if (std::optional<MSVCIntrin> MsvcIntId =
+      CodeGenUtils::translateX86ToMsvcIntrin(builtinID))
+    return emitX86MSVCIntrin(*MsvcIntId, expr);
 
   // Find out if any arguments are required to be integer constant expressions.
   assert(!cir::MissingFeatures::handleBuiltinICEArguments());

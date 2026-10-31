@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -19,40 +20,6 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
-
-static std::optional<CodeGenFunction::MSVCIntrin>
-translateX86ToMsvcIntrin(unsigned BuiltinID) {
-  using MSVCIntrin = CodeGenFunction::MSVCIntrin;
-  switch (BuiltinID) {
-  default:
-    return std::nullopt;
-  case clang::X86::BI_BitScanForward:
-  case clang::X86::BI_BitScanForward64:
-    return MSVCIntrin::_BitScanForward;
-  case clang::X86::BI_BitScanReverse:
-  case clang::X86::BI_BitScanReverse64:
-    return MSVCIntrin::_BitScanReverse;
-  case clang::X86::BI_InterlockedAnd64:
-    return MSVCIntrin::_InterlockedAnd;
-  case clang::X86::BI_InterlockedCompareExchange128:
-    return MSVCIntrin::_InterlockedCompareExchange128;
-  case clang::X86::BI_InterlockedExchange64:
-    return MSVCIntrin::_InterlockedExchange;
-  case clang::X86::BI_InterlockedExchangeAdd64:
-    return MSVCIntrin::_InterlockedExchangeAdd;
-  case clang::X86::BI_InterlockedExchangeSub64:
-    return MSVCIntrin::_InterlockedExchangeSub;
-  case clang::X86::BI_InterlockedOr64:
-    return MSVCIntrin::_InterlockedOr;
-  case clang::X86::BI_InterlockedXor64:
-    return MSVCIntrin::_InterlockedXor;
-  case clang::X86::BI_InterlockedDecrement64:
-    return MSVCIntrin::_InterlockedDecrement;
-  case clang::X86::BI_InterlockedIncrement64:
-    return MSVCIntrin::_InterlockedIncrement;
-  }
-  llvm_unreachable("must return from switch");
-}
 
 // Convert the mask from an integer type to a vector of i1.
 static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
@@ -792,7 +759,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
-  if (std::optional<MSVCIntrin> MsvcIntId = translateX86ToMsvcIntrin(BuiltinID))
+  if (std::optional<CodeGenUtils::MSVCIntrin> MsvcIntId =
+      CodeGenUtils::translateX86ToMsvcIntrin(BuiltinID))
     return EmitMSVCBuiltinExpr(*MsvcIntId, E);
 
   SmallVector<Value*, 4> Ops;
