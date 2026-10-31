@@ -8753,6 +8753,18 @@ defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, scalar_to_vector, INSvi8lane
 defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, scalar_to_vector_v2f32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
 defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, scalar_to_vector_v2f32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
+// extract from lane 0 and insert into lane 0 of a zero vector
+// is equivalent to clearing upper bits of a register, we can use fmov
+def : Pat<(v4i32 (vector_insert immAllZerosV, (i32 (vector_extract (v4i32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4i32 V128:$Rn), ssub)), ssub))>;
+def : Pat<(v4f32 (vector_insert immAllZerosV, (f32 (vector_extract (v4f32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4f32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4f32 V128:$Rn), ssub)), ssub))>;
+
+def : Pat<(v2i64 (AArch64zip1 (v2i64 V128:$Rn), immAllZerosV)), 
+          (v2i64 (SUBREG_TO_REG (FMOVDr (EXTRACT_SUBREG (v2i64 V128:$Rn), dsub)), dsub))>;
+def : Pat<(v2i32 (AArch64zip1 (v2i32 V64:$Rn), immAllZerosV)), 
+          (v2i32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v2i32 V64:$Rn), ssub)), ssub))>;
+
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
 def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),

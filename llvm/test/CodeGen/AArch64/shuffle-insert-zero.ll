@@ -23,8 +23,7 @@ entry:
 define <2 x double> @testv2f64_1(<2 x double> noundef %vec) {
 ; CHECK-SD-LABEL: testv2f64_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2f64_1:
@@ -38,12 +37,17 @@ entry:
 }
 
 define <4 x float> @testv4f32_0(<4 x float> noundef %vec) {
-; CHECK-LABEL: testv4f32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: testv4f32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv4f32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <4 x float> %vec, <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %vecinit3
@@ -52,9 +56,7 @@ entry:
 define <4 x float> @testv4f32_1(<4 x float> noundef %vec) {
 ; CHECK-SD-LABEL: testv4f32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4f32_1:
@@ -93,8 +95,7 @@ entry:
 define <2 x float> @testv2f32_1(<2 x float> noundef %vec) {
 ; CHECK-SD-LABEL: testv2f32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2f32_1:
@@ -279,8 +280,7 @@ entry:
 define <2 x i64> @testv2i64_1(<2 x i64> noundef %vec) {
 ; CHECK-SD-LABEL: testv2i64_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    fmov d0, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2i64_1:
@@ -294,12 +294,17 @@ entry:
 }
 
 define <4 x i32> @testv4i32_0(<4 x i32> noundef %vec) {
-; CHECK-LABEL: testv4i32_0:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: testv4i32_0:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    fmov s0, s0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: testv4i32_0:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v1.2d, #0000000000000000
+; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
+; CHECK-GI-NEXT:    mov v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
 entry:
   %vecinit3 = shufflevector <4 x i32> %vec, <4 x i32> <i32 poison, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x i32> %vecinit3
@@ -308,9 +313,7 @@ entry:
 define <4 x i32> @testv4i32_1(<4 x i32> noundef %vec) {
 ; CHECK-SD-LABEL: testv4i32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    mov v1.s[0], v0.s[0]
-; CHECK-SD-NEXT:    mov v0.16b, v1.16b
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv4i32_1:
@@ -348,8 +351,7 @@ entry:
 define <2 x i32> @testv2i32_1(<2 x i32> noundef %vec) {
 ; CHECK-SD-LABEL: testv2i32_1:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    fmov s0, s0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: testv2i32_1:
