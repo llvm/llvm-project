@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=x86_64-linux-gnu -global-isel=0 -stop-after=finalize-isel %s -o %t.mir
+; RUN: llc -mtriple=x86_64-linux-gnu -stop-after=finalize-isel %s -o %t.mir
 ; RUN: FileCheck %s --check-prefix=MIR < %t.mir
 ; RUN: llc -mtriple=x86_64-linux-gnu -run-pass=none %t.mir -o - | FileCheck %s --check-prefix=MIR
 ; RUN: llc -mtriple=x86_64-linux-gnu -start-after=finalize-isel %t.mir -o - | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux-gnu -global-isel=0 %s -o - | FileCheck %s
-; RUN: llc -mtriple=x86_64-linux-gnu -global-isel=0 -print-after=finalize-isel -filetype=null %s 2>&1 | FileCheck %s --check-prefix=PRINT
+; RUN: llc -mtriple=x86_64-linux-gnu %s -o - | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux-gnu -print-after=finalize-isel -filetype=null %s 2>&1 | FileCheck %s --check-prefix=PRINT
 
 ; Test that the "func" flag of a function operand of an inline asm call, and
 ; its constraint, survive a MIR round trip and are printed.
