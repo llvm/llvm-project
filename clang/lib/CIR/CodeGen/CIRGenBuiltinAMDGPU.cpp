@@ -124,12 +124,21 @@ static mlir::Value emitAMDGPUAtomicRMW(CIRGenFunction &cgf,
     scope = decodeAMDGPUSyncScope(expr->getArg(3));
   }
 
+  mlir::Type origTy = val.getType();
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(origTy);
+      vecTy && mlir::isa<cir::IntType>(vecTy.getElementType())) {
+    auto bf16VecTy =
+        cir::VectorType::get(builder.getBfloat16Ty(), vecTy.getSize());
+    val = builder.createBitcast(loc, val, bf16VecTy);
+    ptr = ptr.withElementType(builder, bf16VecTy);
+  }
+
   auto rmw = cir::AtomicFetchOp::create(builder, loc, ptr.emitRawPointer(), val,
                                         binOp, order, scope, isVolatile,
                                         /*fetch_first=*/true);
   rmw->setAttr(cir::CIRDialect::getAMDGPURawAtomicAttrName(),
                builder.getUnitAttr());
-  return rmw->getResult(0);
+  return builder.createBitcast(loc, rmw->getResult(0), origTy);
 }
 
 // Emit the `amdgcn.dispatch.ptr` intrinsic, address-space-casting the
@@ -1334,6 +1343,12 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_f64:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f32:
   case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_f64:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
+  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
+  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16:
     return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Add,
                                /*hasVolatileArg=*/false);
   case AMDGPU::BI__builtin_amdgcn_global_atomic_fmin_f64:
@@ -1355,17 +1370,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_ds_fmaxf:
     return emitAMDGPUAtomicRMW(*this, expr, cir::AtomicFetchKind::Max,
                                /*hasVolatileArg=*/true);
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_ds_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2f16:
-  case AMDGPU::BI__builtin_amdgcn_global_atomic_fadd_v2bf16:
-  case AMDGPU::BI__builtin_amdgcn_flat_atomic_fadd_v2bf16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.s.sendmsg.rtn",
