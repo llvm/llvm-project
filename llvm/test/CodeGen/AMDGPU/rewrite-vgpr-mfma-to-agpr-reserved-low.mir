@@ -1,0 +1,33 @@
+# NOTE: Do not autogenerate. This test checks a reserved register without a
+# physical operand and the resulting MFMA rewrite, not complete MIR output.
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=greedy,amdgpu-rewrite-agpr-copy-mfma -verify-machineinstrs -o - %s | FileCheck %s
+
+# Reserve low AGPRs for whole-wave values without mentioning them in an
+# instruction. Greedy must assign the accumulator to higher AGPRs, and the
+# rewrite must still run.
+---
+name: test_rewrite_reserved_low_agprs
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  wwmReservedRegs: ['$agpr0', '$agpr1']
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+
+    ; CHECK-LABEL: name: test_rewrite_reserved_low_agprs
+    ; CHECK: wwmReservedRegs:
+    ; CHECK-NEXT: - '$agpr0'
+    ; CHECK-NEXT: - '$agpr1'
+    ; CHECK: body:
+    ; CHECK-NOT: $agpr0
+    ; CHECK: %result:areg_64_align2 = V_MFMA_F64_4X4X4F64_e64
+    %addr:vreg_64_align2 = COPY $vgpr4_vgpr5
+    %src0:av_64_align2 = COPY $vgpr0_vgpr1
+    %src1:av_64_align2 = COPY $vgpr2_vgpr3
+    %acc:areg_128_align2 = GLOBAL_LOAD_DWORDX4 %addr, 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    %vgpracc:vreg_128_align2 = COPY %acc
+    %result:vreg_64_align2 = V_MFMA_F64_4X4X4F64_vgprcd_e64 %src0, %src1, %vgpracc.sub0_sub1, 0, 0, 0, implicit $mode, implicit $exec
+    GLOBAL_STORE_DWORDX2 %addr, %result, 0, 0, implicit $exec :: (store (s64), addrspace 1)
+    SI_RETURN
+...
