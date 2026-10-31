@@ -3681,7 +3681,9 @@ void SPIRVEmitIntrinsicsImpl::applyDemangledPtrArgTypes(IRBuilder<> &B) {
             B.SetCurrentDebugLocation(DebugLoc());
             GR->buildAssignPtr(B, ElemTy, Arg);
           }
-        } else if (isaGEP(Param)) {
+        } else if (isaGEP(Param) || isa<AllocaInst>(Param)) {
+          // The allocated type defines the size of an alloca, so cast at the
+          // call instead of overriding its pointee type.
           replaceUsesOfWithSpvPtrcast(
               Param, normalizeType(ElemTy, CanUseAnyVectorRank), CI, Ptrcasts);
         } else if (isa<Instruction>(Param)) {
