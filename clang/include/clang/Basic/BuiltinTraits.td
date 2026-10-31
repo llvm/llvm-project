@@ -494,6 +494,7 @@ def IsFloatingPoint : UnaryTrait {
 
 def IsIntegral : UnaryTrait {
   let Spelling = "__is_integral";
+  let StdName = "is_integral";
 }
 
 def IsCompleteType : UnaryTrait {
