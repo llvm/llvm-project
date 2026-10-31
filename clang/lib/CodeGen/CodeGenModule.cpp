@@ -36,6 +36,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/Builtins.h"
@@ -54,6 +55,7 @@
 #include "llvm/ABI/TargetInfo.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -3661,6 +3663,59 @@ static void setLinkageForGV(llvm::GlobalValue *GV, const NamedDecl *ND) {
     GV->setLinkage(llvm::GlobalValue::ExternalWeakLinkage);
 }
 
+/// Returns the method that \p MD overrides in the nearest class of the primary
+/// base chain of its class, or null if there is none.
+static const CXXMethodDecl *
+FindOverriddenMethodInPrimaryBases(const ASTContext &Context,
+                                   const CXXMethodDecl *MD) {
+  // Collect the methods MD overrides, directly or indirectly: the overridden
+  // method in the primary base chain may be hidden from the direct list by a
+  // dominating declaration on another path (e.g., through a virtual base).
+  llvm::SmallSetVector<const CXXMethodDecl *, 8> Overridden;
+  SmallVector<const CXXMethodDecl *, 8> Worklist(MD->overridden_methods());
+  while (!Worklist.empty()) {
+    const CXXMethodDecl *OM = Worklist.pop_back_val();
+    if (Overridden.insert(OM))
+      llvm::append_range(Worklist, OM->overridden_methods());
+  }
+  if (Overridden.empty())
+    return nullptr;
+
+  // Walk the primary base chain, nearest base first.
+  for (const CXXRecordDecl *RD = MD->getParent()->getDefinition(); RD;) {
+    const CXXRecordDecl *PrimaryBase =
+        Context.getASTRecordLayout(RD).getPrimaryBase();
+    if (!PrimaryBase)
+      return nullptr;
+    for (const CXXMethodDecl *OM : Overridden)
+      if (OM->getParent()->getCanonicalDecl() ==
+          PrimaryBase->getCanonicalDecl())
+        return OM;
+    RD = PrimaryBase->getDefinition();
+  }
+  return nullptr;
+}
+
+QualType CodeGenModule::GetCallGraphFunctionType(const FunctionDecl *FD) const {
+  // A virtual call is typed after the method named at the call site, so every
+  // function that the vtable entry of that method can hold must carry the same
+  // identifier. A virtual method is placed in the entry of the method it
+  // overrides in the primary base chain of its class (Itanium C++ ABI 2.5.2),
+  // and otherwise gets an entry of its own. Identify it after the method that
+  // introduced that entry, which also covers covariant overriders that get an
+  // entry of their own because their return type requires an adjustment, as
+  // the calls typed after them reach them through that entry. The entries of
+  // the other overridden methods are filled by thunks, which are identified
+  // after those methods (see CodeGenVTables::maybeEmitThunk).
+  const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+  if (!MD || !MD->isVirtual())
+    return FD->getType();
+  while (const CXXMethodDecl *Overridden =
+             FindOverriddenMethodInPrimaryBases(getContext(), MD))
+    MD = Overridden;
+  return MD->getType();
+}
+
 void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
                                                  llvm::Function *F) {
   // All functions which are not internal linkage could be indirect targets.
@@ -3674,7 +3729,7 @@ void CodeGenModule::createIndirectFunctionTypeMD(const FunctionDecl *FD,
     if (!HasBody || !Def)
       Def = FD;
 
-    QualType QT = Def->getType();
+    QualType QT = GetCallGraphFunctionType(Def);
     if (const auto *FNPT = QT->getAs<FunctionNoProtoType>()) {
       // If there is no definition available in this TU for an unprototyped
       // function declaration, skip generating incomplete callgraph metadata.
