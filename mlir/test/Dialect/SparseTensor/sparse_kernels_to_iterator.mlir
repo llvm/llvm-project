@@ -227,6 +227,17 @@ func.func @matvec(%matrix: tensor<4x8xf64, #CSR>,
 // ITER:           sparse_tensor.iterate %{{.*}} in %{{.*}} at(%[[ROW:.*]])
 // ITER:             %[[DENSE_ITER:.*]] = builtin.unrealized_conversion_cast %[[ROW]]
 // ITER:             sparse_tensor.extract_iteration_space %{{.*}} at %[[DENSE_ITER]] lvls = 1
+
+// CHECK-LABEL:   func.func @mixed_sparse_encoded_dense_parent(
+// CHECK:           %[[MIXED_C1:.*]] = arith.constant 1 : index
+// CHECK:           scf.for %[[MIXED_ROW_POS:.*]] = %{{.*}} to %{{.*}} step %[[MIXED_C1]] {
+// CHECK:             %[[MIXED_ROW:.*]] = memref.load %{{.*}}[%[[MIXED_ROW_POS]]]
+// CHECK:             %[[MIXED_COL_LO:.*]] = memref.load %{{.*}}[%[[MIXED_ROW]]]
+// CHECK:             %[[MIXED_ROW_END:.*]] = arith.addi %[[MIXED_ROW]], %[[MIXED_C1]] : index
+// CHECK:             %[[MIXED_COL_HI:.*]] = memref.load %{{.*}}[%[[MIXED_ROW_END]]]
+// CHECK:             scf.for %[[MIXED_COL_POS:.*]] = %[[MIXED_COL_LO]] to %[[MIXED_COL_HI]] step %[[MIXED_C1]] {
+// CHECK:               %[[MIXED_COL:.*]] = memref.load %{{.*}}[%[[MIXED_COL_POS]]]
+// CHECK:               memref.store %{{.*}}, %{{.*}}[%[[MIXED_ROW]], %[[MIXED_COL]]]
 func.func @mixed_sparse_encoded_dense_parent(
     %rows: tensor<4xf64, #VEC>, %matrix: tensor<4x8xf64, #CSR>,
     %output: tensor<4x8xf64>) -> tensor<4x8xf64> {
@@ -249,6 +260,15 @@ func.func @mixed_sparse_encoded_dense_parent(
 // ITER-LABEL:   func.func @sparse_broadcast(
 // ITER:           sparse_tensor.iterate
 // ITER:             scf.for
+
+// CHECK-LABEL:   func.func @sparse_broadcast(
+// CHECK:           %[[BROADCAST_C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[BROADCAST_C8:.*]] = arith.constant 8 : index
+// CHECK:           scf.for %[[BROADCAST_ROW_POS:.*]] = %{{.*}} to %{{.*}} step %{{.*}} {
+// CHECK:             %[[BROADCAST_ROW:.*]] = memref.load %{{.*}}[%[[BROADCAST_ROW_POS]]]
+// CHECK:             %[[BROADCAST_VALUE:.*]] = memref.load %{{.*}}[%[[BROADCAST_ROW_POS]]]
+// CHECK:             scf.for %[[BROADCAST_COL:.*]] = %[[BROADCAST_C0]] to %[[BROADCAST_C8]] step %{{.*}} {
+// CHECK:               memref.store %[[BROADCAST_VALUE]], %{{.*}}[%[[BROADCAST_ROW]], %[[BROADCAST_COL]]]
 func.func @sparse_broadcast(%input: tensor<4xf64, #VEC>,
                             %output: tensor<4x8xf64>) -> tensor<4x8xf64> {
   %result = linalg.generic {
