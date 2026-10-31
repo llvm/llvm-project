@@ -39,7 +39,6 @@ add_clang_unittest(ToolingTests
   RecursiveASTVisitorTests/IntegerLiteral.cpp
   RecursiveASTVisitorTests/LambdaDefaultCapture.cpp
   RecursiveASTVisitorTests/LambdaExpr.cpp
-  RecursiveASTVisitorTests/LambdaExprModules.cpp
   RecursiveASTVisitorTests/LambdaTemplateParams.cpp
   RecursiveASTVisitorTests/MemberPointerTypeLoc.cpp
   RecursiveASTVisitorTests/NestedNameSpecifiers.cpp

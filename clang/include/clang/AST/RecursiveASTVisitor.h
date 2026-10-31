@@ -2897,15 +2897,6 @@ DEF_TRAVERSE_STMT(LambdaExpr, {
   if (getDerived().shouldVisitImplicitCode()) {
     // The implicit model is simple: everything else is in the lambda class.
     TRY_TO(TraverseDecl(S->getLambdaClass()));
-
-    // The body is normally reached through the call operator of the closure
-    // class. If that declaration is not a definition (which happens when the
-    // closure type was merged with one from another module), visit the body
-    // through the lambda expression.
-    if (CXXMethodDecl *CallOp = S->getCallOperator();
-        CallOp && !CallOp->isThisDeclarationADefinition() &&
-        getDerived().shouldVisitLambdaBody())
-      TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getBody());
   } else {
     // We need to poke around to find the bits that might be explicitly written.
     TypeLoc TL = S->getCallOperator()->getTypeSourceInfo()->getTypeLoc();
