@@ -65,3 +65,16 @@ $ clang-apply-replacements --remove-change-desc-files <dir-with-yaml>
 
 The transformation report can be consumed by any SARIF viewer.
 
+
+## Merging conflict reports
+
+`clang-ssaf-src-edit-merge --sarif-conflicts-out=` reports the overlapping
+edits it dropped while merging. `clang-ssaf-conflict-merge` merges such
+reports, so that the conflicts found while merging the edits of an archive
+reach the report of the program it is linked into:
+
+```console
+$ clang-ssaf-conflict-merge libparse.a.sarif prg.sarif -o all.sarif
+```
+
+The inputs must all have been written by the same tool.
