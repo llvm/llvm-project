@@ -23,16 +23,16 @@ void TypeKey::appendRef(const TypeEntry *Entry) {
 
 TypeKey::Part TypeKey::takePart(StringRef &Key) {
   assert(!Key.empty() && "no part to take");
-  Part Result;
   if (Key.front() != RefMarker) {
-    Result.Text = Key.take_front(Key.find(RefMarker));
-    Key = Key.drop_front(Result.Text.size());
-    return Result;
+    StringRef Text = Key.take_front(Key.find(RefMarker));
+    Key = Key.drop_front(Text.size());
+    return Text;
   }
   assert(Key.size() >= RefSize && "truncated reference");
-  std::memcpy(&Result.Ref, Key.data() + 1, sizeof(Result.Ref));
+  const TypeEntry *Ref;
+  std::memcpy(&Ref, Key.data() + 1, sizeof(Ref));
   Key = Key.drop_front(RefSize);
-  return Result;
+  return Ref;
 }
 
 namespace {
@@ -42,7 +42,8 @@ public:
   ExpandedKeyCursor(StringRef Key) { Pending.push_back(Key); }
 
   bool atEnd() {
-    if (!Head.Text.empty() || Head.Ref)
+    if (const auto *Text = std::get_if<StringRef>(&Head);
+        !Text || !Text->empty())
       return false;
     while (!Pending.empty() && Pending.back().empty())
       Pending.pop_back();
@@ -56,7 +57,10 @@ public:
   const TypeKey::Part &peek() const { return Head; }
 
   /// \pre peek() is text of at least \p N bytes.
-  void consumeText(size_t N) { Head.Text = Head.Text.drop_front(N); }
+  void consumeText(size_t N) {
+    StringRef &Text = std::get<StringRef>(Head);
+    Text = Text.drop_front(N);
+  }
 
   /// \pre peek() is a reference.
   void skipRef() { Head = {}; }
@@ -64,15 +68,15 @@ public:
   /// Replace the reference at the cursor by the key it refers to.
   /// \pre peek() is a reference.
   void enterRef() {
-    Pending.push_back(Head.Ref->getKey());
+    Pending.push_back(std::get<const TypeEntry *>(Head)->getKey());
     Head = {};
   }
 
 private:
   /// The undecoded rest of each key being expanded, innermost last.
   SmallVector<StringRef, 8> Pending;
-  /// Decoded once, so consuming it piecemeal does not rescan it. Empty until
-  /// the next part is decoded.
+  /// Decoded once, so consuming it piecemeal does not rescan it. Empty text
+  /// until the next part is decoded.
   TypeKey::Part Head;
 };
 } // namespace
@@ -83,17 +87,15 @@ static int compareTypeKeyStructure(StringRef LHS, StringRef RHS) {
   while (!LHS.empty() && !RHS.empty()) {
     TypeKey::Part L = TypeKey::takePart(LHS);
     TypeKey::Part R = TypeKey::takePart(RHS);
-    bool LRef = L.Ref != nullptr;
-    bool RRef = R.Ref != nullptr;
-    if (LRef != RRef)
-      return LRef ? -1 : 1;
-    if (LRef) {
-      if (L.Ref != R.Ref)
-        if (int Cmp = compareTypeKeyStructure(L.Ref->getKey(), R.Ref->getKey()))
-          return Cmp;
+    if (L.index() != R.index())
+      return std::holds_alternative<const TypeEntry *>(L) ? -1 : 1;
+    if (L == R)
       continue;
-    }
-    if (int Cmp = L.Text.compare(R.Text))
+    if (const auto *LText = std::get_if<StringRef>(&L))
+      return LText->compare(std::get<StringRef>(R));
+    if (int Cmp =
+            compareTypeKeyStructure(std::get<const TypeEntry *>(L)->getKey(),
+                                    std::get<const TypeEntry *>(R)->getKey()))
       return Cmp;
   }
   return LHS.empty() == RHS.empty() ? 0 : (LHS.empty() ? -1 : 1);
@@ -112,24 +114,28 @@ int llvm::dwarf_linker::parallel::compareTypeKeys(StringRef LHS,
     if (LEnd || REnd)
       return LEnd ? -1 : 1;
 
-    TypeKey::Part LPart = L.peek();
-    TypeKey::Part RPart = R.peek();
+    const TypeKey::Part &LPart = L.peek();
+    const TypeKey::Part &RPart = R.peek();
+    bool LRef = std::holds_alternative<const TypeEntry *>(LPart);
+    bool RRef = std::holds_alternative<const TypeEntry *>(RPart);
     // Equal references refer to equal keys, so they need no expanding.
-    if (LPart.Ref && LPart.Ref == RPart.Ref) {
+    if (LRef && LPart == RPart) {
       L.skipRef();
       R.skipRef();
       continue;
     }
-    if (LPart.Ref || RPart.Ref) {
-      if (LPart.Ref)
+    if (LRef || RRef) {
+      if (LRef)
         L.enterRef();
-      if (RPart.Ref)
+      if (RRef)
         R.enterRef();
       continue;
     }
 
-    size_t N = std::min(LPart.Text.size(), RPart.Text.size());
-    if (int Cmp = LPart.Text.take_front(N).compare(RPart.Text.take_front(N)))
+    StringRef LText = std::get<StringRef>(LPart);
+    StringRef RText = std::get<StringRef>(RPart);
+    size_t N = std::min(LText.size(), RText.size());
+    if (int Cmp = LText.take_front(N).compare(RText.take_front(N)))
       return Cmp;
     L.consumeText(N);
     R.consumeText(N);
@@ -141,13 +147,13 @@ llvm::dwarf_linker::parallel::getExpandedTypeKey(const TypeEntry &Entry) {
   std::string Result;
   ExpandedKeyCursor Cursor(Entry.getKey());
   while (!Cursor.atEnd()) {
-    TypeKey::Part Part = Cursor.peek();
-    if (Part.Ref) {
+    const auto *Text = std::get_if<StringRef>(&Cursor.peek());
+    if (!Text) {
       Cursor.enterRef();
       continue;
     }
-    Result += Part.Text;
-    Cursor.consumeText(Part.Text.size());
+    Result += *Text;
+    Cursor.consumeText(Text->size());
   }
   return Result;
 }

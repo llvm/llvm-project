@@ -18,6 +18,7 @@
 #include "llvm/Support/Parallel.h"
 #include <atomic>
 #include <limits>
+#include <variant>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -35,10 +36,7 @@ using TypeEntry = StringMapEntry<std::atomic<TypeEntryBody *>>;
 class TypeKey {
 public:
   /// A maximal run of text, or a reference.
-  struct Part {
-    StringRef Text;
-    const TypeEntry *Ref = nullptr;
-  };
+  using Part = std::variant<StringRef, const TypeEntry *>;
 
   /// Remove the first part of the non-empty key \p Key and return it.
   static Part takePart(StringRef &Key);

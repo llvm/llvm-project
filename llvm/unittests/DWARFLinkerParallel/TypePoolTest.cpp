@@ -47,15 +47,10 @@ TEST(TypePoolTest, TakePart) {
   std::string Key = makeKey("{C}", "x", Int, Int, "y");
   StringRef Rest = Key;
 
-  TypeKey::Part Text = TypeKey::takePart(Rest);
-  EXPECT_EQ(Text.Text, "{C}x");
-  EXPECT_EQ(Text.Ref, nullptr);
-  for (int I = 0; I < 2; ++I) {
-    TypeKey::Part Ref = TypeKey::takePart(Rest);
-    EXPECT_TRUE(Ref.Text.empty());
-    EXPECT_EQ(Ref.Ref, Int);
-  }
-  EXPECT_EQ(TypeKey::takePart(Rest).Text, "y");
+  EXPECT_EQ(TypeKey::takePart(Rest), TypeKey::Part(StringRef("{C}x")));
+  for (int I = 0; I < 2; ++I)
+    EXPECT_EQ(TypeKey::takePart(Rest), TypeKey::Part(Int));
+  EXPECT_EQ(TypeKey::takePart(Rest), TypeKey::Part(StringRef("y")));
   EXPECT_TRUE(Rest.empty());
 }
 
