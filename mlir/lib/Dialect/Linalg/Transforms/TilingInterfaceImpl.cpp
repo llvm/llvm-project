@@ -22,10 +22,13 @@
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
+#include <algorithm>
 #include <optional>
 
 #define DEBUG_TYPE "linalg-tiling-interface-impl"
@@ -699,6 +702,222 @@ static InitSliceInfo getInitSliceInfo(MLIRContext *context,
       partialReductionMap, initOperandShape);
 }
 
+namespace {
+/// A group is either an existing independent reduction or a recognized stable
+/// integer argmin/argmax. Paired result positions are ordered as value, index.
+struct PartialReductionGroup {
+  SmallVector<unsigned, 2> results;
+  Operation *combiner = nullptr;
+  std::optional<arith::CmpIPredicate> valuePredicate;
+  arith::CmpIPredicate indexPredicate = arith::CmpIPredicate::slt;
+};
+
+struct PartialReductionAnalysis {
+  SmallVector<PartialReductionGroup> groups;
+  SmallVector<TypedAttr> identities;
+};
+} // namespace
+
+static bool hasCommutativeOperands(Operation *op, Value lhs, Value rhs) {
+  return op && op->getNumOperands() == 2 &&
+         ((op->getOperand(0) == lhs && op->getOperand(1) == rhs) ||
+          (op->getOperand(0) == rhs && op->getOperand(1) == lhs));
+}
+
+/// Incoming candidates may depend on inputs and loop indices, but never on
+/// carried outputs. Captured SSA values are invariant within the payload.
+static bool isIndependentOfReductionOutputs(Value value, LinalgOp op) {
+  Block &body = op->getRegion(0).front();
+  SmallVector<Value> worklist{value};
+  llvm::SmallPtrSet<Operation *, 16> visited;
+  while (!worklist.empty()) {
+    Value current = worklist.pop_back_val();
+    if (auto arg = dyn_cast<BlockArgument>(current)) {
+      if (arg.getOwner() == &body && arg.getArgNumber() >= op.getNumDpsInputs())
+        return false;
+      continue;
+    }
+    Operation *def = current.getDefiningOp();
+    if (!def || def->getBlock() != &body || !visited.insert(def).second)
+      continue;
+    if (def->getNumRegions() != 0 || !isMemoryEffectFree(def))
+      return false;
+    llvm::append_range(worklist, def->getOperands());
+  }
+  return true;
+}
+
+static bool matchesArgValue(Value yielded, Value take, Value incoming,
+                            Value carried, arith::CmpIPredicate predicate) {
+  if (auto select = yielded.getDefiningOp<arith::SelectOp>())
+    return select.getCondition() == take && select.getTrueValue() == incoming &&
+           select.getFalseValue() == carried;
+  Operation *def = yielded.getDefiningOp();
+  bool matchesKind = (predicate == arith::CmpIPredicate::sgt &&
+                      isa_and_nonnull<arith::MaxSIOp>(def)) ||
+                     (predicate == arith::CmpIPredicate::slt &&
+                      isa_and_nonnull<arith::MinSIOp>(def)) ||
+                     (predicate == arith::CmpIPredicate::ugt &&
+                      isa_and_nonnull<arith::MaxUIOp>(def)) ||
+                     (predicate == arith::CmpIPredicate::ult &&
+                      isa_and_nonnull<arith::MinUIOp>(def));
+  return matchesKind && hasCommutativeOperands(def, incoming, carried);
+}
+
+/// Recognize take = better(value) || (equal(value) && earlier(index)).
+/// The index select must choose the incoming index exactly when take is true.
+static std::optional<PartialReductionGroup>
+matchStableArgReduction(LinalgOp op, unsigned indexResult) {
+  Block &body = op->getRegion(0).front();
+  ValueRange yielded = body.getTerminator()->getOperands();
+  auto outputs = op.getRegionOutputArgs();
+  auto select = yielded[indexResult].getDefiningOp<arith::SelectOp>();
+  if (!select || select.getFalseValue() != outputs[indexResult] ||
+      !isa<IntegerType>(outputs[indexResult].getType()))
+    return std::nullopt;
+  auto take = select.getCondition().getDefiningOp<arith::OrIOp>();
+  if (!take)
+    return std::nullopt;
+
+  auto tryMatch = [&](Value betterValue,
+                      Value tieValue) -> std::optional<PartialReductionGroup> {
+    auto better = betterValue.getDefiningOp<arith::CmpIOp>();
+    auto tie = tieValue.getDefiningOp<arith::AndIOp>();
+    if (!better || !tie)
+      return std::nullopt;
+    auto predicate = better.getPredicate();
+    if (predicate != arith::CmpIPredicate::sgt &&
+        predicate != arith::CmpIPredicate::slt &&
+        predicate != arith::CmpIPredicate::ugt &&
+        predicate != arith::CmpIPredicate::ult)
+      return std::nullopt;
+    auto carried = dyn_cast<BlockArgument>(better.getRhs());
+    auto found = llvm::find(outputs, carried);
+    if (!carried || found == outputs.end() ||
+        !isa<IntegerType>(carried.getType()))
+      return std::nullopt;
+    unsigned valueResult = std::distance(outputs.begin(), found);
+    if (valueResult == indexResult)
+      return std::nullopt;
+
+    auto matchTie =
+        [&](Value equalValue,
+            Value earlierValue) -> std::optional<PartialReductionGroup> {
+      auto equal = equalValue.getDefiningOp<arith::CmpIOp>();
+      auto earlier = earlierValue.getDefiningOp<arith::CmpIOp>();
+      if (!equal || !earlier ||
+          equal.getPredicate() != arith::CmpIPredicate::eq ||
+          !hasCommutativeOperands(equal, better.getLhs(), carried) ||
+          (earlier.getPredicate() != arith::CmpIPredicate::slt &&
+           earlier.getPredicate() != arith::CmpIPredicate::ult) ||
+          earlier.getLhs() != select.getTrueValue() ||
+          earlier.getRhs() != outputs[indexResult] ||
+          !matchesArgValue(yielded[valueResult], select.getCondition(),
+                           better.getLhs(), carried, predicate) ||
+          !isIndependentOfReductionOutputs(better.getLhs(), op) ||
+          !isIndependentOfReductionOutputs(select.getTrueValue(), op))
+        return std::nullopt;
+
+      auto valueType =
+          dyn_cast<RankedTensorType>(op->getResult(valueResult).getType());
+      auto indexType =
+          dyn_cast<RankedTensorType>(op->getResult(indexResult).getType());
+      auto maps = op.getIndexingMapsArray();
+      if (!valueType || !indexType || valueType.getEncoding() ||
+          indexType.getEncoding() ||
+          valueType.getShape() != indexType.getShape() ||
+          maps[op.getNumDpsInputs() + valueResult] !=
+              maps[op.getNumDpsInputs() + indexResult] ||
+          !llvm::all_of(body.without_terminator(), [](Operation &nested) {
+            return nested.getNumRegions() == 0 && isMemoryEffectFree(&nested);
+          }))
+        return std::nullopt;
+      PartialReductionGroup group;
+      group.results = {valueResult, indexResult};
+      group.valuePredicate = predicate;
+      group.indexPredicate = earlier.getPredicate();
+      return group;
+    };
+    if (auto group = matchTie(tie.getLhs(), tie.getRhs()))
+      return group;
+    return matchTie(tie.getRhs(), tie.getLhs());
+  };
+  if (auto group = tryMatch(take.getLhs(), take.getRhs()))
+    return group;
+  return tryMatch(take.getRhs(), take.getLhs());
+}
+
+static TypedAttr getArgReductionIdentity(Type type,
+                                         arith::CmpIPredicate predicate) {
+  auto intType = cast<IntegerType>(type);
+  unsigned width = intType.getWidth();
+  APInt identity;
+  switch (predicate) {
+  case arith::CmpIPredicate::sgt:
+    identity = APInt::getSignedMinValue(width);
+    break;
+  case arith::CmpIPredicate::slt:
+    identity = APInt::getSignedMaxValue(width);
+    break;
+  case arith::CmpIPredicate::ugt:
+    identity = APInt::getMinValue(width);
+    break;
+  case arith::CmpIPredicate::ult:
+    identity = APInt::getMaxValue(width);
+    break;
+  default:
+    llvm_unreachable("unexpected arg reduction predicate");
+  }
+  return IntegerAttr::get(intType, identity);
+}
+
+/// Analyze all groups before creating IR. Keep the independent combiner
+/// recognition and its diagnostics unchanged.
+static FailureOr<PartialReductionAnalysis>
+analyzePartialReductions(LinalgOp op) {
+  PartialReductionAnalysis analysis;
+  analysis.identities.resize(op->getNumResults());
+  SmallVector<bool> covered(op->getNumResults(), false);
+  auto outputs = op.getRegionOutputArgs();
+  for (unsigned idx = 0; idx < op->getNumResults(); ++idx) {
+    auto group = matchStableArgReduction(op, idx);
+    if (!group)
+      continue;
+    unsigned valueResult = group->results[0];
+    unsigned indexResult = group->results[1];
+    if (covered[valueResult] || covered[indexResult])
+      return op->emitOpError("Failed to anaysis the reduction operation.");
+    covered[valueResult] = covered[indexResult] = true;
+    analysis.identities[valueResult] = getArgReductionIdentity(
+        outputs[valueResult].getType(), *group->valuePredicate);
+    // The index combiner always chooses the smaller index on value ties.
+    analysis.identities[indexResult] = getArgReductionIdentity(
+        outputs[indexResult].getType(), group->indexPredicate);
+    analysis.groups.push_back(std::move(*group));
+  }
+  for (unsigned idx = 0; idx < op->getNumResults(); ++idx) {
+    if (covered[idx])
+      continue;
+    SmallVector<Operation *, 4> combiners;
+    if (!matchReduction(outputs, idx, combiners) || combiners.size() != 1)
+      return op->emitOpError("Failed to anaysis the reduction operation.");
+    auto identity = arith::getNeutralElement(combiners[0]);
+    if (!identity)
+      return op->emitOpError(
+          "Failed to get an identity value for the reduction operation.");
+    PartialReductionGroup group;
+    group.results.push_back(idx);
+    group.combiner = combiners[0];
+    analysis.identities[idx] = *identity;
+    analysis.groups.push_back(std::move(group));
+  }
+  llvm::sort(analysis.groups, [](const auto &lhs, const auto &rhs) {
+    return *std::min_element(lhs.results.begin(), lhs.results.end()) <
+           *std::min_element(rhs.results.begin(), rhs.results.end());
+  });
+  return analysis;
+}
+
 /// Operation-independent implementation shared by the
 /// PartialReductionInterface external models for LinalgOps.
 struct LinalgOpPartialReductionInterfaceImpl {
@@ -711,23 +930,16 @@ struct LinalgOpPartialReductionInterfaceImpl {
     if (linalgOp.hasPureBufferSemantics())
       return op->emitOpError("expected operation to have tensor semantics");
 
+    auto analysis = analyzePartialReductions(linalgOp);
+    if (failed(analysis))
+      return failure();
+
     SmallVector<AffineMap> partialResultMaps =
         getPartialResultAffineMaps(linalgOp, reductionDims);
 
     SmallVector<Value> inits;
     for (auto [initIdx, result, partialMap] :
          llvm::enumerate(linalgOp->getResults(), partialResultMaps)) {
-      SmallVector<Operation *, 4> combinerOps;
-      if (!matchReduction(linalgOp.getRegionOutputArgs(), initIdx,
-                          combinerOps) ||
-          combinerOps.size() != 1)
-        return op->emitOpError("Failed to anaysis the reduction operation.");
-
-      Operation *reductionOp = combinerOps[0];
-      std::optional<TypedAttr> identity = arith::getNeutralElement(reductionOp);
-      if (!identity.has_value())
-        return op->emitOpError(
-            "Failed to get an identity value for the reduction operation.");
 
       // Append the new partial result dimensions.
       SmallVector<OpFoldResult> partialResultShape;
@@ -749,7 +961,8 @@ struct LinalgOpPartialReductionInterfaceImpl {
       Type elType = getElementTypeOrSelf(result.getType());
       Value emptyTensor =
           tensor::EmptyOp::create(b, loc, partialResultShape, elType);
-      Value constantOp = arith::ConstantOp::create(b, loc, *identity);
+      Value constantOp =
+          arith::ConstantOp::create(b, loc, analysis->identities[initIdx]);
       auto identityTensor =
           linalg::FillOp::create(b, loc, constantOp, emptyTensor);
       inits.push_back(identityTensor.getResult(0));
@@ -861,15 +1074,22 @@ struct LinalgOpPartialReductionInterfaceImpl {
                   ValueRange partialReduce,
                   const SetVector<unsigned> &reductionDims) const {
     auto linalgOp = cast<LinalgOp>(op);
+    auto analysis = analyzePartialReductions(linalgOp);
+    if (failed(analysis))
+      return failure();
     SmallVector<AffineMap> partialReductionMaps =
         getPartialResultAffineMaps(linalgOp, reductionDims);
 
     // Permute the reduction dims as permuted by the partial result map.
     SmallVector<Operation *> mergeOperations;
-    SmallVector<Value> replacements;
-    for (auto [idx, init, partialResult, partialMap] : llvm::enumerate(
-             linalgOp.getDpsInits(), partialReduce, partialReductionMaps)) {
-      unsigned initIdx = idx;
+    SmallVector<Value> replacements(op->getNumResults());
+    for (const PartialReductionGroup &group : analysis->groups) {
+      AffineMap partialMap = partialReductionMaps[group.results.front()];
+      SmallVector<Value, 2> partialResults, originalInits;
+      for (unsigned idx : group.results) {
+        partialResults.push_back(partialReduce[idx]);
+        originalInits.push_back(linalgOp.getDpsInits()[idx]);
+      }
       // linalg.reduce's iteration space is the tiled result's iteration space
       // (and not the tiled operation's iteration space). To account for this,
       // permute the reduction dimensions based on the partial result map of the
@@ -886,21 +1106,36 @@ struct LinalgOpPartialReductionInterfaceImpl {
       }
 
       auto reduction = linalg::ReduceOp::create(
-          b, loc, partialResult, init, partialReductionDims,
-          [&linalgOp, &initIdx](OpBuilder &b, Location loc, ValueRange inputs) {
-            // Get the combiner op.
-            SmallVector<Operation *, 4> combinerOps;
-            matchReduction(linalgOp.getRegionOutputArgs(), initIdx,
-                           combinerOps);
-            Operation *clonedReductionOp = b.clone(*combinerOps[0]);
-            // Combine the input at idx and output at numInits + idx.
-            clonedReductionOp->setOperand(0, inputs[0]);
-            clonedReductionOp->setOperand(1, inputs[1]);
-            linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
+          b, loc, partialResults, originalInits, partialReductionDims,
+          [&group](OpBuilder &b, Location loc, ValueRange inputs) {
+            if (!group.valuePredicate) {
+              Operation *clonedReductionOp = b.clone(*group.combiner);
+              clonedReductionOp->setOperand(0, inputs[0]);
+              clonedReductionOp->setOperand(1, inputs[1]);
+              linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
+              return;
+            }
+            // Both partial fields are inputs. Never reconstruct a candidate's
+            // index from the merge iteration or reduce the index separately.
+            Value better = arith::CmpIOp::create(b, loc, *group.valuePredicate,
+                                                 inputs[0], inputs[2]);
+            Value equal = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::eq, inputs[0], inputs[2]);
+            Value earlier = arith::CmpIOp::create(b, loc, group.indexPredicate,
+                                                  inputs[1], inputs[3]);
+            Value tie = arith::AndIOp::create(b, loc, equal, earlier);
+            Value take = arith::OrIOp::create(b, loc, better, tie);
+            Value value =
+                arith::SelectOp::create(b, loc, take, inputs[0], inputs[2]);
+            Value index =
+                arith::SelectOp::create(b, loc, take, inputs[1], inputs[3]);
+            linalg::YieldOp::create(b, loc, ValueRange{value, index});
           });
 
       mergeOperations.push_back(reduction);
-      replacements.push_back(reduction->getResult(0));
+      for (auto [idx, replacement] :
+           llvm::zip_equal(group.results, reduction->getResults()))
+        replacements[idx] = replacement;
     }
 
     return MergeResult{mergeOperations, replacements};
