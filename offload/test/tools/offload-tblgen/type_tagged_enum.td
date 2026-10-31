@@ -19,7 +19,8 @@ def my_type_tagged_enum_t : Enum {
   let etors = [
     TaggedEtor<"VALUE_ONE", "uint32_t", "Value one.">,
     TaggedEtor<"VALUE_TWO", "char[]", "Value two.">,
-    TaggedEtor<"VALUE_THREE", "some_handle_t", "Value three.">
+    TaggedEtor<"VALUE_THREE", "some_handle_t", "Value three.">,
+    TaggedEtor<"VALUE_FOUR", "uint32_t*", "Value four.">
   ];
 }
 
@@ -47,10 +48,11 @@ def FunctionA : Function {
 }
 
 // Check that a tagged enum print function definition is generated
-// CHECK-PRINT: void printTagged(llvm::raw_ostream &os, const void *ptr, my_type_tagged_enum_t value, size_t size) {
+// CHECK-PRINT: inline void printTagged(OS &os, const void *ptr, my_type_tagged_enum_t value, size_t size) {
 // CHECK-PRINT: case MY_TYPE_TAGGED_ENUM_VALUE_ONE: {
 // CHECK-PRINT:   const uint32_t * const tptr = (const uint32_t * const)ptr;
-// CHECK-PRINT:   os << (const void *)tptr << " (";
+// CHECK-PRINT:   os << (const void *)tptr;
+// CHECK-PRINT-NEXT:   os << " (";
 // CHECK-PRINT:   os << *tptr;
 // CHECK-PRINT:   os << ")";
 // CHECK-PRINT:   break;
@@ -61,13 +63,22 @@ def FunctionA : Function {
 // CHECK-PRINT: }
 // CHECK-PRINT: case MY_TYPE_TAGGED_ENUM_VALUE_THREE: {
 // CHECK-PRINT:   const some_handle_t * const tptr = (const some_handle_t * const)ptr;
-// CHECK-PRINT:   os << (const void *)tptr << " (";
+// CHECK-PRINT:   os << (const void *)tptr;
+// CHECK-PRINT-NEXT:   os << " (";
 // CHECK-PRINT:   os << *tptr;
 // CHECK-PRINT:   os << ")";
 // CHECK-PRINT:   break;
 // CHECK-PRINT: }
+// CHECK-PRINT: case MY_TYPE_TAGGED_ENUM_VALUE_FOUR: {
+// CHECK-PRINT:   const uint32_t* const * tptr = (const uint32_t* const *)ptr;
+// CHECK-PRINT:   os << (const void *)tptr;
+// CHECK-PRINT-NEXT:   os << " (";
+// CHECK-PRINT-NEXT: {{^ *}}printPtr(os, tptr);
+// CHECK-PRINT-NEXT:   os << ")";
+// CHECK-PRINT:   break;
+// CHECK-PRINT: }
 
 // Check that the tagged type information is used when printing function parameters
-// CHECK-PRINT: llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const struct function_a_params_t *params) {
+// CHECK-PRINT: ol_print::enable_if_stream_t<OS> operator<<(OS &os, const struct function_a_params_t *params) {
 // CHECK-PRINT: os << ".PropValue = " 
 // CHECK-PRINT-NEXT: printTagged(os, *params->pPropValue, *params->pPropName, *params->pPropSize);
