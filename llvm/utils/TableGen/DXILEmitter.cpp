@@ -357,7 +357,7 @@ static void emitDXILOpParamTypes(const RecordKeeper &Records, raw_ostream &OS) {
 static void emitDXILAttributes(const RecordKeeper &Records, raw_ostream &OS) {
   OS << "#ifdef DXIL_ATTRIBUTE\n";
   for (const Record *Attr : Records.getAllDerivedDefinitions("DXILAttribute"))
-    OS << "DXIL_ATTRIBUTE(" << Attr->getName() << ")\n";
+    OS << "DXIL_ATTRIBUTE(" << Attr->getValueAsString("Name") << ")\n";
   OS << "#undef DXIL_ATTRIBUTE\n";
   OS << "#endif\n\n";
 }
