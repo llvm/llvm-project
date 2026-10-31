@@ -1,21 +1,21 @@
 [
   {
-    "lnt-machine": "linux-x86_64-O3-2026-10-30",
+    "lnt-machine": "linux-x86_64-O3-2026-10-31",
     "setup": {
       "runner": "llvm-premerge-linux-32-runners",
       "container": "ghcr.io/llvm/ci-ubuntu-26.04:latest@sha256:7ac659feb90ac48dd8676e4eb305b9aa5b31fc8b329b7e39379c38af06efc6e1",
       "llvm-cmake-cache": ".ci/lnt/llvm-test-suite/clang.cmake",
-      "test-suite-version": "28644d9795d11dcc30f5bdeb398a76a52ca53869",
-      "run-test-suite-args": ["--cmake-cache", "O3", "--use-perf", "time", "--build-threads", "32"]
+      "test-suite-version": "9bbe134ffa0b93e5509febe0b5eab307daff3c92",
+      "run-test-suite-args": ["--cmake-cache", "O3", "--use-perf", "all", "--build-threads", "32"]
     }
   },
   {
-    "lnt-machine": "macos-26.6.2-arm64-O3-2026-10-30",
+    "lnt-machine": "macos-26.6.2-arm64-O3-2026-10-31",
     "setup": {
       "runner": ["self-hosted", "macOS", "26.6.2", "ARM64", "apple-runners"],
       "xcode-version": "26.6",
       "llvm-cmake-cache": ".ci/lnt/llvm-test-suite/clang-macos.cmake",
-      "test-suite-version": "28644d9795d11dcc30f5bdeb398a76a52ca53869",
+      "test-suite-version": "9bbe134ffa0b93e5509febe0b5eab307daff3c92",
       "run-test-suite-args": ["--cmake-cache", "O3", "--build-threads", "8"]
     }
   }

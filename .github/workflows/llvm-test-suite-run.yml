@@ -54,7 +54,9 @@ jobs:
           persist-credentials: false
           ref: ${{ github.sha }}
           path: tooling
-          sparse-checkout: .ci/lnt
+          sparse-checkout: |
+            .ci/lnt
+            .github/workflows
 
       - name: Checkout the LLVM monorepo at ${{ inputs.commit }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -95,16 +97,20 @@ jobs:
           echo "$(brew --prefix python@3.14)/libexec/bin" >> "$GITHUB_PATH"
 
       # tclsh is used to generate the inputs of sqlite3. It's already installed on macOS.
+      # Profile support in LNT requires objdump and c++filt.
       - name: Install dependencies via apt
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y tcl python3-venv linux-perf
+          sudo apt-get install -y tcl python3-venv python3-dev linux-perf binutils
 
       - name: Install Python dependencies
         run: |
           python3 -m venv "${RUNNER_TEMP}/venv"
           source "${RUNNER_TEMP}/venv/bin/activate"
+          # LNT converts the profiles gathered with perf for the report. Use the same version as
+          # the one used to submit the report.
+          pip install --require-hashes -r tooling/.github/workflows/lnt-submit.requirements.lock.txt
           pip install -r llvm-test-suite/utils/lnt/requirements.txt lit
 
       - name: Diagnose tools in use
