@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements memory slot interface models for
-// `vector.transfer_read` and `vector.transfer_write`. These models implement
-// `PromotableMemOpInterface` so Mem2Reg can replace vector transfers with uses
+// `vector.transfer_read`, `vector.transfer_write`, and `vector.mask`. They
+// implement `PromotableMemOpInterface` to replace vector transfers with uses
 // and definitions of a vector SSA value. The models for `memref.subview`
 // live in the MemRef dialect.
 //
@@ -21,9 +21,10 @@
 // of those lanes. `arith.select` implements this behavior and also handles
 // lanes disabled by a transfer's mask operand.
 //
-// Transfers wrapped in `vector.mask` prevent promotion because that op does
-// not implement `PromotableRegionOpInterface`, which Mem2Reg requires to
-// promote accesses inside a region.
+// `vector.mask` owns its wrapped transfer's blocking use and is promoted as a
+// whole. Its region cannot accept extra operations, so `arith.select` is built
+// outside it. Disabled read lanes use the passthru, or padding if none is
+// given; disabled write lanes retain their previous values.
 //
 //===----------------------------------------------------------------------===//
 
@@ -189,6 +190,79 @@ struct TransferWriteOpMemOpModel
     return DeletionKind::Delete;
   }
 };
+
+/// Promotes `vector.mask` wrapping a transfer read or write by owning the
+/// transfer's slot use and applying the wrapper's mask.
+struct MaskOpMemOpModel
+    : public PromotableMemOpInterface::ExternalModel<MaskOpMemOpModel,
+                                                     vector::MaskOp> {
+  bool ownsEmbeddedBlockingUses(Operation *op) const {
+    return isa_and_nonnull<vector::TransferReadOp, vector::TransferWriteOp>(
+        cast<vector::MaskOp>(op).getMaskableOp());
+  }
+
+  bool loadsFrom(Operation *op, const MemorySlot &slot) const {
+    auto readOp = dyn_cast_or_null<vector::TransferReadOp>(
+        cast<vector::MaskOp>(op).getMaskableOp());
+    return readOp && readOp.getBase() == slot.ptr;
+  }
+
+  bool storesTo(Operation *op, const MemorySlot &slot) const {
+    auto writeOp = dyn_cast_or_null<vector::TransferWriteOp>(
+        cast<vector::MaskOp>(op).getMaskableOp());
+    return writeOp && writeOp.getBase() == slot.ptr;
+  }
+
+  // Disabled lanes retain the reaching definition.
+  Value getStored(Operation *op, const MemorySlot &slot, OpBuilder &builder,
+                  Value reachingDef, const DataLayout &dataLayout) const {
+    auto maskOp = cast<vector::MaskOp>(op);
+    auto writeOp = cast<vector::TransferWriteOp>(maskOp.getMaskableOp());
+    return arith::SelectOp::create(builder, op->getLoc(), maskOp.getMask(),
+                                   writeOp.getValueToStore(), reachingDef);
+  }
+
+  bool canUsesBeRemoved(Operation *op, const MemorySlot &slot,
+                        const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                        SmallVectorImpl<OpOperand *> &newBlockingUses,
+                        const DataLayout &dataLayout) const {
+    auto xferOp = dyn_cast_or_null<VectorTransferOpInterface>(
+        cast<vector::MaskOp>(op).getMaskableOp());
+    // Transfers with their own mask operand are unsupported.
+    if (!xferOp || xferOp.getMask())
+      return false;
+    return isPromotableTransfer(xferOp, slot, blockingUses);
+  }
+
+  // Replace a read with the masked reaching definition, inserting IR after
+  // `vector.mask`. Writes need no further work after `getStored`.
+  DeletionKind
+  removeBlockingUses(Operation *op, const MemorySlot &slot,
+                     const SmallPtrSetImpl<OpOperand *> &blockingUses,
+                     OpBuilder &builder, Value reachingDefinition,
+                     const DataLayout &dataLayout) const {
+    auto maskOp = cast<vector::MaskOp>(op);
+    auto readOp = dyn_cast<vector::TransferReadOp>(maskOp.getMaskableOp());
+    if (!readOp)
+      return DeletionKind::Delete;
+
+    Location loc = op->getLoc();
+    Value padSplat = vector::BroadcastOp::create(
+        builder, loc, readOp.getVectorType(), readOp.getPadding());
+    Value result = reachingDefinition;
+    // Lanes outside a dynamic view take the padding.
+    if (Value viewMask =
+            memref::buildDynamicSubViewMask(builder, loc, slot.ptr))
+      result =
+          arith::SelectOp::create(builder, loc, viewMask, result, padSplat);
+    // Disabled lanes use the passthru, or padding if none is given.
+    Value disabled = maskOp.hasPassthru() ? maskOp.getPassthru() : padSplat;
+    result = arith::SelectOp::create(builder, loc, maskOp.getMask(), result,
+                                     disabled);
+    maskOp->getResult(0).replaceAllUsesWith(result);
+    return DeletionKind::Delete;
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -199,5 +273,6 @@ void mlir::vector::registerMemorySlotExternalModels(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, vector::VectorDialect *dialect) {
     TransferReadOp::attachInterface<TransferReadOpMemOpModel>(*ctx);
     TransferWriteOp::attachInterface<TransferWriteOpMemOpModel>(*ctx);
+    MaskOp::attachInterface<MaskOpMemOpModel>(*ctx);
   });
 }
