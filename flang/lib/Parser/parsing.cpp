@@ -13,6 +13,7 @@
 #include "flang/Parser/preprocessor.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
+#include "flang/Support/PluginDirectives.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace Fortran::parser {
@@ -104,6 +105,10 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   }
   for (const auto &sentinel : options.compilerDirectiveSentinels) {
     prescanner.AddCompilerDirectiveSentinel(sentinel);
+  }
+  // !$prefix for the directives a plugin defines (Support/PluginDirectives.h)
+  for (const auto &sentinel : common::getPluginDirectiveSentinels()) {
+    prescanner.AddPluginDirectiveSentinel(sentinel);
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
