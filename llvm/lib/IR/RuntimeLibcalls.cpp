@@ -631,7 +631,7 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
   AttrBuilder ArgAttrBuilder(Ctx);
   for (Attribute::AttrKind AK : CommonPtrArgAttrs)
     ArgAttrBuilder.addAttribute(AK);
-  ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy));
+  ArgAttrBuilder.addAlignmentAttr(DL.getABITypeAlign(VecTy->getScalarType()));
 
   bool HasPtrArg = false;
   for (auto [Idx, ParamTy] : enumerate(FuncTy->params())) {

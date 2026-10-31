@@ -47,7 +47,7 @@
 
 ; CHECK: declare <2 x double> @amd_vrd2_sin(<2 x double>) [[ATTRS]]
 
-; CHECK: declare void @amd_vrd2_sincos(<2 x double>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG:#[0-9]+]]
+; CHECK: declare void @amd_vrd2_sincos(<2 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG:#[0-9]+]]
 
 ; CHECK: declare <2 x double> @amd_vrd2_tan(<2 x double>) [[ATTRS]]
 
@@ -93,7 +93,7 @@
 
 ; CHECK: declare <4 x double> @amd_vrd4_sin(<4 x double>) [[ATTRS]]
 
-; CHECK: declare void @amd_vrd4_sincos(<4 x double>, ptr noalias nonnull writeonly align 32, ptr noalias nonnull writeonly align 32) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @amd_vrd4_sincos(<4 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <4 x double> @amd_vrd4_tan(<4 x double>) [[ATTRS]]
 
@@ -139,7 +139,7 @@
 
 ; CHECK: declare <8 x double> @amd_vrd8_sin(<8 x double>) [[ATTRS]]
 
-; CHECK: declare void @amd_vrd8_sincos(<8 x double>, ptr noalias nonnull writeonly align 64, ptr noalias nonnull writeonly align 64) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @amd_vrd8_sincos(<8 x double>, ptr noalias nonnull writeonly align 8, ptr noalias nonnull writeonly align 8) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <8 x double> @amd_vrd8_tan(<8 x double>) [[ATTRS]]
 
@@ -175,7 +175,7 @@
 
 ; CHECK: declare <16 x float> @amd_vrs16_roundf(<16 x float>) [[ATTRS]]
 
-; CHECK: declare void @amd_vrs16_sincosf(<16 x float>, ptr noalias nonnull writeonly align 64, ptr noalias nonnull writeonly align 64) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @amd_vrs16_sincosf(<16 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <16 x float> @amd_vrs16_sinf(<16 x float>) [[ATTRS]]
 
@@ -219,7 +219,7 @@
 
 ; CHECK: declare <4 x float> @amd_vrs4_roundf(<4 x float>) [[ATTRS]]
 
-; CHECK: declare void @amd_vrs4_sincosf(<4 x float>, ptr noalias nonnull writeonly align 16, ptr noalias nonnull writeonly align 16) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @amd_vrs4_sincosf(<4 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <4 x float> @amd_vrs4_sinf(<4 x float>) [[ATTRS]]
 
@@ -259,7 +259,7 @@
 
 ; CHECK: declare <8 x float> @amd_vrs8_roundf(<8 x float>) [[ATTRS]]
 
-; CHECK: declare void @amd_vrs8_sincosf(<8 x float>, ptr noalias nonnull writeonly align 32, ptr noalias nonnull writeonly align 32) [[ATTRS_PTR_ARG]]
+; CHECK: declare void @amd_vrs8_sincosf(<8 x float>, ptr noalias nonnull writeonly align 4, ptr noalias nonnull writeonly align 4) [[ATTRS_PTR_ARG]]
 
 ; CHECK: declare <8 x float> @amd_vrs8_sinf(<8 x float>) [[ATTRS]]
 
