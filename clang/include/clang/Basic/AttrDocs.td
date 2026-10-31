@@ -8426,6 +8426,8 @@ alternatives, though the attribute can be used even when the fix can't be automa
 
   Here, every read/write to the fields `ptr1`, `ptr2`, `buf` and `sz` will trigger a warning
   that the field has been explicitly marked as unsafe due to unsafe-buffer operations.
+  Writes include initializing the field in a constructor's member initializer
+  list or in aggregate initialization, such as `A a = {.ptr1 = p}`.
 
 - Attribute attached to container constructors and factory functions: The
   spellings `[[clang::unsafe_buffer_usage_in_container]]` and
