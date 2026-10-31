@@ -355,13 +355,14 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 /// merged with the consumer's inst_data so downstream setup* paths see a
 /// fully-populated layout.
 /// Returns the layout unchanged when it is null, has no inst_data, or already
-/// carries lane info; returns nullopt when the derived lane factorization does
-/// not divide the user's inst_data (an invalid inst_data).
+/// carries lane info. Returns nullopt when no lane factorization covers the
+/// user's inst_data with one contiguous span per lane whose length tiles the
+/// runs of `contiguity` (an inst_data the access cannot implement).
 std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
     DistributeLayoutAttr userSpecifiedLayout,
     DistributeLayoutAttr consumerLayout, Type elemTy,
     const xegpu::uArch::LoadGatherInstruction *uArchInstruction,
-    const int subgroupSize);
+    const int subgroupSize, int contiguity);
 
 /// Like completeScatterLoadLaneLayoutFromInstData, but for scatter stores
 /// (store_scatter / store_matrix). A store is a data sink: lane info is derived
@@ -370,7 +371,7 @@ std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
 std::optional<DistributeLayoutAttr> completeScatterStoreLaneLayoutFromInstData(
     DistributeLayoutAttr specifiedLayout, Type elemTy,
     const xegpu::uArch::StoreScatterInstruction *uArchInstruction,
-    const int subgroupSize);
+    const int subgroupSize, int contiguity);
 
 /// Completes a user-provided 2D-block store_nd / prefetch_nd anchor that has
 /// only inst_data. These ops are data sinks, so lane info is derived purely

@@ -95,9 +95,12 @@ void populateXeGPUSgToLaneDistributeTypeConversionAndLegality(
 /// Run the AxisInfo-based contiguity analysis over `root` and stamp a
 /// `contiguity` attribute on every `xegpu.load` / `xegpu.store` whose
 /// offsets are contiguous (in runs of >= 2) along the innermost dimension.
-/// The stamped value is the inner-dim contiguity; it is a target-independent
-/// property consumed downstream (e.g. to derive a `lane_data` split). Ops that
-/// already carry a `contiguity` attribute are left untouched.
+/// `xegpu.load_matrix` / `xegpu.store_matrix` get one too when their
+/// `mem_desc` memory layout keeps runs of >= 2 contiguous along the innermost
+/// data dimension. The stamped value is the inner-dim contiguity; it is a
+/// target-independent property consumed downstream (e.g. to derive a
+/// `lane_data` split). Ops that already carry a `contiguity` attribute are left
+/// untouched.
 void runContiguityAnalysis(Operation *root);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
