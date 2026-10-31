@@ -87,12 +87,8 @@ entry:
 define void @zero_f64(ptr %i) {
 ; RV32F-LABEL: zero_f64:
 ; RV32F:       # %bb.0: # %entry
-; RV32F-NEXT:    lui a1, %hi(.LCPI3_0)
-; RV32F-NEXT:    addi a1, a1, %lo(.LCPI3_0)
-; RV32F-NEXT:    lw a2, 0(a1)
-; RV32F-NEXT:    lw a1, 4(a1)
-; RV32F-NEXT:    sw a2, 0(a0)
-; RV32F-NEXT:    sw a1, 4(a0)
+; RV32F-NEXT:    sw zero, 0(a0)
+; RV32F-NEXT:    sw zero, 4(a0)
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: zero_f64:
@@ -209,12 +205,8 @@ entry:
 define void @zero_v1f64(ptr %i) {
 ; RV32F-LABEL: zero_v1f64:
 ; RV32F:       # %bb.0: # %entry
-; RV32F-NEXT:    lui a1, %hi(.LCPI7_0)
-; RV32F-NEXT:    addi a1, a1, %lo(.LCPI7_0)
-; RV32F-NEXT:    lw a2, 0(a1)
-; RV32F-NEXT:    lw a1, 4(a1)
-; RV32F-NEXT:    sw a2, 0(a0)
-; RV32F-NEXT:    sw a1, 4(a0)
+; RV32F-NEXT:    sw zero, 0(a0)
+; RV32F-NEXT:    sw zero, 4(a0)
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: zero_v1f64:
@@ -240,14 +232,10 @@ entry:
 define void @zero_v2f64(ptr %i) {
 ; RV32F-LABEL: zero_v2f64:
 ; RV32F:       # %bb.0: # %entry
-; RV32F-NEXT:    lui a1, %hi(.LCPI8_0)
-; RV32F-NEXT:    addi a1, a1, %lo(.LCPI8_0)
-; RV32F-NEXT:    lw a2, 0(a1)
-; RV32F-NEXT:    lw a1, 4(a1)
-; RV32F-NEXT:    sw a2, 0(a0)
-; RV32F-NEXT:    sw a1, 4(a0)
-; RV32F-NEXT:    sw a2, 8(a0)
-; RV32F-NEXT:    sw a1, 12(a0)
+; RV32F-NEXT:    sw zero, 0(a0)
+; RV32F-NEXT:    sw zero, 4(a0)
+; RV32F-NEXT:    sw zero, 8(a0)
+; RV32F-NEXT:    sw zero, 12(a0)
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: zero_v2f64:
@@ -276,18 +264,14 @@ entry:
 define void @zero_v4f64(ptr %i) {
 ; RV32F-LABEL: zero_v4f64:
 ; RV32F:       # %bb.0: # %entry
-; RV32F-NEXT:    lui a1, %hi(.LCPI9_0)
-; RV32F-NEXT:    addi a1, a1, %lo(.LCPI9_0)
-; RV32F-NEXT:    lw a2, 0(a1)
-; RV32F-NEXT:    lw a1, 4(a1)
-; RV32F-NEXT:    sw a2, 0(a0)
-; RV32F-NEXT:    sw a1, 4(a0)
-; RV32F-NEXT:    sw a2, 8(a0)
-; RV32F-NEXT:    sw a1, 12(a0)
-; RV32F-NEXT:    sw a2, 16(a0)
-; RV32F-NEXT:    sw a1, 20(a0)
-; RV32F-NEXT:    sw a2, 24(a0)
-; RV32F-NEXT:    sw a1, 28(a0)
+; RV32F-NEXT:    sw zero, 0(a0)
+; RV32F-NEXT:    sw zero, 4(a0)
+; RV32F-NEXT:    sw zero, 8(a0)
+; RV32F-NEXT:    sw zero, 12(a0)
+; RV32F-NEXT:    sw zero, 16(a0)
+; RV32F-NEXT:    sw zero, 20(a0)
+; RV32F-NEXT:    sw zero, 24(a0)
+; RV32F-NEXT:    sw zero, 28(a0)
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: zero_v4f64:

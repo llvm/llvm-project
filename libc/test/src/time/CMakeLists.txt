@@ -291,7 +291,6 @@ add_libc_test(
   DEPENDS
     libc.src.time.time
     libc.src.__support.time.clock_gettime
-    libc.src.errno.errno
 )
 
 add_libc_test(
@@ -314,7 +313,6 @@ add_libc_test(
   DEPENDS
     libc.include.time
     libc.src.time.clock
-    libc.src.errno.errno
     libc.hdr.types.clock_t
 )
 

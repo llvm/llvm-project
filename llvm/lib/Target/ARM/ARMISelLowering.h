@@ -316,6 +316,8 @@ class VectorType;
     /// Returns how to materialize the specified FP immediate.
     FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
                                bool ForCodeSize = false) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, LLT Ty,
+                               bool ForCodeSize = false) const override;
 
     void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                             const CallBase &I, MachineFunction &MF,

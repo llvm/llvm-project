@@ -16,7 +16,7 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
-MODULE_PASS("mips-16-hard-float", Mips16HardFloatPass(*this))
+MODULE_PASS("mips-mips16-hard-float", Mips16HardFloatPass(*this))
 MODULE_PASS("mips-os16", MipsOs16Pass())
 #undef MODULE_PASS
 

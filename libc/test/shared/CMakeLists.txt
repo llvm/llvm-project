@@ -1,5 +1,11 @@
 add_libc_testsuite(libc-shared-tests)
 
+if(NOT LLVM_LIBC_FULL_BUILD AND "${LIBC_CONF_ERRNO_MODE}" STREQUAL "LIBC_ERRNO_MODE_DEFAULT")
+  set(shared_test_errno_options "")
+  libc_add_definition(shared_test_errno_options "LIBC_ERRNO_MODE=LIBC_ERRNO_MODE_SYSTEM_INLINE")
+  add_compile_options(${shared_test_errno_options})
+endif()
+
 # Shared math tests include the entire math library headers into a single file
 # so it might take some time to compile the tests.  We do have dedicated
 # precommit CIs to build and test shared tests.  So we provide a cmake option
