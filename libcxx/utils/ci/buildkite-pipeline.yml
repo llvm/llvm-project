@@ -41,7 +41,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: aarch64
     <<: *common
 
@@ -51,7 +51,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: aarch64
     <<: *common
 
@@ -61,7 +61,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: armv8l
     <<: *common
 
@@ -71,7 +71,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: armv8l
     <<: *common
 
@@ -81,7 +81,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: armv8l
     <<: *common
 
@@ -91,7 +91,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: armv8l
     <<: *common
 
@@ -101,7 +101,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: aarch64
     <<: *common
 
@@ -111,7 +111,7 @@ steps:
       CC: cc
       CXX: c++
     agents:
-      queue: libcxx-builders-arm
+      queue: libcxx-builders-linaro-arm
       arch: aarch64
     <<: *common
 
