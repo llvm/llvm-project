@@ -4314,6 +4314,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_writev",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/writev.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+        ":types_ssize_t",
+        ":types_struct_iovec",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_wait4",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/wait4.h"],
     target_compatible_with = select({
@@ -20020,6 +20037,25 @@ libc_function(
         ":__support_libc_errno",
         ":__support_macros_config",
         ":__support_osutil_linux_syscall_wrappers_readv",
+        ":errno",
+        ":types_ssize_t",
+        ":types_struct_iovec",
+    ],
+)
+
+libc_function(
+    name = "writev",
+    srcs = ["src/sys/uio/linux/writev.cpp"],
+    hdrs = ["src/sys/uio/writev.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_libc_errno",
+        ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_writev",
         ":errno",
         ":types_ssize_t",
         ":types_struct_iovec",
