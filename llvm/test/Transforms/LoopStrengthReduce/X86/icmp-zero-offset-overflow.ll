@@ -10,22 +10,17 @@ define i16 @test(i16 %start) #0 {
 ; CHECK-LABEL: define i16 @test(
 ; CHECK-SAME: i16 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i16 0, [[START]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i64
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 65536, %[[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], [[LSR_IV]]
-; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP2]] to i16
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 4, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi i16 [ [[START]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP1]] = add i16 [[TMP]], 1
 ; CHECK-NEXT:    [[IV2_CMP:%.*]] = icmp ne i16 [[TMP]], 0
 ; CHECK-NEXT:    call void @use(i1 [[IV2_CMP]])
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
-; CHECK-NEXT:    [[IV1_CMP:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 65532
+; CHECK-NEXT:    [[IV1_CMP:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
 ; CHECK-NEXT:    br i1 [[IV1_CMP]], label %[[EXIT:.*]], label %[[LOOP]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i16 [[START]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], [[LSR_IV_NEXT]]
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[TMP4]] to i16
 ; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
 entry:
@@ -74,6 +69,40 @@ loop:
 
 exit:
   ret i16 %iv
+}
+
+; The i8 compare is rewritten in terms of the i64 IV, and its immediate (864)
+; does not fit in i8; it is truncated to 96.
+define void @test3() {
+; CHECK-LABEL: define void @test3() {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 900, %[[ENTRY]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[LSR_IV]] to i8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP]], 96
+; CHECK-NEXT:    call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i64 [[LSR_IV]], -1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv1 = phi i64 [ 100, %entry ], [ %iv1.next, %loop ]
+  %iv2 = phi i8 [ 5, %entry ], [ %iv2.inc, %loop ]
+  %iv2.inc = add i8 %iv2, 1
+  %cmp = icmp eq i8 %iv2.inc, 42
+  call void @use(i1 %cmp)
+  %iv1.next = add i64 %iv1, 1
+  %exitcond = icmp eq i64 %iv1.next, 1000
+  br i1 %exitcond, label %exit, label %loop
+
+exit:
+  ret void
 }
 
 attributes #0 = { "target-cpu"="x86-64" }

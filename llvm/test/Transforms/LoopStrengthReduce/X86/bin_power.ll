@@ -9,17 +9,18 @@ define i32 @test_01(i32 %a) {
 ; CHECK-LABEL: define i32 @test_01(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], -80
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[TMP3:%.*]], %[[LOOP]] ], [ [[TMP2]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 80, %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[TMP3]] = add i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP3]]
 ;
 
@@ -43,20 +44,21 @@ exit:                                             ; preds = %loop
 define i32 @test_02(i32 %a) {
 ; CHECK-LABEL: define i32 @test_02(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], -80
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:  [[EXIT:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i32 [[TMP4]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[TMP5:%.*]], %[[LOOP]] ], [ [[TMP4]], %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 80, %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[TMP5]] = add i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
 entry:
@@ -81,14 +83,7 @@ exit:                                             ; preds = %loop
 define i32 @test_03(i32 %a) {
 ; CHECK-LABEL: define i32 @test_03(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], -80
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:  [[EXIT:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP0]], [[TMP1]]
@@ -98,7 +93,15 @@ define i32 @test_03(i32 %a) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP4]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[TMP9:%.*]], %[[LOOP]] ], [ [[TMP8]], %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 80, %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[TMP9]] = add i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
 entry:
@@ -128,21 +131,22 @@ exit:                                             ; preds = %loop
 define i32 @test_04(i32 %a) {
 ; CHECK-LABEL: define i32 @test_04(
 ; CHECK-SAME: i32 [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], -80
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:  [[EXIT:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i32 [[TMP2]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul i32 [[TMP3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], -1
-; CHECK-NEXT:    [[TMP6:%.*]] = sub i32 [[TMP5]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[TMP6:%.*]], %[[LOOP]] ], [ [[TMP5]], %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 80, %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[TMP6]] = add i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i32 [[TMP6]]
 ;
 entry:
@@ -179,13 +183,6 @@ define i32 @test_05(i32 %a) {
 ; CHECK-LABEL: define i32 @test_05(
 ; CHECK-SAME: i32 [[A:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], -80
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[TMP0]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i32 [[TMP1]], [[TMP1]]
@@ -326,7 +323,15 @@ define i32 @test_05(i32 %a) {
 ; CHECK-NEXT:    [[TMP137:%.*]] = mul i32 [[TMP136]], [[TMP136]]
 ; CHECK-NEXT:    [[TMP138:%.*]] = mul i32 [[TMP132]], [[TMP137]]
 ; CHECK-NEXT:    [[TMP139:%.*]] = add i32 [[TMP138]], -1
-; CHECK-NEXT:    [[TMP140:%.*]] = sub i32 [[TMP139]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[TMP140:%.*]], %[[LOOP]] ], [ [[TMP139]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 80, %[[ENTRY]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[TMP140]] = add i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 [[TMP140]]
 ;
 
@@ -367,14 +372,7 @@ exit:                                             ; preds = %loop
 define i32 @test_06(i32 %a, i32 %c) {
 ; CHECK-LABEL: define i32 @test_06(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], -80
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
-; CHECK:       [[EXIT]]:
+; CHECK-NEXT:  [[EXIT:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[C]], [[C]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[C]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[A]], 1
@@ -384,7 +382,15 @@ define i32 @test_06(i32 %a, i32 %c) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i32 [[TMP5]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP1]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], -1
-; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 [[TMP8]], [[LSR_IV_NEXT]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i32 [ [[TMP9:%.*]], %[[LOOP]] ], [ [[TMP8]], %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], %[[LOOP]] ], [ 80, %[[EXIT]] ]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], -1
+; CHECK-NEXT:    [[TMP9]] = add i32 [[LSR_IV1]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT1:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret i32 [[TMP9]]
 ;
 entry:

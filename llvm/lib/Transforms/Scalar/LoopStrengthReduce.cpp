@@ -1207,6 +1207,8 @@ public:
 
   bool isLess(const Cost &Other) const;
 
+  unsigned getNumInsns() const { return C.Insns; }
+
   void Lose();
 
 #ifndef NDEBUG
@@ -1309,6 +1311,10 @@ public:
   /// within the loop, meaning they will be executed on every path to the loop
   /// latch. This includes fixups before early exits.
   bool AllFixupsUnconditional = true;
+
+  /// This records whether the value of a fixup reaches a PHI in an outer loop
+  /// that merges it with a value from a path that skips the loop.
+  bool MergesWithLoopBypass = false;
 
   /// RigidFormula is set to true to guarantee that this use will be associated
   /// with a single formula--the one that initially matched. Some SCEV
@@ -1527,6 +1533,9 @@ void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
     // allows to fold 2 registers.
     C.NumBaseAdds +=
         NumBaseParts - (1 + (F.Scale && isAMCompletelyFolded(*TTI, LU, F)));
+  // A Special use negates a lone -1 scaled register.
+  else if (LU.Kind == LSRUse::Special && F.Scale == -1)
+    ++C.NumBaseAdds;
   C.NumBaseAdds += (F.UnfoldedOffset.isNonZero());
 
   // Accumulate non-free scaling amounts.
@@ -1591,9 +1600,21 @@ void Cost::RateFormula(const Formula &F, SmallPtrSetImpl<const SCEV *> &Regs,
   // Each new AddRec adds 1 instruction to calculation.
   C.Insns += (C.AddRecCost - PrevAddRecCost);
 
-  // BaseAdds adds instructions for unfolded registers.
-  if (LU.Kind != LSRUse::ICmpZero)
+  // BaseAdds adds instructions for unfolded registers. An ICmpZero use can
+  // fold a -1 scaled register into the other operand of the compare, which
+  // NumBaseAdds already accounts for; anything else has to be added up before
+  // the compare. Count that only when the compare is in the loop: outside it,
+  // the add runs once, and counting it makes LSR keep a second IV in the loop
+  // to save it.
+  if (LU.Kind != LSRUse::ICmpZero || !LU.AllFixupsOutsideLoop)
     C.Insns += C.NumBaseAdds - PrevNumBaseAdds;
+  // An exit value that needs an unfolded add is computed on the exit edge. If
+  // a PHI in an outer loop merges it with a value from a path that skips the
+  // loop, the IV cannot share a register with that value either, which can
+  // cost a copy or an extra branch on the bypass path.
+  if ((LU.Kind == LSRUse::Basic || LU.Kind == LSRUse::Special) &&
+      LU.MergesWithLoopBypass && C.NumBaseAdds != PrevNumBaseAdds)
+    ++C.Insns;
   assert(isValid() && "invalid cost");
 }
 
@@ -1654,6 +1675,53 @@ bool LSRFixup::isUseFullyOutsideLoop(const Loop *L) const {
   }
 
   return !L->contains(UserInst);
+}
+
+/// Test whether the value \p LF provides, the IV \p S of \p L, reaches a PHI
+/// outside \p L but inside a loop that contains \p L, which merges it with a
+/// value from a path through that loop that skips \p L. Only a value that is
+/// not a constant but differs from the start of \p S by a constant counts:
+/// that is what could share a register with the IV. PHIs that only merge exits
+/// of
+/// \p L, such as LCSSA PHIs, are looked through.
+static bool isMergedWithLoopBypass(const LSRFixup &LF, const SCEV *S,
+                                   const Loop &L, const DominatorTree &DT,
+                                   ScalarEvolution &SE) {
+  const Loop *Outermost = L.getOutermostLoop();
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(S);
+  if (Outermost == &L || !AR || AR->getLoop() != &L)
+    return false;
+  const BasicBlock *Header = L.getHeader();
+  SmallVector<const PHINode *, 4> Worklist;
+  SmallPtrSet<const PHINode *, 4> Visited;
+  if (const auto *PN = dyn_cast<PHINode>(LF.UserInst))
+    Worklist.push_back(PN);
+  while (!Worklist.empty() && Visited.size() < 8) {
+    const PHINode *PN = Worklist.pop_back_val();
+    if (!Visited.insert(PN).second || L.contains(PN) ||
+        !Outermost->contains(PN))
+      continue;
+    // A block that is only reachable through L is dominated by its header.
+    bool ExitsOnly = true;
+    for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+      const BasicBlock *BB = PN->getIncomingBlock(I);
+      if (DT.dominates(Header, BB))
+        continue;
+      ExitsOnly = false;
+      Value *V = PN->getIncomingValue(I);
+      if (!Outermost->contains(BB) || !SE.isSCEVable(V->getType()))
+        continue;
+      const SCEV *Bypass = SE.getSCEV(V);
+      if (!isa<SCEVConstant>(Bypass) &&
+          SE.computeConstantDifference(Bypass, AR->getStart()))
+        return true;
+    }
+    if (ExitsOnly)
+      for (const User *U : PN->users())
+        if (const auto *UserPN = dyn_cast<PHINode>(U))
+          Worklist.push_back(UserPN);
+  }
+  return false;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1858,8 +1926,9 @@ static bool isAMCompletelyFolded(const TargetTransformInfo &TTI,
     return !BaseGV && Scale == 0 && BaseOffset.isZero();
 
   case LSRUse::Special:
-    // Special case Basic to handle -1 scales.
-    return !BaseGV && (Scale == 0 || Scale == -1) && BaseOffset.isZero();
+    // Special case Basic to handle -1 scales. They are legal (see isLegalUse),
+    // but not folded: expanding one takes a sub, or a neg.
+    return !BaseGV && Scale == 0 && BaseOffset.isZero();
   }
 
   llvm_unreachable("Invalid LSRUse Kind!");
@@ -1919,7 +1988,11 @@ static bool isLegalUse(const TargetTransformInfo &TTI, Immediate MinOffset,
          // registers.
          (Scale == 1 &&
           isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy,
-                               BaseGV, BaseOffset, true, 0));
+                               BaseGV, BaseOffset, true, 0)) ||
+         // Or a Special use with a -1 scale.
+         (Kind == LSRUse::Special && Scale == -1 &&
+          isAMCompletelyFolded(TTI, MinOffset, MaxOffset, Kind, AccessTy,
+                               BaseGV, BaseOffset, HasBaseReg, 0));
 }
 
 static bool isLegalUse(const TargetTransformInfo &TTI, Immediate MinOffset,
@@ -1958,6 +2031,11 @@ static InstructionCost getScalingFactorCost(const TargetTransformInfo &TTI,
                                             const LSRUse &LU, const Formula &F,
                                             const Loop &L) {
   if (!F.Scale)
+    return 0;
+
+  // The sub or neg that a Special use's -1 scale takes is counted as a base
+  // add.
+  if (LU.Kind == LSRUse::Special)
     return 0;
 
   // If the use is not completely folded in that instruction, we will have to
@@ -2268,6 +2346,7 @@ class LSRInstance {
   void NarrowSearchSpaceByFilterPostInc();
   void NarrowSearchSpaceByMergingUsesOutsideLoop();
   void NarrowSearchSpaceByDeletingCostlyFormulas();
+  Cost rateWinnerRegCandidate(const SCEV *Reg) const;
   void NarrowSearchSpaceByPickingWinnerRegs();
   void NarrowSearchSpaceUsingHeuristics();
 
@@ -3715,6 +3794,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     LF.Offset = Offset;
     LU.AllFixupsOutsideLoop &= LF.isUseFullyOutsideLoop(L);
     LU.AllFixupsUnconditional &= IsFixupExecutedEachIncrement(LF);
+    LU.MergesWithLoopBypass |= isMergedWithLoopBypass(LF, S, *L, DT, SE);
 
     // Create SCEV as Formula for calculating baseline cost
     if (!VisitedLSRUse.count(LUIdx) && !LF.isUseFullyOutsideLoop(L)) {
@@ -5055,6 +5135,7 @@ void LSRInstance::NarrowSearchSpaceByCollapsingUnrolledCode() {
 
       LUThatHas->AllFixupsOutsideLoop &= LU.AllFixupsOutsideLoop;
       LUThatHas->AllFixupsUnconditional &= LU.AllFixupsUnconditional;
+      LUThatHas->MergesWithLoopBypass |= LU.MergesWithLoopBypass;
 
       // Transfer the fixups of LU to LUThatHas.
       for (LSRFixup &Fixup : LU.Fixups) {
@@ -5328,6 +5409,7 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
     for (LSRFixup &Fixup : LU.Fixups) {
       LUToMergeWith->pushFixup(Fixup);
     }
+    LUToMergeWith->MergesWithLoopBypass |= LU.MergesWithLoopBypass;
 
     // Delete the old use.
     DeleteUse(LU, LUIdx);
@@ -5500,6 +5582,33 @@ static bool IsSimplerBaseSCEVForTarget(const TargetTransformInfo &TTI,
              /*HasBaseReg=*/true, /*Scale=*/0, AccessType.AddrSpace);
 }
 
+/// Estimate what committing to \p Reg costs: in each use that references it,
+/// take the cheapest formula that does, and rate the chosen formulae together
+/// so that registers they share are counted once.
+Cost LSRInstance::rateWinnerRegCandidate(const SCEV *Reg) const {
+  Cost Total(Opts, L, SE, TTI, AMK);
+  SmallPtrSet<const SCEV *, 16> TotalRegs;
+  for (int LUIdx : RegUses.getUsedByIndices(Reg).set_bits()) {
+    const LSRUse &LU = Uses[LUIdx];
+    const Formula *BestF = nullptr;
+    std::optional<Cost> BestFCost;
+    for (const Formula &F : LU.Formulae) {
+      if (!F.referencesReg(Reg))
+        continue;
+      Cost FCost(Opts, L, SE, TTI, AMK);
+      SmallPtrSet<const SCEV *, 4> Regs;
+      FCost.RateFormula(F, Regs, {}, LU, HardwareLoopProfitable);
+      if (!BestFCost || FCost.isLess(*BestFCost)) {
+        BestF = &F;
+        BestFCost = FCost;
+      }
+    }
+    if (BestF)
+      Total.RateFormula(*BestF, TotalRegs, {}, LU, HardwareLoopProfitable);
+  }
+  return Total;
+}
+
 /// Pick a register which seems likely to be profitable, and then in any use
 /// which has any reference to that register, delete all formulae which do not
 /// reference that register.
@@ -5516,6 +5625,8 @@ void LSRInstance::NarrowSearchSpaceByPickingWinnerRegs() {
     // to be a good reuse register candidate.
     const SCEV *Best = nullptr;
     unsigned BestNum = 0;
+    // The cost of committing to Best, computed when a tie needs it.
+    std::optional<Cost> BestCost;
     for (const SCEV *Reg : RegUses) {
       if (Taken.count(Reg))
         continue;
@@ -5527,18 +5638,38 @@ void LSRInstance::NarrowSearchSpaceByPickingWinnerRegs() {
         if (Count > BestNum) {
           Best = Reg;
           BestNum = Count;
-        }
-
-        // If the scores are the same, but the Reg is simpler for the target
-        // (for example {x,+,1} as opposed to {x+C,+,1}, where the target can
-        // handle +C but not -C), opt for the simpler formula.
-        if (Count == BestNum) {
+          BestCost.reset();
+        } else if (Count == BestNum) {
+          // If the scores are the same, but the Reg is simpler for the target
+          // (for example {x,+,1} as opposed to {x+C,+,1}, where the target can
+          // handle +C but not -C), opt for the simpler formula. If neither is
+          // simpler, opt for the one whose formulae are cheaper, e.g. {x,+,1}
+          // over {x+1,+,1} when the latter makes equality compares against x
+          // add up the IV and a negated bound.
           int LUIdx = RegUses.getUsedByIndices(Reg).find_first();
-          if (LUIdx >= 0 && Uses[LUIdx].Kind == LSRUse::Address &&
-              IsSimplerBaseSCEVForTarget(TTI, SE, Best, Reg,
-                                         Uses[LUIdx].AccessTy)) {
+          bool IsAddress = LUIdx >= 0 && Uses[LUIdx].Kind == LSRUse::Address;
+          if (IsAddress && IsSimplerBaseSCEVForTarget(TTI, SE, Best, Reg,
+                                                      Uses[LUIdx].AccessTy)) {
             Best = Reg;
-            BestNum = Count;
+            BestCost.reset();
+          } else if ((!IsAddress ||
+                      !IsSimplerBaseSCEVForTarget(TTI, SE, Reg, Best,
+                                                  Uses[LUIdx].AccessTy)) &&
+                     valueOr(Opts.lsr_insns_cost, true) &&
+                     Best->getType() == Reg->getType() &&
+                     SE.computeConstantDifference(Best, Reg)) {
+            if (!BestCost)
+              BestCost = rateWinnerRegCandidate(Best);
+            Cost RegCost = rateWinnerRegCandidate(Reg);
+            if (RegCost.getNumInsns() < BestCost->getNumInsns() &&
+                RegCost.isLess(*BestCost)) {
+              LLVM_DEBUG(dbgs() << "Preferring " << *Reg << " (";
+                         RegCost.print(dbgs());
+                         dbgs() << ") to " << *Best << " (";
+                         BestCost->print(dbgs()); dbgs() << ")\n");
+              Best = Reg;
+              BestCost = RegCost;
+            }
           }
         }
       }
