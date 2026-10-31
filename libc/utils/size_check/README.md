@@ -10,6 +10,48 @@ The checks never execute target code. They only inspect objects with
 `llvm-nm` and `llvm-size`, so they work the same way for host, cross and
 baremetal builds.
 
+## Running the checks
+
+Configure libc with `-DLIBC_INCLUDE_SIZE_CHECKS=ON` and build the
+`check-libc-size` target:
+
+```
+cmake -S runtimes -B build -G Ninja -DLLVM_ENABLE_RUNTIMES=libc \
+    -DLIBC_INCLUDE_SIZE_CHECKS=ON \
+    "-DLIBC_CONF_MATH_OPTIMIZATIONS=(LIBC_MATH_SKIP_ACCURATE_PASS|LIBC_MATH_SMALL_TABLES)"
+ninja -C build check-libc-size
+```
+
+The option is independent of `LLVM_INCLUDE_TESTS`, which is off in the
+baremetal caches, e.g.:
+
+```
+cmake -S runtimes -B build -G Ninja -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld \
+    -DLIBC_INCLUDE_SIZE_CHECKS=ON -C libc/cmake/caches/armv7em-none-eabi.cmake
+ninja -C build check-libc-size
+```
+
+`check-libc-size` runs the unit tests of the checker and checks every math
+entrypoint object against `rules/math.json`. The reports are written to
+`<build>/libc/utils/size_check/libc-size-check-math-objects.{json,md}`. When
+tests are enabled, `check-libc` depends on `check-libc-size`.
+
+The checks support ELF targets only and need `llvm-nm` and `llvm-size`. They
+are looked up next to the compiler, then on `PATH` and in `LLVM_TOOLS_DIR`;
+set `LIBC_SIZE_CHECK_NM` and `LIBC_SIZE_CHECK_SIZE` to override them.
+
+Some entrypoints are compiled with extra target options (for example `-mfma`
+on x86-64 when the host supports it), so the predefined macros used by
+`when_macros` are dumped once per distinct set of compile options.
+
+## Updating the rules
+
+When a change legitimately grows a function, update `rules/math.json` in the
+same change so reviewers see it. When a change shrinks a function, the
+checker's notes (`--verbose`, or the reports) point out exceptions and limits
+that can be tightened.
+
 ## The checker
 
 `libc_size_check.py objects` reads a manifest of entrypoint objects, runs
