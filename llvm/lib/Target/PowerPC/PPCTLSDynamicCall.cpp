@@ -23,7 +23,6 @@
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -328,20 +327,14 @@ public:
     }
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<LiveIntervalsWrapperPass>();
-      AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
 }
 
-INITIALIZE_PASS_BEGIN(PPCTLSDynamicCall, DEBUG_TYPE,
-                      "PowerPC TLS Dynamic Call Fixup", false, false)
-INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_END(PPCTLSDynamicCall, DEBUG_TYPE,
-                    "PowerPC TLS Dynamic Call Fixup", false, false)
+INITIALIZE_PASS(PPCTLSDynamicCall, DEBUG_TYPE, "PowerPC TLS Dynamic Call Fixup",
+                false, false)
 
 char PPCTLSDynamicCall::ID = 0;
 FunctionPass*
