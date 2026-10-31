@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -26,16 +26,16 @@ static LogicalResult createDependencyFile(StringRef outputFilename,
     return failure();
   }
 
-  std::string errorMessage;
-  std::unique_ptr<llvm::ToolOutputFile> outputFile =
-      openOutputFile(dependencyFile, &errorMessage);
-  if (!outputFile) {
-    llvm::errs() << errorMessage << "\n";
+  std::error_code ec;
+  llvm::ToolOutputFile outputFile(dependencyFile, ec, llvm::sys::fs::OF_None);
+  if (ec) {
+    llvm::errs() << "cannot open output file '" << dependencyFile
+                 << "': " << ec.message() << "\n";
     return failure();
   }
 
-  outputFile->os() << outputFilename << ":\n";
-  outputFile->keep();
+  outputFile.os() << outputFilename << ":\n";
+  outputFile.keep();
   return success();
 }
 
@@ -76,11 +76,11 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   // Open the input file.
-  std::string errorMessage;
-  std::unique_ptr<llvm::MemoryBuffer> inputFile =
-      openInputFile(inputFilename, &errorMessage);
-  if (!inputFile) {
-    llvm::errs() << errorMessage << "\n";
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> inputFile =
+      llvm::MemoryBuffer::getFileOrSTDIN(inputFilename);
+  if (std::error_code ec = inputFile.getError()) {
+    llvm::errs() << "cannot open input file '" << inputFilename
+                 << "': " << ec.message() << "\n";
     return 1;
   }
 
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
   std::string outputStr;
   llvm::raw_string_ostream os(outputStr);
   os << "#define GET_OP_DEFS_" << opShardIndex << "\n"
-     << inputFile->getBuffer();
+     << (*inputFile)->getBuffer();
 
   // Determine whether we need to write the output file.
   bool shouldWriteOutput = true;
@@ -104,14 +104,15 @@ int main(int argc, char **argv) {
 
   // Populate the output file if necessary.
   if (shouldWriteOutput) {
-    std::unique_ptr<llvm::ToolOutputFile> outputFile =
-        openOutputFile(outputFilename, &errorMessage);
-    if (!outputFile) {
-      llvm::errs() << errorMessage << "\n";
+    std::error_code ec;
+    llvm::ToolOutputFile outputFile(outputFilename, ec, llvm::sys::fs::OF_None);
+    if (ec) {
+      llvm::errs() << "cannot open output file '" << outputFilename
+                   << "': " << ec.message() << "\n";
       return 1;
     }
-    outputFile->os() << os.str();
-    outputFile->keep();
+    outputFile.os() << os.str();
+    outputFile.keep();
   }
 
   // Always write the depfile, even if the main output hasn't changed. If it's
