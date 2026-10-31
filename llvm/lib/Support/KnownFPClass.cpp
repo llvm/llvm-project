@@ -1241,9 +1241,11 @@ KnownFPClass KnownFPClass::fptrunc(const KnownFPClass &KnownSrc,
                    getConvertDenormalMode(DstMode, SrcMode));
 }
 
-KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
+KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc_,
                                            bool MayBeMultiUnitFPType,
                                            DenormalMode Mode) {
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+
   KnownFPClass Known;
 
   // Integer results cannot be subnormal.
@@ -1251,7 +1253,10 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
 
   Known.propagateNonNaN(KnownSrc);
 
-  // Pass through infinities, except PPC_FP128 is a special case for intrinsics.
+  // Pass through infinities, except PPCDoubleDouble is a special case for
+  // intrinsics. While it is possible to refine +-inf results for
+  // PPCDoubleDouble (roundToIntegral(positive) cannot be -inf for example), it
+  // is not worth implementing for a rarely used type.
   if (!MayBeMultiUnitFPType) {
     if (KnownSrc.isKnownNeverPosInfinity())
       Known.knownNot(fcPosInf);
@@ -1269,46 +1274,116 @@ KnownFPClass KnownFPClass::roundToIntegral(const KnownFPClass &KnownSrc,
   if (KnownSrc.isKnownNever(fcNegFinite))
     Known.knownNot(fcNegZero);
 
-  // Negative subnormals may flush to positive zero.
-  if (KnownSrc.isKnownNever(fcPosFinite) &&
-      (KnownSrc.isKnownNever(fcNegSubnormal) ||
-       !Mode.inputsMayBePositiveZero()))
+  if (KnownSrc.isKnownNever(fcPosFinite))
     Known.knownNot(fcPosZero);
 
+  // Output denormal mode does not matter here.
   return Known;
 }
 
-KnownFPClass KnownFPClass::trunc(const KnownFPClass &KnownSrc,
+KnownFPClass KnownFPClass::trunc(const KnownFPClass &KnownSrc_,
                                  DenormalMode Mode) {
-  KnownFPClass Known = roundToIntegral(KnownSrc,
-                                       /*MayBeMultiUnitFPType=*/true, Mode);
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+  KnownFPClass Known;
+  Known.knownNot(fcSubnormal);
+  Known.propagateNonNaN(KnownSrc);
 
-  if (KnownSrc.isKnownNeverPosInfinity())
-    Known.knownNot(fcPosInf);
+  // PPCDoubleDouble will not overflow for trunc as the magnitude never
+  // increases.
+
+  // trunc(x) == -inf iff x == -inf
   if (KnownSrc.isKnownNeverNegInfinity())
     Known.knownNot(fcNegInf);
+
+  // trunc(x) <= -1.0 iff x <= -1.0
+  if (KnownSrc.isKnownNever(fcNegNormal))
+    Known.knownNot(fcNegNormal);
+
+  // trunc(x) == -0.0 iff -1.0 < x <= -0.0
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegZero);
+
+  // trunc(x) == +0.0 iff +0.0 <= x < +1.0
+  if (KnownSrc.isKnownNever(fcPosFinite))
+    Known.knownNot(fcPosZero);
+
+  // trunc(x) >= +1.0 iff x >= +1.0
+  if (KnownSrc.isKnownNever(fcPosNormal))
+    Known.knownNot(fcPosNormal);
+
+  // trunc(x) == +inf iff x == +inf
+  if (KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
 
   return Known;
 }
 
-KnownFPClass KnownFPClass::floor(const KnownFPClass &KnownSrc,
+KnownFPClass KnownFPClass::floor(const KnownFPClass &KnownSrc_,
                                  bool IsMultiUnitFPType, DenormalMode Mode) {
-  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+  KnownFPClass Known;
+  Known.knownNot(fcSubnormal);
+  Known.propagateNonNaN(KnownSrc);
 
-  // Applicable for multi-unit floating point types.
+  // PPCDoubleDouble can overflow to negative infinity. See roundToIntegral for
+  // rationale.
+  if (!IsMultiUnitFPType && KnownSrc.isKnownNeverNegInfinity())
+    Known.knownNot(fcNegInf);
+
+  // floor(x) <= -1.0 iff x < -0.0
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegSubnormal))
+    Known.knownNot(fcNegNormal);
+
+  // floor(x) == -0.0 iff x == -0.0
+  if (KnownSrc.isKnownNever(fcNegZero))
+    Known.knownNot(fcNegZero);
+
+  // floor(x) == +0.0 iff +0.0 <= x < +1.0
+  if (KnownSrc.isKnownNever(fcPosFinite))
+    Known.knownNot(fcPosZero);
+
+  // floor(x) >= +1.0 iff x >= +1.0
+  if (KnownSrc.isKnownNever(fcPosNormal))
+    Known.knownNot(fcPosNormal);
+
+  // floor(x) == +inf iff x == +inf
   if (KnownSrc.isKnownNeverPosInfinity())
     Known.knownNot(fcPosInf);
 
   return Known;
 }
 
-KnownFPClass KnownFPClass::ceil(const KnownFPClass &KnownSrc,
+KnownFPClass KnownFPClass::ceil(const KnownFPClass &KnownSrc_,
                                 bool IsMultiUnitFPType, DenormalMode Mode) {
-  KnownFPClass Known = roundToIntegral(KnownSrc, IsMultiUnitFPType, Mode);
+  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
+  KnownFPClass Known;
+  Known.knownNot(fcSubnormal);
+  Known.propagateNonNaN(KnownSrc);
 
-  // Applicable for multi-unit floating point types.
+  // ceil(x) == -inf iff x == -inf
   if (KnownSrc.isKnownNeverNegInfinity())
     Known.knownNot(fcNegInf);
+
+  // ceil(x) <= -1.0 iff x <= -1.0
+  if (KnownSrc.isKnownNever(fcNegNormal))
+    Known.knownNot(fcNegNormal);
+
+  // ceil(x) == -0.0 iff -1.0 < x <= -0.0
+  if (KnownSrc.isKnownNever(fcNegFinite))
+    Known.knownNot(fcNegZero);
+
+  // ceil(x) == +0.0 iff x == +0.0
+  if (KnownSrc.isKnownNever(fcPosZero))
+    Known.knownNot(fcPosZero);
+
+  // ceil(x) >= +1.0 iff x > +0.0
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosSubnormal))
+    Known.knownNot(fcPosNormal);
+
+  // PPCDoubleDouble can overflow to positive infinity. See roundToIntegral for
+  // rationale.
+  if (!IsMultiUnitFPType && KnownSrc.isKnownNeverPosInfinity())
+    Known.knownNot(fcPosInf);
 
   return Known;
 }
