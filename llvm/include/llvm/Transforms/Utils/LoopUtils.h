@@ -46,6 +46,7 @@ class LPPassManager;
 class Instruction;
 struct RuntimeCheckingPtrGroup;
 class ConditionalInductionDescriptor;
+class EarliestEscapeAnalysis;
 
 typedef std::pair<const RuntimeCheckingPtrGroup *,
                   const RuntimeCheckingPtrGroup *>
@@ -151,6 +152,7 @@ struct SinkAndHoistDependencies {
   AAResults &AA;
   DominatorTree &DT;
   MemorySSAUpdater &MSSAU;
+  EarliestEscapeAnalysis &EEA;
   OptimizationRemarkEmitter *ORE;
 };
 
