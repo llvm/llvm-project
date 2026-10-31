@@ -12445,12 +12445,11 @@ The location of memory pointed to is loaded. If the value being loaded
 is of scalar type then the number of bytes read does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
 example, loading an `i24` reads at most three bytes. When loading a
-value of a type like `i20` with a size that is not an integral number
-of bytes, the load will be performed on the next larger multiple of the byte
-size (here `i24`) and truncated. If any of the truncated bits are non-zero,
-the result is a poison value. As such, a non-byte-sized load behaves like a
-byte-sized load followed by a `trunc nuw` operation. Especially, a load with
-non-byte-sized byte type doesn't check the truncated bits.
+non-byte-sized scalar or vector value, the load is performed on the next
+larger multiple of the byte size, reading a value of byte type. If any
+padding bit is non-zero or poison, all value bits in the byte containing that
+padding become poison. Then, the value bits are extracted from bit 0 using
+`bitextract`, and the extracted value is finally `bitcast` to the loaded type.
 
 If the value being loaded is of aggregate type, the bytes that correspond to
 padding may be accessed but are ignored, because it is impossible to observe
@@ -12544,13 +12543,12 @@ The contents of memory are updated to contain `<value>` at the
 location specified by the `<pointer>` operand. If `<value>` is
 of scalar type then the number of bytes written does not exceed the
 minimum number of bytes needed to hold all bits of the type. For
-example, storing an `i24` writes at most three bytes. When writing a
-value of a type like `i20` with a size that is not an integral number
-of bytes, the value will be zero extended to the next larger multiple of the
-byte size (here `i24`) and then stored. As such, a non-byte-sized store
-behaves like a `zext` followed by a byte-sized store. Especially, a store with
-a non-byte-sized byte value fills the extended bits with poison if and only if
-the value is a {ref}`poison value <poisonvalues>`.
+example, storing an `i24` writes at most three bytes. When storing a
+non-byte-sized scalar or vector value, the value is first `bitcast` to a
+scalar byte type and inserted at bit 0 into a byte type with the next
+larger byte size using `bitinsert`, and the resulting byte-sized value is
+stored. The padding bits are poison if every bit of the value is poison;
+otherwise, they are zero.
 
 If `<value>` is of aggregate type, padding is filled with
 {ref}`undef <undefvalues>`.

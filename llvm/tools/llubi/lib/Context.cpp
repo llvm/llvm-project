@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Context.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/MathExtras.h"
@@ -520,8 +521,15 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     if (IsTagValid) {
       assert((LogicalByte.TagMask & LogicalByte.ConcreteMask) ==
              LogicalByte.TagMask);
-      if ((LogicalByte.TagMask & Mask) == Mask) {
-        uint8_t ActualTagBits = LogicalByte.TagValue & Mask;
+      // Only the pointer value bits in this chunk need tags; padding bits are
+      // not part of the pointer.
+      uint32_t ValueBitsInByte = std::min(NumBitsInByte, NumBits - I);
+      uint8_t TagBitsMask =
+          ValueBitsInByte == 8
+              ? 255
+              : static_cast<uint8_t>((1U << ValueBitsInByte) - 1);
+      if ((LogicalByte.TagMask & TagBitsMask) == TagBitsMask) {
+        uint8_t ActualTagBits = LogicalByte.TagValue & TagBitsMask;
         RawTagBits[I / WordBits] |= static_cast<APInt::WordType>(ActualTagBits)
                                     << (I % WordBits);
       } else {
@@ -538,12 +546,13 @@ AnyValue Context::fromBytes(ConstBytesView Bytes, Type *Ty,
     if (DL.isBigEndian())
       std::reverse(LogicalBytes.begin(), LogicalBytes.end());
     return ByteValue(NumBits, std::move(LogicalBytes), DL.isLittleEndian(),
-                     /*ImplicitClearHighBits=*/true);
+                     ByteValue::PaddingBitsMode::Unspecified);
   }
 
   APInt Bits(NumBitsToExtract, RawBits);
 
-  // Padding bits for non-byte-sized scalar types must be zero.
+  // Padding bits are not part of the value. If any padding bit is non-zero,
+  // the result is poison.
   if (NeedsPadding) {
     if (!Bits.isIntN(NumBits)) {
       if (ContainsUndefinedBits)
@@ -577,15 +586,15 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
   if (Ty->isByteTy()) {
     unsigned BitWidth = Ty->getByteBitWidth();
     ByteValue Res(BitWidth, Bytes, DL.isLittleEndian(),
-                  /*ImplicitClearHighBits=*/true);
+                  ByteValue::PaddingBitsMode::Memory);
     bool HasUndefinedBits = false;
     for (Byte &V : Res.mutableBytes()) {
       if (V.ConcreteMask != 255)
         HasUndefinedBits = true;
       V.poisonBits(~V.ConcreteMask);
     }
-    if (ContainsUndefinedBits)
-      *ContainsUndefinedBits = HasUndefinedBits;
+    if (ContainsUndefinedBits && HasUndefinedBits)
+      *ContainsUndefinedBits = true;
     return AnyValue(std::move(Res));
   }
 
@@ -596,17 +605,29 @@ AnyValue Context::fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
     // Check padding bits. <N x iM> acts as if an integer type with N * M bits.
     uint32_t VecBits = ElemBits * NumElements;
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
-    ConstBytesView View(Bytes, DL);
+    // Temporarily modify the padding byte in place to avoid copying Bytes; it
+    // is restored after reading the elements.
+    Byte *Data = const_cast<Byte *>(Bytes.data());
+    uint32_t PaddingByteIndex = DL.isLittleEndian() ? Bytes.size() - 1 : 0;
+    Byte SavedPaddingByte;
+    bool ModifiedPaddingByte = false;
+    llvm::scope_exit RestorePaddingByte([&] {
+      if (ModifiedPaddingByte)
+        Data[PaddingByteIndex] = SavedPaddingByte;
+    });
     if (VecBits != AlignedVecBits) {
-      const Byte &PaddingByte = View[Bytes.size() - 1];
-      uint32_t Mask = (~0U << (VecBits % 8)) & 255U;
-      // Make sure all high padding bits are zero.
-      if ((PaddingByte.ConcreteMask & ~PaddingByte.Value & Mask) != Mask) {
+      uint8_t PaddingMask = static_cast<uint8_t>((~0U) << (VecBits & 7));
+      Byte &PaddingByte = Data[PaddingByteIndex];
+      if (!PaddingByte.areBitsFilledWithZeroOrPoison(PaddingMask,
+                                                     /*IsPoison=*/false)) {
+        SavedPaddingByte = PaddingByte;
+        PaddingByte.poisonBits(static_cast<uint8_t>(~PaddingMask));
+        ModifiedPaddingByte = true;
         if (ContainsUndefinedBits)
           *ContainsUndefinedBits = true;
-        return AnyValue::getPoisonValue(*this, Ty);
       }
     }
+    ConstBytesView View(Bytes, DL);
 
     std::vector<AnyValue> ValVec;
     ValVec.reserve(NumElements);
@@ -756,7 +777,17 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     auto &ByteVal = Val.asByte();
     ArrayRef<Byte> SrcBytes = ByteVal.bytes();
     assert(Bytes.size() == SrcBytes.size() && "Mismatched byte array.");
+    if (ByteVal.isAllBitsPoison()) {
+      fill(Bytes, Byte::poison());
+      return;
+    }
     copy(SrcBytes, Bytes.begin());
+    unsigned BitWidth = Ty->getByteBitWidth();
+    if (BitWidth & 7) {
+      uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+      Byte &MSB = DL.isLittleEndian() ? Bytes.back() : Bytes.front();
+      MSB.zeroBits(Mask);
+    }
     return;
   }
 
@@ -764,6 +795,13 @@ void Context::toBytes(const AnyValue &Val, Type *Ty,
     Type *ElemTy = VecTy->getElementType();
     uint32_t ElemBits = DL.getTypeSizeInBits(ElemTy).getFixedValue();
     uint32_t NumElements = getEVL(VecTy->getElementCount());
+    if (Val.isPoison() || all_of(Val.asAggregate(), [](const AnyValue &Elem) {
+          return Elem.isPoison() ||
+                 (Elem.isByte() && Elem.asByte().isAllBitsPoison());
+        })) {
+      fill(Bytes, Byte::poison());
+      return;
+    }
     // Zero padding bits. <N x iM> acts as if an integer type with N * M bits.
     uint32_t VecBits = ElemBits * NumElements;
     uint32_t AlignedVecBits = alignTo(VecBits, 8);
@@ -838,7 +876,7 @@ void Context::insertBits(ByteValue &Base, uint32_t OffsetInBits,
          "Bit range out of bounds");
   toBytes(Val, Ty, OffsetInBits, MutableBytesView(Base.mutableBytes(), DL),
           /*PaddingBits=*/false);
-  Base.clearHighBits();
+  Base.canonicalize(ByteValue::PaddingBitsMode::Unspecified);
 }
 
 AnyValue Context::load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
@@ -904,6 +942,7 @@ void Context::freeze(AnyValue &Val, Type *Ty) {
       uint8_t Mask = static_cast<uint8_t>((~0U) << (NumBits & 7));
       MSB.zeroBits(Mask);
     }
+    Val.asMutableByte().canonicalize(ByteValue::PaddingBitsMode::Unspecified);
     return;
   }
   if (Val.isAggregate()) {

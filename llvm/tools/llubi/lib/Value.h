@@ -117,9 +117,11 @@ struct Byte {
                 static_cast<uint8_t>(TagValue << Shift)};
   }
 
+  /// Padding bits may carry pointer provenance. Only require their value bits
+  /// to be concrete zero, or non-concrete for poison.
   bool areBitsFilledWithZeroOrPoison(uint8_t Mask, bool IsPoison) const {
     return (ConcreteMask & Mask) == (IsPoison ? 0 : Mask) &&
-           (Value & Mask) == 0 && (TagMask & Mask) == 0;
+           (Value & Mask) == 0;
   }
 };
 
@@ -248,17 +250,18 @@ public:
 class ByteValue {
   // The byte order is endianness-dependent.
   std::vector<Byte> Val;
-  uint32_t BitWidth : 31;
+  uint32_t BitWidth : 30;
   uint32_t IsLittleEndian : 1;
+  uint32_t IsAllBitsPoison : 1;
 
   // Note that we don't have undef bits in byte values.
   // The only exception is Context::fromBytes will convert undef bits
   // into poison bits after the construction.
-  bool shouldFillWithPoison() const {
-    assert((BitWidth & 7) != 0 && "It is meaningless for byte-sized values.");
-    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+  void updateAllBitsPoison() {
+    uint8_t Mask =
+        (BitWidth & 7) != 0 ? static_cast<uint8_t>((~0U) << (BitWidth & 7)) : 0;
     const Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
-    return all_of(this->Val, [&](const Byte &V) {
+    IsAllBitsPoison = all_of(this->Val, [&](const Byte &V) {
       if (&V == &MSB)
         return (V.ConcreteMask & ~Mask) == 0;
       return V.ConcreteMask == 0;
@@ -266,21 +269,30 @@ class ByteValue {
   }
 
 public:
+  enum class PaddingBitsMode {
+    // The input padding bits are already canonical.
+    Canonical,
+    // The input padding bits are unspecified and will be overwritten.
+    Unspecified,
+    // The input padding bits come from memory. If they are not concrete zero,
+    // poison the value bits in the most significant byte.
+    Memory,
+  };
+
   ByteValue(const APInt &V, bool IsLittleEndian);
   ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
-            bool ImplicitClearHighBits = false)
-      : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian,
-                  ImplicitClearHighBits) {}
+            PaddingBitsMode Mode = PaddingBitsMode::Canonical)
+      : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian, Mode) {}
   ByteValue(uint32_t BitWidth, std::vector<Byte> Val, bool IsLittleEndian,
-            bool ImplicitClearHighBits = false)
-      : Val(std::move(Val)), BitWidth(BitWidth),
-        IsLittleEndian(IsLittleEndian) {
-    if (ImplicitClearHighBits)
-      clearHighBits();
-    else
-      assert(isValid() &&
-             "The caller is responsible to fill high bits for non-byte-sized "
-             "values.");
+            PaddingBitsMode Mode = PaddingBitsMode::Canonical)
+      : Val(std::move(Val)), BitWidth(BitWidth), IsLittleEndian(IsLittleEndian),
+        IsAllBitsPoison(false) {
+    if (Mode == PaddingBitsMode::Canonical) {
+      updateAllBitsPoison();
+      assert(isValid() && "Input padding bits must be canonical.");
+    } else {
+      canonicalize(Mode);
+    }
   }
   ByteValue(const ByteValue &) = default;
   ByteValue(ByteValue &&) = default;
@@ -293,27 +305,38 @@ public:
 
   uint32_t getBitWidth() const { return BitWidth; }
   ArrayRef<Byte> bytes() const { return Val; }
-  /// The caller should call clearHighBits after mutation.
+  /// The caller should call canonicalize after mutation.
   MutableArrayRef<Byte> mutableBytes() { return Val; }
 
-  // Fill high bits with poison iff the byte value is poison.
-  void clearHighBits() {
-    if ((BitWidth & 7) == 0)
+  // Handle incoming padding bits according to \p Mode, update the cached
+  // all-poison state, and fill padding bits based on that state.
+  void canonicalize(PaddingBitsMode Mode) {
+    assert(Mode != PaddingBitsMode::Canonical &&
+           "Canonical padding bits should not be canonicalized.");
+    if ((BitWidth & 7) == 0) {
+      updateAllBitsPoison();
       return;
+    }
     uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
     Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
-    if (shouldFillWithPoison())
+    if (Mode == PaddingBitsMode::Memory &&
+        !MSB.areBitsFilledWithZeroOrPoison(Mask, /*IsPoison=*/false))
+      MSB = Byte::poison();
+    updateAllBitsPoison();
+    if (IsAllBitsPoison)
       MSB.poisonBits(Mask);
     else
       MSB.zeroBits(Mask);
   }
+
+  bool isAllBitsPoison() const { return IsAllBitsPoison; }
 
   bool isValid() const {
     if ((BitWidth & 7) == 0)
       return true;
     uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
     const Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
-    return MSB.areBitsFilledWithZeroOrPoison(Mask, shouldFillWithPoison());
+    return MSB.areBitsFilledWithZeroOrPoison(Mask, IsAllBitsPoison);
   }
 
   void print(Context &Ctx, raw_ostream &OS) const;
