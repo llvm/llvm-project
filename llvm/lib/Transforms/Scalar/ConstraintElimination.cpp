@@ -595,6 +595,19 @@ static bool doesHoldInRange(ConstraintInfo &Info, Value *Op,
   return true;
 }
 
+static bool isKnownNoWrap(Value *V, ConstraintInfo &Info, bool Signed);
+
+/// Returns the first operand of \p X if it is a sub of \p Y, i.e. Z - Y for
+/// X = op(Z - Y, ...), and nullptr otherwise.
+static BinaryOperator *getFirstOperandSubtracting(Value *X, Value *Y) {
+  BinaryOperator *D;
+  if (match(X,
+            m_BinOp(m_CombineAnd(m_BinOp(D), m_Sub(m_Value(), m_Specific(Y))),
+                    m_Value())))
+    return D;
+  return nullptr;
+}
+
 /// Returns true if \p Opcode applied to \p Op0 and \p Op1 with \p NoWrapFlags
 /// is known to not wrap in signed or unsigned, depending on \p Signed.
 static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
@@ -604,6 +617,15 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
 
   if (NoWrapFlags & (Signed ? OBO::NoSignedWrap : OBO::NoUnsignedWrap))
     return true;
+
+  // X + Y does not wrap unsigned if X = op(D, W) <=u D for D = Z - Y, and D
+  // does not wrap unsigned.
+  if (Opcode == Instruction::Add && !Signed)
+    for (auto [X, Y] : {std::pair(Op0, Op1), std::pair(Op1, Op0)})
+      if (BinaryOperator *D = getFirstOperandSubtracting(X, Y))
+        if (isKnownNoWrap(D, Info, /*Signed=*/false) &&
+            Info.doesHold(CmpInst::ICMP_ULE, X, D))
+          return true;
 
   if (Opcode == Instruction::Sub) {
     // Op0 - Op1 does not wrap unsigned if Op0 >=u Op1.
