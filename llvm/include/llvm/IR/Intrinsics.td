@@ -2547,7 +2547,7 @@ def int_public_type_test : DefaultAttrsIntrinsic<[llvm_i1_ty],
 
 // Create a branch funnel that implements an indirect call to a limited set of
 // callees. This needs to be a musttail call.
-def int_icall_branch_funnel : DefaultAttrsIntrinsic<[], [llvm_vararg_ty], []>;
+def int_icall_branch_funnel : Intrinsic<[], [llvm_vararg_ty], [Throws]>;
 
 def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty],
                                  [llvm_ptr_ty, llvm_any_scalar_int_ty],
