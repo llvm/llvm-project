@@ -27,7 +27,10 @@ add_clang_library(MLIRCIR
   DEPENDS
   MLIRCIROpsShardGen
   MLIRCIRDialectBytecodeIncGen
+  MLIRCIRTypeConstraintsIncGen
   MLIRCIREnumsGen
+  MLIRCIROpInterfacesIncGen
+  MLIRCIRLoopOpInterfaceIncGen
   mlir-headers
 
   LINK_COMPONENTS

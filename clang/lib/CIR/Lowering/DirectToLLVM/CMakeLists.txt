@@ -12,6 +12,8 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   DEPENDS
   CIRLowering
   MLIRCIREnumsGen
+  MLIRCIROpInterfacesIncGen
+  MLIRCIROpsIncGen
   MLIRCIRPassIncGen
   mlir-headers
 
