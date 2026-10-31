@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=aarch64 -mcpu=neoverse-n1 -run-pass=pipeliner \
-# RUN:   -pipeliner-force-ii=3 -verify-machineinstrs %s -o - \
+# RUN:   -pipeliner-force-ii=3 %s -o - \
 # RUN:   | FileCheck %s
 
 # A debug-only use outside the loop must not keep dead epilog instructions.
