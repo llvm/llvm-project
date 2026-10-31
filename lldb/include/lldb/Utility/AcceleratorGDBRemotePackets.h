@@ -139,11 +139,17 @@ struct AcceleratorActions {
   std::string session_name;
   /// Unique identifier for this action within the plugin.
   int64_t identifier = 0;
+  /// Stop identifier from the accelerator process's GDB server. The
+  /// wait-for-resume action below uses this to refer to a specific stop.
+  std::optional<uint32_t> stop_id;
   /// New breakpoints to set. Nothing to set if this is empty.
   std::vector<AcceleratorBreakpointInfo> breakpoints;
   /// If set, the client should create a new target and connect to the
   /// accelerator GDB server described here.
   std::optional<AcceleratorConnectionInfo> connect_info;
+  /// Request that the client wait for the accelerator process to resume from
+  /// stop_id.
+  bool wait_for_accelerator_process_to_resume = false;
 };
 
 bool fromJSON(const llvm::json::Value &value, AcceleratorActions &data,
