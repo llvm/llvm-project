@@ -237,7 +237,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     if (const auto *BO = dyn_cast<BinaryOperator>(S))
       return BO->getOpcodeStr().str();
     if (const auto *UO = dyn_cast<UnaryOperator>(S))
-      return UnaryOperator::getOpcodeStr(UO->getOpcode()).str();
+      return UO->getOpcodeStr().str();
     if (const auto *CCO = dyn_cast<CXXConstructExpr>(S))
       return CCO->getConstructor()->getNameAsString();
     if (const auto *CTE = dyn_cast<CXXThisExpr>(S)) {
