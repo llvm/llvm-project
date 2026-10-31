@@ -188,6 +188,7 @@ PipelineTuningOptions::PipelineTuningOptions(
   UnifiedLTO = false;
   MergeFunctions = Opts.enable_merge_functions;
   InlinerThreshold = -1;
+  MaxDevirtIterations = getMaxDevirtIterations(LibraryOptions);
   EagerlyInvalidateAnalyses = Opts.eagerly_invalidate_analyses;
   DevirtualizeSpeculatively = Opts.enable_devirtualize_speculatively;
 }
@@ -868,7 +869,7 @@ PassBuilder::buildInlinerPipeline(OptimizationLevel Level,
   ModuleInlinerWrapperPass MIWP(IP, Opts.mandatory_inlining_first,
                                 InlineContext{Phase, InlinePass::CGSCCInliner},
                                 Opts.enable_ml_inliner,
-                                getMaxDevirtIterations(Context));
+                                PTO.MaxDevirtIterations);
 
   // Require the GlobalsAA analysis for the module so we can query it within
   // the CGSCC pipeline.

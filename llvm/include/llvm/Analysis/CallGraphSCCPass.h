@@ -30,11 +30,15 @@ namespace llvm {
 class CallGraph;
 class CallGraphNode;
 class CallGraphSCC;
-class LLVMContext;
 class PMStack;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
-/// Return -max-devirt-iterations.
-LLVM_ABI unsigned getMaxDevirtIterations(const LLVMContext &C);
+/// Return -max-devirt-iterations of LibraryOptions, or its global value if
+/// null.
+LLVM_ABI unsigned
+getMaxDevirtIterations(const cl::LibraryOptionsContext *LibraryOptions);
 
 class LLVM_ABI CallGraphSCCPass : public Pass {
 public:
