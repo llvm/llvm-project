@@ -4992,6 +4992,23 @@ static Value *simplifySelectWithFCmp(Value *Cond, Value *T, Value *F,
     return nullptr;
   FCmpInst *I = cast<FCmpInst>(Cond);
 
+  Value *X = nullptr;
+  auto FPToISat =
+      m_AnyIntrinsic<Intrinsic::fptosi_sat, Intrinsic::fptoui_sat>();
+  // select (fcmp ord X, 0.0), fpto[su]i.sat(X), 0 --> fpto[su]i.sat(X)
+  if (match(Cond,
+            m_SpecificFCmp(FCmpInst::FCMP_ORD, m_Value(X), m_AnyZeroFP())) &&
+      match(T, m_CombineAnd(FPToISat, m_Argument<0>(m_Specific(X)))) &&
+      match(F, m_Zero()))
+    return T;
+
+  // select (fcmp uno X, 0.0), 0, fpto[su]i.sat(X) --> fpto[su]i.sat(X)
+  if (match(Cond,
+            m_SpecificFCmp(FCmpInst::FCMP_UNO, m_Value(X), m_AnyZeroFP())) &&
+      match(F, m_CombineAnd(FPToISat, m_Argument<0>(m_Specific(X)))) &&
+      match(T, m_Zero()))
+    return F;
+
   bool IsEquiv = I->isEquivalence();
   if (I->isEquivalence(/*Invert=*/true)) {
     std::swap(T, F);
