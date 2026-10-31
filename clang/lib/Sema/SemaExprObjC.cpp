@@ -2959,6 +2959,54 @@ static bool isMethodDeclaredInRootProtocol(Sema &S, const ObjCMethodDecl *M) {
   return false;
 }
 
+/// Whether \p M is a designated initializer the way Swift imports it: marked
+/// as one, or its class marks no designated initializers at all.
+static bool isDesignatedInitializer(const ObjCMethodDecl *M) {
+  if (M->getMethodFamily() != OMF_init)
+    return false;
+  const ObjCInterfaceDecl *Class = M->getClassInterface();
+  if (Class)
+    Class = Class->getDefinition();
+  return Class && (!Class->hasDesignatedInitializers() ||
+                   M->isDesignatedInitializerForTheInterface());
+}
+
+/// Warn when a subclass instance is initialized with its superclass's direct
+/// designated initializer, e.g. [[Child alloc] initWithParent:1]. The subclass
+/// can't override a direct method, so its own initialization never runs.
+static void checkDirectInitOfSubclass(Sema &S, Expr *Receiver,
+                                      QualType ReceiverType,
+                                      const ObjCMethodDecl *Method,
+                                      SourceLocation SelLoc,
+                                      SourceRange RecRange) {
+  if (!isDesignatedInitializer(Method))
+    return;
+
+  // Use the receiver's static type such that a cast to the superclass
+  // silences the warning.
+  const auto *OPT = ReceiverType->getAsObjCInterfacePointerType();
+  if (!OPT)
+    return;
+  const ObjCInterfaceDecl *Class = Method->getClassInterface();
+  const ObjCInterfaceDecl *Subclass = OPT->getInterfaceDecl();
+  if (!Subclass || declaresSameEntity(Class, Subclass) ||
+      !Class->isSuperClassOf(Subclass))
+    return;
+
+  // A designated initializer of the subclass has to chain up through self,
+  // since messaging super with a direct method is an error.
+  if (S.ObjC().isSelfExpr(Receiver)) {
+    const ObjCMethodDecl *CurMethod = S.getCurMethodDecl();
+    if (CurMethod && isDesignatedInitializer(CurMethod))
+      return;
+  }
+
+  S.Diag(SelLoc, diag::warn_objc_direct_init_subclass)
+      << Method->getSelector() << Class << Subclass << RecRange;
+  S.Diag(Method->getLocation(), diag::note_direct_method_declared_at)
+      << Method->getDeclName();
+}
+
 /// Build an Objective-C instance message expression.
 ///
 /// This routine takes care of both normal instance messages and
@@ -3329,6 +3377,10 @@ ExprResult SemaObjC::BuildInstanceMessage(
       Diag(Method->getLocation(), diag::note_direct_method_declared_at)
           << Method->getDeclName();
     }
+
+    if (Receiver && !isImplicit)
+      checkDirectInitOfSubclass(SemaRef, Receiver, ReceiverType, Method, SelLoc,
+                                RecRange);
   } else if (ReceiverType->isObjCIdType() && !isImplicit) {
     Diag(Receiver->getExprLoc(), diag::warn_messaging_unqualified_id);
   }

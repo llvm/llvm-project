@@ -922,6 +922,7 @@ def ObjCPropertyAssignOnObjectType : DiagGroup<"objc-property-assign-on-object-t
 def ObjCProtocolQualifiers : DiagGroup<"objc-protocol-qualifiers">;
 def ObjCMissingSuperCalls : DiagGroup<"objc-missing-super-calls">;
 def ObjCDesignatedInit : DiagGroup<"objc-designated-initializers">;
+def ObjCDirectInitSubclass : DiagGroup<"objc-direct-init-subclass">;
 def ObjCRetainBlockProperty : DiagGroup<"objc-noncopy-retain-block-property">;
 def ObjCReadonlyPropertyHasSetter : DiagGroup<"objc-readonly-with-setter-property">;
 def ObjCInvalidIBOutletProperty : DiagGroup<"invalid-iboutlet">;
