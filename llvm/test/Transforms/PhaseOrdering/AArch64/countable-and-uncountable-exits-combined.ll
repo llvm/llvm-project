@@ -34,14 +34,9 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP0]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 10000, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub nuw nsw i64 10000, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP30:%.*]] = tail call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
-; CHECK-NEXT:    [[DOTSCALAR:%.*]] = shl nuw nsw i64 [[TMP0]], 3
-; CHECK-NEXT:    [[TMP31:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[DOTSCALAR]], i64 0
-; CHECK-NEXT:    [[REASS_ADD:%.*]] = shufflevector <vscale x 4 x i64> [[TMP31]], <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP30]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4 x i8], ptr @c, i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[TMP2]], i64 [[TMP13]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP2]], align 4
@@ -72,7 +67,6 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = tail call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP16]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[REASS_ADD]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -83,8 +77,7 @@ define void @foo() #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> [[TMP3]], i1 false)
 ; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i64 [[TMP4]], [[TMP21]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = select i1 [[DOTNOT]], i64 [[TMP23]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <vscale x 4 x i64> [[VEC_IND]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[TMP29]], [[TMP25]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[TMP11]], 10000
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[EXIT:.*]], label %[[FOR_BODY_PREHEADER]]
 ; CHECK:       [[FOR_BODY_PREHEADER]]:

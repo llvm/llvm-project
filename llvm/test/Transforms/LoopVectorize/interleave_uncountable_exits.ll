@@ -11,8 +11,6 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP1]], align 2
@@ -40,7 +38,6 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP12]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -50,10 +47,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 0, [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = icmp ne i64 [[TMP18]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP20]], i64 [[TMP19]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[VEC_IND]], i64 0
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[STEP_ADD]], i64 -4
-; CHECK-NEXT:    [[TMP25:%.*]] = select i1 false, i64 [[TMP27]], i64 [[TMP26]]
-; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[TMP25]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = add i64 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[TMP9]], 20
 ; CHECK-NEXT:    br i1 [[TMP10]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
@@ -83,9 +77,8 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; VF1IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
-; VF1IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; VF1IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; VF1IC2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[TMP1]]
 ; VF1IC2-NEXT:    [[TMP4:%.*]] = load i16, ptr [[TMP2]], align 2
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP3]], align 2
@@ -98,7 +91,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; VF1IC2-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP11]], true
 ; VF1IC2-NEXT:    br i1 [[TMP10]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_STORE_IF]]:
-; VF1IC2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[INDEX]]
 ; VF1IC2-NEXT:    [[TMP14:%.*]] = load i16, ptr [[TMP13]], align 2
 ; VF1IC2-NEXT:    [[TMP15:%.*]] = add nsw i16 [[TMP14]], 1
 ; VF1IC2-NEXT:    store i16 [[TMP15]], ptr [[TMP13]], align 2
@@ -126,8 +119,7 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; VF1IC2-NEXT:    [[TMP27:%.*]] = add i64 0, [[TMP26]]
 ; VF1IC2-NEXT:    [[TMP28:%.*]] = icmp ne i64 [[TMP26]], 1
 ; VF1IC2-NEXT:    [[TMP29:%.*]] = select i1 [[TMP28]], i64 [[TMP27]], i64 [[TMP24]]
-; VF1IC2-NEXT:    [[TMP30:%.*]] = select i1 false, i64 [[TMP1]], i64 [[TMP0]]
-; VF1IC2-NEXT:    [[TMP31:%.*]] = add i64 [[TMP30]], [[TMP29]]
+; VF1IC2-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], [[TMP29]]
 ; VF1IC2-NEXT:    [[TMP32:%.*]] = icmp eq i64 [[TMP31]], 20
 ; VF1IC2-NEXT:    br i1 [[TMP32]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
 ; VF1IC2:       [[SCALAR_PH]]:
