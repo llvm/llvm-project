@@ -16,5 +16,6 @@
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("sparc-delay-slot-filler", SparcDelaySlotFillerPass())
 MACHINE_FUNCTION_PASS("sparc-isel", SparcDAGToDAGISelPass(*this, getOptLevel()))
 #undef MACHINE_FUNCTION_PASS

@@ -55,7 +55,7 @@ void SparcCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   if (getTM().getCLOpts().enable_branch_relax)
     addMachineFunctionPass(BranchRelaxationPass(), PMW);
 
-  // TODO(boomanaiden154): Add SparcDelaySlotFillerPass
+  addMachineFunctionPass(SparcDelaySlotFillerPass(), PMW);
   // TODO(boomanaiden154): Add SparcInsertNOPLoadPass
   // TODO(boomanaiden154): Add SparcDetectRoundChangePass
   // TODO(boomanaiden154): Add SparcFixAllFDIVSQRTPass

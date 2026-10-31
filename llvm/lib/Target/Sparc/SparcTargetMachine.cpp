@@ -165,7 +165,7 @@ void SparcPassConfig::addPreEmitPass(){
   if (getSparcTargetMachine().getCLOpts().enable_branch_relax)
     addPass(&BranchRelaxationPassID);
 
-  addPass(createSparcDelaySlotFillerPass());
+  addPass(createSparcDelaySlotFillerLegacyPass());
   addPass(new InsertNOPLoad());
   addPass(new DetectRoundChange());
   addPass(new FixAllFDIVSQRT());

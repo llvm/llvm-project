@@ -15,7 +15,10 @@
 #define LLVM_LIB_TARGET_SPARC_SPARC_H
 
 #include "MCTargetDesc/SparcMCTargetDesc.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -34,7 +37,19 @@ public:
 
 FunctionPass *createSparcDAGToDAGISelLegacyPass(SparcTargetMachine &TM,
                                                 CodeGenOptLevel OptLevel);
-FunctionPass *createSparcDelaySlotFillerPass();
+
+class SparcDelaySlotFillerPass
+    : public RequiredPassInfoMixin<SparcDelaySlotFillerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+FunctionPass *createSparcDelaySlotFillerLegacyPass();
 
 void initializeSparcAsmPrinterPass(PassRegistry &);
 void initializeSparcDAGToDAGISelLegacyPass(PassRegistry &);

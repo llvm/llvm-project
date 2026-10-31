@@ -81,6 +81,7 @@
 ; SPARC-NEXT:     xray-instrumentation
 ; SPARC-NEXT:     patchable-function
 ; SPARC-BR-RELAX-NEXT:     branch-relaxation
+; SPARC-NEXT:     sparc-delay-slot-filler
 ; SPARC-NEXT:     funclet-layout
 ; SPARC-NEXT:     remove-loads-into-fake-uses
 ; SPARC-NEXT:     StackMapLivenessPass
