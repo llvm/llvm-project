@@ -8,6 +8,7 @@
 #include "X86ISelLowering.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -72,6 +73,33 @@ protected:
   std::unique_ptr<MachineFunction> MF;
   std::unique_ptr<SelectionDAG> DAG;
 };
+
+TEST_F(X86SelectionDAGTest, BuildVectorZExtPromotedExtract) {
+  // Construct the promoted extract directly: IR lowering can turn its
+  // zero-extension into a mask before this combine runs.
+  FunctionLoweringInfo FuncInfo{};
+  FuncInfo.MBB = MF->CreateMachineBasicBlock(&F->getEntryBlock());
+  MF->push_back(FuncInfo.MBB);
+  DAG->setFunctionLoweringInfo(&FuncInfo);
+  SDLoc Loc;
+  SDValue Vec = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                    Register::index2VirtReg(1), MVT::v8i16);
+  // Integer legalization can promote the extract result without changing the
+  // source vector's element type. Its width must not determine a shuffle mask.
+  SDValue Extract = DAG->getNode(ISD::EXTRACT_VECTOR_ELT, Loc, MVT::i32, Vec,
+                                 DAG->getConstant(0, Loc, MVT::i64));
+  SDValue ZExt = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i64, Extract);
+  SDValue BV =
+      DAG->getBuildVector(MVT::v2i64, Loc, {ZExt, DAG->getUNDEF(MVT::i64)});
+  DAG->setRoot(DAG->getStore(DAG->getEntryNode(), Loc, BV,
+                             DAG->getConstant(0, Loc, MVT::i64),
+                             MachinePointerInfo()));
+
+  DAG->Combine(AfterLegalizeTypes, nullptr, CodeGenOptLevel::Default);
+
+  EXPECT_EQ(DAG->getRoot().getOpcode(), ISD::STORE);
+  DAG->setFunctionLoweringInfo(nullptr);
+}
 
 TEST_F(X86SelectionDAGTest, computeKnownBits_FAND) {
   SDLoc Loc;

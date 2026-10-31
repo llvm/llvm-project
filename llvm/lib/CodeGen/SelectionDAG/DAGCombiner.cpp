@@ -26908,6 +26908,11 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
   // The zero-extend must be a multiple of the source size, and we must be
   // building a vector of the same size as the source of the extract element.
   SDValue Extract = Zext.getOperand(0);
+  EVT VecVT = Extract.getOperand(0).getValueType();
+  // A promoted extract result does not describe the source vector's lanes.
+  if (Extract.getValueType() != VecVT.getVectorElementType())
+    return SDValue();
+
   unsigned DestSize = Zext.getValueSizeInBits();
   unsigned SrcSize = Extract.getValueSizeInBits();
   if (DestSize % SrcSize != 0 ||
@@ -26937,7 +26942,6 @@ static SDValue reduceBuildVecToShuffleWithZero(SDNode *BV, SelectionDAG &DAG) {
   // buildvec undef, ..., (zext (extractelt V, IndexC)), undef... -->
   // bitcast (shuffle V, ZeroVec, VectorMask)
   SDLoc DL(BV);
-  EVT VecVT = Extract.getOperand(0).getValueType();
   SDValue ZeroVec = DAG.getConstant(0, DL, VecVT);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   SDValue Shuf = TLI.buildLegalVectorShuffle(VecVT, DL, Extract.getOperand(0),
