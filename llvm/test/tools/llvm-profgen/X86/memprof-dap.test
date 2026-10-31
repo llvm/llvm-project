@@ -1,0 +1,1239 @@
+## Convert a `perf report -D` dump of SAMPLE data addresses into MemProf DAP.
+# RUN: rm -rf %t && split-file %s %t
+# RUN: not llvm-profgen --binary=%t/does-not-exist --data-access-perftrace=%t/exec.perf \
+# RUN:   --memprof-dap -o %t/out.yaml 2>&1 | FileCheck %s --check-prefix=NEEDBIN
+# NEEDBIN: Input binary({{.*}}) doesn't exist.
+# RUN: yaml2obj %t/exec.yaml -o %t/test.bin
+# RUN: not llvm-profgen --binary=%t/test.bin --memprof-dap -o %t/out.yaml 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NEEDDUMP
+# NEEDDUMP: --memprof-dap requires --data-access-perftrace
+## A stripped binary has no symbol table to find data objects in.
+# RUN: llvm-strip %t/test.bin -o %t/stripped.bin
+# RUN: not llvm-profgen --binary=%t/stripped.bin --data-access-perftrace=%t/exec.perf \
+# RUN:   --memprof-dap -o %t/stripped.out 2>&1 | FileCheck %s --check-prefix=STRIPPED
+# STRIPPED: --memprof-dap requires a symbol table, but {{.*}}stripped.bin has none (stripped?)
+## A SAMPLE line this parser does not recognize must not become an all-cold profile.
+# RUN: not llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/bad-sample.perf --memprof-dap -o %t/bad.out \
+# RUN:   2>&1 | FileCheck %s --check-prefix=BADSAMPLE
+# BADSAMPLE: No PERF_RECORD_SAMPLE line matches a data-access sample
+## No samples must not become an all-cold profile, even with --pid.
+# RUN: not llvm-profgen --binary=%t/test.bin --data-access-perftrace=%t/empty.perf \
+# RUN:   --memprof-dap --pid=100 -o %t/empty.out 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOSAMPLE
+# NOSAMPLE: No PERF_RECORD_SAMPLE line found in data-access trace
+## Zero data addresses provide no usable evidence about object hotness.
+# RUN: not llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/zero-addr.perf --memprof-dap \
+# RUN:   -o %t/zero.profdata 2>&1 | FileCheck %s --check-prefix=ZEROADDR
+# RUN: not llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/zero-pid.perf --memprof-dap --pid=100 \
+# RUN:   -o %t/zero-pid.profdata 2>&1 | FileCheck %s --check-prefix=ZEROADDR
+# ZEROADDR: All {{[0-9]+}} matched data-access samples have a zero data address
+## Valid samples with neither a matching address nor a binary mapping may come
+## from a different binary and must not mark every object cold.
+# RUN: not llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/no-mapping.perf --memprof-dap \
+# RUN:   -o %t/no-mapping.profdata 2>&1 | FileCheck %s --check-prefix=NOMAPPING
+# NOMAPPING: No data-access sample maps to {{.*}}test.bin
+# RUN: llvm-profgen --binary=%t/test.bin --data-access-perftrace=%t/exec.perf \
+# RUN:   --memprof-dap -o %t/exec.profdata
+# RUN: llvm-profdata show --memory %t/exec.profdata | FileCheck %s --check-prefix=EXEC
+## PID 1 mapped this ET_EXEC. PID 2 has no mmap. PID 2's sample is hot_var's
+## preferred VA and must be credited, not treated as known-cold.
+# RUN: llvm-profgen --binary=%t/test.bin --data-access-perftrace=%t/other-pid.perf \
+# RUN:   --memprof-dap -o %t/other-pid.profdata
+# RUN: llvm-profdata show --memory %t/other-pid.profdata \
+# RUN:   | FileCheck %s --check-prefix=OTHERPID
+## An absent PID may use an ET_EXEC preferred VA, but exec or PID reuse makes
+## that old preferred address stale.
+# RUN: llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/exec-replaced.perf --memprof-dap \
+# RUN:   -o %t/exec-replaced.profdata
+# RUN: llvm-profdata show --memory %t/exec-replaced.profdata \
+# RUN:   | FileCheck %s --check-prefix=DROPPED
+# RUN: llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/pid-reused.perf --memprof-dap \
+# RUN:   -o %t/pid-reused.profdata
+# RUN: llvm-profdata show --memory %t/pid-reused.profdata \
+# RUN:   | FileCheck %s --check-prefix=DROPPED
+## Every sample is from a PID with no image, and none is a preferred VA, while
+## another PID mapped the binary. That is not evidence the objects are cold.
+# RUN: not llvm-profgen --binary=%t/test.bin --data-access-perftrace=%t/orphan.perf \
+# RUN:   --memprof-dap -o %t/orphan.profdata 2>&1 | FileCheck %s --check-prefix=ORPHAN
+# ORPHAN: No data-access sample maps to {{.*}}test.bin
+
+# RUN: yaml2obj %t/pie.yaml -o %t/test.bin
+# RUN: llvm-profgen --binary=%t/test.bin --data-access-perftrace=%t/pie.perf \
+# RUN:   --memprof-dap --pid=3446532 -o %t/pie.profdata
+# RUN: llvm-profdata show --memory %t/pie.profdata | FileCheck %s --check-prefix=PIE
+## A mapped image makes an all-cold result meaningful when every sample is in
+## heap, stack, or another object. A sample from another PID with no mapping
+## is not unresolved and must not suppress known-cold.
+# RUN: llvm-profgen --binary=%t/test.bin \
+# RUN:   --data-access-perftrace=%t/mapped-cold.perf --memprof-dap \
+# RUN:   -o %t/mapped-cold.profdata
+# RUN: llvm-profdata show --memory %t/mapped-cold.profdata \
+# RUN:   | FileCheck %s --check-prefix=MAPPEDCOLD
+#
+# RUN: yaml2obj %t/pie-bss.yaml -o %t/pie-bss.bin
+# RUN: llvm-profgen --binary=%t/pie-bss.bin --data-access-perftrace=%t/pie-bss.perf \
+# RUN:   --memprof-dap -o %t/pie-bss.profdata
+# RUN: llvm-profdata show --memory %t/pie-bss.profdata | FileCheck %s --check-prefix=PIEBSS
+
+# RUN: yaml2obj %t/alias.yaml -o %t/alias.bin
+# RUN: llvm-profgen --binary=%t/alias.bin --data-access-perftrace=%t/alias.perf \
+# RUN:   --memprof-dap -o %t/alias.profdata
+# RUN: llvm-profdata show --memory %t/alias.profdata | FileCheck %s --check-prefix=ALIAS
+
+# RUN: yaml2obj %t/lstr.yaml -o %t/lstr.bin
+# RUN: llvm-profgen --binary=%t/lstr.bin --data-access-perftrace=%t/lstr.perf \
+# RUN:   --memprof-dap -o %t/lstr.profdata
+# RUN: llvm-profdata show --memory %t/lstr.profdata | FileCheck %s --check-prefix=LSTR
+
+# RUN: yaml2obj %t/canon.yaml -o %t/canon.bin
+# RUN: llvm-profgen --binary=%t/canon.bin --data-access-perftrace=%t/canon.perf \
+# RUN:   --memprof-dap -o %t/canon.profdata
+# RUN: llvm-profdata show --memory %t/canon.profdata | FileCheck %s --check-prefix=CANON
+
+# RUN: yaml2obj %t/lstr-dup.yaml -o %t/lstr-dup.bin
+# RUN: llvm-profgen --binary=%t/lstr-dup.bin --data-access-perftrace=%t/lstr-dup.perf \
+# RUN:   --memprof-dap -o %t/lstr-dup.profdata
+# RUN: llvm-profdata show --memory %t/lstr-dup.profdata | FileCheck %s --check-prefix=LSTRDUP
+
+# RUN: yaml2obj -DALIGN=0x1000 %t/page-pie.yaml -o %t/page-pie.bin
+# RUN: llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/page-pie.perf \
+# RUN:   --memprof-dap -o %t/page-pie.profdata
+# RUN: llvm-profdata show --memory %t/page-pie.profdata | FileCheck %s --check-prefix=PAGEPIE
+
+## No text mmap. The next PT_LOAD's p_offset sits inside the previous p_memsz.
+## File bytes win; the BSS tail past every p_filesz is still credited.
+# RUN: yaml2obj %t/overlap.yaml -o %t/overlap.bin
+# RUN: llvm-profgen --binary=%t/overlap.bin --data-access-perftrace=%t/overlap.perf \
+# RUN:   --memprof-dap -o %t/overlap.profdata
+# RUN: llvm-profdata show --memory %t/overlap.profdata | FileCheck %s --check-prefix=OVERLAP
+
+## A forked child has no mmaps of its own and inherits the parent's slide, also
+## when only the child is selected. A child that execs another image does not.
+# RUN: llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/fork.perf \
+# RUN:   --memprof-dap -o %t/fork.profdata
+# RUN: llvm-profdata show --memory %t/fork.profdata | FileCheck %s --check-prefix=FORK
+
+## Mappings are per process: a sample is only resolved through its own
+## process's mmaps. A new thread keeps the slide; a reused PID starts clean.
+# RUN: llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/procs.perf \
+# RUN:   --memprof-dap -o %t/procs.profdata
+# RUN: llvm-profdata show --memory %t/procs.profdata | FileCheck %s --check-prefix=PROCS
+
+## A --pid that selects no sample is an error, not an all-cold profile.
+# RUN: not llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/procs.perf \
+# RUN:   --memprof-dap --pid=12345 -o %t/nopid.profdata 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOPID
+
+## Without a text mmap, the file offset comes from the newest mapping that
+## covers the address, not from the loader's whole-image reservation.
+# RUN: llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/reserve.perf \
+# RUN:   --memprof-dap -o %t/reserve.profdata
+# RUN: llvm-profdata show --memory %t/reserve.profdata | FileCheck %s --check-prefix=RESERVE
+## A sample in this binary's mmap that cannot be placed suppresses known-cold.
+# RUN: llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/unresolved.perf \
+# RUN:   --memprof-dap -o %t/unresolved.profdata
+# RUN: llvm-profdata show --memory %t/unresolved.profdata \
+# RUN:   | FileCheck %s --check-prefix=UNRESOLVED
+
+## The kernel prints " (deleted)" after the path of an unlinked image. The
+## basename still has to match this binary.
+# RUN: llvm-profgen --binary=%t/page-pie.bin --data-access-perftrace=%t/deleted.perf \
+# RUN:   --memprof-dap -o %t/deleted.profdata
+# RUN: llvm-profdata show --memory %t/deleted.profdata | FileCheck %s --check-prefix=DELETED
+
+## The profiled binary is a DSO. The same dump also maps the main executable.
+## Only the DSO's data is credited; a sample in the executable is dropped.
+# RUN: yaml2obj %t/dso.yaml -o %t/dso.so
+# RUN: llvm-profgen --binary=%t/dso.so --data-access-perftrace=%t/dso.perf \
+# RUN:   --memprof-dap -o %t/dso.profdata 2>&1 | FileCheck %s --check-prefix=DSOWARN
+# RUN: llvm-profdata show --memory %t/dso.profdata | FileCheck %s --check-prefix=DSO
+
+## The DSO's only spelling is dso_exported.llvm.1. The executable defines
+## dso_exported, so the canonical name is not known-cold. dso_other is only
+## referenced, not defined, there.
+# RUN: yaml2obj %t/main.yaml -o %t/main.bin
+# RUN: sed -e 's|MAIN|%/t/main.bin|' %t/copyreloc.perf > %t/copyreloc.real.perf
+# RUN: llvm-profgen --binary=%t/dso.so --data-access-perftrace=%t/copyreloc.real.perf \
+# RUN:   --memprof-dap -o %t/copyreloc.profdata 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=COPYRELWARN --allow-empty
+# RUN: llvm-profdata show --memory %t/copyreloc.profdata | FileCheck %s --check-prefix=COPYREL
+
+## Another file mapped over the DSO means it was unloaded; later samples at its
+## old addresses are dropped. An anonymous mapping, like BSS, does not unload it.
+# RUN: llvm-profgen --binary=%t/dso.so --data-access-perftrace=%t/dso-unload.perf \
+# RUN:   --memprof-dap -o %t/dso-unload.profdata
+# RUN: llvm-profdata show --memory %t/dso-unload.profdata | FileCheck %s --check-prefix=DSOUNLOAD
+
+## other.so covers only the DSO text page. The data mmap it did not cover must
+## not keep crediting samples after the image is gone.
+# RUN: llvm-profgen --binary=%t/dso.so --data-access-perftrace=%t/dso-stale.perf \
+# RUN:   --memprof-dap -o %t/dso-stale.profdata
+# RUN: llvm-profdata show --memory %t/dso-stale.profdata | FileCheck %s --check-prefix=STALE
+
+## Named symbols are credited by ELF name. `.str*` literals use llvm::MD5Hash of
+## the contents (including the trailing NUL). Here `.rodata` shares the
+## executable PT_LOAD with `.text`. Unsampled data objects are KnownCold.
+## Stack / unknown VAs are dropped.
+# EXEC:      Num hot symbols and string literals: 3
+# EXEC:      Num known cold symbols: 2
+# EXEC:      DataAccessProfiles:
+# EXEC-NEXT:   SampledRecords:
+# EXEC-NEXT:     - Symbol:          hot_var
+# EXEC-NEXT:       AccessCount:     4
+# EXEC-NEXT:     - Hash:            667000227519429140
+# EXEC-NEXT:       AccessCount:     3
+# EXEC-NEXT:     - Symbol:          hot_str
+# EXEC-NEXT:       AccessCount:     1
+# EXEC:        KnownColdSymbols:
+# EXEC-DAG:      - cold_var
+# EXEC-DAG:      - unknown_var
+
+# OTHERPID:      Num hot symbols and string literals: 1
+# OTHERPID:      Num known cold symbols: 3
+# OTHERPID:      Num known cold string literals: 1
+# OTHERPID:      SampledRecords:
+# OTHERPID-NEXT:   - Symbol:          hot_var
+# OTHERPID-NEXT:     AccessCount:     1
+# OTHERPID:        KnownColdSymbols:
+# OTHERPID-DAG:      - cold_var
+# OTHERPID-DAG:      - hot_str
+# OTHERPID-DAG:      - unknown_var
+# OTHERPID:        KnownColdStrHashes: [ 667000227519429140 ]
+
+# DROPPED:      SampledRecords:
+# DROPPED-NEXT:   - Symbol:          hot_var
+# DROPPED-NEXT:     AccessCount:     1
+# DROPPED:        KnownColdSymbols:
+# DROPPED-DAG:      - cold_var
+# DROPPED-DAG:      - hot_str
+# DROPPED-DAG:      - unknown_var
+
+# PIE:       DataAccessProfiles:
+# PIE:         SampledRecords:
+# PIE-NEXT:      - Symbol:          hot_var
+# PIE-NEXT:        AccessCount:     4
+# PIE:           KnownColdSymbols:
+# PIE-NEXT:        - cold_var
+#
+# MAPPEDCOLD:      DataAccessProfiles:
+# MAPPEDCOLD:      KnownColdSymbols:
+# MAPPEDCOLD-DAG:    - cold_var
+# MAPPEDCOLD-DAG:    - hot_var
+#
+## PIE .bss lives past p_filesz. The file-backed mmap does not cover it;
+## canonicalization must use PT_LOAD p_memsz.
+# PIEBSS:      SampledRecords:
+# PIEBSS-NEXT:   - Symbol:          hot_table
+# PIEBSS-NEXT:     AccessCount:     3
+# PIEBSS:        KnownColdSymbols:
+# PIEBSS-NEXT:     - cold_var
+
+## Overlapping aliases: one VA credits every covering symbol. The unnamed
+## symbol covering both variables has no profile key and is skipped.
+# ALIAS:      SampledRecords:
+# ALIAS-DAG:    - Symbol:          hot_alias
+# ALIAS-DAG:      AccessCount:     5
+# ALIAS-DAG:    - Symbol:          hot_var
+# ALIAS-DAG:      AccessCount:     5
+# ALIAS:        KnownColdSymbols:
+# ALIAS-NEXT:     - cold_var
+
+## Clang-style `.L.str` is hashed like `.str`; unsampled literals are KnownCold hashes.
+# LSTR:       SampledRecords:
+# LSTR-NEXT:    - Hash:            667000227519429140
+# LSTR-NEXT:      AccessCount:     2
+# LSTR:         KnownColdStrHashes: [ 4969486738645055141 ]
+
+## `.llvm.` / `.part.` spellings share one canonical key. Counts merge, and an
+## unsampled clone is not also known-cold.
+# CANON:      SampledRecords:
+# CANON-NEXT:   - Symbol:          foo
+# CANON-NEXT:     AccessCount:     3
+# CANON:        KnownColdSymbols:
+# CANON-NEXT:     - bar
+# CANON-NOT:    foo
+# CANON-NOT:    .llvm.
+# CANON-NOT:    .part.
+
+## Two local symbols both named .L.str, different bytes. Sampling one must not
+## drop the other's known-cold hash. 4969486738645055141 is "hot\0";
+## 11668175513417606517 is "cold".
+# LSTRDUP:      Num hot symbols and string literals: 1
+# LSTRDUP:      Num known cold symbols: 0
+# LSTRDUP:      Num known cold string literals: 1
+# LSTRDUP:      SampledRecords:
+# LSTRDUP-NEXT:   - Hash:            4969486738645055141
+# LSTRDUP-NEXT:     AccessCount:     1
+# LSTRDUP:        KnownColdStrHashes: [ 11668175513417606517 ]
+
+## Sub-page p_offset/p_vaddr sharing one file page, mmaps recorded at that page.
+## hot_bss is past p_filesz. Each PID has its own slide.
+# PAGEPIE:      Num hot symbols and string literals: 1
+# PAGEPIE:      Num known cold symbols: 1
+# PAGEPIE:      SampledRecords:
+# PAGEPIE-NEXT:   - Symbol:          hot_bss
+# PAGEPIE-NEXT:     AccessCount:     2
+# PAGEPIE:        KnownColdSymbols:
+# PAGEPIE-NEXT:     - cold_data
+
+## next_data's file offset is inside the previous segment's p_memsz. hot_bss is
+## past every p_filesz. wrap_sym's range does not fit in the address space.
+# OVERLAP:      SampledRecords:
+# OVERLAP-NEXT:   - Symbol:          hot_bss
+# OVERLAP-NEXT:     AccessCount:     1
+# OVERLAP-NEXT:   - Symbol:          next_data
+# OVERLAP-NEXT:     AccessCount:     1
+# OVERLAP-NOT:    wrap_sym
+# OVERLAP:        KnownColdSymbols:
+# OVERLAP-NEXT:     - cold_data
+# OVERLAP-NOT:    wrap_sym
+
+## Only child 101's BSS sample is credited; child 102 ran another image.
+# FORK:      SampledRecords:
+# FORK-NEXT:   - Symbol:          hot_bss
+# FORK-NEXT:     AccessCount:     1
+# FORK:        KnownColdSymbols:
+# FORK-NEXT:     - cold_data
+
+## PID 200's sample and the one after PID 300 is reused are dropped.
+# PROCS:      SampledRecords:
+# PROCS-NEXT:   - Symbol:          cold_data
+# PROCS-NEXT:     AccessCount:     1
+# PROCS-NEXT:   - Symbol:          hot_bss
+# PROCS-NEXT:     AccessCount:     1
+
+# NOPID: error: None of the 4 data-access samples in {{.*}}procs.perf has PID 12345 from --pid
+
+## The BSS sample resolves through p_memsz despite being past p_filesz.
+# RESERVE:      SampledRecords:
+# RESERVE-NEXT:   - Symbol:          hot_bss
+# RESERVE-NEXT:     AccessCount:     1
+# RESERVE:        KnownColdSymbols:
+# RESERVE-NEXT:     - cold_data
+
+# UNRESOLVED:      SampledRecords:
+# UNRESOLVED-NEXT:   - Symbol:          cold_data
+# UNRESOLVED-NEXT:     AccessCount:     1
+# UNRESOLVED-NOT:  KnownColdSymbols:
+
+## " (deleted)" is not part of the binary name.
+# DELETED:      SampledRecords:
+# DELETED-NEXT:   - Symbol:          hot_bss
+# DELETED-NEXT:     AccessCount:     1
+# DELETED:        KnownColdSymbols:
+# DELETED-NEXT:     - cold_data
+
+## DSO data at its runtime load address. The executable sample is not a symbol.
+## The executable in the dump cannot be read, so no unsampled exported variable
+## is known-cold; any of them may have been copy-relocated into it.
+# DSOWARN: warning: cannot read /path/to/main: {{.*}}
+# DSOWARN: warning: no exported variable of dso.so is listed as known-cold
+# DSO:      SampledRecords:
+# DSO-NEXT:   - Symbol:          dso_hot
+# DSO-NEXT:     AccessCount:     2
+# DSO:        KnownColdSymbols:
+# DSO-NEXT:     - dso_cold
+# DSO-NOT:    exe_hot
+# DSO-NOT:    dso_exported
+# DSO-NOT:    dso_other
+
+# COPYRELWARN-NOT: warning: {{.*}}known-cold
+# COPYREL:      SampledRecords:
+# COPYREL-NEXT:   - Symbol:          dso_hot
+# COPYREL-NEXT:     AccessCount:     1
+# COPYREL:        KnownColdSymbols:
+# COPYREL-NEXT:     - dso_cold
+# COPYREL-NEXT:     - dso_other
+# COPYREL-NOT:      dso_exported
+
+## Only the sample before other.so replaced the DSO is credited. No other ELF
+## was recorded, so an exported symbol is not known-cold. dso_cold is hidden.
+# DSOUNLOAD:      SampledRecords:
+# DSOUNLOAD-NEXT:   - Symbol:          dso_hot
+# DSOUNLOAD-NEXT:     AccessCount:     1
+# DSOUNLOAD:        KnownColdSymbols:
+# DSOUNLOAD-NEXT:     - dso_cold
+# DSOUNLOAD-NOT:    dso_exported
+# DSOUNLOAD-NOT:    dso_other
+
+## The foreign mapping covers the text page only. The later data sample is
+## dropped with the rest of the image.
+# STALE:      SampledRecords:
+# STALE-NEXT:   - Symbol:          dso_hot
+# STALE-NEXT:     AccessCount:     1
+# STALE:        KnownColdSymbols:
+# STALE-NEXT:     - dso_cold
+# STALE-NOT:    dso_exported
+# STALE-NOT:    dso_other
+
+#--- exec.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    AddressAlign: 0x10
+    Content:      "9090"
+  - Name:         .rodata
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x401002
+    AddressAlign: 0x1
+    ## "hot\0" at 0x401002, "abc\0" at 0x401006
+    Content:      "686f740061626300"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x403000
+    AddressAlign: 0x4
+    Content:      "0100000002000000"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x403008
+    AddressAlign: 0x4
+    Size:         4
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x401000
+    FirstSec: .text
+    LastSec:  .rodata
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x403000
+    FirstSec: .data
+    LastSec:  .bss
+Symbols:
+  - Name:    _start
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x401000
+    Size:    2
+    Binding: STB_GLOBAL
+  - Name:    hot_str
+    Type:    STT_OBJECT
+    Section: .rodata
+    Value:   0x401002
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    .str.1
+    Type:    STT_OBJECT
+    Section: .rodata
+    Value:   0x401006
+    Size:    4
+    Binding: STB_LOCAL
+  - Name:    hot_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    cold_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403004
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    unknown_var
+    Type:    STT_OBJECT
+    Section: .bss
+    Value:   0x403008
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- exec.perf
+0 0x0 [0x0]: PERF_RECORD_MMAP2
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+## A second load IP to the same data addr still aggregates in DAP.
+0 0x21 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401001 period: 1000 addr: 0x403000
+0 0x22 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x401002
+0 0x40 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x401006
+0 0x50 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x401006
+0 0x60 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x401006
+0 0x70 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x7fffffffe000
+0 0x80 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x0
+0 0x90 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0
+
+#--- pie.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x3000
+    Offset:       0x2000
+    AddressAlign: 0x4
+    Content:      "0100000002000000"
+ProgramHeaders:
+  - Type:     PT_INTERP
+    Flags:    [ PF_R ]
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    Offset:   0x2000
+    VAddr:    0x3000
+    FirstSec: .data
+    LastSec:  .data
+Symbols:
+  - Name:    hot_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x3000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    cold_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x3004
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- pie.perf
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x7f00001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/test.bin
+0 0x7c20 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x7f00003000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/test.bin
+## RELRO records the same data page again, smaller and read-only.
+0 0x7c21 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x7f00003000(0x100) @ 0x2000 08:01 1 0]: r--p /path/to/test.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x7f00001000 period: 1000 addr: 0x7f00003000
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x7f00001000 period: 1000 addr: 0x7f00003000
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x7f00001000 period: 1000 addr: 0x7f00003000
+0 0x40 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x7f00001000 period: 1000 addr: 0x7f00003000
+## Different PID must be ignored when --pid is set.
+0 0x50 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 1/1: 0x7f00001000 period: 1000 addr: 0x7f00003004
+## A malformed text mmap must not wrap the slide and turn 0x2010 into the
+## preferred data VA 0x3000.
+0 0x60 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x10(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/test.bin
+0 0x70 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x10 period: 1000 addr: 0x2010
+
+#--- pie-bss.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x3000
+    Offset:       0x2000
+    AddressAlign: 0x4
+    Content:      "01000000"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x3004
+    AddressAlign: 0x4
+    Size:         4
+ProgramHeaders:
+  - Type:     PT_INTERP
+    Flags:    [ PF_R ]
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    Offset:   0x2000
+    VAddr:    0x3000
+    FileSize: 4
+    MemSize:  8
+    FirstSec: .data
+    LastSec:  .bss
+Symbols:
+  - Name:    hot_table
+    Type:    STT_OBJECT
+    Section: .bss
+    Value:   0x3004
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    cold_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x3000
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- pie-bss.perf
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/pie-bss.bin
+## File-backed mapping is only p_filesz (4 bytes). hot_table is in the BSS tail.
+0 0x7c20 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00003000(0x4) @ 0x2000 08:01 1 0]: rw-p /path/to/pie-bss.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00001000 period: 1000 addr: 0x7f00003004
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00001000 period: 1000 addr: 0x7f00003004
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00001000 period: 1000 addr: 0x7f00003004
+
+#--- alias.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x403000
+    AddressAlign: 0x4
+    Content:      "0100000002000000"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x401000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x403000
+    FirstSec: .data
+    LastSec:  .data
+Symbols:
+  - Name:    ''
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403000
+    Size:    8
+  - Name:    hot_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    hot_alias
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    cold_var
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403004
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- alias.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x40 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x50 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+
+#--- lstr.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .rodata
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x402000
+    AddressAlign: 0x10
+    ## "hot\0" at 0x402000, "abc\0" at 0x402004
+    Content:      "686f740061626300"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x401000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x402000
+    FirstSec: .rodata
+    LastSec:  .rodata
+Symbols:
+  - Name:    '.L.str'
+    Type:    STT_OBJECT
+    Section: .rodata
+    Value:   0x402000
+    Size:    4
+    Binding: STB_LOCAL
+  - Name:    '.L.str.1'
+    Type:    STT_OBJECT
+    Section: .rodata
+    Value:   0x402004
+    Size:    4
+    Binding: STB_LOCAL
+
+#--- lstr.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x402004
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x402004
+
+#--- canon.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x403000
+    AddressAlign: 0x4
+    Content:      "010000000200000003000000040000000500000006000000"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x401000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    VAddr:    0x403000
+    FirstSec: .data
+    LastSec:  .data
+Symbols:
+  - Name:    foo.llvm.1
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    foo.llvm.2
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403004
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    foo.part.1
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403008
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    foo.llvm.3
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x40300c
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    bar
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403010
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    bar.llvm.9
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x403014
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- canon.perf
+## One sample each for foo.llvm.1, foo.llvm.2, and foo.part.1. Each SAMPLE is
+## one access. foo.llvm.3 is not sampled.
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403004
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403008
+
+#--- lstr-dup.yaml
+## yaml2obj rejects a repeated symbol name, so the static table is raw.
+## Both locals are named .L.str (st_name 1) and cover different bytes.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .rodata
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x402000
+    AddressAlign: 0x1
+    ## "hot\0" then "cold". Section index 2.
+    Content:      "686f7400636f6c64"
+  - Name:    .strtab
+    Type:    SHT_STRTAB
+    ## \0 .L.str \0
+    Content: "002E4C2E73747200"
+  - Name:    .symtab
+    Type:    SHT_SYMTAB
+    Link:    .strtab
+    Info:    0x3
+    EntSize: 24
+    ## null, then two STB_LOCAL STT_OBJECT .L.str at 0x402000 and 0x402004.
+    Content: "000000000000000000000000000000000000000000000000010000000100020000204000000000000400000000000000010000000100020004204000000000000400000000000000"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    VAddr:    0x401000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    VAddr:    0x402000
+    FirstSec: .rodata
+    LastSec:  .rodata
+
+#--- lstr-dup.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x402000
+
+#--- page-pie.yaml
+## Three PT_LOADs share file page 0x1000 but land on different virtual pages,
+## matching a packed PIE. perf records each mmap at the page-rounded offset.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .rodata
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC ]
+    Address:      0x2000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    Content:      "01000000"
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x3100
+    Offset:       0x1100
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x4200
+    Offset:       0x1200
+    AddressAlign: 0x4
+    Content:      "02000000"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x4204
+    AddressAlign: 0x4
+    Size:         4
+ProgramHeaders:
+  - Type:     PT_INTERP
+    Flags:    [ PF_R ]
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Align:    [[ALIGN]]
+    Offset:   0x1000
+    VAddr:    0x2000
+    FileSize: 0x10
+    MemSize:  0x10
+    FirstSec: .rodata
+    LastSec:  .rodata
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Align:    [[ALIGN]]
+    Offset:   0x1100
+    VAddr:    0x3100
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    Align:    [[ALIGN]]
+    Offset:   0x1200
+    VAddr:    0x4200
+    FileSize: 4
+    MemSize:  8
+    FirstSec: .data
+    LastSec:  .bss
+Symbols:
+  - Name:    cold_data
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x4200
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    hot_bss
+    Type:    STT_OBJECT
+    Section: .bss
+    Value:   0x4204
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- page-pie.perf
+## Kernel maps every segment at file offset 0x1000 (page rounded). Two PIDs.
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00002000(0x1000) @ 0x1000 08:01 1 0]: r--p /path/to/page-pie.bin
+0 0x7b11 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00003000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/page-pie.bin
+0 0x7b12 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x7b20 [0x88]: PERF_RECORD_MMAP2 200/200: [0x7e00002000(0x1000) @ 0x1000 08:01 1 0]: r--p /path/to/page-pie.bin
+0 0x7b21 [0x88]: PERF_RECORD_MMAP2 200/200: [0x7e00003000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/page-pie.bin
+0 0x7b22 [0x88]: PERF_RECORD_MMAP2 200/200: [0x7e00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00003100 period: 1000 addr: 0x7f00004204
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 200/200: 0x7e00003100 period: 1000 addr: 0x7e00004204
+
+#--- deleted.perf
+0 0x7b11 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00003000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/page-pie.bin (deleted)
+0 0x7b12 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin (deleted)
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00003100 period: 1000 addr: 0x7f00004204
+
+#--- fork.perf
+## The loader reserves the whole image at the first segment's offset, then maps
+## each segment over it. PID 100 forks 101 and 102; 102 then execs another image.
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00002000(0x3000) @ 0x1000 08:01 1 0]: r--p /path/to/page-pie.bin
+0 0x7b11 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00003000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/page-pie.bin
+0 0x7b12 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x7b20 [0x30]: PERF_RECORD_FORK(101:101):(100:100)
+0 0x7b21 [0x30]: PERF_RECORD_FORK(102:102):(100:100)
+0 0x7b22 [0x28]: PERF_RECORD_COMM exec: other:102/102
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 101/101: 0x7f00003100 period: 1000 addr: 0x7f00004204
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 102/102: 0x7f00003100 period: 1000 addr: 0x7f00004204
+
+#--- procs.perf
+## PID 100 maps only the data segment. PID 300 is fully mapped and starts a
+## thread; later PID 300 is reused by a child of an unknown process.
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x7b20 [0x88]: PERF_RECORD_MMAP2 300/300: [0x7e00003000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/page-pie.bin
+0 0x7b21 [0x88]: PERF_RECORD_MMAP2 300/300: [0x7e00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x7b30 [0x30]: PERF_RECORD_FORK(300:301):(300:300)
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 300/301: 0x7e00003100 period: 1000 addr: 0x7e00004204
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00003100 period: 1000 addr: 0x7f00004200
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 200/200: 0x7f00003100 period: 1000 addr: 0x7f00004200
+0 0x7b40 [0x30]: PERF_RECORD_FORK(300:300):(999:999)
+0 0x40 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 300/300: 0x7e00003100 period: 1000 addr: 0x7e00004204
+
+#--- reserve.perf
+## As in fork.perf, but perf did not record the text mapping.
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00002000(0x3000) @ 0x1000 08:01 1 0]: r--p /path/to/page-pie.bin
+0 0x7b12 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00003100 period: 1000 addr: 0x7f00004204
+
+#--- unresolved.perf
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x7b11 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00006000(0x1000) @ 0x9000 08:01 1 0]: rw-p /path/to/page-pie.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00003100 period: 1000 addr: 0x7f00004200
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f00003100 period: 1000 addr: 0x7f00006000
+
+#--- bad-sample.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000
+
+#--- empty.perf
+# No sample records.
+
+#--- zero-addr.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0
+
+#--- zero-pid.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0 period: 1000 addr: 0
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 200/200: 0x401000 period: 1000 addr: 0x403000
+
+#--- no-mapping.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x7fffffffe000
+
+#--- mapped-cold.perf
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x7f00001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/test.bin
+0 0x7c20 [0x88]: PERF_RECORD_MMAP2 3446532/3446532: [0x7f00003000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/test.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 3446532/3446532: 0x7f00001000 period: 1000 addr: 0x7fffffffe000
+## PID 99 never mapped this binary. Its sample is not a preferred VA and must
+## not suppress known-cold for the process that did map it.
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 99/99: 0x7f00001000 period: 1000 addr: 0x7fffffffe000
+## A PIE or DSO preferred VA is not a runtime address without a mapping.
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 99/99: 0x7f00001000 period: 1000 addr: 0x3000
+
+#--- other-pid.perf
+## PID 1 mapped this ET_EXEC. PID 2 has no mmap; its sample is hot_var's
+## preferred VA (0x403000).
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 1/1: [0x403000(0x1000) @ 0 08:01 1 0]: rw-p /path/to/test.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 2/2: 0x401000 period: 1000 addr: 0x403000
+
+#--- exec-replaced.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 2/2: 0x401000 period: 1000 addr: 0x403000
+0 0x20 [0x28]: PERF_RECORD_COMM exec: other:2/2
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 2/2: 0x401000 period: 1000 addr: 0x403000
+
+#--- pid-reused.perf
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 300/300: 0x401000 period: 1000 addr: 0x403000
+0 0x20 [0x30]: PERF_RECORD_FORK(300:300):(999:999)
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 300/300: 0x401000 period: 1000 addr: 0x403000
+
+#--- orphan.perf
+## PID 1 mapped this ET_EXEC. PID 2 has no mmap, and 0x7fffffffe000 is not a
+## preferred PT_LOAD address.
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 1/1: [0x403000(0x1000) @ 0 08:01 1 0]: rw-p /path/to/test.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 2/2: 0x401000 period: 1000 addr: 0x7fffffffe000
+
+#--- overlap.yaml
+## The second PT_LOAD's p_offset (0x1100) is inside the first's p_memsz window
+## [0x1000, 0x2000). hot_bss is past both file sizes, at file offset 0x1200.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x200
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x4000
+    Offset:       0x1100
+    AddressAlign: 0x4
+    Content:      "0100000002000000"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x2200
+    AddressAlign: 0x4
+    Size:         4
+  - Name:         .huge
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0xfffffffffffffff0
+    AddressAlign: 0x1
+    Size:         1
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x200
+    VAddr:    0x1000
+    FileSize: 0x1
+    MemSize:  0x1
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x1000
+    VAddr:    0x2000
+    FileSize: 0x100
+    MemSize:  0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    Offset:   0x1100
+    VAddr:    0x4000
+    FileSize: 0x10
+    MemSize:  0x10
+Symbols:
+  - Name:    hot_bss
+    Type:    STT_OBJECT
+    Section: .bss
+    Value:   0x2200
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    next_data
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x4000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    cold_data
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x4004
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    wrap_sym
+    Type:    STT_OBJECT
+    Section: .huge
+    Value:   0xfffffffffffffff0
+    Size:    32
+    Binding: STB_GLOBAL
+
+#--- overlap.perf
+## Data mmap only. 0x7f00004100 is file offset 0x1100; 0x7f00004200 is 0x1200.
+0 0x7b12 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f00004000(0x1000) @ 0x1000 08:01 1 0]: rw-p /path/to/overlap.bin
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x1000 period: 1000 addr: 0x7f00004100
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x1000 period: 1000 addr: 0x7f00004200
+
+#--- dso-stale.perf
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/dso.so
+0 0x7b20 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01003000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/dso.so
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003000
+0 0x7c10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01001000(0x1000) @ 0 08:01 2 0]: r--p /path/to/other.so
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003004
+
+#--- dso.yaml
+## Shared library. Preferred VAs match pie.yaml; the runtime base does not.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .data
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x3000
+    Offset:       0x2000
+    AddressAlign: 0x4
+    Content:      "01000000020000000300000004000000"
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_X ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    FirstSec: .text
+    LastSec:  .text
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W ]
+    Offset:   0x2000
+    VAddr:    0x3000
+    FirstSec: .data
+    LastSec:  .data
+Symbols:
+  - Name:    dso_hot
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x3000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    dso_cold
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x3004
+    Size:    4
+    Binding: STB_GLOBAL
+    Other:   [ STV_HIDDEN ]
+  - Name:    dso_exported.llvm.1
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x3008
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    dso_other
+    Type:    STT_OBJECT
+    Section: .data
+    Value:   0x300c
+    Size:    4
+    Binding: STB_GLOBAL
+
+#--- main.yaml
+## A non-PIE executable with a copy relocation for dso_exported, which it
+## defines in its dynamic symbol table. It only references dso_other.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    AddressAlign: 0x10
+    Content:      "90"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC, SHF_WRITE ]
+    Address:      0x403000
+    AddressAlign: 0x4
+    Size:         4
+DynamicSymbols:
+  - Name:    dso_exported
+    Type:    STT_OBJECT
+    Section: .bss
+    Value:   0x403000
+    Size:    4
+    Binding: STB_GLOBAL
+  - Name:    dso_other
+    Type:    STT_OBJECT
+    Binding: STB_GLOBAL
+
+#--- copyreloc.perf
+0 0x7a10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x401000(0x1000) @ 0 08:01 1 0]: r-xp MAIN
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/dso.so
+0 0x7b20 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01003000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/dso.so
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003000
+
+#--- dso.perf
+## Main executable, then the DSO at 0x7f01000000. Slide is 0x7f01000000.
+0 0x7a10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x401000(0x1000) @ 0 08:01 1 0]: r-xp /path/to/main
+0 0x7a20 [0x88]: PERF_RECORD_MMAP2 100/100: [0x403000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/main
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/dso.so
+0 0x7b20 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01003000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/dso.so
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003000
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003000
+## This address is the executable's data, not the DSO's.
+0 0x30 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x401000 period: 1000 addr: 0x403000
+
+#--- dso-unload.perf
+0 0x7b10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01001000(0x1000) @ 0x1000 08:01 1 0]: r-xp /path/to/dso.so
+0 0x7b20 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01003000(0x1000) @ 0x2000 08:01 1 0]: rw-p /path/to/dso.so
+0 0x7b30 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01003000(0x1000) @ 0 00:00 0 0]: rw-p //anon
+0 0x10 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003000
+## dlclose, then other.so is loaded into the freed range.
+0 0x7c10 [0x88]: PERF_RECORD_MMAP2 100/100: [0x7f01001000(0x3000) @ 0 08:01 2 0]: r--p /path/to/other.so
+0 0x20 [0x30]: PERF_RECORD_SAMPLE(IP, 0x4002): 100/100: 0x7f01001000 period: 1000 addr: 0x7f01003004
