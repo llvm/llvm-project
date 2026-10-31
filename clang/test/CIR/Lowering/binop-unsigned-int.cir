@@ -41,8 +41,8 @@ module {
     %33 = cir.load %1 : !cir.ptr<!u32i>, !u32i
     %34 = cir.or %32, %33 : !u32i
     cir.store %34, %2 : !u32i, !cir.ptr<!u32i>
-    %35 = cir.add sat %32, %33: !u32i
-    %36 = cir.sub sat %32, %33: !u32i  
+    %35 = cir.add.sat %32, %33: !u32i
+    %36 = cir.sub.sat %32, %33: !u32i  
     %37 = cir.max %32, %33 : !u32i
     %38 = cir.min %32, %33 : !u32i
     cir.return

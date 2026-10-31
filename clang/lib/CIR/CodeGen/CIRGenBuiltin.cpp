@@ -2096,8 +2096,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat: {
-    // cir.add/cir.sub do not model i1 arithmetic, so a bool-element
-    // saturating add/sub is not representable through the saturated op.
+    // cir.add.sat/cir.sub.sat do not accept !cir.bool elements, so a
+    // bool-element saturating add/sub is not representable with them.
     // Bail before emitScalarExpr: an ext-vector-of-bool operand would
     // otherwise hit the NYI bool-vector load, which returns a null value
     // and would crash op0.getType().
@@ -2114,9 +2114,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
            "elementwise saturating add/sub requires integer operands");
     mlir::Value val =
         builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_add_sat
-            ? builder.createAdd(loc, op0, op1, cir::OverflowBehavior::Saturated)
-            : builder.createSub(loc, op0, op1,
-                                cir::OverflowBehavior::Saturated);
+            ? cir::AddSatOp::create(builder, loc, op0, op1).getResult()
+            : cir::SubSatOp::create(builder, loc, op0, op1).getResult();
     return RValue::get(val);
   }
   case Builtin::BI__builtin_elementwise_max: {

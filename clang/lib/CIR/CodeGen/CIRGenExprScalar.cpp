@@ -2070,12 +2070,10 @@ static mlir::Value emitPointerArithmetic(CIRGenFunction &cgf,
     // GEP indexes are signed, and scaling an index isn't permitted to
     // signed-overflow, so we use the same semantics for our explicit
     // multiply.  We suppress this if overflow is not undefined behavior.
-    cir::OverflowBehavior overflowBehavior =
-        cgf.getLangOpts().PointerOverflowDefined
-            ? cir::OverflowBehavior::None
-            : cir::OverflowBehavior::NoSignedWrap;
-    index =
-        cgf.getBuilder().createMul(loc, index, numElements, overflowBehavior);
+    cir::OverflowFlags overflowFlags = cgf.getLangOpts().PointerOverflowDefined
+                                           ? cir::OverflowFlags::none
+                                           : cir::OverflowFlags::nsw;
+    index = cgf.getBuilder().createMul(loc, index, numElements, overflowFlags);
     assert(!cir::MissingFeatures::sanitizers());
     return cir::PtrStrideOp::create(cgf.getBuilder(), loc, pointer.getType(),
                                     pointer, index);
@@ -3260,7 +3258,7 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
               builder.getConstAPInt(numElts.getLoc(), numElts.getType(),
                                     cgf.cgm.getSize(eltSize).getValue());
           return builder.createMul(loc, eltSizeValue, numElts,
-                                   cir::OverflowBehavior::NoUnsignedWrap);
+                                   cir::OverflowFlags::nuw);
         }
 
         return numElts;

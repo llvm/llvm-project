@@ -2831,27 +2831,23 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
   }];
 }
 
-// Base class for binary ops that support integer overflow flags (nsw/nuw)
-// and saturated arithmetic.
+// Integer overflow flags (nsw/nuw) stored as a single bit enum, written as
+// `nuw`, `nsw` or `nuw|nsw`.
+def CIR_OverflowFlagsProp : EnumProp<CIR_OverflowFlags> {
+  let defaultValue = enum.cppType # "::none";
+}
+
+// Base class for integer binary ops that support the nsw/nuw overflow flags.
 class CIR_BinaryOpWithOverflowFlags<string mnemonic, Type type,
                                     list<Trait> traits = []>
     : CIR_BinaryOp<mnemonic, type, !listconcat([Pure], traits)>
 {
-  let arguments = (ins
-    type:$lhs, type:$rhs,
-    UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap,
-    UnitProp:$saturated
-  );
+  let arguments = !con(commonArgs,
+                       (ins CIR_OverflowFlagsProp:$overflow_flags));
 
   let assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
-    (`nuw` $no_unsigned_wrap^)?
-    (`sat` $saturated^)?
-    $lhs `,` $rhs `:` type($lhs) attr-dict
+    ($overflow_flags^)? $lhs `,` $rhs `:` type($lhs) attr-dict
   }];
-
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2866,21 +2862,19 @@ def CIR_AddOp
     operands and the result must have the same integer, vector-of-integer or
     matrix-of-integer type.
 
-    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
-    attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively. The optional `sat` (saturated) attribute
-    clamps the result to the type's representable range instead of wrapping.
-    The `nsw`/`nuw` flags and `sat` are mutually exclusive.
+    The optional `nuw` (no unsigned wrap) and `nsw` (no signed wrap) flags
+    indicate that the result is poison if unsigned or signed overflow occurs,
+    respectively; both may be given as `nuw|nsw`. Saturating addition is
+    `cir.add.sat`.
 
     Example:
 
     ```
     %0 = cir.add %a, %b : !s32i
     %1 = cir.add nsw %a, %b : !s32i
-    %2 = cir.add nuw %a, %b : !u32i
-    %3 = cir.add sat %a, %b : !s32i
-    %4 = cir.add %va, %vb : !cir.vector<4 x !s32i>
-    %5 = cir.add %ma, %mb : !cir.matrix<3 x 3 x !s32i>
+    %2 = cir.add nuw|nsw %a, %b : !s32i
+    %3 = cir.add %va, %vb : !cir.vector<4 x !s32i>
+    %4 = cir.add %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
 }
@@ -2897,18 +2891,17 @@ def CIR_SubOp
     operands and the result must have the same integer, vector-of-integer or
     matrix-of-integer type.
 
-    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
-    attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively. The optional `sat` (saturated) attribute
-    clamps the result to the type's representable range. The `nsw`/`nuw`
-    flags and `sat` are mutually exclusive.
+    The optional `nuw` (no unsigned wrap) and `nsw` (no signed wrap) flags
+    indicate that the result is poison if unsigned or signed overflow occurs,
+    respectively; both may be given as `nuw|nsw`. Saturating subtraction is
+    `cir.sub.sat`.
 
     Example:
 
     ```
     %0 = cir.sub %a, %b : !s32i
     %1 = cir.sub nsw %a, %b : !s32i
-    %2 = cir.sub sat %a, %b : !s32i
+    %2 = cir.sub nuw|nsw %a, %b : !u32i
     %3 = cir.sub %va, %vb : !cir.vector<4 x !s32i>
     %4 = cir.sub %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
@@ -2919,39 +2912,73 @@ def CIR_SubOp
 // MulOp
 //===----------------------------------------------------------------------===//
 
-def CIR_MulOp : CIR_BinaryOp<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
+def CIR_MulOp
+    : CIR_BinaryOpWithOverflowFlags<"mul", CIR_AnyIntOrVecOrMatrixOfIntType> {
   let summary = "Integer multiplication";
   let description = [{
     The `cir.mul` operation performs multiplication on integer operands. Both
     operands and the result must have the same integer or vector-of-integer
     or matrix-of-integer type.
 
-    The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
-    attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively.
+    The optional `nuw` (no unsigned wrap) and `nsw` (no signed wrap) flags
+    indicate that the result is poison if unsigned or signed overflow occurs,
+    respectively; both may be given as `nuw|nsw`.
 
     Example:
 
     ```
     %0 = cir.mul %a, %b : !s32i
     %1 = cir.mul nsw %a, %b : !s32i
-    %2 = cir.mul nuw %a, %b : !u32i
+    %2 = cir.mul nuw|nsw %a, %b : !u32i
     %3 = cir.mul %va, %vb : !cir.vector<4 x !s32i>
     %4 = cir.mul %ma, %mb : !cir.matrix<3 x 3 x !s32i>
     ```
   }];
+}
 
-  let arguments = (ins
-    CIR_AnyIntOrVecOrMatrixOfIntType:$lhs,
-    CIR_AnyIntOrVecOrMatrixOfIntType:$rhs,
-    UnitProp:$no_signed_wrap,
-    UnitProp:$no_unsigned_wrap
-  );
+//===----------------------------------------------------------------------===//
+// AddSatOp
+//===----------------------------------------------------------------------===//
 
-  let assemblyFormat = [{
-    (`nsw` $no_signed_wrap^)?
-    (`nuw` $no_unsigned_wrap^)?
-    $lhs `,` $rhs `:` type($lhs) attr-dict
+def CIR_AddSatOp
+    : CIR_BinaryOp<"add.sat", CIR_AnyIntOrVecOrMatrixOfIntType, [Pure]> {
+  let summary = "Saturating integer addition";
+  let description = [{
+    The `cir.add.sat` operation adds its integer operands and clamps the
+    result to the representable range of the element type instead of
+    wrapping. Whether the clamp is signed or unsigned follows the signedness
+    of the element type. Vector and matrix operands are added elementwise.
+    Both operands and the result must have the same type.
+
+    Example:
+
+    ```
+    %0 = cir.add.sat %a, %b : !s32i
+    %1 = cir.add.sat %va, %vb : !cir.vector<4 x !u8i>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// SubSatOp
+//===----------------------------------------------------------------------===//
+
+def CIR_SubSatOp
+    : CIR_BinaryOp<"sub.sat", CIR_AnyIntOrVecOrMatrixOfIntType, [Pure]> {
+  let summary = "Saturating integer subtraction";
+  let description = [{
+    The `cir.sub.sat` operation subtracts its integer operands and clamps the
+    result to the representable range of the element type instead of
+    wrapping. Whether the clamp is signed or unsigned follows the signedness
+    of the element type. Vector and matrix operands are subtracted
+    elementwise. Both operands and the result must have the same type.
+
+    Example:
+
+    ```
+    %0 = cir.sub.sat %a, %b : !u32i
+    %1 = cir.sub.sat %va, %vb : !cir.vector<4 x !s16i>
+    ```
   }];
 }
 

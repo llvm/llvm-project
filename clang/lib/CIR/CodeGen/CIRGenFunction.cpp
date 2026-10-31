@@ -1619,9 +1619,8 @@ CIRGenFunction::emitArrayLength(const clang::ArrayType *origArrayType,
 
   // If we had any VLA dimensions, factor them in.
   if (numVLAElements)
-    numElements =
-        builder.createMul(numVLAElements.getLoc(), numVLAElements, numElements,
-                          cir::OverflowBehavior::NoUnsignedWrap);
+    numElements = builder.createMul(numVLAElements.getLoc(), numVLAElements,
+                                    numElements, cir::OverflowFlags::nuw);
 
   return numElements;
 }
@@ -1675,9 +1674,8 @@ CIRGenFunction::getVLASize(const VariableArrayType *type) {
       // It's undefined behavior if this wraps around, so mark it that way.
       // FIXME: Teach -fsanitize=undefined to trap this.
 
-      numElements =
-          builder.createMul(numElements.getLoc(), numElements, vlaSize,
-                            cir::OverflowBehavior::NoUnsignedWrap);
+      numElements = builder.createMul(numElements.getLoc(), numElements,
+                                      vlaSize, cir::OverflowFlags::nuw);
     }
   } while ((type = getContext().getAsVariableArrayType(elementType)));
 

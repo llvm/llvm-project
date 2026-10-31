@@ -1,0 +1,27 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+
+cir.func @add_sat_with_flag(%a: !s32i, %b: !s32i) {
+  // expected-error@+1 {{expected SSA operand}}
+  %0 = cir.add.sat nsw %a, %b : !s32i
+  cir.return
+}
+
+// -----
+
+cir.func @sub_sat_bool(%a: !cir.bool, %b: !cir.bool) {
+  // expected-error@+1 {{'cir.sub.sat' op operand #0 must be}}
+  %0 = cir.sub.sat %a, %b : !cir.bool
+  cir.return
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+cir.func @unknown_bit(%a: !s32i, %b: !s32i) {
+  // expected-error@+1 {{property 'overflow_flags' failed to satisfy constraint: integer overflow flags}}
+  %0 = "cir.add"(%a, %b) <{overflow_flags = 4 : i32}> : (!s32i, !s32i) -> !s32i
+  cir.return
+}
