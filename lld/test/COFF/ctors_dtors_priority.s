@@ -4,6 +4,7 @@
 # RUN: llvm-objdump -s %t.exe | FileCheck %s
 
 ## In MSVC mode the second-dot stripping must NOT apply.
+## For LLD on Windows non-standard section names ".llvm." and "llvm_" should NOT be truncated.
 # RUN: lld-link -force:unresolved -entry:main %t.obj -out:%t.msvc.exe
 # RUN: llvm-readobj --section-headers %t.msvc.exe | FileCheck %s --check-prefix=MSVC
 
@@ -54,3 +55,12 @@ main:
 # MSVC: Name: .ctors.0
 # MSVC: Name: .dtors.0
 # MSVC: Name: .dtors.0
+
+.section .llvm.offload.bad, "w"
+.quad 0
+
+.section llvm_offload_bad, "w" 
+.quad 0
+
+# MSVC: Name: .llvm.offload.bad
+# MSVC: Name: llvm_offload_bad
