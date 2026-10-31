@@ -40,6 +40,7 @@
 #include "clang/Sema/SemaProxy.h"
 #include "clang/Sema/Template.h"
 #include "clang/Sema/TemplateDeduction.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -382,6 +383,91 @@ static const Expr *IgnoreNarrowingConversion(ASTContext &Ctx,
   return Converted;
 }
 
+static bool isExactFloatingConversion(llvm::APFloat Value,
+                                      const llvm::fltSemantics &Semantics) {
+  bool Ignored;
+  return Value.isNaN() ||
+         Value.convert(Semantics, llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored) == llvm::APFloat::opOK;
+}
+
+static bool isExactFloatingConversion(const llvm::APSInt &Value,
+                                      const llvm::fltSemantics &Semantics) {
+  llvm::APFloat Result(Semantics);
+  Result.convertFromAPInt(Value, Value.isSigned(),
+                          llvm::APFloat::rmNearestTiesToEven);
+  llvm::APSInt ConvertedValue = Value;
+  bool Ignored;
+  llvm::APFloat::opStatus Status = Result.convertToInteger(
+      ConvertedValue, llvm::APFloat::rmTowardZero, &Ignored);
+  return Status != llvm::APFloat::opInvalidOp && Value == ConvertedValue;
+}
+
+static bool isExactFloatingConversion(const APValue &Value,
+                                      const llvm::fltSemantics &Semantics) {
+  if (Value.isInt())
+    return isExactFloatingConversion(Value.getInt(), Semantics);
+  if (Value.isFloat())
+    return isExactFloatingConversion(Value.getFloat(), Semantics);
+  return isExactFloatingConversion(Value.getComplexFloatReal(), Semantics) &&
+         isExactFloatingConversion(Value.getComplexFloatImag(), Semantics);
+}
+
+static NarrowingKind getC23FloatingNarrowingKind(
+    ASTContext &Ctx, const StandardConversionSequence &SCS,
+    const Expr *Converted, APValue &ConstantValue, QualType &ConstantType,
+    bool IgnoreFloatToIntegralConversion) {
+  switch (SCS.Second) {
+  case ICK_Floating_Promotion:
+  case ICK_Floating_Conversion:
+  case ICK_Floating_Integral:
+  case ICK_Complex_Real:
+  case ICK_Complex_Promotion:
+  case ICK_Complex_Conversion:
+    break;
+  default:
+    return NK_Not_Narrowing;
+  }
+
+  QualType FromType = SCS.getToType(0);
+  QualType ToType = SCS.getToType(1);
+  if (FromType->isComplexType() && !ToType->isComplexType())
+    return NK_Type_Narrowing;
+
+  bool FromInteger = FromType->isIntegralOrUnscopedEnumerationType();
+  if (!FromInteger && !FromType->isFloatingType())
+    return NK_Not_Narrowing;
+  if (FromInteger && IgnoreFloatToIntegralConversion)
+    return NK_Not_Narrowing;
+
+  const Expr *Initializer = Converted->IgnoreParenImpCasts();
+  if (Initializer->isValueDependent())
+    return NK_Dependent_Narrowing;
+
+  Expr::EvalResult Result;
+  if (!Initializer->EvaluateAsRValue(Result, Ctx,
+                                     /*isConstantContext=*/true))
+    return NK_Variable_Narrowing;
+  if (FromInteger && !Result.Val.isInt())
+    return NK_Variable_Narrowing;
+
+  ConstantValue = std::move(Result.Val);
+  ConstantType = Initializer->getType();
+  if (ToType->isComplexType())
+    ToType = ToType->castAs<ComplexType>()->getElementType();
+
+  // C23 6.7.2p6: A real signaling NaN initializer must have a type
+  // compatible with the corresponding real type of the object.
+  if (ConstantValue.isFloat() && ConstantValue.getFloat().isSignaling() &&
+      !Ctx.typesAreCompatible(ConstantType.getUnqualifiedType(),
+                              ToType.getUnqualifiedType()))
+    return NK_Constant_Narrowing;
+  return isExactFloatingConversion(ConstantValue,
+                                   Ctx.getFloatTypeSemantics(ToType))
+             ? NK_Not_Narrowing
+             : NK_Constant_Narrowing;
+}
+
 /// Check if this standard conversion sequence represents a narrowing
 /// conversion, according to C++11 [dcl.init.list]p7.
 ///
@@ -412,6 +498,11 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
   // the form 'Enum{init}'.
   if (const auto *ED = ToType->getAsEnumDecl())
     ToType = ED->getIntegerType();
+
+  if (Ctx.getLangOpts().C23 && ToType->isFloatingType())
+    return getC23FloatingNarrowingKind(Ctx, *this, Converted, ConstantValue,
+                                       ConstantType,
+                                       IgnoreFloatToIntegralConversion);
 
   switch (Second) {
   // 'bool' is an integral type; dispatch to the right place to handle it.
@@ -446,19 +537,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
 
       if (std::optional<llvm::APSInt> IntConstantValue =
               Initializer->getIntegerConstantExpr(Ctx)) {
-        // Convert the integer to the floating type.
-        llvm::APFloat Result(Ctx.getFloatTypeSemantics(ToType));
-        Result.convertFromAPInt(*IntConstantValue, IntConstantValue->isSigned(),
-                                llvm::APFloat::rmNearestTiesToEven);
-        // And back.
-        llvm::APSInt ConvertedValue = *IntConstantValue;
-        bool ignored;
-        llvm::APFloat::opStatus Status = Result.convertToInteger(
-            ConvertedValue, llvm::APFloat::rmTowardZero, &ignored);
-        // If the converted-back integer has unspecified value, or if the
-        // resulting value is different, this was a narrowing conversion.
-        if (Status == llvm::APFloat::opInvalidOp ||
-            *IntConstantValue != ConvertedValue) {
+        if (!isExactFloatingConversion(*IntConstantValue,
+                                       Ctx.getFloatTypeSemantics(ToType))) {
           ConstantValue = APValue(*IntConstantValue);
           ConstantType = Initializer->getType();
           return NK_Constant_Narrowing;
@@ -484,14 +564,8 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
       if (Initializer->isValueDependent())
         return NK_Dependent_Narrowing;
 
-      Expr::EvalResult R;
-      if ((Ctx.getLangOpts().C23 && Initializer->EvaluateAsRValue(R, Ctx)) ||
-          ((Ctx.getLangOpts().CPlusPlus &&
-            Initializer->isCXX11ConstantExpr(Ctx, ConstantValue,
-                                             AllowRelaxedEval)))) {
-        // Constant!
-        if (Ctx.getLangOpts().C23)
-          ConstantValue = R.Val;
+      if (Initializer->isCXX11ConstantExpr(Ctx, ConstantValue,
+                                           AllowRelaxedEval)) {
         assert(ConstantValue.isFloat());
         llvm::APFloat FloatVal = ConstantValue.getFloat();
         // Convert the source value into the target type.
@@ -500,27 +574,11 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
         llvm::APFloat::opStatus ConvertStatus =
             Converted.convert(Ctx.getFloatTypeSemantics(ToType),
                               llvm::APFloat::rmNearestTiesToEven, &ignored);
-        Converted.convert(Ctx.getFloatTypeSemantics(FromType),
-                          llvm::APFloat::rmNearestTiesToEven, &ignored);
-        if (Ctx.getLangOpts().C23) {
-          if (FloatVal.isNaN() && Converted.isNaN() &&
-              !FloatVal.isSignaling() && !Converted.isSignaling()) {
-            // Quiet NaNs are considered the same value, regardless of
-            // payloads.
-            return NK_Not_Narrowing;
-          }
-          // For normal values, check exact equality.
-          if (!Converted.bitwiseIsEqual(FloatVal)) {
-            ConstantType = Initializer->getType();
-            return NK_Constant_Narrowing;
-          }
-        } else {
-          // If there was no overflow, the source value is within the range of
-          // values that can be represented.
-          if (ConvertStatus & llvm::APFloat::opOverflow) {
-            ConstantType = Initializer->getType();
-            return NK_Constant_Narrowing;
-          }
+        // If there was no overflow, the source value is within the range of
+        // values that can be represented.
+        if (ConvertStatus & llvm::APFloat::opOverflow) {
+          ConstantType = Initializer->getType();
+          return NK_Constant_Narrowing;
         }
       } else {
         return NK_Variable_Narrowing;
@@ -622,26 +680,6 @@ NarrowingKind StandardConversionSequence::getNarrowingKind(
   case ICK_Complex_Real:
     if (FromType->isComplexType() && !ToType->isComplexType())
       return NK_Type_Narrowing;
-    return NK_Not_Narrowing;
-
-  case ICK_Floating_Promotion:
-    if (Ctx.getLangOpts().C23) {
-      const Expr *Initializer = IgnoreNarrowingConversion(Ctx, Converted);
-      Expr::EvalResult R;
-      if (Initializer->EvaluateAsRValue(R, Ctx)) {
-        ConstantValue = R.Val;
-        assert(ConstantValue.isFloat());
-        llvm::APFloat FloatVal = ConstantValue.getFloat();
-        // C23 6.7.3p6 If the initializer has real type and a signaling NaN
-        // value, the unqualified versions of the type of the initializer and
-        // the corresponding real type of the object declared shall be
-        // compatible.
-        if (FloatVal.isNaN() && FloatVal.isSignaling()) {
-          ConstantType = Initializer->getType();
-          return NK_Constant_Narrowing;
-        }
-      }
-    }
     return NK_Not_Narrowing;
   default:
     // Other kinds of conversions are not narrowings.

@@ -69,6 +69,8 @@ public:
   mlir::Attribute tryEmitForInitializer(const VarDecl &d);
   mlir::Attribute tryEmitForInitializer(const Expr *e, QualType destType);
 
+  cir::GlobalOp tryEmitGlobalCompoundLiteral(const CompoundLiteralExpr *e);
+
   mlir::Attribute emitForInitializer(const APValue &value, QualType destType);
 
   void finalize(cir::GlobalOp gv);

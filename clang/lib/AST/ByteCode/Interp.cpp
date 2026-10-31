@@ -521,25 +521,41 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+bool CheckConstexprObject(InterpState &S, CodePtr OpPC,
+                          const Descriptor *Desc) {
+  if (S.EvalMode != EvaluationMode::ConstantExpression)
+    return true;
+
+  if (const auto *VD = Desc->asVarDecl()) {
+    if (VD != S.EvaluatingDecl && !VD->isConstexpr())
+      return Invalid(S, OpPC);
+  } else if (const auto *CLE =
+                 dyn_cast_if_present<CompoundLiteralExpr>(Desc->asExpr())) {
+    if (!CLE->isConstexpr())
+      S.CCEDiag(S.Current->getSource(OpPC),
+                diag::note_constexpr_non_constexpr_compound_literal);
+  }
+  return true;
+}
+
 bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
                    AccessKinds AK) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
+  if (!D)
+    return CheckC23ConstexprObject(S, OpPC, Desc);
+
   if (S.checkingConstantDestruction(D)) {
     // If we're checking for a constant destructor for this variable, we can
     // only read from it if it is constant.
     if (D->getType().isConstQualified())
       return true;
-  } else if (!D || D == S.EvaluatingDecl || D->isConstexpr())
+  } else if (D == S.EvaluatingDecl || D->isConstexpr())
     return true;
 
-  // If we're evaluating the initializer for a constexpr variable in C23, we may
-  // only read other contexpr variables. Abort here since this one isn't
-  // constexpr.
-  if (const auto *VD = S.EvaluatingDecl;
-      VD && VD->isConstexpr() && S.getLangOpts().C23)
-    return Invalid(S, OpPC);
+  if (!CheckC23ConstexprObject(S, OpPC, Desc))
+    return false;
 
   QualType T = D->getType();
   bool IsConstant = T.isConstant(S.getASTContext());
@@ -596,10 +612,8 @@ static bool CheckConstant(InterpState &S, CodePtr OpPC, PtrView Ptr,
   if (S.checkingConstantDestruction(Ptr.getDeclDesc()->asVarDecl()))
     return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 
-  if (!Ptr.block()->isStatic())
-    return true;
-  if (!Ptr.block()->getDeclID())
-    return true;
+  if (!Ptr.block()->isStatic() || !Ptr.block()->getDeclID())
+    return CheckC23ConstexprObject(S, OpPC, Ptr.getDeclDesc());
   return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 }
 
@@ -980,7 +994,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   if (isConstexprUnknown(Ptr.block()))
     return false;
 
-  if (!Ptr.isArrayRoot()) {
+  if (Ptr.block()->isStatic() && !Ptr.isArrayRoot()) {
     // According to GCC info page:
     //
     // 6.28 Compound Literals
@@ -3739,7 +3753,8 @@ bool Memcpy(InterpState &S, CodePtr OpPC) {
       Src.inUnion()) {
     if (!CheckLoad(S, OpPC, Src))
       return false;
-  }
+  } else if (!CheckC23ConstexprObject(S, OpPC, Src.getDeclDesc()))
+    return false;
 
   return DoMemcpy(S, OpPC, Src, Dest);
 }

@@ -3701,6 +3701,9 @@ bool Compiler<Emitter>::VisitCXXBindTemporaryExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   const Expr *Init = E->getInitializer();
+  if (E->hasThreadStorage())
+    return this->emitInvalid(E);
+
   if (DiscardResult)
     return this->discard(Init);
 
@@ -3710,7 +3713,7 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
   }
 
   OptPrimType T = classify(E->getType());
-  if (E->isFileScope()) {
+  if (E->hasGlobalStorage()) {
     // Avoid creating a variable if this is a primitive RValue anyway.
     if (T && !E->isLValue())
       return this->delegate(Init);
@@ -3721,11 +3724,6 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
     if (!this->emitGetPtrGlobal(*GlobalIndex, E))
       return false;
-
-    // Since this is a global variable, we might've already seen,
-    // don't do it again.
-    if (P.isGlobalInitialized(*GlobalIndex))
-      return true;
 
     if (T) {
       if (!this->visit(Init))
@@ -3744,8 +3742,8 @@ bool Compiler<Emitter>::VisitCompoundLiteralExpr(const CompoundLiteralExpr *E) {
 
   unsigned LocalIndex;
   if (T)
-    LocalIndex = this->allocateLocalPrimitive(Init, *T, /*IsConst=*/false);
-  else if (UnsignedOrNone MaybeIndex = this->allocateLocal(Init))
+    LocalIndex = this->allocateLocalPrimitive(E, *T, /*IsConst=*/false);
+  else if (UnsignedOrNone MaybeIndex = this->allocateLocal(E))
     LocalIndex = *MaybeIndex;
   else
     return false;
