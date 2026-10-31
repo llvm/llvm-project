@@ -192,15 +192,29 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     // be removed.
     r.Prevailing = !objSym.isUndefined() && sym->getFile() == &f;
     r.VisibleToRegularObj = sym->isUsedInRegularObj;
-    if (r.Prevailing)
+    if (r.Prevailing) {
+      std::vector<char> saved(sizeof(SymbolUnion));
+      memcpy(saved.data(), static_cast<void *>(sym), sizeof(SymbolUnion));
+      savedSymbols.emplace_back(sym, std::move(saved));
       undefine(sym);
+    }
 
     // We tell LTO to not apply interprocedural optimization for wrapped
     // (with -wrap) symbols because otherwise LTO would inline them while
     // their values are still not final.
     r.LinkerRedefined = !sym->canInline;
   }
+  addedFiles.emplace_back(&f, MemoryBufferRef(f.mb.getBuffer(), obj.getName()));
   checkError(ltoObj->add(std::move(f.obj), resols));
+}
+
+void BitcodeCompiler::restore() {
+  for (auto &[sym, bytes] : savedSymbols)
+    memcpy(static_cast<void *>(sym), bytes.data(), sizeof(SymbolUnion));
+  savedSymbols.clear();
+  for (auto &[f, mbref] : addedFiles)
+    f->obj = check(lto::InputFile::create(mbref));
+  addedFiles.clear();
 }
 
 // Merge all the bitcode files we have seen, codegen the result
