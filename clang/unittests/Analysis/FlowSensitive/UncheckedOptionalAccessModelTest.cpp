@@ -3016,6 +3016,35 @@ TEST_P(UncheckedOptionalAccessTest, AssertFalseGtestMacroWithNullableValue) {
   )cc");
 }
 
+// The optional class is recognized by name, so its template parameters need
+// not start with the value type. Here the first parameter is the derived class
+// (CRTP); the value type must come from `value_type`, not template argument 0.
+TEST_P(UncheckedOptionalAccessTest, OptionalWithDerivedFirstTemplateParam) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    namespace folly {
+    template <typename Derived, typename T>
+    class Optional {
+    public:
+      using value_type = T;
+      bool has_value() const;
+      T &operator*();
+      T &value();
+    };
+    } // namespace folly
+
+    struct IntOptional : folly::Optional<IntOptional, int> {};
+
+    void target(IntOptional opt) {
+      *opt; // [[unsafe]]
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
