@@ -844,6 +844,97 @@ define amdgpu_kernel void @v_permlane_idx_gen_b32(ptr addrspace(1) %out, i32 %sr
   ret void
 }
 
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 %src0, i32 %src1, i1 false)
+define amdgpu_kernel void @v_exclusive_scan_sum_i32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.sum.i32(i32 %src0, i32 %src1, i1 false)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 %src0, i32 %src1, i1 false)
+define amdgpu_kernel void @v_exclusive_scan_sum_u32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.sum.u32(i32 %src0, i32 %src1, i1 false)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_xor_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.xor.b32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_or_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.or.b32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_and_b32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.and.b32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i16 @llvm.amdgcn.exclusive.scan.min.i16(i16 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_min_i16(ptr addrspace(1) %out, i16 %src0, i32 %src1) {
+  %result = call i16 @llvm.amdgcn.exclusive.scan.min.i16(i16 %src0, i32 %src1)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i16 @llvm.amdgcn.exclusive.scan.min.u16(i16 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_min_u16(ptr addrspace(1) %out, i16 %src0, i32 %src1) {
+  %result = call i16 @llvm.amdgcn.exclusive.scan.min.u16(i16 %src0, i32 %src1)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_min_i32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.min.i32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_min_u32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.min.u32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i16 @llvm.amdgcn.exclusive.scan.max.i16(i16 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_max_i16(ptr addrspace(1) %out, i16 %src0, i32 %src1) {
+  %result = call i16 @llvm.amdgcn.exclusive.scan.max.i16(i16 %src0, i32 %src1)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i16 @llvm.amdgcn.exclusive.scan.max.u16(i16 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_max_u16(ptr addrspace(1) %out, i16 %src0, i32 %src1) {
+  %result = call i16 @llvm.amdgcn.exclusive.scan.max.u16(i16 %src0, i32 %src1)
+  store i16 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_max_i32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.max.i32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
+; CHECK: DIVERGENT: %result = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 %src0, i32 %src1)
+define amdgpu_kernel void @v_exclusive_scan_max_u32(ptr addrspace(1) %out, i32 %src0, i32 %src1) {
+  %result = call i32 @llvm.amdgcn.exclusive.scan.max.u32(i32 %src0, i32 %src1)
+  store i32 %result, ptr addrspace(1) %out
+  ret void
+}
+
 ; CHECK: DIVERGENT:   %v = call i32 @llvm.amdgcn.dead.i32()
 define amdgpu_cs_chain void @dead(ptr addrspace(1) %out) {
   %v = call i32 @llvm.amdgcn.dead.i32()
