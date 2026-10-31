@@ -165,6 +165,31 @@ func.func @negative_combining_kind(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf1
 
 // -----
 
+// The transposed B is moved into a vector.transpose first. The new contract
+// keeps the kind and the fast-math flags, so it is still not converted.
+
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
+func.func @negative_combining_kind_transpose_b(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf16>,
+    %acc: vector<8x16xf32>) -> vector<8x16xf32> {
+  %3 = vector.contract
+    {indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<mul>, fastmath = #arith.fastmath<nnan>} %lhs, %rhs, %acc
+    : vector<8x16xf16>, vector<16x16xf16> into vector<8x16xf32>
+  return %3 : vector<8x16xf32>
+}
+
+// CHECK-LABEL: @negative_combining_kind_transpose_b(
+// CHECK-NOT:   xegpu.dpas
+// CHECK:       vector.transpose
+// CHECK:       vector.contract {fastmath = #arith.fastmath<nnan>,
+// CHECK-SAME:  kind = #vector.kind<mul>}
+// CHECK-NOT:   xegpu.dpas
+
+// -----
+
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> ()>
