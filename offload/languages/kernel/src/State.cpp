@@ -78,7 +78,7 @@ static void destroyStreamHandle(StreamTy *&Stream) {
   if (!Stream)
     return;
 
-  olSyncQueue(Stream->Queue);
+  (void)Stream->sync();
   olDestroyQueue(Stream->Queue);
   delete Stream;
   Stream = nullptr;
@@ -320,8 +320,12 @@ ol_result_t StateTy::destroyStream(StreamTy *Stream) {
   if (!isStreamRegistered(Stream))
     return &InvalidStreamError;
 
+  ol_result_t Result = Stream->sync();
+  if (Result != OL_SUCCESS)
+    return Result;
+
   removeStream(Stream);
-  ol_result_t Result = olDestroyQueue(Stream->Queue);
+  Result = olDestroyQueue(Stream->Queue);
   delete Stream;
   return Result;
 }
