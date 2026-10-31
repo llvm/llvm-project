@@ -310,6 +310,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     }
   }
 
+  Edges.remove_if([](auto X) { return match(X.second, m_Poison()); });
+
   return Edges;
 }
 
