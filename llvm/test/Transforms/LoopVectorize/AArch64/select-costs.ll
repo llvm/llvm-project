@@ -43,8 +43,8 @@ exit:
 
 define i32 @multi_user_cmp(ptr readonly %a, i64 noundef %n) {
 ; CHECK: LV: Checking a loop in 'multi_user_cmp'
-; CHECK: Cost of 4 for VF 16: WIDEN ir<%cmp1> = fcmp olt ir<%load1>, ir<0.000000e+00>
-; CHECK: LV: Selecting VF: 16.
+; CHECK: Cost of 1 for VF 4: WIDEN ir<%cmp1> = fcmp olt ir<%load1>, ir<0.000000e+00>
+; CHECK: LV: Selecting VF: 4.
 entry:
   br label %loop
 

@@ -674,16 +674,26 @@ struct FixedScalableVFPair {
 /// Holds state needed to make cost decisions before computing costs per-VF,
 /// including the maximum VFs.
 class VFSelectionContext {
+  using VectorKind = TargetTransformInfo::VectorKind;
   /// \return True if maximizing vector bandwidth is enabled by the target or
   /// user options, for the given register kind (scalable or fixed-width).
-  bool useMaxBandwidth(bool IsScalable) const;
+  bool useMaxBandwidth(VectorKind Kind, Type *ElementTy = nullptr) const;
+  bool useMaxBandwidth(bool IsScalable, Type *ElementTy = nullptr) const {
+    return useMaxBandwidth(
+        IsScalable ? VectorKind::Scalable : VectorKind::FixedWidth, ElementTy);
+  }
+
+  struct VFSelectionTypeWidths {
+    unsigned SmallestTypeForMaxBandwidth;
+    unsigned SmallestType;
+    unsigned WidestType;
+  };
 
   /// \return the maximized element count based on the targets vector
   /// registers and the loop trip-count, but limited to a maximum safe VF.
   /// This is a helper function of computeFeasibleMaxVF.
   ElementCount getMaximizedVFForTarget(unsigned MaxTripCount,
-                                       unsigned SmallestType,
-                                       unsigned WidestType,
+                                       const VFSelectionTypeWidths &TypeWidths,
                                        ElementCount MaxSafeVF, unsigned UserIC,
                                        bool FoldTailByMasking,
                                        bool RequiresScalarEpilogue);
@@ -797,10 +807,11 @@ public:
   void collectElementTypesForWidening(
       const SmallPtrSetImpl<const Value *> *ValuesToIgnore = nullptr);
 
-  /// \return The size (in bits) of the smallest and widest types in the code
-  /// that need to be vectorized. We ignore values that remain scalar such as
-  /// 64 bit loop indices.
-  std::pair<unsigned, unsigned> getSmallestAndWidestTypes() const;
+  /// \return The size (in bits) of the of the types used to determine the
+  /// possible VFs. That is the widest type in the loop and the smallest type
+  /// the target wants to maximize vector bandwidth for. We ignore values that
+  /// remain scalar such as 64 bit loop indices.
+  VFSelectionTypeWidths getTypeWidthsForVFSelection() const;
 
   /// \return An upper bound for the vectorization factors for both
   /// fixed and scalable vectorization, where the minimum-known number of
