@@ -45,10 +45,10 @@ set(LLVM_ENABLE_OPENCSD "OFF" CACHE STRING "Use OpenCSD if available. Can be ON,
 set(LLVM_HAVE_OPENCSD OFF CACHE BOOL "Is OpenCSD available" FORCE)
 
 # Minimum OpenCSD release that exposes every symbol referenced by
-# ETMTraceDecoder.cpp. OCSD_OPFLG_CHK_RANGE_CONTINUE was introduced in
-# OpenCSD 1.5.4; older releases (e.g. the 1.2.0 shipped by Debian/Ubuntu)
-# build the OpenCSD library but cannot satisfy our use of the C API.
-set(LLVM_OPENCSD_MIN_VERSION "1.5.4")
+# ETMTraceDecoder.cpp. OCSD_BUILTIN_DCD_ITM was introduced in OpenCSD 1.7.1;
+# older releases (e.g. the 1.2.0 shipped by Debian/Ubuntu) build the OpenCSD
+# library but cannot satisfy our use of the C API.
+set(LLVM_OPENCSD_MIN_VERSION "1.7.1")
 
 if(NOT LLVM_ENABLE_OPENCSD STREQUAL "OFF")
   find_library(OPENCSD_C_LIB NAMES opencsd_c_api_static opencsd_c_api HINTS ${OPENCSD_ROOT} PATH_SUFFIXES lib lib64)
