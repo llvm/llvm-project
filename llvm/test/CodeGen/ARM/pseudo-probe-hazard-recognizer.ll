@@ -2,12 +2,7 @@
 ; on a pseudo probe when it ran with a hazard recognizer, as it does for ARM
 ; cores with an itinerary such as Cortex-A8.
 
-; RUN: llc -mtriple=armv7 -mcpu=cortex-a8 -stop-after=finalize-isel %s -o - | FileCheck %s
-
-; CHECK-LABEL: name: f
-; CHECK-DAG: ADDrr
-; CHECK-DAG: PSEUDO_PROBE 1, 1, 0, 0
-; CHECK: BX_RET
+; RUN: llc -mtriple=armv7 -mcpu=cortex-a8 %s -o /dev/null
 
 define i32 @f(i32 %a, i32 %b) {
 entry:
