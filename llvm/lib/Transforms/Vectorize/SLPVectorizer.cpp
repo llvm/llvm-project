@@ -6659,57 +6659,6 @@ BoUpSLP::findPartiallyOrderedLoads(const BoUpSLP::TreeEntry &TE) {
   return std::nullopt;
 }
 
-/// Check if two insertelement instructions are from the same buildvector.
-static bool areTwoInsertFromSameBuildVector(
-    InsertElementInst *VU, InsertElementInst *V,
-    function_ref<Value *(InsertElementInst *)> GetBaseOperand) {
-  // Instructions must be from the same basic blocks.
-  if (VU->getParent() != V->getParent())
-    return false;
-  // Checks if 2 insertelements are from the same buildvector.
-  if (VU->getType() != V->getType())
-    return false;
-  // Multiple used inserts are separate nodes.
-  if (!VU->hasOneUse() && !V->hasOneUse())
-    return false;
-  auto *IE1 = VU;
-  auto *IE2 = V;
-  std::optional<unsigned> Idx1 = getElementIndex(IE1);
-  std::optional<unsigned> Idx2 = getElementIndex(IE2);
-  if (Idx1 == std::nullopt || Idx2 == std::nullopt)
-    return false;
-  // Go through the vector operand of insertelement instructions trying to find
-  // either VU as the original vector for IE2 or V as the original vector for
-  // IE1.
-  SmallBitVector ReusedIdx(VU->getType()->getElementCount().getKnownMinValue());
-  bool IsReusedIdx = false;
-  do {
-    if (IE2 == VU && !IE1)
-      return VU->hasOneUse();
-    if (IE1 == V && !IE2)
-      return V->hasOneUse();
-    if (IE1 && IE1 != V) {
-      unsigned Idx1 = getElementIndex(IE1).value_or(*Idx2);
-      IsReusedIdx |= ReusedIdx.test(Idx1);
-      ReusedIdx.set(Idx1);
-      if ((IE1 != VU && !IE1->hasOneUse()) || IsReusedIdx)
-        IE1 = nullptr;
-      else
-        IE1 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE1));
-    }
-    if (IE2 && IE2 != VU) {
-      unsigned Idx2 = getElementIndex(IE2).value_or(*Idx1);
-      IsReusedIdx |= ReusedIdx.test(Idx2);
-      ReusedIdx.set(Idx2);
-      if ((IE2 != V && !IE2->hasOneUse()) || IsReusedIdx)
-        IE2 = nullptr;
-      else
-        IE2 = dyn_cast_if_present<InsertElementInst>(GetBaseOperand(IE2));
-    }
-  } while (!IsReusedIdx && (IE1 || IE2));
-  return false;
-}
-
 std::optional<BoUpSLP::OrdersType>
 BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom,
                            bool IgnoreReorder) {
@@ -9188,117 +9137,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
 static bool isMainInstruction(Instruction *I, Instruction *MainOp,
                               Instruction *AltOp, const TargetLibraryInfo &TLI);
 
-/// Builds the arguments types vector for the given call instruction with the
-/// given \p ID for the specified vector factor.
-static SmallVector<Type *>
-buildIntrinsicArgTypes(const CallInst *CI, const Intrinsic::ID ID,
-                       const unsigned VF, unsigned MinBW,
-                       const TargetTransformInfo *TTI) {
-  SmallVector<Type *> ArgTys;
-  for (auto [Idx, Arg] : enumerate(CI->args())) {
-    if (ID != Intrinsic::not_intrinsic) {
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
-        ArgTys.push_back(Arg->getType());
-        continue;
-      }
-      if (MinBW > 0) {
-        ArgTys.push_back(
-            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
-        continue;
-      }
-    }
-    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
-  }
-  return ArgTys;
-}
-
-/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
-/// function (if possible) calls. Returns invalid cost for the corresponding
-/// calls, if they cannot be vectorized/will be scalarized.
-static std::pair<InstructionCost, InstructionCost>
-getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
-                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
-                   const TTI::TargetCostKind CostKind) {
-  auto Shape = VFShape::get(CI->getFunctionType(),
-                            ElementCount::getFixed(getNumElements(VecTy)),
-                            false /*HasGlobalPred*/);
-  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
-  auto LibCost = InstructionCost::getInvalid();
-  if (!CI->isNoBuiltin() && VecFunc) {
-    // Calculate the cost of the vector library call.
-    // If the corresponding vector call is cheaper, return its cost.
-    LibCost = TTI->getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
-  }
-  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-
-  // Calculate the cost of the vector intrinsic call.
-  FastMathFlags FMF;
-  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
-    FMF = FPCI->getFastMathFlags();
-  const InstructionCost ScalarLimit = 10000;
-  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF,
-                                    dyn_cast<IntrinsicInst>(CI),
-                                    LibCost.isValid() ? LibCost : ScalarLimit);
-  auto IntrinsicCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
-  if (LibCost.isValid()) {
-    if (IntrinsicCost > LibCost)
-      IntrinsicCost = InstructionCost::getInvalid();
-  } else if (IntrinsicCost > ScalarLimit) {
-    // A type-based query always scalarizes struct-returning intrinsics (e.g.
-    // llvm.sincos), which do not have a VFDatabase name mapping. Retry with an
-    // argument-aware query (as the loop vectorizer does) so such lowerings are
-    // taken into account.
-    SmallVector<const Value *> Args(CI->args());
-    IntrinsicCostAttributes ArgAwareAttrs(
-        ID, VecTy, Args, ArgTys, FMF, dyn_cast<IntrinsicInst>(CI), ScalarLimit);
-    IntrinsicCost = TTI->getIntrinsicInstrCost(ArgAwareAttrs, CostKind);
-    if (IntrinsicCost > ScalarLimit)
-      IntrinsicCost = InstructionCost::getInvalid();
-  }
-
-  return {IntrinsicCost, LibCost};
-}
-
-/// \returns the reciprocal-throughput cost of \p I widened to \p VF lanes (an
-/// arithmetic op or a vectorizable call).
-static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
-                                       const TargetTransformInfo &TTI,
-                                       const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind) {
-  assert((isa<BinaryOperator, CallInst>(I)) &&
-         "getVectorOpCost expects an arithmetic op or a vectorizable call.");
-  Type *VecTy = getWidenedType(I->getType(), VF);
-  if (auto *CI = dyn_cast<CallInst>(I)) {
-    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
-    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
-    auto [IntrCost, LibCost] =
-        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys, CostKind);
-    return std::min(IntrCost, LibCost);
-  }
-  SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
-  return TTI.getArithmeticInstrCost(
-      I->getOpcode(), VecTy, CostKind, TTI::getOperandInfo(I->getOperand(0)),
-      TTI::getOperandInfo(I->getOperand(1)), Args, I);
-}
-
-/// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
-/// id reused across scalar widths (e.g. fdiv float vs. fdiv double) is cached
-/// per width instead of sharing one verdict.
-static unsigned getPoorThroughputTypeKey(Type *Ty) {
-  return (static_cast<unsigned>(Ty->getTypeID()) << 16) |
-         Ty->getScalarSizeInBits();
-}
-
 namespace {
-/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
-struct PoorThroughputOpCache {
-  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
-  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
-  // Keyed on the callee alone: a Function's signature is fixed, so its type
-  // never varies between calls.
-  SmallDenseSet<const Function *> CheapCallees;
-};
-
 /// Groups poor-throughput seeds for tryToVectorizeSequence.
 struct SeedGroupKey {
   unsigned Opcode = 0;
@@ -9327,75 +9166,6 @@ static SeedGroupKey getSeedGroupKey(const Instruction *I,
 }
 } // namespace
 
-/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
-/// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
-/// widest vector fitting into it is checked too.
-static bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
-                               const TargetTransformInfo &TTI,
-                               const TargetLibraryInfo &TLI,
-                               PoorThroughputOpCache &Cache,
-                               const TTI::TargetCostKind CostKind,
-                               unsigned MaxVecRegSize = 0) {
-  if (!isa<BinaryOperator, CallInst>(I))
-    return false;
-  Type *Ty = I->getType();
-  if ((Ty->isVectorTy() && !Opts.slp_revec) || Ty->isAggregateType() ||
-      !isValidElementType(Ty, Opts.slp_revec))
-    return false;
-  auto Analyze = [&]() {
-    InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
-    if (ScalarCost < TTI::TCC_Expensive)
-      return false;
-    constexpr unsigned MinVF = 2;
-    if (getVectorOpCost(I, MinVF, TTI, TLI, CostKind) < ScalarCost * MinVF)
-      return true;
-    // Some ops (e.g. div by constant) scalarize at VF=2 but have a cheap
-    // vector form at the full register width.
-    unsigned TyBits = Ty->getPrimitiveSizeInBits().getFixedValue();
-    unsigned MaxVF = TyBits ? llvm::bit_floor(MaxVecRegSize / TyBits) : 0;
-    return MaxVF > MinVF &&
-           getVectorOpCost(I, MaxVF, TTI, TLI, CostKind) < ScalarCost * MaxVF;
-  };
-  auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
-    if (IsCheap)
-      return false;
-    if (Analyze())
-      return true;
-    MarkCheap();
-    return false;
-  };
-  if (auto *CI = dyn_cast<CallInst>(I)) {
-    if (any_of(CI->args(), [&](const Value *Arg) {
-          return !isValidElementType(Arg->getType(), Opts.slp_revec);
-        }))
-      return false;
-    // A call, used only as a select operand, may get the values rejected by the
-    // select condition, which the vector library call handles on its slow path.
-    if (!CI->use_empty() && !CI->hasNUsesOrMore(UsesLimit) &&
-        all_of(CI->users(), [&](User *U) {
-          return match(
-              U, m_Select(m_Unless(m_Specific(CI)), m_Value(), m_Value()));
-        }))
-      return false;
-    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
-      auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
-      return CheckCached(Cache.CheapIntrinsics.contains(Key),
-                         [&] { Cache.CheapIntrinsics.insert(Key); });
-    }
-    // A call without the vector variants is never vectorized.
-    if (VFDatabase::getMappings(*CI).empty())
-      return false;
-    const Function *Callee = CI->getCalledFunction();
-    if (!Callee)
-      return Analyze();
-    return CheckCached(Cache.CheapCallees.contains(Callee),
-                       [&] { Cache.CheapCallees.insert(Callee); });
-  }
-  auto Key = std::make_pair(I->getOpcode(), getPoorThroughputTypeKey(Ty));
-  return CheckCached(Cache.CheapOpcodes.contains(Key),
-                     [&] { Cache.CheapOpcodes.insert(Key); });
-}
-
 /// Get the loop nest for the given loop.
 ArrayRef<const Loop *> BoUpSLP::getLoopNest(const Loop *L) {
   assert(L && "Expected valid loop");
@@ -9412,70 +9182,6 @@ ArrayRef<const Loop *> BoUpSLP::getLoopNest(const Loop *L) {
   }
   Res.assign(LoopNest.rbegin(), LoopNest.rend());
   return Res;
-}
-
-/// Detects an extractvalue bundle that can be widened by vectorizing the
-/// underlying struct-returning calls.
-///
-/// \p VL is a bundle whose state \p S is Instruction::ExtractValue. The
-/// bundle is acceptable for widening into one struct-of-vectors call only
-/// when:
-///   - every element of \p VL is an ExtractValueInst,
-///   - every ExtractValueInst extracts the same struct field (its
-///     getIndices() matches the main op's indices),
-///   - the aggregate operands form a uniform set of CallInsts (per
-///     getSameOpcode) that is not an alt-shuffle and whose return type is
-///     a literal struct, and
-///   - every user of every such call is itself an ExtractValueInst, so the
-///     external-use extraction code can rebuild scalars via extractvalue +
-///     extractelement without needing an insertvalue chain.
-///
-/// On success returns true and fills \p Indices with the common field
-/// index path and \p Calls with the per-lane aggregate calls (in VL order),
-/// for the caller to feed as the operand of the new tree entry. Otherwise
-/// returns false and leaves the output parameters untouched.
-static bool checkEVsForVecCalls(ArrayRef<Value *> VL,
-                                const InstructionsState &S,
-                                const TargetLibraryInfo &TLI,
-                                SmallVectorImpl<unsigned> &Indices,
-                                SmallVectorImpl<Value *> &Calls) {
-  assert(S && S.getOpcode() == Instruction::ExtractValue &&
-         "Expected extractvalue instruction state.");
-  if (!all_of(VL, IsaPred<ExtractValueInst>))
-    return false;
-  auto *VL0 = cast<ExtractValueInst>(S.getMainOp());
-  ArrayRef<unsigned> VL0Indices = VL0->getIndices();
-  SmallVector<Value *> Aggregates;
-  for (Value *V : VL) {
-    if (V == VL0) {
-      Aggregates.push_back(VL0->getAggregateOperand());
-      continue;
-    }
-    auto *IV = cast<ExtractValueInst>(V);
-    if (IV->getIndices() != VL0Indices ||
-        isa<ScalableVectorType>(IV->getType()))
-      return false;
-    Value *Agg = IV->getAggregateOperand();
-    Aggregates.push_back(Agg);
-  }
-  const InstructionsState AggState = getSameOpcode(Aggregates, TLI);
-  if (AggState && AggState.getOpcode() == Instruction::Call &&
-      !AggState.isAltShuffle() &&
-      isa<StructType>(AggState.getMainOp()->getType()) &&
-      allSameBlock(Aggregates)) {
-    // The struct-returning call may have non-bundle users too. The external
-    // extraction code rebuilds scalars by extractvalue + extractelement,
-    // which only works when every user of the call is an ExtractValueInst.
-    // Bail out if any aggregate has a different kind of user.
-    for (Value *Agg : Aggregates) {
-      if (!all_of(Agg->users(), IsaPred<ExtractValueInst>))
-        return false;
-    }
-    Indices.assign(VL0Indices.begin(), VL0Indices.end());
-    Calls.swap(Aggregates);
-    return true;
-  }
-  return false;
 }
 
 static bool allStructUsersAreExtractValueInsts(ArrayRef<Value *> VL) {
@@ -10069,47 +9775,6 @@ public:
   ArrayRef<Value *> getOperands(unsigned I) const { return Operands[I]; }
 };
 } // namespace
-
-/// Returns main/alternate instructions for the given \p VL. Unlike
-/// getSameOpcode supports non-compatible instructions for better SplitVectorize
-/// node support.
-/// \returns first main/alt instructions, if only poisons and instruction with
-/// only 2 opcodes exists. Returns pair of nullptr otherwise.
-static std::pair<Instruction *, Instruction *>
-getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
-  Instruction *MainOp = nullptr;
-  Instruction *AltOp = nullptr;
-  for (Value *V :
-       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      return {};
-    if (!MainOp) {
-      MainOp = I;
-      continue;
-    }
-    if (MainOp->getOpcode() == I->getOpcode()) {
-      if (I->getParent() != MainOp->getParent())
-        return {};
-      continue;
-    }
-    if (!AltOp) {
-      AltOp = I;
-      continue;
-    }
-    if (AltOp->getOpcode() == I->getOpcode()) {
-      if (I->getParent() != AltOp->getParent())
-        return {};
-      continue;
-    }
-    return {};
-  }
-  if (!AltOp)
-    return {};
-  assert(MainOp && AltOp && MainOp->getOpcode() != AltOp->getOpcode() &&
-         "Expected different main and alt instructions.");
-  return std::make_pair(MainOp, AltOp);
-}
 
 /// Checks that every instruction appears once in the list and if not, packs
 /// them, building \p ReuseShuffleIndices mask and mutating \p VL. The list of
@@ -13473,22 +13138,6 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI,
                                        const BoUpSLP &R);
 
-/// \returns true if \p Op is a contractable single-use fmul, which the backend
-/// fuses with its fadd/fsub user \p I: \p Op is in the block of \p I or the
-/// target sinks it there.
-static bool isFusableFMulOperand(Value *Op, Instruction *I,
-                                 const TargetTransformInfo &TTI) {
-  Instruction *FMul;
-  if (!match(Op, m_Instruction(FMul, m_OneUse(m_AllowContract(
-                                         m_FMul(m_Value(), m_Value()))))))
-    return false;
-  if (FMul->getParent() == I->getParent())
-    return true;
-  SmallVector<Use *> OpsToSink;
-  return TTI.isProfitableToSinkOperands(I, OpsToSink) &&
-         any_of(OpsToSink, [&](const Use *U) { return U->get() == FMul; });
-}
-
 /// \returns the fmul operand of the fadd/fsub \p I that the backend fuses with
 /// \p I into an fmuladd: the first fusable one from either operand, c - a*b
 /// included. \p I must allow contraction.
@@ -16764,31 +16413,6 @@ BoUpSLP::getVectorSpillReloadCost(const TreeEntry *E, Type *ScalarTy,
   return SpillsReloads;
 }
 
-/// Calculates a VectorInstrContext from the values in \p VL at indices in
-/// \p DemandedElts.
-static TTI::VectorInstrContext
-getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts) {
-  TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
-  for (unsigned I : seq(VL.size())) {
-    if (!DemandedElts[I])
-      continue;
-    Value *V = VL[I];
-    if (isa<UndefValue>(V))
-      continue;
-    auto *Inst = dyn_cast<Instruction>(V);
-    if (!Inst)
-      return TTI::VectorInstrContext::None;
-    TTI::VectorInstrContext IVIC = TTI::getVectorInstrContextHint(Inst);
-    if (VIC == TTI::VectorInstrContext::None) {
-      VIC = IVIC;
-      continue;
-    }
-    if (VIC != IVIC)
-      return TTI::VectorInstrContext::None;
-  }
-  return VIC;
-}
-
 /// \returns the cast opcode, which gives the same result for the operand,
 /// demoted with the signedness \p IsSigned, as \p Opcode gives for the original
 /// operand, or std::nullopt if the operand must be extended back first.
@@ -19397,130 +19021,6 @@ InstructionCost BoUpSLP::getSpillCost() {
   return Cost;
 }
 
-namespace {
-/// Returns incoming Value *, if the requested type is Value * too, or a default
-/// value, otherwise.
-struct ValueSelect {
-  template <typename U>
-  static std::enable_if_t<std::is_same_v<Value *, U>, Value *> get(Value *V) {
-    return V;
-  }
-  template <typename U>
-  static std::enable_if_t<!std::is_same_v<Value *, U>, U> get(Value *) {
-    return U();
-  }
-};
-} // namespace
-
-/// Does the analysis of the provided shuffle masks and performs the requested
-/// actions on the vectors with the given shuffle masks. It tries to do it in
-/// several steps.
-/// 1. If the Base vector is not poison vector, resizing the very first mask to
-/// have common VF and perform action for 2 input vectors (including non-poison
-/// Base). Other shuffle masks are combined with the resulting after the 1 stage
-/// and processed as a shuffle of 2 elements.
-/// 2. If the Base is poison vector and have only 1 shuffle mask, perform the
-/// action only for 1 vector with the given mask, if it is not the identity
-/// mask.
-/// 3. If > 2 masks are used, perform the remaining shuffle actions for 2
-/// vectors, combing the masks properly between the steps.
-template <typename T>
-static T *performExtractsShuffleAction(
-    MutableArrayRef<std::pair<T *, SmallVector<int>>> ShuffleMask, Value *Base,
-    function_ref<unsigned(T *)> GetVF,
-    function_ref<std::pair<T *, bool>(T *, ArrayRef<int>, bool)> ResizeAction,
-    function_ref<T *(ArrayRef<int>, ArrayRef<T *>)> Action) {
-  assert(!ShuffleMask.empty() && "Empty list of shuffles for inserts.");
-  SmallVector<int> Mask(ShuffleMask.begin()->second);
-  auto VMIt = std::next(ShuffleMask.begin());
-  T *Prev = nullptr;
-  SmallBitVector UseMask =
-      buildUseMask(Mask.size(), Mask, UseMask::UndefsAsMask);
-  // The undef elements of the base must be preserved, only the poison base can
-  // be dropped.
-  SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
-  if (!IsBasePoison.all()) {
-    // Base is not poison, need to combine it with the next subvectors.
-    std::pair<T *, bool> Res =
-        ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
-    for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
-      if (Mask[Idx] == PoisonMaskElem)
-        Mask[Idx] = IsBasePoison.test(Idx) ? PoisonMaskElem : Idx;
-      else
-        Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
-    }
-    [[maybe_unused]] auto *V = ValueSelect::get<T *>(Base);
-    assert((!V || GetVF(V) == Mask.size()) &&
-           "Expected base vector of VF number of elements.");
-    Prev = Action(Mask, {nullptr, Res.first});
-  } else if (ShuffleMask.size() == 1) {
-    // Base is poison and only 1 vector is shuffled - perform the action only
-    // for single vector, if the mask is not the identity mask.
-    std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask,
-                                            /*ForSingleMask=*/true);
-    if (Res.second)
-      // Identity mask is found.
-      Prev = Res.first;
-    else
-      Prev = Action(Mask, {ShuffleMask.begin()->first});
-  } else {
-    // Base is poison and at least 2 input vectors shuffled - perform 2 vectors
-    // shuffles step by step, combining shuffle between the steps.
-    unsigned Vec1VF = GetVF(ShuffleMask.begin()->first);
-    unsigned Vec2VF = GetVF(VMIt->first);
-    if (Vec1VF == Vec2VF) {
-      // No need to resize the input vectors since they are of the same size, we
-      // can shuffle them directly.
-      ArrayRef<int> SecMask = VMIt->second;
-      for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
-        if (SecMask[I] != PoisonMaskElem) {
-          assert(Mask[I] == PoisonMaskElem && "Multiple uses of scalars.");
-          Mask[I] = SecMask[I] + Vec1VF;
-        }
-      }
-      Prev = Action(Mask, {ShuffleMask.begin()->first, VMIt->first});
-    } else {
-      // Vectors of different sizes - resize and reshuffle.
-      std::pair<T *, bool> Res1 = ResizeAction(ShuffleMask.begin()->first, Mask,
-                                               /*ForSingleMask=*/false);
-      std::pair<T *, bool> Res2 =
-          ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
-      ArrayRef<int> SecMask = VMIt->second;
-      for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
-        if (Mask[I] != PoisonMaskElem) {
-          assert(SecMask[I] == PoisonMaskElem && "Multiple uses of scalars.");
-          if (Res1.second)
-            Mask[I] = I;
-        } else if (SecMask[I] != PoisonMaskElem) {
-          assert(Mask[I] == PoisonMaskElem && "Multiple uses of scalars.");
-          Mask[I] = (Res2.second ? I : SecMask[I]) + VF;
-        }
-      }
-      Prev = Action(Mask, {Res1.first, Res2.first});
-    }
-    VMIt = std::next(VMIt);
-  }
-  [[maybe_unused]] bool IsBaseNotPoison = !IsBasePoison.all();
-  // Perform requested actions for the remaining masks/vectors.
-  for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
-    // Shuffle other input vectors, if any.
-    std::pair<T *, bool> Res =
-        ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
-    ArrayRef<int> SecMask = VMIt->second;
-    for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
-      if (SecMask[I] != PoisonMaskElem) {
-        assert((Mask[I] == PoisonMaskElem || IsBaseNotPoison) &&
-               "Multiple uses of scalars.");
-        Mask[I] = (Res.second ? I : SecMask[I]) + VF;
-      } else if (Mask[I] != PoisonMaskElem) {
-        Mask[I] = I;
-      }
-    }
-    Prev = Action(Mask, {Prev, Res.first});
-  }
-  return Prev;
-}
-
 void BoUpSLP::detectBooleanizedNodes() {
   // An absorbable boolean leaf is a one-use trunc of a wide value or a
   // one-use zero-test of a value from [0, 1]; bit 0 of the wide value is the
@@ -20574,32 +20074,6 @@ template <typename T> struct ShuffledInsertData {
   MapVector<T, SmallVector<int>> ValueMasks;
 };
 } // namespace
-
-/// \returns true if more values with the scalar type \p Ty than registers are
-/// live at some point of the block \p BB. The blocks larger than the scheduling
-/// budget are skipped to save compile time.
-static bool hasHighRegisterPressure(const VectorizeOptions &Opts,
-                                    const BasicBlock &BB, Type *Ty,
-                                    const TargetTransformInfo &TTI) {
-  if (hasNItemsOrMore(BB, Opts.slp_schedule_budget))
-    return false;
-  const unsigned NumRegs = TTI.getNumberOfRegisters(
-      TTI.getRegisterClassForType(/*Vector=*/false, Ty));
-  auto IsLiveCandidate = [&](const Value *V) {
-    return isa<Instruction, Argument>(V) && V->getType()->getScalarType() == Ty;
-  };
-  SmallPtrSet<const Value *, 32> Live;
-  for (const Instruction &I : reverse(BB)) {
-    // The operands of the PHIs are live in the predecessors.
-    if (isa<PHINode>(I))
-      break;
-    Live.erase(&I);
-    Live.insert_range(make_filter_range(I.operand_values(), IsLiveCandidate));
-    if (Live.size() > NumRegs)
-      return true;
-  }
-  return false;
-}
 
 InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                                      ArrayRef<Value *> VectorizedVals,
@@ -29682,8 +29156,6 @@ bool BoUpSLP::collectValuesToDemote(
   return FinalAnalysis();
 }
 
-static RecurKind getRdxKind(Value *V);
-
 void BoUpSLP::computeMinimumValueSizes() {
   // Detect booleanized i1 and/or nodes first: they are registered in MinBWs
   // like the demoted nodes and processed the same way.
@@ -31843,103 +31315,7 @@ public:
     return I->getOpcode() == Instruction::FAdd;
   }
 
-  static RecurKind getRdxKind(Value *V) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      return RecurKind::None;
-    if (match(I, m_Add(m_Value(), m_Value())))
-      return RecurKind::Add;
-    if (match(I, m_Mul(m_Value(), m_Value())))
-      return RecurKind::Mul;
-    if (match(I, m_And(m_Value(), m_Value())) ||
-        match(I, m_LogicalAnd(m_Value(), m_Value())))
-      return RecurKind::And;
-    if (match(I, m_Or(m_Value(), m_Value())) ||
-        match(I, m_LogicalOr(m_Value(), m_Value())))
-      return RecurKind::Or;
-    if (match(I, m_Xor(m_Value(), m_Value())))
-      return RecurKind::Xor;
-    if (match(I, m_FAdd(m_Value(), m_Value())))
-      return RecurKind::FAdd;
-    if (match(I, m_FMul(m_Value(), m_Value())))
-      return RecurKind::FMul;
-
-    if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
-      return RecurKind::FMax;
-    if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
-      return RecurKind::FMin;
-
-    if (match(I, m_FMaximum(m_Value(), m_Value())))
-      return RecurKind::FMaximum;
-    if (match(I, m_FMinimum(m_Value(), m_Value())))
-      return RecurKind::FMinimum;
-    // TODO: remove several special-case paths that deal with selects.
-    if (match(I, m_SMax(m_Value(), m_Value())))
-      return RecurKind::SMax;
-    if (match(I, m_SMin(m_Value(), m_Value())))
-      return RecurKind::SMin;
-    if (match(I, m_UMax(m_Value(), m_Value())))
-      return RecurKind::UMax;
-    if (match(I, m_UMin(m_Value(), m_Value())))
-      return RecurKind::UMin;
-
-    if (auto *Select = dyn_cast<SelectInst>(I)) {
-      // Try harder: look for min/max pattern based on instructions producing
-      // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
-      // During the intermediate stages of SLP, it's very common to have
-      // pattern like this (since optimizeGatherSequence is run only once
-      // at the end):
-      // %1 = extractelement <2 x i32> %a, i32 0
-      // %2 = extractelement <2 x i32> %a, i32 1
-      // %cond = icmp sgt i32 %1, %2
-      // %3 = extractelement <2 x i32> %a, i32 0
-      // %4 = extractelement <2 x i32> %a, i32 1
-      // %select = select i1 %cond, i32 %3, i32 %4
-      CmpPredicate Pred;
-      Instruction *L1;
-      Instruction *L2;
-
-      Value *LHS = Select->getTrueValue();
-      Value *RHS = Select->getFalseValue();
-      Value *Cond = Select->getCondition();
-
-      // TODO: Support inverse predicates.
-      if (match(Cond, m_Cmp(Pred, m_Specific(LHS), m_Instruction(L2)))) {
-        if (!isa<ExtractElementInst>(RHS) ||
-            !L2->isIdenticalTo(cast<Instruction>(RHS)))
-          return RecurKind::None;
-      } else if (match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Specific(RHS)))) {
-        if (!isa<ExtractElementInst>(LHS) ||
-            !L1->isIdenticalTo(cast<Instruction>(LHS)))
-          return RecurKind::None;
-      } else {
-        if (!isa<ExtractElementInst>(LHS) || !isa<ExtractElementInst>(RHS))
-          return RecurKind::None;
-        if (!match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2))) ||
-            !L1->isIdenticalTo(cast<Instruction>(LHS)) ||
-            !L2->isIdenticalTo(cast<Instruction>(RHS)))
-          return RecurKind::None;
-      }
-
-      switch (Pred) {
-      default:
-        return RecurKind::None;
-      case CmpInst::ICMP_SGT:
-      case CmpInst::ICMP_SGE:
-        return RecurKind::SMax;
-      case CmpInst::ICMP_SLT:
-      case CmpInst::ICMP_SLE:
-        return RecurKind::SMin;
-      case CmpInst::ICMP_UGT:
-      case CmpInst::ICMP_UGE:
-        return RecurKind::UMax;
-      case CmpInst::ICMP_ULT:
-      case CmpInst::ICMP_ULE:
-        return RecurKind::UMin;
-      }
-    }
-    return RecurKind::None;
-  }
+  static RecurKind getRdxKind(Value *V) { return slpvectorizer::getRdxKind(V); }
 
   /// Get the index of the first operand.
   static unsigned getFirstOperandIndex(Instruction *I) {
@@ -35716,10 +35092,6 @@ private:
 };
 } // end anonymous namespace
 
-/// Gets recurrence kind from the specified value.
-static RecurKind getRdxKind(Value *V) {
-  return HorizontalReduction::getRdxKind(V);
-}
 static void findBuildAggregateRec(Instruction *LastInsertInst,
                                   TargetTransformInfo *TTI,
                                   SmallVectorImpl<Value *> &BuildVectorOpds,

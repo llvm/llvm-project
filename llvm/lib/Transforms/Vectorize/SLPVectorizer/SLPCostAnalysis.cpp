@@ -7,14 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "SLPCostAnalysis.h"
+#include "../VectorizeOptions.h"
 #include "SLPTypeUtils.h"
 #include "SLPUtils.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -571,4 +575,225 @@ InstructionCost getNarrowedLeafOpsCost(
         {TTI::OK_NonUniformConstantValue, TTI::OP_None}, {}, CtxI);
   return Cost;
 }
+
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo *TTI) {
+  SmallVector<Type *> ArgTys;
+  for (auto [Idx, Arg] : enumerate(CI->args())) {
+    if (ID != Intrinsic::not_intrinsic) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, Idx, TTI)) {
+        ArgTys.push_back(Arg->getType());
+        continue;
+      }
+      if (MinBW > 0) {
+        ArgTys.push_back(
+            getWidenedType(IntegerType::get(CI->getContext(), MinBW), VF));
+        continue;
+      }
+    }
+    ArgTys.push_back(getWidenedType(Arg->getType(), VF));
+  }
+  return ArgTys;
+}
+
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
+                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
+                   const TTI::TargetCostKind CostKind) {
+  auto Shape = VFShape::get(CI->getFunctionType(),
+                            ElementCount::getFixed(getNumElements(VecTy)),
+                            false /*HasGlobalPred*/);
+  Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
+  auto LibCost = InstructionCost::getInvalid();
+  if (!CI->isNoBuiltin() && VecFunc) {
+    // Calculate the cost of the vector library call.
+    // If the corresponding vector call is cheaper, return its cost.
+    LibCost = TTI->getCallInstrCost(nullptr, VecTy, ArgTys, CostKind);
+  }
+  Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
+
+  // Calculate the cost of the vector intrinsic call.
+  FastMathFlags FMF;
+  if (auto *FPCI = dyn_cast<FPMathOperator>(CI))
+    FMF = FPCI->getFastMathFlags();
+  const InstructionCost ScalarLimit = 10000;
+  IntrinsicCostAttributes CostAttrs(ID, VecTy, ArgTys, FMF,
+                                    dyn_cast<IntrinsicInst>(CI),
+                                    LibCost.isValid() ? LibCost : ScalarLimit);
+  auto IntrinsicCost = TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+  if (LibCost.isValid()) {
+    if (IntrinsicCost > LibCost)
+      IntrinsicCost = InstructionCost::getInvalid();
+  } else if (IntrinsicCost > ScalarLimit) {
+    // A type-based query always scalarizes struct-returning intrinsics (e.g.
+    // llvm.sincos), which do not have a VFDatabase name mapping. Retry with an
+    // argument-aware query (as the loop vectorizer does) so such lowerings are
+    // taken into account.
+    SmallVector<const Value *> Args(CI->args());
+    IntrinsicCostAttributes ArgAwareAttrs(
+        ID, VecTy, Args, ArgTys, FMF, dyn_cast<IntrinsicInst>(CI), ScalarLimit);
+    IntrinsicCost = TTI->getIntrinsicInstrCost(ArgAwareAttrs, CostKind);
+    if (IntrinsicCost > ScalarLimit)
+      IntrinsicCost = InstructionCost::getInvalid();
+  }
+
+  return {IntrinsicCost, LibCost};
+}
+
+/// \returns the reciprocal-throughput cost of \p I widened to \p VF lanes (an
+/// arithmetic op or a vectorizable call).
+static InstructionCost getVectorOpCost(Instruction *I, unsigned VF,
+                                       const TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI,
+                                       const TTI::TargetCostKind CostKind) {
+  assert((isa<BinaryOperator, CallInst>(I)) &&
+         "getVectorOpCost expects an arithmetic op or a vectorizable call.");
+  Type *VecTy = getWidenedType(I->getType(), VF);
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI);
+    SmallVector<Type *> ArgTys = buildIntrinsicArgTypes(CI, ID, VF, 0, &TTI);
+    auto [IntrCost, LibCost] =
+        getVectorCallCosts(CI, VecTy, &TTI, &TLI, ArgTys, CostKind);
+    return std::min(IntrCost, LibCost);
+  }
+  SmallVector<const Value *, 2> Args{I->getOperand(0), I->getOperand(1)};
+  return TTI.getArithmeticInstrCost(
+      I->getOpcode(), VecTy, CostKind, TTI::getOperandInfo(I->getOperand(0)),
+      TTI::getOperandInfo(I->getOperand(1)), Args, I);
+}
+
+/// Packs a type's kind and scalar width into one key, so an opcode/intrinsic
+/// id reused across scalar widths (e.g. fdiv float vs. fdiv double) is cached
+/// per width instead of sharing one verdict.
+static unsigned getPoorThroughputTypeKey(Type *Ty) {
+  return (static_cast<unsigned>(Ty->getTypeID()) << 16) |
+         Ty->getScalarSizeInBits();
+}
+
+bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
+                        const TargetTransformInfo &TTI,
+                        const TargetLibraryInfo &TLI,
+                        PoorThroughputOpCache &Cache,
+                        const TTI::TargetCostKind CostKind,
+                        unsigned MaxVecRegSize) {
+  if (!isa<BinaryOperator, CallInst>(I))
+    return false;
+  Type *Ty = I->getType();
+  if ((Ty->isVectorTy() && !Opts.slp_revec) || Ty->isAggregateType() ||
+      !isValidElementType(Ty, Opts.slp_revec))
+    return false;
+  auto Analyze = [&]() {
+    InstructionCost ScalarCost = TTI.getInstructionCost(I, CostKind);
+    if (ScalarCost < TTI::TCC_Expensive)
+      return false;
+    constexpr unsigned MinVF = 2;
+    if (getVectorOpCost(I, MinVF, TTI, TLI, CostKind) < ScalarCost * MinVF)
+      return true;
+    // Some ops (e.g. div by constant) scalarize at VF=2 but have a cheap
+    // vector form at the full register width.
+    unsigned TyBits = Ty->getPrimitiveSizeInBits().getFixedValue();
+    unsigned MaxVF = TyBits ? llvm::bit_floor(MaxVecRegSize / TyBits) : 0;
+    return MaxVF > MinVF &&
+           getVectorOpCost(I, MaxVF, TTI, TLI, CostKind) < ScalarCost * MaxVF;
+  };
+  auto CheckCached = [&](bool IsCheap, llvm::function_ref<void()> MarkCheap) {
+    if (IsCheap)
+      return false;
+    if (Analyze())
+      return true;
+    MarkCheap();
+    return false;
+  };
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (any_of(CI->args(), [&](const Value *Arg) {
+          return !isValidElementType(Arg->getType(), Opts.slp_revec);
+        }))
+      return false;
+    // A call, used only as a select operand, may get the values rejected by the
+    // select condition, which the vector library call handles on its slow path.
+    if (!CI->use_empty() && !CI->hasNUsesOrMore(UsesLimit) &&
+        all_of(CI->users(), [&](User *U) {
+          return match(
+              U, m_Select(m_Unless(m_Specific(CI)), m_Value(), m_Value()));
+        }))
+      return false;
+    if (Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, &TLI)) {
+      auto Key = std::make_pair(ID, getPoorThroughputTypeKey(Ty));
+      return CheckCached(Cache.CheapIntrinsics.contains(Key),
+                         [&] { Cache.CheapIntrinsics.insert(Key); });
+    }
+    // A call without the vector variants is never vectorized.
+    if (VFDatabase::getMappings(*CI).empty())
+      return false;
+    const Function *Callee = CI->getCalledFunction();
+    if (!Callee)
+      return Analyze();
+    return CheckCached(Cache.CheapCallees.contains(Callee),
+                       [&] { Cache.CheapCallees.insert(Callee); });
+  }
+  auto Key = std::make_pair(I->getOpcode(), getPoorThroughputTypeKey(Ty));
+  return CheckCached(Cache.CheapOpcodes.contains(Key),
+                     [&] { Cache.CheapOpcodes.insert(Key); });
+}
+
+bool isFusableFMulOperand(Value *Op, Instruction *I,
+                          const TargetTransformInfo &TTI) {
+  Instruction *FMul;
+  if (!match(Op, m_Instruction(FMul, m_OneUse(m_AllowContract(
+                                         m_FMul(m_Value(), m_Value()))))))
+    return false;
+  if (FMul->getParent() == I->getParent())
+    return true;
+  SmallVector<Use *> OpsToSink;
+  return TTI.isProfitableToSinkOperands(I, OpsToSink) &&
+         any_of(OpsToSink, [&](const Use *U) { return U->get() == FMul; });
+}
+
+TTI::VectorInstrContext getVectorInstrContextHint(ArrayRef<Value *> VL,
+                                                  const APInt &DemandedElts) {
+  TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
+  for (unsigned I : seq(VL.size())) {
+    if (!DemandedElts[I])
+      continue;
+    Value *V = VL[I];
+    if (isa<UndefValue>(V))
+      continue;
+    auto *Inst = dyn_cast<Instruction>(V);
+    if (!Inst)
+      return TTI::VectorInstrContext::None;
+    TTI::VectorInstrContext IVIC = TTI::getVectorInstrContextHint(Inst);
+    if (VIC == TTI::VectorInstrContext::None) {
+      VIC = IVIC;
+      continue;
+    }
+    if (VIC != IVIC)
+      return TTI::VectorInstrContext::None;
+  }
+  return VIC;
+}
+
+bool hasHighRegisterPressure(const VectorizeOptions &Opts, const BasicBlock &BB,
+                             Type *Ty, const TargetTransformInfo &TTI) {
+  if (hasNItemsOrMore(BB, Opts.slp_schedule_budget))
+    return false;
+  const unsigned NumRegs = TTI.getNumberOfRegisters(
+      TTI.getRegisterClassForType(/*Vector=*/false, Ty));
+  auto IsLiveCandidate = [&](const Value *V) {
+    return isa<Instruction, Argument>(V) && V->getType()->getScalarType() == Ty;
+  };
+  SmallPtrSet<const Value *, 32> Live;
+  for (const Instruction &I : reverse(BB)) {
+    // The operands of the PHIs are live in the predecessors.
+    if (isa<PHINode>(I))
+      break;
+    Live.erase(&I);
+    Live.insert_range(make_filter_range(I.operand_values(), IsLiveCandidate));
+    if (Live.size() > NumRegs)
+      return true;
+  }
+  return false;
+}
+
 } // namespace llvm::slpvectorizer

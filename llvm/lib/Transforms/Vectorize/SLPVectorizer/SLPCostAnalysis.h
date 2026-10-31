@@ -19,7 +19,10 @@
 #include "SLPUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/InstructionCost.h"
 
 #include <tuple>
@@ -27,9 +30,12 @@
 
 namespace llvm {
 class APInt;
+class BasicBlock;
+class CallInst;
 class DataLayout;
 class FastMathFlags;
 class FixedVectorType;
+class Function;
 class Instruction;
 class TargetLibraryInfo;
 class Type;
@@ -37,6 +43,7 @@ class User;
 class Value;
 class VectorType;
 enum class RecurKind;
+struct VectorizeOptions;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -177,6 +184,57 @@ getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
                    FixedVectorType *VectorTy, Type *ScalarTy,
                    TargetTransformInfo::CastContextHint Ctx,
                    TargetTransformInfo::TargetCostKind CostKind);
+
+/// Builds the arguments types vector for the given call instruction with the
+/// given \p ID for the specified vector factor.
+SmallVector<Type *> buildIntrinsicArgTypes(const CallInst *CI,
+                                           const Intrinsic::ID ID,
+                                           const unsigned VF, unsigned MinBW,
+                                           const TargetTransformInfo *TTI);
+
+/// Calculates the costs of vectorized intrinsic (if possible) and vectorized
+/// function (if possible) calls. Returns invalid cost for the corresponding
+/// calls, if they cannot be vectorized/will be scalarized.
+std::pair<InstructionCost, InstructionCost>
+getVectorCallCosts(CallInst *CI, Type *VecTy, const TargetTransformInfo *TTI,
+                   const TargetLibraryInfo *TLI, ArrayRef<Type *> ArgTys,
+                   const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Memoizes opcode / intrinsic / callee kinds already ruled out as seeds.
+struct PoorThroughputOpCache {
+  SmallDenseSet<std::pair<unsigned, unsigned>> CheapOpcodes;
+  SmallDenseSet<std::pair<Intrinsic::ID, unsigned>> CheapIntrinsics;
+  // Keyed on the callee alone: a Function's signature is fixed, so its type
+  // never varies between calls.
+  SmallDenseSet<const Function *> CheapCallees;
+};
+
+/// Returns true if \p I is an expensive scalar op whose vector form is cheaper
+/// per lane (e.g. fdiv, frem, fsqrt). If \p MaxVecRegSize is non-zero, the
+/// widest vector fitting into it is checked too.
+bool isPoorThroughputOp(const VectorizeOptions &Opts, Instruction *I,
+                        const TargetTransformInfo &TTI,
+                        const TargetLibraryInfo &TLI,
+                        PoorThroughputOpCache &Cache,
+                        const TargetTransformInfo::TargetCostKind CostKind,
+                        unsigned MaxVecRegSize = 0);
+
+/// \returns true if \p Op is a contractable single-use fmul, which the backend
+/// fuses with its fadd/fsub user \p I: \p Op is in the block of \p I or the
+/// target sinks it there.
+bool isFusableFMulOperand(Value *Op, Instruction *I,
+                          const TargetTransformInfo &TTI);
+
+/// Calculates a VectorInstrContext from the values in \p VL at indices in
+/// \p DemandedElts.
+TargetTransformInfo::VectorInstrContext
+getVectorInstrContextHint(ArrayRef<Value *> VL, const APInt &DemandedElts);
+
+/// \returns true if more values with the scalar type \p Ty than registers are
+/// live at some point of the block \p BB. The blocks larger than the scheduling
+/// budget are skipped to save compile time.
+bool hasHighRegisterPressure(const VectorizeOptions &Opts, const BasicBlock &BB,
+                             Type *Ty, const TargetTransformInfo &TTI);
 
 } // namespace llvm::slpvectorizer
 

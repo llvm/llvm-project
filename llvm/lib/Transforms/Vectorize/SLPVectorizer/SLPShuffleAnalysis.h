@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -29,6 +30,8 @@
 
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
+#include <utility>
 
 namespace llvm::slpvectorizer {
 
@@ -391,6 +394,128 @@ protected:
         CommonMask[I] = I;
   }
 };
+
+/// Returns incoming Value *, if the requested type is Value * too, or a default
+/// value, otherwise.
+struct ValueSelect {
+  template <typename U>
+  static std::enable_if_t<std::is_same_v<Value *, U>, Value *> get(Value *V) {
+    return V;
+  }
+  template <typename U>
+  static std::enable_if_t<!std::is_same_v<Value *, U>, U> get(Value *) {
+    return U();
+  }
+};
+
+/// Does the analysis of the provided shuffle masks and performs the requested
+/// actions on the vectors with the given shuffle masks. It tries to do it in
+/// several steps.
+/// 1. If the Base vector is not poison vector, resizing the very first mask to
+/// have common VF and perform action for 2 input vectors (including non-poison
+/// Base). Other shuffle masks are combined with the resulting after the 1 stage
+/// and processed as a shuffle of 2 elements.
+/// 2. If the Base is poison vector and have only 1 shuffle mask, perform the
+/// action only for 1 vector with the given mask, if it is not the identity
+/// mask.
+/// 3. If > 2 masks are used, perform the remaining shuffle actions for 2
+/// vectors, combing the masks properly between the steps.
+template <typename T>
+T *performExtractsShuffleAction(
+    MutableArrayRef<std::pair<T *, SmallVector<int>>> ShuffleMask, Value *Base,
+    function_ref<unsigned(T *)> GetVF,
+    function_ref<std::pair<T *, bool>(T *, ArrayRef<int>, bool)> ResizeAction,
+    function_ref<T *(ArrayRef<int>, ArrayRef<T *>)> Action) {
+  assert(!ShuffleMask.empty() && "Empty list of shuffles for inserts.");
+  SmallVector<int> Mask(ShuffleMask.begin()->second);
+  auto VMIt = std::next(ShuffleMask.begin());
+  T *Prev = nullptr;
+  SmallBitVector UseMask =
+      buildUseMask(Mask.size(), Mask, UseMask::UndefsAsMask);
+  // The undef elements of the base must be preserved, only the poison base can
+  // be dropped.
+  SmallBitVector IsBasePoison = isUndefVector<true>(Base, UseMask);
+  if (!IsBasePoison.all()) {
+    // Base is not poison, need to combine it with the next subvectors.
+    std::pair<T *, bool> Res =
+        ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
+    for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
+      if (Mask[Idx] == PoisonMaskElem)
+        Mask[Idx] = IsBasePoison.test(Idx) ? PoisonMaskElem : Idx;
+      else
+        Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
+    }
+    [[maybe_unused]] auto *V = ValueSelect::get<T *>(Base);
+    assert((!V || GetVF(V) == Mask.size()) &&
+           "Expected base vector of VF number of elements.");
+    Prev = Action(Mask, {nullptr, Res.first});
+  } else if (ShuffleMask.size() == 1) {
+    // Base is poison and only 1 vector is shuffled - perform the action only
+    // for single vector, if the mask is not the identity mask.
+    std::pair<T *, bool> Res = ResizeAction(ShuffleMask.begin()->first, Mask,
+                                            /*ForSingleMask=*/true);
+    if (Res.second)
+      // Identity mask is found.
+      Prev = Res.first;
+    else
+      Prev = Action(Mask, {ShuffleMask.begin()->first});
+  } else {
+    // Base is poison and at least 2 input vectors shuffled - perform 2 vectors
+    // shuffles step by step, combining shuffle between the steps.
+    unsigned Vec1VF = GetVF(ShuffleMask.begin()->first);
+    unsigned Vec2VF = GetVF(VMIt->first);
+    if (Vec1VF == Vec2VF) {
+      // No need to resize the input vectors since they are of the same size, we
+      // can shuffle them directly.
+      ArrayRef<int> SecMask = VMIt->second;
+      for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
+        if (SecMask[I] != PoisonMaskElem) {
+          assert(Mask[I] == PoisonMaskElem && "Multiple uses of scalars.");
+          Mask[I] = SecMask[I] + Vec1VF;
+        }
+      }
+      Prev = Action(Mask, {ShuffleMask.begin()->first, VMIt->first});
+    } else {
+      // Vectors of different sizes - resize and reshuffle.
+      std::pair<T *, bool> Res1 = ResizeAction(ShuffleMask.begin()->first, Mask,
+                                               /*ForSingleMask=*/false);
+      std::pair<T *, bool> Res2 =
+          ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
+      ArrayRef<int> SecMask = VMIt->second;
+      for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
+        if (Mask[I] != PoisonMaskElem) {
+          assert(SecMask[I] == PoisonMaskElem && "Multiple uses of scalars.");
+          if (Res1.second)
+            Mask[I] = I;
+        } else if (SecMask[I] != PoisonMaskElem) {
+          assert(Mask[I] == PoisonMaskElem && "Multiple uses of scalars.");
+          Mask[I] = (Res2.second ? I : SecMask[I]) + VF;
+        }
+      }
+      Prev = Action(Mask, {Res1.first, Res2.first});
+    }
+    VMIt = std::next(VMIt);
+  }
+  [[maybe_unused]] bool IsBaseNotPoison = !IsBasePoison.all();
+  // Perform requested actions for the remaining masks/vectors.
+  for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
+    // Shuffle other input vectors, if any.
+    std::pair<T *, bool> Res =
+        ResizeAction(VMIt->first, VMIt->second, /*ForSingleMask=*/false);
+    ArrayRef<int> SecMask = VMIt->second;
+    for (unsigned I = 0, VF = Mask.size(); I < VF; ++I) {
+      if (SecMask[I] != PoisonMaskElem) {
+        assert((Mask[I] == PoisonMaskElem || IsBaseNotPoison) &&
+               "Multiple uses of scalars.");
+        Mask[I] = (Res.second ? I : SecMask[I]) + VF;
+      } else if (Mask[I] != PoisonMaskElem) {
+        Mask[I] = I;
+      }
+    }
+    Prev = Action(Mask, {Prev, Res.first});
+  }
+  return Prev;
+}
 
 } // namespace llvm::slpvectorizer
 

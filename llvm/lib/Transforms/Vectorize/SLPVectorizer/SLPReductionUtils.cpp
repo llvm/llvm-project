@@ -216,4 +216,102 @@ Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
   return nullptr;
 }
 
+RecurKind getRdxKind(Value *V) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return RecurKind::None;
+  if (match(I, m_Add(m_Value(), m_Value())))
+    return RecurKind::Add;
+  if (match(I, m_Mul(m_Value(), m_Value())))
+    return RecurKind::Mul;
+  if (match(I, m_And(m_Value(), m_Value())) ||
+      match(I, m_LogicalAnd(m_Value(), m_Value())))
+    return RecurKind::And;
+  if (match(I, m_Or(m_Value(), m_Value())) ||
+      match(I, m_LogicalOr(m_Value(), m_Value())))
+    return RecurKind::Or;
+  if (match(I, m_Xor(m_Value(), m_Value())))
+    return RecurKind::Xor;
+  if (match(I, m_FAdd(m_Value(), m_Value())))
+    return RecurKind::FAdd;
+  if (match(I, m_FMul(m_Value(), m_Value())))
+    return RecurKind::FMul;
+
+  if (match(I, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
+    return RecurKind::FMax;
+  if (match(I, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
+    return RecurKind::FMin;
+
+  if (match(I, m_FMaximum(m_Value(), m_Value())))
+    return RecurKind::FMaximum;
+  if (match(I, m_FMinimum(m_Value(), m_Value())))
+    return RecurKind::FMinimum;
+  // TODO: remove several special-case paths that deal with selects.
+  if (match(I, m_SMax(m_Value(), m_Value())))
+    return RecurKind::SMax;
+  if (match(I, m_SMin(m_Value(), m_Value())))
+    return RecurKind::SMin;
+  if (match(I, m_UMax(m_Value(), m_Value())))
+    return RecurKind::UMax;
+  if (match(I, m_UMin(m_Value(), m_Value())))
+    return RecurKind::UMin;
+
+  if (auto *Select = dyn_cast<SelectInst>(I)) {
+    // Try harder: look for min/max pattern based on instructions producing
+    // same values such as: select ((cmp Inst1, Inst2), Inst1, Inst2).
+    // During the intermediate stages of SLP, it's very common to have
+    // pattern like this (since optimizeGatherSequence is run only once
+    // at the end):
+    // %1 = extractelement <2 x i32> %a, i32 0
+    // %2 = extractelement <2 x i32> %a, i32 1
+    // %cond = icmp sgt i32 %1, %2
+    // %3 = extractelement <2 x i32> %a, i32 0
+    // %4 = extractelement <2 x i32> %a, i32 1
+    // %select = select i1 %cond, i32 %3, i32 %4
+    CmpPredicate Pred;
+    Instruction *L1;
+    Instruction *L2;
+
+    Value *LHS = Select->getTrueValue();
+    Value *RHS = Select->getFalseValue();
+    Value *Cond = Select->getCondition();
+
+    // TODO: Support inverse predicates.
+    if (match(Cond, m_Cmp(Pred, m_Specific(LHS), m_Instruction(L2)))) {
+      if (!isa<ExtractElementInst>(RHS) ||
+          !L2->isIdenticalTo(cast<Instruction>(RHS)))
+        return RecurKind::None;
+    } else if (match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Specific(RHS)))) {
+      if (!isa<ExtractElementInst>(LHS) ||
+          !L1->isIdenticalTo(cast<Instruction>(LHS)))
+        return RecurKind::None;
+    } else {
+      if (!isa<ExtractElementInst>(LHS) || !isa<ExtractElementInst>(RHS))
+        return RecurKind::None;
+      if (!match(Cond, m_Cmp(Pred, m_Instruction(L1), m_Instruction(L2))) ||
+          !L1->isIdenticalTo(cast<Instruction>(LHS)) ||
+          !L2->isIdenticalTo(cast<Instruction>(RHS)))
+        return RecurKind::None;
+    }
+
+    switch (Pred) {
+    default:
+      return RecurKind::None;
+    case CmpInst::ICMP_SGT:
+    case CmpInst::ICMP_SGE:
+      return RecurKind::SMax;
+    case CmpInst::ICMP_SLT:
+    case CmpInst::ICMP_SLE:
+      return RecurKind::SMin;
+    case CmpInst::ICMP_UGT:
+    case CmpInst::ICMP_UGE:
+      return RecurKind::UMax;
+    case CmpInst::ICMP_ULT:
+    case CmpInst::ICMP_ULE:
+      return RecurKind::UMin;
+    }
+  }
+  return RecurKind::None;
+}
+
 } // namespace llvm::slpvectorizer
