@@ -12,7 +12,6 @@ add_libc_test(
     libc.hdr.sys_file_macros
     libc.hdr.sys_stat_macros
     libc.src.__support.CPP.scope
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.file.flock
     libc.src.unistd.close

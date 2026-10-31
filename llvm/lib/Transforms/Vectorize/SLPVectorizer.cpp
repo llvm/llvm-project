@@ -542,6 +542,7 @@ public:
     UserIgnoreList = nullptr;
     NarrowedChainInsts.clear();
     PostponedGathers.clear();
+    ExpandedOperandFreezes.clear();
     ValueToGatherNodes.clear();
     TreeEntryToStridedPtrInfoMap.clear();
     CurrentLoopNest.clear();
@@ -3462,6 +3463,11 @@ private:
   /// handle order of the vector instructions and shuffles.
   SetVector<const TreeEntry *> PostponedGathers;
 
+  /// Frozen operands of the expanded binops with the shuffles, which blend the
+  /// frozen expanded lanes into the other operands.
+  SmallVector<std::pair<FreezeInst *, ShuffleVectorInst *>>
+      ExpandedOperandFreezes;
+
   using ValueToGatherNodesMap =
       DenseMap<Value *, SmallSetVector<const TreeEntry *, 4>>;
   ValueToGatherNodesMap ValueToGatherNodes;
@@ -4564,14 +4570,15 @@ private:
           // Remove extra deps for users, becoming non-immediate users of the
           // instruction. It may happen, if the chain of same copyable elements
           // appears in the tree. With the self-operand modeling (op(V, V)) the
-          // user node has the value on more than one operand column, so its
-          // copyable data releases the instruction's schedule data directly
-          // and must stay a counted user.
+          // user node may have the value on an operand column without copyable
+          // data, so its copyable data releases the instruction's schedule
+          // data directly and must stay a counted user.
           if (In == I) {
             unsigned NumCols = 0;
             for (unsigned OpIdx : seq<unsigned>(EI.UserTE->getNumOperands()))
-              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I;
-            if (NumCols <= 1) {
+              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I &&
+                         !getScheduleCopyableData({EI.UserTE, OpIdx}, I);
+            if (NumCols == 0) {
               EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
               if (ScheduleCopyableData *UserCD =
                       getScheduleCopyableData(UserEI, In))
@@ -7201,12 +7208,17 @@ void BoUpSLP::reorderTopToBottom() {
       (getRootNode().getOpcode() == Instruction::InsertElement ||
        getRootNode().getOpcode() == Instruction::InsertValue ||
        getRootNode().getOpcode() == Instruction::Store);
-  // The operand subtree of a blended load builds the blend mask in the lane
-  // order of the load scalars, so it is not reordered with the graph.
-  auto IsBlendedLoadOperand = [](const TreeEntry *TE) {
-    for (; TE->UserTreeIndex; TE = TE->UserTreeIndex.UserTE)
-      if (TE->UserTreeIndex.UserTE->State == TreeEntry::BlendedLoadVectorize)
+  // The operand subtrees of a blended load and of a revec shufflevector build
+  // the masks in the lane order of the user scalars, so they are not reordered
+  // with the graph.
+  auto IsFixedOrderOperand = [&](const TreeEntry *TE) {
+    for (; TE->UserTreeIndex; TE = TE->UserTreeIndex.UserTE) {
+      const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
+      if (UserTE->State == TreeEntry::BlendedLoadVectorize ||
+          (Opts.slp_revec && UserTE->hasState() &&
+           isa<ShuffleVectorInst>(UserTE->getMainOp())))
         return true;
+    }
     return false;
   };
   // Find all reorderable nodes with the given VF.
@@ -7214,7 +7226,7 @@ void BoUpSLP::reorderTopToBottom() {
   // extracts.
   for_each(VectorizableTree, [&, &TTIRef = *TTI](
                                  const std::unique_ptr<TreeEntry> &TE) {
-    if (IsBlendedLoadOperand(TE.get()))
+    if (IsFixedOrderOperand(TE.get()))
       return;
     // Look for external users that will probably be vectorized.
     SmallVector<OrdersType, 1> ExternalUserReorderIndices =
@@ -7415,7 +7427,7 @@ void BoUpSLP::reorderTopToBottom() {
                return (TE->State != TreeEntry::Vectorize ||
                        TE->getOpcode() != Instruction::Load ||
                        !is_contained(SplatGatheredScalarsRoots, TE.get())) &&
-                      !IsBlendedLoadOperand(TE.get());
+                      !IsFixedOrderOperand(TE.get());
              })) {
       // Just do the reordering for the nodes with the given VF.
       if (TE->Scalars.size() != VF) {
@@ -7432,16 +7444,6 @@ void BoUpSLP::reorderTopToBottom() {
                TE->UserTreeIndex.UserTE->Scalars.size() == TE->Scalars.size() ||
                TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize) &&
               "All users must be of VF size.");
-          if (Opts.slp_revec) {
-            assert(Opts.slp_revec && "Only supported by REVEC.");
-            // ShuffleVectorInst does not do reorderOperands (and it should not
-            // because ShuffleVectorInst supports only a limited set of
-            // patterns). Only do reorderNodeWithReuses if the user is not
-            // ShuffleVectorInst.
-            if (TE->UserTreeIndex && TE->UserTreeIndex.UserTE->hasState() &&
-                isa<ShuffleVectorInst>(TE->UserTreeIndex.UserTE->getMainOp()))
-              continue;
-          }
           // Update ordering of the operands with the smaller VF than the given
           // one.
           reorderNodeWithReuses(*TE, Mask);
@@ -14189,7 +14191,6 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
   auto *SrcType = IntegerType::getIntNTy(ScalarTy->getContext(),
                                          Stride * LhsTE->getVectorFactor());
   FastMathFlags FMF;
-  SmallPtrSet<Value *, 4> CheckedExtracts;
   auto *VecTy =
       cast<VectorType>(getWidenedType(ScalarTy, TE.getVectorFactor()));
   auto *SrcVecTy =
@@ -22995,6 +22996,11 @@ public:
                count_if(E->UserTreeIndex.UserTE->Scalars,
                         [&](Value *V) { return V == EI; })) ||
           (NumParts != 1 && count(VL, EI) > 1) ||
+          // Other gather nodes may still use the extractelement.
+          any_of(R.ValueToGatherNodes.lookup(EI),
+                 [&](const TreeEntry *TE) {
+                   return TE != E && !R.DeletedNodes.contains(TE);
+                 }) ||
           any_of(EI->users(), [&](User *U) {
             ArrayRef<TreeEntry *> UTEs = R.getTreeEntries(U);
             return UTEs.empty() || UTEs.size() > 1 ||
@@ -23962,6 +23968,15 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
               Vec = ShuffleBuilder.gather(NonConstants, Mask.size(), Vec);
             } else {
               Value *V = *find_if_not(NonConstants, IsaPred<UndefValue>);
+              // The splat replaces undefs by the splatted value, freeze it if
+              // it may be poison.
+              if constexpr (std::is_same_v<ResTy, Value *>)
+                if (any_of(NonConstants,
+                           [](Value *U) {
+                             return isa<UndefValue>(U) && !isa<PoisonValue>(U);
+                           }) &&
+                    !isGuaranteedNotToBePoison(V, AC))
+                  V = ShuffleBuilder.createFreeze(V);
               SmallVector<Value *> Values(NonConstants.size(),
                                           PoisonValue::get(ScalarTy));
               Values[0] = V;
@@ -24215,6 +24230,38 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         return !isKnownNonNegative(R, SimplifyQuery(*DL));
       });
     return IsSigned;
+  };
+  // The expanded shl X, 1 lanes compute add X, X, which reads X twice. If X
+  // may be undef, both operands must read the same frozen value. X cannot be
+  // undef if undef X triggers undefined behavior.
+  auto FreezeExpandedOperands = [&](Value *&LHS, Value *&RHS) {
+    SmallVector<unsigned> Lanes;
+    for (auto [Idx, V] : enumerate(E->Scalars)) {
+      if (!E->isExpandedBinOp(V))
+        continue;
+      auto *I = cast<Instruction>(V);
+      Value *X = I->getOperand(0);
+      auto *XI = dyn_cast<Instruction>(X);
+      if (!isGuaranteedNotToBeUndef(X, AC, I, DT) &&
+          !programUndefinedIfUndefOrPoison(I) &&
+          (!XI || !programUndefinedIfUndefOrPoison(XI)))
+        Lanes.push_back(Idx);
+    }
+    if (Lanes.empty())
+      return;
+    LHS = Builder.CreateFreeze(LHS);
+    const unsigned VF = E->Scalars.size();
+    SmallVector<int> Mask(VF);
+    std::iota(Mask.begin(), Mask.end(), 0);
+    for (unsigned Lane : Lanes)
+      Mask[Lane] += VF;
+    if (isa<FixedVectorType>(ScalarTy))
+      transformScalarShuffleIndiciesToVector(getNumElements(ScalarTy), Mask);
+    RHS = Builder.CreateShuffleVector(RHS, LHS, Mask);
+    if (!isa<FixedVectorType>(ScalarTy))
+      if (auto *Fr = dyn_cast<FreezeInst>(LHS))
+        if (auto *Sh = dyn_cast<ShuffleVectorInst>(RHS))
+          ExpandedOperandFreezes.emplace_back(Fr, Sh);
   };
   auto PropagateIRFlags = [&](Value *V, unsigned Opcode = 0,
                               ArrayRef<Value *> VL = {}) -> Value * {
@@ -25240,6 +25287,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (RHS->getType() != VecTy)
           RHS = Builder.CreateIntCast(RHS, VecTy, GetOperandSignedness(1));
       }
+      FreezeExpandedOperands(LHS, RHS);
 
       // Structural padding does not imply profitability; re-check the cost
       // here so codegen matches the earlier cost-based decision.
@@ -25762,6 +25810,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
         Value *V0, *V1;
         if (Instruction::isBinaryOp(E->getOpcode())) {
+          FreezeExpandedOperands(LHS, RHS);
           V0 = Builder.CreateBinOp(
               static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
           V1 = Builder.CreateBinOp(
@@ -26675,6 +26724,105 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
     }
     eraseInstruction(PrevVec);
   }
+
+  // Returns the gather insertelement, which defines the lane of the vector,
+  // looking through the lane-preserving shuffles and casts.
+  auto GetLaneInsert = [&](Value *V, unsigned Lane) -> InsertElementInst * {
+    while (true) {
+      if (auto *IE = dyn_cast<InsertElementInst>(V)) {
+        auto *Idx = dyn_cast<ConstantInt>(IE->getOperand(2));
+        if (!Idx)
+          return nullptr;
+        if (Idx->getZExtValue() == Lane)
+          return GatherShuffleExtractSeq.contains(IE) ? IE : nullptr;
+        V = IE->getOperand(0);
+      } else if (auto *SV = dyn_cast<ShuffleVectorInst>(V)) {
+        int Mask = SV->getMaskValue(Lane);
+        if (Mask == PoisonMaskElem)
+          return nullptr;
+        unsigned VF = getNumElements(SV->getOperand(0)->getType());
+        V = SV->getOperand(Mask / VF);
+        Lane = Mask % VF;
+      } else if (auto *CI = dyn_cast<CastInst>(V);
+                 CI && getNumElements(CI->getSrcTy()) ==
+                           getNumElements(CI->getDestTy())) {
+        V = CI->getOperand(0);
+      } else {
+        return nullptr;
+      }
+    }
+  };
+  // If both operands of the expanded binop read the frozen lanes from the
+  // same gathered scalars, freeze these scalars instead of the whole operand.
+  // Otherwise, if the other operand is a shuffle, which reads the frozen lanes
+  // from the frozen operand, shuffle the frozen operand instead of blending.
+  SmallDenseMap<Value *, Value *> FrozenScalars;
+  for (auto [Fr, Sh] : ExpandedOperandFreezes) {
+    Value *LHS = Fr->getOperand(0);
+    Value *RHS = Sh->getOperand(0);
+    const unsigned VF = getNumElements(Sh->getType());
+    auto IsFrozenLane = [&, Sh = Sh](unsigned Lane) {
+      return Sh->getMaskValue(Lane) >= static_cast<int>(VF);
+    };
+    SmallSetVector<InsertElementInst *, 4> Inserts;
+    if (all_of(seq<unsigned>(VF), [&](unsigned Lane) {
+          if (!IsFrozenLane(Lane))
+            return true;
+          InsertElementInst *LHSIE = GetLaneInsert(LHS, Lane);
+          InsertElementInst *RHSIE = GetLaneInsert(RHS, Lane);
+          if (!LHSIE || !RHSIE || LHSIE->getOperand(1) != RHSIE->getOperand(1))
+            return false;
+          // Freezing an instruction, gathered by different buildvectors, may
+          // prevent later vectorization of these buildvectors.
+          auto *S = dyn_cast<Instruction>(LHSIE->getOperand(1));
+          if (S && (LHSIE != RHSIE || isDeleted(S) || isVectorized(S) ||
+                    !S->getInsertionPointAfterDef()))
+            return false;
+          Inserts.insert(LHSIE);
+          Inserts.insert(RHSIE);
+          return true;
+        })) {
+      for (InsertElementInst *IE : Inserts) {
+        Value *S = IE->getOperand(1);
+        if (isa<FreezeInst>(S))
+          continue;
+        Value *&FrozenS = FrozenScalars.try_emplace(S).first->second;
+        if (!FrozenS) {
+          IRBuilderBase::InsertPointGuard Guard(Builder);
+          if (auto *I = dyn_cast<Instruction>(S))
+            Builder.SetInsertPoint(*I->getInsertionPointAfterDef());
+          else
+            Builder.SetInsertPoint(F->getEntryBlock().getFirstInsertionPt());
+          FrozenS = Builder.CreateFreeze(S);
+        }
+        IE->setOperand(1, FrozenS);
+      }
+      Sh->replaceAllUsesWith(RHS);
+      Fr->replaceAllUsesWith(LHS);
+      Sh->eraseFromParent();
+      Fr->eraseFromParent();
+      continue;
+    }
+    auto *RHSSh = dyn_cast<ShuffleVectorInst>(RHS);
+    auto *LHSI = dyn_cast<Instruction>(LHS);
+    if (!RHSSh || !is_contained(RHSSh->operands(), LHS) ||
+        (LHSI && !DT->dominates(LHSI, RHSSh)) ||
+        !all_of(seq<unsigned>(VF), [&](unsigned Lane) {
+          if (!IsFrozenLane(Lane))
+            return true;
+          int Idx = RHSSh->getMaskValue(Lane);
+          if (Idx == PoisonMaskElem)
+            return false;
+          unsigned OpIdx = Idx / VF;
+          return RHSSh->getOperand(OpIdx) == LHS && Idx % VF == Lane;
+        }))
+      continue;
+    Fr->moveBefore(RHSSh->getIterator());
+    RHSSh->replaceUsesOfWith(LHS, Fr);
+    Sh->replaceAllUsesWith(RHSSh);
+    Sh->eraseFromParent();
+  }
+  ExpandedOperandFreezes.clear();
 
   LLVM_DEBUG(dbgs() << "SLP: Extracting " << ExternalUses.size()
                     << " values .\n");
@@ -30818,7 +30966,6 @@ bool SLPVectorizerPass::vectorizeStores(
   SmallVector<unsigned> RangeSizesByIdx(Stores.size(), 1);
 
   auto ExtendContexts = [&](const RelatedStoreInsts::DistToInstMap &StoreSeq) {
-    BoUpSLP::ValueList Operands;
     const unsigned MaxStride =
         Opts->slp_enable_strided_stores ? Opts->slp_max_stride : 1;
 
@@ -34617,10 +34764,11 @@ private:
         // For flattened fadd reductions the reduced value may be consumed by
         // an fsub/fneg chain link instead of an fadd. No reassoc/nsz gating
         // is needed: the result is only a cost context.
+        // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
         if (getRdxKind(U) == RdxKind ||
             (RdxKind == RecurKind::FAdd &&
              (match(U, m_FSub(m_Value(), m_Value())) ||
-              match(U, m_FNeg(m_Value())))))
+              match(U, m_FNegOrFSubNegZero(m_Value())))))
           return cast<Instruction>(U);
       return cast<Instruction>(RdxVal);
     };

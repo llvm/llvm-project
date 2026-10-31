@@ -3392,13 +3392,30 @@ let append Predicates = [IsRV64] in {
             (MULSU_W00 sexti32:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (mul (sext_inreg GPR:$rs1, i32), zexti32:$rs2)),
             (MULSU_W00 GPR:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (mul (sra GPR:$rs1, (XLenVT 32)), (srl GPR:$rs2, (XLenVT 32)))),
+            (MULSU_W11 GPR:$rs1, GPR:$rs2)>;
 
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, sexti32:$rs2))),
             (MACC_W00 GPR:$rd, sexti32:$rs1, sexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1,
+                                           (sra GPR:$rs2, (XLenVT 32))))),
+            (MACC_W01 GPR:$rd, sexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 32)),
+                                           (sra GPR:$rs2, (XLenVT 32))))),
+            (MACC_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1, zexti32:$rs2))),
             (MACCU_W00 GPR:$rd, zexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse zexti32:$rs1,
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCU_W01 GPR:$rd, zexti32:$rs1, GPR:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (srl GPR:$rs1, (XLenVT 32)),
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCU_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
   def : Pat<(i64 (add GPR:$rd, (mul_oneuse sexti32:$rs1, zexti32:$rs2))),
             (MACCSU_W00 GPR:$rd, sexti32:$rs1, zexti32:$rs2)>;
+  def : Pat<(i64 (add GPR:$rd, (mul_oneuse (sra GPR:$rs1, (XLenVT 32)),
+                                           (srl GPR:$rs2, (XLenVT 32))))),
+            (MACCSU_W11 GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
   // bits [15:0] coming from a zero extended value, and bits [63:32] being

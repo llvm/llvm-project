@@ -1285,10 +1285,11 @@ bool X86RegisterInfo::isNonRex2RegClass(const TargetRegisterClass *RC) const {
 }
 
 unsigned X86RegisterInfo::getCSRFirstUseCost(const MachineFunction &MF) const {
-  // If PPX is implemented, push/pop pairs don't access memory.
+  // PPX push/pop pairs don't access memory, but they still execute, so use a
+  // non-zero cost to let RAGreedy keep CSR saves off hot paths.
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   if (ST.is64Bit() && ST.hasPPX())
-    return 0;
+    return 1;
 
   // push + pop.
   return 2;

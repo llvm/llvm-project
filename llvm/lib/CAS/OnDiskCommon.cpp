@@ -80,6 +80,24 @@ void cas::ondisk::setMaxMappingSize(uint64_t Size) {
 std::error_code cas::ondisk::lockFileThreadSafe(int FD,
                                                 sys::fs::LockKind Kind) {
 #if HAVE_FLOCK
+#ifdef __APPLE__
+  // flock LOCK_SH after an exclusive lock is released may only wake a single
+  // waiter on Darwin, which can cause very long waits if the first shared
+  // access is long-running. Use a retry loop so waiters wake automatically.
+  if (Kind == sys::fs::LockKind::Shared) {
+    std::chrono::milliseconds Wait(1);
+    std::chrono::milliseconds MaxWait(20);
+    while (true) {
+      std::error_code EC = tryLockFileThreadSafe(FD, {}, Kind);
+      if (EC != std::errc::no_lock_available)
+        return EC;
+      std::this_thread::sleep_for(Wait);
+      Wait = std::min(2 * Wait, MaxWait);
+    }
+  }
+  // Fallthrough for exclusive lock
+  assert(Kind == sys::fs::LockKind::Exclusive);
+#endif
   if (sys::RetryAfterSignal(
           -1, flock, FD,
           Kind == sys::fs::LockKind::Exclusive ? LOCK_EX : LOCK_SH) == 0)
