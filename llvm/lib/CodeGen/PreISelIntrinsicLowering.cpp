@@ -17,12 +17,14 @@
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ExpandVectorPredication.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
@@ -56,6 +58,13 @@ static cl::opt<int64_t> MemIntrinsicExpandSizeThresholdOpt(
     cl::desc("Set minimum mem intrinsic size to expand in IR"), cl::init(-1),
     cl::Hidden);
 
+/// Maximum bound of a memset with non-constant length for it to be expanded
+/// inline. Overrides TargetTransformInfo::getMaxBoundedMemSetInlineSize.
+static cl::opt<uint64_t> BoundedMemSetInlineSizeOpt(
+    "bounded-memset-inline-size",
+    cl::desc("Set maximum bound of a variable-length memset to expand inline"),
+    cl::Hidden);
+
 namespace {
 
 struct PreISelIntrinsicLowering {
@@ -81,6 +90,8 @@ struct PreISelIntrinsicLowering {
 
   static bool shouldExpandMemIntrinsicWithSize(Value *Size,
                                                const TargetTransformInfo &TTI);
+  bool tryExpandBoundedMemSet(MemSetInst *Memset,
+                              const TargetTransformInfo &TTI) const;
   bool
   expandMemIntrinsicUses(Function &F,
                          DenseMap<Constant *, GlobalVariable *> &CMap) const;
@@ -288,6 +299,41 @@ static bool canEmitMemcpy(const ModuleLibcallLoweringInfo &ModuleLowering,
   return Lowering.getMemcpyImpl() != RTLIB::Unsupported;
 }
 
+// Expand a memset whose length is not constant but is known to be small, which
+// is faster than calling the library.
+bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
+    MemSetInst *Memset, const TargetTransformInfo &TTI) const {
+  // This pass runs even at -O0, so skip if e.g. llc -O0 is used.
+  if (!TM || TM->getOptLevel() == CodeGenOptLevel::None)
+    return false;
+
+  Value *Len = Memset->getLength();
+  const Function *F = Memset->getFunction();
+  if (isa<Constant>(Len) || Memset->isVolatile() || F->hasOptNone() ||
+      F->hasMinSize())
+    return false;
+  uint64_t Threshold = BoundedMemSetInlineSizeOpt.getNumOccurrences()
+                           ? BoundedMemSetInlineSizeOpt
+                           : TTI.getMaxBoundedMemSetInlineSize();
+  if (!Threshold)
+    return false;
+
+  const DataLayout &DL = Memset->getDataLayout();
+  KnownBits Known = computeKnownBits(Len, DL);
+  ConstantRange CR = computeConstantRangeIncludingKnownBits(
+      {Len, Known}, /*ForSigned=*/false, SimplifyQuery(DL, Memset));
+  Attribute RangeAttr = Memset->getParamAttr(
+      Memset->getLengthUse().getOperandNo(), Attribute::Range);
+  if (RangeAttr.isValid())
+    CR = CR.intersectWith(RangeAttr.getRange());
+  if (CR.isEmptySet() || CR.getUnsignedMax().ugt(Threshold))
+    return false;
+
+  expandBoundedMemSet(Memset, CR.getUnsignedMin().getZExtValue(),
+                      CR.getUnsignedMax().getZExtValue(), Known);
+  return true;
+}
+
 // Return a value appropriate for use with the memset_pattern16 libcall, if
 // possible and if we know how. (Adapted from equivalent helper in
 // LoopIdiomRecognize).
@@ -406,6 +452,11 @@ bool PreISelIntrinsicLowering::expandMemIntrinsicUses(
       auto *Memset = cast<MemSetInst>(Inst);
       Function *ParentFunc = Memset->getFunction();
       const TargetTransformInfo &TTI = LookupTTI(*ParentFunc);
+      if (tryExpandBoundedMemSet(Memset, TTI)) {
+        Changed = true;
+        Memset->eraseFromParent();
+        break;
+      }
       if (shouldExpandMemIntrinsicWithSize(Memset->getLength(), TTI)) {
         if (UseMemIntrinsicLibFunc &&
             canEmitLibcall(ModuleLibcalls, TM, ParentFunc, RTLIB::MEMSET))
