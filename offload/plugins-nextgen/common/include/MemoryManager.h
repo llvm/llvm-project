@@ -22,6 +22,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "OffloadError.h"
 #include "Shared/Debug.h"
 #include "Shared/Utils.h"
 #include "omptarget.h"
@@ -34,7 +35,7 @@ using namespace llvm::offload::debug;
 
 namespace llvm {
 
-/// Base class of per-device allocator.
+/// Base class of the allocator a memory manager pools the memory of.
 class DeviceAllocatorTy {
 public:
   virtual ~DeviceAllocatorTy() = default;
@@ -50,9 +51,9 @@ public:
                      TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
 
-/// Class of memory manager. The memory manager is per-device by using
-/// per-device allocator. Therefore, each plugin using memory manager should
-/// have an allocator for each device.
+/// Class of memory manager. A manager pools the memory of a single allocator,
+/// so there is one manager per allocator, e.g. one per context, device and
+/// kind of memory.
 class MemoryManagerTy {
   static constexpr const size_t BucketSize[] = {
       0,       1U << 2, 1U << 3,  1U << 4,  1U << 5,  1U << 6, 1U << 7,

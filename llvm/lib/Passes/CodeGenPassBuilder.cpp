@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
+#include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
@@ -735,6 +736,9 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
     addMachineFunctionPass(GCEmptyBasicBlocksPass(), PMW);
 
   addPostBBSections(PMW);
+
+  if (!Opt.DisableCFIFixup && TM.Options.EnableCFIFixup)
+    addMachineFunctionPass(CFIFixupPass(), PMW);
 
   addMachineFunctionPass(StackFrameLayoutAnalysisPass(), PMW);
 

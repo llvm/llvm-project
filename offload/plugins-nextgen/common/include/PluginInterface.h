@@ -727,6 +727,22 @@ struct PluginAllocInfoTy {
   size_t Size;
 };
 
+/// Memory manager that allocates through a plugin context, so that pooled
+/// memory comes from the same place as memory the context hands out directly.
+class ContextAllocatorTy final : public DeviceAllocatorTy {
+public:
+  ContextAllocatorTy(PluginContextTy &Context, GenericDeviceTy &Device)
+      : Context(Context), Device(Device) {}
+
+  llvm::Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                                  size_t Alignment) override;
+  llvm::Error free(void *TgtPtr, TargetAllocTy Kind) override;
+
+private:
+  PluginContextTy &Context;
+  GenericDeviceTy &Device;
+};
+
 /// A plugin-side context grouping a set of devices.
 struct PluginContextTy {
   PluginContextTy(GenericPluginTy &Plugin,
@@ -756,22 +772,42 @@ struct PluginContextTy {
   /// Allocate Size bytes of Kind memory accessible from Device. HostPtr is an
   /// optional hint (e.g. for pinned-buffer registration); pass nullptr when
   /// unused.
+  llvm::Expected<void *> allocate(GenericDeviceTy &Device, int64_t Size,
+                                  void *HostPtr, TargetAllocTy Kind,
+                                  size_t Alignment,
+                                  GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Serve an allocation requested through allocate, which decides pooling.
   virtual llvm::Expected<void *>
-  allocate(GenericDeviceTy &Device, int64_t Size, void *HostPtr,
-           TargetAllocTy Kind, size_t Alignment,
-           GenericProfilerTy *ProfilerPtr = nullptr);
+  allocateImpl(GenericDeviceTy &Device, int64_t Size, void *HostPtr,
+               TargetAllocTy Kind, size_t Alignment,
+               GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Free a pointer returned by allocate; resolves owner/kind via
   /// getAllocInfo. Requires a non-empty device set, so this is only valid on
   /// user-created contexts (not on the per-plugin default context, which
   /// carries no devices).
-  virtual llvm::Error deallocate(void *Ptr,
-                                 GenericProfilerTy *ProfilerPtr = nullptr);
+  llvm::Error deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Free a pointer when the caller already knows the owning device and kind.
-  virtual llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr,
-                                 TargetAllocTy Kind,
-                                 GenericProfilerTy *ProfilerPtr = nullptr);
+  llvm::Error deallocate(GenericDeviceTy &Device, void *Ptr, TargetAllocTy Kind,
+                         GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Serve the deallocation requested through deallocate.
+  virtual llvm::Error deallocateImpl(GenericDeviceTy &Device, void *Ptr,
+                                     TargetAllocTy Kind,
+                                     GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Record that \p Ptr is a live allocation of \p Size bytes of \p Kind
+  /// memory on \p Device. Called once per allocation served through allocate,
+  /// pooled or not, so that an implementation's registry tracks what the user
+  /// asked for and not how it was served.
+  virtual void trackAllocation(GenericDeviceTy &Device, void *Ptr, int64_t Size,
+                               TargetAllocTy Kind) {}
+
+  /// Record that \p Ptr is no longer live. Called before the deallocation is
+  /// served, as serving it may hand \p Ptr back out to another thread.
+  virtual void untrackAllocation(void *Ptr) {}
 
   /// Look up the allocation containing Ptr. Returns NOT_FOUND when Ptr is not
   /// known to this context. Only valid on user-created contexts.
@@ -784,42 +820,33 @@ struct PluginContextTy {
                          "%s not supported by platform", __func__);
   }
 
+  /// Release the memory pools of this context. Must be called before deinit.
+  void releaseMemoryManagers();
+
 protected:
   GenericPluginTy &Plugin;
   llvm::SmallVector<GenericDeviceTy *> Devices;
 
 private:
+  /// Return the pool that serves allocations of \p Kind memory on \p Device,
+  /// or null when they are not pooled.
+  MemoryManagerTy *getMemoryManagerFor(GenericDeviceTy &Device,
+                                       TargetAllocTy Kind);
   MemoryManagerTy *getDeviceMemoryManagerFor(GenericDeviceTy &Device,
                                              TargetAllocTy Kind);
   MemoryManagerTy *getHostMemoryManager();
 
-  llvm::DenseMap<std::pair<GenericDeviceTy *, int>,
-                 std::unique_ptr<MemoryManagerTy>>
+  /// A memory pool and the allocator that lets it allocate through this
+  /// context. The allocator outlives the pool it backs.
+  struct MemoryPoolTy {
+    std::unique_ptr<ContextAllocatorTy> Allocator;
+    std::unique_ptr<MemoryManagerTy> Manager;
+  };
+
+  llvm::DenseMap<std::pair<GenericDeviceTy *, int>, MemoryPoolTy>
       DeviceMemoryManagers;
-  std::unique_ptr<MemoryManagerTy> HostMemoryManager;
+  MemoryPoolTy HostMemoryManager;
   std::mutex MemoryManagersMutex;
-};
-
-/// Default plugin context: a device-less placeholder used as the per-plugin
-/// MemoryManager dispatcher for libomptarget. Allocations made through this
-/// context are pooled but not tracked per-pointer, so getAllocInfo is not
-/// supported.
-struct DefaultPluginContextTy : public PluginContextTy {
-  DefaultPluginContextTy(GenericPluginTy &Plugin)
-      : PluginContextTy(Plugin, llvm::ArrayRef<GenericDeviceTy *>{}) {}
-
-  llvm::Expected<PluginAllocInfoTy>
-  getAllocInfo(const void * /*Ptr*/) override {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "getAllocInfo is not supported on the default "
-                         "plugin context");
-  }
-
-  Error initAsyncInfoImpl(GenericDeviceTy & /*Device*/,
-                          AsyncInfoWrapperTy & /*AsyncInfoWrapper*/) override {
-    return Plugin::error(error::ErrorCode::UNSUPPORTED,
-                         "default plugin context cannot initialize async info");
-  }
 };
 
 /// Class implementing common functionalities of offload devices. Each plugin
@@ -953,6 +980,17 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind,
                    GenericProfilerTy *ProfilerPtr = nullptr);
+
+  /// Record the allocation of \p Size bytes of \p Kind memory at \p DevicePtr,
+  /// associated to \p HostPtr, with the stack it was made from. Does nothing
+  /// if allocation traces are not tracked.
+  void recordAllocation(void *DevicePtr, void *HostPtr, int64_t Size,
+                        TargetAllocTy Kind);
+
+  /// Record the deallocation of \p Kind memory at \p DevicePtr, and report it
+  /// if the allocation it refers to was never made, is already deallocated, or
+  /// was of another kind. Does nothing if allocation traces are not tracked.
+  void recordDeallocation(void *DevicePtr, TargetAllocTy Kind);
 
   /// Pin or register host memory to optimize transfers and return the device
   /// accessible pointer that devices should use for memory transfers involving
@@ -1514,16 +1552,6 @@ struct GenericPluginTy {
   virtual Expected<std::unique_ptr<PluginContextTy>>
   createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) = 0;
 
-  /// Create the per-plugin default context returned by getDefaultContext.
-  /// The default builds a plain PluginContextTy with no devices, which is
-  /// sufficient for plugins where the default is just a MemoryManager
-  /// dispatcher.
-  virtual Expected<std::unique_ptr<PluginContextTy>>
-  createDefaultPluginContext();
-
-  /// Return the default context that services Device.
-  virtual PluginContextTy &getDefaultContext(GenericDeviceTy &Device);
-
 protected:
   /// Indicate whether a device id is valid.
   bool isValidDeviceId(int32_t DeviceId) const {
@@ -1549,14 +1577,6 @@ public:
                                    bool SaveOutput, bool EmitReport,
                                    const char *ReportFilename,
                                    const char *OutputDirPath);
-
-  /// Allocates memory that is accessively to the given device.
-  void *data_alloc(int32_t DeviceId, int64_t Size, void *HostPtr, int32_t Kind,
-                   GenericProfilerTy *ProfilerPtr = nullptr);
-
-  /// Deallocates memory on the given device.
-  int32_t data_delete(int32_t DeviceId, void *TgtPtr, int32_t Kind,
-                      GenericProfilerTy *ProfilerPtr = nullptr);
 
   /// Return the interop specification that the plugin supports
   /// It might not be one of the user specified ones.
@@ -1609,10 +1629,6 @@ private:
 
   /// The interface between the plugin and the GPU for host services.
   RPCServerTy *RPCServer;
-
-  /// The default plugin context returned by getDefaultContext, used by
-  /// libomptarget.
-  std::unique_ptr<PluginContextTy> DefaultContext;
 };
 
 /// Auxiliary interface class for GenericDeviceResourceManagerTy. This class
