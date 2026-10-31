@@ -6291,7 +6291,11 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   }
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl)) {
-    if (FD->hasAttr<StrictFPAttr>())
+    // HLSL `precise` makes the function strictfp after Sema decided whether to
+    // add StrictFPAttr, so also check the emitted function.
+    if (FD->hasAttr<StrictFPAttr>() ||
+        (getContext().getTranslationUnitDecl()->hasAttr<HLSLPreciseAttr>() &&
+         CurFn->hasFnAttribute(llvm::Attribute::StrictFP)))
       // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
 
@@ -6380,7 +6384,9 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
   EmitPointerAuthOperandBundle(ConcreteCallee.getPointerAuthInfo(), BundleList);
 
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl))
-    if (FD->hasAttr<StrictFPAttr>())
+    if (FD->hasAttr<StrictFPAttr>() ||
+        (getContext().getTranslationUnitDecl()->hasAttr<HLSLPreciseAttr>() &&
+         CurFn->hasFnAttribute(llvm::Attribute::StrictFP)))
       // All calls within a strictfp function are marked strictfp
       Attrs = Attrs.addFnAttribute(getLLVMContext(), llvm::Attribute::StrictFP);
 

@@ -5476,6 +5476,13 @@ def HLSLColumnMajor : TypeAttr {
   let Documentation = [HLSLMatrixLayoutDocs];
 }
 
+def HLSLPrecise : HLSLAnnotationAttr {
+  let Spellings = [CustomKeyword<"precise">];
+  let Subjects = SubjectList<[Field, Function, Var, TypedefName], ErrorDiag>;
+  let LangOpts = [HLSL];
+  let Documentation = [HLSLPreciseDocs];
+}
+
 def RandomizeLayout : InheritableAttr {
   let Spellings = [GCC<"randomize_layout">];
   let Subjects = SubjectList<[Record]>;

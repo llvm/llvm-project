@@ -9767,6 +9767,23 @@ row_major float2x2 myMatrix;
   }];
 }
 
+def HLSLPreciseDocs : Documentation {
+  let Category = DocCatVariable;
+  let Heading = "precise";
+  let Content = [{
+The HLSL ``precise`` keyword can be applied to variables, parameters, fields,
+typedefs, and function return values to request that floating-point computations
+contributing to their values are performed with IEEE-strict semantics.
+
+Clang currently implements a simplified version of ``precise``: if the keyword
+is used anywhere in a translation unit, the whole translation unit is compiled
+in IEEE-strict floating-point mode, as if ``-Gis`` (``-ffp-model=strict``) and
+``-fno-fast-math`` had been specified.
+
+The full documentation is available here: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-variable-syntax
+  }];
+}
+
 def WebAssemblyFuncrefDocs : Documentation {
   let Category = DocCatType;
   let Content = [{

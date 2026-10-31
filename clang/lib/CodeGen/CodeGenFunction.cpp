@@ -1105,9 +1105,11 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       ToConstrainedExceptMD(getLangOpts().getDefaultExceptionMode());
   Builder.setDefaultConstrainedRounding(RM);
   Builder.setDefaultConstrainedExcept(FPExceptionBehavior);
+  bool HLSLPrecise =
+      CGM.getContext().getTranslationUnitDecl()->hasAttr<HLSLPreciseAttr>();
   if ((FD && (FD->UsesFPIntrin() || FD->hasAttr<StrictFPAttr>())) ||
-      (!FD && (FPExceptionBehavior != llvm::fp::ebIgnore ||
-               RM != llvm::RoundingMode::NearestTiesToEven))) {
+      ((!FD || HLSLPrecise) && (FPExceptionBehavior != llvm::fp::ebIgnore ||
+                                RM != llvm::RoundingMode::NearestTiesToEven))) {
     Builder.setIsFPConstrained(true);
     Fn->addFnAttr(llvm::Attribute::StrictFP);
   }
