@@ -150,6 +150,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`modernize-use-bit-cast
+  <clang-tidy/checks/modernize/use-bit-cast>` check.
+
+  Finds `memcpy`-based type punning that can be rewritten as `std::bit_cast`
+  in C++20 and later.
+
 - New {doc}`modernize-use-if-consteval
   <clang-tidy/checks/modernize/use-if-consteval>` check.
 
