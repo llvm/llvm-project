@@ -70,8 +70,14 @@ inline bool ShouldCheckMisplacedLifetimebound(Sema &S, const Decl *D) {
 }
 
 inline bool ShouldCheckInapplicableLifetimebound(Sema &S, const Decl *D) {
-  return !S.getDiagnostics().isIgnored(
-      diag::warn_lifetime_safety_inapplicable_lifetimebound, D->getBeginLoc());
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_inapplicable_lifetimebound,
+      diag::warn_lifetime_safety_inapplicable_lifetimebound_return};
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
 }
 
 inline bool ShouldCheckFieldOriginEscape(Sema &S, const Decl *D) {
@@ -116,7 +122,6 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
   // Enable per-function mode via debug flag or specific diagnostics.
   if (S.getLangOpts().DebugRunLifetimeSafety)
     return true;
-
   return ShouldCheckSafety(S, D) || ShouldCheckNoescapeViolations(S, D) ||
          ShouldCheckLifetimeboundViolations(S, D) ||
          ShouldCheckMisplacedLifetimebound(S, D) ||
@@ -465,13 +470,33 @@ public:
         << Attr->getRange();
   }
 
-  void reportInapplicableLifetimebound(const ParmVarDecl *PVD) override {
+  void reportInapplicableLifetimebound(const ParmVarDecl *PVD,
+                                       QualType Type) override {
     assert(PVD->hasAttr<LifetimeBoundAttr>() &&
            "Expected parameter to have lifetimebound attribute");
     const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
     S.Diag(Attr->getLocation(),
            diag::warn_lifetime_safety_inapplicable_lifetimebound)
-        << PVD->getType() << Attr->getRange();
+        << Type << Attr->getRange();
+  }
+
+  void reportInapplicableLifetimeboundReturnTy(const ParmVarDecl *PVD,
+                                               QualType Type) override {
+    assert(PVD->hasAttr<LifetimeBoundAttr>() &&
+           "Expected parameter to have lifetimebound attribute");
+    const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound_return)
+        << Type << Attr->getRange();
+  }
+
+  void
+  reportInapplicableLifetimeboundReturnTy(const CXXMethodDecl *MD) override {
+    const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(MD);
+    assert(Attr && "Expected lifetimebound attribute");
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound_return)
+        << MD->getReturnType() << Attr->getRange();
   }
 
   void suggestLifetimeboundToImplicitThis(WarningScope Scope,
