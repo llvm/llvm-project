@@ -4109,6 +4109,9 @@ ModuleVisitor::SymbolRename ModuleVisitor::AddUse(
   if (!useModuleScope_) {
     return {}; // error occurred finding module
   }
+  if (useModuleScope_->Contains(currScope())) {
+    return {}; // itself error already reported
+  }
   if (!useSymbol) {
     Say(useName, "'%s' not found in module '%s'"_err_en_US, MakeOpName(useName),
         useModuleScope_->GetName().value());
@@ -4913,7 +4916,7 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   Scope *scope{
       reader.Read(name.source, isIntrinsic, ancestor, /*silent=*/false)};
   if (scope) {
-    if (DoesScopeContain(scope, currScope())) { // 14.2.2(1)
+    if (scope->Contains(currScope())) { // F2023 14.2.2 p1
       std::optional<SourceName> submoduleName;
       if (const Scope * container{FindModuleOrSubmoduleContaining(currScope())};
           container && container->IsSubmodule()) {

@@ -24,3 +24,7 @@ submodule(m) submod2
   use m
 end
 
+module m2
+  !ERROR: Module 'm2' cannot USE itself
+  use m2
+end module m2
