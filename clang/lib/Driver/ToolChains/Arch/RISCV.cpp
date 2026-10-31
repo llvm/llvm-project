@@ -105,13 +105,8 @@ void riscv::getRISCVTargetFeatures(const Driver &D, const llvm::Triple &Triple,
 #define RESERVE_REG(REG)                                                       \
   if (Args.hasArg(options::OPT_ffixed_##REG))                                  \
     Features.push_back("+reserve-" #REG);
-  RESERVE_REG(x1)
-  RESERVE_REG(x2)
   RESERVE_REG(x3)
   RESERVE_REG(x4)
-  RESERVE_REG(x5)
-  RESERVE_REG(x6)
-  RESERVE_REG(x7)
   RESERVE_REG(x8)
   RESERVE_REG(x9)
   RESERVE_REG(x10)

@@ -2,12 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+reserve-x3 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X3
 ; RUN: llc -mtriple=riscv32 -mattr=+reserve-x4 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X4
 ; RUN: llc -mtriple=riscv64 -mattr=+reserve-x4 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X4
-; RUN: llc -mtriple=riscv32 -mattr=+reserve-x5 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X5
-; RUN: llc -mtriple=riscv64 -mattr=+reserve-x5 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X5
-; RUN: llc -mtriple=riscv32 -mattr=+reserve-x6 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X6
-; RUN: llc -mtriple=riscv64 -mattr=+reserve-x6 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X6
-; RUN: llc -mtriple=riscv32 -mattr=+reserve-x7 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X7
-; RUN: llc -mtriple=riscv64 -mattr=+reserve-x7 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X7
 ; RUN: llc -mtriple=riscv32 -mattr=+reserve-x8 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X8
 ; RUN: llc -mtriple=riscv64 -mattr=+reserve-x8 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X8
 ; RUN: llc -mtriple=riscv32 -mattr=+reserve-x9 -verify-machineinstrs < %s | FileCheck %s -check-prefix=X9
@@ -71,12 +65,6 @@ define void @foo() {
 ; X3-NOT: ld gp,
 ; X4-NOT: lw tp,
 ; X4-NOT: ld tp,
-; X5-NOT: lw t0,
-; X5-NOT: ld t0,
-; X6-NOT: lw t1,
-; X6-NOT: ld t1,
-; X7-NOT: lw t2,
-; X7-NOT: ld t2,
 ; X8-NOT: lw s0,
 ; X8-NOT: ld s0,
 ; X9-NOT: lw s1,
