@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -buffer-deallocation-pipeline | FileCheck %s
+// RUN: mlir-opt %s -buffer-deallocation-pipeline -split-input-file | FileCheck %s
 
 func.func @gpu_launch() {
   %c1 = arith.constant 1 : index
@@ -16,3 +16,22 @@ func.func @gpu_launch() {
 //       CHECK:     [[ALLOC:%.+]] = memref.alloc(
 //       CHECK:     memref.dealloc [[ALLOC]]
 //       CHECK:     gpu.terminator
+
+// -----
+
+module attributes {gpu.container_module} {
+  gpu.binary @kernels [#gpu.object<#nvvm.target, "">]
+
+  func.func @gpu_launch_func() {
+    %c1 = arith.constant 1 : index
+    %alloc = memref.alloc() : memref<2xf32>
+    gpu.launch_func @kernels::@kernel blocks in (%c1, %c1, %c1)
+        threads in (%c1, %c1, %c1) args(%alloc : memref<2xf32>)
+    return
+  }
+}
+
+// CHECK-LABEL: func @gpu_launch_func
+//       CHECK:   [[ALLOC:%.+]] = memref.alloc(
+//       CHECK:   gpu.launch_func
+//  CHECK-NEXT:   memref.dealloc [[ALLOC]]
