@@ -10507,8 +10507,9 @@ constructOperandInfo(ConstraintDecisionInfo &Info,
   return false;
 }
 
-/// Compute which constraint option to use for each operand.
-static void
+/// Compute which constraint option to use for each operand. Returns true (and
+/// sets Info.ErrorMsg) on failure.
+static bool
 computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
                        TargetLowering::AsmOperandInfoVector &TargetConstraints,
                        SelectionDAGBuilder &Builder, const TargetLowering &TLI,
@@ -10566,13 +10567,24 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.ConstraintType = TargetLowering::C_Address;
     }
 
-    // If this is a memory input, and if the operand is not indirect, do what we
-    // need to provide an address for the memory input.
+    // A label (e.g. "!m") is a branch target, which has no value in memory.
+    if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
+        OpInfo.Type == InlineAsm::isLabel) {
+      Info.ErrorMsg << "cannot handle memory constraint '"
+                    << OpInfo.ConstraintCode << "' for a label";
+      return true;
+    }
+
+    // A direct operand with a memory constraint needs an address. An input's
+    // value is put in memory for one. A direct output would have to be
+    // reloaded from memory after the asm, which isn't supported.
     if (OpInfo.ConstraintType == TargetLowering::C_Memory &&
         !OpInfo.isIndirect) {
-      assert((OpInfo.isMultipleAlternative ||
-              (OpInfo.Type == InlineAsm::isInput)) &&
-             "Can only indirectify direct input operands!");
+      if (OpInfo.Type != InlineAsm::isInput) {
+        Info.ErrorMsg << "cannot handle direct memory outputs for constraint '"
+                      << OpInfo.ConstraintCode << "'";
+        return true;
+      }
 
       // Memory operands really want the address of the value.
       Info.Chain = getAddressForMemoryInput(Info.Chain, Builder.getCurSDLoc(),
@@ -10585,6 +10597,8 @@ computeConstraintToUse(ConstraintDecisionInfo &Info, const CallBase &Call,
       OpInfo.isIndirect = true;
     }
   }
+
+  return false;
 }
 
 /// Prepare DAG-level operands. As part of this, assign virtual and physical
@@ -10878,7 +10892,9 @@ determineConstraints(ConstraintDecisionInfo &Info,
     Info.Chain = Builder.lowerStartEH(Info.Chain, EHPadBB, Info.BeginLabel);
 
   // Second pass: Compute which constraint option to use.
-  computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM, DAG);
+  if (computeConstraintToUse(Info, Call, TargetConstraints, Builder, TLI, TM,
+                             DAG))
+    return true;
 
   // AsmNodeOperands - The operands for the ISD::INLINEASM node.
   Info.AsmNodeOperands.push_back(SDValue()); // reserve space for input chain
