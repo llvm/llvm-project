@@ -332,14 +332,26 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
   Ctx = &F.getContext();
   A = &RegionAnalyses;
   InstrMaps IMaps;
-  Legality = std::make_unique<LegalityAnalysis>(
-      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
-      A->getTTI(), F.getContext(), IMaps, SchedDirection::BottomUp);
-
   auto Opc = Bndl[0]->getOpcode();
   assert(
       all_of(Bndl, [Opc](Instruction *I) { return I->getOpcode() == Opc; }) &&
       "Expected a homogeneous seed slice!");
+
+  SchedDirection Dir;
+  switch (Opc) {
+  case Instruction::Opcode::Load:
+    Dir = SchedDirection::TopDown;
+    break;
+  case Instruction::Opcode::Store:
+    Dir = SchedDirection::BottomUp;
+    break;
+  default:
+    llvm_unreachable("Expected Load or Store");
+  }
+
+  Legality = std::make_unique<LegalityAnalysis>(
+      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
+      A->getTTI(), F.getContext(), IMaps, Dir);
 
   bool Changed = false;
   switch (Opc) {
