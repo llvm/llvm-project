@@ -1255,6 +1255,114 @@ define float @ret_fmul_exact_negzero__mode_dynamic_dynamic(float nofpclass(nan i
   ret float %fmul
 }
 
+define float @ret_fmul_neg_square_f32(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(pinf pzero psub pnorm) float @ret_fmul_neg_square_f32(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[ARG]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[NEG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %neg = fneg float %arg
+  %fmul = fmul float %neg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_neg_square_commuted_f32(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(pinf pzero psub pnorm) float @ret_fmul_neg_square_commuted_f32(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[ARG]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[ARG]], [[NEG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %neg = fneg float %arg
+  %fmul = fmul float %arg, %neg
+  ret float %fmul
+}
+
+define float @ret_fmul_neg_square_f32_maybe_undef(float %arg) {
+; CHECK-LABEL: define float @ret_fmul_neg_square_f32_maybe_undef(
+; CHECK-SAME: float [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[ARG]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[NEG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %neg = fneg float %arg
+  %fmul = fmul float %neg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_neg_square_f32__mode_ieee_positivezero(float noundef %arg) #2 {
+; CHECK-LABEL: define noundef nofpclass(pinf psub pnorm) float @ret_fmul_neg_square_f32__mode_ieee_positivezero(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[ARG]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[NEG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %neg = fneg float %arg
+  %fmul = fmul float %neg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_neg_square_f32__mode_positivezero_positivezero(float noundef %arg) #4 {
+; CHECK-LABEL: define noundef nofpclass(pinf psub pnorm) float @ret_fmul_neg_square_f32__mode_positivezero_positivezero(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[ARG]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[NEG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %neg = fneg float %arg
+  %fmul = fmul float %neg, %arg
+  ret float %fmul
+}
+
+define float @ret_fmul_neg_square_f32__mode_ieee_preservesign(float noundef %arg) #1 {
+; CHECK-LABEL: define noundef nofpclass(pinf pzero psub pnorm) float @ret_fmul_neg_square_f32__mode_ieee_preservesign(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[ARG]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[NEG]], [[ARG]]
+; CHECK-NEXT:    ret float [[FMUL]]
+;
+  %neg = fneg float %arg
+  %fmul = fmul float %neg, %arg
+  ret float %fmul
+}
+
+define float @ret_fma_neg_square_f32(float noundef %x, float nofpclass(nan pinf pnorm psub) %y) {
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_fma_neg_square_f32(
+; CHECK-SAME: float noundef [[X:%.*]], float nofpclass(nan pinf psub pnorm) [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.fma.f32(float noundef [[NEG]], float noundef [[X]], float nofpclass(nan pinf psub pnorm) [[Y]]) #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %neg = fneg float %x
+  %fma = call float @llvm.fma.f32(float %neg, float %x, float %y)
+  ret float %fma
+}
+
+define float @ret_fmuladd_neg_square_f32(float noundef %x, float nofpclass(nan pinf pnorm psub) %y) {
+; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @ret_fmuladd_neg_square_f32(
+; CHECK-SAME: float noundef [[X:%.*]], float nofpclass(nan pinf psub pnorm) [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(pinf psub pnorm) float @llvm.fmuladd.f32(float noundef [[NEG]], float noundef [[X]], float nofpclass(nan pinf psub pnorm) [[Y]]) #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %neg = fneg float %x
+  %fma = call float @llvm.fmuladd.f32(float %neg, float %x, float %y)
+  ret float %fma
+}
+
+define float @ret_fma_neg_square_f32_maybe_undef(float %x, float nofpclass(nan pinf pnorm psub) %y) {
+; CHECK-LABEL: define float @ret_fma_neg_square_f32_maybe_undef(
+; CHECK-SAME: float [[X:%.*]], float nofpclass(nan pinf psub pnorm) [[Y:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[FMA:%.*]] = call float @llvm.fma.f32(float [[NEG]], float [[X]], float nofpclass(nan pinf psub pnorm) [[Y]]) #[[ATTR8]]
+; CHECK-NEXT:    ret float [[FMA]]
+;
+  %neg = fneg float %x
+  %fma = call float @llvm.fma.f32(float %neg, float %x, float %y)
+  ret float %fma
+}
+
 attributes #0 = { denormal_fpenv(ieee|ieee) }
 attributes #1 = { denormal_fpenv(ieee|preservesign) }
 attributes #2 = { denormal_fpenv(ieee|positivezero) }

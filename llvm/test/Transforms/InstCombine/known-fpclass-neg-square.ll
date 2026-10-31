@@ -6,7 +6,6 @@ declare float @llvm.fabs.f32(float)
 declare float @llvm.fmuladd.f32(float, float, float)
 declare i1 @llvm.is.fpclass.f32(float, i32)
 
-; (-x) * x is never a positive non-zero value, so this must fold
 define i1 @fmul_neg_not_pos(float noundef %x) {
 ; CHECK-LABEL: define i1 @fmul_neg_not_pos(
 ; CHECK-SAME: float noundef [[X:%.*]]) {
@@ -18,7 +17,6 @@ define i1 @fmul_neg_not_pos(float noundef %x) {
   ret i1 %r
 }
 
-; test for x * (-x)
 define i1 @fmul_neg_not_pos_commutative(float noundef %x) {
 ; CHECK-LABEL: define i1 @fmul_neg_not_pos_commutative(
 ; CHECK-SAME: float noundef [[X:%.*]]) {
@@ -30,7 +28,6 @@ define i1 @fmul_neg_not_pos_commutative(float noundef %x) {
   ret i1 %r
 }
 
-; flush to positive zero case should not fold
 define i1 @fmul_neg_pzero(float noundef %x) #0 {
 ; CHECK-LABEL: define i1 @fmul_neg_pzero(
 ; CHECK-SAME: float noundef [[X:%.*]]) #[[ATTR1:[0-9]+]] {
@@ -45,7 +42,6 @@ define i1 @fmul_neg_pzero(float noundef %x) #0 {
   ret i1 %r
 }
 
-; with IEEE denormals this must fold
 define i1 @fmul_neg_pzero_ieee(float noundef %x) #1 {
 ; CHECK-LABEL: define i1 @fmul_neg_pzero_ieee(
 ; CHECK-SAME: float noundef [[X:%.*]]) #[[ATTR2:[0-9]+]] {
@@ -57,7 +53,6 @@ define i1 @fmul_neg_pzero_ieee(float noundef %x) #1 {
   ret i1 %r
 }
 
-; should still fold with preservesign
 define i1 @fmul_neg_pzero_preservesign(float noundef %x) #2 {
 ; CHECK-LABEL: define i1 @fmul_neg_pzero_preservesign(
 ; CHECK-SAME: float noundef [[X:%.*]]) #[[ATTR3:[0-9]+]] {
@@ -69,7 +64,6 @@ define i1 @fmul_neg_pzero_preservesign(float noundef %x) #2 {
   ret i1 %r
 }
 
-; shouldn't fold
 define i1 @fmul_neg_pzero_dynamic(float noundef %x) #3 {
 ; CHECK-LABEL: define i1 @fmul_neg_pzero_dynamic(
 ; CHECK-SAME: float noundef [[X:%.*]]) #[[ATTR4:[0-9]+]] {
@@ -84,7 +78,6 @@ define i1 @fmul_neg_pzero_dynamic(float noundef %x) #3 {
   ret i1 %r
 }
 
-; only output side can flush to +0 so it must not fold
 define i1 @fmul_neg_pzero_out_pzero(float noundef %x) #4 {
 ; CHECK-LABEL: define i1 @fmul_neg_pzero_out_pzero(
 ; CHECK-SAME: float noundef [[X:%.*]]) #[[ATTR5:[0-9]+]] {
@@ -99,7 +92,6 @@ define i1 @fmul_neg_pzero_out_pzero(float noundef %x) #4 {
   ret i1 %r
 }
 
-; fma of the form -x, x, -y
 define i1 @fma_negx_x_negy(float noundef %x, float noundef %y) {
 ; CHECK-LABEL: define i1 @fma_negx_x_negy(
 ; CHECK-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) {
@@ -113,24 +105,22 @@ define i1 @fma_negx_x_negy(float noundef %x, float noundef %y) {
   ret i1 %r
 }
 
-; fma contracted from -(x * x) + y shouldn't fold
 define i1 @fma_y_minus_neg_x_squared(float noundef %x, float noundef %y) {
 ; CHECK-LABEL: define i1 @fma_y_minus_neg_x_squared(
 ; CHECK-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) {
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[Y]])
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fmuladd.f32(float [[NEG]], float [[X]], float [[ABS]])
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fma.f32(float [[NEG]], float [[X]], float [[ABS]])
 ; CHECK-NEXT:    [[R:%.*]] = fcmp uno float [[RES]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = fneg float %x
   %abs = call float @llvm.fabs.f32(float %y)
-  %res = call float @llvm.fmuladd.f32(float %neg, float %x, float %abs)
+  %res = call float @llvm.fma.f32(float %neg, float %x, float %abs)
   %r = call i1 @llvm.is.fpclass.f32(float %res, i32 3)
   ret i1 %r
 }
 
-; must not fold due to possibility of nan
 define i1 @fma_neg_x_x_pinf_y(float nofpclass(nan) noundef %x, float nofpclass(nan) noundef %y) {
 ; CHECK-LABEL: define i1 @fma_neg_x_x_pinf_y(
 ; CHECK-SAME: float noundef nofpclass(nan) [[X:%.*]], float noundef nofpclass(nan) [[Y:%.*]]) {
@@ -145,7 +135,6 @@ define i1 @fma_neg_x_x_pinf_y(float nofpclass(nan) noundef %x, float nofpclass(n
   ret i1 %r
 }
 
-; must not fold since the addend may be of any class
 define i1 @fma_neg_x_x_unknown_y(float noundef %x, float noundef %y) {
 ; CHECK-LABEL: define i1 @fma_neg_x_x_unknown_y(
 ; CHECK-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) {
@@ -156,6 +145,63 @@ define i1 @fma_neg_x_x_unknown_y(float noundef %x, float noundef %y) {
 ;
   %neg = fneg float %x
   %res = call float @llvm.fma.f32(float %neg, float %x, float %y)
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 896)
+  ret i1 %r
+}
+
+define i1 @fmuladd_negx_x_negy(float noundef %x, float noundef %y) {
+; CHECK-LABEL: define i1 @fmuladd_negx_x_negy(
+; CHECK-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) {
+; CHECK-NEXT:    ret i1 false
+;
+  %neg1 = fneg float %x ; -x
+  %abs = call float @llvm.fabs.f32(float %y)
+  %neg2 = fneg float %abs ; -y
+  %res = call float @llvm.fmuladd.f32(float %neg1, float %x, float %neg2)
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 896)
+  ret i1 %r
+}
+
+define i1 @fmuladd_y_minus_neg_x_squared(float noundef %x, float noundef %y) {
+; CHECK-LABEL: define i1 @fmuladd_y_minus_neg_x_squared(
+; CHECK-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[ABS:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fmuladd.f32(float [[NEG]], float [[X]], float [[ABS]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %abs = call float @llvm.fabs.f32(float %y)
+  %res = call float @llvm.fmuladd.f32(float %neg, float %x, float %abs)
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 3)
+  ret i1 %r
+}
+
+define i1 @fmuladd_neg_x_x_pinf_y(float nofpclass(nan) noundef %x, float nofpclass(nan) noundef %y) {
+; CHECK-LABEL: define i1 @fmuladd_neg_x_x_pinf_y(
+; CHECK-SAME: float noundef nofpclass(nan) [[X:%.*]], float noundef nofpclass(nan) [[Y:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fmuladd.f32(float [[NEG]], float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp uno float [[RES]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %res = call float @llvm.fmuladd.f32(float %neg, float %x, float %y)
+  %r = call i1 @llvm.is.fpclass.f32(float %res, i32 3)
+  ret i1 %r
+}
+
+define i1 @fmuladd_neg_x_x_unknown_y(float noundef %x, float noundef %y) {
+; CHECK-LABEL: define i1 @fmuladd_neg_x_x_unknown_y(
+; CHECK-SAME: float noundef [[X:%.*]], float noundef [[Y:%.*]]) {
+; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.fmuladd.f32(float [[NEG]], float [[X]], float [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[RES]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %neg = fneg float %x
+  %res = call float @llvm.fmuladd.f32(float %neg, float %x, float %y)
   %r = call i1 @llvm.is.fpclass.f32(float %res, i32 896)
   ret i1 %r
 }
